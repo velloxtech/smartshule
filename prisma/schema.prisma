@@ -1,0 +1,341 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  firstName    String
+  lastName     String
+  role         String
+  phone        String?
+  status       String   @default("ACTIVE")
+  schoolId     String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Student {
+  id                String   @id @default(uuid())
+  admissionNumber   String   @unique
+  upiNumber         String?  @unique
+  firstName         String
+  middleName        String?
+  lastName          String
+  dateOfBirth       String
+  gender            String
+  gradeLevel        String
+  streamId          String
+  schoolId          String
+  academicYearId    String
+  guardianIds       String[]
+  medicalConditions String?
+  specialNeeds      String?
+  status            String   @default("ACTIVE")
+  profilePhotoUrl   String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model Teacher {
+  id                     String   @id @default(uuid())
+  userId                 String   @unique
+  tscNumber              String?
+  employeeNumber         String   @unique
+  specialization         String[]
+  assignedClassStreamIds String[]
+  qualification          String?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+}
+
+model Guardian {
+  id               String   @id @default(uuid())
+  userId           String   @unique
+  nationalId       String?
+  occupation       String?
+  relationship     String
+  emergencyContact String
+  studentIds       String[]
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model School {
+  id         String   @id @default(uuid())
+  name       String
+  code       String   @unique
+  centerCode String?
+  motto      String?
+  email      String
+  phone      String
+  address    String
+  logoUrl    String?
+  currency   String   @default("KES")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model AcademicYear {
+  id        String   @id @default(uuid())
+  name      String
+  startDate String
+  endDate   String
+  isCurrent Boolean  @default(false)
+  schoolId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AcademicTerm {
+  id             String   @id @default(uuid())
+  academicYearId String
+  termNumber     Int
+  name           String
+  startDate      String
+  endDate        String
+  isCurrent      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model ClassRoom {
+  id             String   @id @default(uuid())
+  name           String
+  gradeLevel     String
+  educationLevel String
+  schoolId       String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Stream {
+  id             String   @id @default(uuid())
+  classRoomId    String
+  name           String
+  capacity       Int
+  classTeacherId String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model LearningArea {
+  id             String   @id @default(uuid())
+  name           String
+  code           String
+  gradeLevel     String
+  educationLevel String
+  isElective     Boolean  @default(false)
+  schoolId       String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Strand {
+  id             String   @id @default(uuid())
+  learningAreaId String
+  gradeLevel     String
+  code           String
+  title          String
+  description    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model SubStrand {
+  id                       String   @id @default(uuid())
+  strandId                 String
+  code                     String
+  title                    String
+  specificLearningOutcomes String[]
+  suggestedExperiences    String[]
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+}
+
+model FormativeAssessment {
+  id                    String   @id @default(uuid())
+  studentId             String
+  teacherId             String
+  learningAreaId        String
+  subStrandId           String
+  termId                String
+  academicYearId        String
+  assessmentDate        String
+  assessmentMethod      String
+  performanceLevel      String
+  specificOutcomeTested String
+  teacherRemarks        String?
+  evidenceNotes         String?
+  targetedCompetencies  String[]
+  valuesObserved        String[]
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+model SummativeAssessment {
+  id                      String   @id @default(uuid())
+  studentId               String
+  teacherId               String
+  learningAreaId          String
+  termId                  String
+  academicYearId          String
+  strandScores            Json
+  overallPerformanceLevel String
+  teacherRemarks          String
+  evaluationDate          String
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+}
+
+model CbcReportCard {
+  id                        String   @id @default(uuid())
+  studentId                 String
+  termId                    String
+  academicYearId            String
+  gradeLevel                String
+  streamId                  String
+  learningAreaAssessments   Json
+  coreCompetencyAssessments Json
+  valueAssessments          Json
+  attendanceDaysPresent     Int
+  attendanceDaysTotal       Int
+  classTeacherRemarks       String
+  headTeacherRemarks        String
+  overallAverageScore       Float
+  overallPerformanceLevel   String
+  closingDate               String?
+  nextTermOpeningDate       String?
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+}
+
+model SchemeOfWork {
+  id               String    @id @default(uuid())
+  teacherId        String
+  learningAreaId   String
+  classRoomId      String
+  streamId         String?
+  academicYearId   String
+  termId           String
+  title            String
+  entries          Json
+  status           String    @default("DRAFT")
+  submittedAt      DateTime?
+  reviewedByUserId String?
+  reviewedAt       DateTime?
+  reviewRemarks    String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
+
+model LessonPlan {
+  id                         String   @id @default(uuid())
+  schemeOfWorkEntryId        String?
+  teacherId                  String
+  learningAreaId             String
+  classRoomId                String
+  streamId                   String?
+  lessonDate                 String
+  durationMinutes            Int
+  rollBoys                   Int?
+  rollGirls                  Int?
+  strand                     String
+  subStrand                  String
+  specificLearningOutcomes   String[]
+  keyInquiryQuestions        String[]
+  coreCompetenciesAddressed  String[]
+  valuesAddressed            String[]
+  learningResources          String[]
+  steps                      Json
+  extendedActivity           String?
+  teacherSelfReflection      String?
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+}
+
+model Timetable {
+  id             String   @id @default(uuid())
+  schoolId       String
+  academicYearId String
+  termId         String
+  classRoomId    String
+  streamId       String
+  slots          Json
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model AttendanceRegister {
+  id                 String   @id @default(uuid())
+  schoolId           String
+  classRoomId        String
+  streamId           String
+  academicYearId     String
+  termId             String
+  date               String
+  type               String
+  lessonId           String?
+  markedByTeacherId  String
+  entries            Json
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model FeeStructure {
+  id             String   @id @default(uuid())
+  schoolId       String
+  academicYearId String
+  termId         String
+  gradeLevel     String
+  title          String
+  items          Json
+  dueDate        String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model StudentInvoice {
+  id             String   @id @default(uuid())
+  schoolId       String
+  studentId      String
+  feeStructureId String
+  academicYearId String
+  termId         String
+  invoiceNumber  String   @unique
+  items          Json
+  amountBilled   Float
+  discountAmount Float    @default(0)
+  amountPayable  Float
+  amountPaid     Float    @default(0)
+  balance        Float
+  status         String   @default("UNPAID")
+  dueDate        String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Payment {
+  id                   String   @id @default(uuid())
+  schoolId             String
+  invoiceId            String
+  studentId            String
+  receiptNumber        String   @unique
+  amount               Float
+  paymentMethod        String
+  transactionReference String   @unique
+  mpesaPhoneNumber     String?
+  paymentDate          String
+  recordedByUserId     String
+  status               String   @default("COMPLETED")
+  notes                String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}

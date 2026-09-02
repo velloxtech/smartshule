@@ -1,0 +1,692 @@
+{
+  "info": {
+    "name": "SmartShule CBC School Management API",
+    "_postman_id": "smartshule-api-collection-2026",
+    "description": "Comprehensive Postman collection for SmartShule School Management & CBC Curriculum Performance Tracking Backend (Hexagonal Architecture).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Authentication",
+      "item": [
+        {
+          "name": "1.1 Login as Admin (Auto-sets {{adminToken}})",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.accessToken) {",
+                  "    pm.environment.set('adminToken', json.data.accessToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@smartshule.ac.ke\",\n  \"password\": \"Admin@123\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "1.2 Login as Teacher (Auto-sets {{teacherToken}})",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.accessToken) {",
+                  "    pm.environment.set('teacherToken', json.data.accessToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"sarah.mwangi@smartshule.ac.ke\",\n  \"password\": \"Teacher@123\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
+          }
+        },
+        {
+          "name": "1.3 Register New User",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"accountant@smartshule.ac.ke\",\n  \"password\": \"Accountant@123\",\n  \"firstName\": \"James\",\n  \"lastName\": \"Koech\",\n  \"role\": \"ACCOUNTANT\",\n  \"phone\": \"+254712000333\",\n  \"schoolId\": \"{{schoolId}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] }
+          }
+        },
+        {
+          "name": "1.4 Get Current User Profile",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/auth/profile", "host": ["{{baseUrl}}"], "path": ["auth", "profile"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Academic Setup",
+      "item": [
+        {
+          "name": "2.1 Setup School Profile",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"SmartShule CBC Academy\",\n  \"code\": \"SSCA-2026\",\n  \"centerCode\": \"KNEC-041289\",\n  \"motto\": \"Excellence in Competence & Character\",\n  \"email\": \"admin@smartshule.ac.ke\",\n  \"phone\": \"+254712345678\",\n  \"address\": \"P.O. Box 4567-00100 Nairobi, Kenya\",\n  \"currency\": \"KES\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/academics/school", "host": ["{{baseUrl}}"], "path": ["academics", "school"] }
+          }
+        },
+        {
+          "name": "2.2 Get School Profile",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/academics/school", "host": ["{{baseUrl}}"], "path": ["academics", "school"] }
+          }
+        },
+        {
+          "name": "2.3 Create Academic Year",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"2026\",\n  \"startDate\": \"2026-01-05\",\n  \"endDate\": \"2026-11-20\",\n  \"isCurrent\": true,\n  \"schoolId\": \"{{schoolId}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/academics/years", "host": ["{{baseUrl}}"], "path": ["academics", "years"] }
+          }
+        },
+        {
+          "name": "2.4 List Academic Years",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/academics/years?schoolId={{schoolId}}", "host": ["{{baseUrl}}"], "path": ["academics", "years"], "query": [{ "key": "schoolId", "value": "{{schoolId}}" }] }
+          }
+        },
+        {
+          "name": "2.5 Create Academic Term",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"academicYearId\": \"{{academicYearId}}\",\n  \"termNumber\": 1,\n  \"name\": \"Term 1\",\n  \"startDate\": \"2026-01-05\",\n  \"endDate\": \"2026-04-03\",\n  \"isCurrent\": true\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/academics/terms", "host": ["{{baseUrl}}"], "path": ["academics", "terms"] }
+          }
+        },
+        {
+          "name": "2.6 Get Current Academic Context",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/academics/context?schoolId={{schoolId}}", "host": ["{{baseUrl}}"], "path": ["academics", "context"], "query": [{ "key": "schoolId", "value": "{{schoolId}}" }] }
+          }
+        },
+        {
+          "name": "2.7 Create Class (Grade)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Grade 7\",\n  \"gradeLevel\": \"GRADE_7\",\n  \"educationLevel\": \"JUNIOR_SCHOOL\",\n  \"schoolId\": \"{{schoolId}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/academics/classes", "host": ["{{baseUrl}}"], "path": ["academics", "classes"] }
+          }
+        },
+        {
+          "name": "2.8 List Classes",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/academics/classes?schoolId={{schoolId}}", "host": ["{{baseUrl}}"], "path": ["academics", "classes"], "query": [{ "key": "schoolId", "value": "{{schoolId}}" }] }
+          }
+        },
+        {
+          "name": "2.9 Create Stream",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"classRoomId\": \"{{classRoomId}}\",\n  \"name\": \"West\",\n  \"capacity\": 40\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/academics/streams", "host": ["{{baseUrl}}"], "path": ["academics", "streams"] }
+          }
+        },
+        {
+          "name": "2.10 Create CBC Learning Area (Subject)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Pre-Technical Studies\",\n  \"code\": \"PRETECH7\",\n  \"gradeLevel\": \"GRADE_7\",\n  \"educationLevel\": \"JUNIOR_SCHOOL\",\n  \"isElective\": false,\n  \"schoolId\": \"{{schoolId}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/academics/learning-areas", "host": ["{{baseUrl}}"], "path": ["academics", "learning-areas"] }
+          }
+        },
+        {
+          "name": "2.11 List Learning Areas",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/academics/learning-areas?gradeLevel=GRADE_7", "host": ["{{baseUrl}}"], "path": ["academics", "learning-areas"], "query": [{ "key": "gradeLevel", "value": "GRADE_7" }] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Students & Guardians",
+      "item": [
+        {
+          "name": "3.1 Register Student with Guardian",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"admissionNumber\": \"ADM-2026-002\",\n  \"upiNumber\": \"NEMIS-M8821B\",\n  \"firstName\": \"Brenda\",\n  \"middleName\": \"Achieng\",\n  \"lastName\": \"Otieno\",\n  \"dateOfBirth\": \"2013-09-12\",\n  \"gender\": \"FEMALE\",\n  \"gradeLevel\": \"GRADE_7\",\n  \"streamId\": \"{{streamId}}\",\n  \"schoolId\": \"{{schoolId}}\",\n  \"academicYearId\": \"{{academicYearId}}\",\n  \"guardian\": {\n    \"firstName\": \"Peter\",\n    \"lastName\": \"Otieno\",\n    \"email\": \"peter.otieno@gmail.com\",\n    \"phone\": \"+254711888999\",\n    \"relationship\": \"FATHER\",\n    \"emergencyContact\": \"+254711888999\"\n  }\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/students", "host": ["{{baseUrl}}"], "path": ["students"] }
+          }
+        },
+        {
+          "name": "3.2 List All Students",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/students?schoolId={{schoolId}}&gradeLevel=GRADE_7", "host": ["{{baseUrl}}"], "path": ["students"], "query": [{ "key": "schoolId", "value": "{{schoolId}}" }, { "key": "gradeLevel", "value": "GRADE_7" }] }
+          }
+        },
+        {
+          "name": "3.3 Get Student Profile by ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/students/{{studentId}}", "host": ["{{baseUrl}}"], "path": ["students", "{{studentId}}"] }
+          }
+        },
+        {
+          "name": "3.4 Update Student Bio",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"medicalConditions\": \"Mild peanut allergy\",\n  \"specialNeeds\": \"None\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/students/{{studentId}}", "host": ["{{baseUrl}}"], "path": ["students", "{{studentId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Teachers & Staff",
+      "item": [
+        {
+          "name": "4.1 Register Teacher Profile",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"kenneth.odhiambo@smartshule.ac.ke\",\n  \"firstName\": \"Kenneth\",\n  \"lastName\": \"Odhiambo\",\n  \"phone\": \"+254744111222\",\n  \"schoolId\": \"{{schoolId}}\",\n  \"employeeNumber\": \"EMP-0103\",\n  \"tscNumber\": \"TSC/998811\",\n  \"specialization\": [\"Pre-Technical Studies\", \"Computer Science\"],\n  \"qualification\": \"B.Ed Technical Education\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/teachers", "host": ["{{baseUrl}}"], "path": ["teachers"] }
+          }
+        },
+        {
+          "name": "4.2 List Teachers",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/teachers", "host": ["{{baseUrl}}"], "path": ["teachers"] }
+          }
+        },
+        {
+          "name": "4.3 Get Teacher by ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/teachers/{{teacherId}}", "host": ["{{baseUrl}}"], "path": ["teachers", "{{teacherId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. CBC Competency Assessment",
+      "item": [
+        {
+          "name": "5.1 Create Curriculum Strand",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"learningAreaId\": \"{{learningAreaId}}\",\n  \"gradeLevel\": \"GRADE_7\",\n  \"code\": \"STR-SCIE-02\",\n  \"title\": \"Matter and Energy Transformations\",\n  \"description\": \"Study of states of matter, mixtures, and energy sources\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/cbc/strands", "host": ["{{baseUrl}}"], "path": ["cbc", "strands"] }
+          }
+        },
+        {
+          "name": "5.2 Get Strands by Learning Area",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{teacherToken}}" }],
+            "url": { "raw": "{{baseUrl}}/cbc/strands/by-learning-area/{{learningAreaId}}", "host": ["{{baseUrl}}"], "path": ["cbc", "strands", "by-learning-area", "{{learningAreaId}}"] }
+          }
+        },
+        {
+          "name": "5.3 Create Sub-strand with Outcomes",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"strandId\": \"{{strandId}}\",\n  \"code\": \"SUB-SCIE-1.2\",\n  \"title\": \"Plant & Animal Cell Organelles\",\n  \"specificLearningOutcomes\": [\n    \"Identify nucleus, cytoplasm, and cell membrane under magnification\",\n    \"Distinguish plant cells from animal cells using chloroplasts and cell wall\",\n    \"Demonstrate care and safety when handling laboratory specimens\"\n  ],\n  \"suggestedExperiences\": [\n    \"Observing cheek cell smears under compound microscope\",\n    \"Creating clay models of plant cell structures\"\n  ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/cbc/sub-strands", "host": ["{{baseUrl}}"], "path": ["cbc", "sub-strands"] }
+          }
+        },
+        {
+          "name": "5.4 Record Formative Assessment (Rubrics)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{teacherToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": \"{{studentId}}\",\n  \"teacherId\": \"{{teacherId}}\",\n  \"learningAreaId\": \"{{learningAreaId}}\",\n  \"subStrandId\": \"{{subStrandId}}\",\n  \"termId\": \"{{termId}}\",\n  \"academicYearId\": \"{{academicYearId}}\",\n  \"assessmentDate\": \"2026-02-18\",\n  \"assessmentMethod\": \"PRACTICAL_WORK\",\n  \"performanceLevel\": \"EE\",\n  \"specificOutcomeTested\": \"Mounting temporary slide and focusing under 100x magnification\",\n  \"teacherRemarks\": \"Mastered optical focusing and neatly drew labeled diagram.\",\n  \"evidenceNotes\": \"Portfolio entry #4 signed off in laboratory manual.\",\n  \"targetedCompetencies\": [\n    \"CRITICAL_THINKING_AND_PROBLEM_SOLVING\",\n    \"DIGITAL_LITERACY\"\n  ],\n  \"valuesObserved\": [\"RESPONSIBILITY\", \"INTEGRITY\"]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/cbc/formative", "host": ["{{baseUrl}}"], "path": ["cbc", "formative"] }
+          }
+        },
+        {
+          "name": "5.5 List Formative Assessments",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{teacherToken}}" }],
+            "url": { "raw": "{{baseUrl}}/cbc/formative?studentId={{studentId}}&termId={{termId}}", "host": ["{{baseUrl}}"], "path": ["cbc", "formative"], "query": [{ "key": "studentId", "value": "{{studentId}}" }, { "key": "termId", "value": "{{termId}}" }] }
+          }
+        },
+        {
+          "name": "5.6 Record Summative Assessment",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{teacherToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": \"{{studentId}}\",\n  \"teacherId\": \"{{teacherId}}\",\n  \"learningAreaId\": \"{{learningAreaId}}\",\n  \"termId\": \"{{termId}}\",\n  \"academicYearId\": \"{{academicYearId}}\",\n  \"strandScores\": [\n    {\n      \"strandId\": \"{{strandId}}\",\n      \"performanceLevel\": \"EE\",\n      \"rawScore\": 92,\n      \"maxScore\": 100\n    }\n  ],\n  \"overallPerformanceLevel\": \"EE\",\n  \"teacherRemarks\": \"Outstanding grasp of scientific methods and experimental accuracy.\",\n  \"evaluationDate\": \"2026-03-30\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/cbc/summative", "host": ["{{baseUrl}}"], "path": ["cbc", "summative"] }
+          }
+        },
+        {
+          "name": "5.7 Generate Comprehensive CBC Report Card",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{teacherToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": \"{{studentId}}\",\n  \"termId\": \"{{termId}}\",\n  \"academicYearId\": \"{{academicYearId}}\",\n  \"classTeacherRemarks\": \"Kevin is an inquisitive and disciplined student who excels in scientific inquiry.\",\n  \"headTeacherRemarks\": \"Excellent results across learning areas. Promoted to next term with distinction.\",\n  \"closingDate\": \"2026-04-03\",\n  \"nextTermOpeningDate\": \"2026-04-28\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/cbc/report-cards/generate", "host": ["{{baseUrl}}"], "path": ["cbc", "report-cards", "generate"] }
+          }
+        },
+        {
+          "name": "5.8 View Student CBC Report Card",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{teacherToken}}" }],
+            "url": { "raw": "{{baseUrl}}/cbc/report-cards?studentId={{studentId}}&termId={{termId}}&academicYearId={{academicYearId}}", "host": ["{{baseUrl}}"], "path": ["cbc", "report-cards"], "query": [{ "key": "studentId", "value": "{{studentId}}" }, { "key": "termId", "value": "{{termId}}" }, { "key": "academicYearId", "value": "{{academicYearId}}" }] }
+          }
+        },
+        {
+          "name": "5.9 CBC Performance Analytics",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{teacherToken}}" }],
+            "url": { "raw": "{{baseUrl}}/cbc/analytics?termId={{termId}}&academicYearId={{academicYearId}}", "host": ["{{baseUrl}}"], "path": ["cbc", "analytics"], "query": [{ "key": "termId", "value": "{{termId}}" }, { "key": "academicYearId", "value": "{{academicYearId}}" }] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Schemes of Work & Lesson Plans",
+      "item": [
+        {
+          "name": "6.1 Create Scheme of Work",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{teacherToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"teacherId\": \"{{teacherId}}\",\n  \"learningAreaId\": \"{{learningAreaId}}\",\n  \"classRoomId\": \"{{classRoomId}}\",\n  \"streamId\": \"{{streamId}}\",\n  \"academicYearId\": \"{{academicYearId}}\",\n  \"termId\": \"{{termId}}\",\n  \"title\": \"Grade 7 Integrated Science - Term 1 2026 Teaching Scheme\",\n  \"entries\": [\n    {\n      \"weekNumber\": 1,\n      \"lessonNumber\": 1,\n      \"strandTitle\": \"Living Things and Their Environment\",\n      \"subStrandTitle\": \"Microscope and Cell Structure\",\n      \"specificLearningOutcomes\": [\"Identify parts of a light microscope\"],\n      \"keyInquiryQuestions\": [\"How does a microscope aid scientific discovery?\"],\n      \"learningExperiences\": [\"Manipulate lenses and observe coarse/fine adjustments\"],\n      \"learningResources\": [\"Compound microscopes\", \"KLB Science Book 7\"],\n      \"assessmentMethods\": [\"Observation\", \"Oral questioning\"]\n    }\n  ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/curriculum/schemes", "host": ["{{baseUrl}}"], "path": ["curriculum", "schemes"] }
+          }
+        },
+        {
+          "name": "6.2 List Schemes of Work",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{teacherToken}}" }],
+            "url": { "raw": "{{baseUrl}}/curriculum/schemes?teacherId={{teacherId}}", "host": ["{{baseUrl}}"], "path": ["curriculum", "schemes"], "query": [{ "key": "teacherId", "value": "{{teacherId}}" }] }
+          }
+        },
+        {
+          "name": "6.3 Submit Scheme for Review",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{teacherToken}}" }],
+            "url": { "raw": "{{baseUrl}}/curriculum/schemes/{{schemeId}}/submit", "host": ["{{baseUrl}}"], "path": ["curriculum", "schemes", "{{schemeId}}", "submit"] }
+          }
+        },
+        {
+          "name": "6.4 Review Scheme of Work (Head Teacher)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"approved\": true,\n  \"remarks\": \"Approved. Good progression of learning experiences.\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/curriculum/schemes/{{schemeId}}/review", "host": ["{{baseUrl}}"], "path": ["curriculum", "schemes", "{{schemeId}}", "review"] }
+          }
+        },
+        {
+          "name": "6.5 Create Lesson Plan",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{teacherToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"teacherId\": \"{{teacherId}}\",\n  \"schemeOfWorkEntryId\": \"scheme-entry-01\",\n  \"learningAreaId\": \"{{learningAreaId}}\",\n  \"classRoomId\": \"{{classRoomId}}\",\n  \"streamId\": \"{{streamId}}\",\n  \"lessonDate\": \"2026-02-20\",\n  \"durationMinutes\": 40,\n  \"rollBoys\": 20,\n  \"rollGirls\": 18,\n  \"strand\": \"Living Things\",\n  \"subStrand\": \"Cell Structure\",\n  \"specificLearningOutcomes\": [\"Distinguish plant cell wall from animal cell membrane\"],\n  \"keyInquiryQuestions\": [\"Why do plant cells have rigid shapes?\"],\n  \"coreCompetenciesAddressed\": [\"CRITICAL_THINKING_AND_PROBLEM_SOLVING\"],\n  \"valuesAddressed\": [\"RESPONSIBILITY\"],\n  \"learningResources\": [\"Microscope slides\", \"Prepared plant tissues\"],\n  \"steps\": [\n    {\n      \"stepNumber\": 1,\n      \"stepTitle\": \"Introduction\",\n      \"durationMinutes\": 5,\n      \"teacherActivities\": \"Reviews previous lesson on microscope parts.\",\n      \"learnerActivities\": \"Answer oral recap questions.\"\n    },\n    {\n      \"stepNumber\": 2,\n      \"stepTitle\": \"Lesson Body\",\n      \"durationMinutes\": 30,\n      \"teacherActivities\": \"Guides slide examination.\",\n      \"learnerActivities\": \"Observe cell wall and sketch diagram.\"\n    },\n    {\n      \"stepNumber\": 3,\n      \"stepTitle\": \"Conclusion\",\n      \"durationMinutes\": 5,\n      \"teacherActivities\": \"Summarizes key contrasts between plant and animal cells.\",\n      \"learnerActivities\": \"Complete exit ticket in notebook.\"\n    }\n  ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/curriculum/lesson-plans", "host": ["{{baseUrl}}"], "path": ["curriculum", "lesson-plans"] }
+          }
+        },
+        {
+          "name": "6.6 List Lesson Plans",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{teacherToken}}" }],
+            "url": { "raw": "{{baseUrl}}/curriculum/lesson-plans?teacherId={{teacherId}}", "host": ["{{baseUrl}}"], "path": ["curriculum", "lesson-plans"], "query": [{ "key": "teacherId", "value": "{{teacherId}}" }] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Timetables & Schedules",
+      "item": [
+        {
+          "name": "7.1 Create Stream Timetable",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"schoolId\": \"{{schoolId}}\",\n  \"academicYearId\": \"{{academicYearId}}\",\n  \"termId\": \"{{termId}}\",\n  \"classRoomId\": \"{{classRoomId}}\",\n  \"streamId\": \"{{streamId}}\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/timetables", "host": ["{{baseUrl}}"], "path": ["timetables"] }
+          }
+        },
+        {
+          "name": "7.2 Add / Update Timetable Slot",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"timetableId\": \"timetable-g7-east\",\n  \"dayOfWeek\": \"TUESDAY\",\n  \"periodNumber\": 1,\n  \"startTime\": \"08:00\",\n  \"endTime\": \"08:45\",\n  \"learningAreaId\": \"{{learningAreaId}}\",\n  \"teacherId\": \"{{teacherId}}\",\n  \"roomName\": \"Science Lab 2\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/timetables/slots", "host": ["{{baseUrl}}"], "path": ["timetables", "slots"] }
+          }
+        },
+        {
+          "name": "7.3 Get Stream Timetable",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{teacherToken}}" }],
+            "url": { "raw": "{{baseUrl}}/timetables/stream?streamId={{streamId}}&termId={{termId}}", "host": ["{{baseUrl}}"], "path": ["timetables", "stream"], "query": [{ "key": "streamId", "value": "{{streamId}}" }, { "key": "termId", "value": "{{termId}}" }] }
+          }
+        },
+        {
+          "name": "7.4 Get Teacher Weekly Schedule",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{teacherToken}}" }],
+            "url": { "raw": "{{baseUrl}}/timetables/teacher?teacherId={{teacherId}}&termId={{termId}}", "host": ["{{baseUrl}}"], "path": ["timetables", "teacher"], "query": [{ "key": "teacherId", "value": "{{teacherId}}" }, { "key": "termId", "value": "{{termId}}" }] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Attendance & Class Registers",
+      "item": [
+        {
+          "name": "8.1 Mark Daily Class Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{teacherToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"schoolId\": \"{{schoolId}}\",\n  \"classRoomId\": \"{{classRoomId}}\",\n  \"streamId\": \"{{streamId}}\",\n  \"academicYearId\": \"{{academicYearId}}\",\n  \"termId\": \"{{termId}}\",\n  \"date\": \"2026-02-23\",\n  \"type\": \"DAILY_MORNING\",\n  \"markedByTeacherId\": \"{{teacherId}}\",\n  \"notifyGuardiansForAbsence\": true,\n  \"entries\": [\n    {\n      \"studentId\": \"{{studentId}}\",\n      \"status\": \"PRESENT\"\n    }\n  ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/attendance", "host": ["{{baseUrl}}"], "path": ["attendance"] }
+          }
+        },
+        {
+          "name": "8.2 View Daily Register for Date",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{teacherToken}}" }],
+            "url": { "raw": "{{baseUrl}}/attendance/daily?streamId={{streamId}}&date=2026-02-23", "host": ["{{baseUrl}}"], "path": ["attendance", "daily"], "query": [{ "key": "streamId", "value": "{{streamId}}" }, { "key": "date", "value": "2026-02-23" }] }
+          }
+        },
+        {
+          "name": "8.3 Get Stream Attendance Report",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{teacherToken}}" }],
+            "url": { "raw": "{{baseUrl}}/attendance/report?streamId={{streamId}}&termId={{termId}}", "host": ["{{baseUrl}}"], "path": ["attendance", "report"], "query": [{ "key": "streamId", "value": "{{streamId}}" }, { "key": "termId", "value": "{{termId}}" }] }
+          }
+        },
+        {
+          "name": "8.4 Get Student Attendance Summary",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{teacherToken}}" }],
+            "url": { "raw": "{{baseUrl}}/attendance/student/{{studentId}}?termId={{termId}}&academicYearId={{academicYearId}}", "host": ["{{baseUrl}}"], "path": ["attendance", "student", "{{studentId}}"], "query": [{ "key": "termId", "value": "{{termId}}" }, { "key": "academicYearId", "value": "{{academicYearId}}" }] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "9. Fee Billing & Payments",
+      "item": [
+        {
+          "name": "9.1 Create Grade Fee Structure",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"schoolId\": \"{{schoolId}}\",\n  \"academicYearId\": \"{{academicYearId}}\",\n  \"termId\": \"{{termId}}\",\n  \"gradeLevel\": \"GRADE_7\",\n  \"title\": \"Grade 7 Junior Secondary - Term 1 2026 Fee Structure\",\n  \"dueDate\": \"2026-02-28\",\n  \"items\": [\n    {\n      \"name\": \"Tuition Fee\",\n      \"amount\": 25000,\n      \"isOptional\": false,\n      \"category\": \"TUITION\"\n    },\n    {\n      \"name\": \"CBC Assessment Practical Kits\",\n      \"amount\": 6000,\n      \"isOptional\": false,\n      \"category\": \"ASSESSMENT\"\n    },\n    {\n      \"name\": \"Activity & Sports Levy\",\n      \"amount\": 2500,\n      \"isOptional\": false,\n      \"category\": \"ACTIVITY\"\n    },\n    {\n      \"name\": \"Hot Lunch Programme\",\n      \"amount\": 8500,\n      \"isOptional\": true,\n      \"category\": \"MEALS\"\n    }\n  ]\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/finance/structures", "host": ["{{baseUrl}}"], "path": ["finance", "structures"] }
+          }
+        },
+        {
+          "name": "9.2 List Fee Structures",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/finance/structures?schoolId={{schoolId}}", "host": ["{{baseUrl}}"], "path": ["finance", "structures"], "query": [{ "key": "schoolId", "value": "{{schoolId}}" }] }
+          }
+        },
+        {
+          "name": "9.3 Generate Invoices for Grade",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"schoolId\": \"{{schoolId}}\",\n  \"academicYearId\": \"{{academicYearId}}\",\n  \"termId\": \"{{termId}}\",\n  \"gradeLevel\": \"GRADE_7\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/finance/invoices/generate", "host": ["{{baseUrl}}"], "path": ["finance", "invoices", "generate"] }
+          }
+        },
+        {
+          "name": "9.4 Initiate M-Pesa STK Push Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"invoiceId\": \"{{invoiceId}}\",\n  \"phoneNumber\": \"254799888777\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/finance/mpesa/stk-push", "host": ["{{baseUrl}}"], "path": ["finance", "mpesa", "stk-push"] }
+          }
+        },
+        {
+          "name": "9.5 Record Bank / Cash Payment (Issues Receipt)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"schoolId\": \"{{schoolId}}\",\n  \"invoiceId\": \"{{invoiceId}}\",\n  \"amount\": 12000,\n  \"paymentMethod\": \"BANK_TRANSFER\",\n  \"transactionReference\": \"EQTY-99128374\",\n  \"recordedByUserId\": \"usr-admin-01\",\n  \"notes\": \"Direct Equity Bank deposit\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/finance/payments", "host": ["{{baseUrl}}"], "path": ["finance", "payments"] }
+          }
+        },
+        {
+          "name": "9.6 Get Student Fee Statement & Ledger",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/finance/statements/{{studentId}}", "host": ["{{baseUrl}}"], "path": ["finance", "statements", "{{studentId}}"] }
+          }
+        },
+        {
+          "name": "9.7 Get Fee Defaulters Report",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/finance/defaulters?schoolId={{schoolId}}&minBalance=1000", "host": ["{{baseUrl}}"], "path": ["finance", "defaulters"], "query": [{ "key": "schoolId", "value": "{{schoolId}}" }, { "key": "minBalance", "value": "1000" }] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. Executive Analytics & Dashboard",
+      "item": [
+        {
+          "name": "10.1 Get School Dashboard Summary",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/analytics/dashboard?schoolId={{schoolId}}", "host": ["{{baseUrl}}"], "path": ["analytics", "dashboard"], "query": [{ "key": "schoolId", "value": "{{schoolId}}" }] }
+          }
+        }
+      ]
+    }
+  ]
+}
