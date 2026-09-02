@@ -204,3 +204,4 @@ Because this system strictly follows **Hexagonal Architecture**:
 
 ## 📜 License
 ISC License. Designed and developed for modern Competency-Based Curriculum school institutions.
+# smartshule
