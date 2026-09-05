@@ -1,0 +1,7 @@
+{
+  "name": "smartshule CBC Kenya Portal",
+  "description": "Comprehensive school executive dashboard and management system for Kenya's Competency-Based Curriculum (CBC), featuring real-time attendance, KNEC sync, M-Pesa fee collection, and CBC rubric assessments.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
