@@ -20,47 +20,47 @@ export const KnecSyncModal: React.FC<KnecSyncModalProps> = ({ isOpen, onClose })
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-outline-variant/30">
-        <div className="bg-[#00236f] text-white p-5 flex items-center justify-between">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
+      <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-lg w-full max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
+        <div className="bg-[#00236f] text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center text-white">
+            <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center text-white shrink-0">
               <span className="material-symbols-outlined text-[24px]">verified</span>
             </div>
             <div>
-              <h3 className="font-semibold text-base leading-tight">MoE & KNEC CBA Portal Bridge</h3>
-              <p className="text-xs text-blue-200">Kenya National Examinations Council Sync Engine v3.2</p>
+              <h3 className="font-semibold text-base leading-tight">MoE & National CBA Portal Bridge</h3>
+              <p className="text-xs text-blue-200">National Assessment & Examinations Sync Engine v3.2</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-blue-200 hover:text-white hover:bg-white/10 transition-colors"
+            className="p-1 rounded-lg text-blue-200 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
           >
             <span className="material-symbols-outlined text-[20px]">close</span>
           </button>
         </div>
 
-        <div className="p-6 space-y-4">
+        <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1 overscroll-contain">
           <div className="p-3.5 bg-surface-container-low rounded-xl border border-outline-variant/30 space-y-2">
             <div className="flex items-center justify-between text-xs">
               <span className="text-on-surface-variant font-medium">Institution Code:</span>
-              <span className="font-data-mono font-bold text-primary">KNEC-CENTRE-3829011</span>
+              <span className="font-data-mono font-bold text-primary">CBA-CENTRE-3829011</span>
             </div>
             <div className="flex items-center justify-between text-xs">
-              <span className="text-on-surface-variant font-medium">NEMIS Kenya Portal:</span>
+              <span className="text-on-surface-variant font-medium">NEMIS National Portal:</span>
               <span className="inline-flex items-center gap-1 text-secondary font-semibold">
                 <span className="w-1.5 h-1.5 rounded-full bg-secondary"></span> Connected (1,248 Verified)
               </span>
             </div>
             <div className="flex items-center justify-between text-xs">
-              <span className="text-on-surface-variant font-medium">KNEC CBA Summative Endpoint:</span>
+              <span className="text-on-surface-variant font-medium">CBA Summative Endpoint:</span>
               <span className="inline-flex items-center gap-1 text-secondary font-semibold">
                 <span className="w-1.5 h-1.5 rounded-full bg-secondary"></span> Operational
               </span>
             </div>
             <div className="flex items-center justify-between text-xs">
               <span className="text-on-surface-variant font-medium">Summative Portal Window:</span>
-              <span className="font-semibold text-error">Closes 29th March 2024</span>
+              <span className="font-semibold text-error">Closes 27th November 2026</span>
             </div>
           </div>
 

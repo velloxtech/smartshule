@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { TabType, Student, Teacher, SystemActivity, AssessmentRecord, FeeTransaction } from './types';
 import { apiService } from './services/api';
-import {
-  initialStudents,
-  initialTeachers,
-  initialSystemActivity,
-  initialAssessments,
-  initialTransactions,
-} from './data/mockData';
+import { useAuth } from './context/AuthContext';
+import { isTabPermitted } from './utils/rbac';
+
+// Public & Auth Views
+import { LandingPage } from './components/landing/LandingPage';
+import { LoginPage } from './components/auth/LoginPage';
 
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
@@ -34,21 +33,25 @@ import { AdmitLearnerModal } from './components/modals/AdmitLearnerModal';
 import { SendSmsModal } from './components/modals/SendSmsModal';
 import { KnecSyncModal } from './components/modals/KnecSyncModal';
 import { ExportReportModal } from './components/modals/ExportReportModal';
+import { OnboardTeacherModal } from './components/modals/OnboardTeacherModal';
 
 export default function App() {
+  const { user, isAuthenticated, isLoading } = useAuth();
+  const [appView, setAppView] = useState<'landing' | 'login' | 'portal'>('landing');
   const [currentTab, setCurrentTab] = useState<TabType>('dashboard');
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [currentTerm, setCurrentTerm] = useState('Term 1 - 2024');
+  const [currentTerm, setCurrentTerm] = useState('Term 3 - 2026');
 
-  // Core Dynamic Data
-  const [students, setStudents] = useState<Student[]>(initialStudents);
-  const [teachers, setTeachers] = useState<Teacher[]>(initialTeachers);
-  const [activities, setActivities] = useState<SystemActivity[]>(initialSystemActivity);
-  const [assessments, setAssessments] = useState<AssessmentRecord[]>(initialAssessments);
-  const [transactions, setTransactions] = useState<FeeTransaction[]>(initialTransactions);
-  const [totalCollectedFee, setTotalCollectedFee] = useState(8420000);
+  // Core Dynamic Data (Live from backend or user actions - initialized empty)
+  const [students, setStudents] = useState<Student[]>([]);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [activities, setActivities] = useState<SystemActivity[]>([]);
+  const [assessments, setAssessments] = useState<AssessmentRecord[]>([]);
+  const [transactions, setTransactions] = useState<FeeTransaction[]>([]);
+  const [totalCollectedFee, setTotalCollectedFee] = useState(0);
 
   // Modal Visibility States
+  const [onboardTeacherModalOpen, setOnboardTeacherModalOpen] = useState(false);
   const [mpesaModalOpen, setMpesaModalOpen] = useState(false);
   const [selectedStudentForMpesa, setSelectedStudentForMpesa] = useState<Student | undefined>(undefined);
 
@@ -64,24 +67,83 @@ export default function App() {
   const [selectedStudentForReport, setSelectedStudentForReport] = useState<Student | undefined>(undefined);
   const [backendConnected, setBackendConnected] = useState(false);
 
-  // Sync with Backend API on Mount
+  // Synchronize view state with authentication status
+  useEffect(() => {
+    if (isAuthenticated) {
+      setAppView('portal');
+    }
+  }, [isAuthenticated]);
+
+  // Role-Based Tab Guard: if active tab is forbidden for this role, bounce to dashboard
+  useEffect(() => {
+    if (user && !isTabPermitted(currentTab, user.role)) {
+      setCurrentTab('dashboard');
+    }
+  }, [user, currentTab]);
+
+  // Sync with Backend API on Mount & Auth State Changes
   useEffect(() => {
     async function syncBackend() {
       const isUp = await apiService.checkHealth();
       setBackendConnected(isUp);
-      if (isUp) {
+      if (isUp && isAuthenticated) {
         try {
           const studentData = await apiService.getStudents();
-          if (studentData?.students?.length) {
-            setStudents(studentData.students);
+          if (studentData?.data && Array.isArray(studentData.data) && studentData.data.length > 0) {
+            const mappedStudents: Student[] = studentData.data.map((st: any) => ({
+              id: st.id,
+              admNo: st.admissionNumber,
+              upi: st.upiNumber || 'NEMIS-PENDING',
+              nemis: st.upiNumber || 'NEMIS-PENDING',
+              name: `${st.firstName} ${st.lastName}`,
+              gender: st.gender === 'FEMALE' ? 'Girl' : 'Boy',
+              grade: st.gradeLevel ? st.gradeLevel.replace('_', ' ') : 'Grade 7',
+              stream: st.streamId ? st.streamId.replace('stream-g7-', '').toUpperCase() : 'East',
+              guardianName: st.guardian ? `${st.guardian.firstName} ${st.guardian.lastName}` : 'Guardian',
+              guardianPhone: st.guardian?.phone || '+254700000000',
+              feeBalance: 0,
+              totalFee: 42000,
+              attendanceRate: 98,
+              cbcRating: 'ME',
+              status: st.status === 'ACTIVE' ? 'Active' : st.status,
+            }));
+            setStudents(mappedStudents);
           }
         } catch {
-          // Fallback to local state
+          // Keep empty state
+        }
+        try {
+          const teacherData = await apiService.getTeachers();
+          if (teacherData?.data && Array.isArray(teacherData.data) && teacherData.data.length > 0) {
+            const mappedTeachers: Teacher[] = teacherData.data.map((t: any) => ({
+              id: t.id,
+              name: t.user ? `${t.user.firstName} ${t.user.lastName}` : `Teacher ${t.tscNumber || ''}`,
+              role: 'Subject Teacher',
+              tscNumber: t.tscNumber || 'TSC-PENDING',
+              assignedClass: 'Grade 7 East',
+              phone: t.user?.phone || '+254700000000',
+              email: t.user?.email || 'teacher@smartshule.ac.ke',
+              learningAreas: t.specialization || ['Science & Tech'],
+              status: 'Clocked In',
+              clockInTime: '07:45 AM',
+            }));
+            setTeachers(mappedTeachers);
+          }
+        } catch {
+          // Keep empty state
+        }
+        try {
+          const analyticsData = await apiService.getDashboardAnalytics();
+          if (analyticsData?.data?.finance?.totalCollected) {
+            setTotalCollectedFee(analyticsData.data.finance.totalCollected);
+          }
+        } catch {
+          // Keep default 0
         }
       }
     }
     syncBackend();
-  }, []);
+  }, [isAuthenticated]);
 
   // Quick Action / Deep Link Triggers
   const handleOpenMpesa = (student?: Student) => {
@@ -110,8 +172,8 @@ export default function App() {
     const newTx: FeeTransaction = {
       id: `tx-${Date.now()}`,
       ref: `SLK${Math.floor(10000000 + Math.random() * 90000000)}`,
-      studentName: student?.name || 'Hillside Learner',
-      admNo: student?.admNo || 'HA-2023-000',
+      studentName: student?.name || 'Grace Seed Learner',
+      admNo: student?.admNo || 'GSA-2026-000',
       grade: student?.grade || 'Grade 1',
       amount,
       channel: 'M-Pesa Express',
@@ -135,7 +197,13 @@ export default function App() {
     }
 
     // Trigger Backend M-Pesa STK Push Endpoint
-    apiService.initiateMpesaStkPush(phone, amount, studentId).catch(() => {});
+    const cleanPhone = (phone || '').replace(/\D/g, '');
+    const formattedPhone = cleanPhone.startsWith('0')
+      ? `254${cleanPhone.slice(1)}`
+      : cleanPhone.startsWith('254')
+      ? cleanPhone
+      : `254${cleanPhone}`;
+    apiService.initiateMpesaStkPush('inv-2026-001', formattedPhone).catch(() => {});
 
     // Add activity
     const newAct: SystemActivity = {
@@ -162,7 +230,28 @@ export default function App() {
     setAssessments([newRecord, ...assessments]);
 
     // Save to Backend API
-    apiService.recordFormativeAssessment(assessment).catch(() => {});
+    const levelMap: Record<string, string> = {
+      EE: 'EE',
+      ME: 'ME',
+      AE: 'AE',
+      BE: 'BE',
+    };
+    apiService
+      .recordFormativeAssessment({
+        studentId: assessment.studentId,
+        teacherId: 'teacher-001',
+        learningAreaId: 'la-sci-001',
+        subStrandId: 'sub-strand-001',
+        termId: 'term-2026-1',
+        academicYearId: 'year-2026',
+        assessmentDate: new Date().toISOString().split('T')[0],
+        assessmentMethod: 'OBSERVATION',
+        performanceLevel: levelMap[assessment.rating] || 'ME',
+        specificOutcomeTested: `${assessment.strand} - ${assessment.subStrand}`,
+        teacherRemarks: assessment.evidence || 'Demonstrated proficiency in core competency.',
+        evidenceNotes: assessment.evidence,
+      })
+      .catch(() => {});
 
     // Update student's CBC rating in state
     setStudents((prev) =>
@@ -187,15 +276,35 @@ export default function App() {
   };
 
   // Learner Admission Handler
-  const handleAdmitStudent = (newStudent: Omit<Student, 'id'>) => {
+  const handleAdmitStudent = (newStudent: Omit<Student, 'id'>, rawBackendData?: any) => {
     const created: Student = {
       ...newStudent,
       id: `std-${Date.now()}`,
     };
-    setStudents([created, ...students]);
+    setStudents((prev) => [created, ...prev]);
 
     // Save to Backend API
-    apiService.registerStudent(created).catch(() => {});
+    if (rawBackendData) {
+      apiService.registerStudent(rawBackendData).catch(() => {});
+    } else {
+      const parts = (newStudent.name || 'Learner Student').split(' ');
+      const first = parts[0] || 'Learner';
+      const last = parts.slice(1).join(' ') || 'Student';
+      apiService
+        .registerStudent({
+          admissionNumber: newStudent.admNo || `ADM-${Date.now()}`,
+          upiNumber: newStudent.upi,
+          firstName: first,
+          lastName: last,
+          dateOfBirth: '2014-01-01',
+          gender: 'MALE',
+          gradeLevel: 'GRADE_7',
+          streamId: 'stream-g7-east',
+          schoolId: 'school-001',
+          academicYearId: 'year-2026',
+        })
+        .catch(() => {});
+    }
 
     const newAct: SystemActivity = {
       id: `act-${Date.now()}`,
@@ -206,7 +315,37 @@ export default function App() {
       timestamp: 'Just now',
       badgeColor: 'bg-tertiary-container text-white',
     };
-    setActivities([newAct, ...activities]);
+    setActivities((prev) => [newAct, ...prev]);
+  };
+
+  // Onboard New Teacher Handler
+  const handleTeacherCreated = (newTeacherData: any) => {
+    const newT: Teacher = {
+      id: newTeacherData.id || `tch-${Date.now()}`,
+      name: newTeacherData.user
+        ? `${newTeacherData.user.firstName} ${newTeacherData.user.lastName}`
+        : `${newTeacherData.firstName || 'Teacher'} ${newTeacherData.lastName || 'Staff'}`,
+      role: 'Subject Teacher',
+      tscNumber: newTeacherData.tscNumber || 'TSC-NEW',
+      assignedClass: 'Grade 7 East',
+      phone: newTeacherData.user?.phone || '+254711000000',
+      email: newTeacherData.user?.email || 'teacher@smartshule.ac.ke',
+      learningAreas: newTeacherData.specialization || ['CBC Core'],
+      status: 'Clocked In',
+      clockInTime: '08:00 AM',
+    };
+    setTeachers((prev) => [newT, ...prev]);
+
+    const newAct: SystemActivity = {
+      id: `act-${Date.now()}`,
+      type: 'report',
+      icon: 'person_add',
+      title: `Teacher Onboarded: ${newT.name}`,
+      description: `TSC #${newT.tscNumber} · Areas: ${newT.learningAreas.join(', ')}`,
+      timestamp: 'Just now',
+      badgeColor: 'bg-secondary text-white',
+    };
+    setActivities((prev) => [newAct, ...prev]);
   };
 
   // Teacher Clock-In Toggle
@@ -226,6 +365,38 @@ export default function App() {
     );
   };
 
+  // Render Public Landing Page
+  if (appView === 'landing') {
+    return (
+      <LandingPage
+        onNavigateLogin={() => setAppView('login')}
+        isAuthenticated={isAuthenticated}
+        onNavigatePortal={() => setAppView('portal')}
+      />
+    );
+  }
+
+  // Render Single Dedicated Login Page
+  if (appView === 'login') {
+    return (
+      <LoginPage
+        onSuccess={() => setAppView('portal')}
+        onNavigateLanding={() => setAppView('landing')}
+      />
+    );
+  }
+
+  // Fallback: If not authenticated, ensure landing view
+  if (!isAuthenticated && !isLoading) {
+    return (
+      <LandingPage
+        onNavigateLogin={() => setAppView('login')}
+        isAuthenticated={false}
+        onNavigatePortal={() => setAppView('portal')}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-surface flex flex-col antialiased text-on-surface">
       {/* Fixed Left Navigation Sidebar */}
@@ -238,6 +409,7 @@ export default function App() {
         }}
         mobileOpen={mobileSidebarOpen}
         onCloseMobile={() => setMobileSidebarOpen(false)}
+        onNavigateLanding={() => setAppView('landing')}
       />
 
       {/* Main Content Viewport (offset by sidebar width on desktop) */}
@@ -249,6 +421,8 @@ export default function App() {
           onChangeTerm={setCurrentTerm}
           students={students}
           teachers={teachers}
+          backendConnected={backendConnected}
+          onNavigateLanding={() => setAppView('landing')}
           onSelectStudent={(student) => {
             handleViewReportCard(student);
           }}
@@ -285,11 +459,20 @@ export default function App() {
               onOpenCBCWithStudent={handleOpenCbc}
               onOpenAdmitModal={() => setAdmitModalOpen(true)}
               onViewReportCard={handleViewReportCard}
+              onUpdateStudent={(updated) =>
+                setStudents((prev) =>
+                  prev.map((s) => (s.id === updated.id ? { ...s, ...updated } : s))
+                )
+              }
             />
           )}
 
           {currentTab === 'teachers-staff' && (
-            <TeachersView teachers={teachers} onToggleClockIn={handleToggleClockIn} />
+            <TeachersView
+              teachers={teachers}
+              onToggleClockIn={handleToggleClockIn}
+              onOpenOnboardTeacher={() => setOnboardTeacherModalOpen(true)}
+            />
           )}
 
           {currentTab === 'classes-streams' && <ClassesView />}
@@ -328,6 +511,7 @@ export default function App() {
             <InvoicesMpesaView
               transactions={transactions}
               totalCollected={totalCollectedFee}
+              students={students}
               onOpenMpesaModal={() => handleOpenMpesa()}
             />
           )}
@@ -340,9 +524,26 @@ export default function App() {
             />
           )}
         </main>
+
+        {/* Global Portal Footer & Vellox Tech Watermark */}
+        <footer className="mt-auto py-4 px-6 border-t border-outline-variant/20 text-center text-xs text-on-surface-variant flex flex-wrap items-center justify-between gap-2">
+          <div className="font-semibold text-on-surface">
+            Grace Seed Academy · School Management System
+          </div>
+          <div className="flex items-center gap-1.5 text-xs text-on-surface-variant">
+            <span>Powered by</span>
+            <span className="font-bold text-primary tracking-wide">Vellox Tech</span>
+          </div>
+        </footer>
       </div>
 
       {/* Global Interactive Operational Modals */}
+      <OnboardTeacherModal
+        isOpen={onboardTeacherModalOpen}
+        onClose={() => setOnboardTeacherModalOpen(false)}
+        onTeacherCreated={handleTeacherCreated}
+      />
+
       <MpesaStkModal
         isOpen={mpesaModalOpen}
         onClose={() => setMpesaModalOpen(false)}

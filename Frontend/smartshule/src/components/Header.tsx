@@ -1,5 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Student, Teacher } from '../types';
+import { useAuth } from '../context/AuthContext';
+
+import { getRoleDisplayName, getRoleBadgeStyle } from '../utils/rbac';
 
 interface HeaderProps {
   onToggleMobile: () => void;
@@ -9,6 +12,8 @@ interface HeaderProps {
   teachers: Teacher[];
   onSelectStudent?: (student: Student) => void;
   onOpenQuickAction?: (action: string) => void;
+  onNavigateLanding?: () => void;
+  backendConnected?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -18,8 +23,12 @@ export const Header: React.FC<HeaderProps> = ({
   students,
   teachers,
   onSelectStudent,
+  onNavigateLanding,
+  backendConnected = true,
 }) => {
+  const { user, logout } = useAuth();
   const [termDropdownOpen, setTermDropdownOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -42,7 +51,7 @@ export const Header: React.FC<HeaderProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const terms = ['Term 1 - 2024', 'Term 2 - 2024', 'Term 3 - 2024', 'Term 1 - 2025'];
+  const terms = ['Term 3 - 2026', 'Term 2 - 2026', 'Term 1 - 2026', 'Term 1 - 2027'];
 
   const filteredStudents = searchQuery.trim()
     ? students.filter(
@@ -96,7 +105,7 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
 
           {termDropdownOpen && (
-            <div className="absolute left-0 mt-xs w-48 rounded-lg bg-surface-container-lowest p-xs shadow-xl z-50 border border-outline-variant/30 flex flex-col gap-base animate-in fade-in slide-in-from-top-1">
+            <div className="absolute left-0 mt-xs w-48 max-w-[calc(100vw-2rem)] rounded-lg bg-surface-container-lowest p-xs shadow-xl z-50 border border-outline-variant/30 flex flex-col gap-base animate-in fade-in slide-in-from-top-1">
               <div className="px-sm py-xs text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">
                 Academic Session
               </div>
@@ -238,12 +247,12 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
 
           {showNotifications && (
-            <div className="absolute right-0 mt-2 w-80 rounded-xl bg-surface-container-lowest p-sm shadow-2xl border border-outline-variant/30 z-50 animate-in fade-in">
+            <div className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-xl bg-surface-container-lowest p-sm shadow-2xl border border-outline-variant/30 z-50 animate-in fade-in">
               <div className="flex items-center justify-between pb-sm border-b border-surface-container">
                 <span className="font-headline-md text-[14px] font-semibold text-on-surface">
                   Notifications & Alerts
                 </span>
-                <span className="text-[11px] text-secondary font-medium">KNEC Live Bridge</span>
+                <span className="text-[11px] text-secondary font-medium">CBA Live Bridge</span>
               </div>
               <div className="flex flex-col gap-sm py-sm max-h-72 overflow-y-auto">
                 <div className="p-sm rounded-lg bg-secondary-container/30 flex gap-sm items-start">
@@ -253,7 +262,7 @@ export const Header: React.FC<HeaderProps> = ({
                   <div>
                     <div className="text-xs font-semibold text-on-surface">M-Pesa STK Inflow</div>
                     <div className="text-[11px] text-on-surface-variant">
-                      KES 24,000 received for Kevin Omondi (Adm #2024-082)
+                      KES 24,000 received for Kevin Omondi (Adm #GSA-2026-082)
                     </div>
                     <div className="text-[10px] text-outline mt-0.5">2 mins ago</div>
                   </div>
@@ -301,7 +310,7 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
 
           {showHelp && (
-            <div className="absolute right-0 mt-2 w-72 rounded-xl bg-surface-container-lowest p-md shadow-2xl border border-outline-variant/30 z-50">
+            <div className="absolute right-0 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-xl bg-surface-container-lowest p-md shadow-2xl border border-outline-variant/30 z-50">
               <div className="flex items-center gap-xs font-semibold text-sm text-primary mb-2">
                 <span className="material-symbols-outlined text-[18px]">info</span>
                 <span>KICD CBC Rating Guide</span>
@@ -321,18 +330,86 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
               </div>
               <div className="mt-3 pt-2 border-t border-surface-container text-[11px] text-outline">
-                Hillside Academy · MoE CBC Portal v1.4.0
+                Grace Seed Academy · CBC Portal v2.0
               </div>
             </div>
           )}
         </div>
 
-        {/* User Avatar */}
+        {/* Backend Online Status Dot */}
         <div
-          className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0 shadow-xs cursor-pointer"
-          title="Maina Kamau (Admin)"
+          className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-[11px] font-medium border ${
+            backendConnected
+              ? 'bg-secondary-container/30 border-secondary/40 text-secondary'
+              : 'bg-error-container/30 border-error/40 text-error'
+          }`}
+          title={backendConnected ? 'Backend Connected (Hexagonal REST API Active)' : 'Connecting to Backend...'}
         >
-          <span className="material-symbols-outlined text-on-primary text-[18px]">person</span>
+          <span className={`w-2 h-2 rounded-full ${backendConnected ? 'bg-secondary animate-pulse' : 'bg-error'}`}></span>
+          <span className="hidden md:inline">{backendConnected ? 'API Live' : 'Connecting'}</span>
+        </div>
+
+        {/* User Profile Menu */}
+        <div className="relative">
+          <button
+            onClick={() => setUserMenuOpen(!userMenuOpen)}
+            className="flex items-center gap-2 py-1 px-2 rounded-xl hover:bg-surface-container transition-colors cursor-pointer border border-outline-variant/30"
+            title="User Account & Session"
+            type="button"
+          >
+            <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center shrink-0 shadow-xs font-bold text-xs">
+              {user ? `${user.firstName[0]}${user.lastName[0]}` : <span className="material-symbols-outlined text-[18px]">person</span>}
+            </div>
+            <div className="hidden sm:flex flex-col text-left leading-tight">
+              <span className="font-bold text-xs text-on-surface truncate max-w-[110px]">
+                {user?.fullName || 'Authorized'}
+              </span>
+              <span className="text-[10px] font-bold text-primary uppercase truncate max-w-[110px]">
+                {getRoleDisplayName(user?.role)}
+              </span>
+            </div>
+            <span className="material-symbols-outlined text-[16px] text-on-surface-variant">expand_more</span>
+          </button>
+
+          {userMenuOpen && (
+            <div className="absolute right-0 mt-2 w-64 max-w-[calc(100vw-2rem)] rounded-2xl bg-surface-container-lowest p-3 shadow-2xl border border-outline-variant/30 z-50 animate-in fade-in">
+              <div className="p-2 border-b border-surface-container">
+                <div className="font-bold text-sm text-on-surface">{user?.fullName || 'Current User'}</div>
+                <div className="text-xs text-on-surface-variant font-mono truncate">{user?.email || 'admin@smartshule.ac.ke'}</div>
+                <div className="mt-2">
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${getRoleBadgeStyle(user?.role).bg} ${getRoleBadgeStyle(user?.role).text} uppercase tracking-wider`}>
+                    {getRoleDisplayName(user?.role)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="py-2 space-y-1">
+                {onNavigateLanding && (
+                  <button
+                    onClick={() => {
+                      setUserMenuOpen(false);
+                      onNavigateLanding();
+                    }}
+                    className="w-full text-left px-3 py-2 text-xs font-semibold text-on-surface hover:bg-surface-container rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[16px] text-primary">public</span>
+                    <span>View Public Landing Page</span>
+                  </button>
+                )}
+
+                <button
+                  onClick={() => {
+                    setUserMenuOpen(false);
+                    logout();
+                  }}
+                  className="w-full text-left px-3 py-2 text-xs font-semibold text-error hover:bg-error-container/20 rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[16px]">logout</span>
+                  <span>Sign Out</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
       </div>

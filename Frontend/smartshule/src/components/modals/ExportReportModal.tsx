@@ -13,16 +13,16 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({ isOpen, on
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden border border-outline-variant/30">
-        <div className="bg-[#00236f] text-white p-5 flex items-center justify-between shrink-0">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-150">
+      <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-2xl w-full max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
+        <div className="bg-[#00236f] text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center text-white">
               <span className="material-symbols-outlined text-[24px]">description</span>
             </div>
             <div>
               <h3 className="font-semibold text-base leading-tight">Executive Summary Report Preview</h3>
-              <p className="text-xs text-blue-200">Hillside Academy · Term 1, 2024 · Week 8</p>
+              <p className="text-xs text-blue-200">Grace Seed Academy · Term 3, 2026 · Week 2</p>
             </div>
           </div>
           <button
@@ -33,13 +33,13 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({ isOpen, on
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto space-y-5 text-on-surface">
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-5 text-on-surface overscroll-contain">
           {/* Official Document Header */}
           <div className="text-center border-b border-outline-variant/30 pb-4">
             <div className="text-xs font-bold text-secondary uppercase tracking-widest">
-              Republic of Kenya · Ministry of Education
+              Ministry of Education · Continuous Assessment Framework
             </div>
-            <h2 className="text-xl font-bold text-primary mt-1">HILLSIDE ACADEMY - CBC EXECUTIVE BRIEF</h2>
+            <h2 className="text-xl font-bold text-primary mt-1">GRACE SEED ACADEMY - CBC EXECUTIVE BRIEF</h2>
             <p className="text-xs text-on-surface-variant mt-0.5">
               Centre Code: 3829011 · NEMIS Registered · KICD Competency Framework Certified
             </p>
@@ -118,11 +118,11 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({ isOpen, on
           <div className="pt-4 border-t border-outline-variant/30 flex justify-between items-end text-xs">
             <div>
               <div className="font-bold text-on-surface">Maina Kamau</div>
-              <div className="text-on-surface-variant">Principal Administrator, Hillside Academy</div>
+              <div className="text-on-surface-variant">Principal Administrator, Grace Seed Academy</div>
             </div>
             <div className="text-right">
-              <div className="font-bold text-secondary">KNEC MoE Stamp Verified</div>
-              <div className="text-outline font-data-mono">DIGITAL-SEAL-KE-89104</div>
+              <div className="font-bold text-secondary">Institutional Seal Stamp Verified</div>
+              <div className="text-outline font-data-mono">DIGITAL-SEAL-GSA-89104</div>
             </div>
           </div>
         </div>

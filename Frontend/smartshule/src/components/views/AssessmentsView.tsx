@@ -32,6 +32,17 @@ export const AssessmentsView: React.FC<AssessmentsViewProps> = ({
     }
   };
 
+  const totalCount = assessments.length;
+  const eeCount = assessments.filter((a) => a.rating === 'EE').length;
+  const meCount = assessments.filter((a) => a.rating === 'ME').length;
+  const aeCount = assessments.filter((a) => a.rating === 'AE').length;
+  const beCount = assessments.filter((a) => a.rating === 'BE').length;
+
+  const eePct = totalCount > 0 ? `${((eeCount / totalCount) * 100).toFixed(1)}%` : '0.0%';
+  const mePct = totalCount > 0 ? `${((meCount / totalCount) * 100).toFixed(1)}%` : '0.0%';
+  const aePct = totalCount > 0 ? `${((aeCount / totalCount) * 100).toFixed(1)}%` : '0.0%';
+  const bePct = totalCount > 0 ? `${((beCount / totalCount) * 100).toFixed(1)}%` : '0.0%';
+
   return (
     <div className="space-y-6 pb-12">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -65,7 +76,7 @@ export const AssessmentsView: React.FC<AssessmentsViewProps> = ({
         <div className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 flex items-center justify-between">
           <div>
             <span className="text-xs text-on-surface-variant uppercase font-semibold">Exceeding (EE)</span>
-            <div className="text-2xl font-bold text-secondary font-data-mono mt-1">34.0%</div>
+            <div className="text-2xl font-bold text-secondary font-data-mono mt-1">{eePct}</div>
           </div>
           <span className="w-8 h-8 rounded-full bg-secondary-container text-secondary flex items-center justify-center font-bold">
             EE
@@ -75,7 +86,7 @@ export const AssessmentsView: React.FC<AssessmentsViewProps> = ({
         <div className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 flex items-center justify-between">
           <div>
             <span className="text-xs text-on-surface-variant uppercase font-semibold">Meeting (ME)</span>
-            <div className="text-2xl font-bold text-primary font-data-mono mt-1">52.0%</div>
+            <div className="text-2xl font-bold text-primary font-data-mono mt-1">{mePct}</div>
           </div>
           <span className="w-8 h-8 rounded-full bg-primary-fixed text-primary flex items-center justify-center font-bold">
             ME
@@ -85,7 +96,7 @@ export const AssessmentsView: React.FC<AssessmentsViewProps> = ({
         <div className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 flex items-center justify-between">
           <div>
             <span className="text-xs text-on-surface-variant uppercase font-semibold">Approaching (AE)</span>
-            <div className="text-2xl font-bold text-amber-700 font-data-mono mt-1">11.0%</div>
+            <div className="text-2xl font-bold text-amber-700 font-data-mono mt-1">{aePct}</div>
           </div>
           <span className="w-8 h-8 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center font-bold">
             AE
@@ -95,7 +106,7 @@ export const AssessmentsView: React.FC<AssessmentsViewProps> = ({
         <div className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 flex items-center justify-between">
           <div>
             <span className="text-xs text-on-surface-variant uppercase font-semibold">Below (BE)</span>
-            <div className="text-2xl font-bold text-error font-data-mono mt-1">3.0%</div>
+            <div className="text-2xl font-bold text-error font-data-mono mt-1">{bePct}</div>
           </div>
           <span className="w-8 h-8 rounded-full bg-error-container text-error flex items-center justify-center font-bold">
             BE
@@ -127,45 +138,66 @@ export const AssessmentsView: React.FC<AssessmentsViewProps> = ({
 
       {/* Assessment Records List */}
       <div className="space-y-3">
-        {filtered.map((item) => (
-          <div
-            key={item.id}
-            className="bg-surface-container-lowest rounded-xl p-5 shadow-xs border border-outline-variant/30 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:shadow-md transition-all"
-          >
-            <div className="space-y-1.5 flex-1">
-              <div className="flex items-center gap-2.5 flex-wrap">
-                <span className="font-bold text-base text-on-surface">{item.studentName}</span>
-                <span className="font-data-mono text-xs text-outline font-medium">
-                  (Adm #{item.admNo} · {item.grade})
-                </span>
-                <span className="px-2 py-0.5 rounded bg-surface-container text-xs font-semibold text-primary">
-                  {item.learningArea}
-                </span>
+        {filtered.length > 0 ? (
+          filtered.map((item) => (
+            <div
+              key={item.id}
+              className="bg-surface-container-lowest rounded-xl p-5 shadow-xs border border-outline-variant/30 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:shadow-md transition-all"
+            >
+              <div className="space-y-1.5 flex-1">
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <span className="font-bold text-base text-on-surface">{item.studentName}</span>
+                  <span className="font-data-mono text-xs text-outline font-medium">
+                    (Adm #{item.admNo} · {item.grade})
+                  </span>
+                  <span className="px-2 py-0.5 rounded bg-surface-container text-xs font-semibold text-primary">
+                    {item.learningArea}
+                  </span>
+                </div>
+
+                <div className="text-xs text-on-surface">
+                  <span className="text-on-surface-variant font-medium">Strand:</span>{' '}
+                  <strong className="text-primary">{item.strand}</strong> · Sub-strand: {item.subStrand}
+                </div>
+
+                <p className="text-xs text-on-surface-variant italic bg-surface-container-low p-2.5 rounded-lg border-l-2 border-primary/50">
+                  "{item.evidence}"
+                </p>
+
+                <div className="flex items-center gap-4 text-[11px] text-outline pt-1">
+                  <span>Evaluator: <strong>{item.recordedBy}</strong></span>
+                  <span>Date: <strong>{item.date}</strong></span>
+                </div>
               </div>
 
-              <div className="text-xs text-on-surface">
-                <span className="text-on-surface-variant font-medium">Strand:</span>{' '}
-                <strong className="text-primary">{item.strand}</strong> · Sub-strand: {item.subStrand}
-              </div>
-
-              <p className="text-xs text-on-surface-variant italic bg-surface-container-low p-2.5 rounded-lg border-l-2 border-primary/50">
-                "{item.evidence}"
-              </p>
-
-              <div className="flex items-center gap-4 text-[11px] text-outline pt-1">
-                <span>Evaluator: <strong>{item.recordedBy}</strong></span>
-                <span>Date: <strong>{item.date}</strong></span>
+              <div className="shrink-0 flex flex-col md:items-end gap-2">
+                {getRatingBadge(item.rating)}
+                <span className="text-[11px] text-secondary font-medium flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[14px]">cloud_done</span> KNEC Synced
+                </span>
               </div>
             </div>
-
-            <div className="shrink-0 flex flex-col md:items-end gap-2">
-              {getRatingBadge(item.rating)}
-              <span className="text-[11px] text-secondary font-medium flex items-center gap-1">
-                <span className="material-symbols-outlined text-[14px]">cloud_done</span> KNEC Synced
-              </span>
+          ))
+        ) : (
+          <div className="bg-surface-container-lowest rounded-2xl p-12 text-center border border-dashed border-outline-variant">
+            <div className="w-14 h-14 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto mb-3">
+              <span className="material-symbols-outlined text-3xl">rule</span>
             </div>
+            <h3 className="text-base font-bold text-on-surface mb-1">No Formative Assessments Recorded</h3>
+            <p className="text-xs text-on-surface-variant max-w-md mx-auto mb-4">
+              {assessments.length === 0
+                ? 'No formative competency rubrics have been recorded yet. Click "Record Formative Rubric" to evaluate student mastery against KICD strands.'
+                : 'No assessment logs match the selected filter criteria.'}
+            </p>
+            <button
+              onClick={onOpenNewAssessment}
+              className="px-4 py-2 bg-primary text-white rounded-lg text-xs font-semibold hover:bg-primary-container inline-flex items-center gap-2 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-base">add</span>
+              <span>Record First Rubric</span>
+            </button>
           </div>
-        ))}
+        )}
       </div>
     </div>
   );

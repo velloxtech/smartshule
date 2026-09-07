@@ -1,11 +1,14 @@
 import React from 'react';
 import { TabType } from '../types';
+import { useAuth } from '../context/AuthContext';
+import { getFilteredNavSections, getRoleDisplayName, getRoleBadgeStyle } from '../utils/rbac';
 
 interface SidebarProps {
   currentTab: TabType;
   onSelectTab: (tab: TabType) => void;
   mobileOpen: boolean;
   onCloseMobile: () => void;
+  onNavigateLanding?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -13,49 +16,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSelectTab,
   mobileOpen,
   onCloseMobile,
+  onNavigateLanding,
 }) => {
-  const navItems: { group?: string; items: { id: TabType; label: string; icon: string }[] }[] = [
-    {
-      group: 'Overview',
-      items: [
-        { id: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
-      ],
-    },
-    {
-      group: 'Academics',
-      items: [
-        { id: 'students-guardians', label: 'Students & Guardians', icon: 'group' },
-        { id: 'teachers-staff', label: 'Teachers & Staff', icon: 'badge' },
-        { id: 'classes-streams', label: 'Classes & Streams', icon: 'meeting_room' },
-        { id: 'learning-areas', label: 'Learning Areas', icon: 'menu_book' },
-      ],
-    },
-    {
-      group: 'CBC Competencies',
-      items: [
-        { id: 'assessments', label: 'Assessments (Form/Summ)', icon: 'assignment' },
-        { id: 'competencies-strands', label: 'Strands & Sub-strands', icon: 'account_tree' },
-        { id: 'report-cards', label: 'CBC Report Cards', icon: 'article' },
-        { id: 'cbc-analytics', label: 'Competency Analytics', icon: 'monitoring' },
-      ],
-    },
-    {
-      group: 'Operations',
-      items: [
-        { id: 'schemes-lesson-plans', label: 'Schemes & Lesson Plans', icon: 'edit_calendar' },
-        { id: 'timetable', label: 'Timetable Builder', icon: 'calendar_view_week' },
-        { id: 'attendance-register', label: 'Daily Attendance', icon: 'checklist' },
-      ],
-    },
-    {
-      group: 'Finance & Billing',
-      items: [
-        { id: 'fee-structure', label: 'Fee Structure', icon: 'payments' },
-        { id: 'invoices-mpesa', label: 'M-Pesa & Fee Invoices', icon: 'receipt_long' },
-        { id: 'defaulters-receipts', label: 'Defaulters & Receipts', icon: 'point_of_sale' },
-      ],
-    },
-  ];
+  const { user, logout } = useAuth();
+  const navSections = getFilteredNavSections(user?.role);
+  const badgeStyle = getRoleBadgeStyle(user?.role);
 
   return (
     <>
@@ -81,18 +46,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <span className="material-symbols-outlined text-[20px] text-white">school</span>
               </div>
               <div className="flex flex-col leading-tight">
-                <span className="font-headline-md text-body-md text-primary font-semibold tracking-tight">
-                  smartshule CBC
+                <span className="font-headline-md text-body-md text-primary font-bold tracking-tight">
+                  Grace Seed Academy
                 </span>
-                <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">
-                  Kenya Portal
+                <span className="font-label-md text-[10px] text-on-surface-variant uppercase tracking-wider font-semibold">
+                  CBC Portal
                 </span>
               </div>
             </div>
             {/* Close button on mobile */}
             <button
               onClick={onCloseMobile}
-              className="lg:hidden p-1 rounded hover:bg-surface-container text-on-surface-variant"
+              className="lg:hidden p-1 rounded hover:bg-surface-container text-on-surface-variant cursor-pointer"
               aria-label="Close sidebar"
             >
               <span className="material-symbols-outlined text-[20px]">close</span>
@@ -101,28 +66,36 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           {/* User Profile Card */}
           <div className="p-md bg-surface-container-lowest">
-            <div className="p-sm rounded-lg bg-surface-container-low flex items-center gap-sm">
-              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined text-on-primary text-[18px]">person</span>
+            <div className="w-full p-3 rounded-xl bg-surface-container-low flex flex-col gap-2 border border-outline-variant/30">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
+                  {user ? `${user.firstName[0]}${user.lastName[0]}` : <span className="material-symbols-outlined text-[18px]">person</span>}
+                </div>
+                <div className="flex flex-col min-w-0 flex-1">
+                  <span className="font-headline-md text-sm text-on-surface truncate font-semibold">
+                    {user?.fullName || 'User'}
+                  </span>
+                  <span className="text-[11px] text-on-surface-variant truncate font-mono">
+                    {user?.email || 'Authorized Account'}
+                  </span>
+                </div>
               </div>
-              <div className="flex flex-col min-w-0 flex-1">
-                <span className="font-headline-md text-body-md text-on-surface truncate font-semibold">
-                  Maina Kamau
+              <div className="flex items-center justify-between pt-1 border-t border-outline-variant/20">
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${badgeStyle.bg} ${badgeStyle.text} uppercase tracking-wider`}>
+                  {getRoleDisplayName(user?.role)}
                 </span>
-                <span className="font-label-md text-label-md text-on-surface-variant truncate">
-                  Admin · Hillside Academy
-                </span>
+                <span className="w-2 h-2 rounded-full bg-secondary" title="Active Session"></span>
               </div>
             </div>
           </div>
 
           {/* Navigation Links */}
           <nav className="px-sm pb-lg flex flex-col gap-xs">
-            {navItems.map((section, sIdx) => (
+            {navSections.map((section, sIdx) => (
               <React.Fragment key={sIdx}>
                 {section.group && (
-                  <div className={`px-sm ${sIdx === 0 ? 'pt-sm' : 'pt-md'} pb-xs`}>
-                    <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">
+                  <div className={`px-sm ${sIdx === 0 ? 'pt-xs' : 'pt-md'} pb-xs`}>
+                    <span className="font-label-md text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
                       {section.group}
                     </span>
                   </div>
@@ -136,7 +109,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         onSelectTab(item.id);
                         onCloseMobile();
                       }}
-                      className={`flex items-center gap-sm px-sm py-sm text-left w-full transition-all rounded-lg cursor-pointer ${
+                      className={`flex items-center gap-sm px-sm py-2 text-left w-full transition-all rounded-lg cursor-pointer ${
                         isActive
                           ? 'bg-primary-container text-on-primary font-semibold shadow-xs'
                           : 'text-on-surface-variant hover:bg-surface-container hover:text-on-surface'
@@ -146,7 +119,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       <span className={`material-symbols-outlined text-[18px] ${isActive ? 'text-white' : ''}`}>
                         {item.icon}
                       </span>
-                      <span className="font-body-md text-body-md truncate">{item.label}</span>
+                      <span className="font-body-md text-sm truncate">{item.label}</span>
                     </button>
                   );
                 })}
@@ -155,13 +128,31 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </nav>
         </div>
 
-        {/* Server Status Footer */}
-        <div className="p-sm bg-surface-container-low m-sm rounded-lg flex items-center justify-between">
-          <div className="flex items-center gap-xs">
-            <span className="w-2 h-2 rounded-full bg-secondary"></span>
-            <span className="font-label-md text-label-md text-on-surface-variant">CBC Server v1.4</span>
-          </div>
-          <span className="font-label-md text-label-md text-secondary font-medium">Online</span>
+        {/* Sidebar Footer: Landing Page & Sign Out */}
+        <div className="p-sm bg-surface-container-low m-sm rounded-xl space-y-2 border border-outline-variant/20">
+          {onNavigateLanding && (
+            <button
+              onClick={onNavigateLanding}
+              className="w-full py-1.5 px-2 text-xs font-semibold text-on-surface-variant hover:text-primary hover:bg-surface-container rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[16px]">home</span>
+              <span>Landing Page</span>
+            </button>
+          )}
+
+          <button
+            onClick={logout}
+            className="w-full py-1.5 px-2 text-xs font-semibold text-error hover:bg-error-container/20 rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[16px]">logout</span>
+            <span>Sign Out</span>
+          </button>
+        </div>
+
+        {/* Vellox Tech Company Watermark */}
+        <div className="px-3 pb-3 text-center text-[10px] text-on-surface-variant/70 flex items-center justify-center gap-1">
+          <span>Powered by</span>
+          <span className="font-bold text-primary tracking-wide">Vellox Tech</span>
         </div>
       </aside>
     </>

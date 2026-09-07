@@ -43,7 +43,7 @@ export const RecordPaymentSchema = z.object({
 
 export const MpesaStkPushSchema = z.object({
   invoiceId: z.string().min(1),
-  phoneNumber: z.string().regex(/^2547\d{8}$|^2541\d{8}$/, 'Must be Kenyan phone format: 2547XXXXXXXX or 2541XXXXXXXX')
+  phoneNumber: z.string().regex(/^2547\d{8}$|^2541\d{8}$/, 'Must be valid phone format: 2547XXXXXXXX or 2541XXXXXXXX')
 });
 
 export class FinanceController {

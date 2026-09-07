@@ -31,13 +31,13 @@ export async function seedDatabase(repositories: any, passwordHasher: IPasswordH
   const schoolId = 'school-001';
   const school = School.create(
     {
-      name: 'SmartShule CBC Academy',
-      code: 'SSCA-2026',
-      centerCode: 'KNEC-041289',
+      name: 'Grace Seed Academy',
+      code: 'GSA-2026',
+      centerCode: 'CBA-041289',
       motto: 'Excellence in Competence & Character',
       email: 'admin@smartshule.ac.ke',
       phone: '+254712345678',
-      address: 'P.O. Box 4567-00100 Nairobi, Kenya',
+      address: 'P.O. Box 4567-00100 Nairobi',
       currency: 'KES'
     },
     schoolId
@@ -105,7 +105,23 @@ export async function seedDatabase(repositories: any, passwordHasher: IPasswordH
   );
   await repositories.userRepository.save(guardianUser1);
 
-  // 3. Academic Year & Term
+  const accountantPasswordHash = await passwordHasher.hash('Finance@123');
+  const accountantUser = User.create(
+    {
+      email: 'finance@smartshule.ac.ke',
+      passwordHash: accountantPasswordHash,
+      firstName: 'Grace',
+      lastName: 'Njeri',
+      role: UserRole.ACCOUNTANT,
+      phone: '+254788333444',
+      status: UserStatus.ACTIVE,
+      schoolId
+    },
+    'usr-finance-01'
+  );
+  await repositories.userRepository.save(accountantUser);
+
+  // 3. Academic Year & Current Terms (Session 2026)
   const academicYearId = 'year-2026';
   const academicYear = AcademicYear.create(
     {
@@ -127,11 +143,37 @@ export async function seedDatabase(repositories: any, passwordHasher: IPasswordH
       name: 'Term 1',
       startDate: '2026-01-05',
       endDate: '2026-04-03',
-      isCurrent: true
+      isCurrent: false
     },
     termId
   );
   await repositories.academicRepository.saveTerm(term1);
+
+  const term2 = AcademicTerm.create(
+    {
+      academicYearId,
+      termNumber: 2,
+      name: 'Term 2',
+      startDate: '2026-05-04',
+      endDate: '2026-08-07',
+      isCurrent: false
+    },
+    'term-2026-2'
+  );
+  await repositories.academicRepository.saveTerm(term2);
+
+  const term3 = AcademicTerm.create(
+    {
+      academicYearId,
+      termNumber: 3,
+      name: 'Term 3',
+      startDate: '2026-08-31',
+      endDate: '2026-11-20',
+      isCurrent: true
+    },
+    'term-2026-3'
+  );
+  await repositories.academicRepository.saveTerm(term3);
 
   // 4. Class & Stream (Grade 7 Junior Secondary)
   const classId = 'class-grade-7';
@@ -475,6 +517,20 @@ export async function seedDatabase(repositories: any, passwordHasher: IPasswordH
     'timetable-g7-east'
   );
   await repositories.timetableRepository.save(timetable);
+
+  const timetableTerm3 = Timetable.create(
+    {
+      schoolId,
+      academicYearId,
+      termId: 'term-2026-3',
+      classRoomId: classId,
+      streamId,
+      slots: timetable.slots,
+      isActive: true
+    },
+    'timetable-g7-east-term3'
+  );
+  await repositories.timetableRepository.save(timetableTerm3);
 
   // 15. Attendance Register Sample
   const attendanceRegister = AttendanceRegister.create(

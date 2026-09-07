@@ -1,20 +1,52 @@
 import React, { useState } from 'react';
 import { Teacher } from '../../types';
+import { apiService } from '../../services/api';
 
 interface TeachersViewProps {
   teachers: Teacher[];
   onToggleClockIn: (teacherId: string) => void;
+  onOpenOnboardTeacher?: () => void;
 }
 
-export const TeachersView: React.FC<TeachersViewProps> = ({ teachers, onToggleClockIn }) => {
+export const TeachersView: React.FC<TeachersViewProps> = ({
+  teachers,
+  onToggleClockIn,
+  onOpenOnboardTeacher,
+}) => {
   const [search, setSearch] = useState('');
+  const [isAssignOpen, setIsAssignOpen] = useState(false);
+  const [selectedTeacherId, setSelectedTeacherId] = useState<string>('');
+  const [streamId, setStreamId] = useState('stream-g7-east');
+  const [assignLoading, setAssignLoading] = useState(false);
+  const [assignSuccess, setAssignSuccess] = useState<string | null>(null);
 
   const filtered = teachers.filter(
     (t) =>
       t.name.toLowerCase().includes(search.toLowerCase()) ||
       t.tscNumber.toLowerCase().includes(search.toLowerCase()) ||
-      t.role.toLowerCase().includes(search.toLowerCase())
+      t.role.toLowerCase().includes(search.toLowerCase()) ||
+      t.learningAreas.some((la) => la.toLowerCase().includes(search.toLowerCase()))
   );
+
+  const handleAssignStream = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAssignLoading(true);
+    setAssignSuccess(null);
+    try {
+      const res = await apiService.assignStreamToTeacher(selectedTeacherId, streamId);
+      if (res.success) {
+        setAssignSuccess('Stream successfully assigned to teacher!');
+        setTimeout(() => {
+          setIsAssignOpen(false);
+          setAssignSuccess(null);
+        }, 1200);
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to assign stream');
+    } finally {
+      setAssignLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-6 pb-12">
@@ -31,21 +63,53 @@ export const TeachersView: React.FC<TeachersViewProps> = ({ teachers, onToggleCl
             Faculty & Biometric Clock-in Registry
           </h1>
           <p className="text-xs text-on-surface-variant mt-0.5">
-            TSC registered educators, assigned learning areas, and real-time roll call logs
+            TSC registered educators, assigned learning areas, stream allocations, and real-time roll call
           </p>
         </div>
 
         <div className="flex items-center gap-2">
+          {onOpenOnboardTeacher && (
+            <button
+              onClick={onOpenOnboardTeacher}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-primary text-white rounded-lg hover:bg-primary-container text-xs font-semibold shadow-xs transition-all cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[16px]">person_add</span>
+              <span>Onboard Teacher</span>
+            </button>
+          )}
           <span className="px-3 py-1.5 rounded-lg bg-secondary-container text-on-secondary-container text-xs font-bold flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-secondary"></span>
-            42/43 Staff Clocked In Today
+            {teachers.filter((t) => t.status === 'Clocked In').length}/{teachers.length} Clocked In
           </span>
         </div>
       </div>
 
+      {/* Search Input Bar */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="relative flex-1 max-w-md">
+          <span className="absolute left-3 top-2.5 material-symbols-outlined text-outline text-[18px]">search</span>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by teacher name, TSC number, or learning area..."
+            className="w-full pl-9 pr-4 py-2 text-xs bg-surface-container-lowest border border-outline-variant/30 rounded-lg focus:outline-primary shadow-xs"
+          />
+        </div>
+      </div>
+
       {/* Faculty Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filtered.map((t) => {
+      {filtered.length === 0 ? (
+        <div className="py-16 text-center text-on-surface-variant bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-8">
+          <div className="flex flex-col items-center justify-center gap-2">
+            <span className="material-symbols-outlined text-5xl text-outline">person_off</span>
+            <p className="font-bold text-base text-on-surface">No educators found</p>
+            <p className="text-xs text-outline">Click "Onboard CBC Teacher" to register faculty members with TSC numbers.</p>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filtered.map((t) => {
           const isClockedIn = t.status === 'Clocked In';
           return (
             <div
@@ -59,87 +123,120 @@ export const TeachersView: React.FC<TeachersViewProps> = ({ teachers, onToggleCl
                       {(t.name || '')
                         .replace('Tr. ', '')
                         .split(' ')
-                        .filter(Boolean)
                         .map((n) => n[0])
-                        .slice(0, 2)
-                        .join('') || 'TR'}
+                        .join('')}
                     </div>
                     <div>
-                      <h3 className="font-semibold text-base text-on-surface">{t.name}</h3>
-                      <span className="font-data-mono text-xs text-outline block">{t.tscNumber}</span>
+                      <h3 className="font-headline-md text-sm font-bold text-on-surface">{t.name}</h3>
+                      <p className="text-[11px] text-on-surface-variant font-data-mono">{t.tscNumber}</p>
                     </div>
                   </div>
                   <span
-                    className={`px-2 py-0.5 rounded text-[11px] font-bold ${
-                      isClockedIn
-                        ? 'bg-secondary-container text-on-secondary-container'
-                        : 'bg-error-container text-on-error-container'
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                      isClockedIn ? 'bg-secondary text-white' : 'bg-surface-container text-outline'
                     }`}
                   >
                     {t.status}
                   </span>
                 </div>
 
-                <div className="mt-4 space-y-2 text-xs">
+                <div className="mt-4 pt-3 border-t border-surface-container space-y-2 text-xs">
                   <div className="flex justify-between">
-                    <span className="text-on-surface-variant">Role:</span>
-                    <span className="font-medium text-on-surface text-right">{t.role}</span>
+                    <span className="text-on-surface-variant">Role / Designation:</span>
+                    <span className="font-semibold text-on-surface">{t.role}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-on-surface-variant">Assigned Class:</span>
-                    <span className="font-semibold text-primary">{t.assignedClass}</span>
+                    <span className="font-bold text-primary">{t.assignedClass}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-on-surface-variant">Phone:</span>
-                    <span className="font-data-mono text-on-surface">{t.phone}</span>
+                    <span className="text-on-surface-variant">Specialization:</span>
+                    <span className="font-semibold text-secondary truncate max-w-[170px]">
+                      {t.learningAreas.join(', ')}
+                    </span>
                   </div>
-                  {t.clockInTime && (
+                  {t.qualification && (
                     <div className="flex justify-between">
-                      <span className="text-on-surface-variant">Biometric Logged:</span>
-                      <span className="font-data-mono text-secondary font-semibold">{t.clockInTime}</span>
+                      <span className="text-on-surface-variant">Qualification:</span>
+                      <span className="text-on-surface">{t.qualification}</span>
                     </div>
                   )}
-                </div>
-
-                <div className="mt-3 pt-3 border-t border-surface-container">
-                  <span className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider block mb-1.5">
-                    Learning Areas Handled
-                  </span>
-                  <div className="flex flex-wrap gap-1">
-                    {t.learningAreas.map((la) => (
-                      <span
-                        key={la}
-                        className="px-2 py-0.5 rounded bg-surface-container text-primary font-medium text-[11px]"
-                      >
-                        {la}
-                      </span>
-                    ))}
+                  <div className="flex justify-between">
+                    <span className="text-on-surface-variant">Direct Phone:</span>
+                    <span className="font-data-mono text-outline">{t.phone}</span>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-4 pt-3 border-t border-surface-container flex items-center justify-between">
+              <div className="mt-4 pt-3 border-t border-surface-container flex items-center justify-between gap-2">
+                <button
+                  onClick={() => {
+                    setSelectedTeacherId(t.id);
+                    setIsAssignOpen(true);
+                  }}
+                  className="px-2.5 py-1 rounded bg-surface-container hover:bg-surface-container-high text-xs font-semibold text-primary transition-colors cursor-pointer"
+                >
+                  Assign Stream
+                </button>
+
                 <button
                   onClick={() => onToggleClockIn(t.id)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                  className={`px-3 py-1 rounded text-xs font-semibold transition-all cursor-pointer ${
                     isClockedIn
-                      ? 'bg-surface-container text-error hover:bg-error-container'
-                      : 'bg-secondary text-white hover:bg-secondary/90'
+                      ? 'bg-error-container text-on-error-container hover:bg-error/20'
+                      : 'bg-primary text-white hover:bg-primary-container'
                   }`}
                 >
-                  {isClockedIn ? 'Clock Out / Permit' : 'Clock In Biometric'}
+                  {isClockedIn ? 'Clock Out' : 'Clock In'}
                 </button>
-                <a
-                  href={`tel:${t.phone.replace(/\s/g, '')}`}
-                  className="text-primary text-xs font-semibold flex items-center gap-1 hover:underline"
-                >
-                  <span className="material-symbols-outlined text-[16px]">call</span> Contact
-                </a>
               </div>
             </div>
           );
         })}
-      </div>
+        </div>
+      )}
+
+      {/* Assign Stream Modal */}
+      {isAssignOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-150">
+          <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-sm w-full max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
+            <div className="bg-[#00236f] text-white p-4 flex items-center justify-between shrink-0">
+              <h3 className="font-semibold text-sm">Assign Stream to Educator</h3>
+              <button onClick={() => setIsAssignOpen(false)} className="text-blue-200 hover:text-white cursor-pointer p-1 rounded-lg">
+                <span className="material-symbols-outlined text-[18px]">close</span>
+              </button>
+            </div>
+            <form onSubmit={handleAssignStream} className="p-4 sm:p-5 space-y-3 text-xs overflow-y-auto flex-1 overscroll-contain">
+              {assignSuccess && (
+                <div className="p-2.5 rounded bg-secondary/10 text-secondary font-semibold border border-secondary/20">
+                  {assignSuccess}
+                </div>
+              )}
+              <div>
+                <label className="block font-bold text-on-surface-variant mb-1 uppercase">Target Stream</label>
+                <select
+                  value={streamId}
+                  onChange={(e) => setStreamId(e.target.value)}
+                  className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2"
+                >
+                  <option value="stream-g7-east">Grade 7 - East Stream</option>
+                  <option value="stream-g7-west">Grade 7 - West Stream</option>
+                  <option value="stream-g8-east">Grade 8 - East Stream</option>
+                </select>
+              </div>
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={assignLoading}
+                  className="w-full py-2 bg-primary text-white font-bold rounded-lg hover:bg-primary-container disabled:opacity-50"
+                >
+                  {assignLoading ? 'Assigning...' : 'Confirm Stream Assignment'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

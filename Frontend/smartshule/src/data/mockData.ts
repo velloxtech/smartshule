@@ -405,7 +405,7 @@ export const initialSystemActivity: SystemActivity[] = [
     id: 'act-4',
     type: 'nemis',
     title: 'MoE Bridge Push',
-    description: 'Automated UPI sync completed: 1,248 students validated with NEMIS Kenya database.',
+    description: 'Automated UPI sync completed: 1,248 students validated with NEMIS National database.',
     timestamp: '1h ago',
     badgeColor: 'bg-surface-container-highest text-on-surface',
     icon: 'sync_saved_locally'

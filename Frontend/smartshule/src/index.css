@@ -64,17 +64,102 @@
   --font-label-md: 'Geist', sans-serif;
   --font-data-mono: 'Geist', monospace;
 
-  --spacing-base: 4px;
-  --spacing-xs: 4px;
-  --spacing-sm: 8px;
-  --spacing-md: 16px;
-  --spacing-lg: 24px;
-  --spacing-xl: 32px;
-  --spacing-gutter: 16px;
-  --spacing-container-margin: 24px;
+  --container-xs: 20rem;
+  --container-sm: 24rem;
+  --container-md: 28rem;
+  --container-lg: 32rem;
+  --container-xl: 36rem;
+  --container-2xl: 42rem;
+  --container-3xl: 48rem;
+  --container-4xl: 56rem;
+  --container-5xl: 64rem;
+  --container-6xl: 72rem;
+  --container-7xl: 80rem;
 }
 
 @layer utilities {
+  /* Prevent Tailwind v4 spacing conflict with container widths */
+  .max-w-xs { max-width: 20rem !important; }
+  .max-w-sm { max-width: 24rem !important; }
+  .max-w-md { max-width: 28rem !important; }
+  .max-w-lg { max-width: 32rem !important; }
+  .max-w-xl { max-width: 36rem !important; }
+  .max-w-2xl { max-width: 42rem !important; }
+  .max-w-3xl { max-width: 48rem !important; }
+  .max-w-4xl { max-width: 56rem !important; }
+  .max-w-5xl { max-width: 64rem !important; }
+  .max-w-6xl { max-width: 72rem !important; }
+  .max-w-7xl { max-width: 80rem !important; }
+
+  /* Custom spacing utilities */
+  .gap-xs { gap: 4px; }
+  .gap-sm { gap: 8px; }
+  .gap-md { gap: 16px; }
+  .gap-lg { gap: 24px; }
+  .gap-xl { gap: 32px; }
+  .gap-base { gap: 4px; }
+
+  .p-xs { padding: 4px; }
+  .p-sm { padding: 8px; }
+  .p-md { padding: 16px; }
+  .p-lg { padding: 24px; }
+  .p-xl { padding: 32px; }
+
+  .px-xs { padding-left: 4px; padding-right: 4px; }
+  .px-sm { padding-left: 8px; padding-right: 8px; }
+  .px-md { padding-left: 16px; padding-right: 16px; }
+  .px-lg { padding-left: 24px; padding-right: 24px; }
+  .px-xl { padding-left: 32px; padding-right: 32px; }
+
+  .py-xs { padding-top: 4px; padding-bottom: 4px; }
+  .py-sm { padding-top: 8px; padding-bottom: 8px; }
+  .py-md { padding-top: 16px; padding-bottom: 16px; }
+  .py-lg { padding-top: 24px; padding-bottom: 24px; }
+  .py-xl { padding-top: 32px; padding-bottom: 32px; }
+
+  .mt-xs { margin-top: 4px; }
+  .mt-sm { margin-top: 8px; }
+  .mt-md { margin-top: 16px; }
+  .my-xs { margin-top: 4px; margin-bottom: 4px; }
+  .my-sm { margin-top: 8px; margin-bottom: 8px; }
+  .my-md { margin-top: 16px; margin-bottom: 16px; }
+  .mr-xs { margin-right: 4px; }
+
+  .pb-xs { padding-bottom: 4px; }
+  .pb-sm { padding-bottom: 8px; }
+  .pb-md { padding-bottom: 16px; }
+  .pb-lg { padding-bottom: 24px; }
+  .pb-xl { padding-bottom: 32px; }
+
+  .pt-xs { padding-top: 4px; }
+  .pt-sm { padding-top: 8px; }
+  .pt-md { padding-top: 16px; }
+  .pt-lg { padding-top: 24px; }
+  .pt-xl { padding-top: 32px; }
+
+  /* Responsive Modal Container Utility */
+  .modal-dialog {
+    width: 100% !important;
+    max-width: calc(100vw - 1.5rem) !important;
+    margin-left: auto;
+    margin-right: auto;
+    max-height: 92vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  @media (min-width: 640px) {
+    .modal-dialog-sm { max-width: 24rem !important; }
+    .modal-dialog-md { max-width: 28rem !important; }
+    .modal-dialog-lg { max-width: 32rem !important; }
+    .modal-dialog-xl { max-width: 40rem !important; }
+    .modal-dialog-2xl { max-width: 48rem !important; }
+    .modal-dialog {
+      max-height: 88vh;
+      max-width: 32rem !important;
+    }
+  }
+
   .font-display {
     font-family: var(--font-display);
     font-size: 36px;

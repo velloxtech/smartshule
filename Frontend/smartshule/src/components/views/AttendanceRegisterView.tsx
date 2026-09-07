@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { attendanceGradeData } from '../../data/mockData';
+import React, { useState, useEffect } from 'react';
+import { apiService } from '../../services/api';
+import { AttendanceEntry } from '../../types';
 
 interface AttendanceRegisterViewProps {
   onOpenSmsModal: (target?: 'absentee' | 'fee' | 'all') => void;
@@ -8,7 +9,95 @@ interface AttendanceRegisterViewProps {
 export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
   onOpenSmsModal,
 }) => {
-  const [selectedGrade, setSelectedGrade] = useState('Grade 1');
+  const [streamId, setStreamId] = useState('stream-g7-east');
+  const [registerDate, setRegisterDate] = useState('2026-02-10');
+  const [students, setStudents] = useState<any[]>([]);
+  const [attendanceEntries, setAttendanceEntries] = useState<Record<string, 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED'>>({});
+  const [notifyGuardians, setNotifyGuardians] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadStudentsAndRegister() {
+      try {
+        const [stRes, regRes] = await Promise.all([
+          apiService.getStudents({ streamId }).catch(() => null),
+          apiService.getDailyRegister(streamId, registerDate).catch(() => null),
+        ]);
+
+        const studentList = stRes?.data || [
+          {
+            id: 'student-001',
+            admissionNumber: 'ADM-2026-001',
+            fullName: 'Kevin Kamau Kariuki',
+            gradeLevel: 'GRADE_7',
+          },
+        ];
+        setStudents(studentList);
+
+        // Pre-populate entries
+        const initialStatusMap: Record<string, 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED'> = {};
+        if (regRes?.success && regRes.data?.entries?.length) {
+          regRes.data.entries.forEach((e: AttendanceEntry) => {
+            initialStatusMap[e.studentId] = e.status;
+          });
+        } else {
+          studentList.forEach((s: any) => {
+            initialStatusMap[s.id] = 'PRESENT';
+          });
+        }
+        setAttendanceEntries(initialStatusMap);
+      } catch {
+        // Fallback
+      }
+    }
+    loadStudentsAndRegister();
+  }, [streamId, registerDate]);
+
+  const handleStatusChange = (studentId: string, status: 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED') => {
+    setAttendanceEntries((prev) => ({
+      ...prev,
+      [studentId]: status,
+    }));
+  };
+
+  const handleSaveRegister = async () => {
+    setIsSaving(true);
+    setSaveMessage(null);
+
+    const entries = students.map((s) => ({
+      studentId: s.id,
+      status: attendanceEntries[s.id] || 'PRESENT',
+      remarks: 'Daily morning roll-call record',
+    }));
+
+    try {
+      const res = await apiService.markAttendance({
+        schoolId: 'school-001',
+        classRoomId: 'class-grade-7',
+        streamId,
+        academicYearId: 'year-2026',
+        termId: 'term-2026-1',
+        date: registerDate,
+        markedByTeacherId: 'teacher-001',
+        notifyGuardiansForAbsence: notifyGuardians,
+        entries,
+      });
+
+      if (res.success) {
+        setSaveMessage('Daily register successfully saved and synced to cloud ledger!');
+        setTimeout(() => setSaveMessage(null), 3500);
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to save attendance register');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const presentCount = Object.values(attendanceEntries).filter((st) => st === 'PRESENT').length;
+  const absentCount = Object.values(attendanceEntries).filter((st) => st === 'ABSENT').length;
+  const lateCount = Object.values(attendanceEntries).filter((st) => st === 'LATE').length;
 
   return (
     <div className="space-y-6 pb-12">
@@ -25,7 +114,7 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
             Biometric & Teacher Roll-Call Register
           </h1>
           <p className="text-xs text-on-surface-variant mt-0.5">
-            Morning roll call records, late-arrivals verification, and absentee SMS trigger
+            Morning roll call records, absence reason documentation, and automated parent SMS dispatch
           </p>
         </div>
 
@@ -38,66 +127,153 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
         </button>
       </div>
 
-      {/* Grade Level Summary Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {attendanceGradeData.map((g) => (
-          <div
-            key={g.grade}
-            onClick={() => setSelectedGrade(g.grade)}
-            className={`p-4 rounded-xl border transition-all cursor-pointer ${
-              selectedGrade === g.grade
-                ? 'bg-surface-container-lowest border-primary shadow-sm'
-                : 'bg-surface-container-lowest border-outline-variant/30 hover:border-outline'
-            }`}
-          >
-            <div className="flex justify-between items-center">
-              <span className="font-bold text-sm text-on-surface">{g.grade}</span>
-              <span className="text-xs font-data-mono font-bold text-secondary">{g.pct.toFixed(1)}%</span>
-            </div>
-            <div className="mt-2 text-xs text-on-surface-variant flex justify-between">
-              <span>{g.present} / {g.total} Present</span>
-              <span className="text-error font-medium">{g.late} Late</span>
-            </div>
+      {/* Date & Stream Selector */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl bg-surface-container-low border border-outline-variant/30">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-on-surface-variant">Stream:</span>
+            <select
+              value={streamId}
+              onChange={(e) => setStreamId(e.target.value)}
+              className="bg-surface-container-lowest border border-outline-variant/40 rounded-lg py-1 px-3 text-xs font-semibold text-on-surface"
+            >
+              <option value="stream-g7-east">Grade 7 - East</option>
+              <option value="stream-g7-west">Grade 7 - West</option>
+            </select>
           </div>
-        ))}
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-on-surface-variant">Date:</span>
+            <input
+              type="date"
+              value={registerDate}
+              onChange={(e) => setRegisterDate(e.target.value)}
+              className="bg-surface-container-lowest border border-outline-variant/40 rounded-lg py-1 px-3 text-xs font-semibold text-on-surface"
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <input
+              type="checkbox"
+              id="notifyGuardians"
+              checked={notifyGuardians}
+              onChange={(e) => setNotifyGuardians(e.target.checked)}
+              className="w-4 h-4 text-primary rounded"
+            />
+            <label htmlFor="notifyGuardians" className="text-xs font-semibold text-on-surface">
+              Auto-SMS absent guardians
+            </label>
+          </div>
+          <button
+            onClick={handleSaveRegister}
+            disabled={isSaving}
+            className="px-4 py-2 bg-secondary text-white font-bold rounded-lg hover:bg-secondary-container text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+          >
+            <span className="material-symbols-outlined text-[16px]">save</span>
+            <span>{isSaving ? 'Saving...' : 'Save Register'}</span>
+          </button>
+        </div>
       </div>
 
-      {/* Active Class Register */}
+      {saveMessage && (
+        <div className="p-3 rounded-xl bg-secondary/10 border border-secondary/20 text-secondary text-xs font-bold flex items-center gap-2 animate-in fade-in">
+          <span className="material-symbols-outlined text-[18px]">check_circle</span>
+          <span>{saveMessage}</span>
+        </div>
+      )}
+
+      {/* Summary KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+        <div className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 flex justify-between items-center">
+          <div>
+            <span className="text-[11px] font-bold text-on-surface-variant uppercase">Enrolled</span>
+            <div className="text-xl font-bold font-data-mono text-on-surface">{students.length}</div>
+          </div>
+          <span className="material-symbols-outlined text-primary text-[24px]">groups</span>
+        </div>
+        <div className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 flex justify-between items-center">
+          <div>
+            <span className="text-[11px] font-bold text-secondary uppercase">Present</span>
+            <div className="text-xl font-bold font-data-mono text-secondary">{presentCount}</div>
+          </div>
+          <span className="material-symbols-outlined text-secondary text-[24px]">how_to_reg</span>
+        </div>
+        <div className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 flex justify-between items-center">
+          <div>
+            <span className="text-[11px] font-bold text-error uppercase">Absent</span>
+            <div className="text-xl font-bold font-data-mono text-error">{absentCount}</div>
+          </div>
+          <span className="material-symbols-outlined text-error text-[24px]">person_off</span>
+        </div>
+        <div className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 flex justify-between items-center">
+          <div>
+            <span className="text-[11px] font-bold text-amber-700 uppercase">Late Arrivals</span>
+            <div className="text-xl font-bold font-data-mono text-amber-700">{lateCount}</div>
+          </div>
+          <span className="material-symbols-outlined text-amber-700 text-[24px]">schedule</span>
+        </div>
+      </div>
+
+      {/* Active Class Register Table */}
       <div className="bg-surface-container-lowest rounded-xl shadow-xs border border-outline-variant/30 p-6 space-y-4">
         <div className="flex items-center justify-between border-b border-surface-container pb-3">
           <div>
-            <h3 className="font-bold text-base text-primary">{selectedGrade} Morning Roll-Call</h3>
-            <p className="text-xs text-on-surface-variant">Class Teacher: Tr. Sarah Mwangi · Time Logged: 07:45 AM</p>
+            <h3 className="font-bold text-base text-primary">Daily Morning Roll-Call Register</h3>
+            <p className="text-xs text-on-surface-variant">Class Teacher: Tr. Sarah Mwangi · Term 1 2026</p>
           </div>
           <span className="px-3 py-1 rounded bg-secondary-container text-on-secondary-container text-xs font-bold">
-            Biometric Gate Reader Active
+            Live Register Active
           </span>
         </div>
 
         <div className="space-y-2">
-          {[
-            { name: 'Kipchoge Brian', adm: 'HA-2021-089', status: 'Present', time: '07:12 AM', badge: 'bg-secondary' },
-            { name: 'Achieng Brenda', adm: 'HA-2022-104', status: 'Present', time: '07:20 AM', badge: 'bg-secondary' },
-            { name: 'Otieno Emmanuel', adm: 'HA-2022-145', status: 'Late', time: '08:15 AM', badge: 'bg-amber-600' },
-            { name: 'Wanjiku Mercy', adm: 'HA-2023-012', status: 'Absent (Unexplained)', time: '--', badge: 'bg-error' },
-            { name: 'Mutua Kevin', adm: 'HA-2021-078', status: 'Present', time: '07:25 AM', badge: 'bg-secondary' },
-          ].map((st, i) => (
-            <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-surface-container-low text-xs">
-              <div className="flex items-center gap-3">
-                <span className={`w-2.5 h-2.5 rounded-full ${st.badge}`}></span>
-                <div>
-                  <div className="font-semibold text-on-surface">{st.name}</div>
-                  <div className="text-[11px] text-outline font-data-mono">{st.adm}</div>
+          {students.map((st) => {
+            const currentStatus = attendanceEntries[st.id] || 'PRESENT';
+            return (
+              <div
+                key={st.id}
+                className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl bg-surface-container-low text-xs gap-3"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xs">
+                    {(st.fullName || st.name || 'Learner').split(' ').map((n: string) => n[0]).join('')}
+                  </div>
+                  <div>
+                    <div className="font-bold text-sm text-on-surface">{st.fullName || st.name}</div>
+                    <div className="text-[11px] text-outline font-data-mono">{st.admissionNumber || st.admNo}</div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 self-end sm:self-auto">
+                  {(['PRESENT', 'ABSENT', 'LATE', 'EXCUSED'] as const).map((status) => {
+                    const isSelected = currentStatus === status;
+                    return (
+                      <button
+                        key={status}
+                        type="button"
+                        onClick={() => handleStatusChange(st.id, status)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          isSelected
+                            ? status === 'PRESENT'
+                              ? 'bg-secondary text-white shadow-xs'
+                              : status === 'ABSENT'
+                              ? 'bg-error text-white shadow-xs'
+                              : status === 'LATE'
+                              ? 'bg-amber-600 text-white shadow-xs'
+                              : 'bg-primary text-white shadow-xs'
+                            : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'
+                        }`}
+                      >
+                        {status}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
-              <div className="flex items-center gap-4">
-                <span className="font-data-mono text-on-surface-variant">{st.time}</span>
-                <span className={`font-semibold ${st.status.includes('Absent') ? 'text-error' : st.status === 'Late' ? 'text-amber-700' : 'text-secondary'}`}>
-                  {st.status}
-                </span>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>

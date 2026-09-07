@@ -1,0 +1,9 @@
+{
+  "name": "smartshule-frontend-wrapper",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix smartshule run dev",
+    "build": "npm --prefix smartshule run build",
+    "lint": "npm --prefix smartshule run lint"
+  }
+}

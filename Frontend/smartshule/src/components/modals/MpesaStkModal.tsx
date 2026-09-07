@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Student } from '../../types';
+import { apiService } from '../../services/api';
 
 interface MpesaStkModalProps {
   isOpen: boolean;
@@ -70,6 +71,15 @@ export const MpesaStkModal: React.FC<MpesaStkModalProps> = ({
     const newRef = 'QKH' + Math.floor(100000 + Math.random() * 900000) + 'XJ';
     setTxRef(newRef);
 
+    let cleanPhone = phone.replace(/[^0-9]/g, '');
+    if (cleanPhone.startsWith('0')) {
+      cleanPhone = '254' + cleanPhone.slice(1);
+    } else if (!cleanPhone.startsWith('254')) {
+      cleanPhone = '254' + cleanPhone;
+    }
+
+    apiService.initiateMpesaStkPush('inv-student-001', cleanPhone).catch(() => {});
+
     setTimeout(() => {
       setStep('prompt');
     }, 1200);
@@ -80,7 +90,7 @@ export const MpesaStkModal: React.FC<MpesaStkModalProps> = ({
     if (onPaymentSuccess) {
       onPaymentSuccess({
         studentName: currentStudent ? currentStudent.name : 'Kevin Omondi',
-        admNo: currentStudent ? currentStudent.admNo : '2024-082',
+        admNo: currentStudent ? currentStudent.admNo : 'GSA-2026-082',
         grade: currentStudent ? currentStudent.grade : 'Grade 4',
         amount: paidAmount,
         phone,
@@ -99,12 +109,12 @@ export const MpesaStkModal: React.FC<MpesaStkModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-outline-variant/30">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
+      <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-md w-full max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
         {/* Modal Header */}
-        <div className="bg-[#00236f] text-white p-5 flex items-center justify-between">
+        <div className="bg-[#00236f] text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-[#006a63] flex items-center justify-center text-white font-bold">
+            <div className="w-10 h-10 rounded-xl bg-[#006a63] flex items-center justify-center text-white font-bold shrink-0">
               <span className="material-symbols-outlined text-[24px]">point_of_sale</span>
             </div>
             <div>
@@ -114,13 +124,13 @@ export const MpesaStkModal: React.FC<MpesaStkModalProps> = ({
           </div>
           <button
             onClick={handleReset}
-            className="p-1 rounded-lg text-blue-200 hover:text-white hover:bg-white/10 transition-colors"
+            className="p-1 rounded-lg text-blue-200 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
           >
             <span className="material-symbols-outlined text-[20px]">close</span>
           </button>
         </div>
 
-        <div className="p-6">
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1 overscroll-contain">
           {step === 'form' && (
             <form onSubmit={handleSendPush} className="space-y-4">
               <div>
@@ -182,7 +192,7 @@ export const MpesaStkModal: React.FC<MpesaStkModalProps> = ({
                   <span className="w-2 h-2 rounded-full bg-secondary"></span>
                   Paybill Account:
                 </span>
-                <span className="font-data-mono font-bold">HILLSIDE-{currentStudent?.admNo}</span>
+                <span className="font-data-mono font-bold">GSA-{currentStudent?.admNo}</span>
               </div>
 
               <div className="pt-2 flex items-center justify-end gap-2">
@@ -225,7 +235,7 @@ export const MpesaStkModal: React.FC<MpesaStkModalProps> = ({
                   <span>📱 Parent's Phone Screen</span>
                 </div>
                 <div className="bg-slate-900 text-green-400 p-4 rounded-lg font-mono text-xs shadow-inner leading-relaxed">
-                  <p className="font-bold text-white mb-1">Do you want to pay KES {Number(amount).toLocaleString()} to HILLSIDE ACADEMY Paybill 891230?</p>
+                  <p className="font-bold text-white mb-1">Do you want to pay KES {Number(amount).toLocaleString()} to GRACE SEED ACADEMY Paybill 174379?</p>
                   <p className="text-slate-300">Account: {currentStudent.admNo}</p>
                   <p className="text-yellow-400 mt-2">Enter M-Pesa PIN:</p>
                   <p className="text-lg tracking-widest text-white mt-1">● ● ● ●</p>
@@ -264,7 +274,7 @@ export const MpesaStkModal: React.FC<MpesaStkModalProps> = ({
               <div>
                 <h4 className="font-bold text-lg text-on-surface">Payment Confirmed!</h4>
                 <p className="text-xs text-on-surface-variant mt-1">
-                  KES {Number(amount).toLocaleString()} credited to Hillside Academy collection ledger.
+                  KES {Number(amount).toLocaleString()} credited to Grace Seed Academy collection ledger.
                 </p>
                 <div className="inline-block mt-3 px-3 py-1 rounded bg-surface-container font-data-mono text-xs font-bold text-primary">
                   Ref: {txRef}

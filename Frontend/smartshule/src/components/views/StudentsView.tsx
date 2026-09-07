@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Student, CBCRubric } from '../../types';
+import { EditStudentModal } from '../modals/EditStudentModal';
 
 interface StudentsViewProps {
   students: Student[];
@@ -7,6 +8,7 @@ interface StudentsViewProps {
   onOpenCBCWithStudent: (student: Student) => void;
   onOpenAdmitModal: () => void;
   onViewReportCard: (student: Student) => void;
+  onUpdateStudent?: (student: Student) => void;
 }
 
 export const StudentsView: React.FC<StudentsViewProps> = ({
@@ -15,10 +17,12 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
   onOpenCBCWithStudent,
   onOpenAdmitModal,
   onViewReportCard,
+  onUpdateStudent,
 }) => {
   const [search, setSearch] = useState('');
   const [selectedGrade, setSelectedGrade] = useState('All');
   const [selectedRating, setSelectedRating] = useState('All');
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
 
   const grades = ['All', 'PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'];
   const ratings = ['All', 'EE', 'ME', 'AE', 'BE'];
@@ -133,7 +137,18 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-surface-container">
-              {filtered.map((s) => (
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="py-12 text-center text-on-surface-variant">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <span className="material-symbols-outlined text-4xl text-outline">group_off</span>
+                      <p className="font-semibold text-sm">No learners found</p>
+                      <p className="text-xs text-outline">Click "Admit New Learner" to register students in the CBC database.</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filtered.map((s) => (
                 <tr key={s.id} className="hover:bg-surface-container-low/50 transition-colors">
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-3">
@@ -205,14 +220,33 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                           <span className="material-symbols-outlined text-[18px]">point_of_sale</span>
                         </button>
                       )}
+                      <button
+                        onClick={() => setEditingStudent(s)}
+                        title="Edit Profile & Link Guardian"
+                        className="p-1.5 rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">manage_accounts</span>
+                      </button>
                     </div>
                   </td>
                 </tr>
-              ))}
+              ))
+            )}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* Edit Learner & Link Guardian Modal */}
+      <EditStudentModal
+        isOpen={!!editingStudent}
+        student={editingStudent}
+        onClose={() => setEditingStudent(null)}
+        onStudentUpdated={(updated) => {
+          onUpdateStudent?.(updated);
+          setEditingStudent(null);
+        }}
+      />
     </div>
   );
 };

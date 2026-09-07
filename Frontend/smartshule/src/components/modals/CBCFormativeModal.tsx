@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Student, CBCRubric, LearningArea, AssessmentRecord } from '../../types';
-import { initialLearningAreas } from '../../data/mockData';
 
 interface CBCFormativeModalProps {
   isOpen: boolean;
@@ -17,7 +16,7 @@ export const CBCFormativeModal: React.FC<CBCFormativeModalProps> = ({
   onClose,
   students = [],
   initialStudent,
-  learningAreas = initialLearningAreas,
+  learningAreas = [],
   onSave,
   onSaveAssessment,
 }) => {
@@ -107,11 +106,11 @@ export const CBCFormativeModal: React.FC<CBCFormativeModalProps> = ({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-outline-variant/30">
-        <div className="bg-[#00236f] text-white p-5 flex items-center justify-between">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
+      <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-lg w-full max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
+        <div className="bg-[#00236f] text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center text-white">
+            <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center text-white shrink-0">
               <span className="material-symbols-outlined text-[24px]">rule</span>
             </div>
             <div>
@@ -121,14 +120,14 @@ export const CBCFormativeModal: React.FC<CBCFormativeModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-blue-200 hover:text-white hover:bg-white/10 transition-colors"
+            className="p-1 rounded-lg text-blue-200 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
           >
             <span className="material-symbols-outlined text-[20px]">close</span>
           </button>
         </div>
 
         {saved ? (
-          <div className="p-8 text-center space-y-3">
+          <div className="p-8 text-center space-y-3 overflow-y-auto flex-1">
             <div className="w-16 h-16 rounded-full bg-secondary-container flex items-center justify-center text-secondary mx-auto">
               <span className="material-symbols-outlined text-[36px]">check_circle</span>
             </div>
@@ -138,7 +137,7 @@ export const CBCFormativeModal: React.FC<CBCFormativeModalProps> = ({
             </p>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1 overscroll-contain">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">
@@ -256,11 +255,11 @@ export const CBCFormativeModal: React.FC<CBCFormativeModalProps> = ({
               />
             </div>
 
-            <div className="pt-2 flex items-center justify-end gap-2">
+            <div className="pt-3 flex items-center justify-end gap-2 shrink-0 border-t border-outline-variant/20 mt-2">
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-sm font-medium text-on-surface-variant hover:bg-surface-container rounded-lg"
+                className="px-4 py-2 text-sm font-medium text-on-surface-variant hover:bg-surface-container rounded-lg cursor-pointer"
               >
                 Cancel
               </button>

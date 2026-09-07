@@ -73,8 +73,8 @@ describe('SmartShule Hexagonal API Integration Tests', () => {
         .set('Authorization', `Bearer ${adminToken}`);
 
       expect(res.status).toBe(200);
-      expect(res.body.data.name).toBe('SmartShule CBC Academy');
-      expect(res.body.data.centerCode).toBe('KNEC-041289');
+      expect(res.body.data.name).toBe('Grace Seed Academy');
+      expect(res.body.data.centerCode).toBe('CBA-041289');
     });
 
     it('GET /api/v1/academics/classes returns classes', async () => {
