@@ -25,6 +25,18 @@ export const AddSlotSchema = z.object({
   label: z.string().optional()
 });
 
+export const SaveGridSchema = z.object({
+  timetableId: z.string().optional(),
+  streamId: z.string().optional(),
+  termId: z.string().optional(),
+  schoolId: z.string().optional(),
+  academicYearId: z.string().optional(),
+  classRoomId: z.string().optional(),
+  periods: z.array(z.any()).optional(),
+  days: z.array(z.any()).optional(),
+  slots: z.array(z.any())
+});
+
 export class TimetableController {
   constructor(private readonly timetableUseCases: TimetableUseCases) {}
 
@@ -41,6 +53,33 @@ export class TimetableController {
     try {
       const timetable = await this.timetableUseCases.addOrUpdateSlot(req.body);
       return res.status(200).json({ success: true, message: 'Slot assigned successfully', data: timetable });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public saveGrid = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const timetable = await this.timetableUseCases.saveTimetableGrid(req.body);
+      return res.status(200).json({
+        success: true,
+        message: 'Timetable grid updated and saved successfully',
+        data: timetable
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public deleteSlot = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { timetableId, slotId } = req.params;
+      const timetable = await this.timetableUseCases.deleteSlot(timetableId as string, slotId as string);
+      return res.status(200).json({
+        success: true,
+        message: 'Slot removed from timetable',
+        data: timetable
+      });
     } catch (err) {
       next(err);
     }

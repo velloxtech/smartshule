@@ -148,9 +148,9 @@ export const LearningAreasView: React.FC = () => {
       {isAddOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
           <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-md w-full max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
-            <div className="bg-[#00236f] text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
+            <div className="bg-[#7a1228] text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
               <h3 className="font-semibold text-sm">Create New CBC Learning Area</h3>
-              <button onClick={() => setIsAddOpen(false)} className="text-blue-200 hover:text-white cursor-pointer shrink-0">
+              <button onClick={() => setIsAddOpen(false)} className="text-rose-100 hover:text-white cursor-pointer shrink-0">
                 <span className="material-symbols-outlined text-[18px]">close</span>
               </button>
             </div>

@@ -53,7 +53,8 @@ import {
 import {
   TimetableController,
   CreateTimetableSchema,
-  AddSlotSchema
+  AddSlotSchema,
+  SaveGridSchema
 } from '../controllers/TimetableController';
 
 import {
@@ -66,8 +67,27 @@ import {
   CreateFeeStructureSchema,
   GenerateInvoicesSchema,
   RecordPaymentSchema,
+  PaystackInitSchema,
   MpesaStkPushSchema
 } from '../controllers/FinanceController';
+
+import {
+  MediaController,
+  CreateHelpRequestSchema,
+  RespondHelpRequestSchema,
+  UploadProgressPhotoSchema
+} from '../controllers/MediaController';
+
+import {
+  EDiaryController,
+  CreateEDiarySchema,
+  AcknowledgeEDiarySchema
+} from '../controllers/EDiaryController';
+
+import {
+  WhatsAppController,
+  WhatsAppSimulateSchema
+} from '../controllers/WhatsAppController';
 
 import { AnalyticsController } from '../controllers/AnalyticsController';
 
@@ -85,6 +105,9 @@ export function createApiRouter(container: AppContainer): Router {
   const attendanceController = new AttendanceController(container.attendanceUseCases);
   const financeController = new FinanceController(container.feeUseCases);
   const analyticsController = new AnalyticsController(container.analyticsUseCases);
+  const mediaController = new MediaController(container.visualMediaUseCases);
+  const ediaryController = new EDiaryController(container.ediaryUseCases);
+  const whatsAppController = new WhatsAppController(container.whatsAppService);
 
   // ==========================================
   // 1. AUTH ROUTES
@@ -120,6 +143,7 @@ export function createApiRouter(container: AppContainer): Router {
   // ==========================================
   const studentRouter = Router();
   studentRouter.post('/', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), validateBody(RegisterStudentSchema), studentController.registerStudent);
+  studentRouter.get('/guardian/me', authMiddleware, studentController.getGuardianPortalData);
   studentRouter.get('/', authMiddleware, studentController.listStudents);
   studentRouter.get('/:id', authMiddleware, studentController.getStudentById);
   studentRouter.put('/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), validateBody(UpdateStudentSchema), studentController.updateStudent);
@@ -131,6 +155,7 @@ export function createApiRouter(container: AppContainer): Router {
   // ==========================================
   const teacherRouter = Router();
   teacherRouter.post('/', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN), validateBody(RegisterTeacherSchema), teacherController.registerTeacher);
+  teacherRouter.get('/me/profile', authMiddleware, teacherController.getMyTeacherProfile);
   teacherRouter.get('/', authMiddleware, teacherController.listTeachers);
   teacherRouter.get('/:id', authMiddleware, teacherController.getTeacherById);
   teacherRouter.post('/assign-stream', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN), validateBody(AssignStreamSchema), teacherController.assignStream);
@@ -173,7 +198,10 @@ export function createApiRouter(container: AppContainer): Router {
   // ==========================================
   const timetableRouter = Router();
   timetableRouter.post('/', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), validateBody(CreateTimetableSchema), timetableController.createTimetable);
-  timetableRouter.post('/slots', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), validateBody(AddSlotSchema), timetableController.addSlot);
+  timetableRouter.post('/slots', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.TEACHER), validateBody(AddSlotSchema), timetableController.addSlot);
+  timetableRouter.post('/grid', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.TEACHER), validateBody(SaveGridSchema), timetableController.saveGrid);
+  timetableRouter.put('/grid', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.TEACHER), validateBody(SaveGridSchema), timetableController.saveGrid);
+  timetableRouter.delete('/:timetableId/slots/:slotId', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.TEACHER), timetableController.deleteSlot);
   timetableRouter.get('/stream', authMiddleware, timetableController.getStreamTimetable);
   timetableRouter.get('/teacher', authMiddleware, timetableController.getTeacherTimetable);
   router.use('/timetables', timetableRouter);
@@ -189,21 +217,60 @@ export function createApiRouter(container: AppContainer): Router {
   router.use('/attendance', attendanceRouter);
 
   // ==========================================
-  // 9. FINANCE & FEE PAYMENTS (M-PESA / BANK) ROUTES
+  // 9. FINANCE & FEE PAYMENTS (PAYSTACK / BANK) ROUTES
   // ==========================================
   const financeRouter = Router();
   financeRouter.post('/structures', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT), validateBody(CreateFeeStructureSchema), financeController.createFeeStructure);
   financeRouter.get('/structures', authMiddleware, financeController.listFeeStructures);
   financeRouter.post('/invoices/generate', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT), validateBody(GenerateInvoicesSchema), financeController.generateInvoices);
+  financeRouter.get('/invoices', authMiddleware, financeController.listInvoices); // Parent isolated
+  financeRouter.get('/summary', authMiddleware, financeController.getFinanceSummary); // Parent vs Admin summary
   financeRouter.post('/payments', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ACCOUNTANT), validateBody(RecordPaymentSchema), financeController.recordPayment);
-  financeRouter.post('/mpesa/stk-push', authMiddleware, validateBody(MpesaStkPushSchema), financeController.initiateMpesa);
-  financeRouter.post('/mpesa/callback', financeController.mpesaCallback); // Webhook endpoint without bearer token
-  financeRouter.get('/statements/:studentId', authMiddleware, financeController.getFeeStatement);
+  financeRouter.get('/payments', authMiddleware, financeController.listPayments); // Parent isolated
+  financeRouter.get('/statements/:studentId', authMiddleware, financeController.getFeeStatement); // Parent isolated
   financeRouter.get('/defaulters', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT, UserRole.HEAD_TEACHER), financeController.getDefaulters);
+  // Paystack Bank & Card Rails
+  financeRouter.post('/paystack/initialize', authMiddleware, validateBody(PaystackInitSchema), financeController.initiatePaystack);
+  financeRouter.get('/paystack/verify/:reference', authMiddleware, financeController.verifyPaystack);
+  financeRouter.post('/paystack/webhook', financeController.paystackWebhook);
+  // Legacy M-Pesa routes maintained
+  financeRouter.post('/mpesa/stk-push', authMiddleware, validateBody(MpesaStkPushSchema), financeController.initiateMpesa);
+  financeRouter.post('/mpesa/callback', financeController.mpesaCallback);
   router.use('/finance', financeRouter);
 
   // ==========================================
-  // 10. ANALYTICS & DASHBOARD ROUTES
+  // 10. VISUAL CBC & PARENT HELP MEDIA ROUTES
+  // ==========================================
+  const mediaRouter = Router();
+  mediaRouter.post('/help-requests', authMiddleware, validateBody(CreateHelpRequestSchema), mediaController.createHelpRequest);
+  mediaRouter.get('/help-requests', authMiddleware, mediaController.listHelpRequests);
+  mediaRouter.post('/help-requests/:id/respond', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), validateBody(RespondHelpRequestSchema), mediaController.respondToHelpRequest);
+  mediaRouter.post('/progress-photos', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), validateBody(UploadProgressPhotoSchema), mediaController.uploadProgressPhoto);
+  mediaRouter.get('/progress-photos', authMiddleware, mediaController.listProgressPhotos);
+  router.use('/media', mediaRouter);
+
+  // ==========================================
+  // 11. DIGITAL eDIARY & PARENT ACKNOWLEDGEMENT ROUTES
+  // ==========================================
+  const ediaryRouter = Router();
+  ediaryRouter.post('/', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), validateBody(CreateEDiarySchema), ediaryController.createEntry);
+  ediaryRouter.get('/student/:studentId', authMiddleware, ediaryController.listStudentEntries);
+  ediaryRouter.get('/stream/:streamId', authMiddleware, ediaryController.listStreamEntries);
+  ediaryRouter.post('/:id/acknowledge', authMiddleware, validateBody(AcknowledgeEDiarySchema), ediaryController.acknowledgeEntry);
+  router.use('/ediary', ediaryRouter);
+
+  // ==========================================
+  // 12. WHATSAPP QUERY SYSTEM ROUTES
+  // ==========================================
+  const whatsappRouter = Router();
+  whatsappRouter.get('/webhook', whatsAppController.webhookVerification);
+  whatsappRouter.post('/webhook', whatsAppController.webhookInbound);
+  whatsappRouter.post('/simulate', validateBody(WhatsAppSimulateSchema), whatsAppController.simulate);
+  whatsappRouter.get('/config', whatsAppController.getConfig);
+  router.use('/whatsapp', whatsappRouter);
+
+  // ==========================================
+  // 13. ANALYTICS & DASHBOARD ROUTES
   // ==========================================
   const analyticsRouter = Router();
   analyticsRouter.get('/dashboard', authMiddleware, analyticsController.getDashboard);

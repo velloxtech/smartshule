@@ -1,5 +1,5 @@
 {
-  "name": "Grace Seed Academy - CBC Portal",
+  "name": "Grace Seeds School - CBC Portal",
   "description": "Comprehensive school executive dashboard and management system for the Competency-Based Curriculum (CBC), featuring real-time attendance, examinations sync, M-Pesa fee collection, and CBC rubric assessments.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

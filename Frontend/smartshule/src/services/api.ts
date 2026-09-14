@@ -26,9 +26,21 @@ import {
   StudentInvoice,
   DefaultersReport,
   DashboardSummary,
+  PeriodDefinition,
+  DayDefinition,
+  PaystackInitializeRequest,
+  PaystackInitializeResponse,
+  PaystackVerifyResponse,
+  FeePaymentReceipt,
+  FinanceSummaryData,
+  ParentHelpRequest,
+  StudentProgressPhoto,
+  EDiaryEntry,
+  WhatsAppSimulateRequest,
+  WhatsAppSimulateResponse,
 } from '../types';
 
-const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3000/api/v1';
+const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || '/api/v1';
 
 let authToken: string | null = localStorage.getItem('smartshule_token') || null;
 
@@ -82,7 +94,7 @@ export const apiService = {
   // Health & Status Check
   checkHealth: async (): Promise<boolean> => {
     try {
-      const res = await fetch('http://localhost:3000/health').catch(() => fetch('/health'));
+      const res = await fetch('/health');
       return res.ok;
     } catch {
       return false;
@@ -298,6 +310,10 @@ export const apiService = {
   },
 
   // 4. Teachers & Staff Endpoints
+  getMyTeacherProfile: async (): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/teachers/me/profile');
+  },
+
   getTeachers: async (): Promise<ApiResponse<any[]>> => {
     return apiFetch<ApiResponse<any[]>>('/teachers');
   },
@@ -585,6 +601,29 @@ export const apiService = {
     return apiFetch<ApiResponse<any[]>>(`/timetables/teacher?teacherId=${teacherId}&termId=${termId}`);
   },
 
+  saveTimetableGrid: async (data: {
+    timetableId?: string;
+    schoolId?: string;
+    academicYearId: string;
+    termId: string;
+    classRoomId: string;
+    streamId: string;
+    periods: PeriodDefinition[];
+    days: DayDefinition[];
+    slots: TimetableSlot[];
+  }): Promise<ApiResponse<TimetableData>> => {
+    return apiFetch<ApiResponse<TimetableData>>('/timetables/grid', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  deleteTimetableSlot: async (timetableId: string, slotId: string): Promise<ApiResponse<TimetableData>> => {
+    return apiFetch<ApiResponse<TimetableData>>(`/timetables/${timetableId}/slots/${slotId}`, {
+      method: 'DELETE',
+    });
+  },
+
   // 8. Class Registers & Attendance Endpoints
   markAttendance: async (data: {
     schoolId: string;
@@ -689,14 +728,159 @@ export const apiService = {
     return apiFetch<ApiResponse<any>>(`/finance/statements/${studentId}`);
   },
 
+  getPayments: async (schoolId = 'school-001', studentId?: string): Promise<ApiResponse<any[]>> => {
+    const params = new URLSearchParams({ schoolId });
+    if (studentId) params.append('studentId', studentId);
+    return apiFetch<ApiResponse<any[]>>(`/finance/payments?${params.toString()}`);
+  },
+
   getDefaulters: async (schoolId = 'school-001', minBalance = 1): Promise<ApiResponse<DefaultersReport>> => {
     return apiFetch<ApiResponse<DefaultersReport>>(
       `/finance/defaulters?schoolId=${schoolId}&minBalance=${minBalance}`
     );
   },
 
-  // 10. Dashboard & Analytics Endpoints
+  getInvoices: async (params?: { schoolId?: string; studentId?: string; status?: string }): Promise<ApiResponse<StudentInvoice[]>> => {
+    const q = new URLSearchParams();
+    if (params?.schoolId) q.append('schoolId', params.schoolId);
+    if (params?.studentId) q.append('studentId', params.studentId);
+    if (params?.status) q.append('status', params.status);
+    const qs = q.toString();
+    return apiFetch<ApiResponse<StudentInvoice[]>>(`/finance/invoices${qs ? `?${qs}` : ''}`);
+  },
+
+  getFinanceSummary: async (schoolId = 'school-001'): Promise<ApiResponse<FinanceSummaryData>> => {
+    return apiFetch<ApiResponse<FinanceSummaryData>>(`/finance/summary?schoolId=${schoolId}`);
+  },
+
+  initializePaystack: async (data: PaystackInitializeRequest): Promise<ApiResponse<PaystackInitializeResponse>> => {
+    return apiFetch<ApiResponse<PaystackInitializeResponse>>('/finance/paystack/initialize', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  verifyPaystack: async (reference: string): Promise<ApiResponse<PaystackVerifyResponse>> => {
+    return apiFetch<ApiResponse<PaystackVerifyResponse>>(`/finance/paystack/verify?reference=${encodeURIComponent(reference)}`);
+  },
+
+  // 10. Digital eDiary Endpoints
+  getStudentEDiary: async (studentId: string): Promise<ApiResponse<EDiaryEntry[]>> => {
+    return apiFetch<ApiResponse<EDiaryEntry[]>>(`/ediary/student/${studentId}`);
+  },
+
+  getStreamEDiary: async (streamId: string, date?: string): Promise<ApiResponse<EDiaryEntry[]>> => {
+    const qs = date ? `?date=${date}` : '';
+    return apiFetch<ApiResponse<EDiaryEntry[]>>(`/ediary/stream/${streamId}${qs}`);
+  },
+
+  createEDiaryEntry: async (data: {
+    schoolId: string;
+    classRoomId: string;
+    streamId: string;
+    studentId?: string;
+    date: string;
+    homeworkTasks: Array<{
+      learningArea: string;
+      description: string;
+      dueDate: string;
+    }>;
+    teacherRemarks?: string;
+    tomorrowRequirements?: string[];
+  }): Promise<ApiResponse<EDiaryEntry>> => {
+    return apiFetch<ApiResponse<EDiaryEntry>>('/ediary', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  acknowledgeEDiary: async (entryId: string, data?: { guardianName?: string; parentNote?: string }): Promise<ApiResponse<EDiaryEntry>> => {
+    return apiFetch<ApiResponse<EDiaryEntry>>(`/ediary/${entryId}/acknowledge`, {
+      method: 'POST',
+      body: JSON.stringify(data || {}),
+    });
+  },
+
+  // 11. Visual CBC & Parent Help Desk Endpoints
+  uploadHelpRequest: async (data: {
+    schoolId: string;
+    studentId: string;
+    title: string;
+    description: string;
+    photoBase64: string;
+    mimeType?: string;
+    learningAreaId?: string;
+  }): Promise<ApiResponse<ParentHelpRequest>> => {
+    return apiFetch<ApiResponse<ParentHelpRequest>>('/media/help-requests', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  getHelpRequests: async (params?: { studentId?: string; schoolId?: string; status?: string }): Promise<ApiResponse<ParentHelpRequest[]>> => {
+    const q = new URLSearchParams();
+    if (params?.studentId) q.append('studentId', params.studentId);
+    if (params?.schoolId) q.append('schoolId', params.schoolId);
+    if (params?.status) q.append('status', params.status);
+    const qs = q.toString();
+    return apiFetch<ApiResponse<ParentHelpRequest[]>>(`/media/help-requests${qs ? `?${qs}` : ''}`);
+  },
+
+  respondHelpRequest: async (requestId: string, data: {
+    responseMessage: string;
+    responsePhotoBase64?: string;
+  }): Promise<ApiResponse<ParentHelpRequest>> => {
+    return apiFetch<ApiResponse<ParentHelpRequest>>(`/media/help-requests/${requestId}/respond`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  uploadProgressPhoto: async (data: {
+    schoolId: string;
+    studentId: string;
+    title: string;
+    description: string;
+    photoBase64: string;
+    mimeType?: string;
+    learningAreaId?: string;
+    competencyDomain?: string;
+    tags?: string[];
+    rating?: string;
+  }): Promise<ApiResponse<StudentProgressPhoto>> => {
+    return apiFetch<ApiResponse<StudentProgressPhoto>>('/media/progress-photos', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  getProgressPhotos: async (params?: { studentId?: string; schoolId?: string; competencyDomain?: string }): Promise<ApiResponse<StudentProgressPhoto[]>> => {
+    const q = new URLSearchParams();
+    if (params?.studentId) q.append('studentId', params.studentId);
+    if (params?.schoolId) q.append('schoolId', params.schoolId);
+    if (params?.competencyDomain) q.append('competencyDomain', params.competencyDomain);
+    const qs = q.toString();
+    return apiFetch<ApiResponse<StudentProgressPhoto[]>>(`/media/progress-photos${qs ? `?${qs}` : ''}`);
+  },
+
+  // 12. WhatsApp Parent Desk Endpoints
+  simulateWhatsApp: async (phoneNumber: string, message: string): Promise<ApiResponse<WhatsAppSimulateResponse>> => {
+    return apiFetch<ApiResponse<WhatsAppSimulateResponse>>('/whatsapp/simulate', {
+      method: 'POST',
+      body: JSON.stringify({ phoneNumber, message }),
+    });
+  },
+
+  getWhatsAppConfig: async (): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/whatsapp/config');
+  },
+
+  // 13. Dashboard & Analytics Endpoints
   getDashboardAnalytics: async (schoolId = 'school-001'): Promise<ApiResponse<DashboardSummary>> => {
     return apiFetch<ApiResponse<DashboardSummary>>(`/analytics/dashboard?schoolId=${schoolId}`);
+  },
+
+  getGuardianPortalData: async (): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/students/guardian/me');
   },
 };

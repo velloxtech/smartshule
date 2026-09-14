@@ -112,19 +112,19 @@ export const MpesaStkModal: React.FC<MpesaStkModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
       <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-md w-full max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
         {/* Modal Header */}
-        <div className="bg-[#00236f] text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
+        <div className="bg-[#7a1228] text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-xl bg-[#006a63] flex items-center justify-center text-white font-bold shrink-0">
               <span className="material-symbols-outlined text-[24px]">point_of_sale</span>
             </div>
             <div>
               <h3 className="font-semibold text-base leading-tight">M-Pesa STK Push Collection</h3>
-              <p className="text-xs text-blue-200">Safaricom Daraja API v2.0 · Paybill 891230</p>
+              <p className="text-xs text-rose-100">Safaricom Daraja API v2.0 · Paybill 891230</p>
             </div>
           </div>
           <button
             onClick={handleReset}
-            className="p-1 rounded-lg text-blue-200 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+            className="p-1 rounded-lg text-rose-100 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
           >
             <span className="material-symbols-outlined text-[20px]">close</span>
           </button>
@@ -235,7 +235,7 @@ export const MpesaStkModal: React.FC<MpesaStkModalProps> = ({
                   <span>📱 Parent's Phone Screen</span>
                 </div>
                 <div className="bg-slate-900 text-green-400 p-4 rounded-lg font-mono text-xs shadow-inner leading-relaxed">
-                  <p className="font-bold text-white mb-1">Do you want to pay KES {Number(amount).toLocaleString()} to GRACE SEED ACADEMY Paybill 174379?</p>
+                  <p className="font-bold text-white mb-1">Do you want to pay KES {Number(amount).toLocaleString()} to GRACE SEEDS SCHOOL Paybill 174379?</p>
                   <p className="text-slate-300">Account: {currentStudent.admNo}</p>
                   <p className="text-yellow-400 mt-2">Enter M-Pesa PIN:</p>
                   <p className="text-lg tracking-widest text-white mt-1">● ● ● ●</p>
@@ -274,7 +274,7 @@ export const MpesaStkModal: React.FC<MpesaStkModalProps> = ({
               <div>
                 <h4 className="font-bold text-lg text-on-surface">Payment Confirmed!</h4>
                 <p className="text-xs text-on-surface-variant mt-1">
-                  KES {Number(amount).toLocaleString()} credited to Grace Seed Academy collection ledger.
+                  KES {Number(amount).toLocaleString()} credited to Grace Seeds School collection ledger.
                 </p>
                 <div className="inline-block mt-3 px-3 py-1 rounded bg-surface-container font-data-mono text-xs font-bold text-primary">
                   Ref: {txRef}

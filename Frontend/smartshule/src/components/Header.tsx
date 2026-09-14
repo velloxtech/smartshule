@@ -330,7 +330,7 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
               </div>
               <div className="mt-3 pt-2 border-t border-surface-container text-[11px] text-outline">
-                Grace Seed Academy · CBC Portal v2.0
+                Grace Seeds School · CBC Portal v2.0
               </div>
             </div>
           )}

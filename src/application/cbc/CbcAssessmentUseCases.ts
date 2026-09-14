@@ -353,6 +353,8 @@ export class CbcAssessmentUseCases {
       academicYearId: filters.academicYearId
     });
 
+    const learningAreas = await this.academicRepository.findAllLearningAreas({ gradeLevel: filters.gradeLevel });
+
     const total = summatives.length;
     const distribution = {
       [PerformanceLevel.EXCEEDING_EXPECTATIONS]: summatives.filter(s => s.overallPerformanceLevel === PerformanceLevel.EXCEEDING_EXPECTATIONS).length,
@@ -361,12 +363,34 @@ export class CbcAssessmentUseCases {
       [PerformanceLevel.BELOW_EXPECTATIONS]: summatives.filter(s => s.overallPerformanceLevel === PerformanceLevel.BELOW_EXPECTATIONS).length
     };
 
+    const subjectAnalytics = learningAreas.map(la => {
+      const laSummatives = summatives.filter(s => s.learningAreaId === la.id);
+      const laTotal = laSummatives.length;
+      const ee = laSummatives.filter(s => s.overallPerformanceLevel === PerformanceLevel.EXCEEDING_EXPECTATIONS).length;
+      const me = laSummatives.filter(s => s.overallPerformanceLevel === PerformanceLevel.MEETING_EXPECTATIONS).length;
+      const ae = laSummatives.filter(s => s.overallPerformanceLevel === PerformanceLevel.APPROACHING_EXPECTATIONS).length;
+      const be = laSummatives.filter(s => s.overallPerformanceLevel === PerformanceLevel.BELOW_EXPECTATIONS).length;
+
+      return {
+        id: la.id,
+        name: la.name,
+        code: la.code,
+        total: laTotal,
+        ee: laTotal > 0 ? Math.round((ee / laTotal) * 100) : 0,
+        me: laTotal > 0 ? Math.round((me / laTotal) * 100) : 0,
+        ae: laTotal > 0 ? Math.round((ae / laTotal) * 100) : 0,
+        be: laTotal > 0 ? Math.round((be / laTotal) * 100) : 0,
+        counts: { ee, me, ae, be }
+      };
+    });
+
     return {
       totalAssessments: total,
       distribution,
       proficiencyRatePercentage: total > 0
         ? Math.round(((distribution[PerformanceLevel.EXCEEDING_EXPECTATIONS] + distribution[PerformanceLevel.MEETING_EXPECTATIONS]) / total) * 100)
-        : 0
+        : 0,
+      subjectAnalytics
     };
   }
 }

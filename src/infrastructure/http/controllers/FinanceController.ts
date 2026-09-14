@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { FeeUseCases } from '../../../application/finance/FeeUseCases';
 import { PaymentMethod } from '../../../core/domain/finance/Fee';
 import { CbcGradeLevel } from '../../../core/domain/user/Student';
+import { AuthenticatedRequest } from '../middlewares/authMiddleware';
 
 export const CreateFeeStructureSchema = z.object({
   schoolId: z.string().min(1),
@@ -39,6 +40,13 @@ export const RecordPaymentSchema = z.object({
   paymentDate: z.string().optional(),
   recordedByUserId: z.string().min(1),
   notes: z.string().optional()
+});
+
+export const PaystackInitSchema = z.object({
+  invoiceId: z.string().min(1),
+  amount: z.number().positive().optional(),
+  email: z.string().email().optional(),
+  callbackUrl: z.string().url().optional()
 });
 
 export const MpesaStkPushSchema = z.object({
@@ -80,6 +88,22 @@ export class FinanceController {
     }
   };
 
+  public listInvoices = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const { schoolId, studentId, termId, status } = req.query;
+      const invoices = await this.feeUseCases.listInvoices({
+        schoolId: schoolId as string,
+        studentId: studentId as string,
+        termId: termId as string,
+        status: status as any,
+        requestingUser: req.user
+      });
+      return res.status(200).json({ success: true, count: invoices.length, data: invoices });
+    } catch (err) {
+      next(err);
+    }
+  };
+
   public recordPayment = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const result = await this.feeUseCases.recordPayment(req.body);
@@ -93,6 +117,103 @@ export class FinanceController {
     }
   };
 
+  public listPayments = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const { schoolId, studentId } = req.query;
+      const payments = await this.feeUseCases.listPayments({
+        schoolId: schoolId as string,
+        studentId: studentId as string,
+        requestingUser: req.user
+      });
+      return res.status(200).json({ success: true, count: payments.length, data: payments });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public getFeeStatement = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const statement = await this.feeUseCases.getStudentFeeStatement(
+        req.params.studentId as string,
+        req.user
+      );
+      return res.status(200).json({ success: true, data: statement });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public getDefaulters = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const { schoolId, minBalance } = req.query;
+      const report = await this.feeUseCases.getFeeDefaultersReport(
+        schoolId as string,
+        minBalance ? Number(minBalance) : 1,
+        req.user
+      );
+      return res.status(200).json({ success: true, data: report });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public getFinanceSummary = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const { schoolId } = req.query;
+      const summary = await this.feeUseCases.getFinanceSummary(
+        schoolId as string,
+        req.user
+      );
+      return res.status(200).json({ success: true, data: summary });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  // ==========================================
+  // PAYSTACK INTEGRATION (BANK TRANSFER / CARD)
+  // ==========================================
+  public initiatePaystack = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const result = await this.feeUseCases.initializePaystackPayment({
+        ...req.body,
+        requestingUser: req.user
+      });
+      return res.status(200).json({
+        success: true,
+        message: 'Paystack checkout session created',
+        data: result
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public verifyPaystack = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const { reference } = req.params;
+      const result = await this.feeUseCases.verifyPaystackPayment(reference as string);
+      return res.status(200).json({
+        success: true,
+        message: 'Payment verification completed',
+        data: result
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public paystackWebhook = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const signature = req.headers['x-paystack-signature'] as string;
+      const result = await this.feeUseCases.handlePaystackWebhook(req.body, signature);
+      return res.status(200).json({ status: 'ok', data: result });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  // Legacy M-Pesa endpoints maintained for compatibility
   public initiateMpesa = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const result = await this.feeUseCases.initiateMpesaStk(req.body);
@@ -114,28 +235,6 @@ export class FinanceController {
         ResultDesc: 'Accepted',
         data: result
       });
-    } catch (err) {
-      next(err);
-    }
-  };
-
-  public getFeeStatement = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const statement = await this.feeUseCases.getStudentFeeStatement(req.params.studentId as string);
-      return res.status(200).json({ success: true, data: statement });
-    } catch (err) {
-      next(err);
-    }
-  };
-
-  public getDefaulters = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { schoolId, minBalance } = req.query;
-      const report = await this.feeUseCases.getFeeDefaultersReport(
-        schoolId as string,
-        minBalance ? Number(minBalance) : 1
-      );
-      return res.status(200).json({ success: true, data: report });
     } catch (err) {
       next(err);
     }

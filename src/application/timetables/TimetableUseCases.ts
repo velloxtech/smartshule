@@ -109,6 +109,60 @@ export class TimetableUseCases {
     return timetable.toJSON();
   }
 
+  public async saveTimetableGrid(dto: {
+    timetableId?: string;
+    streamId?: string;
+    termId?: string;
+    schoolId?: string;
+    academicYearId?: string;
+    classRoomId?: string;
+    periods?: any[];
+    days?: any[];
+    slots: TimetableSlot[];
+  }) {
+    let timetable = null;
+
+    if (dto.timetableId) {
+      timetable = await this.timetableRepository.findById(dto.timetableId);
+    } else if (dto.streamId && dto.termId) {
+      timetable = await this.timetableRepository.findByStream(dto.streamId, dto.termId);
+    }
+
+    if (timetable) {
+      timetable.updateGrid(dto.periods, dto.days, dto.slots);
+      await this.timetableRepository.update(timetable);
+      return timetable.toJSON();
+    }
+
+    // Create new timetable if not exists
+    const newTimetable = Timetable.create(
+      {
+        schoolId: dto.schoolId || 'school-001',
+        academicYearId: dto.academicYearId || 'year-2026',
+        termId: dto.termId || 'term-2026-1',
+        classRoomId: dto.classRoomId || 'class-grade-7',
+        streamId: dto.streamId || 'stream-g7-east',
+        slots: dto.slots || [],
+        periods: dto.periods,
+        days: dto.days,
+        isActive: true
+      },
+      IdGenerator.generate()
+    );
+
+    await this.timetableRepository.save(newTimetable);
+    return newTimetable.toJSON();
+  }
+
+  public async deleteSlot(timetableId: string, slotId: string) {
+    const timetable = await this.timetableRepository.findById(timetableId);
+    if (!timetable) throw new NotFoundError('Timetable', timetableId);
+
+    timetable.removeSlot(slotId);
+    await this.timetableRepository.update(timetable);
+    return timetable.toJSON();
+  }
+
   public async getStreamTimetable(streamId: string, termId: string) {
     const timetable = await this.timetableRepository.findByStream(streamId, termId);
     if (!timetable) throw new NotFoundError('Timetable for this stream');

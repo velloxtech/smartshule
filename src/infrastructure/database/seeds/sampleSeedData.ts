@@ -31,7 +31,7 @@ export async function seedDatabase(repositories: any, passwordHasher: IPasswordH
   const schoolId = 'school-001';
   const school = School.create(
     {
-      name: 'Grace Seed Academy',
+      name: 'Grace Seeds School',
       code: 'GSA-2026',
       centerCode: 'CBA-041289',
       motto: 'Excellence in Competence & Character',

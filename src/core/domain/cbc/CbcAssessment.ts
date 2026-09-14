@@ -353,7 +353,7 @@ export interface CbcReportCardProps {
   termId: string;
   academicYearId: string;
   gradeLevel: CbcGradeLevel;
-  streamId: string;
+  streamId?: string;
   learningAreaAssessments: LearningAreaReportEntry[];
   coreCompetencyAssessments: CoreCompetencyAssessmentEntry[];
   valueAssessments: ValueAssessmentEntry[];
@@ -388,7 +388,7 @@ export class CbcReportCard extends Entity<CbcReportCardProps> {
     return this._props.gradeLevel;
   }
 
-  public get streamId(): string {
+  public get streamId(): string | undefined {
     return this._props.streamId;
   }
 

@@ -4,6 +4,7 @@ import { CbcGradeLevel } from '../../domain/user/Student';
 export interface InvoiceFilterCriteria {
   schoolId?: string;
   studentId?: string;
+  studentIds?: string[];
   termId?: string;
   academicYearId?: string;
   status?: InvoiceStatus;
@@ -12,6 +13,7 @@ export interface InvoiceFilterCriteria {
 export interface PaymentFilterCriteria {
   schoolId?: string;
   studentId?: string;
+  studentIds?: string[];
   invoiceId?: string;
   startDate?: string;
   endDate?: string;

@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { TeacherUseCases } from '../../../application/teachers/TeacherUseCases';
+import { AuthenticatedRequest } from '../middlewares/authMiddleware';
 
 export const RegisterTeacherSchema = z.object({
   email: z.string().email(),
@@ -33,6 +34,24 @@ export class TeacherController {
         data: teacher
       });
     } catch (err) {
+      next(err);
+    }
+  };
+
+  public getMyTeacherProfile = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      if (!req.user?.userId) {
+        return res.status(401).json({ success: false, message: 'Authentication required' });
+      }
+      const teacher = await this.teacherUseCases.getTeacherByUserId(req.user.userId);
+      return res.status(200).json({
+        success: true,
+        data: teacher
+      });
+    } catch (err: any) {
+      if (err.name === 'NotFoundError') {
+        return res.status(404).json({ success: false, message: 'No teacher profile linked to this user' });
+      }
       next(err);
     }
   };

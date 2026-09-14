@@ -57,19 +57,19 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
       <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-md w-full max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
-        <div className="bg-[#00236f] text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
+        <div className="bg-[#7a1228] text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-xl bg-primary-fixed text-on-primary-fixed flex items-center justify-center font-bold shrink-0">
               <span className="material-symbols-outlined text-[24px]">receipt_long</span>
             </div>
             <div>
               <h3 className="font-semibold text-base leading-tight">Record Direct Payment</h3>
-              <p className="text-xs text-blue-200">Bank Wire · Cheque · Cash Official Receipt</p>
+              <p className="text-xs text-rose-100">Bank Wire · Cheque · Cash Official Receipt</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-blue-200 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+            className="p-1 rounded-lg text-rose-100 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
           >
             <span className="material-symbols-outlined text-[20px]">close</span>
           </button>

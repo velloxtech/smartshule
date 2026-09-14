@@ -9,6 +9,7 @@
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "dev:frontend": "npm --prefix Frontend/smartshule run dev",
     "build:frontend": "npm --prefix Frontend/smartshule run build",
+    "preview:frontend": "npm --prefix Frontend/smartshule run preview",
     "test": "jest --runInBand",
     "test:coverage": "jest --coverage",
     "prisma:generate": "prisma generate",

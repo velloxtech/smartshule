@@ -2,9 +2,11 @@ import { Entity } from '../shared/Entity';
 import { CbcGradeLevel } from '../user/Student';
 
 export enum PaymentMethod {
-  MPESA = 'MPESA',
+  PAYSTACK = 'PAYSTACK',
   BANK_TRANSFER = 'BANK_TRANSFER',
   BANK_DEPOSIT = 'BANK_DEPOSIT',
+  CARD = 'CARD',
+  MPESA = 'MPESA',
   CHEQUE = 'CHEQUE',
   CASH = 'CASH'
 }

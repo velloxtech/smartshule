@@ -1,4 +1,6 @@
 import express, { Express, Request, Response } from 'express';
+import path from 'path';
+import fs from 'fs';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -10,7 +12,7 @@ export function createExpressApp(container: AppContainer): Express {
   const app = express();
 
   // Standard Middlewares
-  app.use(helmet());
+  app.use(helmet({ contentSecurityPolicy: false }));
   app.use(cors());
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
@@ -53,6 +55,18 @@ export function createExpressApp(container: AppContainer): Express {
 
   // Register API Routes
   app.use('/api/v1', createApiRouter(container));
+
+  // Serve Frontend production build if dist exists
+  const frontendDist = path.resolve(__dirname, '../../../Frontend/smartshule/dist');
+  if (fs.existsSync(frontendDist)) {
+    app.use(express.static(frontendDist));
+    app.use((req: Request, res: Response, next) => {
+      if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/health')) {
+        return res.sendFile(path.join(frontendDist, 'index.html'));
+      }
+      next();
+    });
+  }
 
   // Global Error Handler
   app.use(errorHandler);

@@ -13,7 +13,8 @@ export const RegisterStudentSchema = z.object({
   dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Format must be YYYY-MM-DD'),
   gender: z.nativeEnum(StudentGender),
   gradeLevel: z.nativeEnum(CbcGradeLevel),
-  streamId: z.string().min(1),
+  classroomId: z.string().optional(),
+  streamId: z.string().optional(),
   schoolId: z.string().min(1),
   academicYearId: z.string().min(1),
   medicalConditions: z.string().optional(),
@@ -41,6 +42,7 @@ export const UpdateStudentSchema = z.object({
   medicalConditions: z.string().optional(),
   specialNeeds: z.string().optional(),
   gradeLevel: z.nativeEnum(CbcGradeLevel).optional(),
+  classroomId: z.string().optional(),
   streamId: z.string().optional(),
   academicYearId: z.string().optional(),
   status: z.nativeEnum(StudentStatus).optional()
@@ -89,10 +91,11 @@ export class StudentController {
 
   public listStudents = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { schoolId, gradeLevel, streamId, academicYearId, search } = req.query;
+      const { schoolId, gradeLevel, classroomId, streamId, academicYearId, search } = req.query;
       const students = await this.studentUseCases.listStudents({
         schoolId: schoolId as string,
         gradeLevel: gradeLevel as CbcGradeLevel,
+        classroomId: classroomId as string,
         streamId: streamId as string,
         academicYearId: academicYearId as string,
         search: search as string
@@ -114,6 +117,22 @@ export class StudentController {
       return res.status(200).json({
         success: true,
         data: result
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public getGuardianPortalData = async (req: any, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        return res.status(401).json({ success: false, message: 'Authentication required' });
+      }
+      const data = await this.studentUseCases.getGuardianPortalData(userId);
+      return res.status(200).json({
+        success: true,
+        data
       });
     } catch (err) {
       next(err);

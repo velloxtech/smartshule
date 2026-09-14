@@ -92,7 +92,9 @@ export const DefaultersView: React.FC<DefaultersViewProps> = ({
             <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
               Collection Efficiency
             </span>
-            <div className="text-xl font-bold font-data-mono text-on-surface mt-1">71.4%</div>
+            <div className="text-xl font-bold font-data-mono text-on-surface mt-1">
+              {defaultersReport?.collectionRatePercentage ?? 0}%
+            </div>
             <span className="text-[11px] text-secondary font-medium mt-1 block">Live Daraja IPN Synchronized</span>
           </div>
           <div className="w-12 h-12 rounded-xl bg-surface-container-low text-primary flex items-center justify-center font-bold">
@@ -147,9 +149,9 @@ export const DefaultersView: React.FC<DefaultersViewProps> = ({
                     <tr key={d.invoiceId} className="hover:bg-surface-container-low/50">
                       <td className="py-3 px-4 font-bold text-on-surface">{d.studentName}</td>
                       <td className="py-3 px-4 font-data-mono text-outline">{d.admissionNumber}</td>
-                      <td className="py-3 px-4 font-semibold text-primary">{d.gradeLevel}</td>
-                      <td className="py-3 px-4 text-on-surface">{d.guardianContact?.name || 'Mary Kariuki'}</td>
-                      <td className="py-3 px-4 font-data-mono text-outline">{d.guardianContact?.phone || '+254799888777'}</td>
+                      <td className="py-3 px-4 font-semibold text-primary">{d.gradeLevel?.replace('_', ' ')}</td>
+                      <td className="py-3 px-4 text-on-surface">{d.guardianContact?.name || studentMatch?.guardianName || 'N/A'}</td>
+                      <td className="py-3 px-4 font-data-mono text-outline">{d.guardianContact?.phone || studentMatch?.guardianPhone || 'N/A'}</td>
                       <td className="py-3 px-4 text-right font-data-mono">KES {d.amountPayable?.toLocaleString()}</td>
                       <td className="py-3 px-4 text-right font-data-mono font-bold text-error">
                         KES {d.balance?.toLocaleString()}
@@ -166,14 +168,14 @@ export const DefaultersView: React.FC<DefaultersViewProps> = ({
                             onClick={() => onOpenMpesaWithStudent(studentMatch || {
                               id: d.studentId,
                               admNo: d.admissionNumber,
-                              upi: 'NEMIS-K9281A',
-                              nemis: 'NEMIS-K9281A',
+                              upi: studentMatch?.upi || '',
+                              nemis: studentMatch?.nemis || '',
                               name: d.studentName,
-                              gender: 'Boy',
+                              gender: studentMatch?.gender || 'Learner',
                               grade: d.gradeLevel,
-                              stream: 'East',
+                              stream: studentMatch?.stream || '',
                               guardianName: d.guardianContact?.name || 'Parent',
-                              guardianPhone: d.guardianContact?.phone || '+254799888777',
+                              guardianPhone: d.guardianContact?.phone || '',
                               feeBalance: d.balance,
                               totalFee: d.amountPayable,
                               attendanceRate: 100,

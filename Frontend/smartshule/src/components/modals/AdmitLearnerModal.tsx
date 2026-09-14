@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { Student } from '../../types';
+import React, { useState, useEffect } from 'react';
+import { Student, ClassRoom, StreamItem } from '../../types';
+import { apiService } from '../../services/api';
 
 interface AdmitLearnerModalProps {
   isOpen: boolean;
@@ -12,18 +13,64 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
   onClose,
   onAdmit,
 }) => {
+  const [classes, setClasses] = useState<ClassRoom[]>([]);
+  const [streams, setStreams] = useState<StreamItem[]>([]);
+  const [selectedClassId, setSelectedClassId] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [gender, setGender] = useState<'MALE' | 'FEMALE'>('MALE');
-  const [gradeLevel, setGradeLevel] = useState('GRADE_7');
-  const [streamId, setStreamId] = useState('stream-g7-east');
-  const [dob, setDob] = useState('2013-05-14');
+  const [streamId, setStreamId] = useState('');
+  const [dob, setDob] = useState('2015-05-14');
   const [guardianName, setGuardianName] = useState('');
-  const [guardianPhone, setGuardianPhone] = useState('+254799888777');
+  const [guardianPhone, setGuardianPhone] = useState('');
   const [guardianEmail, setGuardianEmail] = useState('');
-  const [totalFee, setTotalFee] = useState('42000');
+  const [totalFee, setTotalFee] = useState('0');
+
+  useEffect(() => {
+    async function loadDbClasses() {
+      try {
+        const res = await apiService.getClasses();
+        if (res.success && res.data?.length) {
+          setClasses(res.data);
+          setSelectedClassId(res.data[0].id);
+        }
+      } catch (err) {
+        console.error('Failed to load classes for admission modal:', err);
+      }
+    }
+    if (isOpen) {
+      loadDbClasses();
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    async function loadStreamsForClass() {
+      if (!selectedClassId) {
+        setStreams([]);
+        setStreamId('');
+        return;
+      }
+      try {
+        const res = await apiService.getStreamsByClass(selectedClassId);
+        if (res.success && res.data?.length) {
+          setStreams(res.data);
+          setStreamId('');
+        } else {
+          setStreams([]);
+          setStreamId('');
+        }
+      } catch {
+        setStreams([]);
+        setStreamId('');
+      }
+    }
+    loadStreamsForClass();
+  }, [selectedClassId]);
 
   if (!isOpen) return null;
+
+  const currentClass = classes.find(c => c.id === selectedClassId) || classes[0];
+  const gradeLevel = currentClass?.gradeLevel || 'GRADE_7';
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,16 +90,17 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
       dateOfBirth: dob,
       gender,
       gradeLevel,
-      streamId,
+      classroomId: currentClass?.id,
+      streamId: streamId || undefined,
       schoolId: 'school-001',
       academicYearId: 'year-2026',
       guardian: {
         firstName: gFirst,
         lastName: gLast,
         email: guardianEmail || `${gFirst.toLowerCase()}@gmail.com`,
-        phone: guardianPhone,
-        relationship: 'MOTHER',
-        emergencyContact: guardianPhone,
+        phone: guardianPhone || '+254700000000',
+        relationship: 'PARENT',
+        emergencyContact: guardianPhone || '+254700000000',
       },
     };
 
@@ -63,10 +111,10 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
         nemis: upi,
         name: fullName,
         gender: gender === 'MALE' ? 'Boy' : 'Girl',
-        grade: gradeLevel.replace('_', ' '),
-        stream: 'East',
+        grade: currentClass?.name || gradeLevel.replace('_', ' '),
+        stream: streamId ? (streams.find(s => s.id === streamId)?.name || 'Stream') : 'General',
         guardianName: guardianName || `${gFirst} ${gLast}`,
-        guardianPhone,
+        guardianPhone: guardianPhone || '-',
         feeBalance: Number(totalFee),
         totalFee: Number(totalFee),
         attendanceRate: 100,
@@ -82,19 +130,19 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-150">
       <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-lg w-full max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
-        <div className="bg-[#00236f] text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
+        <div className="bg-[#7a1228] text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-xl bg-primary-fixed text-on-primary-fixed flex items-center justify-center font-bold">
               <span className="material-symbols-outlined text-[24px]">person_add</span>
             </div>
             <div>
               <h3 className="font-semibold text-base leading-tight">Admit New CBC Learner</h3>
-              <p className="text-xs text-blue-200">SmartShule · Automatic UPI & NEMIS Registration</p>
+              <p className="text-xs text-rose-100">Grace Seeds School · Automatic UPI & NEMIS Registration</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-blue-200 hover:text-white hover:bg-white/10 transition-colors"
+            className="p-1 rounded-lg text-rose-100 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
           >
             <span className="material-symbols-outlined text-[20px]">close</span>
           </button>
@@ -161,37 +209,35 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">
-                CBC Grade
+                CBC Class (From Database)
               </label>
               <select
-                value={gradeLevel}
-                onChange={(e) => setGradeLevel(e.target.value)}
+                value={selectedClassId}
+                onChange={(e) => setSelectedClassId(e.target.value)}
                 className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-sm text-on-surface focus:outline-primary"
               >
-                <option value="GRADE_7">Grade 7 (Junior Sec)</option>
-                <option value="GRADE_8">Grade 8 (Junior Sec)</option>
-                <option value="GRADE_9">Grade 9 (Junior Sec)</option>
-                <option value="GRADE_6">Grade 6 (KPSEA)</option>
-                <option value="GRADE_5">Grade 5</option>
-                <option value="GRADE_4">Grade 4</option>
-                <option value="GRADE_3">Grade 3</option>
-                <option value="GRADE_2">Grade 2</option>
-                <option value="GRADE_1">Grade 1</option>
-                <option value="PP2">PP2</option>
-                <option value="PP1">PP1</option>
+                {classes.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} ({c.educationLevel.replace('_', ' ')})
+                  </option>
+                ))}
               </select>
             </div>
             <div>
               <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">
-                Allocated Stream
+                Stream (Optional)
               </label>
               <select
                 value={streamId}
                 onChange={(e) => setStreamId(e.target.value)}
                 className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-sm text-on-surface focus:outline-primary"
               >
-                <option value="stream-g7-east">East Stream</option>
-                <option value="stream-g7-west">West Stream</option>
+                <option value="">No Stream (Single Class)</option>
+                {streams.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    Stream {s.name} (Cap: {s.capacity})
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -227,7 +273,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
               </div>
               <div>
                 <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">
-                  Email
+                  Email (Optional)
                 </label>
                 <input
                   type="email"

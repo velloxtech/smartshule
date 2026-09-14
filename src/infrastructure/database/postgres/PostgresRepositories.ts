@@ -433,6 +433,7 @@ export class PostgresStudentRepository implements IStudentRepository {
       dateOfBirth: r.date_of_birth,
       gender: r.gender,
       gradeLevel: r.grade_level,
+      classroomId: r.classroom_id,
       streamId: r.stream_id,
       schoolId: r.school_id,
       academicYearId: r.academic_year_id,
@@ -460,7 +461,14 @@ export class PostgresStudentRepository implements IStudentRepository {
     const params: any[] = [];
     if (filters?.schoolId) { params.push(filters.schoolId); q += ` AND school_id = $${params.length}`; }
     if (filters?.gradeLevel) { params.push(filters.gradeLevel); q += ` AND grade_level = $${params.length}`; }
-    if (filters?.streamId) { params.push(filters.streamId); q += ` AND stream_id = $${params.length}`; }
+    if (filters?.classroomId) {
+      params.push(filters.classroomId);
+      q += ` AND (classroom_id = $${params.length} OR stream_id = $${params.length})`;
+    }
+    if (filters?.streamId) {
+      params.push(filters.streamId);
+      q += ` AND (stream_id = $${params.length} OR classroom_id = $${params.length})`;
+    }
     if (filters?.academicYearId) { params.push(filters.academicYearId); q += ` AND academic_year_id = $${params.length}`; }
     if (filters?.search) {
       params.push(`%${filters.search}%`);
@@ -475,10 +483,31 @@ export class PostgresStudentRepository implements IStudentRepository {
     return res.rows.map(r => this.mapRow(r));
   }
   public async save(s: Student): Promise<void> {
-    const q = `INSERT INTO students (id, admission_number, upi_number, first_name, middle_name, last_name, date_of_birth, gender, grade_level, stream_id, school_id, academic_year_id, guardian_ids, medical_conditions, special_needs, status, profile_photo_url, created_at, updated_at)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
-               ON CONFLICT (id) DO UPDATE SET first_name = EXCLUDED.first_name, last_name = EXCLUDED.last_name, grade_level = EXCLUDED.grade_level, stream_id = EXCLUDED.stream_id, guardian_ids = EXCLUDED.guardian_ids, status = EXCLUDED.status, updated_at = NOW()`;
-    await this.pool.query(q, [s.id, s.admissionNumber, s.upiNumber, s.firstName, s.middleName, s.lastName, s.dateOfBirth, s.gender, s.gradeLevel, s.streamId, s.schoolId, s.academicYearId, JSON.stringify(s.guardianIds), s.medicalConditions, s.specialNeeds, s.status, s.profilePhotoUrl, s.createdAt, s.updatedAt]);
+    const q = `INSERT INTO students (id, admission_number, upi_number, first_name, middle_name, last_name, date_of_birth, gender, grade_level, classroom_id, stream_id, school_id, academic_year_id, guardian_ids, medical_conditions, special_needs, status, profile_photo_url, created_at, updated_at)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+               ON CONFLICT (id) DO UPDATE SET first_name = EXCLUDED.first_name, last_name = EXCLUDED.last_name, grade_level = EXCLUDED.grade_level, classroom_id = EXCLUDED.classroom_id, stream_id = EXCLUDED.stream_id, guardian_ids = EXCLUDED.guardian_ids, status = EXCLUDED.status, updated_at = NOW()`;
+    await this.pool.query(q, [
+      s.id,
+      s.admissionNumber,
+      s.upiNumber || null,
+      s.firstName,
+      s.middleName || null,
+      s.lastName,
+      s.dateOfBirth,
+      s.gender,
+      s.gradeLevel,
+      s.classroomId || null,
+      s.streamId || null,
+      s.schoolId,
+      s.academicYearId,
+      JSON.stringify(s.guardianIds),
+      s.medicalConditions || null,
+      s.specialNeeds || null,
+      s.status,
+      s.profilePhotoUrl || null,
+      s.createdAt,
+      s.updatedAt
+    ]);
   }
   public async update(s: Student): Promise<void> { await this.save(s); }
   public async delete(id: string): Promise<void> { await this.pool.query('DELETE FROM students WHERE id = $1', [id]); }

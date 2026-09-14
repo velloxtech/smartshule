@@ -77,7 +77,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col">
       {/* Top Notification Banner */}
-      <div className="bg-[#00236f] text-white text-xs py-2 px-4 text-center font-medium flex items-center justify-center gap-2">
+      <div className="bg-[#7a1228] text-white text-xs py-2 px-4 text-center font-medium flex items-center justify-center gap-2">
         <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
         <span>Competency-Based Curriculum Framework & Automated Assessment CBA Bridge Active</span>
       </div>
@@ -86,28 +86,28 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#00236f] text-white flex items-center justify-center font-bold shadow-md shadow-blue-900/20">
+            <div className="w-10 h-10 rounded-xl bg-[#7a1228] text-white flex items-center justify-center font-bold shadow-md shadow-rose-950/20">
               <span className="material-symbols-outlined text-[24px]">school</span>
             </div>
             <div>
-              <div className="font-bold text-xl tracking-tight text-[#00236f] leading-none">
-                Grace Seed Academy
+              <div className="font-bold text-xl tracking-tight text-[#7a1228] leading-none">
+                Grace Seeds School
               </div>
               <p className="text-[11px] text-slate-500 font-medium">Competency-Based Curriculum System</p>
             </div>
           </div>
 
           <nav className="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-600">
-            <a href="#features" className="hover:text-[#00236f] transition-colors">Key Features</a>
-            <a href="#portals" className="hover:text-[#00236f] transition-colors">Role Portals</a>
-            <a href="#cbc-framework" className="hover:text-[#00236f] transition-colors">CBC Rubrics</a>
-            <a href="#mpesa" className="hover:text-[#00236f] transition-colors">M-Pesa STK</a>
+            <a href="#features" className="hover:text-[#7a1228] transition-colors">Key Features</a>
+            <a href="#portals" className="hover:text-[#7a1228] transition-colors">Role Portals</a>
+            <a href="#cbc-framework" className="hover:text-[#7a1228] transition-colors">CBC Rubrics</a>
+            <a href="#mpesa" className="hover:text-[#7a1228] transition-colors">M-Pesa STK</a>
           </nav>
 
           <div className="flex items-center gap-3">
             <button
               onClick={isAuthenticated && onNavigatePortal ? onNavigatePortal : onNavigateLogin}
-              className="px-5 py-2.5 bg-[#00236f] hover:bg-[#1e3a8a] text-white font-semibold text-sm rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer"
+              className="px-5 py-2.5 bg-[#7a1228] hover:bg-[#5c0a1a] text-white font-semibold text-sm rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer"
             >
               <span className="material-symbols-outlined text-[18px]">
                 {isAuthenticated ? 'dashboard' : 'login'}
@@ -119,16 +119,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </header>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-blue-50/70 via-white to-slate-50 pt-16 pb-24">
+      <section className="relative overflow-hidden bg-gradient-to-b from-rose-50/50 via-white to-slate-50 pt-16 pb-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center max-w-3xl mx-auto">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-100/80 border border-blue-200 text-[#00236f] text-xs font-semibold mb-6">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-rose-100/80 border border-rose-200 text-[#7a1228] text-xs font-semibold mb-6">
               <span className="material-symbols-outlined text-[16px] text-[#006a63]">verified</span>
               <span>Aligned with Competency-Based Curriculum Standards (CBC)</span>
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 leading-[1.15]">
-              Intelligent School Management Built for <span className="text-[#00236f]">Grace Seed Academy</span>
+              Intelligent School Management Built for <span className="text-[#7a1228]">Grace Seeds School</span>
             </h1>
 
             <p className="mt-6 text-lg sm:text-xl text-slate-600 leading-relaxed">
@@ -139,7 +139,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <div className="mt-9 flex flex-col sm:flex-row items-center justify-center gap-4">
               <button
                 onClick={isAuthenticated && onNavigatePortal ? onNavigatePortal : onNavigateLogin}
-                className="w-full sm:w-auto px-8 py-4 bg-[#00236f] hover:bg-[#1e3a8a] text-white font-bold rounded-2xl shadow-xl shadow-blue-900/25 hover:shadow-2xl transition-all flex items-center justify-center gap-2.5 text-base cursor-pointer"
+                className="w-full sm:w-auto px-8 py-4 bg-[#7a1228] hover:bg-[#5c0a1a] text-white font-bold rounded-2xl shadow-xl shadow-rose-950/25 hover:shadow-2xl transition-all flex items-center justify-center gap-2.5 text-base cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[20px]">rocket_launch</span>
                 <span>{isAuthenticated ? 'Return to Dashboard' : 'Launch School Portal'}</span>
@@ -153,22 +153,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <span className="material-symbols-outlined text-[18px]">arrow_downward</span>
               </a>
             </div>
-
-            {/* Credential Quick Pill */}
-            <div className="mt-8 p-3 rounded-2xl bg-blue-50/80 border border-blue-200/80 max-w-xl mx-auto flex flex-wrap items-center justify-center gap-2 text-xs text-slate-600">
-              <span className="font-bold text-[#00236f]">Try Demo Accounts:</span>
-              <span className="px-2 py-0.5 rounded bg-white font-mono text-[11px] font-semibold border border-blue-200">Admin</span>
-              <span className="px-2 py-0.5 rounded bg-white font-mono text-[11px] font-semibold border border-blue-200">Teacher</span>
-              <span className="px-2 py-0.5 rounded bg-white font-mono text-[11px] font-semibold border border-blue-200">Finance</span>
-              <span className="px-2 py-0.5 rounded bg-white font-mono text-[11px] font-semibold border border-blue-200">Parent</span>
-              <span className="text-slate-400">· Available on Login Page</span>
-            </div>
           </div>
 
           {/* Quick Metrics Cards */}
           <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-5xl mx-auto">
             <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs text-center">
-              <div className="text-3xl font-extrabold text-[#00236f]">100%</div>
+              <div className="text-3xl font-extrabold text-[#7a1228]">100%</div>
               <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-1">KICD CBC Aligned</div>
               <p className="text-[11px] text-slate-400 mt-1">EE, ME, AE, BE Rubrics</p>
             </div>
@@ -178,7 +168,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <p className="text-[11px] text-slate-400 mt-1">Instant Parent Checkout</p>
             </div>
             <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs text-center">
-              <div className="text-3xl font-extrabold text-[#00236f]">KNEC CBA</div>
+              <div className="text-3xl font-extrabold text-[#7a1228]">KNEC CBA</div>
               <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-1">Portal Bridge</div>
               <p className="text-[11px] text-slate-400 mt-1">Automated UPI NEMIS</p>
             </div>
@@ -206,8 +196,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {/* Feature 1 */}
-            <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 hover:border-[#00236f]/30 hover:shadow-md transition-all">
-              <div className="w-12 h-12 rounded-xl bg-[#00236f] text-white flex items-center justify-center mb-4">
+            <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 hover:border-[#7a1228]/30 hover:shadow-md transition-all">
+              <div className="w-12 h-12 rounded-xl bg-[#7a1228] text-white flex items-center justify-center mb-4">
                 <span className="material-symbols-outlined text-[24px]">rule</span>
               </div>
               <h4 className="text-lg font-bold text-slate-900 mb-2">CBC 4-Level Assessment Scale</h4>
@@ -218,7 +208,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
 
             {/* Feature 2 */}
-            <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 hover:border-[#00236f]/30 hover:shadow-md transition-all">
+            <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 hover:border-[#7a1228]/30 hover:shadow-md transition-all">
               <div className="w-12 h-12 rounded-xl bg-[#006a63] text-white flex items-center justify-center mb-4">
                 <span className="material-symbols-outlined text-[24px]">point_of_sale</span>
               </div>
@@ -230,8 +220,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
 
             {/* Feature 3 */}
-            <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 hover:border-[#00236f]/30 hover:shadow-md transition-all">
-              <div className="w-12 h-12 rounded-xl bg-[#00236f] text-white flex items-center justify-center mb-4">
+            <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 hover:border-[#7a1228]/30 hover:shadow-md transition-all">
+              <div className="w-12 h-12 rounded-xl bg-[#7a1228] text-white flex items-center justify-center mb-4">
                 <span className="material-symbols-outlined text-[24px]">verified</span>
               </div>
               <h4 className="text-lg font-bold text-slate-900 mb-2">KNEC CBA & NEMIS Bridge</h4>
@@ -242,7 +232,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
 
             {/* Feature 4 */}
-            <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 hover:border-[#00236f]/30 hover:shadow-md transition-all">
+            <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 hover:border-[#7a1228]/30 hover:shadow-md transition-all">
               <div className="w-12 h-12 rounded-xl bg-[#653400] text-white flex items-center justify-center mb-4">
                 <span className="material-symbols-outlined text-[24px]">edit_calendar</span>
               </div>
@@ -254,8 +244,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
 
             {/* Feature 5 */}
-            <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 hover:border-[#00236f]/30 hover:shadow-md transition-all">
-              <div className="w-12 h-12 rounded-xl bg-[#00236f] text-white flex items-center justify-center mb-4">
+            <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 hover:border-[#7a1228]/30 hover:shadow-md transition-all">
+              <div className="w-12 h-12 rounded-xl bg-[#7a1228] text-white flex items-center justify-center mb-4">
                 <span className="material-symbols-outlined text-[24px]">calendar_view_week</span>
               </div>
               <h4 className="text-lg font-bold text-slate-900 mb-2">Timetable Conflict Engine</h4>
@@ -266,7 +256,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
 
             {/* Feature 6 */}
-            <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 hover:border-[#00236f]/30 hover:shadow-md transition-all">
+            <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 hover:border-[#7a1228]/30 hover:shadow-md transition-all">
               <div className="w-12 h-12 rounded-xl bg-[#006a63] text-white flex items-center justify-center mb-4">
                 <span className="material-symbols-outlined text-[24px]">sms</span>
               </div>
@@ -284,7 +274,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       <section id="portals" className="py-20 bg-slate-100 border-t border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto mb-12">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-[#00236f] mb-2">Role-Based Access Control</h2>
+            <h2 className="text-xs font-bold uppercase tracking-widest text-[#7a1228] mb-2">Role-Based Access Control</h2>
             <h3 className="text-3xl font-extrabold text-slate-900">Tailored Workspaces for Every Role</h3>
             <p className="mt-2 text-sm text-slate-600">
               Each user account is securely restricted to the specific tools, workflows, and data their role permits.
@@ -302,7 +292,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     onClick={() => setActivePortalTab(key)}
                     className={`px-4 sm:px-6 py-2.5 rounded-xl font-semibold text-xs sm:text-sm transition-all cursor-pointer flex items-center gap-2 ${
                       isActive
-                        ? 'bg-[#00236f] text-white shadow-md'
+                        ? 'bg-[#7a1228] text-white shadow-md'
                         : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                     }`}
                   >
@@ -317,7 +307,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           {/* Role Detail Card */}
           <div className="max-w-4xl mx-auto bg-white rounded-3xl p-8 sm:p-10 border border-slate-200 shadow-lg flex flex-col md:flex-row gap-8 items-center">
             <div className="flex-1 space-y-4">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-blue-50 text-[#00236f] font-bold text-xs uppercase tracking-wider">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-rose-50 text-[#7a1228] font-bold text-xs uppercase tracking-wider">
                 <span className="material-symbols-outlined text-[16px]">{selectedPortal.icon}</span>
                 <span>{selectedPortal.badge}</span>
               </div>
@@ -337,7 +327,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <div className="pt-4">
                 <button
                   onClick={onNavigateLogin}
-                  className="px-6 py-2.5 bg-[#00236f] hover:bg-[#1e3a8a] text-white font-semibold rounded-xl text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer"
+                  className="px-6 py-2.5 bg-[#7a1228] hover:bg-[#5c0a1a] text-white font-semibold rounded-xl text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer"
                 >
                   <span>Sign In as {selectedPortal.title.split(' ')[0]}</span>
                   <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
@@ -345,15 +335,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </div>
             </div>
 
-            <div className="w-full md:w-72 bg-gradient-to-br from-[#00164e] to-[#00236f] rounded-2xl p-6 text-white text-center flex flex-col items-center justify-center space-y-4 shadow-xl shrink-0">
+            <div className="w-full md:w-72 bg-gradient-to-br from-[#3b050e] to-[#7a1228] rounded-2xl p-6 text-white text-center flex flex-col items-center justify-center space-y-4 shadow-xl shrink-0">
               <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center">
                 <span className="material-symbols-outlined text-[36px]">{selectedPortal.icon}</span>
               </div>
               <div>
                 <div className="font-bold text-base">{selectedPortal.badge}</div>
-                <div className="text-xs text-blue-200 mt-0.5">Role Protected Workspace</div>
+                <div className="text-xs text-rose-200 mt-0.5">Role Protected Workspace</div>
               </div>
-              <div className="w-full pt-4 border-t border-white/10 text-[11px] text-blue-100 flex items-center justify-center gap-1">
+              <div className="w-full pt-4 border-t border-white/10 text-[11px] text-rose-100 flex items-center justify-center gap-1">
                 <span className="material-symbols-outlined text-[14px]">lock</span>
                 <span>Requires Authorized Credentials</span>
               </div>
@@ -363,18 +353,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </section>
 
       {/* Call to Action Banner */}
-      <section className="py-20 bg-[#00236f] text-white relative overflow-hidden">
+      <section className="py-20 bg-[#7a1228] text-white relative overflow-hidden">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
           <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
             Ready to Transition to Modern CBC Administration?
           </h2>
-          <p className="mt-4 text-base text-blue-200 max-w-2xl mx-auto">
+          <p className="mt-4 text-base text-rose-100 max-w-2xl mx-auto">
             Experience automated competency grading, real-time Safaricom M-Pesa collections, and synchronized Ministry of Education compliance.
           </p>
           <div className="mt-8 flex justify-center">
             <button
               onClick={isAuthenticated && onNavigatePortal ? onNavigatePortal : onNavigateLogin}
-              className="px-8 py-4 bg-white hover:bg-slate-100 text-[#00236f] font-bold rounded-2xl shadow-2xl transition-all flex items-center gap-2.5 text-base cursor-pointer"
+              className="px-8 py-4 bg-white hover:bg-slate-100 text-[#7a1228] font-bold rounded-2xl shadow-2xl transition-all flex items-center gap-2.5 text-base cursor-pointer"
             >
               <span className="material-symbols-outlined text-[20px]">
                 {isAuthenticated ? 'dashboard' : 'login'}
@@ -386,13 +376,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </section>
 
       {/* Footer & Vellox Tech Watermark */}
-      <footer className="bg-[#00164e] text-slate-300 text-xs py-10 border-t border-blue-950">
+      <footer className="bg-[#2a040a] text-slate-300 text-xs py-10 border-t border-rose-950">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center text-white">
               <span className="material-symbols-outlined text-[16px]">school</span>
             </div>
-            <span className="font-bold text-white">Grace Seed Academy</span>
+            <span className="font-bold text-white">Grace Seeds School</span>
             <span className="text-slate-500">·</span>
             <span>CBC Educational Portal</span>
           </div>
@@ -400,7 +390,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             Standard Competency-Based Curriculum Framework & Continuous Assessment Model.
           </div>
           <div className="flex items-center gap-2 text-slate-300">
-            <span>© {new Date().getFullYear()} Grace Seed Academy.</span>
+            <span>© {new Date().getFullYear()} Grace Seeds School.</span>
             <span>•</span>
             <span className="text-white font-semibold flex items-center gap-1">
               Powered by <strong className="text-emerald-400 font-bold tracking-wide">Vellox Tech</strong>

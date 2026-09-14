@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TabType, Student, Teacher, SystemActivity, AssessmentRecord, FeeTransaction } from './types';
+import { TabType, Student, Teacher, SystemActivity, AssessmentRecord, FeeTransaction, UserRole } from './types';
 import { apiService } from './services/api';
 import { useAuth } from './context/AuthContext';
 import { isTabPermitted } from './utils/rbac';
@@ -11,6 +11,8 @@ import { LoginPage } from './components/auth/LoginPage';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { DashboardView } from './components/views/DashboardView';
+import { TeacherDashboardView } from './components/views/TeacherDashboardView';
+import { ParentDashboardView } from './components/views/ParentDashboardView';
 import { StudentsView } from './components/views/StudentsView';
 import { TeachersView } from './components/views/TeachersView';
 import { ClassesView } from './components/views/ClassesView';
@@ -25,15 +27,22 @@ import { AttendanceRegisterView } from './components/views/AttendanceRegisterVie
 import { FeeStructureView } from './components/views/FeeStructureView';
 import { InvoicesMpesaView } from './components/views/InvoicesMpesaView';
 import { DefaultersView } from './components/views/DefaultersView';
+import { EDiaryView } from './components/views/EDiaryView';
+import { VisualCBCView } from './components/views/VisualCBCView';
+import { WhatsAppBotView } from './components/views/WhatsAppBotView';
 
 // Modals
 import { MpesaStkModal } from './components/modals/MpesaStkModal';
+import { PaystackCheckoutModal } from './components/modals/PaystackCheckoutModal';
 import { CBCFormativeModal } from './components/modals/CBCFormativeModal';
 import { AdmitLearnerModal } from './components/modals/AdmitLearnerModal';
 import { SendSmsModal } from './components/modals/SendSmsModal';
 import { KnecSyncModal } from './components/modals/KnecSyncModal';
 import { ExportReportModal } from './components/modals/ExportReportModal';
 import { OnboardTeacherModal } from './components/modals/OnboardTeacherModal';
+import { UploadMarksModal } from './components/modals/UploadMarksModal';
+import { CreateLessonPlanModal } from './components/modals/CreateLessonPlanModal';
+import { CreateSchemeModal } from './components/modals/CreateSchemeModal';
 
 export default function App() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -54,6 +63,8 @@ export default function App() {
   const [onboardTeacherModalOpen, setOnboardTeacherModalOpen] = useState(false);
   const [mpesaModalOpen, setMpesaModalOpen] = useState(false);
   const [selectedStudentForMpesa, setSelectedStudentForMpesa] = useState<Student | undefined>(undefined);
+  const [paystackModalOpen, setPaystackModalOpen] = useState(false);
+  const [selectedStudentForPaystack, setSelectedStudentForPaystack] = useState<Student | undefined>(undefined);
 
   const [cbcModalOpen, setCbcModalOpen] = useState(false);
   const [selectedStudentForCbc, setSelectedStudentForCbc] = useState<Student | undefined>(undefined);
@@ -65,6 +76,9 @@ export default function App() {
   const [knecSyncModalOpen, setKnecSyncModalOpen] = useState(false);
   const [exportReportModalOpen, setExportReportModalOpen] = useState(false);
   const [selectedStudentForReport, setSelectedStudentForReport] = useState<Student | undefined>(undefined);
+  const [uploadMarksModalOpen, setUploadMarksModalOpen] = useState(false);
+  const [createLessonPlanModalOpen, setCreateLessonPlanModalOpen] = useState(false);
+  const [createSchemeModalOpen, setCreateSchemeModalOpen] = useState(false);
   const [backendConnected, setBackendConnected] = useState(false);
 
   // Synchronize view state with authentication status
@@ -88,25 +102,39 @@ export default function App() {
       setBackendConnected(isUp);
       if (isUp && isAuthenticated) {
         try {
-          const studentData = await apiService.getStudents();
+          const [studentData, defaultersRes] = await Promise.all([
+            apiService.getStudents().catch(() => null),
+            apiService.getDefaulters().catch(() => null),
+          ]);
+
+          const feeMap = new Map<string, { balance: number; billed: number }>();
+          if (defaultersRes?.data?.defaulters && Array.isArray(defaultersRes.data.defaulters)) {
+            defaultersRes.data.defaulters.forEach((d: any) => {
+              feeMap.set(d.studentId, { balance: d.balance || 0, billed: d.amountPayable || 0 });
+            });
+          }
+
           if (studentData?.data && Array.isArray(studentData.data) && studentData.data.length > 0) {
-            const mappedStudents: Student[] = studentData.data.map((st: any) => ({
-              id: st.id,
-              admNo: st.admissionNumber,
-              upi: st.upiNumber || 'NEMIS-PENDING',
-              nemis: st.upiNumber || 'NEMIS-PENDING',
-              name: `${st.firstName} ${st.lastName}`,
-              gender: st.gender === 'FEMALE' ? 'Girl' : 'Boy',
-              grade: st.gradeLevel ? st.gradeLevel.replace('_', ' ') : 'Grade 7',
-              stream: st.streamId ? st.streamId.replace('stream-g7-', '').toUpperCase() : 'East',
-              guardianName: st.guardian ? `${st.guardian.firstName} ${st.guardian.lastName}` : 'Guardian',
-              guardianPhone: st.guardian?.phone || '+254700000000',
-              feeBalance: 0,
-              totalFee: 42000,
-              attendanceRate: 98,
-              cbcRating: 'ME',
-              status: st.status === 'ACTIVE' ? 'Active' : st.status,
-            }));
+            const mappedStudents: Student[] = studentData.data.map((st: any) => {
+              const fee = feeMap.get(st.id) || { balance: 0, billed: 0 };
+              return {
+                id: st.id,
+                admNo: st.admissionNumber,
+                upi: st.upiNumber || 'NEMIS-PENDING',
+                nemis: st.upiNumber || 'NEMIS-PENDING',
+                name: `${st.firstName} ${st.lastName}`,
+                gender: st.gender === 'FEMALE' ? 'Girl' : 'Boy',
+                grade: st.gradeLevel ? st.gradeLevel.replace('_', ' ') : 'PP1',
+                stream: st.streamId ? st.streamId.replace(/^stream-[^-]+-/, '').toUpperCase() : '',
+                guardianName: st.guardian ? `${st.guardian.firstName} ${st.guardian.lastName}` : 'Guardian',
+                guardianPhone: st.guardian?.phone || '+254700000000',
+                feeBalance: fee.balance,
+                totalFee: fee.billed,
+                attendanceRate: 98,
+                cbcRating: 'ME',
+                status: st.status === 'ACTIVE' ? 'Active' : st.status,
+              };
+            });
             setStudents(mappedStudents);
           }
         } catch {
@@ -120,10 +148,10 @@ export default function App() {
               name: t.user ? `${t.user.firstName} ${t.user.lastName}` : `Teacher ${t.tscNumber || ''}`,
               role: 'Subject Teacher',
               tscNumber: t.tscNumber || 'TSC-PENDING',
-              assignedClass: 'Grade 7 East',
+              assignedClass: t.assignedClassStreamIds?.length ? t.assignedClassStreamIds.join(', ') : 'Unassigned',
               phone: t.user?.phone || '+254700000000',
               email: t.user?.email || 'teacher@smartshule.ac.ke',
-              learningAreas: t.specialization || ['Science & Tech'],
+              learningAreas: t.specialization || ['CBC Core'],
               status: 'Clocked In',
               clockInTime: '07:45 AM',
             }));
@@ -133,9 +161,26 @@ export default function App() {
           // Keep empty state
         }
         try {
-          const analyticsData = await apiService.getDashboardAnalytics();
+          const [analyticsData, paymentsRes] = await Promise.all([
+            apiService.getDashboardAnalytics().catch(() => null),
+            apiService.getPayments().catch(() => null),
+          ]);
           if (analyticsData?.data?.finance?.totalCollected) {
             setTotalCollectedFee(analyticsData.data.finance.totalCollected);
+          }
+          if (paymentsRes?.data && Array.isArray(paymentsRes.data) && paymentsRes.data.length > 0) {
+            const mappedTxs: FeeTransaction[] = paymentsRes.data.map((p: any) => ({
+              id: p.id,
+              ref: p.receiptNumber || p.transactionReference || p.id,
+              studentName: p.studentName || 'Learner',
+              admNo: p.admissionNumber || '',
+              grade: p.gradeLevel ? p.gradeLevel.replace('_', ' ') : '',
+              amount: p.amount,
+              channel: p.paymentMethod === 'MPESA' ? 'M-Pesa Express' : (p.paymentMethod || 'Bank Wire'),
+              date: p.paymentDate || 'Today',
+              status: p.status === 'COMPLETED' ? 'Settled' : p.status,
+            }));
+            setTransactions(mappedTxs);
           }
         } catch {
           // Keep default 0
@@ -149,6 +194,11 @@ export default function App() {
   const handleOpenMpesa = (student?: Student) => {
     setSelectedStudentForMpesa(student || (students && students.length > 0 ? students[0] : undefined));
     setMpesaModalOpen(true);
+  };
+
+  const handleOpenPaystack = (student?: Student) => {
+    setSelectedStudentForPaystack(student || (students && students.length > 0 ? students[0] : undefined));
+    setPaystackModalOpen(true);
   };
 
   const handleOpenCbc = (student?: Student) => {
@@ -172,7 +222,7 @@ export default function App() {
     const newTx: FeeTransaction = {
       id: `tx-${Date.now()}`,
       ref: `SLK${Math.floor(10000000 + Math.random() * 90000000)}`,
-      studentName: student?.name || 'Grace Seed Learner',
+      studentName: student?.name || 'Grace Seeds Learner',
       admNo: student?.admNo || 'GSA-2026-000',
       grade: student?.grade || 'Grade 1',
       amount,
@@ -437,19 +487,35 @@ export default function App() {
         {/* Dynamic Route Content */}
         <main className="flex-1 px-4 sm:px-6 lg:px-8 pt-4 max-w-7xl w-full mx-auto">
           {currentTab === 'dashboard' && (
-            <DashboardView
-              students={students}
-              teachers={teachers}
-              activities={activities}
-              totalCollectedFee={totalCollectedFee}
-              onOpenMpesa={() => handleOpenMpesa()}
-              onOpenCBCModal={() => handleOpenCbc()}
-              onOpenAdmitModal={() => setAdmitModalOpen(true)}
-              onOpenSmsModal={handleOpenSms}
-              onOpenKnecSync={() => setKnecSyncModalOpen(true)}
-              onOpenExportReport={() => setExportReportModalOpen(true)}
-              onNavigateTab={(tab) => setCurrentTab(tab)}
-            />
+            user?.role === UserRole.TEACHER ? (
+              <TeacherDashboardView
+                onNavigateTab={(tab) => setCurrentTab(tab)}
+                onOpenUploadMarks={() => setUploadMarksModalOpen(true)}
+                onOpenNewLessonPlan={() => setCreateLessonPlanModalOpen(true)}
+                onOpenNewScheme={() => setCreateSchemeModalOpen(true)}
+              />
+            ) : user?.role === UserRole.GUARDIAN ? (
+              <ParentDashboardView
+                onOpenMpesaWithStudent={(student) => handleOpenPaystack(student)}
+                onOpenPaystackWithStudent={(student) => handleOpenPaystack(student)}
+                onViewReportCard={(student) => handleViewReportCard(student)}
+                onNavigateTab={(tab) => setCurrentTab(tab as any)}
+              />
+            ) : (
+              <DashboardView
+                students={students}
+                teachers={teachers}
+                activities={activities}
+                totalCollectedFee={totalCollectedFee}
+                onOpenMpesa={() => handleOpenMpesa()}
+                onOpenCBCModal={() => handleOpenCbc()}
+                onOpenAdmitModal={() => setAdmitModalOpen(true)}
+                onOpenSmsModal={handleOpenSms}
+                onOpenKnecSync={() => setKnecSyncModalOpen(true)}
+                onOpenExportReport={() => setExportReportModalOpen(true)}
+                onNavigateTab={(tab) => setCurrentTab(tab)}
+              />
+            )
           )}
 
           {currentTab === 'students-guardians' && (
@@ -523,12 +589,18 @@ export default function App() {
               onOpenSmsModal={handleOpenSms}
             />
           )}
+
+          {currentTab === 'ediary' && <EDiaryView />}
+
+          {currentTab === 'visual-cbc' && <VisualCBCView />}
+
+          {currentTab === 'whatsapp-bot' && <WhatsAppBotView />}
         </main>
 
         {/* Global Portal Footer & Vellox Tech Watermark */}
         <footer className="mt-auto py-4 px-6 border-t border-outline-variant/20 text-center text-xs text-on-surface-variant flex flex-wrap items-center justify-between gap-2">
           <div className="font-semibold text-on-surface">
-            Grace Seed Academy · School Management System
+            Grace Seeds School · School Management System
           </div>
           <div className="flex items-center gap-1.5 text-xs text-on-surface-variant">
             <span>Powered by</span>
@@ -542,6 +614,30 @@ export default function App() {
         isOpen={onboardTeacherModalOpen}
         onClose={() => setOnboardTeacherModalOpen(false)}
         onTeacherCreated={handleTeacherCreated}
+      />
+
+      <PaystackCheckoutModal
+        isOpen={paystackModalOpen}
+        onClose={() => setPaystackModalOpen(false)}
+        students={students}
+        initialStudent={selectedStudentForPaystack}
+        onPaymentSuccess={(tx) => {
+          const newTx: FeeTransaction = {
+            id: `tx-${Date.now()}`,
+            ref: tx.reference || tx.receiptNumber,
+            studentName: tx.studentName,
+            admNo: tx.admNo,
+            grade: 'Grade Level',
+            amount: tx.amount,
+            channel: tx.channel || 'Paystack Bank',
+            phone: '+254700000000',
+            timestamp: 'Just now',
+            status: 'Completed',
+          };
+          setTransactions((prev) => [newTx, ...prev]);
+          setTotalCollectedFee((prev) => prev + tx.amount);
+          setPaystackModalOpen(false);
+        }}
       />
 
       <MpesaStkModal
@@ -580,6 +676,24 @@ export default function App() {
       <ExportReportModal
         isOpen={exportReportModalOpen}
         onClose={() => setExportReportModalOpen(false)}
+      />
+
+      <UploadMarksModal
+        isOpen={uploadMarksModalOpen}
+        onClose={() => setUploadMarksModalOpen(false)}
+        onMarksUploaded={() => {}}
+      />
+
+      <CreateLessonPlanModal
+        isOpen={createLessonPlanModalOpen}
+        onClose={() => setCreateLessonPlanModalOpen(false)}
+        onPlanCreated={() => {}}
+      />
+
+      <CreateSchemeModal
+        isOpen={createSchemeModalOpen}
+        onClose={() => setCreateSchemeModalOpen(false)}
+        onSchemeCreated={() => {}}
       />
     </div>
   );

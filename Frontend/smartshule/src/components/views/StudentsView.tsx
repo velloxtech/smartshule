@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { Student, CBCRubric } from '../../types';
+import { Student, CBCRubric, UserRole } from '../../types';
 import { EditStudentModal } from '../modals/EditStudentModal';
+import { LearnerProfileModal } from '../modals/LearnerProfileModal';
+import { useAuth } from '../../context/AuthContext';
 
 interface StudentsViewProps {
   students: Student[];
@@ -19,12 +21,16 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
   onViewReportCard,
   onUpdateStudent,
 }) => {
+  const { user } = useAuth();
+  const isTeacher = user?.role === UserRole.TEACHER;
+
   const [search, setSearch] = useState('');
   const [selectedGrade, setSelectedGrade] = useState('All');
   const [selectedRating, setSelectedRating] = useState('All');
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [profileStudent, setProfileStudent] = useState<Student | null>(null);
 
-  const grades = ['All', 'PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'];
+  const grades = ['All', 'PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8'];
   const ratings = ['All', 'EE', 'ME', 'AE', 'BE'];
 
   const filtered = students.filter((s) => {
@@ -70,13 +76,15 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
           </p>
         </div>
 
-        <button
-          onClick={onOpenAdmitModal}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-lg hover:bg-primary-container text-sm font-semibold shadow-md transition-all self-start sm:self-auto cursor-pointer"
-        >
-          <span className="material-symbols-outlined text-[18px]">person_add</span>
-          <span>Admit New Learner</span>
-        </button>
+        {!isTeacher && (
+          <button
+            onClick={onOpenAdmitModal}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-lg hover:bg-primary-container text-sm font-semibold shadow-md transition-all self-start sm:self-auto cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[18px]">person_add</span>
+            <span>Admit New Learner</span>
+          </button>
+        )}
       </div>
 
       {/* Filter Controls */}
@@ -98,11 +106,11 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
           <select
             value={selectedGrade}
             onChange={(e) => setSelectedGrade(e.target.value)}
-            className="bg-surface-container-low text-xs font-semibold py-2 px-3 rounded-lg border border-outline-variant/30 text-on-surface"
+            className="bg-surface-container-low border border-outline-variant/30 text-xs rounded-lg py-2 px-3 text-on-surface"
           >
             {grades.map((g) => (
               <option key={g} value={g}>
-                Class: {g}
+                Grade: {g}
               </option>
             ))}
           </select>
@@ -110,29 +118,33 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
           <select
             value={selectedRating}
             onChange={(e) => setSelectedRating(e.target.value)}
-            className="bg-surface-container-low text-xs font-semibold py-2 px-3 rounded-lg border border-outline-variant/30 text-on-surface"
+            className="bg-surface-container-low border border-outline-variant/30 text-xs rounded-lg py-2 px-3 text-on-surface"
           >
             {ratings.map((r) => (
               <option key={r} value={r}>
-                CBC Rating: {r}
+                Rubric: {r}
               </option>
             ))}
           </select>
         </div>
       </div>
 
-      {/* Students Table */}
+      {/* Main Table */}
       <div className="bg-surface-container-lowest rounded-xl shadow-xs border border-outline-variant/30 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-surface-container-low text-on-surface-variant text-xs uppercase font-label-md tracking-wider border-b border-outline-variant/20">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-surface-container-low text-on-surface-variant uppercase font-semibold border-b border-outline-variant/30">
               <tr>
                 <th className="py-3 px-4">Learner Details</th>
                 <th className="py-3 px-4">MoE UPI / NEMIS</th>
                 <th className="py-3 px-4">Grade & Stream</th>
                 <th className="py-3 px-4">Guardian & Phone</th>
                 <th className="py-3 px-4">CBC Rubric</th>
-                <th className="py-3 px-4 text-right">Fee Balance</th>
+                {isTeacher ? (
+                  <th className="py-3 px-4 text-right">Attendance</th>
+                ) : (
+                  <th className="py-3 px-4 text-right">Fee Balance</th>
+                )}
                 <th className="py-3 px-4 text-right">Actions</th>
               </tr>
             </thead>
@@ -143,7 +155,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                     <div className="flex flex-col items-center justify-center gap-2">
                       <span className="material-symbols-outlined text-4xl text-outline">group_off</span>
                       <p className="font-semibold text-sm">No learners found</p>
-                      <p className="text-xs text-outline">Click "Admit New Learner" to register students in the CBC database.</p>
+                      <p className="text-xs text-outline">All learners are synced from the database.</p>
                     </div>
                   </td>
                 </tr>
@@ -181,22 +193,40 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                     <div className="text-xs font-data-mono text-on-surface-variant">{s.guardianPhone}</div>
                   </td>
                   <td className="py-3 px-4">{getRatingBadge(s.cbcRating)}</td>
-                  <td className="py-3 px-4 text-right">
-                    {s.feeBalance === 0 ? (
-                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-secondary">
-                        <span className="material-symbols-outlined text-[14px]">check_circle</span> Cleared
+                  
+                  {isTeacher ? (
+                    <td className="py-3 px-4 text-right">
+                      <span className="font-data-mono font-bold text-secondary">
+                        {s.attendanceRate}% Present
                       </span>
-                    ) : (
-                      <div>
-                        <div className="font-bold text-error font-data-mono">
-                          KES {s.feeBalance.toLocaleString()}
+                    </td>
+                  ) : (
+                    <td className="py-3 px-4 text-right">
+                      {s.feeBalance === 0 ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-secondary">
+                          <span className="material-symbols-outlined text-[14px]">check_circle</span> Cleared
+                        </span>
+                      ) : (
+                        <div>
+                          <div className="font-bold text-error font-data-mono">
+                            KES {s.feeBalance.toLocaleString()}
+                          </div>
+                          <span className="text-[11px] text-outline">due this term</span>
                         </div>
-                        <span className="text-[11px] text-outline">due this term</span>
-                      </div>
-                    )}
-                  </td>
+                      )}
+                    </td>
+                  )}
+
                   <td className="py-3 px-4 text-right">
                     <div className="inline-flex items-center justify-end gap-1">
+                      <button
+                        onClick={() => setProfileStudent(s)}
+                        title="View Learner Profile & Emergency Details"
+                        className="p-1.5 rounded-lg text-primary hover:bg-surface-container transition-colors cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">visibility</span>
+                      </button>
+
                       <button
                         onClick={() => onViewReportCard(s)}
                         title="View Official CBC Report Card"
@@ -204,14 +234,16 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                       >
                         <span className="material-symbols-outlined text-[18px]">article</span>
                       </button>
+
                       <button
                         onClick={() => onOpenCBCWithStudent(s)}
-                        title="Log CBC Rubric"
+                        title="Log CBC Rubric / Upload Marks"
                         className="p-1.5 rounded-lg text-secondary hover:bg-surface-container transition-colors cursor-pointer"
                       >
                         <span className="material-symbols-outlined text-[18px]">rule</span>
                       </button>
-                      {s.feeBalance > 0 && (
+
+                      {!isTeacher && s.feeBalance > 0 && (
                         <button
                           onClick={() => onOpenMpesaWithStudent(s)}
                           title="Trigger M-Pesa STK Push"
@@ -220,13 +252,16 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                           <span className="material-symbols-outlined text-[18px]">point_of_sale</span>
                         </button>
                       )}
-                      <button
-                        onClick={() => setEditingStudent(s)}
-                        title="Edit Profile & Link Guardian"
-                        className="p-1.5 rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors cursor-pointer"
-                      >
-                        <span className="material-symbols-outlined text-[18px]">manage_accounts</span>
-                      </button>
+
+                      {!isTeacher && (
+                        <button
+                          onClick={() => setEditingStudent(s)}
+                          title="Edit Profile & Link Guardian"
+                          className="p-1.5 rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">manage_accounts</span>
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -237,7 +272,18 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
         </div>
       </div>
 
-      {/* Edit Learner & Link Guardian Modal */}
+      {/* Partial Learner Details Modal */}
+      <LearnerProfileModal
+        isOpen={!!profileStudent}
+        student={profileStudent}
+        onClose={() => setProfileStudent(null)}
+        onGradeStudent={(st) => {
+          setProfileStudent(null);
+          onOpenCBCWithStudent(st);
+        }}
+      />
+
+      {/* Edit Learner & Link Guardian Modal (Admin Only) */}
       <EditStudentModal
         isOpen={!!editingStudent}
         student={editingStudent}

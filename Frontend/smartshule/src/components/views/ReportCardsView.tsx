@@ -104,52 +104,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
     );
   }
 
-  const defaultEvaluations = [
-    {
-      learningAreaName: 'Integrated Science',
-      performanceLevel: student.cbcRating || 'EE',
-      teacherRemarks: 'Excellent mastery of light microscopy, cell observation, and scientific safety standards.',
-    },
-    {
-      learningAreaName: 'Mathematics Activities',
-      performanceLevel: 'ME',
-      teacherRemarks: 'Demonstrates deep conceptual understanding and precision in linear algebra and measurements.',
-    },
-    {
-      learningAreaName: 'English Language Activities',
-      performanceLevel: 'ME',
-      teacherRemarks: 'Expresses ideas fluently in discussions and produces well-structured descriptive essays.',
-    },
-    {
-      learningAreaName: 'Kiswahili Lugha na Shughuli',
-      performanceLevel: 'ME',
-      teacherRemarks: 'Ana uwezo mzuri wa kutumia msamiati sahihi na kufuata kanuni za sarufi.',
-    },
-    {
-      learningAreaName: 'Pre-Technical Studies',
-      performanceLevel: 'EE',
-      teacherRemarks: 'High aptitude in digital tools, technical drawing, and material safety.',
-    },
-    {
-      learningAreaName: 'Agriculture & Nutrition',
-      performanceLevel: 'ME',
-      teacherRemarks: 'Active participant in school demonstration farm projects and food preservation.',
-    },
-    {
-      learningAreaName: 'Creative Arts & Sports',
-      performanceLevel: 'EE',
-      teacherRemarks: 'Highly skilled in fine art illustration, vocal expression, and athletic team coordination.',
-    },
-    {
-      learningAreaName: 'Social Studies & Religious Education',
-      performanceLevel: 'ME',
-      teacherRemarks: 'Demonstrates solid civic knowledge and upholds positive ethical standards.',
-    },
-  ];
-
-  const evaluations = reportCardData?.learningAreaAssessments?.length
-    ? reportCardData.learningAreaAssessments
-    : defaultEvaluations;
+  const evaluations = reportCardData?.learningAreaAssessments || [];
 
   const getRubricBadge = (rubric: string) => {
     switch (rubric) {
@@ -227,11 +182,11 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
               <span className="material-symbols-outlined text-[32px]">school</span>
             </div>
             <div className="text-left">
-              <h2 className="text-2xl font-black text-primary tracking-tight">GRACE SEED ACADEMY</h2>
+              <h2 className="text-2xl font-black text-primary tracking-tight">GRACE SEEDS SCHOOL</h2>
               <p className="text-xs font-semibold text-gray-600">
                 MoE Registration: <strong>MOE/PRI/2026/0981</strong> · Assessment Centre: <strong>CBA-041289</strong>
               </p>
-              <p className="text-xs italic text-secondary font-medium">"Excellence in Competence & Character"</p>
+              <p className="text-xs italic text-secondary font-medium">&quot;Excellence in Competence & Character&quot;</p>
             </div>
           </div>
 
@@ -254,7 +209,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
           </div>
           <div>
             <span className="text-gray-500 font-semibold block uppercase text-[10px]">CBC Grade & Stream</span>
-            <span className="font-bold text-gray-900">{student.grade} - {student.stream || 'East'}</span>
+            <span className="font-bold text-gray-900">{student.grade}{student.stream ? ` - ${student.stream}` : ''}</span>
           </div>
           <div>
             <span className="text-gray-500 font-semibold block uppercase text-[10px]">Term Roll Call Rate</span>
@@ -284,15 +239,29 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {evaluations.map((ev: any, idx: number) => (
-                <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/70'}>
-                  <td className="py-3 px-4 font-bold text-gray-900">{ev.learningAreaName}</td>
-                  <td className="py-3 px-3 text-center font-bold">{getRubricBadge(ev.performanceLevel)}</td>
-                  <td className="py-3 px-4 text-gray-700 text-[11px] leading-relaxed">
-                    {ev.teacherRemarks || 'Demonstrates strong understanding and mastery of core strand competencies.'}
+              {evaluations.length === 0 ? (
+                <tr>
+                  <td colSpan={3} className="py-10 text-center text-gray-500">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <span className="material-symbols-outlined text-3xl text-gray-400">assignment_late</span>
+                      <p className="font-semibold text-sm text-gray-700">No Assessment Records Compiled</p>
+                      <p className="text-xs text-gray-500 max-w-sm">
+                        Click &quot;Auto-Compile Report Card&quot; above to aggregate all strand assessment evaluations from the database for this learner.
+                      </p>
+                    </div>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                evaluations.map((ev: any, idx: number) => (
+                  <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/70'}>
+                    <td className="py-3 px-4 font-bold text-gray-900">{ev.learningAreaName}</td>
+                    <td className="py-3 px-3 text-center font-bold">{getRubricBadge(ev.performanceLevel)}</td>
+                    <td className="py-3 px-4 text-gray-700 text-[11px] leading-relaxed">
+                      {ev.teacherRemarks || 'Demonstrates strong understanding and mastery of core strand competencies.'}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -326,13 +295,13 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
           <div className="p-4 rounded-xl border border-gray-200 bg-gray-50 space-y-3 text-xs">
             <div className="flex justify-between items-center">
               <span className="font-bold text-primary uppercase text-[11px]">Class Teacher Remarks</span>
-              <span className="text-[10px] text-gray-500 font-data-mono">Tr. Sarah Mwangi</span>
+              <span className="text-[10px] text-gray-500 font-data-mono">{reportCardData?.classTeacherName || 'Class Teacher'}</span>
             </div>
             <p className="text-gray-700 italic text-[11px]">
-              "{reportCardData?.classTeacherRemarks || 'Kevin is an enthusiastic learner with sharp analytical curiosity. Continues to achieve exceptional proficiency in science and mathematical reasoning.'}"
+              &quot;{reportCardData?.classTeacherRemarks || `${student.name} demonstrates commendable diligence and active participation in continuous assessment strands.`}&quot;
             </p>
             <div className="pt-4 border-t border-gray-200 flex justify-between items-center text-[10px] text-gray-500">
-              <span>Digital Signature: <strong>SMwangi/TSC789123</strong></span>
+              <span>Digital Signature: <strong>Verified / CBA Certified</strong></span>
               <span>Date: 28th Mar 2026</span>
             </div>
           </div>
@@ -340,10 +309,10 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
           <div className="p-4 rounded-xl border border-gray-200 bg-gray-50 space-y-3 text-xs">
             <div className="flex justify-between items-center">
               <span className="font-bold text-primary uppercase text-[11px]">Head Teacher Endorsement</span>
-              <span className="text-[10px] text-gray-500 font-data-mono">Don Mutua</span>
+              <span className="text-[10px] text-gray-500 font-data-mono">Principal / Head Teacher</span>
             </div>
             <p className="text-gray-700 italic text-[11px]">
-              "{reportCardData?.headTeacherRemarks || 'Commendable performance throughout Term 1. Demonstrates core values of responsibility, discipline, and teamwork.'}"
+              &quot;{reportCardData?.headTeacherRemarks || 'Commendable performance throughout the term. Demonstrates core CBC values of responsibility and discipline.'}&quot;
             </p>
             <div className="pt-4 border-t border-gray-200 flex justify-between items-center text-[10px] text-gray-500">
               <span className="flex items-center gap-1 font-bold text-primary">

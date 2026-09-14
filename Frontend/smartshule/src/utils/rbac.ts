@@ -190,8 +190,8 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
       },
       {
         id: 'invoices-mpesa',
-        label: 'M-Pesa & Fee Invoices',
-        icon: 'receipt_long',
+        label: 'Bank & Paystack Invoices',
+        icon: 'account_balance',
         allowedRoles: [
           UserRole.SUPER_ADMIN,
           UserRole.SCHOOL_ADMIN,
@@ -208,6 +208,49 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
           UserRole.SUPER_ADMIN,
           UserRole.SCHOOL_ADMIN,
           UserRole.HEAD_TEACHER,
+          UserRole.ACCOUNTANT,
+        ],
+      },
+    ],
+  },
+  {
+    group: 'Digital Diary & Media',
+    items: [
+      {
+        id: 'ediary',
+        label: 'Digital eDiary',
+        icon: 'edit_note',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.HEAD_TEACHER,
+          UserRole.TEACHER,
+          UserRole.GUARDIAN,
+          UserRole.STUDENT,
+        ],
+      },
+      {
+        id: 'visual-cbc',
+        label: 'Visual CBC & Help Desk',
+        icon: 'photo_camera',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.HEAD_TEACHER,
+          UserRole.TEACHER,
+          UserRole.GUARDIAN,
+        ],
+      },
+      {
+        id: 'whatsapp-bot',
+        label: 'WhatsApp Parent Desk',
+        icon: 'chat',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.HEAD_TEACHER,
+          UserRole.TEACHER,
+          UserRole.GUARDIAN,
           UserRole.ACCOUNTANT,
         ],
       },
@@ -260,7 +303,7 @@ export function getRoleBadgeStyle(role?: UserRole): { bg: string; text: string }
     case UserRole.SUPER_ADMIN:
     case UserRole.SCHOOL_ADMIN:
     case UserRole.HEAD_TEACHER:
-      return { bg: 'bg-[#00236f]/15', text: 'text-[#00236f]' };
+      return { bg: 'bg-[#7a1228]/15', text: 'text-[#7a1228]' };
     case UserRole.TEACHER:
       return { bg: 'bg-[#006a63]/15', text: 'text-[#006a63]' };
     case UserRole.ACCOUNTANT:

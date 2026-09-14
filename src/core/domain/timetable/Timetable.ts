@@ -25,6 +25,20 @@ export interface TimetableSlot {
   label?: string; // "Short Break", "Lunch Break", "Games / Physical Education"
 }
 
+export interface PeriodDefinition {
+  period: number;
+  time: string; // "08:00 - 08:45"
+  start: string; // "08:00"
+  end: string; // "08:45"
+  isBreak?: boolean;
+  defaultLabel?: string;
+}
+
+export interface DayDefinition {
+  key: string;
+  label: string;
+}
+
 export interface TimetableProps {
   schoolId: string;
   academicYearId: string;
@@ -32,6 +46,8 @@ export interface TimetableProps {
   classRoomId: string;
   streamId: string;
   slots: TimetableSlot[];
+  periods?: PeriodDefinition[];
+  days?: DayDefinition[];
   isActive: boolean;
 }
 
@@ -64,8 +80,23 @@ export class Timetable extends Entity<TimetableProps> {
     return this._props.slots;
   }
 
+  public get periods(): PeriodDefinition[] | undefined {
+    return this._props.periods;
+  }
+
+  public get days(): DayDefinition[] | undefined {
+    return this._props.days;
+  }
+
   public get isActive(): boolean {
     return this._props.isActive;
+  }
+
+  public updateGrid(periods?: PeriodDefinition[], days?: DayDefinition[], slots?: TimetableSlot[]): void {
+    if (periods) this._props.periods = periods;
+    if (days) this._props.days = days;
+    if (slots) this._props.slots = slots;
+    this.touch();
   }
 
   public addOrUpdateSlot(slot: TimetableSlot): void {
@@ -94,9 +125,12 @@ export class Timetable extends Entity<TimetableProps> {
       classRoomId: this.classRoomId,
       streamId: this.streamId,
       slots: this.slots,
+      periods: this.periods,
+      days: this.days,
       isActive: this.isActive,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt
     };
   }
 }
+

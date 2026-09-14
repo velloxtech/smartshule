@@ -13,7 +13,10 @@ export type TabType =
   | 'attendance-register'
   | 'fee-structure'
   | 'invoices-mpesa'
-  | 'defaulters-receipts';
+  | 'defaulters-receipts'
+  | 'ediary'
+  | 'visual-cbc'
+  | 'whatsapp-bot';
 
 export type CBCRubric = 'EE' | 'ME' | 'AE' | 'BE';
 
@@ -370,9 +373,24 @@ export interface LessonPlan {
   createdAt?: string;
 }
 
+export interface PeriodDefinition {
+  periodNumber: number;
+  name: string;
+  startTime: string;
+  endTime: string;
+  isBreak: boolean;
+  isLunch: boolean;
+}
+
+export interface DayDefinition {
+  dayOfWeek: string;
+  label: string;
+  isEnabled: boolean;
+}
+
 export interface TimetableSlot {
   id: string;
-  dayOfWeek: 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY';
+  dayOfWeek: string;
   periodNumber: number;
   startTime: string;
   endTime: string;
@@ -393,6 +411,8 @@ export interface TimetableData {
   termId: string;
   classRoomId: string;
   streamId: string;
+  periods?: PeriodDefinition[];
+  days?: DayDefinition[];
   slots: TimetableSlot[];
   isActive: boolean;
 }
@@ -505,4 +525,154 @@ export interface DashboardSummary {
     below: number;
     totalAssessments: number;
   };
+}
+
+export interface PaystackInitializeRequest {
+  studentId: string;
+  invoiceId?: string;
+  amount: number;
+  email: string;
+  phone?: string;
+  callbackUrl?: string;
+  paymentType?: 'TUITION' | 'ASSESSMENT' | 'ACTIVITY' | 'BOARDING' | 'MEALS' | 'TRANSPORT' | 'OTHER' | 'GENERAL';
+}
+
+export interface PaystackInitializeResponse {
+  authorizationUrl: string;
+  accessCode: string;
+  reference: string;
+  bankDetails: {
+    bankName: string;
+    accountNumber: string;
+    accountName: string;
+    paymentReference: string;
+  };
+}
+
+export interface PaystackVerifyResponse {
+  status: 'success' | 'failed' | 'abandoned' | 'pending';
+  reference: string;
+  amount: number;
+  channel: string;
+  currency: string;
+  paidAt?: string;
+  receiptNumber?: string;
+  studentId: string;
+  invoiceId?: string;
+  verified: boolean;
+}
+
+export interface FeePaymentReceipt {
+  id: string;
+  schoolId: string;
+  studentId: string;
+  invoiceId?: string;
+  receiptNumber: string;
+  amount: number;
+  method: 'CASH' | 'BANK_DEPOSIT' | 'MPESA' | 'PAYSTACK' | 'CARD';
+  transactionReference: string;
+  paidBy: string;
+  paidAt: string;
+  recordedBy: string;
+  notes?: string;
+  isVerified: boolean;
+}
+
+export interface FinanceSummaryData {
+  schoolId: string;
+  totalInvoiced: number;
+  totalCollected: number;
+  totalOutstanding: number;
+  collectionRatePercentage: number;
+  invoiceCount: number;
+  paymentCount: number;
+  recentPayments: FeePaymentReceipt[];
+  isGuardian?: boolean;
+}
+
+export interface ParentHelpRequest {
+  id: string;
+  schoolId: string;
+  studentId: string;
+  guardianUserId: string;
+  learningAreaId?: string;
+  title: string;
+  description: string;
+  photoUrl: string;
+  thumbnailUrl?: string;
+  photoMetadata?: {
+    fileSize: number;
+    mimeType: string;
+    width: number;
+    height: number;
+  };
+  status: 'OPEN' | 'IN_REVIEW' | 'RESOLVED';
+  teacherResponse?: {
+    teacherUserId: string;
+    teacherName: string;
+    responseMessage: string;
+    responsePhotoUrl?: string;
+    respondedAt: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StudentProgressPhoto {
+  id: string;
+  schoolId: string;
+  studentId: string;
+  teacherUserId: string;
+  learningAreaId?: string;
+  competencyDomain?: string;
+  title: string;
+  description: string;
+  photoUrl: string;
+  thumbnailUrl?: string;
+  photoMetadata?: {
+    fileSize: number;
+    mimeType: string;
+    width: number;
+    height: number;
+  };
+  tags: string[];
+  rating?: CBCRubric;
+  recordedDate: string;
+  createdAt: string;
+}
+
+export interface EDiaryEntry {
+  id: string;
+  schoolId: string;
+  studentId?: string;
+  classRoomId: string;
+  streamId: string;
+  teacherUserId: string;
+  teacherName?: string;
+  date: string;
+  homeworkTasks: Array<{
+    learningArea: string;
+    description: string;
+    dueDate: string;
+  }>;
+  teacherRemarks?: string;
+  tomorrowRequirements?: string[];
+  parentAcknowledgements?: Array<{
+    guardianUserId: string;
+    guardianName: string;
+    signedAt: string;
+    parentNote?: string;
+  }>;
+  createdAt: string;
+}
+
+export interface WhatsAppSimulateRequest {
+  phoneNumber: string;
+  message: string;
+}
+
+export interface WhatsAppSimulateResponse {
+  to: string;
+  replyText: string;
+  intent: string;
 }

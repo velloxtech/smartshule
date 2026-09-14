@@ -40,7 +40,8 @@ export interface StudentProps {
   dateOfBirth: string; // YYYY-MM-DD
   gender: StudentGender;
   gradeLevel: CbcGradeLevel;
-  streamId: string;
+  classroomId?: string;
+  streamId?: string;
   schoolId: string;
   academicYearId: string;
   guardianIds: string[];
@@ -93,7 +94,11 @@ export class Student extends Entity<StudentProps> {
     return this._props.gradeLevel;
   }
 
-  public get streamId(): string {
+  public get classroomId(): string | undefined {
+    return this._props.classroomId;
+  }
+
+  public get streamId(): string | undefined {
     return this._props.streamId;
   }
 
@@ -140,10 +145,37 @@ export class Student extends Entity<StudentProps> {
     this.touch();
   }
 
-  public promoteOrTransfer(newGradeLevel: CbcGradeLevel, newStreamId: string, newAcademicYearId: string): void {
+  public promoteOrTransfer(
+    newGradeLevel: CbcGradeLevel,
+    newClassroomIdOrStreamId?: string,
+    newStreamIdOrAcademicYearId?: string,
+    newAcademicYearId?: string
+  ): void {
     this._props.gradeLevel = newGradeLevel;
-    this._props.streamId = newStreamId;
-    this._props.academicYearId = newAcademicYearId;
+    if (newAcademicYearId !== undefined) {
+      if (newClassroomIdOrStreamId) this._props.classroomId = newClassroomIdOrStreamId;
+      this._props.streamId = newStreamIdOrAcademicYearId;
+      this._props.academicYearId = newAcademicYearId;
+    } else {
+      if (newClassroomIdOrStreamId) {
+        if (newClassroomIdOrStreamId.startsWith('stream-')) {
+          this._props.streamId = newClassroomIdOrStreamId;
+        } else if (newClassroomIdOrStreamId.startsWith('class-')) {
+          this._props.classroomId = newClassroomIdOrStreamId;
+        } else {
+          this._props.streamId = newClassroomIdOrStreamId;
+        }
+      }
+      if (newStreamIdOrAcademicYearId) {
+        if (newStreamIdOrAcademicYearId.startsWith('year-')) {
+          this._props.academicYearId = newStreamIdOrAcademicYearId;
+        } else if (newStreamIdOrAcademicYearId.startsWith('stream-')) {
+          this._props.streamId = newStreamIdOrAcademicYearId;
+        } else {
+          this._props.academicYearId = newStreamIdOrAcademicYearId;
+        }
+      }
+    }
     this.touch();
   }
 
@@ -171,6 +203,7 @@ export class Student extends Entity<StudentProps> {
       dateOfBirth: this.dateOfBirth,
       gender: this.gender,
       gradeLevel: this.gradeLevel,
+      classroomId: this.classroomId,
       streamId: this.streamId,
       schoolId: this.schoolId,
       academicYearId: this.academicYearId,

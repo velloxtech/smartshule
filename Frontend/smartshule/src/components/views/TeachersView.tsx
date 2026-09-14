@@ -200,9 +200,9 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
       {isAssignOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-150">
           <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-sm w-full max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
-            <div className="bg-[#00236f] text-white p-4 flex items-center justify-between shrink-0">
+            <div className="bg-[#7a1228] text-white p-4 flex items-center justify-between shrink-0">
               <h3 className="font-semibold text-sm">Assign Stream to Educator</h3>
-              <button onClick={() => setIsAssignOpen(false)} className="text-blue-200 hover:text-white cursor-pointer p-1 rounded-lg">
+              <button onClick={() => setIsAssignOpen(false)} className="text-rose-100 hover:text-white cursor-pointer p-1 rounded-lg">
                 <span className="material-symbols-outlined text-[18px]">close</span>
               </button>
             </div>

@@ -12,7 +12,9 @@ import {
   InMemoryLessonPlanRepository,
   InMemoryTimetableRepository,
   InMemoryAttendanceRepository,
-  InMemoryFeeRepository
+  InMemoryFeeRepository,
+  InMemoryMediaRepository,
+  InMemoryEDiaryRepository
 } from './in-memory/InMemoryRepositories';
 
 import {
@@ -53,6 +55,9 @@ import { ISchemeOfWorkRepository, ILessonPlanRepository } from '../../core/ports
 import { ITimetableRepository, IAttendanceRepository } from '../../core/ports/repositories/ITimetableRepository';
 import { IFeeRepository } from '../../core/ports/repositories/IFeeRepository';
 
+import { IMediaRepository } from '../../core/ports/repositories/IMediaRepository';
+import { IEDiaryRepository } from '../../core/ports/repositories/IEDiaryRepository';
+
 export interface RepositoryBundle {
   userRepository: IUserRepository;
   studentRepository: IStudentRepository;
@@ -65,6 +70,8 @@ export interface RepositoryBundle {
   timetableRepository: ITimetableRepository;
   attendanceRepository: IAttendanceRepository;
   feeRepository: IFeeRepository;
+  mediaRepository?: IMediaRepository;
+  ediaryRepository?: IEDiaryRepository;
 }
 
 export class DatabaseFactory {
@@ -131,7 +138,9 @@ export class DatabaseFactory {
       lessonPlanRepository: new InMemoryLessonPlanRepository(),
       timetableRepository: new InMemoryTimetableRepository(),
       attendanceRepository: new InMemoryAttendanceRepository(),
-      feeRepository: new InMemoryFeeRepository()
+      feeRepository: new InMemoryFeeRepository(),
+      mediaRepository: new InMemoryMediaRepository(),
+      ediaryRepository: new InMemoryEDiaryRepository()
     };
   }
 }

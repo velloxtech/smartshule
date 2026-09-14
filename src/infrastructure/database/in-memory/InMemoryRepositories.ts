@@ -23,6 +23,15 @@ import {
   InvoiceFilterCriteria,
   PaymentFilterCriteria
 } from '../../../core/ports/repositories/IFeeRepository';
+import {
+  IMediaRepository,
+  HelpRequestFilterCriteria,
+  ProgressPhotoFilterCriteria
+} from '../../../core/ports/repositories/IMediaRepository';
+import {
+  IEDiaryRepository,
+  EDiaryFilterCriteria
+} from '../../../core/ports/repositories/IEDiaryRepository';
 
 import { User } from '../../../core/domain/user/User';
 import { Student, CbcGradeLevel } from '../../../core/domain/user/Student';
@@ -43,6 +52,9 @@ import { LessonPlan } from '../../../core/domain/curriculum-plan/LessonPlan';
 import { Timetable, DayOfWeek } from '../../../core/domain/timetable/Timetable';
 import { AttendanceRegister, AttendanceType } from '../../../core/domain/attendance/Attendance';
 import { FeeStructure, StudentInvoice, Payment } from '../../../core/domain/finance/Fee';
+import { ParentHelpRequest } from '../../../core/domain/media/ParentHelpRequest';
+import { StudentProgressPhoto } from '../../../core/domain/media/StudentProgressPhoto';
+import { EDiaryEntry } from '../../../core/domain/ediary/EDiaryEntry';
 
 export class InMemoryUserRepository implements IUserRepository {
   private users: Map<string, User> = new Map();
@@ -643,6 +655,9 @@ export class InMemoryFeeRepository implements IFeeRepository {
     let result = Array.from(this.invoices.values());
     if (filters.schoolId) result = result.filter(i => i.schoolId === filters.schoolId);
     if (filters.studentId) result = result.filter(i => i.studentId === filters.studentId);
+    if (filters.studentIds && filters.studentIds.length > 0) {
+      result = result.filter(i => filters.studentIds!.includes(i.studentId));
+    }
     if (filters.termId) result = result.filter(i => i.termId === filters.termId);
     if (filters.academicYearId) result = result.filter(i => i.academicYearId === filters.academicYearId);
     if (filters.status) result = result.filter(i => i.status === filters.status);
@@ -680,6 +695,9 @@ export class InMemoryFeeRepository implements IFeeRepository {
     let result = Array.from(this.payments.values());
     if (filters.schoolId) result = result.filter(p => p.schoolId === filters.schoolId);
     if (filters.studentId) result = result.filter(p => p.studentId === filters.studentId);
+    if (filters.studentIds && filters.studentIds.length > 0) {
+      result = result.filter(p => filters.studentIds!.includes(p.studentId));
+    }
     if (filters.invoiceId) result = result.filter(p => p.invoiceId === filters.invoiceId);
     if (filters.startDate) result = result.filter(p => p.paymentDate >= filters.startDate!);
     if (filters.endDate) result = result.filter(p => p.paymentDate <= filters.endDate!);
@@ -692,5 +710,102 @@ export class InMemoryFeeRepository implements IFeeRepository {
 
   public async updatePayment(payment: Payment): Promise<void> {
     this.payments.set(payment.id, payment);
+  }
+}
+
+export class InMemoryMediaRepository implements IMediaRepository {
+  private helpRequests: Map<string, ParentHelpRequest> = new Map();
+  private progressPhotos: Map<string, StudentProgressPhoto> = new Map();
+
+  public async saveHelpRequest(request: ParentHelpRequest): Promise<void> {
+    this.helpRequests.set(request.id, request);
+  }
+
+  public async updateHelpRequest(request: ParentHelpRequest): Promise<void> {
+    this.helpRequests.set(request.id, request);
+  }
+
+  public async findHelpRequestById(id: string): Promise<ParentHelpRequest | null> {
+    return this.helpRequests.get(id) || null;
+  }
+
+  public async findHelpRequests(filters: HelpRequestFilterCriteria): Promise<ParentHelpRequest[]> {
+    let list = Array.from(this.helpRequests.values());
+    if (filters.schoolId) list = list.filter(r => r.schoolId === filters.schoolId);
+    if (filters.guardianId) list = list.filter(r => r.guardianId === filters.guardianId);
+    if (filters.studentId) list = list.filter(r => r.studentId === filters.studentId);
+    if (filters.studentIds && filters.studentIds.length > 0) {
+      list = list.filter(r => filters.studentIds!.includes(r.studentId));
+    }
+    if (filters.teacherId) list = list.filter(r => r.teacherId === filters.teacherId);
+    if (filters.status) list = list.filter(r => r.status === filters.status);
+    return list.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+
+  public async saveProgressPhoto(photo: StudentProgressPhoto): Promise<void> {
+    this.progressPhotos.set(photo.id, photo);
+  }
+
+  public async findProgressPhotoById(id: string): Promise<StudentProgressPhoto | null> {
+    return this.progressPhotos.get(id) || null;
+  }
+
+  public async findProgressPhotos(filters: ProgressPhotoFilterCriteria): Promise<StudentProgressPhoto[]> {
+    let list = Array.from(this.progressPhotos.values());
+    if (filters.schoolId) list = list.filter(p => p.schoolId === filters.schoolId);
+    if (filters.studentId) list = list.filter(p => p.studentId === filters.studentId);
+    if (filters.studentIds && filters.studentIds.length > 0) {
+      list = list.filter(p => filters.studentIds!.includes(p.studentId));
+    }
+    if (filters.teacherId) list = list.filter(p => p.teacherId === filters.teacherId);
+    if (filters.learningAreaId) list = list.filter(p => p.learningAreaId === filters.learningAreaId);
+    if (filters.competencyTag) list = list.filter(p => p.competencyTag === filters.competencyTag);
+    return list.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+
+  public async deleteProgressPhoto(id: string): Promise<void> {
+    this.progressPhotos.delete(id);
+  }
+}
+
+export class InMemoryEDiaryRepository implements IEDiaryRepository {
+  private entries: Map<string, EDiaryEntry> = new Map();
+
+  public async save(entry: EDiaryEntry): Promise<void> {
+    this.entries.set(entry.id, entry);
+  }
+
+  public async update(entry: EDiaryEntry): Promise<void> {
+    this.entries.set(entry.id, entry);
+  }
+
+  public async findById(id: string): Promise<EDiaryEntry | null> {
+    return this.entries.get(id) || null;
+  }
+
+  public async findEntries(filters: EDiaryFilterCriteria): Promise<EDiaryEntry[]> {
+    let list = Array.from(this.entries.values());
+    if (filters.schoolId) list = list.filter(e => e.schoolId === filters.schoolId);
+    if (filters.streamId) list = list.filter(e => e.streamId === filters.streamId);
+    if (filters.studentId) list = list.filter(e => !e.studentId || e.studentId === filters.studentId);
+    if (filters.teacherId) list = list.filter(e => e.teacherId === filters.teacherId);
+    if (filters.date) list = list.filter(e => e.date === filters.date);
+    if (filters.startDate) list = list.filter(e => e.date >= filters.startDate!);
+    if (filters.endDate) list = list.filter(e => e.date <= filters.endDate!);
+    return list.sort((a, b) => b.date.localeCompare(a.date));
+  }
+
+  public async findByStudent(studentId: string, streamId?: string, limit = 20): Promise<EDiaryEntry[]> {
+    let list = Array.from(this.entries.values()).filter(
+      e => e.studentId === studentId || (streamId && e.streamId === streamId && !e.studentId)
+    );
+    list.sort((a, b) => b.date.localeCompare(a.date));
+    return list.slice(0, limit);
+  }
+
+  public async findByStream(streamId: string, date?: string): Promise<EDiaryEntry[]> {
+    let list = Array.from(this.entries.values()).filter(e => e.streamId === streamId);
+    if (date) list = list.filter(e => e.date === date);
+    return list.sort((a, b) => b.date.localeCompare(a.date));
   }
 }

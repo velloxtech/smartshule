@@ -14,8 +14,8 @@ export const SendSmsModal: React.FC<SendSmsModalProps> = ({
   const [target, setTarget] = useState<'absentee' | 'fee' | 'all'>(defaultTarget);
   const [message, setMessage] = useState(
     defaultTarget === 'absentee'
-      ? 'Dear Parent, this is to inform you that your child was marked absent from Grace Seed Academy today. Please confirm reasons with the class teacher.'
-      : 'Dear Parent, Grace Seed Academy kindly requests you to clear the outstanding fee balance via M-Pesa Paybill 174379 before the upcoming assessment window.'
+      ? 'Dear Parent, this is to inform you that your child was marked absent from Grace Seeds School today. Please confirm reasons with the class teacher.'
+      : 'Dear Parent, Grace Seeds School kindly requests you to clear the outstanding fee balance via M-Pesa Paybill 174379 before the upcoming assessment window.'
   );
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent'>('idle');
 
@@ -25,15 +25,15 @@ export const SendSmsModal: React.FC<SendSmsModalProps> = ({
     setTarget(newTarget);
     if (newTarget === 'absentee') {
       setMessage(
-        'Dear Parent, this is to inform you that your child was marked absent from Grace Seed Academy today. Please confirm reasons with the class teacher.'
+        'Dear Parent, this is to inform you that your child was marked absent from Grace Seeds School today. Please confirm reasons with the class teacher.'
       );
     } else if (newTarget === 'fee') {
       setMessage(
-        'Dear Parent, Grace Seed Academy kindly requests you to clear the outstanding fee balance via M-Pesa Paybill 174379 before the upcoming assessment window.'
+        'Dear Parent, Grace Seeds School kindly requests you to clear the outstanding fee balance via M-Pesa Paybill 174379 before the upcoming assessment window.'
       );
     } else {
       setMessage(
-        'Dear Parents and Guardians, please note the upcoming consultative meeting scheduled for next week at Grace Seed Academy main hall.'
+        'Dear Parents and Guardians, please note the upcoming consultative meeting scheduled for next week at Grace Seeds School main hall.'
       );
     }
   };
@@ -55,19 +55,19 @@ export const SendSmsModal: React.FC<SendSmsModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
       <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-md w-full max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
-        <div className="bg-[#00236f] text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
+        <div className="bg-[#7a1228] text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-xl bg-[#653400] flex items-center justify-center text-white shrink-0">
               <span className="material-symbols-outlined text-[24px]">sms</span>
             </div>
             <div>
               <h3 className="font-semibold text-base leading-tight">Send Bulk Parent SMS Alert</h3>
-              <p className="text-xs text-blue-200">Telecom SMS Gateway · Sender ID: GRACESEED</p>
+              <p className="text-xs text-rose-100">Telecom SMS Gateway · Sender ID: GRACESEED</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-blue-200 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+            className="p-1 rounded-lg text-rose-100 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
           >
             <span className="material-symbols-outlined text-[20px]">close</span>
           </button>

@@ -15,19 +15,19 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({ isOpen, on
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-150">
       <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-2xl w-full max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
-        <div className="bg-[#00236f] text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
+        <div className="bg-[#7a1228] text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center text-white">
               <span className="material-symbols-outlined text-[24px]">description</span>
             </div>
             <div>
               <h3 className="font-semibold text-base leading-tight">Executive Summary Report Preview</h3>
-              <p className="text-xs text-blue-200">Grace Seed Academy · Term 3, 2026 · Week 2</p>
+              <p className="text-xs text-rose-100">Grace Seeds School · Term 3, 2026 · Week 2</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-blue-200 hover:text-white hover:bg-white/10 transition-colors"
+            className="p-1 rounded-lg text-rose-100 hover:text-white hover:bg-white/10 transition-colors"
           >
             <span className="material-symbols-outlined text-[20px]">close</span>
           </button>
@@ -39,7 +39,7 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({ isOpen, on
             <div className="text-xs font-bold text-secondary uppercase tracking-widest">
               Ministry of Education · Continuous Assessment Framework
             </div>
-            <h2 className="text-xl font-bold text-primary mt-1">GRACE SEED ACADEMY - CBC EXECUTIVE BRIEF</h2>
+            <h2 className="text-xl font-bold text-primary mt-1">GRACE SEEDS SCHOOL - CBC EXECUTIVE BRIEF</h2>
             <p className="text-xs text-on-surface-variant mt-0.5">
               Centre Code: 3829011 · NEMIS Registered · KICD Competency Framework Certified
             </p>
@@ -117,8 +117,8 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({ isOpen, on
           {/* Certification Signoff */}
           <div className="pt-4 border-t border-outline-variant/30 flex justify-between items-end text-xs">
             <div>
-              <div className="font-bold text-on-surface">Maina Kamau</div>
-              <div className="text-on-surface-variant">Principal Administrator, Grace Seed Academy</div>
+              <div className="font-bold text-on-surface">Principal Administrator</div>
+              <div className="text-on-surface-variant">Principal Administrator, Grace Seeds School</div>
             </div>
             <div className="text-right">
               <div className="font-bold text-secondary">Institutional Seal Stamp Verified</div>

@@ -3,6 +3,7 @@ import { Student, CbcGradeLevel } from '../../domain/user/Student';
 export interface StudentFilterCriteria {
   schoolId?: string;
   gradeLevel?: CbcGradeLevel;
+  classroomId?: string;
   streamId?: string;
   academicYearId?: string;
   search?: string;

@@ -244,9 +244,9 @@ export const StrandsView: React.FC = () => {
       {isAddStrandOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-150">
           <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-md w-full max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
-            <div className="bg-[#00236f] text-white p-4 flex items-center justify-between shrink-0">
+            <div className="bg-[#7a1228] text-white p-4 flex items-center justify-between shrink-0">
               <h3 className="font-semibold text-sm">Add New Curriculum Strand</h3>
-              <button onClick={() => setIsAddStrandOpen(false)} className="text-blue-200 hover:text-white cursor-pointer p-1 rounded-lg">
+              <button onClick={() => setIsAddStrandOpen(false)} className="text-rose-100 hover:text-white cursor-pointer p-1 rounded-lg">
                 <span className="material-symbols-outlined text-[18px]">close</span>
               </button>
             </div>
@@ -300,9 +300,9 @@ export const StrandsView: React.FC = () => {
       {isAddSubStrandOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-150">
           <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-md w-full max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
-            <div className="bg-[#00236f] text-white p-4 flex items-center justify-between shrink-0">
+            <div className="bg-[#7a1228] text-white p-4 flex items-center justify-between shrink-0">
               <h3 className="font-semibold text-sm">Add Sub-strand & Outcome</h3>
-              <button onClick={() => setIsAddSubStrandOpen(false)} className="text-blue-200 hover:text-white cursor-pointer p-1 rounded-lg">
+              <button onClick={() => setIsAddSubStrandOpen(false)} className="text-rose-100 hover:text-white cursor-pointer p-1 rounded-lg">
                 <span className="material-symbols-outlined text-[18px]">close</span>
               </button>
             </div>
