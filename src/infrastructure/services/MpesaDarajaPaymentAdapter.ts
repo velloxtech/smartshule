@@ -9,13 +9,25 @@ import { IdGenerator } from '../../core/domain/shared/Errors';
 export class MpesaDarajaPaymentAdapter implements IPaymentGateway {
   private readonly shortCode: string;
   private readonly passKey: string;
+  private readonly consumerKey: string;
+  private readonly consumerSecret: string;
+  private readonly env: string;
+  private readonly callbackUrl: string;
 
   constructor(
     shortCode = process.env.MPESA_SHORTCODE || '174379',
-    passKey = process.env.MPESA_PASSKEY || 'bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919'
+    passKey = process.env.MPESA_PASSKEY || 'bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919',
+    consumerKey = process.env.MPESA_CONSUMER_KEY || 'daraja_sandbox_consumer_key_2026',
+    consumerSecret = process.env.MPESA_CONSUMER_SECRET || 'daraja_sandbox_consumer_secret_2026',
+    env = process.env.MPESA_ENV || 'sandbox',
+    callbackUrl = process.env.MPESA_CALLBACK_URL || 'http://localhost:3000/api/v1/payments/mpesa/callback'
   ) {
     this.shortCode = shortCode;
     this.passKey = passKey;
+    this.consumerKey = consumerKey;
+    this.consumerSecret = consumerSecret;
+    this.env = env;
+    this.callbackUrl = callbackUrl;
   }
 
   public async initiateStkPush(request: StkPushRequest): Promise<StkPushResponse> {

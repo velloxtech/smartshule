@@ -86,7 +86,9 @@ import {
 
 import {
   WhatsAppController,
-  WhatsAppSimulateSchema
+  WhatsAppSimulateSchema,
+  WhatsAppSendSchema,
+  WhatsAppConfigSchema,
 } from '../controllers/WhatsAppController';
 
 import { AnalyticsController } from '../controllers/AnalyticsController';
@@ -107,7 +109,7 @@ export function createApiRouter(container: AppContainer): Router {
   const analyticsController = new AnalyticsController(container.analyticsUseCases);
   const mediaController = new MediaController(container.visualMediaUseCases);
   const ediaryController = new EDiaryController(container.ediaryUseCases);
-  const whatsAppController = new WhatsAppController(container.whatsAppService);
+  const whatsAppController = new WhatsAppController(container.whatsAppService, container.whatsAppClientManager);
 
   // ==========================================
   // 1. AUTH ROUTES
@@ -260,13 +262,19 @@ export function createApiRouter(container: AppContainer): Router {
   router.use('/ediary', ediaryRouter);
 
   // ==========================================
-  // 12. WHATSAPP QUERY SYSTEM ROUTES
+  // 12. WHATSAPP REAL ACCOUNT & QUERY SYSTEM ROUTES
   // ==========================================
   const whatsappRouter = Router();
+  whatsappRouter.get('/status', whatsAppController.getStatus);
+  whatsappRouter.post('/connect', whatsAppController.connect);
+  whatsappRouter.post('/disconnect', whatsAppController.disconnect);
+  whatsappRouter.post('/send', validateBody(WhatsAppSendSchema), whatsAppController.sendMessage);
+  whatsappRouter.get('/messages', whatsAppController.getRecentMessages);
   whatsappRouter.get('/webhook', whatsAppController.webhookVerification);
   whatsappRouter.post('/webhook', whatsAppController.webhookInbound);
   whatsappRouter.post('/simulate', validateBody(WhatsAppSimulateSchema), whatsAppController.simulate);
   whatsappRouter.get('/config', whatsAppController.getConfig);
+  whatsappRouter.post('/config', validateBody(WhatsAppConfigSchema), whatsAppController.updateConfig);
   router.use('/whatsapp', whatsappRouter);
 
   // ==========================================

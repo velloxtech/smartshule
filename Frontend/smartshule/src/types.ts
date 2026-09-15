@@ -676,3 +676,30 @@ export interface WhatsAppSimulateResponse {
   replyText: string;
   intent: string;
 }
+
+export interface WhatsAppConnectionState {
+  status: 'DISCONNECTED' | 'SCAN_QR' | 'CONNECTING' | 'CONNECTED';
+  qrCodeDataUrl: string | null;
+  connectedPhone: string | null;
+  connectedName: string | null;
+  lastConnectedAt: string | null;
+  totalSent: number;
+  totalReceived: number;
+  mode: 'REAL_WHATSAPP_ACCOUNT' | 'META_CLOUD_API';
+}
+
+export interface WhatsAppMessageLog {
+  id: string;
+  direction: 'INBOUND' | 'OUTBOUND';
+  from: string;
+  to: string;
+  text: string;
+  status: 'SENT' | 'DELIVERED' | 'FAILED' | 'RECEIVED';
+  timestamp: string;
+  intent?: string;
+}
+
+export interface WhatsAppSendActualRequest {
+  to: string;
+  message: string;
+}

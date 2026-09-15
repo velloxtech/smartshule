@@ -19,6 +19,13 @@ async function bootstrap() {
     console.log(`📡 URL: http://localhost:${PORT}`);
     console.log(`🩺 Health: http://localhost:${PORT}/health`);
     console.log(`📚 API Root: http://localhost:${PORT}/api/v1`);
+    console.log('----------------------------------------------------');
+    console.log(`🗄️  Database:      ${process.env.DB_TYPE || 'in-memory'}`);
+    console.log(`💳 Paystack API:   ${process.env.PAYSTACK_PUBLIC_KEY ? 'CONFIGURED (' + process.env.PAYSTACK_PUBLIC_KEY.substring(0, 10) + '...)' : 'SANDBOX'}`);
+    console.log(`💬 WhatsApp API:   ${process.env.WHATSAPP_ACCESS_TOKEN ? 'META CLOUD API' : 'REAL WHATSAPP QR MULTI-DEVICE'}`);
+    console.log(`📱 M-Pesa Daraja:  SHORTCODE ${process.env.MPESA_SHORTCODE || '174379'} (${process.env.MPESA_ENV || 'sandbox'})`);
+    console.log(`📨 SMS Gateway:    ${process.env.SMS_PROVIDER || 'africastalking'} (${process.env.AFRICASTALKING_SENDER_ID || 'SMARTSHULE'})`);
+    console.log(`🤖 Gemini AI API:  ${process.env.GEMINI_API_KEY ? 'CONFIGURED' : 'OPTIONAL'}`);
     console.log('====================================================');
   });
 }

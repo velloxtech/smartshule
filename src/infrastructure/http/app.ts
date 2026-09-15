@@ -13,7 +13,8 @@ export function createExpressApp(container: AppContainer): Express {
 
   // Standard Middlewares
   app.use(helmet({ contentSecurityPolicy: false }));
-  app.use(cors());
+  const corsOrigin = process.env.CORS_ORIGIN || process.env.FRONTEND_URL || '*';
+  app.use(cors({ origin: corsOrigin === '*' ? true : [corsOrigin, 'http://localhost:5173', 'http://localhost:3000'] }));
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 

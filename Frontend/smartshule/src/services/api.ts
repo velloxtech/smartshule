@@ -38,6 +38,8 @@ import {
   EDiaryEntry,
   WhatsAppSimulateRequest,
   WhatsAppSimulateResponse,
+  WhatsAppConnectionState,
+  WhatsAppMessageLog,
 } from '../types';
 
 const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || '/api/v1';
@@ -863,7 +865,34 @@ export const apiService = {
     return apiFetch<ApiResponse<StudentProgressPhoto[]>>(`/media/progress-photos${qs ? `?${qs}` : ''}`);
   },
 
-  // 12. WhatsApp Parent Desk Endpoints
+  // 12. WhatsApp Real Account & Parent Desk Endpoints
+  getWhatsAppStatus: async (): Promise<ApiResponse<WhatsAppConnectionState>> => {
+    return apiFetch<ApiResponse<WhatsAppConnectionState>>('/whatsapp/status');
+  },
+
+  connectWhatsApp: async (): Promise<ApiResponse<WhatsAppConnectionState>> => {
+    return apiFetch<ApiResponse<WhatsAppConnectionState>>('/whatsapp/connect', {
+      method: 'POST',
+    });
+  },
+
+  disconnectWhatsApp: async (): Promise<ApiResponse<WhatsAppConnectionState>> => {
+    return apiFetch<ApiResponse<WhatsAppConnectionState>>('/whatsapp/disconnect', {
+      method: 'POST',
+    });
+  },
+
+  sendActualWhatsAppMessage: async (to: string, message: string): Promise<ApiResponse<{ to: string; messageId: string; status: string; sentAt: string }>> => {
+    return apiFetch<ApiResponse<{ to: string; messageId: string; status: string; sentAt: string }>>('/whatsapp/send', {
+      method: 'POST',
+      body: JSON.stringify({ to, message }),
+    });
+  },
+
+  getWhatsAppRecentMessages: async (): Promise<ApiResponse<WhatsAppMessageLog[]>> => {
+    return apiFetch<ApiResponse<WhatsAppMessageLog[]>>('/whatsapp/messages');
+  },
+
   simulateWhatsApp: async (phoneNumber: string, message: string): Promise<ApiResponse<WhatsAppSimulateResponse>> => {
     return apiFetch<ApiResponse<WhatsAppSimulateResponse>>('/whatsapp/simulate', {
       method: 'POST',
@@ -873,6 +902,13 @@ export const apiService = {
 
   getWhatsAppConfig: async (): Promise<ApiResponse<any>> => {
     return apiFetch<ApiResponse<any>>('/whatsapp/config');
+  },
+
+  updateWhatsAppConfig: async (data: { accessToken?: string; phoneNumberId?: string; verifyToken?: string }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/whatsapp/config', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   },
 
   // 13. Dashboard & Analytics Endpoints

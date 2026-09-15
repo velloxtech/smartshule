@@ -33,6 +33,7 @@ import { MpesaDarajaPaymentAdapter } from './services/MpesaDarajaPaymentAdapter'
 import { SmsNotificationAdapter } from './services/SmsNotificationAdapter';
 import { ImageProcessingService } from './services/ImageProcessingService';
 import { WhatsAppService } from './services/WhatsAppService';
+import { WhatsAppClientManager } from './services/WhatsAppClientManager';
 
 import { AuthUseCases } from '../application/auth/AuthUseCases';
 import { StudentUseCases } from '../application/students/StudentUseCases';
@@ -72,6 +73,7 @@ export class AppContainer {
   public readonly paymentGateway = new MpesaDarajaPaymentAdapter(); // legacy fallback
   public readonly notificationService = new SmsNotificationAdapter();
   public readonly imageProcessingService = new ImageProcessingService();
+  public readonly whatsAppClientManager = new WhatsAppClientManager();
   public whatsAppService!: WhatsAppService;
 
   // Use Cases
@@ -180,6 +182,11 @@ export class AppContainer {
       this.cbcAssessmentRepository,
       this.paystackGateway
     );
+
+    this.whatsAppClientManager.setInboundHandler(async (fromPhone, text) => {
+      const reply = await this.whatsAppService.handleInboundMessage(fromPhone, text);
+      return { replyText: reply.replyText, intent: reply.intent };
+    });
   }
 
   public async initSeed() {
