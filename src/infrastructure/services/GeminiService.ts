@@ -143,7 +143,7 @@ export class GeminiService {
 You are the official SmartShule School Communications Assistant for Grace Seed Academy.
 Your task is to draft a personalized, accurate, polite, and professional WhatsApp message to a real parent/guardian based on the school administrator's command and verified student database records.
 
-COMMAND / INSTRUCTION FROM SCHOOL ADMIN:
+COMMAND / INSTRUCTION:
 "${command}"
 
 VERIFIED DATABASE PROFILE OF RECIPIENT & STUDENT:
@@ -163,11 +163,12 @@ MANDATORY RULES:
 1. Use WhatsApp markdown: *bold* for key numbers, student name, and headlines. Use emojis appropriately (e.g. 💰, 📖, 📅, 🏫, ✅) to make it readable and friendly.
 2. Address the parent courteously: e.g. "Dear ${guardianName}," or "Dear Parent of ${learnerName},"
 3. ONLY use the REAL numbers and data provided above. DO NOT invent or hallucinate balances, dates, or contacts.
-4. Keep the message concise and actionable so it reads easily on a mobile WhatsApp screen.
-5. Sign off officially with:
+4. STRICT RELEVANCE: Only include information directly answering the inquiry. DO NOT mention fees, balances, or payments unless the user specifically asked about fees, payments, or invoices.
+5. Keep the message concise and actionable so it reads easily on a mobile WhatsApp screen.
+6. Sign off officially with:
    *Grace Seed Academy Administration*
    _Admissions & Enquiries: +254 712 345 678_
-6. Output ONLY the raw WhatsApp message text ready to be sent. Do NOT include any markdown code blocks, backticks, conversational preamble, or explanations.
+7. Output ONLY the raw WhatsApp message text ready to be sent. Do NOT include any markdown code blocks, backticks, conversational preamble, or explanations.
 `;
 
     try {
@@ -192,7 +193,52 @@ MANDATORY RULES:
     const learner = student.fullName;
     const adm = student.admissionNumber;
 
-    if (cmdUpper.includes('FEE') || cmdUpper.includes('BAL') || cmdUpper.includes('PAY') || cmdUpper.includes('ARREARS')) {
+    if (/\b(HOMEWORK|EDIARY|DIARY|ASSIGNMENT|ASSIGNMENTS|TASK|TASKS)\b/i.test(cmdUpper)) {
+      return (
+        `👋 *Dear ${guardianName},*\n\n` +
+        `Here is today's CBC eDiary homework notice for *${learner}* (Adm: *${adm}* · ${student.gradeLevel}):\n\n` +
+        `📖 *Assigned Homework:*\n` +
+        `${ediarySummary?.recentHomework || 'Please check student exercise books for current assignments.'}\n\n` +
+        `🎒 *Requirements for Tomorrow:*\n` +
+        `${ediarySummary?.requirementsTomorrow || 'Standard learning materials and CBC activity kit.'}\n\n` +
+        `Please inspect your child's work and acknowledge via the eDiary portal.\n\n` +
+        `Warm regards,\n` +
+        `*Grace Seed Academy Teaching Staff*\n` +
+        `_Enquiries: +254 712 345 678_`
+      );
+    }
+
+    if (/\b(ATTEND|ATTENDANCE|ABSENT|ABSENCE|ROLLCALL)\b/i.test(cmdUpper)) {
+      const pct = attendanceSummary ? attendanceSummary.percentage : 95;
+      const absent = attendanceSummary ? attendanceSummary.absentCount : 0;
+      return (
+        `👋 *Dear ${guardianName},*\n\n` +
+        `Regarding *${learner}* (Adm: *${adm}* · ${student.gradeLevel}):\n\n` +
+        `📅 *Term Attendance Summary:*\n` +
+        `• Overall Attendance: *${pct}%*\n` +
+        `• Recorded Absences: *${absent} day(s)*\n\n` +
+        `Consistent attendance is essential for CBC curriculum progress. Please notify us if your child is unwell or unable to attend.\n\n` +
+        `Warm regards,\n` +
+        `*Grace Seed Academy Administration*\n` +
+        `_Office: +254 712 345 678_`
+      );
+    }
+
+    if (/\b(CBC|RESULT|RESULTS|REPORT|GRADE|GRADES|PERFORMANCE|RUBRIC)\b/i.test(cmdUpper)) {
+      return (
+        `👋 *Dear ${guardianName},*\n\n` +
+        `We are pleased to share a CBC academic update for *${learner}* (Adm: *${adm}* · ${student.gradeLevel}):\n\n` +
+        `🌟 *CBC Competency Evaluation:*\n` +
+        `• Overall Performance: *${cbcSummary?.averagePerformance || 'Meeting Expectations (ME)'}*\n` +
+        `• Teacher Remarks: _"${cbcSummary?.teacherRemarks || 'Consistent engagement in class activities and practical projects.'}"_\n\n` +
+        `You can review complete strand-by-strand CBC assessments via the SmartShule parent portal.\n\n` +
+        `Warm regards,\n` +
+        `*Grace Seed Academy Academic Directorate*\n` +
+        `_Office: +254 712 345 678_`
+      );
+    }
+
+    if (/\b(FEE|FEES|BALANCE|BAL|PAY|PAYMENT|ARREARS|DUE|INVOICE|INVOICES|STATEMENT|STATEMENTS)\b/i.test(cmdUpper)) {
       const bal = feeSummary ? feeSummary.balance.toLocaleString() : '0';
       const paystack = feeSummary?.paystackUrl || `https://pay.smartshule.ac.ke/pay/${student.admissionNumber}`;
       return (
@@ -210,56 +256,11 @@ MANDATORY RULES:
       );
     }
 
-    if (cmdUpper.includes('ATTEND') || cmdUpper.includes('ABSENT')) {
-      const pct = attendanceSummary ? attendanceSummary.percentage : 95;
-      const absent = attendanceSummary ? attendanceSummary.absentCount : 0;
-      return (
-        `👋 *Dear ${guardianName},*\n\n` +
-        `Regarding *${learner}* (Adm: *${adm}* · ${student.gradeLevel}):\n\n` +
-        `📅 *Term Attendance Summary:*\n` +
-        `• Overall Attendance: *${pct}%*\n` +
-        `• Recorded Absences: *${absent} day(s)*\n\n` +
-        `Consistent attendance is essential for CBC curriculum progress. Please notify us if your child is unwell or unable to attend.\n\n` +
-        `Warm regards,\n` +
-        `*Grace Seed Academy Administration*\n` +
-        `_Office: +254 712 345 678_`
-      );
-    }
-
-    if (cmdUpper.includes('CBC') || cmdUpper.includes('RESULT') || cmdUpper.includes('REPORT') || cmdUpper.includes('GRADE')) {
-      return (
-        `👋 *Dear ${guardianName},*\n\n` +
-        `We are pleased to share a CBC academic update for *${learner}* (Adm: *${adm}* · ${student.gradeLevel}).\n\n` +
-        `🌟 *CBC Competency Evaluation:*\n` +
-        `• Overall Performance: *${cbcSummary?.averagePerformance || 'Meeting Expectations (ME)'}*\n` +
-        `• Teacher Remarks: _"${cbcSummary?.teacherRemarks || 'Consistent engagement in class activities and practical projects.'}"_\n\n` +
-        `You can review complete strand-by-strand CBC assessments via the SmartShule parent portal.\n\n` +
-        `Warm regards,\n` +
-        `*Grace Seed Academy Academic Directorate*\n` +
-        `_Office: +254 712 345 678_`
-      );
-    }
-
-    if (cmdUpper.includes('HOMEWORK') || cmdUpper.includes('EDIARY') || cmdUpper.includes('DIARY')) {
-      return (
-        `👋 *Dear ${guardianName},*\n\n` +
-        `Here is today's CBC eDiary homework notice for *${learner}* (Adm: *${adm}* · ${student.gradeLevel}):\n\n` +
-        `📖 *Assigned Homework:*\n` +
-        `${ediarySummary?.recentHomework || 'Please check student exercise books for current assignments.'}\n\n` +
-        `🎒 *Requirements for Tomorrow:*\n` +
-        `${ediarySummary?.requirementsTomorrow || 'Standard learning materials and CBC activity kit.'}\n\n` +
-        `Please inspect your child's work and acknowledge via the eDiary portal.\n\n` +
-        `Warm regards,\n` +
-        `*Grace Seed Academy Teaching Staff*\n` +
-        `_Enquiries: +254 712 345 678_`
-      );
-    }
-
     // Default general message
     return (
       `👋 *Dear ${guardianName},*\n\n` +
       `Official communication from *Grace Seed Academy* concerning *${learner}* (Adm: *${adm}* · ${student.gradeLevel}):\n\n` +
-      `${command}\n\n` +
+      `Thank you for your message: "${command}". Our administration desk has received your request.\n\n` +
       `Please contact the school office if you have any questions.\n\n` +
       `Warm regards,\n` +
       `*Grace Seed Academy Administration*\n` +

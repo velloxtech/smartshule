@@ -211,224 +211,152 @@ export class WhatsAppService {
     }));
 
     // =========================================================================
-    // 2. GEMINI AI AUTONOMOUS INBOUND PARSER & RESOLVER
-    // When enabled (e.g. real WhatsApp account messages), Gemini AI handles the command
-    // based on live database records, with automatic fallback to deterministic handlers.
+    // 2. RECOGNIZE COMMANDS & FETCH DETAILS FROM DATABASE
+    // Direct deterministic handlers ensure fast, accurate, zero-delay responses
+    // matching the exact command requested by the user.
     // =========================================================================
-    if (options?.useAI && commandUpper !== 'MENU') {
-      try {
-        const dbProfile = await this.getPersonFullDatabaseProfile(primaryStudent, guardian || undefined, user || undefined);
 
-        let intent: WhatsAppResponse['intent'] = 'HELP';
-        if (commandUpper === '1' || commandUpper.includes('BAL') || commandUpper.includes('FEE') || commandUpper.includes('ARREARS')) {
-          intent = 'FEES';
-        } else if (commandUpper === '2' || commandUpper.includes('PAY') || commandUpper.includes('LIPA') || commandUpper.includes('MPESA') || commandUpper.includes('BANK') || commandUpper.includes('PAYSTACK')) {
-          intent = 'PAYMENT';
-        } else if (commandUpper === '3' || commandUpper.includes('EDIARY') || commandUpper.includes('DIARY') || commandUpper.includes('HOMEWORK') || commandUpper.includes('ASSIGNMENT') || commandUpper.includes('TASK')) {
-          intent = 'EDIARY';
-        } else if (commandUpper === '4' || commandUpper.includes('ATTEND') || commandUpper.includes('ABSENT') || commandUpper.includes('ROLL')) {
-          intent = 'ATTENDANCE';
-        } else if (commandUpper === '5' || commandUpper.includes('CBC') || commandUpper.includes('RESULT') || commandUpper.includes('REPORT') || commandUpper.includes('GRADE') || commandUpper.includes('MARK')) {
-          intent = 'CBC_PROGRESS';
-        } else if (commandUpper === '6' || commandUpper.includes('TIMETABLE') || commandUpper.includes('SCHEDULE') || commandUpper.includes('ROUTINE')) {
-          intent = 'TIMETABLE';
-        } else if (commandUpper === '7' || commandUpper.includes('PROFILE') || commandUpper.includes('STUDENT')) {
-          intent = 'PROFILE';
-        } else if (commandUpper === '8' || commandUpper.includes('SCHOOL') || commandUpper.includes('CONTACT')) {
-          intent = 'SCHOOL';
-        }
-
-        let multiStudentNote = '';
-        if (targetStudents.length > 1) {
-          const multiDetails = await Promise.all(
-            targetStudents.map(async s => {
-              const p = await this.getPersonFullDatabaseProfile(s, guardian || undefined, user || undefined);
-              return `${s.fullName} (Adm: ${s.admissionNumber}, Grade: ${s.gradeLevel}) -> Balance: KES ${p.feeSummary.balance.toLocaleString()}, Attendance: ${p.attendanceSummary.percentage}%, Homework: "${p.ediarySummary.recentHomework}"`;
-            })
-          );
-          multiStudentNote = `Note: The parent has multiple enrolled learners under their profile: [${multiDetails.join(' | ')}]. Please cover or summarize the figures for each learner accordingly. `;
-        }
-
-        const prompt = `${multiStudentNote}The parent (${firstName}) sent this WhatsApp command/message to the school bot: "${rawText}". ` +
-          `Fulfill their request accurately, clearly and politely using the child's verified database records. ` +
-          `If they requested fee balance or payment (e.g. "BALANCE", "PAY", "fees", "1", "2"), specify the outstanding balance (for ${primaryStudent.fullName}: KES ${dbProfile.feeSummary.balance.toLocaleString()}) and available payment channels (Paystack instant checkout: ${dbProfile.feeSummary.paystackUrl}, Stanbic Bank virtual account: ${dbProfile.feeSummary.stanbicAccount}, M-Pesa paybill: 247247, Acc: ${primaryStudent.admissionNumber}). ` +
-          `If they requested homework, detail the assignments: "${dbProfile.ediarySummary.recentHomework}". ` +
-          `If they requested attendance, provide their attendance percentage: ${dbProfile.attendanceSummary.percentage}%. ` +
-          `If they requested CBC report or grades, provide their evaluation: "${dbProfile.cbcSummary.averagePerformance}". ` +
-          `Format with WhatsApp markdown (*bold*, bullet points, emojis). Keep it professional, warm, concise, and ready for WhatsApp.`;
-
-        const aiReply = await this.aiService.draftWhatsAppMessage({
-          command: prompt,
-          student: {
-            fullName: primaryStudent.fullName,
-            admissionNumber: primaryStudent.admissionNumber,
-            gradeLevel: primaryStudent.gradeLevel,
-            streamId: primaryStudent.streamId,
-          },
-          guardian: {
-            fullName: senderName,
-            relationship: guardian?.relationship,
-            phone: senderPhone,
-          },
-          feeSummary: dbProfile.feeSummary,
-          attendanceSummary: dbProfile.attendanceSummary,
-          cbcSummary: dbProfile.cbcSummary,
-          ediarySummary: dbProfile.ediarySummary,
-          tone: 'friendly',
-        });
-
-        if (aiReply && aiReply.trim()) {
-          return {
-            to: senderPhone,
-            senderName,
-            matchedStudent: primaryStudent.fullName,
-            matchedStudents: studentSummary,
-            replyText: aiReply.trim(),
-            intent,
-          };
-        }
-      } catch (err: any) {
-        console.warn('[WhatsApp Inbound] Gemini AI processing failed, falling back to deterministic database handler:', err.message);
-      }
-    }
-
-    // 3. RECOGNIZE COMMANDS & FETCH DETAILS FROM DATABASE (DETERMINISTIC FALLBACK)
-
-    // =========================================================================
-    // COMMAND 1: FEES / BALANCE / STATEMENT / INVOICES / ARREARS
-    // =========================================================================
+    // COMMAND 0 / MENU GREETING
     if (
-      commandUpper === '1' ||
-      commandUpper.startsWith('1 ') ||
-      commandUpper.includes('FEE') ||
-      commandUpper.includes('BAL') ||
-      commandUpper.includes('STATEMENT') ||
-      commandUpper.includes('INVOICE') ||
-      commandUpper.includes('ARREARS') ||
-      commandUpper.includes('OWE')
+      commandUpper === '0' ||
+      commandUpper === '0.' ||
+      commandUpper === 'MENU' ||
+      commandUpper === 'START' ||
+      commandUpper === 'HI' ||
+      commandUpper === 'HELLO' ||
+      commandUpper === 'JAMBO' ||
+      commandUpper === 'HABARI'
     ) {
-      return await this.handleFeeBalanceCommand(senderPhone, firstName, senderName, students, targetStudents);
-    }
-
-    // =========================================================================
-    // COMMAND 2: PAY / PAYMENT / LIPA / CHECKOUT / BANK / MPESA
-    // =========================================================================
-    if (
+      // Handled by default menu below
+    } else if (
+      // COMMAND 2: PAY / PAYMENT / LIPA / CHECKOUT / BANK / MPESA
+      // Evaluated before fee balance so "PAY", "PAY FEES", "LIPA" route to payment instructions
       commandUpper === '2' ||
       commandUpper.startsWith('2 ') ||
-      commandUpper.includes('PAY') ||
-      commandUpper.includes('LIPA') ||
-      commandUpper.includes('CHECKOUT') ||
-      commandUpper.includes('BANK') ||
-      commandUpper.includes('MPESA') ||
-      commandUpper.includes('PAYSTACK')
+      commandUpper.startsWith('2.') ||
+      commandUpper.startsWith('2-') ||
+      commandUpper === 'PAY' ||
+      commandUpper.startsWith('PAY ') ||
+      commandUpper.startsWith('PAY:') ||
+      /\b(PAYMENT|PAYMENTS|LIPA|CHECKOUT|MPESA|M-PESA|PAYSTACK)\b/i.test(commandUpper) ||
+      /\bPAY\s+FEES?\b/i.test(commandUpper)
     ) {
       return await this.handlePaymentCommand(senderPhone, firstName, senderName, primaryStudent);
-    }
-
-    // =========================================================================
-    // COMMAND 3: EDIARY / DIARY / HOMEWORK / ASSIGNMENT / TASKS
-    // =========================================================================
-    if (
+    } else if (
+      // COMMAND 1: FEES / BALANCE / STATEMENT / INVOICES / ARREARS
+      commandUpper === '1' ||
+      commandUpper.startsWith('1 ') ||
+      commandUpper.startsWith('1.') ||
+      commandUpper.startsWith('1-') ||
+      commandUpper === 'BAL' ||
+      commandUpper.startsWith('BAL ') ||
+      commandUpper === 'BALANCE' ||
+      commandUpper.startsWith('BALANCE ') ||
+      commandUpper === 'FEES' ||
+      commandUpper.startsWith('FEES ') ||
+      commandUpper === 'FEE' ||
+      commandUpper.startsWith('FEE ') ||
+      /\b(BALANCE|BALANCES|STATEMENT|STATEMENTS|INVOICE|INVOICES|ARREARS|OWE|OWING)\b/i.test(commandUpper) ||
+      /\bFEE\s+BALANCE\b/i.test(commandUpper) ||
+      /\bSCHOOL\s+FEES?\b/i.test(commandUpper)
+    ) {
+      return await this.handleFeeBalanceCommand(senderPhone, firstName, senderName, students, targetStudents);
+    } else if (
+      // COMMAND 3: EDIARY / DIARY / HOMEWORK / ASSIGNMENT / TASKS
       commandUpper === '3' ||
       commandUpper.startsWith('3 ') ||
-      commandUpper.includes('DIARY') ||
-      commandUpper.includes('EDIARY') ||
-      commandUpper.includes('HOMEWORK') ||
-      commandUpper.includes('ASSIGNMENT') ||
-      commandUpper.includes('TASK')
+      commandUpper.startsWith('3.') ||
+      commandUpper.startsWith('3-') ||
+      commandUpper === 'EDIARY' ||
+      commandUpper.startsWith('EDIARY ') ||
+      commandUpper === 'DIARY' ||
+      commandUpper.startsWith('DIARY ') ||
+      commandUpper === 'HOMEWORK' ||
+      commandUpper.startsWith('HOMEWORK ') ||
+      /\b(EDIARY|E-DIARY|DIARY|HOMEWORK|ASSIGNMENT|ASSIGNMENTS|TASKS?)\b/i.test(commandUpper)
     ) {
       return await this.handleEDiaryCommand(senderPhone, firstName, senderName, primaryStudent);
-    }
-
-    // =========================================================================
-    // COMMAND 4: ATTENDANCE / ROLL-CALL / PRESENT / ABSENT
-    // =========================================================================
-    if (
+    } else if (
+      // COMMAND 4: ATTENDANCE / ROLL-CALL / PRESENT / ABSENT
       commandUpper === '4' ||
       commandUpper.startsWith('4 ') ||
-      commandUpper.includes('ATTEND') ||
-      commandUpper.includes('ROLL') ||
-      commandUpper.includes('PRESENT') ||
-      commandUpper.includes('ABSENT')
+      commandUpper.startsWith('4.') ||
+      commandUpper.startsWith('4-') ||
+      commandUpper === 'ATTENDANCE' ||
+      commandUpper.startsWith('ATTENDANCE ') ||
+      commandUpper === 'ATTEND' ||
+      commandUpper.startsWith('ATTEND ') ||
+      /\b(ATTENDANCE|ATTEND|ROLLCALL|ROLL-CALL|PRESENT|ABSENT|ABSENCE|ABSENCES)\b/i.test(commandUpper) ||
+      /\bROLL\s+CALL\b/i.test(commandUpper)
     ) {
       return await this.handleAttendanceCommand(senderPhone, firstName, senderName, students, targetStudents);
-    }
-
-    // =========================================================================
-    // COMMAND 5: CBC PROGRESS / RESULTS / REPORT CARD / GRADES / MARKS
-    // =========================================================================
-    if (
+    } else if (
+      // COMMAND 5: CBC PROGRESS / RESULTS / REPORT CARD / GRADES / MARKS
       commandUpper === '5' ||
       commandUpper.startsWith('5 ') ||
-      commandUpper.includes('PROGRESS') ||
-      commandUpper.includes('CBC') ||
-      commandUpper.includes('RESULT') ||
-      commandUpper.includes('REPORT') ||
-      commandUpper.includes('GRADE') ||
-      commandUpper.includes('MARK') ||
-      commandUpper.includes('RUBRIC') ||
-      commandUpper.includes('EXAM')
+      commandUpper.startsWith('5.') ||
+      commandUpper.startsWith('5-') ||
+      commandUpper === 'CBC' ||
+      commandUpper.startsWith('CBC ') ||
+      commandUpper === 'RESULTS' ||
+      commandUpper.startsWith('RESULTS ') ||
+      commandUpper === 'RESULT' ||
+      commandUpper.startsWith('RESULT ') ||
+      /\b(CBC|RESULTS?|PROGRESS|REPORT\s*CARD|GRADES?|MARKS?|RUBRICS?|EXAMS?|ASSESSMENTS?)\b/i.test(commandUpper)
     ) {
       return await this.handleCbcProgressCommand(senderPhone, firstName, senderName, primaryStudent);
-    }
-
-    // =========================================================================
-    // COMMAND 6: TIMETABLE / SCHEDULE / ROUTINE / PERIODS / CLASSES
-    // =========================================================================
-    if (
+    } else if (
+      // COMMAND 6: TIMETABLE / SCHEDULE / ROUTINE / PERIODS / CLASSES
       commandUpper === '6' ||
       commandUpper.startsWith('6 ') ||
-      commandUpper.includes('TIMETABLE') ||
-      commandUpper.includes('SCHEDULE') ||
-      commandUpper.includes('ROUTINE') ||
-      commandUpper.includes('PERIOD') ||
-      commandUpper.includes('CLASS')
+      commandUpper.startsWith('6.') ||
+      commandUpper.startsWith('6-') ||
+      commandUpper === 'TIMETABLE' ||
+      commandUpper.startsWith('TIMETABLE ') ||
+      commandUpper === 'SCHEDULE' ||
+      commandUpper.startsWith('SCHEDULE ') ||
+      /\b(TIMETABLE|TIMETABLES|SCHEDULE|SCHEDULES|ROUTINE|PERIODS?|LESSONS?)\b/i.test(commandUpper)
     ) {
       return await this.handleTimetableCommand(senderPhone, firstName, senderName, primaryStudent);
-    }
-
-    // =========================================================================
-    // COMMAND 7: PROFILE / STUDENT / LEARNERS / MY KIDS
-    // =========================================================================
-    if (
+    } else if (
+      // COMMAND 7: PROFILE / STUDENT / LEARNERS / MY KIDS
       commandUpper === '7' ||
       commandUpper.startsWith('7 ') ||
-      commandUpper.includes('PROFILE') ||
-      commandUpper.includes('STUDENT') ||
-      commandUpper.includes('KID') ||
-      commandUpper.includes('CHILD') ||
-      commandUpper.includes('LEARNER')
+      commandUpper.startsWith('7.') ||
+      commandUpper.startsWith('7-') ||
+      commandUpper === 'PROFILE' ||
+      commandUpper.startsWith('PROFILE ') ||
+      commandUpper === 'STUDENT' ||
+      commandUpper.startsWith('STUDENT ') ||
+      commandUpper === 'LEARNER' ||
+      commandUpper.startsWith('LEARNER ') ||
+      /\b(PROFILES?|STUDENTS?|LEARNERS?|KIDS?|CHILD|CHILDREN)\b/i.test(commandUpper)
     ) {
       return await this.handleProfileCommand(senderPhone, firstName, senderName, students);
-    }
-
-    // =========================================================================
-    // COMMAND 8: SCHOOL / INFO / CONTACT / ADMIN / TERM
-    // =========================================================================
-    if (
+    } else if (
+      // COMMAND 8: SCHOOL / INFO / CONTACT / ADMIN / TERM
       commandUpper === '8' ||
       commandUpper.startsWith('8 ') ||
-      commandUpper.includes('SCHOOL') ||
-      commandUpper.includes('INFO') ||
-      commandUpper.includes('CONTACT') ||
-      commandUpper.includes('TERM') ||
-      commandUpper.includes('ADMIN')
+      commandUpper.startsWith('8.') ||
+      commandUpper.startsWith('8-') ||
+      commandUpper === 'SCHOOL' ||
+      commandUpper.startsWith('SCHOOL ') ||
+      commandUpper === 'INFO' ||
+      commandUpper.startsWith('INFO ') ||
+      /\b(SCHOOL|CONTACTS?|TERMS?|CALENDAR|TERM\s*DATES|OFFICE|ADDRESS)\b/i.test(commandUpper)
     ) {
       return await this.handleSchoolInfoCommand(senderPhone, firstName, senderName, primaryStudent);
-    }
-
-    // =========================================================================
-    // COMMAND 9: HELP / ASK TEACHER / QUESTION / SUPPORT
-    // =========================================================================
-    if (
+    } else if (
+      // COMMAND 9: HELP / ASK TEACHER / QUESTION / SUPPORT
       commandUpper === '9' ||
       commandUpper.startsWith('9 ') ||
-      commandUpper.includes('HELP') ||
-      commandUpper.includes('TEACHER') ||
-      commandUpper.includes('QUESTION') ||
+      commandUpper.startsWith('9.') ||
+      commandUpper.startsWith('9-') ||
+      commandUpper === 'HELP' ||
+      commandUpper.startsWith('HELP ') ||
       commandUpper.startsWith('ASK:') ||
-      commandUpper.startsWith('ASK ')
+      commandUpper.startsWith('ASK ') ||
+      /\b(TEACHERS?|QUESTIONS?|SUPPORT|HELP\s*DESK)\b/i.test(commandUpper)
     ) {
       return await this.handleHelpDeskCommand(senderPhone, firstName, senderName, primaryStudent, rawText);
     }

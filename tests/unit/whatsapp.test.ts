@@ -415,13 +415,69 @@ describe('WhatsApp Bot & Phone Counter-Checking Unit Tests', () => {
         expect(draft.draftedMessage).toBeTruthy();
       });
 
-      it('processes live inbound message via Gemini AI when useAI is true for registered user', async () => {
+      it('processes live inbound message when useAI is true for registered user', async () => {
         const res = await whatsAppService.handleInboundMessage('+254711223344', 'Balance', { useAI: true });
 
         expect(res.intent).toBe('FEES');
         expect(res.matchedStudent).toBe('Liam Doe');
-        expect(res.replyText).toBeTruthy();
+        expect(res.replyText).toContain('FEES STATEMENT');
         expect(res.to).toBe('+254711223344');
+      });
+
+      it('sends the corresponding response for each command (2-9, MENU) and NOT the balance message when useAI is true', async () => {
+        // Command 2: Payment
+        const res2 = await whatsAppService.handleInboundMessage('+254711223344', '2', { useAI: true });
+        expect(res2.intent).toBe('PAYMENT');
+        expect(res2.replyText).toContain('Paystack Bank Gateway');
+        expect(res2.replyText).not.toContain('FEES STATEMENT');
+
+        // Command 3: eDiary / Homework
+        const res3 = await whatsAppService.handleInboundMessage('+254711223344', '3', { useAI: true });
+        expect(res3.intent).toBe('EDIARY');
+        expect(res3.replyText).toContain('eDIARY & HOMEWORK');
+        expect(res3.replyText).not.toContain('FEES STATEMENT');
+
+        // Command 4: Attendance
+        const res4 = await whatsAppService.handleInboundMessage('+254711223344', '4', { useAI: true });
+        expect(res4.intent).toBe('ATTENDANCE');
+        expect(res4.replyText).toContain('LIVE ATTENDANCE REPORT');
+        expect(res4.replyText).not.toContain('FEES STATEMENT');
+
+        // Command 5: CBC Results
+        const res5 = await whatsAppService.handleInboundMessage('+254711223344', '5', { useAI: true });
+        expect(res5.intent).toBe('CBC_PROGRESS');
+        expect(res5.replyText).toContain('CBC COMPETENCY REPORT');
+        expect(res5.replyText).not.toContain('FEES STATEMENT');
+
+        // Command 6: Timetable
+        const res6 = await whatsAppService.handleInboundMessage('+254711223344', '6', { useAI: true });
+        expect(res6.intent).toBe('TIMETABLE');
+        expect(res6.replyText).toContain('DAILY TIMETABLE');
+        expect(res6.replyText).not.toContain('FEES STATEMENT');
+
+        // Command 7: Profile
+        const res7 = await whatsAppService.handleInboundMessage('+254711223344', '7', { useAI: true });
+        expect(res7.intent).toBe('PROFILE');
+        expect(res7.replyText).toContain('ENROLLED LEARNER PROFILES');
+        expect(res7.replyText).not.toContain('FEES STATEMENT');
+
+        // Command 8: School Info
+        const res8 = await whatsAppService.handleInboundMessage('+254711223344', '8', { useAI: true });
+        expect(res8.intent).toBe('SCHOOL');
+        expect(res8.replyText).toContain('SCHOOL INFORMATION & CONTACTS');
+        expect(res8.replyText).not.toContain('FEES STATEMENT');
+
+        // Command 9: Help Desk
+        const res9 = await whatsAppService.handleInboundMessage('+254711223344', '9', { useAI: true });
+        expect(res9.intent).toBe('HELP');
+        expect(res9.replyText).toContain('HELP DESK');
+        expect(res9.replyText).not.toContain('FEES STATEMENT');
+
+        // MENU Command
+        const resMenu = await whatsAppService.handleInboundMessage('+254711223344', 'MENU', { useAI: true });
+        expect(resMenu.intent).toBe('MENU');
+        expect(resMenu.replyText).toContain('Welcome to *Grace Seed Academy CBC Portal*');
+        expect(resMenu.replyText).not.toContain('FEES STATEMENT');
       });
 
       it('rejects inbound message from unregistered phone number without calling Gemini AI', async () => {
