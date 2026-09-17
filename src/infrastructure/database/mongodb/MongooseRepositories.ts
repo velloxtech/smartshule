@@ -1,4 +1,5 @@
 import mongoose, { Schema } from 'mongoose';
+import { PhoneUtils } from '../../utils/PhoneUtils';
 import { IUserRepository } from '../../../core/ports/repositories/IUserRepository';
 import { IStudentRepository, StudentFilterCriteria } from '../../../core/ports/repositories/IStudentRepository';
 import { ITeacherRepository, IGuardianRepository } from '../../../core/ports/repositories/ITeacherRepository';
@@ -418,6 +419,18 @@ export class MongoUserRepository implements IUserRepository {
     if (!doc) return null;
     return User.create(doc as any, doc._id, doc.createdAt, doc.updatedAt);
   }
+  public async findByPhone(phone: string): Promise<User | null> {
+    const subscriber = PhoneUtils.getSubscriberDigits(phone);
+    let doc: any = null;
+    if (subscriber.length >= 7) {
+      doc = await UserModel.findOne({ phone: { $regex: `${subscriber}$` } }).lean();
+    }
+    if (!doc) {
+      doc = await UserModel.findOne({ phone }).lean();
+    }
+    if (!doc) return null;
+    return User.create(doc as any, doc._id, doc.createdAt, doc.updatedAt);
+  }
   public async findAll(filters?: { schoolId?: string; role?: string }): Promise<User[]> {
     const query: any = {};
     if (filters?.schoolId) query.schoolId = filters.schoolId;
@@ -530,6 +543,18 @@ export class MongoGuardianRepository implements IGuardianRepository {
   public async findByStudentId(studentId: string): Promise<Guardian[]> {
     const docs = await GuardianModel.find({ studentIds: studentId }).lean();
     return docs.map((d: any) => Guardian.create(d, d._id, d.createdAt, d.updatedAt));
+  }
+  public async findByPhone(phone: string): Promise<Guardian | null> {
+    const subscriber = PhoneUtils.getSubscriberDigits(phone);
+    let doc: any = null;
+    if (subscriber.length >= 7) {
+      doc = await GuardianModel.findOne({ emergencyContact: { $regex: `${subscriber}$` } }).lean();
+    }
+    if (!doc) {
+      doc = await GuardianModel.findOne({ emergencyContact: phone }).lean();
+    }
+    if (!doc) return null;
+    return Guardian.create(doc as any, doc._id, doc.createdAt, doc.updatedAt);
   }
   public async findAll(): Promise<Guardian[]> {
     const docs = await GuardianModel.find().lean();

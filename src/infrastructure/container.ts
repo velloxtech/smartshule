@@ -180,11 +180,13 @@ export class AppContainer {
       this.ediaryRepository,
       this.attendanceRepository,
       this.cbcAssessmentRepository,
-      this.paystackGateway
+      this.paystackGateway,
+      this.academicRepository,
+      this.timetableRepository
     );
 
     this.whatsAppClientManager.setInboundHandler(async (fromPhone, text) => {
-      const reply = await this.whatsAppService.handleInboundMessage(fromPhone, text);
+      const reply = await this.whatsAppService.handleInboundMessage(fromPhone, text, { useAI: true });
       return { replyText: reply.replyText, intent: reply.intent };
     });
   }

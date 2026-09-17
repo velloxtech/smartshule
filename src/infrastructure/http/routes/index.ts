@@ -89,6 +89,8 @@ import {
   WhatsAppSimulateSchema,
   WhatsAppSendSchema,
   WhatsAppConfigSchema,
+  WhatsAppAIDraftSchema,
+  WhatsAppAIDispatchSchema,
 } from '../controllers/WhatsAppController';
 
 import { AnalyticsController } from '../controllers/AnalyticsController';
@@ -269,6 +271,8 @@ export function createApiRouter(container: AppContainer): Router {
   whatsappRouter.post('/connect', whatsAppController.connect);
   whatsappRouter.post('/disconnect', whatsAppController.disconnect);
   whatsappRouter.post('/send', validateBody(WhatsAppSendSchema), whatsAppController.sendMessage);
+  whatsappRouter.post('/ai-draft', validateBody(WhatsAppAIDraftSchema), whatsAppController.draftWithGemini);
+  whatsappRouter.post('/ai-dispatch', validateBody(WhatsAppAIDispatchSchema), whatsAppController.dispatchWithGemini);
   whatsappRouter.get('/messages', whatsAppController.getRecentMessages);
   whatsappRouter.get('/webhook', whatsAppController.webhookVerification);
   whatsappRouter.post('/webhook', whatsAppController.webhookInbound);

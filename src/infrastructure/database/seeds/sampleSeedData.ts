@@ -97,7 +97,7 @@ export async function seedDatabase(repositories: any, passwordHasher: IPasswordH
       firstName: 'Mary',
       lastName: 'Kariuki',
       role: UserRole.GUARDIAN,
-      phone: '+254799888777',
+      phone: '+254759496975',
       status: UserStatus.ACTIVE,
       schoolId
     },
@@ -234,7 +234,7 @@ export async function seedDatabase(repositories: any, passwordHasher: IPasswordH
       userId: guardianUser1.id,
       nationalId: '29876543',
       relationship: GuardianRelationship.MOTHER,
-      emergencyContact: '+254799888777',
+      emergencyContact: '+254759496975',
       occupation: 'Civil Engineer',
       studentIds: ['student-001']
     },

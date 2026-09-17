@@ -90,7 +90,7 @@ export const env = {
   // 9. Google Gemini AI & Vision API
   gemini: {
     apiKey: process.env.GEMINI_API_KEY || '',
-    model: process.env.GEMINI_MODEL || 'gemini-1.5-flash',
+    model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
   },
 
   // 10. File & Cloud Media Storage API (Cloudinary / Local)

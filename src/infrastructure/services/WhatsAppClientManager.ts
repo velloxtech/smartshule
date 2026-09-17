@@ -40,6 +40,8 @@ export class WhatsAppClientManager {
   private sessionDir: string;
   private inboundHandler: InboundMessageHandler | null = null;
   private isReconnecting = false;
+  private lidToPhoneMap = new Map<string, string>();
+  private phoneToLidMap = new Map<string, string>();
 
   constructor(sessionPath?: string) {
     this.sessionDir = sessionPath || process.env.WHATSAPP_SESSION_PATH || path.join(process.cwd(), 'data', 'whatsapp_session');
@@ -186,8 +188,7 @@ export class WhatsAppClientManager {
 
           if (!text.trim()) continue;
 
-          const rawPhone = remoteJid.replace('@s.whatsapp.net', '');
-          const senderPhone = rawPhone.startsWith('+') ? rawPhone : `+${rawPhone}`;
+          const { senderPhone, replyJid } = await this.resolveSenderPhone(msg, remoteJid);
 
           this.totalReceived++;
 
@@ -202,7 +203,7 @@ export class WhatsAppClientManager {
           };
           this.recordMessage(inLog);
 
-          console.log(`[WhatsApp Inbound] Real message from ${senderPhone}: "${text.trim()}"`);
+          console.log(`[WhatsApp Inbound] Real message from ${senderPhone} (Chat JID: ${remoteJid}): "${text.trim()}"`);
 
           // Process via registered inbound handler
           if (this.inboundHandler) {
@@ -210,7 +211,8 @@ export class WhatsAppClientManager {
               const reply = await this.inboundHandler(senderPhone, text.trim());
               if (reply && reply.replyText) {
                 // Send real reply back through the actual WhatsApp account!
-                await this.sendRealMessage(senderPhone, reply.replyText, reply.intent);
+                // Prioritize replyJid (the exact chat where the message originated) to guarantee delivery
+                await this.sendRealMessage(senderPhone, reply.replyText, reply.intent, replyJid);
               }
             } catch (err) {
               console.error('[WhatsApp Inbound] Error handling message:', err);
@@ -228,36 +230,161 @@ export class WhatsAppClientManager {
   }
 
   /**
-   * Sends an actual WhatsApp message to a real phone number
+   * Resolves the actual phone number and reply JID from incoming Baileys message
+   * Handles both standard phone JIDs (@s.whatsapp.net) and multi-device LIDs (@lid)
+   */
+  public async resolveSenderPhone(msg: any, remoteJid: string): Promise<{ senderPhone: string; replyJid: string }> {
+    const replyJid = remoteJid;
+
+    // Case 1: Standard WhatsApp user JID: e.g. "254759496975@s.whatsapp.net" or "254759496975:1@s.whatsapp.net"
+    if (remoteJid.endsWith('@s.whatsapp.net')) {
+      const rawUser = remoteJid.replace('@s.whatsapp.net', '').split(':')[0].replace(/[^0-9]/g, '');
+      const senderPhone = rawUser.startsWith('+') ? rawUser : `+${rawUser}`;
+      return { senderPhone, replyJid };
+    }
+
+    // Case 2: Multi-device / privacy LID: e.g. "148438935179455@lid"
+    if (remoteJid.endsWith('@lid')) {
+      const lidUser = remoteJid.replace('@lid', '').split(':')[0].replace(/[^0-9]/g, '');
+
+      // 2a. Check in-memory cache
+      if (this.lidToPhoneMap.has(lidUser)) {
+        const phone = this.lidToPhoneMap.get(lidUser)!;
+        return { senderPhone: phone, replyJid };
+      }
+
+      // 2b. Check msg.key.remoteJidAlt or participantAlt in Baileys message key
+      const altJid = msg?.key?.remoteJidAlt || msg?.key?.participantAlt || msg?.participant;
+      if (altJid && typeof altJid === 'string' && altJid.endsWith('@s.whatsapp.net')) {
+        const rawPn = altJid.replace('@s.whatsapp.net', '').split(':')[0].replace(/[^0-9]/g, '');
+        if (rawPn.length >= 9) {
+          const phone = `+${rawPn}`;
+          this.lidToPhoneMap.set(lidUser, phone);
+          this.phoneToLidMap.set(rawPn, remoteJid);
+          return { senderPhone: phone, replyJid };
+        }
+      }
+
+      // 2c. Check Baileys internal signalRepository.lidMapping
+      if (this.sock && (this.sock as any).signalRepository?.lidMapping?.getPNForLID) {
+        try {
+          const pnResult = await (this.sock as any).signalRepository.lidMapping.getPNForLID(remoteJid);
+          if (pnResult) {
+            const pnStr = typeof pnResult === 'string' ? pnResult : (pnResult.pn || '');
+            const rawPn = pnStr.replace(/@.+/, '').split(':')[0].replace(/[^0-9]/g, '');
+            if (rawPn.length >= 9) {
+              const phone = `+${rawPn}`;
+              this.lidToPhoneMap.set(lidUser, phone);
+              this.phoneToLidMap.set(rawPn, remoteJid);
+              return { senderPhone: phone, replyJid };
+            }
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+
+      // 2d. Check saved session files for lid-mapping-<lidUser>_reverse.json
+      try {
+        const reverseFile = path.join(this.sessionDir, `lid-mapping-${lidUser}_reverse.json`);
+        if (fs.existsSync(reverseFile)) {
+          const raw = fs.readFileSync(reverseFile, 'utf8');
+          const parsed = JSON.parse(raw);
+          const rawPn = (parsed || '').toString().replace(/[^0-9]/g, '');
+          if (rawPn.length >= 9) {
+            const phone = `+${rawPn}`;
+            this.lidToPhoneMap.set(lidUser, phone);
+            this.phoneToLidMap.set(rawPn, remoteJid);
+            return { senderPhone: phone, replyJid };
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+
+      // 2e. Check if any file in sessionDir is lid-mapping-* matching this LID
+      try {
+        const files = fs.readdirSync(this.sessionDir);
+        for (const file of files) {
+          if (file.startsWith('lid-mapping-') && file.endsWith('.json') && !file.includes('_reverse')) {
+            const content = fs.readFileSync(path.join(this.sessionDir, file), 'utf8');
+            if (content.includes(lidUser)) {
+              const pnFromFileName = file.replace('lid-mapping-', '').replace('.json', '').replace(/[^0-9]/g, '');
+              if (pnFromFileName.length >= 9) {
+                const phone = `+${pnFromFileName}`;
+                this.lidToPhoneMap.set(lidUser, phone);
+                this.phoneToLidMap.set(pnFromFileName, remoteJid);
+                return { senderPhone: phone, replyJid };
+              }
+            }
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
+
+      // Fallback if completely unresolved
+      console.warn(`[WhatsApp Inbound] Could not resolve real phone number for LID: ${remoteJid}`);
+      return { senderPhone: `+${lidUser}`, replyJid };
+    }
+
+    // Default fallback
+    const raw = remoteJid.replace(/@.+/, '').split(':')[0].replace(/[^0-9]/g, '');
+    return { senderPhone: raw ? `+${raw}` : remoteJid, replyJid };
+  }
+
+  /**
+   * Sends an actual WhatsApp message to a real phone number or JID
    */
   public async sendRealMessage(
-    toPhone: string,
+    toPhoneOrJid: string,
     messageText: string,
-    intent?: string
+    intent?: string,
+    preferredJid?: string
   ): Promise<{ success: boolean; messageId?: string; error?: string }> {
     const text = (messageText || '').trim();
     if (!text) {
       return { success: false, error: 'Message text cannot be empty' };
     }
 
-    // Clean destination phone number
-    const cleanPhone = toPhone.replace(/[\s\-\(\)\+]/g, '');
-    if (cleanPhone.length < 9) {
-      return { success: false, error: `Invalid recipient phone number: ${toPhone}` };
+    // Determine target JID for Baileys socket
+    let targetJid = (preferredJid || '').trim();
+    if (!targetJid) {
+      if (toPhoneOrJid.includes('@s.whatsapp.net') || toPhoneOrJid.includes('@lid')) {
+        targetJid = toPhoneOrJid.trim();
+      } else {
+        const cleanDigits = toPhoneOrJid.replace(/[^0-9]/g, '');
+        if (cleanDigits.length < 9) {
+          return { success: false, error: `Invalid recipient phone number: ${toPhoneOrJid}` };
+        }
+        // Check if we already have a mapped LID for this phone number
+        const mappedLid = this.phoneToLidMap.get(cleanDigits);
+        if (mappedLid) {
+          targetJid = mappedLid;
+        } else {
+          targetJid = `${cleanDigits}@s.whatsapp.net`;
+        }
+      }
     }
+
+    // Clean human-readable phone number for logging and Meta API fallback
+    const rawDigits = toPhoneOrJid.replace(/@.+/, '').replace(/[^0-9]/g, '');
+    const displayPhone = rawDigits.length >= 9
+      ? (rawDigits.startsWith('254') ? `+${rawDigits}` : `+254${rawDigits.replace(/^0/, '')}`)
+      : (toPhoneOrJid.startsWith('+') ? toPhoneOrJid : `+${toPhoneOrJid}`);
 
     // 1. Try Baileys connected socket (Actual WhatsApp account)
     if (this.sock && this.status === 'CONNECTED') {
       try {
-        const jid = `${cleanPhone}@s.whatsapp.net`;
-        const result = await this.sock.sendMessage(jid, { text });
+        console.log(`[WhatsApp Outbound] Sending via Baileys to JID: ${targetJid} (Recipient: ${displayPhone})`);
+        const result = await this.sock.sendMessage(targetJid, { text });
 
         this.totalSent++;
         const outLog: WhatsAppMessageLog = {
           id: result?.key?.id || `out-${Date.now()}`,
           direction: 'OUTBOUND',
           from: this.connectedPhone || 'SmartShule Account',
-          to: toPhone.startsWith('+') ? toPhone : `+${toPhone}`,
+          to: displayPhone,
           text,
           status: 'SENT',
           timestamp: new Date().toISOString(),
@@ -265,10 +392,10 @@ export class WhatsAppClientManager {
         };
         this.recordMessage(outLog);
 
-        console.log(`[WhatsApp Outbound] ✅ Real message sent to ${toPhone} | ID: ${outLog.id}`);
+        console.log(`[WhatsApp Outbound] ✅ Real message sent to ${displayPhone} | ID: ${outLog.id}`);
         return { success: true, messageId: outLog.id };
       } catch (err: any) {
-        console.error(`[WhatsApp Outbound] Error sending to ${toPhone}:`, err);
+        console.error(`[WhatsApp Outbound] Error sending to ${displayPhone} (JID: ${targetJid}):`, err);
         return { success: false, error: err.message || 'Failed to send WhatsApp message' };
       }
     }
@@ -278,6 +405,7 @@ export class WhatsAppClientManager {
     const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
     if (metaToken && phoneId) {
       try {
+        const cleanPhone = rawDigits;
         const apiBase = process.env.WHATSAPP_API_BASE_URL || 'https://graph.facebook.com/v21.0';
         const url = `${apiBase}/${phoneId}/messages`;
         const response = await fetch(url, {
@@ -303,26 +431,30 @@ export class WhatsAppClientManager {
             id: msgId,
             direction: 'OUTBOUND',
             from: phoneId,
-            to: toPhone.startsWith('+') ? toPhone : `+${toPhone}`,
+            to: displayPhone,
             text,
             status: 'SENT',
             timestamp: new Date().toISOString(),
             intent,
           };
           this.recordMessage(outLog);
+
+          console.log(`[WhatsApp Outbound (Meta Cloud)] ✅ Sent to ${displayPhone} | ID: ${msgId}`);
           return { success: true, messageId: msgId };
         } else {
-          const errMsg = data.error?.message || 'Meta Cloud API error';
+          const errMsg = data.error?.message || 'Meta Cloud API rejected the message';
+          console.error(`[WhatsApp Outbound (Meta Cloud)] Error sending to ${displayPhone}:`, errMsg);
           return { success: false, error: errMsg };
         }
       } catch (err: any) {
-        return { success: false, error: err.message || 'Meta Cloud API request failed' };
+        console.error(`[WhatsApp Outbound (Meta Cloud)] Exception sending to ${displayPhone}:`, err);
+        return { success: false, error: err.message };
       }
     }
 
     return {
       success: false,
-      error: 'No WhatsApp account is currently connected. Please scan the QR code to connect your actual WhatsApp account.',
+      error: 'No active WhatsApp connection or Meta Cloud credentials available',
     };
   }
 

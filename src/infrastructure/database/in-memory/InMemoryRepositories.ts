@@ -55,6 +55,7 @@ import { FeeStructure, StudentInvoice, Payment } from '../../../core/domain/fina
 import { ParentHelpRequest } from '../../../core/domain/media/ParentHelpRequest';
 import { StudentProgressPhoto } from '../../../core/domain/media/StudentProgressPhoto';
 import { EDiaryEntry } from '../../../core/domain/ediary/EDiaryEntry';
+import { PhoneUtils } from '../../utils/PhoneUtils';
 
 export class InMemoryUserRepository implements IUserRepository {
   private users: Map<string, User> = new Map();
@@ -66,6 +67,13 @@ export class InMemoryUserRepository implements IUserRepository {
   public async findByEmail(email: string): Promise<User | null> {
     for (const u of this.users.values()) {
       if (u.email.toLowerCase() === email.toLowerCase()) return u;
+    }
+    return null;
+  }
+
+  public async findByPhone(phone: string): Promise<User | null> {
+    for (const u of this.users.values()) {
+      if (PhoneUtils.areMatches(u.phone, phone)) return u;
     }
     return null;
   }
@@ -202,6 +210,13 @@ export class InMemoryGuardianRepository implements IGuardianRepository {
 
   public async findByStudentId(studentId: string): Promise<Guardian[]> {
     return Array.from(this.guardians.values()).filter(g => g.studentIds.includes(studentId));
+  }
+
+  public async findByPhone(phone: string): Promise<Guardian | null> {
+    for (const g of this.guardians.values()) {
+      if (PhoneUtils.areMatches(g.emergencyContact, phone)) return g;
+    }
+    return null;
   }
 
   public async findAll(): Promise<Guardian[]> {

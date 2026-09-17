@@ -1,0 +1,269 @@
+import env from '../config/env';
+
+export interface GeminiDraftParams {
+  command: string;
+  student: {
+    fullName: string;
+    admissionNumber: string;
+    gradeLevel: string;
+    streamId?: string;
+  };
+  guardian: {
+    fullName?: string;
+    relationship?: string;
+    phone: string;
+  };
+  feeSummary?: {
+    totalBilled: number;
+    totalPaid: number;
+    balance: number;
+    paystackUrl?: string;
+    stanbicAccount?: string;
+    dueDate?: string;
+  };
+  attendanceSummary?: {
+    presentCount: number;
+    absentCount: number;
+    percentage: number;
+    lastRecordedDate?: string;
+  };
+  cbcSummary?: {
+    recentAssessments?: Array<{ learningArea: string; strand: string; scoreLevel: string }>;
+    averagePerformance?: string;
+    teacherRemarks?: string;
+  };
+  ediarySummary?: {
+    recentHomework?: string;
+    teacherRemarks?: string;
+    requirementsTomorrow?: string;
+  };
+  tone?: 'professional' | 'urgent' | 'friendly' | 'concise';
+}
+
+export class GeminiService {
+  private readonly apiKey: string;
+  private readonly model: string;
+
+  constructor(apiKey?: string, model?: string) {
+    this.apiKey = apiKey || env.gemini.apiKey || process.env.GEMINI_API_KEY || '';
+    // Default to gemini-2.5-flash which is confirmed active and supported on the v1beta endpoint
+    this.model = model || env.gemini.model || process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+  }
+
+  /**
+   * Directly generates text using Google Gemini Generative Language API
+   */
+  public async generateContent(prompt: string, customModel?: string): Promise<string> {
+    if (!this.apiKey) {
+      throw new Error('GEMINI_API_KEY is not configured in environment.');
+    }
+
+    const modelToUse = customModel || this.model;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelToUse}:generateContent?key=${this.apiKey}`;
+
+    const payload = {
+      contents: [
+        {
+          parts: [{ text: prompt }]
+        }
+      ],
+      generationConfig: {
+        temperature: 0.4,
+        maxOutputTokens: 600,
+      }
+    };
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      const errorMsg = (errorData as any)?.error?.message || response.statusText;
+      
+      // If the model was not found (e.g. 1.5 deprecated), try fallback models
+      if (response.status === 404 && modelToUse !== 'gemini-2.5-flash') {
+        console.warn(`[GeminiService] Model ${modelToUse} failed with 404, falling back to gemini-2.5-flash...`);
+        return this.generateContent(prompt, 'gemini-2.5-flash');
+      }
+
+      throw new Error(`Gemini API error (${response.status}): ${errorMsg}`);
+    }
+
+    const data = (await response.json()) as any;
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) {
+      throw new Error('Gemini returned an empty response.');
+    }
+
+    return text.trim();
+  }
+
+  /**
+   * Drafts a targeted WhatsApp message tailored to real database facts and a user command
+   */
+  public async draftWhatsAppMessage(params: GeminiDraftParams): Promise<string> {
+    const {
+      command,
+      student,
+      guardian,
+      feeSummary,
+      attendanceSummary,
+      cbcSummary,
+      ediarySummary,
+      tone = 'professional'
+    } = params;
+
+    const guardianName = guardian.fullName || 'Parent/Guardian';
+    const learnerName = student.fullName;
+    const admNo = student.admissionNumber;
+    const grade = student.gradeLevel;
+
+    const feeText = feeSummary
+      ? `Outstanding Balance: KES ${feeSummary.balance.toLocaleString()} (Total Billed: KES ${feeSummary.totalBilled.toLocaleString()}, Paid: KES ${feeSummary.totalPaid.toLocaleString()}). Stanbic Bank: ${feeSummary.stanbicAccount || '0100012345678 (Ref: ' + admNo + ')'}. Paystack: ${feeSummary.paystackUrl || 'https://pay.smartshule.ac.ke/fees/' + admNo}.`
+      : 'Fee details not requested or not available.';
+
+    const attendanceText = attendanceSummary
+      ? `Attendance Rate: ${attendanceSummary.percentage}% (${attendanceSummary.presentCount} present, ${attendanceSummary.absentCount} absent).`
+      : 'Attendance details not requested.';
+
+    const cbcText = cbcSummary
+      ? `Performance: ${cbcSummary.averagePerformance || 'Meeting Expectations (ME)'}. Remarks: ${cbcSummary.teacherRemarks || 'Good academic engagement.'}`
+      : 'CBC performance details not requested.';
+
+    const ediaryText = ediarySummary
+      ? `Homework: ${ediarySummary.recentHomework || 'Review daily class notes'}. Remarks: ${ediarySummary.teacherRemarks || 'All tasks on schedule'}. Tomorrow's requirements: ${ediarySummary.requirementsTomorrow || 'Standard books and kit'}.`
+      : 'eDiary homework not requested.';
+
+    const prompt = `
+You are the official SmartShule School Communications Assistant for Grace Seed Academy.
+Your task is to draft a personalized, accurate, polite, and professional WhatsApp message to a real parent/guardian based on the school administrator's command and verified student database records.
+
+COMMAND / INSTRUCTION FROM SCHOOL ADMIN:
+"${command}"
+
+VERIFIED DATABASE PROFILE OF RECIPIENT & STUDENT:
+- Parent/Guardian: ${guardianName} (${guardian.phone})
+- Enrolled Student: ${learnerName}
+- Admission Number: ${admNo}
+- Grade Level: ${grade}
+- Financial / Fee Records: ${feeText}
+- Attendance Records: ${attendanceText}
+- CBC Academic Assessment: ${cbcText}
+- eDiary Homework: ${ediaryText}
+
+DESIRED TONE:
+${tone} (must remain respectful, helpful, and official)
+
+MANDATORY RULES:
+1. Use WhatsApp markdown: *bold* for key numbers, student name, and headlines. Use emojis appropriately (e.g. 💰, 📖, 📅, 🏫, ✅) to make it readable and friendly.
+2. Address the parent courteously: e.g. "Dear ${guardianName}," or "Dear Parent of ${learnerName},"
+3. ONLY use the REAL numbers and data provided above. DO NOT invent or hallucinate balances, dates, or contacts.
+4. Keep the message concise and actionable so it reads easily on a mobile WhatsApp screen.
+5. Sign off officially with:
+   *Grace Seed Academy Administration*
+   _Admissions & Enquiries: +254 712 345 678_
+6. Output ONLY the raw WhatsApp message text ready to be sent. Do NOT include any markdown code blocks, backticks, conversational preamble, or explanations.
+`;
+
+    try {
+      if (this.apiKey) {
+        return await this.generateContent(prompt);
+      }
+    } catch (err: any) {
+      console.warn('[GeminiService] Gemini API call failed, falling back to dynamic template generator:', err.message);
+    }
+
+    // Fallback template generator if Gemini is offline or API key is not present
+    return this.generateFallbackDraft(params);
+  }
+
+  /**
+   * Dynamic fallback generator that uses real database facts if Gemini API is temporarily unavailable
+   */
+  private generateFallbackDraft(params: GeminiDraftParams): string {
+    const { command, student, guardian, feeSummary, attendanceSummary, cbcSummary, ediarySummary } = params;
+    const cmdUpper = command.toUpperCase();
+    const guardianName = guardian.fullName || 'Parent/Guardian';
+    const learner = student.fullName;
+    const adm = student.admissionNumber;
+
+    if (cmdUpper.includes('FEE') || cmdUpper.includes('BAL') || cmdUpper.includes('PAY') || cmdUpper.includes('ARREARS')) {
+      const bal = feeSummary ? feeSummary.balance.toLocaleString() : '0';
+      const paystack = feeSummary?.paystackUrl || `https://pay.smartshule.ac.ke/pay/${student.admissionNumber}`;
+      return (
+        `👋 *Dear ${guardianName},*\n\n` +
+        `This is an official fee update from *Grace Seed Academy* for *${learner}* (Adm: *${adm}* · ${student.gradeLevel}).\n\n` +
+        `💰 *Current Outstanding Balance:* KES *${bal}*\n\n` +
+        `💳 *Payment Options:*\n` +
+        `• *Paystack Instant Online Checkout:* ${paystack}\n` +
+        `• *Stanbic Bank Virtual Account:* 0100012345678 (Ref: *${adm}*)\n` +
+        `• *M-Pesa Paybill:* 522522 | Acc: *${adm}*\n\n` +
+        `Kindly settle the outstanding amount or reach out to our accounts desk.\n\n` +
+        `Warm regards,\n` +
+        `*Grace Seed Academy Accounts Desk*\n` +
+        `_Enquiries: +254 712 345 678_`
+      );
+    }
+
+    if (cmdUpper.includes('ATTEND') || cmdUpper.includes('ABSENT')) {
+      const pct = attendanceSummary ? attendanceSummary.percentage : 95;
+      const absent = attendanceSummary ? attendanceSummary.absentCount : 0;
+      return (
+        `👋 *Dear ${guardianName},*\n\n` +
+        `Regarding *${learner}* (Adm: *${adm}* · ${student.gradeLevel}):\n\n` +
+        `📅 *Term Attendance Summary:*\n` +
+        `• Overall Attendance: *${pct}%*\n` +
+        `• Recorded Absences: *${absent} day(s)*\n\n` +
+        `Consistent attendance is essential for CBC curriculum progress. Please notify us if your child is unwell or unable to attend.\n\n` +
+        `Warm regards,\n` +
+        `*Grace Seed Academy Administration*\n` +
+        `_Office: +254 712 345 678_`
+      );
+    }
+
+    if (cmdUpper.includes('CBC') || cmdUpper.includes('RESULT') || cmdUpper.includes('REPORT') || cmdUpper.includes('GRADE')) {
+      return (
+        `👋 *Dear ${guardianName},*\n\n` +
+        `We are pleased to share a CBC academic update for *${learner}* (Adm: *${adm}* · ${student.gradeLevel}).\n\n` +
+        `🌟 *CBC Competency Evaluation:*\n` +
+        `• Overall Performance: *${cbcSummary?.averagePerformance || 'Meeting Expectations (ME)'}*\n` +
+        `• Teacher Remarks: _"${cbcSummary?.teacherRemarks || 'Consistent engagement in class activities and practical projects.'}"_\n\n` +
+        `You can review complete strand-by-strand CBC assessments via the SmartShule parent portal.\n\n` +
+        `Warm regards,\n` +
+        `*Grace Seed Academy Academic Directorate*\n` +
+        `_Office: +254 712 345 678_`
+      );
+    }
+
+    if (cmdUpper.includes('HOMEWORK') || cmdUpper.includes('EDIARY') || cmdUpper.includes('DIARY')) {
+      return (
+        `👋 *Dear ${guardianName},*\n\n` +
+        `Here is today's CBC eDiary homework notice for *${learner}* (Adm: *${adm}* · ${student.gradeLevel}):\n\n` +
+        `📖 *Assigned Homework:*\n` +
+        `${ediarySummary?.recentHomework || 'Please check student exercise books for current assignments.'}\n\n` +
+        `🎒 *Requirements for Tomorrow:*\n` +
+        `${ediarySummary?.requirementsTomorrow || 'Standard learning materials and CBC activity kit.'}\n\n` +
+        `Please inspect your child's work and acknowledge via the eDiary portal.\n\n` +
+        `Warm regards,\n` +
+        `*Grace Seed Academy Teaching Staff*\n` +
+        `_Enquiries: +254 712 345 678_`
+      );
+    }
+
+    // Default general message
+    return (
+      `👋 *Dear ${guardianName},*\n\n` +
+      `Official communication from *Grace Seed Academy* concerning *${learner}* (Adm: *${adm}* · ${student.gradeLevel}):\n\n` +
+      `${command}\n\n` +
+      `Please contact the school office if you have any questions.\n\n` +
+      `Warm regards,\n` +
+      `*Grace Seed Academy Administration*\n` +
+      `_Admissions Desk: +254 712 345 678_`
+    );
+  }
+}

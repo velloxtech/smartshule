@@ -1,4 +1,5 @@
 import { Pool } from 'pg';
+import { PhoneUtils } from '../../utils/PhoneUtils';
 import { IUserRepository } from '../../../core/ports/repositories/IUserRepository';
 import { IStudentRepository, StudentFilterCriteria } from '../../../core/ports/repositories/IStudentRepository';
 import { ITeacherRepository, IGuardianRepository } from '../../../core/ports/repositories/ITeacherRepository';
@@ -403,6 +404,23 @@ export class PostgresUserRepository implements IUserRepository {
     const r = res.rows[0];
     return User.create({ email: r.email, passwordHash: r.password_hash, firstName: r.first_name, lastName: r.last_name, role: r.role, phone: r.phone, status: r.status, schoolId: r.school_id }, r.id, r.created_at, r.updated_at);
   }
+  public async findByPhone(phone: string): Promise<User | null> {
+    const subscriber = PhoneUtils.getSubscriberDigits(phone);
+    if (subscriber.length >= 7) {
+      const res = await this.pool.query(
+        "SELECT * FROM users WHERE RIGHT(regexp_replace(COALESCE(phone, ''), '[^0-9]', '', 'g'), 9) = $1 LIMIT 1",
+        [subscriber]
+      );
+      if (res.rows.length > 0) {
+        const r = res.rows[0];
+        return User.create({ email: r.email, passwordHash: r.password_hash, firstName: r.first_name, lastName: r.last_name, role: r.role, phone: r.phone, status: r.status, schoolId: r.school_id }, r.id, r.created_at, r.updated_at);
+      }
+    }
+    const res = await this.pool.query('SELECT * FROM users WHERE phone = $1 LIMIT 1', [phone]);
+    if (res.rows.length === 0) return null;
+    const r = res.rows[0];
+    return User.create({ email: r.email, passwordHash: r.password_hash, firstName: r.first_name, lastName: r.last_name, role: r.role, phone: r.phone, status: r.status, schoolId: r.school_id }, r.id, r.created_at, r.updated_at);
+  }
   public async findAll(filters?: { schoolId?: string; role?: string }): Promise<User[]> {
     let q = 'SELECT * FROM users WHERE 1=1';
     const params: any[] = [];
@@ -574,6 +592,18 @@ export class PostgresGuardianRepository implements IGuardianRepository {
   public async findByStudentId(studentId: string): Promise<Guardian[]> {
     const res = await this.pool.query('SELECT * FROM guardians WHERE student_ids @> $1::jsonb', [JSON.stringify([studentId])]);
     return res.rows.map(r => this.mapRow(r));
+  }
+  public async findByPhone(phone: string): Promise<Guardian | null> {
+    const subscriber = PhoneUtils.getSubscriberDigits(phone);
+    if (subscriber.length >= 7) {
+      const res = await this.pool.query(
+        "SELECT * FROM guardians WHERE RIGHT(regexp_replace(COALESCE(emergency_contact, ''), '[^0-9]', '', 'g'), 9) = $1 LIMIT 1",
+        [subscriber]
+      );
+      if (res.rows.length > 0) return this.mapRow(res.rows[0]);
+    }
+    const res = await this.pool.query('SELECT * FROM guardians WHERE emergency_contact = $1 LIMIT 1', [phone]);
+    return res.rows.length ? this.mapRow(res.rows[0]) : null;
   }
   public async findAll(): Promise<Guardian[]> {
     const res = await this.pool.query('SELECT * FROM guardians');

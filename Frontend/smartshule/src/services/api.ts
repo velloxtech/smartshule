@@ -28,6 +28,7 @@ import {
   DashboardSummary,
   PeriodDefinition,
   DayDefinition,
+  TimetableSlot,
   PaystackInitializeRequest,
   PaystackInitializeResponse,
   PaystackVerifyResponse,
@@ -40,6 +41,10 @@ import {
   WhatsAppSimulateResponse,
   WhatsAppConnectionState,
   WhatsAppMessageLog,
+  WhatsAppAIDraftRequest,
+  WhatsAppAIDraftResponse,
+  WhatsAppAIDispatchRequest,
+  WhatsAppAIDispatchResponse,
 } from '../types';
 
 const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || '/api/v1';
@@ -891,6 +896,20 @@ export const apiService = {
 
   getWhatsAppRecentMessages: async (): Promise<ApiResponse<WhatsAppMessageLog[]>> => {
     return apiFetch<ApiResponse<WhatsAppMessageLog[]>>('/whatsapp/messages');
+  },
+
+  draftWhatsAppWithGemini: async (params: WhatsAppAIDraftRequest): Promise<ApiResponse<WhatsAppAIDraftResponse>> => {
+    return apiFetch<ApiResponse<WhatsAppAIDraftResponse>>('/whatsapp/ai-draft', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
+  },
+
+  dispatchWhatsAppWithGemini: async (params: WhatsAppAIDispatchRequest): Promise<ApiResponse<WhatsAppAIDispatchResponse>> => {
+    return apiFetch<ApiResponse<WhatsAppAIDispatchResponse>>('/whatsapp/ai-dispatch', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
   },
 
   simulateWhatsApp: async (phoneNumber: string, message: string): Promise<ApiResponse<WhatsAppSimulateResponse>> => {

@@ -15,6 +15,7 @@ export interface IGuardianRepository {
   findById(id: string): Promise<Guardian | null>;
   findByUserId(userId: string): Promise<Guardian | null>;
   findByStudentId(studentId: string): Promise<Guardian[]>;
+  findByPhone?(phone: string): Promise<Guardian | null>;
   findAll(): Promise<Guardian[]>;
   save(guardian: Guardian): Promise<void>;
   update(guardian: Guardian): Promise<void>;

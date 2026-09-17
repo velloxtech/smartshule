@@ -14,7 +14,7 @@ export default defineConfig(() => {
     server: {
       port: 5173,
       host: '0.0.0.0',
-      allowedHosts: true,
+      allowedHosts: true as any,
       // Configure HMR clientPort for HTTPS tunneling through ngrok
       hmr: process.env.DISABLE_HMR !== 'true' ? { clientPort: 443 } : false,
       // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
@@ -33,7 +33,7 @@ export default defineConfig(() => {
     preview: {
       port: 5173,
       host: '0.0.0.0',
-      allowedHosts: true,
+      allowedHosts: true as any,
       proxy: {
         '/api': {
           target: 'http://localhost:3000',

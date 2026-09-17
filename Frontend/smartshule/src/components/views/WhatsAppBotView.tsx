@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { WhatsAppConnectionState, WhatsAppMessageLog, Student, UserRole } from '../../types';
+import { WhatsAppConnectionState, WhatsAppMessageLog, WhatsAppAIDraftResponse, Student, UserRole } from '../../types';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
 export const WhatsAppBotView: React.FC = () => {
   const { user } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<'link_account' | 'send_message' | 'message_log' | 'meta_cloud'>('link_account');
+  const [activeTab, setActiveTab] = useState<'link_account' | 'ai_dispatch' | 'send_message' | 'message_log' | 'meta_cloud'>('link_account');
   const [connectionState, setConnectionState] = useState<WhatsAppConnectionState>({
     status: 'DISCONNECTED',
     qrCodeDataUrl: null,
@@ -29,6 +29,21 @@ export const WhatsAppBotView: React.FC = () => {
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [sendSuccessMsg, setSendSuccessMsg] = useState<{ id: string; to: string } | null>(null);
   const [sendErrorMsg, setSendErrorMsg] = useState<string | null>(null);
+
+  // Gemini AI Draft & Dispatch state (Real WhatsApp Person Dispatch)
+  const [aiCommand, setAiCommand] = useState('Draft fee balance reminder with Paystack link');
+  const [aiSelectedStudentId, setAiSelectedStudentId] = useState<string>('');
+  const [aiTone, setAiTone] = useState<'professional' | 'urgent' | 'friendly' | 'concise'>('professional');
+  const [isAiDrafting, setIsAiDrafting] = useState(false);
+  const [isAiDispatching, setIsAiDispatching] = useState(false);
+  const [aiDraftResult, setAiDraftResult] = useState<WhatsAppAIDraftResponse | null>(null);
+  const [aiCustomMessage, setAiCustomMessage] = useState('');
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiDispatchSuccess, setAiDispatchSuccess] = useState<{
+    id: string;
+    to: string;
+    recipientName: string;
+  } | null>(null);
 
   // Meta Cloud API config form
   const [metaPhoneId, setMetaPhoneId] = useState('');
@@ -74,6 +89,7 @@ export const WhatsAppBotView: React.FC = () => {
         setStudents(stRes.data);
         const s = stRes.data[0];
         setSelectedStudentId(s.id);
+        setAiSelectedStudentId(s.id);
         if (s.guardianPhone) setRecipientPhone(s.guardianPhone);
       }
 
@@ -193,6 +209,67 @@ export const WhatsAppBotView: React.FC = () => {
     }
   };
 
+  // Gemini AI Draft message from command & verified DB records
+  const handleAiDraft = async (customCmd?: string) => {
+    const cmd = customCmd !== undefined ? customCmd : aiCommand;
+    if (!cmd.trim()) return;
+    setIsAiDrafting(true);
+    setAiError(null);
+    setAiDispatchSuccess(null);
+    try {
+      const res = await apiService.draftWhatsAppWithGemini({
+        command: cmd.trim(),
+        studentId: aiSelectedStudentId || undefined,
+        tone: aiTone,
+      });
+      if (res.success && res.data) {
+        setAiDraftResult(res.data);
+        setAiCustomMessage(res.data.draftedMessage);
+      } else {
+        throw new Error(res.message || 'Failed to draft WhatsApp message with Gemini.');
+      }
+    } catch (err: any) {
+      setAiError(err.message || 'Error drafting message with Gemini AI.');
+    } finally {
+      setIsAiDrafting(false);
+    }
+  };
+
+  // Dispatch real WhatsApp message to the verified recipient from database
+  const handleAiDispatch = async () => {
+    const messageToSend = aiCustomMessage.trim() || (aiDraftResult ? aiDraftResult.draftedMessage : '');
+    if (!messageToSend) {
+      setAiError('Please draft or enter a message before dispatching.');
+      return;
+    }
+    setIsAiDispatching(true);
+    setAiError(null);
+    setAiDispatchSuccess(null);
+    try {
+      const res = await apiService.dispatchWhatsAppWithGemini({
+        command: aiCommand.trim(),
+        studentId: aiSelectedStudentId || undefined,
+        customMessage: messageToSend,
+        tone: aiTone,
+      });
+      if (res.success && res.data) {
+        setAiDispatchSuccess({
+          id: res.data.messageId,
+          to: res.data.to,
+          recipientName: res.data.recipientName,
+        });
+        fetchMessages();
+        fetchStatus();
+      } else {
+        throw new Error(res.message || 'Failed to dispatch real WhatsApp message.');
+      }
+    } catch (err: any) {
+      setAiError(err.message || 'Could not send WhatsApp message. Make sure an account is connected.');
+    } finally {
+      setIsAiDispatching(false);
+    }
+  };
+
   // Save Meta Cloud API config
   const handleSaveConfig = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -309,7 +386,7 @@ export const WhatsAppBotView: React.FC = () => {
       </div>
 
       {/* Main Tabs */}
-      <div className="flex items-center gap-2 border-b border-outline-variant/30 pb-2">
+      <div className="flex flex-wrap items-center gap-2 border-b border-outline-variant/30 pb-2">
         <button
           onClick={() => setActiveTab('link_account')}
           className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
@@ -319,7 +396,19 @@ export const WhatsAppBotView: React.FC = () => {
           }`}
         >
           <span className="material-symbols-outlined text-[16px]">qr_code_scanner</span>
-          <span>1. Link WhatsApp Account (QR Code)</span>
+          <span>1. Link WhatsApp Account</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('ai_dispatch')}
+          className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+            activeTab === 'ai_dispatch'
+              ? 'bg-[#075E54] text-white shadow-xs ring-2 ring-emerald-500/50'
+              : 'bg-surface-container-low text-on-surface-variant hover:text-on-surface'
+          }`}
+        >
+          <span className="material-symbols-outlined text-[16px] text-amber-300">smart_toy</span>
+          <span>2. Gemini AI Smart Dispatch</span>
         </button>
 
         <button
@@ -331,7 +420,7 @@ export const WhatsAppBotView: React.FC = () => {
           }`}
         >
           <span className="material-symbols-outlined text-[16px]">send</span>
-          <span>2. Send Real WhatsApp Message</span>
+          <span>3. Direct Outbound Message</span>
         </button>
 
         <button
@@ -343,7 +432,7 @@ export const WhatsAppBotView: React.FC = () => {
           }`}
         >
           <span className="material-symbols-outlined text-[16px]">history</span>
-          <span>3. Live Messages Audit Log ({messages.length})</span>
+          <span>4. Live Audit Log ({messages.length})</span>
         </button>
 
         <button
@@ -355,7 +444,7 @@ export const WhatsAppBotView: React.FC = () => {
           }`}
         >
           <span className="material-symbols-outlined text-[16px]">cloud</span>
-          <span>Meta Cloud API (Optional)</span>
+          <span>5. Meta Cloud API (Optional)</span>
         </button>
       </div>
 
@@ -685,7 +774,355 @@ export const WhatsAppBotView: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 3: LIVE MESSAGE AUDIT LOG */}
+      {/* TAB 2: GEMINI AI COMMAND & REAL WHATSAPP DISPATCH */}
+      {activeTab === 'ai_dispatch' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Left Column: Command & Database Verification */}
+          <div className="lg:col-span-6 space-y-4">
+            <div className="bg-surface-container-lowest rounded-2xl p-6 border border-outline-variant/30 shadow-xs space-y-4">
+              <div className="pb-3 border-b border-outline-variant/20">
+                <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold mb-1.5">
+                  <span className="material-symbols-outlined text-[12px] text-amber-500">auto_awesome</span>
+                  <span>Google Gemini 2.5 AI Powered</span>
+                </div>
+                <h3 className="font-bold text-sm text-on-surface flex items-center gap-2">
+                  <span className="material-symbols-outlined text-base text-[#075E54]">smart_toy</span>
+                  <span>Command-to-WhatsApp Assistant</span>
+                </h3>
+                <p className="text-xs text-on-surface-variant mt-0.5 leading-relaxed">
+                  Enter an instruction or pick an enrolled learner. Gemini extracts verified records from the database, crafts a personalized message, and transmits it directly to the real recipient over WhatsApp.
+                </p>
+              </div>
+
+              {/* Database Verification Error Alert */}
+              {aiError && (
+                <div className="p-3.5 rounded-xl bg-error/10 border border-error/20 text-error text-xs flex items-start gap-2 animate-fade-in">
+                  <span className="material-symbols-outlined text-base shrink-0 mt-0.5">error</span>
+                  <div>
+                    <strong className="block font-bold">Database Verification Failed:</strong>
+                    <span>{aiError}</span>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-4 text-xs">
+                {/* 1. Database Learner Picker */}
+                {students.length > 0 && (
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block font-bold text-on-surface">
+                        1. Target Enrolled Learner in Database:
+                      </label>
+                      <span className="text-[10px] text-emerald-700 font-semibold flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[12px]">verified</span>
+                        <span>{students.length} Learners in DB</span>
+                      </span>
+                    </div>
+                    <select
+                      value={aiSelectedStudentId}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setAiSelectedStudentId(val);
+                        const s = students.find((st) => st.id === val);
+                        if (s) {
+                          setAiCommand(`Draft fee balance reminder for ${s.name}`);
+                        }
+                      }}
+                      className="w-full p-2.5 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs font-semibold text-on-surface focus:outline-hidden focus:border-[#075E54]"
+                    >
+                      <option value="">-- Auto-detect learner from command text --</option>
+                      {students.map((st) => (
+                        <option key={st.id} value={st.id}>
+                          {st.name} ({st.admNo}) · Grade: {st.gradeLevel} · Parent: {st.guardianName} ({st.guardianPhone})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* 2. Command Presets */}
+                <div>
+                  <label className="block font-bold text-on-surface mb-1.5">
+                    Quick Command Presets:
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { label: '💰 Fee Arrears & Paystack Link', cmd: 'Draft fee balance reminder with Paystack online checkout link and Stanbic bank details' },
+                      { label: '📖 Daily Homework / eDiary', cmd: 'Draft daily CBC eDiary homework notice, teacher remarks and tomorrow requirements' },
+                      { label: '🌟 CBC Performance Report', cmd: 'Draft CBC academic competency report summary with grades and teacher remarks' },
+                      { label: '📅 Attendance & Roll-Call', cmd: 'Draft official attendance summary and term roll-call status' },
+                      { label: '📢 Academic Showcase Notice', cmd: 'Draft reminder for tomorrow CBC academic showcase meeting starting at 9:00 AM' },
+                      { label: '💳 Paystack Bank Checkout', cmd: 'Send Paystack instant online fee payment instructions' },
+                    ].map((item) => (
+                      <button
+                        key={item.label}
+                        type="button"
+                        onClick={() => {
+                          setAiCommand(item.cmd);
+                          handleAiDraft(item.cmd);
+                        }}
+                        className={`px-2.5 py-1.5 rounded-lg font-bold text-[11px] transition-all cursor-pointer border flex items-center gap-1 ${
+                          aiCommand === item.cmd
+                            ? 'bg-[#075E54] text-white border-[#075E54] shadow-xs'
+                            : 'bg-surface-container-low text-on-surface hover:bg-surface-container border-outline-variant/30'
+                        }`}
+                      >
+                        <span>{item.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 3. Command Instruction Box */}
+                <div>
+                  <label className="block font-bold text-on-surface mb-1">
+                    2. Your Command / Instruction:
+                  </label>
+                  <div className="relative">
+                    <textarea
+                      rows={3}
+                      value={aiCommand}
+                      onChange={(e) => setAiCommand(e.target.value)}
+                      placeholder="e.g. Draft fee balance reminder for Kevin Kamau... or Congratulate parent on top CBC science score..."
+                      className="w-full p-3 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs font-semibold text-on-surface focus:outline-hidden focus:border-[#075E54] leading-relaxed"
+                    />
+                  </div>
+                  <span className="text-[10px] text-on-surface-variant mt-0.5 block">
+                    You can specify a student name directly in the prompt (e.g. "Draft fee notice for Kevin") or select from the database list above.
+                  </span>
+                </div>
+
+                {/* 4. Tone Selector & Action */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-on-surface-variant text-[11px]">Tone:</span>
+                    {(['professional', 'friendly', 'urgent', 'concise'] as const).map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setAiTone(t)}
+                        className={`px-2 py-1 rounded-md text-[10px] font-bold capitalize transition-all cursor-pointer ${
+                          aiTone === t
+                            ? 'bg-[#075E54] text-white shadow-xs'
+                            : 'bg-surface-container text-on-surface-variant hover:text-on-surface'
+                        }`}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleAiDraft()}
+                    disabled={isAiDrafting || !aiCommand.trim()}
+                    className="px-4 py-2.5 bg-[#075E54] hover:bg-[#064942] text-white font-bold rounded-xl text-xs shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    <span className="material-symbols-outlined text-base">auto_awesome</span>
+                    <span>{isAiDrafting ? 'Gemini Drafting...' : 'Draft with Gemini AI'}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Verified Database Profile Card */}
+            {aiDraftResult && (
+              <div className="bg-surface-container-lowest rounded-2xl p-5 border border-emerald-300 dark:border-emerald-800 shadow-xs space-y-3 animate-fade-in">
+                <div className="flex items-center justify-between pb-2 border-b border-outline-variant/20">
+                  <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                    <span className="material-symbols-outlined text-base text-emerald-600">verified</span>
+                    <span>Verified Contact in Database</span>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 text-[10px] font-bold font-data-mono">
+                    Intent: {aiDraftResult.intent}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div className="p-2.5 rounded-xl bg-surface-container-low border border-outline-variant/20">
+                    <span className="text-[10px] text-on-surface-variant font-semibold uppercase block">Student Profile</span>
+                    <strong className="text-on-surface text-xs block font-bold mt-0.5">
+                      {aiDraftResult.matchedPerson.studentName}
+                    </strong>
+                    <span className="text-[11px] font-data-mono text-outline">
+                      Adm: {aiDraftResult.matchedPerson.admissionNumber} · {aiDraftResult.matchedPerson.gradeLevel}
+                    </span>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-surface-container-low border border-outline-variant/20">
+                    <span className="text-[10px] text-on-surface-variant font-semibold uppercase block">Recipient Phone</span>
+                    <strong className="text-primary text-xs block font-bold font-data-mono mt-0.5">
+                      {aiDraftResult.matchedPerson.recipientPhone}
+                    </strong>
+                    <span className="text-[11px] text-on-surface-variant">
+                      {aiDraftResult.matchedPerson.recipientName} ({aiDraftResult.matchedPerson.relationship || 'Guardian'})
+                    </span>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-surface-container-low border border-outline-variant/20">
+                    <span className="text-[10px] text-on-surface-variant font-semibold uppercase block">Live Fee Balance</span>
+                    <strong className="text-amber-700 text-sm block font-bold font-data-mono mt-0.5">
+                      KES {aiDraftResult.matchedPerson.feeBalance.toLocaleString()}
+                    </strong>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-surface-container-low border border-outline-variant/20">
+                    <span className="text-[10px] text-on-surface-variant font-semibold uppercase block">Attendance Rate</span>
+                    <strong className="text-emerald-700 text-sm block font-bold font-data-mono mt-0.5">
+                      {aiDraftResult.matchedPerson.attendancePercentage}% Present
+                    </strong>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Right Column: Live WhatsApp Draft Preview & Dispatch */}
+          <div className="lg:col-span-6 flex flex-col space-y-4">
+            {/* Success Banner */}
+            {aiDispatchSuccess && (
+              <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-950 text-xs space-y-1 animate-fade-in shadow-xs">
+                <div className="flex items-center gap-1.5 font-bold text-emerald-800 text-sm">
+                  <span className="material-symbols-outlined text-base">check_circle</span>
+                  <span>Real WhatsApp Message Delivered!</span>
+                </div>
+                <p className="text-emerald-900">
+                  Transmitted to <strong>{aiDispatchSuccess.recipientName}</strong> at <strong>{aiDispatchSuccess.to}</strong>.
+                </p>
+                <div className="text-[10px] font-data-mono text-emerald-700">
+                  Message ID: {aiDispatchSuccess.id} · Dispatched via Baileys Multi-Device Socket
+                </div>
+              </div>
+            )}
+
+            <div className="bg-[#E5DDD5] dark:bg-[#0b141a] rounded-2xl p-5 border border-outline-variant/40 shadow-md flex-1 flex flex-col justify-between">
+              {/* WhatsApp Header bar */}
+              <div className="bg-[#075E54] text-white p-3 rounded-xl flex items-center justify-between mb-4 shadow-sm">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-full bg-emerald-100 text-[#075E54] flex items-center justify-center font-bold text-xs">
+                    GS
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-xs leading-none">Grace Seed Academy CBC Desk</h4>
+                    <span className="text-[10px] text-emerald-200">
+                      {isConnected ? `Online (From: ${connectionState.connectedPhone})` : 'Account Not Linked (Tab 1)'}
+                    </span>
+                  </div>
+                </div>
+
+                {aiDraftResult && (
+                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-800/80 text-[10px] font-data-mono font-bold">
+                    To: {aiDraftResult.matchedPerson.recipientPhone}
+                  </span>
+                )}
+              </div>
+
+              {/* Message Draft Canvas */}
+              <div className="flex-1 space-y-3 overflow-y-auto max-h-[460px] p-2">
+                {isAiDrafting ? (
+                  <div className="flex justify-start">
+                    <div className="bg-white dark:bg-[#202c33] text-gray-900 dark:text-gray-100 p-4 rounded-2xl rounded-tl-xs shadow-xs text-xs flex items-center gap-3">
+                      <div className="w-4 h-4 border-2 border-[#075E54] border-t-transparent rounded-full animate-spin"></div>
+                      <div>
+                        <strong className="block text-on-surface font-semibold">Gemini AI is drafting...</strong>
+                        <span className="text-[11px] text-on-surface-variant">Gathering database records and crafting official WhatsApp communication...</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : aiDraftResult || aiCustomMessage ? (
+                  <div className="space-y-3">
+                    {/* Editable Message Box */}
+                    <div className="bg-white dark:bg-[#202c33] text-gray-900 dark:text-gray-100 p-4 rounded-2xl rounded-tl-xs shadow-sm text-xs space-y-2 leading-relaxed">
+                      <div className="flex items-center justify-between text-[10px] text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-800 pb-1.5">
+                        <span className="font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                          <span className="material-symbols-outlined text-xs">edit_note</span>
+                          <span>Editable WhatsApp Draft (Review & tweak if needed):</span>
+                        </span>
+                        <span className="font-data-mono">{aiCustomMessage.length} chars</span>
+                      </div>
+
+                      <textarea
+                        rows={11}
+                        value={aiCustomMessage}
+                        onChange={(e) => setAiCustomMessage(e.target.value)}
+                        className="w-full p-2 bg-transparent text-gray-900 dark:text-gray-100 font-sans text-xs focus:outline-hidden border-none resize-y leading-relaxed"
+                        placeholder="Drafted WhatsApp message..."
+                      />
+
+                      <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-800 text-[10px] text-gray-400">
+                        <span>Markdown (*bold*, _italic_) supported on WhatsApp</span>
+                        <span className="font-data-mono">{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} ✓✓</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-10 text-center text-xs text-gray-500 dark:text-gray-400 space-y-2">
+                    <span className="material-symbols-outlined text-4xl text-gray-400 mb-1 block">auto_awesome</span>
+                    <strong className="block text-sm text-on-surface font-semibold">Ready to Draft Official WhatsApp Message</strong>
+                    <p className="text-xs text-on-surface-variant max-w-sm mx-auto">
+                      Select a command pill on the left (e.g. <em>Fee Arrears</em> or <em>Homework Notice</em>) or type a command instruction and click <strong>Draft with Gemini AI</strong>.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Bottom Dispatch Controls */}
+              <div className="pt-3 border-t border-outline-variant/30 flex flex-col sm:flex-row items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleAiDispatch}
+                  disabled={isAiDispatching || (!aiCustomMessage.trim() && !aiDraftResult) || !isConnected}
+                  className={`flex-1 py-3 px-4 rounded-xl text-xs font-bold text-white shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                    isConnected && (aiCustomMessage.trim() || aiDraftResult)
+                      ? 'bg-[#075E54] hover:bg-[#064942] hover:shadow-lg'
+                      : 'bg-neutral-400 cursor-not-allowed opacity-60'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-base">send</span>
+                  <span>
+                    {isAiDispatching
+                      ? 'Transmitting via WhatsApp...'
+                      : !isConnected
+                      ? 'Link WhatsApp Account in Tab 1 First'
+                      : aiDraftResult
+                      ? `Send Real WhatsApp Message to ${aiDraftResult.matchedPerson.recipientName} (${aiDraftResult.matchedPerson.recipientPhone})`
+                      : 'Send Real WhatsApp Message'}
+                  </span>
+                </button>
+
+                {(aiDraftResult || aiCustomMessage) && (
+                  <div className="flex gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleAiDraft()}
+                      disabled={isAiDrafting}
+                      className="p-2.5 bg-surface-container hover:bg-surface-container-high rounded-xl text-on-surface text-xs font-bold transition-colors cursor-pointer"
+                      title="Re-Draft with Gemini"
+                    >
+                      <span className="material-symbols-outlined text-base">refresh</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (aiCustomMessage) {
+                          navigator.clipboard.writeText(aiCustomMessage);
+                          alert('Draft copied to clipboard!');
+                        }
+                      }}
+                      className="p-2.5 bg-surface-container hover:bg-surface-container-high rounded-xl text-on-surface text-xs font-bold transition-colors cursor-pointer"
+                      title="Copy Message Text"
+                    >
+                      <span className="material-symbols-outlined text-base">content_copy</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 4: LIVE MESSAGE AUDIT LOG */}
       {activeTab === 'message_log' && (
         <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 shadow-xs overflow-hidden">
           <div className="p-4 border-b border-surface-container flex items-center justify-between">

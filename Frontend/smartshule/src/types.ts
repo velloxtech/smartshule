@@ -703,3 +703,45 @@ export interface WhatsAppSendActualRequest {
   to: string;
   message: string;
 }
+
+export interface WhatsAppAIDraftRequest {
+  command: string;
+  studentId?: string;
+  tone?: 'professional' | 'urgent' | 'friendly' | 'concise';
+}
+
+export interface WhatsAppAIDraftResponse {
+  matchedPerson: {
+    studentId: string;
+    studentName: string;
+    admissionNumber: string;
+    gradeLevel: string;
+    streamId?: string;
+    recipientName: string;
+    recipientPhone: string;
+    relationship?: string;
+    feeBalance: number;
+    attendancePercentage: number;
+    status: string;
+  };
+  command: string;
+  draftedMessage: string;
+  intent: string;
+  verifiedInDatabase: boolean;
+}
+
+export interface WhatsAppAIDispatchRequest {
+  command?: string;
+  studentId?: string;
+  customMessage?: string;
+  tone?: 'professional' | 'urgent' | 'friendly' | 'concise';
+}
+
+export interface WhatsAppAIDispatchResponse {
+  messageId: string;
+  to: string;
+  recipientName: string;
+  sentAt: string;
+  message: string;
+  matchedPerson: WhatsAppAIDraftResponse['matchedPerson'];
+}
