@@ -38,7 +38,17 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLandi
           onClick={onNavigateLanding}
           className="flex items-center gap-2.5 text-white hover:opacity-90 transition-opacity cursor-pointer"
         >
-          <div className="w-10 h-10 rounded-xl bg-white text-[#7a1228] flex items-center justify-center font-bold shadow-md">
+          <img
+            src="/logo.png"
+            alt="School Logo"
+            className="w-10 h-10 rounded-xl object-cover shadow-md border border-white/20 shrink-0"
+            onError={(e) => {
+              (e.target as HTMLElement).style.display = 'none';
+              const fallback = (e.target as HTMLElement).nextElementSibling;
+              if (fallback) (fallback as HTMLElement).style.display = 'flex';
+            }}
+          />
+          <div className="w-10 h-10 rounded-xl bg-white text-[#7a1228] hidden items-center justify-center font-bold shadow-md shrink-0">
             <span className="material-symbols-outlined text-[24px]">school</span>
           </div>
           <div className="text-left">
@@ -183,7 +193,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLandi
                   className="w-full py-2.5 px-3 rounded-xl border border-emerald-600/30 hover:bg-emerald-50 text-emerald-800 font-bold text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[16px] text-emerald-600">account_balance</span>
-                  <span>Onboard School (Constitution of Kenya 2010)</span>
+                  <span>Onboard School</span>
                 </button>
               </div>
             )}
@@ -195,7 +205,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLandi
               <span className="material-symbols-outlined text-[14px] text-green-600">verified_user</span>
               <span>256-Bit SSL Encrypted</span>
             </div>
-            <span>Constitution 2010 & ODPC Compliant</span>
+            <span>ODPC Compliant</span>
           </div>
         </div>
       </main>
