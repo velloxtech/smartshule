@@ -317,3 +317,229 @@ export class Payment extends Entity<PaymentProps> {
     };
   }
 }
+
+// 4. Expense Management & Vote Heads
+export enum ExpenseCategory {
+  SALARIES_WAGES = 'SALARIES_WAGES',
+  CBC_LEARNING_MATERIALS = 'CBC_LEARNING_MATERIALS',
+  UTILITIES_BILLS = 'UTILITIES_BILLS',
+  MEALS_FEEDING = 'MEALS_FEEDING',
+  REPAIRS_MAINTENANCE = 'REPAIRS_MAINTENANCE',
+  TRANSPORT_FUEL = 'TRANSPORT_FUEL',
+  ADMIN_OFFICE = 'ADMIN_OFFICE',
+  KNEC_EXAMS = 'KNEC_EXAMS',
+  CO_CURRICULAR = 'CO_CURRICULAR',
+  CAPITAL_DEVELOPMENT = 'CAPITAL_DEVELOPMENT',
+  OTHER_EXPENSES = 'OTHER_EXPENSES'
+}
+
+export enum ExpenseStatus {
+  PAID = 'PAID',
+  APPROVED = 'APPROVED',
+  PENDING = 'PENDING',
+  REJECTED = 'REJECTED'
+}
+
+export interface ExpenseProps {
+  schoolId: string;
+  voucherNumber: string;
+  category: ExpenseCategory;
+  title: string;
+  amount: number;
+  paymentMethod: PaymentMethod;
+  paymentReference: string;
+  payee: string;
+  expenseDate: string;
+  status: ExpenseStatus;
+  notes?: string;
+  recordedByUserId: string;
+  approvedByUserId?: string;
+  receiptUrl?: string;
+}
+
+export class Expense extends Entity<ExpenseProps> {
+  public static create(props: ExpenseProps, id: string, createdAt?: Date, updatedAt?: Date): Expense {
+    return new Expense(props, id, createdAt, updatedAt);
+  }
+
+  public get schoolId(): string {
+    return this._props.schoolId;
+  }
+
+  public get voucherNumber(): string {
+    return this._props.voucherNumber;
+  }
+
+  public get category(): ExpenseCategory {
+    return this._props.category;
+  }
+
+  public get title(): string {
+    return this._props.title;
+  }
+
+  public get amount(): number {
+    return this._props.amount;
+  }
+
+  public get paymentMethod(): PaymentMethod {
+    return this._props.paymentMethod;
+  }
+
+  public get paymentReference(): string {
+    return this._props.paymentReference;
+  }
+
+  public get payee(): string {
+    return this._props.payee;
+  }
+
+  public get expenseDate(): string {
+    return this._props.expenseDate;
+  }
+
+  public get status(): ExpenseStatus {
+    return this._props.status;
+  }
+
+  public get notes(): string | undefined {
+    return this._props.notes;
+  }
+
+  public get recordedByUserId(): string {
+    return this._props.recordedByUserId;
+  }
+
+  public get approvedByUserId(): string | undefined {
+    return this._props.approvedByUserId;
+  }
+
+  public get receiptUrl(): string | undefined {
+    return this._props.receiptUrl;
+  }
+
+  public setStatus(status: ExpenseStatus, approvedByUserId?: string): void {
+    this._props.status = status;
+    if (approvedByUserId) {
+      this._props.approvedByUserId = approvedByUserId;
+    }
+    this.touch();
+  }
+
+  public toJSON() {
+    return {
+      id: this.id,
+      schoolId: this.schoolId,
+      voucherNumber: this.voucherNumber,
+      category: this.category,
+      title: this.title,
+      amount: this.amount,
+      paymentMethod: this.paymentMethod,
+      paymentReference: this.paymentReference,
+      payee: this.payee,
+      expenseDate: this.expenseDate,
+      status: this.status,
+      notes: this.notes,
+      recordedByUserId: this.recordedByUserId,
+      approvedByUserId: this.approvedByUserId,
+      receiptUrl: this.receiptUrl,
+      createdAt: this.createdAt,
+      updatedAt: this.updatedAt
+    };
+  }
+}
+
+// 5. Non-Fee Income Sources (Capitation, Uniform, Hire, Grants)
+export enum IncomeSource {
+  FEES_COLLECTION = 'FEES_COLLECTION',
+  GOVERNMENT_CAPITATION_FPE = 'GOVERNMENT_CAPITATION_FPE',
+  GOVERNMENT_CAPITATION_JSS = 'GOVERNMENT_CAPITATION_JSS',
+  UNIFORM_SALES = 'UNIFORM_SALES',
+  BUS_FACILITY_HIRE = 'BUS_FACILITY_HIRE',
+  DONATIONS_GRANTS = 'DONATIONS_GRANTS',
+  EXAM_REVISION_BOOKS = 'EXAM_REVISION_BOOKS',
+  OTHER_INCOME = 'OTHER_INCOME'
+}
+
+export interface OtherIncomeProps {
+  schoolId: string;
+  receiptNumber: string;
+  source: IncomeSource;
+  title: string;
+  amount: number;
+  paymentMethod: PaymentMethod;
+  paymentReference: string;
+  receivedFrom: string;
+  incomeDate: string;
+  notes?: string;
+  recordedByUserId: string;
+}
+
+export class OtherIncome extends Entity<OtherIncomeProps> {
+  public static create(props: OtherIncomeProps, id: string, createdAt?: Date, updatedAt?: Date): OtherIncome {
+    return new OtherIncome(props, id, createdAt, updatedAt);
+  }
+
+  public get schoolId(): string {
+    return this._props.schoolId;
+  }
+
+  public get receiptNumber(): string {
+    return this._props.receiptNumber;
+  }
+
+  public get source(): IncomeSource {
+    return this._props.source;
+  }
+
+  public get title(): string {
+    return this._props.title;
+  }
+
+  public get amount(): number {
+    return this._props.amount;
+  }
+
+  public get paymentMethod(): PaymentMethod {
+    return this._props.paymentMethod;
+  }
+
+  public get paymentReference(): string {
+    return this._props.paymentReference;
+  }
+
+  public get receivedFrom(): string {
+    return this._props.receivedFrom;
+  }
+
+  public get incomeDate(): string {
+    return this._props.incomeDate;
+  }
+
+  public get notes(): string | undefined {
+    return this._props.notes;
+  }
+
+  public get recordedByUserId(): string {
+    return this._props.recordedByUserId;
+  }
+
+  public toJSON() {
+    return {
+      id: this.id,
+      schoolId: this.schoolId,
+      receiptNumber: this.receiptNumber,
+      source: this.source,
+      title: this.title,
+      amount: this.amount,
+      paymentMethod: this.paymentMethod,
+      paymentReference: this.paymentReference,
+      receivedFrom: this.receivedFrom,
+      incomeDate: this.incomeDate,
+      notes: this.notes,
+      recordedByUserId: this.recordedByUserId,
+      createdAt: this.createdAt,
+      updatedAt: this.updatedAt
+    };
+  }
+}

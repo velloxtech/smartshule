@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { useAuth, DEMO_ACCOUNTS, DemoAccount } from '../../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 
 interface LoginPageProps {
   onSuccess: () => void;
   onNavigateLanding: () => void;
+  onOpenOnboardSchool?: () => void;
 }
 
-export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLanding }) => {
+export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLanding, onOpenOnboardSchool }) => {
   const { login, isLoading, error: authError } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -28,16 +29,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLandi
     }
   };
 
-  const handleQuickFill = async (account: DemoAccount) => {
-    setEmail(account.email);
-    setPassword(account.password);
-    setLocalError(null);
-    const ok = await login(account.email, account.password);
-    if (ok) {
-      onSuccess();
-    }
-  };
-
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-[#3b050e] via-[#5c0b1b] to-[#250308] flex flex-col justify-between text-on-surface">
       {/* Top Bar */}
@@ -52,7 +43,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLandi
           </div>
           <div className="text-left">
             <div className="font-bold text-lg tracking-tight text-white flex items-center gap-1.5">
-              <span>Grace Seeds School</span>
+              <span>SmartShule Portal</span>
               <span className="text-[11px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded bg-white/20 text-white">
                 CBC Portal
               </span>
@@ -61,14 +52,27 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLandi
           </div>
         </button>
 
-        <button
-          type="button"
-          onClick={onNavigateLanding}
-          className="flex items-center gap-1.5 text-xs font-semibold text-rose-100 hover:text-white bg-white/10 hover:bg-white/20 px-3.5 py-2 rounded-lg transition-colors cursor-pointer backdrop-blur-xs"
-        >
-          <span className="material-symbols-outlined text-[16px]">arrow_back</span>
-          <span>Back to Landing Page</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {onOpenOnboardSchool && (
+            <button
+              type="button"
+              onClick={onOpenOnboardSchool}
+              className="hidden sm:flex items-center gap-1.5 text-xs font-bold text-amber-300 hover:text-amber-200 bg-white/10 hover:bg-white/20 px-3.5 py-2 rounded-lg transition-colors cursor-pointer border border-amber-300/30"
+            >
+              <span className="material-symbols-outlined text-[16px]">account_balance</span>
+              <span>Onboard School</span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={onNavigateLanding}
+            className="flex items-center gap-1.5 text-xs font-semibold text-rose-100 hover:text-white bg-white/10 hover:bg-white/20 px-3.5 py-2 rounded-lg transition-colors cursor-pointer backdrop-blur-xs"
+          >
+            <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+            <span>Back to Landing</span>
+          </button>
+        </div>
       </header>
 
       {/* Main Login Card Shell */}
@@ -79,7 +83,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLandi
             <div className="w-14 h-14 rounded-2xl bg-white/10 mx-auto flex items-center justify-center text-white mb-3 shadow-inner">
               <span className="material-symbols-outlined text-[32px]">lock_person</span>
             </div>
-            <h1 className="text-2xl font-bold tracking-tight">Grace Seeds School Portal Sign In</h1>
+            <h1 className="text-2xl font-bold tracking-tight">SmartShule CBC Portal Sign In</h1>
             <p className="text-xs text-rose-200 mt-1 max-w-xs mx-auto">
               Secure authentication for Administrators, Teachers, Finance, and Parents
             </p>
@@ -168,6 +172,21 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLandi
                 </button>
               </div>
             </form>
+
+            {/* Institution Onboarding Link */}
+            {onOpenOnboardSchool && (
+              <div className="pt-2 border-t border-gray-100 text-center">
+                <p className="text-[11px] text-gray-500 mb-2">Setting up a new institution or branch?</p>
+                <button
+                  type="button"
+                  onClick={onOpenOnboardSchool}
+                  className="w-full py-2.5 px-3 rounded-xl border border-emerald-600/30 hover:bg-emerald-50 text-emerald-800 font-bold text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[16px] text-emerald-600">account_balance</span>
+                  <span>Onboard School (Constitution of Kenya 2010)</span>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Card Footer Security Note */}
@@ -176,14 +195,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLandi
               <span className="material-symbols-outlined text-[14px] text-green-600">verified_user</span>
               <span>256-Bit SSL Encrypted</span>
             </div>
-            <span>KNEC & MoE CBC Verified</span>
+            <span>Constitution 2010 & ODPC Compliant</span>
           </div>
         </div>
       </main>
 
       {/* Page Footer & Vellox Tech Watermark */}
       <footer className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 text-center text-xs text-rose-200/80 flex flex-col items-center justify-center gap-1">
-        <p>Grace Seeds School · Competency-Based Curriculum System</p>
+        <p>SmartShule · Competency-Based Curriculum System</p>
         <div className="flex items-center gap-1.5 text-xs text-rose-100 font-medium">
           <span>Powered by</span>
           <span className="font-bold text-white tracking-wide">Vellox Tech</span>

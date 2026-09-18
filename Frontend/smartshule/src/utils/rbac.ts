@@ -178,9 +178,53 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
     group: 'Finance & Billing',
     items: [
       {
+        id: 'cashflow-ledger',
+        label: 'Cash Flow & Ledger (In/Out)',
+        icon: 'account_balance_wallet',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.HEAD_TEACHER,
+          UserRole.ACCOUNTANT,
+        ],
+      },
+      {
+        id: 'expenses-management',
+        label: 'Operating Expenses (Money Out)',
+        icon: 'payments',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.HEAD_TEACHER,
+          UserRole.ACCOUNTANT,
+        ],
+      },
+      {
+        id: 'capitation-income',
+        label: 'Capitation & Grants (Money In)',
+        icon: 'domain_add',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.HEAD_TEACHER,
+          UserRole.ACCOUNTANT,
+        ],
+      },
+      {
+        id: 'financial-reports',
+        label: 'Financial Reports & P&L',
+        icon: 'analytics',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.HEAD_TEACHER,
+          UserRole.ACCOUNTANT,
+        ],
+      },
+      {
         id: 'fee-structure',
         label: 'Fee Structure',
-        icon: 'payments',
+        icon: 'table_chart',
         allowedRoles: [
           UserRole.SUPER_ADMIN,
           UserRole.SCHOOL_ADMIN,

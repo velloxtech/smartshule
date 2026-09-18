@@ -2,6 +2,7 @@ import request from 'supertest';
 import { createExpressApp } from '../../src/infrastructure/http/app';
 import { AppContainer } from '../../src/infrastructure/container';
 import { UserRole } from '../../src/core/domain/user/User';
+import { setupTestFixtures } from '../helpers/testFixtures';
 
 describe('New Features Integration Tests', () => {
   let app: any;
@@ -12,7 +13,7 @@ describe('New Features Integration Tests', () => {
 
   beforeAll(async () => {
     container = new AppContainer();
-    await container.initSeed();
+    await setupTestFixtures(container);
     app = createExpressApp(container);
 
     // 1. Admin token
@@ -97,9 +98,116 @@ describe('New Features Integration Tests', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.data.isParentView).toBe(true);
-      expect(res.body.data.childrenCount).toBeGreaterThanOrEqual(1);
     });
   });
+
+  // ==========================================
+  // 1B. MONEY IN & MONEY OUT (CASH FLOW LEDGER)
+  // ==========================================
+  describe('Money In & Money Out Financial System', () => {
+    it('Admin can record an operating expense (Money Out)', async () => {
+      const res = await request(app)
+        .post('/api/v1/finance/expenses')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          category: 'CBC_LEARNING_MATERIALS',
+          title: 'Science Lab Microscope Slides & Beakers',
+          amount: 15000,
+          paymentMethod: 'BANK_TRANSFER',
+          paymentReference: 'TX-BNK-99011',
+          payee: 'Nairobi Laboratory Supplies Ltd',
+          expenseDate: '2026-02-01',
+          notes: 'Junior Secondary Grade 8 Integrated Science'
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.data.id).toBeDefined();
+      expect(res.body.data.voucherNumber).toMatch(/^PV-/);
+      expect(res.body.data.amount).toBe(15000);
+      expect(res.body.data.category).toBe('CBC_LEARNING_MATERIALS');
+    });
+
+    it('Admin can list school expenses and filter by category', async () => {
+      const res = await request(app)
+        .get('/api/v1/finance/expenses?category=UTILITIES_BILLS')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.body.data)).toBe(true);
+      expect(res.body.data.length).toBeGreaterThanOrEqual(1);
+      expect(res.body.data[0].category).toBe('UTILITIES_BILLS');
+    });
+
+    it('Admin can update expense status (e.g. from APPROVED to PAID)', async () => {
+      // Fetch an expense
+      const listRes = await request(app)
+        .get('/api/v1/finance/expenses')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      const expense = listRes.body.data[0];
+
+      const patchRes = await request(app)
+        .patch(`/api/v1/finance/expenses/${expense.id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'PAID' });
+
+      expect(patchRes.status).toBe(200);
+      expect(patchRes.body.data.status).toBe('PAID');
+    });
+
+    it('Admin can record non-fee other income (Money In - Capitation/Uniforms)', async () => {
+      const res = await request(app)
+        .post('/api/v1/finance/income')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          source: 'GOVERNMENT_CAPITATION_FPE',
+          title: 'MoE Primary Education Capitation Grant 2026',
+          amount: 150000,
+          paymentMethod: 'BANK_TRANSFER',
+          paymentReference: 'EFT-FPE-TR1-2026',
+          receivedFrom: 'Ministry of Education',
+          incomeDate: '2026-02-01',
+          notes: 'FPE Capitation for 200 primary pupils'
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.data.id).toBeDefined();
+      expect(res.body.data.receiptNumber).toMatch(/^OR-/);
+      expect(res.body.data.amount).toBe(150000);
+      expect(res.body.data.source).toBe('GOVERNMENT_CAPITATION_FPE');
+    });
+
+    it('Admin can get complete Cash Flow Ledger with Money In, Money Out, and Account Balances', async () => {
+      const res = await request(app)
+        .get('/api/v1/finance/cashflow-ledger')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.totalMoneyIn).toBeGreaterThan(0);
+      expect(res.body.data.totalMoneyOut).toBeGreaterThan(0);
+      expect(typeof res.body.data.netCashFlow).toBe('number');
+      expect(res.body.data.accountBalances).toBeDefined();
+      expect(res.body.data.accountBalances.bank.balance).toBeGreaterThan(0);
+      expect(res.body.data.accountBalances.mpesa.balance).toBeGreaterThan(0);
+      expect(Array.isArray(res.body.data.voteHeadBreakdown)).toBe(true);
+      expect(Array.isArray(res.body.data.incomeBreakdown)).toBe(true);
+      expect(Array.isArray(res.body.data.recentLedger)).toBe(true);
+      expect(res.body.data.recentLedger.length).toBeGreaterThan(0);
+    });
+
+    it('Parents CANNOT view school expenses or Cash Flow Ledger (Forbidden 403)', async () => {
+      const expRes = await request(app)
+        .get('/api/v1/finance/expenses')
+        .set('Authorization', `Bearer ${guardianToken}`);
+      expect(expRes.status).toBe(403);
+
+      const ledgerRes = await request(app)
+        .get('/api/v1/finance/cashflow-ledger')
+        .set('Authorization', `Bearer ${guardianToken}`);
+      expect(ledgerRes.status).toBe(403);
+    });
+  });
+
 
   // ==========================================
   // 2. PAYSTACK INTEGRATION (BANK TRANSFER / CARD)

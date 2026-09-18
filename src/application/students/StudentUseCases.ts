@@ -313,4 +313,10 @@ export class StudentUseCases {
       children: childrenDetails
     };
   }
+
+  public async deleteStudent(id: string): Promise<void> {
+    const student = await this.studentRepository.findById(id);
+    if (!student) throw new NotFoundError('Student', id);
+    await this.studentRepository.delete(id);
+  }
 }

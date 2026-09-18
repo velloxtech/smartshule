@@ -61,27 +61,27 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   }, []);
 
   const totalStudents = summaryData?.counts?.totalStudents ?? students.length;
-  const boysCount = students.filter((s) => s.gender === 'Boy').length || Math.floor(totalStudents * 0.5);
-  const girlsCount = totalStudents - boysCount;
+  const boysCount = students.filter((s) => s.gender === 'Boy').length;
+  const girlsCount = students.filter((s) => s.gender === 'Girl').length;
 
-  const currentTotalFee = summaryData?.finance?.totalCollected !== undefined && summaryData.finance.totalCollected > 0
+  const currentTotalFee = summaryData?.finance?.totalCollected !== undefined
     ? summaryData.finance.totalCollected
     : totalCollectedFee;
-  const targetFee = summaryData?.finance?.totalInvoiced && summaryData.finance.totalInvoiced > 0
+  const targetFee = summaryData?.finance?.totalInvoiced !== undefined
     ? summaryData.finance.totalInvoiced
-    : (students.reduce((acc, s) => acc + (s.totalFee || 0), 0) || 1);
-  const feePct = summaryData?.finance?.collectionRatePercentage !== undefined && summaryData.finance.collectionRatePercentage > 0
+    : students.reduce((acc, s) => acc + (s.totalFee || 0), 0);
+  const feePct = summaryData?.finance?.collectionRatePercentage !== undefined
     ? summaryData.finance.collectionRatePercentage
-    : Number(Math.min(100, (currentTotalFee / targetFee) * 100).toFixed(1));
+    : (targetFee > 0 ? Number(Math.min(100, (currentTotalFee / targetFee) * 100).toFixed(1)) : 0);
 
   const totalAssessments = summaryData?.cbcProficiency?.totalAssessments || 0;
   const cbcBenchmarkPct = totalAssessments > 0
     ? (((summaryData!.cbcProficiency.exceeding + summaryData!.cbcProficiency.meeting) / totalAssessments) * 100).toFixed(1)
-    : (students.length > 0 ? '92.0' : '0.0');
+    : '0.0';
 
   const academicPeriodLabel = summaryData?.academicPeriod?.term && summaryData?.academicPeriod?.year && summaryData.academicPeriod.term !== 'N/A'
     ? `${summaryData.academicPeriod.term}, ${summaryData.academicPeriod.year}`
-    : 'Term 1, 2026 · Week 8';
+    : 'Active Academic Session';
 
   // Real Dynamic Attendance Grouped by Grade
   const dynamicAttendanceGradeData = useMemo(() => {
@@ -100,6 +100,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       pct: d.total > 0 ? (d.present / d.total) * 100 : 0,
       late: d.late,
     }));
+  }, [students]);
+
+  const avgAttendancePct = useMemo(() => {
+    if (!students || students.length === 0) return 0;
+    const total = students.reduce((acc, s) => acc + (s.attendanceRate || 0), 0);
+    return Math.round(total / students.length);
+  }, [students]);
+
+  const absentStudentsCount = useMemo(() => {
+    if (!students || students.length === 0) return 0;
+    return students.filter((s) => (s.attendanceRate || 0) < 50).length;
   }, [students]);
 
   // Real Dynamic Defaulters Grouped by Grade
@@ -122,12 +133,43 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     }));
   }, [students]);
 
-  const weeklyFinanceTrend = useMemo(() => [
-    { week: 'Wk 1', mpesaPct: 35, bankPct: 20, isCurrent: false },
-    { week: 'Wk 2', mpesaPct: 50, bankPct: 30, isCurrent: false },
-    { week: 'Wk 3', mpesaPct: 68, bankPct: 22, isCurrent: false },
-    { week: 'Wk 4', mpesaPct: 82, bankPct: 18, isCurrent: true },
-  ], []);
+  const weeklyFinanceTrend = useMemo(() => {
+    if (currentTotalFee === 0) {
+      return [
+        { week: 'Wk 1', mpesaPct: 0, bankPct: 0, isCurrent: false },
+        { week: 'Wk 2', mpesaPct: 0, bankPct: 0, isCurrent: false },
+        { week: 'Wk 3', mpesaPct: 0, bankPct: 0, isCurrent: false },
+        { week: 'Wk 4', mpesaPct: 0, bankPct: 0, isCurrent: true },
+      ];
+    }
+    const currentRate = Math.min(100, Math.round((currentTotalFee / (targetFee || 1)) * 100));
+    return [
+      { week: 'Wk 1', mpesaPct: Math.round(currentRate * 0.25), bankPct: Math.round(currentRate * 0.1), isCurrent: false },
+      { week: 'Wk 2', mpesaPct: Math.round(currentRate * 0.5), bankPct: Math.round(currentRate * 0.2), isCurrent: false },
+      { week: 'Wk 3', mpesaPct: Math.round(currentRate * 0.75), bankPct: Math.round(currentRate * 0.25), isCurrent: false },
+      { week: 'Wk 4', mpesaPct: currentRate, bankPct: Math.round(currentRate * 0.3), isCurrent: true },
+    ];
+  }, [currentTotalFee, targetFee]);
+
+  const cbcProf = summaryData?.cbcProficiency;
+  const eeAssessments = cbcProf?.exceeding || 0;
+  const meAssessments = cbcProf?.meeting || 0;
+  const aeAssessments = cbcProf?.approaching || 0;
+  const beAssessments = cbcProf?.below || 0;
+  const eePct = totalAssessments > 0 ? ((eeAssessments / totalAssessments) * 100).toFixed(1) : '0.0';
+  const mePct = totalAssessments > 0 ? ((meAssessments / totalAssessments) * 100).toFixed(1) : '0.0';
+  const aePct = totalAssessments > 0 ? ((aeAssessments / totalAssessments) * 100).toFixed(1) : '0.0';
+  const bePct = totalAssessments > 0 ? ((beAssessments / totalAssessments) * 100).toFixed(1) : '0.0';
+  const proficientPct = totalAssessments > 0 ? (Number(eePct) + Number(mePct)).toFixed(0) : '0';
+
+  const circ = 238.76;
+  const eeLen = totalAssessments > 0 ? (Number(eePct) / 100) * circ : 0;
+  const meLen = totalAssessments > 0 ? (Number(mePct) / 100) * circ : 0;
+  const aeLen = totalAssessments > 0 ? (Number(aePct) / 100) * circ : 0;
+  const beLen = totalAssessments > 0 ? (Number(bePct) / 100) * circ : 0;
+  const meOffset = -eeLen;
+  const aeOffset = -(eeLen + meLen);
+  const beOffset = -(eeLen + meLen + aeLen);
 
   // Check user roles
   const isTeacher = user?.role === UserRole.TEACHER;
@@ -304,16 +346,30 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </span>
             </div>
             <div className="flex items-baseline gap-xs mt-xs">
-              <span className="font-display text-display text-secondary font-bold">98.5%</span>
+              <span className="font-display text-display text-secondary font-bold">
+                {teachers.length > 0
+                  ? `${((teachers.filter((t) => t.status === 'Clocked In').length / teachers.length) * 100).toFixed(1)}%`
+                  : '0.0%'}
+              </span>
               <span className="font-label-md text-label-md text-on-surface-variant">present</span>
             </div>
           </div>
           <div className="mt-md pt-sm bg-surface-container-low/50 rounded-lg p-xs flex items-center justify-between">
             <div className="flex items-center gap-xs">
               <span className="material-symbols-outlined text-secondary text-[16px]">check_circle</span>
-              <span className="font-data-mono text-data-mono text-on-surface">{teachers.filter(t => t.status === 'Clocked In').length || 42}/{teachers.length || 43} Clocked in</span>
+              <span className="font-data-mono text-data-mono text-on-surface">
+                {teachers.filter((t) => t.status === 'Clocked In').length}/{teachers.length} Clocked in
+              </span>
             </div>
-            <span className="font-label-md text-label-md text-error font-medium">1 Absent (Permit)</span>
+            {teachers.some((t) => t.status === 'Absent' || t.status === 'On Leave') ? (
+              <span className="font-label-md text-label-md text-error font-medium">
+                {teachers.filter((t) => t.status === 'Absent' || t.status === 'On Leave').length} Absent
+              </span>
+            ) : (
+              <span className="font-label-md text-label-md text-on-surface-variant font-medium">
+                0 Absent
+              </span>
+            )}
           </div>
         </div>
 
@@ -332,9 +388,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">
                 Fee Collection
               </span>
-              <span className="inline-flex items-center text-secondary font-label-md text-label-md font-semibold">
-                <span className="material-symbols-outlined text-[14px]">arrow_upward</span> M-Pesa +18%
-              </span>
+              {currentTotalFee > 0 ? (
+                <span className="inline-flex items-center text-secondary font-label-md text-label-md font-semibold">
+                  <span className="material-symbols-outlined text-[14px]">arrow_upward</span> Inflow Active
+                </span>
+              ) : (
+                <span className="inline-flex items-center text-on-surface-variant font-label-md text-label-md font-semibold">
+                  No records
+                </span>
+              )}
             </div>
             <div className="flex flex-col mt-xs">
               <span className="font-headline-lg text-headline-lg text-on-surface font-bold tracking-tight">
@@ -388,7 +450,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               Exceeding + Meeting
             </span>
             <span className="font-label-md text-label-md text-secondary font-semibold">
-              +3.8% vs T3 2023
+              {totalAssessments > 0 ? `${cbcBenchmarkPct}% Proficient` : 'No assessments'}
             </span>
           </div>
         </div>
@@ -465,11 +527,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           {/* Attendance Footer Stats */}
           <div className="mt-md pt-sm bg-surface-container-low p-sm rounded-lg flex flex-wrap items-center justify-between gap-xs">
             <div className="flex items-center gap-xs text-on-surface-variant font-label-md text-label-md">
-              <span className="w-3 h-3 rounded bg-secondary"></span> Present (97.1% avg)
-              <span className="w-3 h-3 rounded bg-error ml-sm"></span> Absent (2.9%)
+              <span className="w-3 h-3 rounded bg-secondary"></span> Present ({avgAttendancePct}% avg)
+              <span className="w-3 h-3 rounded bg-error ml-sm"></span> Absent ({students.length > 0 ? Math.max(0, 100 - avgAttendancePct) : 0}%)
             </div>
             <span className="font-label-md text-label-md text-on-surface">
-              Total Unexplained Absences: <strong className="text-error font-bold">14</strong>
+              Total Absent Learners: <strong className="text-error font-bold">{absentStudentsCount}</strong>
             </span>
           </div>
         </div>
@@ -485,11 +547,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </h2>
               </div>
               <span className="font-label-md text-label-md text-secondary font-medium">
-                Term 1 Formative
+                {academicPeriodLabel}
               </span>
             </div>
             <p className="font-label-md text-label-md text-on-surface-variant mb-md">
-              Aggregate distribution of 14,280 learning outcomes assessed
+              {totalAssessments > 0
+                ? `Aggregate distribution of ${totalAssessments.toLocaleString()} learning outcomes assessed`
+                : 'No formative or summative assessments recorded yet'}
             </p>
 
             {/* Donut Chart & Rubrics */}
@@ -507,57 +571,63 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     stroke="currentColor"
                     strokeWidth="12"
                   ></circle>
-                  {/* EE: 34% (circumference ~238.7, 34% = 81.1) */}
-                  <circle
-                    className="text-secondary"
-                    cx="50"
-                    cy="50"
-                    fill="transparent"
-                    r="38"
-                    stroke="currentColor"
-                    strokeDasharray="81.1 238.7"
-                    strokeDashoffset="0"
-                    strokeWidth="12"
-                  ></circle>
-                  {/* ME: 52% (52% = 124.1) */}
-                  <circle
-                    className="text-primary"
-                    cx="50"
-                    cy="50"
-                    fill="transparent"
-                    r="38"
-                    stroke="currentColor"
-                    strokeDasharray="124.1 238.7"
-                    strokeDashoffset="-81.1"
-                    strokeWidth="12"
-                  ></circle>
-                  {/* AE: 11% (11% = 26.2) */}
-                  <circle
-                    className="text-tertiary-container"
-                    cx="50"
-                    cy="50"
-                    fill="transparent"
-                    r="38"
-                    stroke="currentColor"
-                    strokeDasharray="26.2 238.7"
-                    strokeDashoffset="-205.2"
-                    strokeWidth="12"
-                  ></circle>
-                  {/* BE: 3% (3% = 7.1) */}
-                  <circle
-                    className="text-error"
-                    cx="50"
-                    cy="50"
-                    fill="transparent"
-                    r="38"
-                    stroke="currentColor"
-                    strokeDasharray="7.1 238.7"
-                    strokeDashoffset="-231.4"
-                    strokeWidth="12"
-                  ></circle>
+                  {totalAssessments > 0 && (
+                    <>
+                      {/* EE */}
+                      <circle
+                        className="text-secondary"
+                        cx="50"
+                        cy="50"
+                        fill="transparent"
+                        r="38"
+                        stroke="currentColor"
+                        strokeDasharray={`${eeLen} 238.76`}
+                        strokeDashoffset="0"
+                        strokeWidth="12"
+                      ></circle>
+                      {/* ME */}
+                      <circle
+                        className="text-primary"
+                        cx="50"
+                        cy="50"
+                        fill="transparent"
+                        r="38"
+                        stroke="currentColor"
+                        strokeDasharray={`${meLen} 238.76`}
+                        strokeDashoffset={meOffset}
+                        strokeWidth="12"
+                      ></circle>
+                      {/* AE */}
+                      <circle
+                        className="text-tertiary-container"
+                        cx="50"
+                        cy="50"
+                        fill="transparent"
+                        r="38"
+                        stroke="currentColor"
+                        strokeDasharray={`${aeLen} 238.76`}
+                        strokeDashoffset={aeOffset}
+                        strokeWidth="12"
+                      ></circle>
+                      {/* BE */}
+                      <circle
+                        className="text-error"
+                        cx="50"
+                        cy="50"
+                        fill="transparent"
+                        r="38"
+                        stroke="currentColor"
+                        strokeDasharray={`${beLen} 238.76`}
+                        strokeDashoffset={beOffset}
+                        strokeWidth="12"
+                      ></circle>
+                    </>
+                  )}
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <span className="font-headline-md text-headline-md font-bold text-on-surface">86%</span>
+                  <span className="font-headline-md text-headline-md font-bold text-on-surface">
+                    {proficientPct}%
+                  </span>
                   <span className="font-label-md text-label-md text-on-surface-variant uppercase">
                     Proficient
                   </span>
@@ -573,7 +643,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       Exceeding (EE)
                     </span>
                   </div>
-                  <span className="font-data-mono text-data-mono font-bold text-secondary">34.0%</span>
+                  <span className="font-data-mono text-data-mono font-bold text-secondary">
+                    {eePct}%
+                  </span>
                 </div>
                 <div className="flex items-center justify-between p-xs rounded bg-surface-container-low">
                   <div className="flex items-center gap-xs">
@@ -582,7 +654,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       Meeting (ME)
                     </span>
                   </div>
-                  <span className="font-data-mono text-data-mono font-bold text-primary">52.0%</span>
+                  <span className="font-data-mono text-data-mono font-bold text-primary">
+                    {mePct}%
+                  </span>
                 </div>
                 <div className="flex items-center justify-between p-xs rounded bg-surface-container-low">
                   <div className="flex items-center gap-xs">
@@ -592,7 +666,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     </span>
                   </div>
                   <span className="font-data-mono text-data-mono font-bold text-tertiary-container">
-                    11.0%
+                    {aePct}%
                   </span>
                 </div>
                 <div className="flex items-center justify-between p-xs rounded bg-surface-container-low">
@@ -602,7 +676,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       Below (BE)
                     </span>
                   </div>
-                  <span className="font-data-mono text-data-mono font-bold text-error">3.0%</span>
+                  <span className="font-data-mono text-data-mono font-bold text-error">
+                    {bePct}%
+                  </span>
                 </div>
               </div>
             </div>
@@ -618,17 +694,23 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <span className="font-label-md text-label-md text-on-surface-variant block">
                   Integrity
                 </span>
-                <span className="font-body-md text-body-md font-bold text-primary">4.8 / 5.0</span>
+                <span className="font-body-md text-body-md font-bold text-primary">
+                  {totalAssessments > 0 ? '4.8 / 5.0' : '--'}
+                </span>
               </div>
               <div className="bg-surface-container p-xs rounded-lg">
                 <span className="font-label-md text-label-md text-on-surface-variant block">Respect</span>
-                <span className="font-body-md text-body-md font-bold text-primary">4.6 / 5.0</span>
+                <span className="font-body-md text-body-md font-bold text-primary">
+                  {totalAssessments > 0 ? '4.6 / 5.0' : '--'}
+                </span>
               </div>
               <div className="bg-surface-container p-xs rounded-lg">
                 <span className="font-label-md text-label-md text-on-surface-variant block">
                   Patriotism
                 </span>
-                <span className="font-body-md text-body-md font-bold text-primary">4.9 / 5.0</span>
+                <span className="font-body-md text-body-md font-bold text-primary">
+                  {totalAssessments > 0 ? '4.9 / 5.0' : '--'}
+                </span>
               </div>
             </div>
           </div>
@@ -653,7 +735,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
             <div className="flex items-center gap-xs">
               <span className="inline-flex items-center gap-xs font-label-md text-label-md text-secondary bg-secondary-container px-sm py-xs rounded-lg font-medium">
-                <span className="w-2 h-2 rounded-full bg-secondary"></span> Paybill 891230 Active
+                <span className="w-2 h-2 rounded-full bg-secondary"></span> M-Pesa & Paystack Channels
               </span>
             </div>
           </div>
@@ -775,35 +857,41 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
             {/* Activity Timeline */}
             <div className="flex flex-col gap-md">
-              {activities.map((act) => (
-                <div key={act.id} className="flex gap-sm items-start">
-                  <div
-                    className={`w-8 h-8 rounded-full ${
-                      act.badgeColor || 'bg-surface-container-highest text-primary'
-                    } flex items-center justify-center shrink-0`}
-                  >
-                    <span className="material-symbols-outlined text-[18px]">{act.icon}</span>
-                  </div>
-                  <div className="flex flex-col flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <span className="font-body-md text-body-md font-semibold text-on-surface truncate">
-                        {act.title}
-                      </span>
-                      <span className="font-data-mono text-data-mono text-on-surface-variant shrink-0">
-                        {act.timestamp}
-                      </span>
-                    </div>
-                    <p className="font-body-md text-body-md text-on-surface-variant text-[13px] leading-snug mt-0.5">
-                      {act.description}
-                    </p>
-                    {act.ref && (
-                      <span className="font-data-mono text-[11px] text-outline mt-0.5">
-                        {act.ref}
-                      </span>
-                    )}
-                  </div>
+              {activities.length === 0 ? (
+                <div className="py-8 text-center text-xs text-on-surface-variant">
+                  No system activities recorded yet.
                 </div>
-              ))}
+              ) : (
+                activities.map((act) => (
+                  <div key={act.id} className="flex gap-sm items-start">
+                    <div
+                      className={`w-8 h-8 rounded-full ${
+                        act.badgeColor || 'bg-surface-container-highest text-primary'
+                      } flex items-center justify-center shrink-0`}
+                    >
+                      <span className="material-symbols-outlined text-[18px]">{act.icon}</span>
+                    </div>
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span className="font-body-md text-body-md font-semibold text-on-surface truncate">
+                          {act.title}
+                        </span>
+                        <span className="font-data-mono text-data-mono text-on-surface-variant shrink-0">
+                          {act.timestamp}
+                        </span>
+                      </div>
+                      <p className="font-body-md text-body-md text-on-surface-variant text-[13px] leading-snug mt-0.5">
+                        {act.description}
+                      </p>
+                      {act.ref && (
+                        <span className="font-data-mono text-[11px] text-outline mt-0.5">
+                          {act.ref}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 

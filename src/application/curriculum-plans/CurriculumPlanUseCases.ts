@@ -176,4 +176,12 @@ export class CurriculumPlanUseCases {
     const plans = await this.lessonPlanRepository.findAll(filters);
     return plans.map(p => p.toJSON());
   }
+
+  public async deleteScheme(id: string): Promise<void> {
+    await this.schemeRepository.delete(id);
+  }
+
+  public async deleteLessonPlan(id: string): Promise<void> {
+    await this.lessonPlanRepository.delete(id);
+  }
 }

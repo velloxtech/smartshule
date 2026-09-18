@@ -6,12 +6,14 @@ interface TeachersViewProps {
   teachers: Teacher[];
   onToggleClockIn: (teacherId: string) => void;
   onOpenOnboardTeacher?: () => void;
+  onDeleteTeacher?: (teacherId: string) => void;
 }
 
 export const TeachersView: React.FC<TeachersViewProps> = ({
   teachers,
   onToggleClockIn,
   onOpenOnboardTeacher,
+  onDeleteTeacher,
 }) => {
   const [search, setSearch] = useState('');
   const [isAssignOpen, setIsAssignOpen] = useState(false);
@@ -19,6 +21,23 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
   const [streamId, setStreamId] = useState('stream-g7-east');
   const [assignLoading, setAssignLoading] = useState(false);
   const [assignSuccess, setAssignSuccess] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDeleteTeacher = async (t: Teacher) => {
+    if (window.confirm(`Are you sure you want to delete ${t.name} (TSC: ${t.tscNumber})? This action cannot be undone.`)) {
+      setDeletingId(t.id);
+      try {
+        const res = await apiService.deleteTeacher(t.id);
+        if (res.success) {
+          onDeleteTeacher?.(t.id);
+        }
+      } catch (err: any) {
+        alert(err.message || 'Failed to delete teacher');
+      } finally {
+        setDeletingId(null);
+      }
+    }
+  };
 
   const filtered = teachers.filter(
     (t) =>
@@ -59,9 +78,15 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
             <span>/</span>
             <span className="text-primary font-semibold">Teachers & Staff</span>
           </div>
-          <h1 className="font-headline-lg text-headline-lg text-on-surface mt-1">
-            Faculty & Biometric Clock-in Registry
-          </h1>
+          <div className="flex items-center gap-2 mt-1">
+            <h1 className="font-headline-lg text-headline-lg text-on-surface">
+              Faculty & Biometric Clock-in Registry
+            </h1>
+            <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-teal-50 border border-teal-200 text-teal-800 text-[11px] font-bold">
+              <span className="material-symbols-outlined text-[14px]">verified</span>
+              <span>Article 237 (TSC) & Chapter 6 Compliant</span>
+            </span>
+          </div>
           <p className="text-xs text-on-surface-variant mt-0.5">
             TSC registered educators, assigned learning areas, stream allocations, and real-time roll call
           </p>
@@ -74,7 +99,7 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
               className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-primary text-white rounded-lg hover:bg-primary-container text-xs font-semibold shadow-xs transition-all cursor-pointer"
             >
               <span className="material-symbols-outlined text-[16px]">person_add</span>
-              <span>Onboard Teacher</span>
+              <span>Onboard Teacher (Art. 237)</span>
             </button>
           )}
           <span className="px-3 py-1.5 rounded-lg bg-secondary-container text-on-secondary-container text-xs font-bold flex items-center gap-1.5">
@@ -179,16 +204,28 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
                   Assign Stream
                 </button>
 
-                <button
-                  onClick={() => onToggleClockIn(t.id)}
-                  className={`px-3 py-1 rounded text-xs font-semibold transition-all cursor-pointer ${
-                    isClockedIn
-                      ? 'bg-error-container text-on-error-container hover:bg-error/20'
-                      : 'bg-primary text-white hover:bg-primary-container'
-                  }`}
-                >
-                  {isClockedIn ? 'Clock Out' : 'Clock In'}
-                </button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => handleDeleteTeacher(t)}
+                    disabled={deletingId === t.id}
+                    title="Delete Teacher Record"
+                    className="p-1 rounded text-outline hover:text-error hover:bg-error/10 transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">
+                      {deletingId === t.id ? 'sync' : 'delete'}
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => onToggleClockIn(t.id)}
+                    className={`px-3 py-1 rounded text-xs font-semibold transition-all cursor-pointer ${
+                      isClockedIn
+                        ? 'bg-error-container text-on-error-container hover:bg-error/20'
+                        : 'bg-primary text-white hover:bg-primary-container'
+                    }`}
+                  >
+                    {isClockedIn ? 'Clock Out' : 'Clock In'}
+                  </button>
+                </div>
               </div>
             </div>
           );

@@ -27,6 +27,10 @@ import { AttendanceRegisterView } from './components/views/AttendanceRegisterVie
 import { FeeStructureView } from './components/views/FeeStructureView';
 import { InvoicesMpesaView } from './components/views/InvoicesMpesaView';
 import { DefaultersView } from './components/views/DefaultersView';
+import { CashFlowLedgerView } from './components/views/CashFlowLedgerView';
+import { ExpensesView } from './components/views/ExpensesView';
+import { CapitationIncomeView } from './components/views/CapitationIncomeView';
+import { FinancialReportsView } from './components/views/FinancialReportsView';
 import { EDiaryView } from './components/views/EDiaryView';
 import { VisualCBCView } from './components/views/VisualCBCView';
 import { WhatsAppBotView } from './components/views/WhatsAppBotView';
@@ -40,6 +44,7 @@ import { SendSmsModal } from './components/modals/SendSmsModal';
 import { KnecSyncModal } from './components/modals/KnecSyncModal';
 import { ExportReportModal } from './components/modals/ExportReportModal';
 import { OnboardTeacherModal } from './components/modals/OnboardTeacherModal';
+import { OnboardSchoolModal } from './components/modals/OnboardSchoolModal';
 import { UploadMarksModal } from './components/modals/UploadMarksModal';
 import { CreateLessonPlanModal } from './components/modals/CreateLessonPlanModal';
 import { CreateSchemeModal } from './components/modals/CreateSchemeModal';
@@ -61,6 +66,7 @@ export default function App() {
 
   // Modal Visibility States
   const [onboardTeacherModalOpen, setOnboardTeacherModalOpen] = useState(false);
+  const [onboardSchoolModalOpen, setOnboardSchoolModalOpen] = useState(false);
   const [mpesaModalOpen, setMpesaModalOpen] = useState(false);
   const [selectedStudentForMpesa, setSelectedStudentForMpesa] = useState<Student | undefined>(undefined);
   const [paystackModalOpen, setPaystackModalOpen] = useState(false);
@@ -114,7 +120,7 @@ export default function App() {
             });
           }
 
-          if (studentData?.data && Array.isArray(studentData.data) && studentData.data.length > 0) {
+          if (studentData?.data && Array.isArray(studentData.data)) {
             const mappedStudents: Student[] = studentData.data.map((st: any) => {
               const fee = feeMap.get(st.id) || { balance: 0, billed: 0 };
               return {
@@ -136,13 +142,15 @@ export default function App() {
               };
             });
             setStudents(mappedStudents);
+          } else {
+            setStudents([]);
           }
         } catch {
-          // Keep empty state
+          setStudents([]);
         }
         try {
           const teacherData = await apiService.getTeachers();
-          if (teacherData?.data && Array.isArray(teacherData.data) && teacherData.data.length > 0) {
+          if (teacherData?.data && Array.isArray(teacherData.data)) {
             const mappedTeachers: Teacher[] = teacherData.data.map((t: any) => ({
               id: t.id,
               name: t.user ? `${t.user.firstName} ${t.user.lastName}` : `Teacher ${t.tscNumber || ''}`,
@@ -156,9 +164,37 @@ export default function App() {
               clockInTime: '07:45 AM',
             }));
             setTeachers(mappedTeachers);
+          } else {
+            setTeachers([]);
           }
         } catch {
-          // Keep empty state
+          setTeachers([]);
+        }
+        try {
+          const formativesRes = await apiService.listFormatives().catch(() => null);
+          if (formativesRes?.data && Array.isArray(formativesRes.data)) {
+            const mappedAssessments: AssessmentRecord[] = formativesRes.data.map((f: any) => ({
+              id: f.id,
+              studentId: f.studentId,
+              studentName: f.studentName || 'Learner',
+              admNo: f.admissionNumber || '',
+              grade: f.gradeLevel ? f.gradeLevel.replace('_', ' ') : 'Grade 7',
+              learningArea: f.learningAreaId || 'CBC Learning Area',
+              strand: f.strandId || f.subStrandId || 'Strand',
+              subStrand: f.specificOutcomeTested || 'Sub-strand',
+              rating: f.performanceLevel as any,
+              evidence: f.evidenceNotes || f.teacherRemarks || 'Formative observation',
+              recordedBy: 'CBC Educator',
+              date: f.assessmentDate,
+              targetedCompetencies: f.targetedCompetencies,
+              valuesObserved: f.valuesObserved,
+            }));
+            setAssessments(mappedAssessments);
+          } else {
+            setAssessments([]);
+          }
+        } catch {
+          setAssessments([]);
         }
         try {
           const [analyticsData, paymentsRes] = await Promise.all([
@@ -222,9 +258,9 @@ export default function App() {
     const newTx: FeeTransaction = {
       id: `tx-${Date.now()}`,
       ref: `SLK${Math.floor(10000000 + Math.random() * 90000000)}`,
-      studentName: student?.name || 'Grace Seeds Learner',
-      admNo: student?.admNo || 'GSA-2026-000',
-      grade: student?.grade || 'Grade 1',
+      studentName: student?.name || 'Enrolled Learner',
+      admNo: student?.admNo || '--',
+      grade: student?.grade || '--',
       amount,
       channel: 'M-Pesa Express',
       phone,
@@ -418,32 +454,89 @@ export default function App() {
   // Render Public Landing Page
   if (appView === 'landing') {
     return (
-      <LandingPage
-        onNavigateLogin={() => setAppView('login')}
-        isAuthenticated={isAuthenticated}
-        onNavigatePortal={() => setAppView('portal')}
-      />
+      <>
+        <LandingPage
+          onNavigateLogin={() => setAppView('login')}
+          isAuthenticated={isAuthenticated}
+          onNavigatePortal={() => setAppView('portal')}
+          onOpenOnboardSchool={() => setOnboardSchoolModalOpen(true)}
+        />
+        <OnboardSchoolModal
+          isOpen={onboardSchoolModalOpen}
+          onClose={() => setOnboardSchoolModalOpen(false)}
+          onSchoolOnboarded={(schoolData) => {
+            const newAct: SystemActivity = {
+              id: `act-${Date.now()}`,
+              type: 'report',
+              icon: 'account_balance',
+              title: `School Configured: ${schoolData.name}`,
+              description: `MoE #${schoolData.moeRegistrationNo || schoolData.code} · ${schoolData.county || 'Nairobi'} County`,
+              timestamp: 'Just now',
+              badgeColor: 'bg-emerald-600 text-white',
+            };
+            setActivities((prev) => [newAct, ...prev]);
+          }}
+        />
+      </>
     );
   }
 
   // Render Single Dedicated Login Page
   if (appView === 'login') {
     return (
-      <LoginPage
-        onSuccess={() => setAppView('portal')}
-        onNavigateLanding={() => setAppView('landing')}
-      />
+      <>
+        <LoginPage
+          onSuccess={() => setAppView('portal')}
+          onNavigateLanding={() => setAppView('landing')}
+          onOpenOnboardSchool={() => setOnboardSchoolModalOpen(true)}
+        />
+        <OnboardSchoolModal
+          isOpen={onboardSchoolModalOpen}
+          onClose={() => setOnboardSchoolModalOpen(false)}
+          onSchoolOnboarded={(schoolData) => {
+            const newAct: SystemActivity = {
+              id: `act-${Date.now()}`,
+              type: 'report',
+              icon: 'account_balance',
+              title: `School Configured: ${schoolData.name}`,
+              description: `MoE #${schoolData.moeRegistrationNo || schoolData.code} · ${schoolData.county || 'Nairobi'} County`,
+              timestamp: 'Just now',
+              badgeColor: 'bg-emerald-600 text-white',
+            };
+            setActivities((prev) => [newAct, ...prev]);
+          }}
+        />
+      </>
     );
   }
 
   // Fallback: If not authenticated, ensure landing view
   if (!isAuthenticated && !isLoading) {
     return (
-      <LandingPage
-        onNavigateLogin={() => setAppView('login')}
-        isAuthenticated={false}
-        onNavigatePortal={() => setAppView('portal')}
-      />
+      <>
+        <LandingPage
+          onNavigateLogin={() => setAppView('login')}
+          isAuthenticated={false}
+          onNavigatePortal={() => setAppView('portal')}
+          onOpenOnboardSchool={() => setOnboardSchoolModalOpen(true)}
+        />
+        <OnboardSchoolModal
+          isOpen={onboardSchoolModalOpen}
+          onClose={() => setOnboardSchoolModalOpen(false)}
+          onSchoolOnboarded={(schoolData) => {
+            const newAct: SystemActivity = {
+              id: `act-${Date.now()}`,
+              type: 'report',
+              icon: 'account_balance',
+              title: `School Configured: ${schoolData.name}`,
+              description: `MoE #${schoolData.moeRegistrationNo || schoolData.code} · ${schoolData.county || 'Nairobi'} County`,
+              timestamp: 'Just now',
+              badgeColor: 'bg-emerald-600 text-white',
+            };
+            setActivities((prev) => [newAct, ...prev]);
+          }}
+        />
+      </>
     );
   }
 
@@ -473,6 +566,7 @@ export default function App() {
           teachers={teachers}
           backendConnected={backendConnected}
           onNavigateLanding={() => setAppView('landing')}
+          onOpenOnboardSchool={() => setOnboardSchoolModalOpen(true)}
           onSelectStudent={(student) => {
             handleViewReportCard(student);
           }}
@@ -530,6 +624,9 @@ export default function App() {
                   prev.map((s) => (s.id === updated.id ? { ...s, ...updated } : s))
                 )
               }
+              onDeleteStudent={(deletedId) =>
+                setStudents((prev) => prev.filter((s) => s.id !== deletedId))
+              }
             />
           )}
 
@@ -538,6 +635,9 @@ export default function App() {
               teachers={teachers}
               onToggleClockIn={handleToggleClockIn}
               onOpenOnboardTeacher={() => setOnboardTeacherModalOpen(true)}
+              onDeleteTeacher={(deletedId) =>
+                setTeachers((prev) => prev.filter((t) => t.id !== deletedId))
+              }
             />
           )}
 
@@ -549,6 +649,9 @@ export default function App() {
             <AssessmentsView
               assessments={assessments}
               onOpenNewAssessment={() => handleOpenCbc()}
+              onDeleteAssessment={(deletedId) =>
+                setAssessments((prev) => prev.filter((a) => a.id !== deletedId))
+              }
             />
           )}
 
@@ -590,6 +693,11 @@ export default function App() {
             />
           )}
 
+          {currentTab === 'cashflow-ledger' && <CashFlowLedgerView />}
+          {currentTab === 'expenses-management' && <ExpensesView />}
+          {currentTab === 'capitation-income' && <CapitationIncomeView />}
+          {currentTab === 'financial-reports' && <FinancialReportsView />}
+
           {currentTab === 'ediary' && <EDiaryView />}
 
           {currentTab === 'visual-cbc' && <VisualCBCView />}
@@ -600,7 +708,7 @@ export default function App() {
         {/* Global Portal Footer & Vellox Tech Watermark */}
         <footer className="mt-auto py-4 px-6 border-t border-outline-variant/20 text-center text-xs text-on-surface-variant flex flex-wrap items-center justify-between gap-2">
           <div className="font-semibold text-on-surface">
-            Grace Seeds School · School Management System
+            {user?.schoolName || 'SmartShule CBC'} · School Management System
           </div>
           <div className="flex items-center gap-1.5 text-xs text-on-surface-variant">
             <span>Powered by</span>
@@ -610,6 +718,23 @@ export default function App() {
       </div>
 
       {/* Global Interactive Operational Modals */}
+      <OnboardSchoolModal
+        isOpen={onboardSchoolModalOpen}
+        onClose={() => setOnboardSchoolModalOpen(false)}
+        onSchoolOnboarded={(schoolData) => {
+          const newAct: SystemActivity = {
+            id: `act-${Date.now()}`,
+            type: 'report',
+            icon: 'account_balance',
+            title: `School Configured: ${schoolData.name}`,
+            description: `MoE #${schoolData.moeRegistrationNo || schoolData.code} · ${schoolData.county || 'Nairobi'} County`,
+            timestamp: 'Just now',
+            badgeColor: 'bg-emerald-600 text-white',
+          };
+          setActivities((prev) => [newAct, ...prev]);
+        }}
+      />
+
       <OnboardTeacherModal
         isOpen={onboardTeacherModalOpen}
         onClose={() => setOnboardTeacherModalOpen(false)}

@@ -213,4 +213,31 @@ export class CbcAssessmentController {
       next(err);
     }
   };
+
+  public deleteStrand = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      await this.cbcUseCases.deleteStrand(req.params.id as string);
+      return res.status(200).json({ success: true, message: 'Strand deleted successfully' });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public deleteSubStrand = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      await this.cbcUseCases.deleteSubStrand(req.params.id as string);
+      return res.status(200).json({ success: true, message: 'Sub-strand deleted successfully' });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public deleteFormative = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      await this.cbcUseCases.deleteFormative(req.params.id as string);
+      return res.status(200).json({ success: true, message: 'Formative assessment deleted successfully' });
+    } catch (err) {
+      next(err);
+    }
+  };
 }

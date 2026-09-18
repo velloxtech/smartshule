@@ -109,4 +109,16 @@ export class AcademicUseCases {
     const areas = await this.academicRepository.findAllLearningAreas(filters);
     return areas.map(a => a.toJSON());
   }
+
+  public async deleteClass(id: string): Promise<void> {
+    await this.academicRepository.deleteClass(id);
+  }
+
+  public async deleteStream(id: string): Promise<void> {
+    await this.academicRepository.deleteStream(id);
+  }
+
+  public async deleteLearningArea(id: string): Promise<void> {
+    await this.academicRepository.deleteLearningArea(id);
+  }
 }

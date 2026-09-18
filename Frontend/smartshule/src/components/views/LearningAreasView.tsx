@@ -18,13 +18,28 @@ export const LearningAreasView: React.FC = () => {
     setLoading(true);
     try {
       const res = await apiService.getLearningAreas();
-      if (res.success && res.data?.length) {
-        setLearningAreas(res.data);
+      if (res.success) {
+        setLearningAreas(res.data || []);
+      } else {
+        setLearningAreas([]);
       }
     } catch {
-      // Keep fallback
+      setLearningAreas([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: string, name: string) => {
+    if (window.confirm(`Are you sure you want to delete learning area "${name}"? This action cannot be undone.`)) {
+      try {
+        const res = await apiService.deleteLearningArea(id);
+        if (res.success) {
+          setLearningAreas((prev) => prev.filter((la) => la.id !== id));
+        }
+      } catch (err: any) {
+        alert(err.message || 'Failed to delete learning area');
+      }
     }
   };
 
@@ -126,9 +141,14 @@ export const LearningAreasView: React.FC = () => {
 
                 <div className="mt-4 pt-3 border-t border-surface-container flex items-center justify-between text-xs">
                   <span className="text-[11px] text-outline">KNEC CBC Compliant</span>
-                  <span className="font-semibold text-primary flex items-center gap-1">
-                    Ready for Grading <span className="material-symbols-outlined text-[14px]">check</span>
-                  </span>
+                  <button
+                    onClick={() => handleDelete(la.id, la.name)}
+                    title="Delete Learning Area"
+                    className="p-1.5 rounded-lg text-outline hover:text-error hover:bg-error/10 transition-colors cursor-pointer flex items-center gap-1 text-xs"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">delete</span>
+                    <span>Delete</span>
+                  </button>
                 </div>
               </div>
             ))}

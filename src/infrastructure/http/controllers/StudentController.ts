@@ -30,8 +30,9 @@ export const RegisterStudentSchema = z.object({
       emergencyContact: z.string().min(8),
       occupation: z.string().optional()
     })
+    .passthrough()
     .optional()
-});
+}).passthrough();
 
 export const UpdateStudentSchema = z.object({
   firstName: z.string().optional(),
@@ -133,6 +134,18 @@ export class StudentController {
       return res.status(200).json({
         success: true,
         data
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public deleteStudent = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      await this.studentUseCases.deleteStudent(req.params.id as string);
+      return res.status(200).json({
+        success: true,
+        message: 'Student deleted successfully'
       });
     } catch (err) {
       next(err);

@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import { PhoneUtils } from '../../src/infrastructure/utils/PhoneUtils';
 import { WhatsAppService } from '../../src/infrastructure/services/WhatsAppService';
 import { WhatsAppClientManager } from '../../src/infrastructure/services/WhatsAppClientManager';
@@ -476,7 +478,7 @@ describe('WhatsApp Bot & Phone Counter-Checking Unit Tests', () => {
         // MENU Command
         const resMenu = await whatsAppService.handleInboundMessage('+254711223344', 'MENU', { useAI: true });
         expect(resMenu.intent).toBe('MENU');
-        expect(resMenu.replyText).toContain('Welcome to *Grace Seed Academy CBC Portal*');
+        expect(resMenu.replyText).toContain('Welcome to *Grace Seeds School CBC Portal*');
         expect(resMenu.replyText).not.toContain('FEES STATEMENT');
       });
 
@@ -521,17 +523,27 @@ describe('WhatsApp Bot & Phone Counter-Checking Unit Tests', () => {
     });
 
     it('resolves multi-device LID (@lid) by reading stored session reverse mapping', async () => {
-      // 148438935179455 has a reverse mapping to 254759496975 in sessionDir
-      const msg = {
-        key: {
-          remoteJid: '148438935179455@lid',
-        },
-      };
+      const sessionDir = process.env.WHATSAPP_SESSION_PATH || './data/whatsapp_session';
+      fs.mkdirSync(sessionDir, { recursive: true });
+      const reverseFile = path.join(sessionDir, 'lid-mapping-148438935179455_reverse.json');
+      fs.writeFileSync(reverseFile, JSON.stringify('254759496975'));
 
-      const { senderPhone, replyJid } = await clientManager.resolveSenderPhone(msg, '148438935179455@lid');
+      try {
+        const msg = {
+          key: {
+            remoteJid: '148438935179455@lid',
+          },
+        };
 
-      expect(senderPhone).toBe('+254759496975');
-      expect(replyJid).toBe('148438935179455@lid');
+        const { senderPhone, replyJid } = await clientManager.resolveSenderPhone(msg, '148438935179455@lid');
+
+        expect(senderPhone).toBe('+254759496975');
+        expect(replyJid).toBe('148438935179455@lid');
+      } finally {
+        if (fs.existsSync(reverseFile)) {
+          fs.unlinkSync(reverseFile);
+        }
+      }
     });
   });
 });

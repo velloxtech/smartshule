@@ -70,7 +70,7 @@ cp .env.example .env
 ```bash
 npm run dev
 ```
-The server will start at `http://localhost:3000` and automatically seed sample CBC academy data.
+The server will start at `http://localhost:3000`. The system operates cleanly using only data entered into the database through the system.
 
 ### 5. Run Automated Tests
 ```bash
@@ -95,21 +95,21 @@ The backend comes with a pre-configured Postman Collection (35+ requests) and En
 ### How to Import & Test in Postman:
 1. Open Postman -> Click **Import** -> Select both files in the `postman/` folder.
 2. In the top-right environment selector in Postman, choose **SmartShule Local Environment**.
-3. Run request **`1.1 Login as Admin`** or **`1.2 Login as Teacher`**.
-   - *The collection has test scripts that automatically extract the JWT `accessToken` and populate `{{adminToken}}` and `{{teacherToken}}` in your environment!*
-4. Execute any request across all 10 modules.
+3. Run request **`1.1 Login as Admin`**.
+   - *The collection has test scripts that automatically extract the JWT `accessToken` and populate `{{adminToken}}` in your environment!*
+4. Execute requests across all modules using your created records.
 
 ---
 
-## 🔑 Demo Seeded Credentials
+## 🔑 Initial Administrator Access
 
-| Role | Email | Password | Identifier / Code |
+The platform automatically ensures an initial root administrator account exists on first boot (configurable via `.env`):
+
+| Role | Default Email | Default Password | Environment Keys |
 |---|---|---|---|
-| **Super Admin** | `admin@smartshule.ac.ke` | `Admin@123` | `usr-admin-01` |
-| **Teacher (Science)** | `sarah.mwangi@smartshule.ac.ke` | `Teacher@123` | `EMP-0101` / `TSC/789123` |
-| **Teacher (Math)** | `john.ochieng@smartshule.ac.ke` | `Teacher@123` | `EMP-0102` / `TSC/654321` |
-| **Guardian** | `mary.kariuki@gmail.com` | `Guardian@123` | `guardian-001` |
-| **Student** | *Linked to Mary Kariuki* | — | `ADM-2026-001` (UPI: `NEMIS-K9281A`) |
+| **Super Admin** | `admin@smartshule.ac.ke` | `Admin@123` | `DEFAULT_ADMIN_EMAIL`, `DEFAULT_ADMIN_PASSWORD` |
+
+All subsequent schools, academic structures, teachers, learners, assessments, and financial transactions are created and managed directly through the system.
 
 ---
 

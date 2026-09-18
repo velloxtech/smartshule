@@ -38,16 +38,16 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
         const profile = profileRes?.data || null;
         setTeacherProfile(profile);
 
-        const assignedStreamId = profile?.assignedClassStreamIds?.[0] || 'stream-g7-east';
-        const teacherId = profile?.id || 'teacher-001';
+        const assignedStreamId = profile?.assignedClassStreamIds?.[0];
+        const teacherId = profile?.id;
 
         // 2. Parallel data fetching
         const [stRes, regRes, ttRes, schRes, lpRes, formRes, sumRes] = await Promise.all([
-          apiService.getStudents({ streamId: assignedStreamId }).catch(() => null),
-          apiService.getDailyRegister(assignedStreamId, todayDate).catch(() => null),
-          apiService.getTeacherTimetable(teacherId, 'term-2026-1').catch(() => null),
-          apiService.getSchemes({ teacherId }).catch(() => null),
-          apiService.getLessonPlans({ teacherId }).catch(() => null),
+          apiService.getStudents({ streamId: assignedStreamId || undefined }).catch(() => null),
+          assignedStreamId ? apiService.getDailyRegister(assignedStreamId, todayDate).catch(() => null) : Promise.resolve(null),
+          teacherId ? apiService.getTeacherTimetable(teacherId, 'term-2026-1').catch(() => null) : Promise.resolve(null),
+          teacherId ? apiService.getSchemes({ teacherId }).catch(() => null) : Promise.resolve(null),
+          teacherId ? apiService.getLessonPlans({ teacherId }).catch(() => null) : Promise.resolve(null),
           apiService.listFormatives().catch(() => null),
           apiService.listSummatives().catch(() => null),
         ]);
@@ -56,37 +56,47 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
           const mapped: Student[] = stRes.data.map((s: any) => ({
             id: s.id,
             admNo: s.admissionNumber,
-            upi: s.upiNumber || 'NEMIS-PENDING',
-            nemis: s.upiNumber || 'NEMIS-PENDING',
+            upi: s.upiNumber || '--',
+            nemis: s.upiNumber || '--',
             name: `${s.firstName} ${s.lastName}`,
             gender: s.gender === 'FEMALE' ? 'Girl' : 'Boy',
-            grade: s.gradeLevel ? s.gradeLevel.replace('_', ' ') : 'Grade 7',
-            stream: s.streamId ? s.streamId.replace('stream-g7-', '').toUpperCase() : 'East',
-            guardianName: s.guardian ? `${s.guardian.firstName} ${s.guardian.lastName}` : 'Guardian',
-            guardianPhone: s.guardian?.phone || '+254700000000',
-            feeBalance: 0,
-            totalFee: 0,
-            attendanceRate: 98,
-            cbcRating: 'ME',
-            status: s.status === 'ACTIVE' ? 'Active' : s.status,
+            grade: s.gradeLevel ? s.gradeLevel.replace('_', ' ') : 'Grade --',
+            stream: s.streamId ? s.streamId.replace('stream-g7-', '').toUpperCase() : '--',
+            guardianName: s.guardian ? `${s.guardian.firstName} ${s.guardian.lastName}` : '--',
+            guardianPhone: s.guardian?.phone || '--',
+            feeBalance: s.feeBalance || 0,
+            totalFee: s.totalFee || 0,
+            attendanceRate: s.attendanceRate ?? 0,
+            cbcRating: s.cbcRating || '--',
+            status: s.status === 'ACTIVE' ? 'Active' : (s.status || 'Active'),
           }));
           setMyStudents(mapped);
+        } else {
+          setMyStudents([]);
         }
 
         if (regRes?.data) {
           setTodayRegister(regRes.data);
+        } else {
+          setTodayRegister(null);
         }
 
         if (ttRes?.data && Array.isArray(ttRes.data)) {
           setMySlots(ttRes.data);
+        } else {
+          setMySlots([]);
         }
 
         if (schRes?.data && Array.isArray(schRes.data)) {
           setMySchemes(schRes.data);
+        } else {
+          setMySchemes([]);
         }
 
         if (lpRes?.data && Array.isArray(lpRes.data)) {
           setMyLessonPlans(lpRes.data);
+        } else {
+          setMyLessonPlans([]);
         }
 
         const totalAssessments = (formRes?.data?.length || 0) + (sumRes?.data?.length || 0);
@@ -102,10 +112,12 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
   }, [todayDate]);
 
   const teacherName = user ? `${user.firstName} ${user.lastName}` : 'Teacher';
-  const tscNumber = teacherProfile?.tscNumber || 'TSC/789123';
-  const specialization = teacherProfile?.specialization?.join(', ') || 'Integrated Science, Agriculture & Nutrition';
+  const tscNumber = teacherProfile?.tscNumber || 'TSC/--';
+  const specialization = teacherProfile?.specialization?.length
+    ? teacherProfile.specialization.join(', ')
+    : 'CBC Educator';
   const assignedClass = teacherProfile?.assignedClassStreamIds?.length
-    ? 'Grade 7 East'
+    ? teacherProfile.assignedClassStreamIds.join(', ')
     : 'Assigned Subject Teacher';
 
   // Calculate Roll Call status

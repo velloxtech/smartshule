@@ -13,6 +13,7 @@ interface HeaderProps {
   onSelectStudent?: (student: Student) => void;
   onOpenQuickAction?: (action: string) => void;
   onNavigateLanding?: () => void;
+  onOpenOnboardSchool?: () => void;
   backendConnected?: boolean;
 }
 
@@ -24,6 +25,7 @@ export const Header: React.FC<HeaderProps> = ({
   teachers,
   onSelectStudent,
   onNavigateLanding,
+  onOpenOnboardSchool,
   backendConnected = true,
 }) => {
   const { user, logout } = useAuth();
@@ -224,9 +226,9 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Right Actions: MoE Sync, Alerts, Help, Profile */}
       <div className="flex items-center gap-sm md:gap-md">
-        <div className="hidden sm:flex items-center gap-xs px-sm py-xs rounded-lg bg-surface-container-low text-secondary">
+        <div className="hidden sm:flex items-center gap-xs px-sm py-xs rounded-lg bg-surface-container-low text-secondary border border-secondary/20">
           <span className="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
-          <span className="font-label-md text-label-md font-medium">MoE CBC Synced</span>
+          <span className="font-label-md text-label-md font-medium">Constitution 2010 Aligned</span>
         </div>
 
         {/* Notifications */}
@@ -330,7 +332,7 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
               </div>
               <div className="mt-3 pt-2 border-t border-surface-container text-[11px] text-outline">
-                Grace Seeds School · CBC Portal v2.0
+                {user?.schoolName || 'SmartShule'} · CBC Portal v2.0
               </div>
             </div>
           )}
@@ -384,6 +386,19 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
 
               <div className="py-2 space-y-1">
+                {onOpenOnboardSchool && (
+                  <button
+                    onClick={() => {
+                      setUserMenuOpen(false);
+                      onOpenOnboardSchool();
+                    }}
+                    className="w-full text-left px-3 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-50 rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[16px] text-emerald-600">account_balance</span>
+                    <span>Institution Setup (Constitution)</span>
+                  </button>
+                )}
+
                 {onNavigateLanding && (
                   <button
                     onClick={() => {

@@ -17,4 +17,5 @@ export interface IEDiaryRepository {
   findEntries(filters: EDiaryFilterCriteria): Promise<EDiaryEntry[]>;
   findByStudent(studentId: string, streamId?: string, limit?: number): Promise<EDiaryEntry[]>;
   findByStream(streamId: string, date?: string): Promise<EDiaryEntry[]>;
+  delete(id: string): Promise<void>;
 }

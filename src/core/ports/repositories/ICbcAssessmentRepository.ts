@@ -27,17 +27,20 @@ export interface ICbcAssessmentRepository {
   findStrandById(id: string): Promise<Strand | null>;
   findStrandsByLearningArea(learningAreaId: string, gradeLevel?: CbcGradeLevel): Promise<Strand[]>;
   saveStrand(strand: Strand): Promise<void>;
+  deleteStrand(id: string): Promise<void>;
 
   // SubStrands
   findSubStrandById(id: string): Promise<SubStrand | null>;
   findSubStrandsByStrand(strandId: string): Promise<SubStrand[]>;
   saveSubStrand(subStrand: SubStrand): Promise<void>;
+  deleteSubStrand(id: string): Promise<void>;
 
   // Formative Assessments
   findFormativeById(id: string): Promise<FormativeAssessment | null>;
   findFormatives(filters: FormativeFilterCriteria): Promise<FormativeAssessment[]>;
   saveFormative(assessment: FormativeAssessment): Promise<void>;
   updateFormative(assessment: FormativeAssessment): Promise<void>;
+  deleteFormative(id: string): Promise<void>;
 
   // Summative Assessments
   findSummativeById(id: string): Promise<SummativeAssessment | null>;

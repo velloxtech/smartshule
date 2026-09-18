@@ -14,7 +14,7 @@ export const SetupSchoolSchema = z.object({
   address: z.string().min(1),
   logoUrl: z.string().optional(),
   currency: z.string().default('KES')
-});
+}).passthrough();
 
 export const CreateYearSchema = z.object({
   name: z.string().min(1),
@@ -175,6 +175,33 @@ export class AcademicController {
         schoolId: schoolId as string
       });
       return res.status(200).json({ success: true, data: areas });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public deleteClass = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      await this.academicUseCases.deleteClass(req.params.id as string);
+      return res.status(200).json({ success: true, message: 'Class deleted successfully' });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public deleteStream = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      await this.academicUseCases.deleteStream(req.params.id as string);
+      return res.status(200).json({ success: true, message: 'Stream deleted successfully' });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public deleteLearningArea = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      await this.academicUseCases.deleteLearningArea(req.params.id as string);
+      return res.status(200).json({ success: true, message: 'Learning area deleted successfully' });
     } catch (err) {
       next(err);
     }

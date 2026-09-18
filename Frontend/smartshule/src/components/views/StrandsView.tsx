@@ -4,7 +4,7 @@ import { BackendLearningArea, BackendStrand, BackendSubStrand } from '../../type
 
 export const StrandsView: React.FC = () => {
   const [learningAreas, setLearningAreas] = useState<BackendLearningArea[]>([]);
-  const [selectedAreaId, setSelectedAreaId] = useState<string>('la-science-7');
+  const [selectedAreaId, setSelectedAreaId] = useState<string>('');
   const [strands, setStrands] = useState<BackendStrand[]>([]);
   const [subStrandsMap, setSubStrandsMap] = useState<Record<string, BackendSubStrand[]>>({});
   const [loading, setLoading] = useState(false);
@@ -30,20 +30,23 @@ export const StrandsView: React.FC = () => {
           setLearningAreas(res.data);
           setSelectedAreaId(res.data[0].id);
         } else {
-          setLearningAreas([
-            { id: 'la-science-7', name: 'Integrated Science', code: 'SCIE7', gradeLevel: 'GRADE_7', educationLevel: 'JUNIOR_SCHOOL', isElective: false, schoolId: 'school-001' },
-            { id: 'la-math-7', name: 'Mathematics', code: 'MATH7', gradeLevel: 'GRADE_7', educationLevel: 'JUNIOR_SCHOOL', isElective: false, schoolId: 'school-001' }
-          ]);
+          setLearningAreas([]);
+          setSelectedAreaId('');
         }
       } catch {
-        // Fallback
+        setLearningAreas([]);
+        setSelectedAreaId('');
       }
     }
     loadAreas();
   }, []);
 
   const loadStrands = async (areaId: string) => {
-    if (!areaId) return;
+    if (!areaId) {
+      setStrands([]);
+      setSubStrandsMap({});
+      return;
+    }
     setLoading(true);
     try {
       const res = await apiService.getStrandsByLearningArea(areaId);
@@ -57,11 +60,47 @@ export const StrandsView: React.FC = () => {
           }
         }
         setSubStrandsMap(subMap);
+      } else {
+        setStrands([]);
+        setSubStrandsMap({});
       }
     } catch {
-      // Fallback
+      setStrands([]);
+      setSubStrandsMap({});
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteStrand = async (strandId: string, title: string) => {
+    if (window.confirm(`Are you sure you want to delete strand "${title}"? This will remove all associated sub-strands.`)) {
+      try {
+        const res = await apiService.deleteStrand(strandId);
+        if (res.success) {
+          setStrands((prev) => prev.filter((s) => s.id !== strandId));
+          const updated = { ...subStrandsMap };
+          delete updated[strandId];
+          setSubStrandsMap(updated);
+        }
+      } catch (err: any) {
+        alert(err.message || 'Failed to delete strand');
+      }
+    }
+  };
+
+  const handleDeleteSubStrand = async (subStrandId: string, title: string, strandId: string) => {
+    if (window.confirm(`Are you sure you want to delete sub-strand "${title}"?`)) {
+      try {
+        const res = await apiService.deleteSubStrand(subStrandId);
+        if (res.success) {
+          setSubStrandsMap((prev) => ({
+            ...prev,
+            [strandId]: (prev[strandId] || []).filter((sub) => sub.id !== subStrandId),
+          }));
+        }
+      } catch (err: any) {
+        alert(err.message || 'Failed to delete sub-strand');
+      }
     }
   };
 
@@ -205,8 +244,17 @@ export const StrandsView: React.FC = () => {
                         {subStrands.map((sub) => (
                           <li key={sub.id} className="p-2.5 rounded bg-surface-container-low space-y-1">
                             <div className="flex items-center justify-between">
-                              <span className="font-bold text-primary font-data-mono text-[11px]">{sub.code}</span>
-                              <span className="font-semibold text-on-surface text-xs">{sub.title}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-primary font-data-mono text-[11px]">{sub.code}</span>
+                                <span className="font-semibold text-on-surface text-xs">{sub.title}</span>
+                              </div>
+                              <button
+                                onClick={() => handleDeleteSubStrand(sub.id, sub.title, st.id)}
+                                title="Delete Sub-strand"
+                                className="p-1 rounded text-outline hover:text-error hover:bg-error/10 transition-colors cursor-pointer"
+                              >
+                                <span className="material-symbols-outlined text-[14px]">delete</span>
+                              </button>
                             </div>
                             {sub.specificLearningOutcomes?.map((outcome, idx) => (
                               <div key={idx} className="text-[11px] text-on-surface-variant flex items-start gap-1.5 pl-1">
@@ -225,8 +273,16 @@ export const StrandsView: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-surface-container text-[10px] text-outline font-data-mono">
-                  Strand ID: {st.id}
+                <div className="pt-2 border-t border-surface-container flex items-center justify-between text-[10px] text-outline font-data-mono">
+                  <span>Strand ID: {st.id}</span>
+                  <button
+                    onClick={() => handleDeleteStrand(st.id, st.title)}
+                    title="Delete Strand"
+                    className="text-xs text-error hover:underline flex items-center gap-1 cursor-pointer font-sans"
+                  >
+                    <span className="material-symbols-outlined text-[14px]">delete</span>
+                    <span>Delete Strand</span>
+                  </button>
                 </div>
               </div>
             );

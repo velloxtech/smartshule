@@ -152,7 +152,7 @@ export class WhatsAppService {
       return {
         to: senderPhone,
         replyText:
-          `👋 *Jambo! Welcome to Grace Seed Academy CBC Portal.*\n\n` +
+          `👋 *Jambo! Welcome to Grace Seeds School CBC Portal.*\n\n` +
           `We could not find an enrolled student record linked to your phone number (${senderPhone}).\n\n` +
           `To link your WhatsApp number to your child's CBC profile, please contact the School Admissions Desk at *+254 712 345 678* or email *admin@smartshule.ac.ke*.`,
         intent: 'UNREGISTERED',
@@ -414,7 +414,7 @@ export class WhatsAppService {
 
     const defaultMenu =
       `👋 *Jambo ${firstName}!*\n` +
-      `Welcome to *Grace Seed Academy CBC Portal* on WhatsApp.\n\n` +
+      `Welcome to *Grace Seeds School CBC Portal* on WhatsApp.\n\n` +
       `${studentListHeader}\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
       `Please reply with a number or command name:\n\n` +
@@ -488,7 +488,7 @@ export class WhatsAppService {
       }
 
       const reply =
-        `💰 *FEES STATEMENT · Grace Seed Academy*\n` +
+        `💰 *FEES STATEMENT · Grace Seeds School*\n` +
         `━━━━━━━━━━━━━━━━━━━━\n` +
         `👤 *Learner:* ${student.fullName} (Adm: ${student.admissionNumber})\n` +
         `📚 *Grade:* ${student.gradeLevel}\n\n` +
@@ -538,7 +538,7 @@ export class WhatsAppService {
     }
 
     const reply =
-      `💰 *FAMILY FEES STATEMENT · Grace Seed Academy*\n` +
+      `💰 *FAMILY FEES STATEMENT · Grace Seeds School*\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
       `Dear ${firstName}, here is the fee summary for your linked learners:\n\n` +
       studentBreakdowns.join('\n\n') +
@@ -581,7 +581,7 @@ export class WhatsAppService {
       `💵 *Amount Due:* *KES ${balance.toLocaleString()}*\n\n` +
       `🏦 *Direct Bank Transfer Details:*\n` +
       `• *Bank:* Stanbic Bank Kenya (Paystack Escrow)\n` +
-      `• *Account Name:* Grace Seed Academy - ${admissionNo}\n` +
+      `• *Account Name:* Grace Seeds School - ${admissionNo}\n` +
       `• *Account No:* 9928172049\n\n` +
       `📱 *M-Pesa Paybill Option:*\n` +
       `• *Business No / Paybill:* 247247\n` +
@@ -622,7 +622,7 @@ export class WhatsAppService {
 
     const latest = entries[0];
     const reply =
-      `📖 *eDIARY & HOMEWORK · Grace Seed Academy*\n` +
+      `📖 *eDIARY & HOMEWORK · Grace Seeds School*\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
       `👤 *Learner:* ${student.fullName} (${student.gradeLevel})\n` +
       `📅 *Date:* ${latest.date}\n` +
@@ -904,7 +904,7 @@ export class WhatsAppService {
     }
 
     const reply =
-      `❓ *PARENT HELP DESK · Grace Seed Academy*\n` +
+      `❓ *PARENT HELP DESK · Grace Seeds School*\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
       `Dear ${firstName},\n\n` +
       `You can ask homework questions or upload textbook/problem photos directly to teachers using the *SmartShule Visual Help Desk* on your Parent Portal.\n\n` +

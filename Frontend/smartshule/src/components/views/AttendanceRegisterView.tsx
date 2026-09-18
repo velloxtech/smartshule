@@ -286,7 +286,7 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
         <div className="flex items-center justify-between border-b border-surface-container pb-3">
           <div>
             <h3 className="font-bold text-base text-[#7a1228]">Daily Morning Roll-Call Register</h3>
-            <p className="text-xs text-on-surface-variant">{teacherDisplayName} · Grade 7 East</p>
+            <p className="text-xs text-on-surface-variant">{teacherDisplayName} · {getAssignedDisplayName()}</p>
           </div>
           <span className="px-3 py-1 rounded bg-secondary-container text-on-secondary-container text-xs font-bold">
             Live Register Active

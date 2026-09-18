@@ -322,7 +322,7 @@ export class WhatsAppController {
     return res.status(200).json({
       success: true,
       data: {
-        botName: 'Grace Seed Academy CBC WhatsApp Assistant',
+        botName: 'Grace Seeds School CBC WhatsApp Assistant',
         businessPhone: status.connectedPhone || '+254 712 345 678',
         connectionStatus: status.status,
         connectedPhone: status.connectedPhone,

@@ -23,22 +23,59 @@ export const ClassesView: React.FC = () => {
     setLoading(true);
     try {
       const res = await apiService.getClasses();
-      if (res.success && res.data?.length) {
-        setClasses(res.data);
+      if (res.success) {
+        const classList = res.data || [];
+        setClasses(classList);
         // Fetch streams for all classes
         const streamEntries: Record<string, StreamItem[]> = {};
-        for (const c of res.data) {
+        for (const c of classList) {
           const streamRes = await apiService.getStreamsByClass(c.id);
           if (streamRes.success) {
-            streamEntries[c.id] = streamRes.data;
+            streamEntries[c.id] = streamRes.data || [];
           }
         }
         setStreamsMap(streamEntries);
+      } else {
+        setClasses([]);
+        setStreamsMap({});
       }
     } catch {
-      // Keep fallback
+      setClasses([]);
+      setStreamsMap({});
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteClass = async (id: string, name: string) => {
+    if (window.confirm(`Are you sure you want to delete class "${name}"? This action cannot be undone.`)) {
+      try {
+        const res = await apiService.deleteClass(id);
+        if (res.success) {
+          setClasses(prev => prev.filter(c => c.id !== id));
+          const updated = { ...streamsMap };
+          delete updated[id];
+          setStreamsMap(updated);
+        }
+      } catch (err: any) {
+        alert(err.message || 'Failed to delete class');
+      }
+    }
+  };
+
+  const handleDeleteStream = async (streamId: string, streamName: string, classId: string) => {
+    if (window.confirm(`Are you sure you want to delete stream "${streamName}"?`)) {
+      try {
+        const res = await apiService.deleteStream(streamId);
+        if (res.success) {
+          setStreamsMap(prev => ({
+            ...prev,
+            [classId]: (prev[classId] || []).filter(s => s.id !== streamId),
+          }));
+        }
+      } catch (err: any) {
+        alert(err.message || 'Failed to delete stream');
+      }
     }
   };
 
@@ -154,7 +191,16 @@ export const ClassesView: React.FC = () => {
                               className="flex items-center justify-between p-2 rounded bg-surface-container-low"
                             >
                               <span className="font-bold text-on-surface">Stream {s.name}</span>
-                              <span className="font-data-mono text-outline">Cap: {s.capacity} learners</span>
+                              <div className="flex items-center gap-2">
+                                <span className="font-data-mono text-outline">Cap: {s.capacity} learners</span>
+                                <button
+                                  onClick={() => handleDeleteStream(s.id, s.name, c.id)}
+                                  title="Delete Stream"
+                                  className="p-1 rounded text-outline hover:text-error hover:bg-error/10 transition-colors cursor-pointer"
+                                >
+                                  <span className="material-symbols-outlined text-[14px]">delete</span>
+                                </button>
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -175,7 +221,17 @@ export const ClassesView: React.FC = () => {
                       <span className="material-symbols-outlined text-[14px]">add</span>
                       <span>Add Stream</span>
                     </button>
-                    <span className="text-[10px] text-outline font-data-mono">{c.id}</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleDeleteClass(c.id, c.name)}
+                        title="Delete Class"
+                        className="text-xs text-outline hover:text-error hover:bg-error/10 p-1 rounded transition-colors cursor-pointer flex items-center gap-1"
+                      >
+                        <span className="material-symbols-outlined text-[14px]">delete</span>
+                        <span>Delete</span>
+                      </button>
+                      <span className="text-[10px] text-outline font-data-mono">{c.id}</span>
+                    </div>
                   </div>
                 </div>
               );

@@ -3,6 +3,7 @@ import { Student, CBCRubric, UserRole } from '../../types';
 import { EditStudentModal } from '../modals/EditStudentModal';
 import { LearnerProfileModal } from '../modals/LearnerProfileModal';
 import { useAuth } from '../../context/AuthContext';
+import { apiService } from '../../services/api';
 
 interface StudentsViewProps {
   students: Student[];
@@ -11,6 +12,7 @@ interface StudentsViewProps {
   onOpenAdmitModal: () => void;
   onViewReportCard: (student: Student) => void;
   onUpdateStudent?: (student: Student) => void;
+  onDeleteStudent?: (studentId: string) => void;
 }
 
 export const StudentsView: React.FC<StudentsViewProps> = ({
@@ -20,6 +22,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
   onOpenAdmitModal,
   onViewReportCard,
   onUpdateStudent,
+  onDeleteStudent,
 }) => {
   const { user } = useAuth();
   const isTeacher = user?.role === UserRole.TEACHER;
@@ -29,6 +32,23 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
   const [selectedRating, setSelectedRating] = useState('All');
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [profileStudent, setProfileStudent] = useState<Student | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDeleteStudent = async (s: Student) => {
+    if (window.confirm(`Are you sure you want to delete ${s.name} (Adm: ${s.admNo})? This action cannot be undone.`)) {
+      setDeletingId(s.id);
+      try {
+        const res = await apiService.deleteStudent(s.id);
+        if (res.success) {
+          onDeleteStudent?.(s.id);
+        }
+      } catch (err: any) {
+        alert(err.message || 'Failed to delete student');
+      } finally {
+        setDeletingId(null);
+      }
+    }
+  };
 
   const grades = ['All', 'PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8'];
   const ratings = ['All', 'EE', 'ME', 'AE', 'BE'];
@@ -68,11 +88,17 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
             <span>/</span>
             <span className="text-primary font-semibold">Students & Guardians</span>
           </div>
-          <h1 className="font-headline-lg text-headline-lg text-on-surface mt-1">
-            CBC Learner Directory & Profiles
-          </h1>
+          <div className="flex items-center gap-2 mt-1">
+            <h1 className="font-headline-lg text-headline-lg text-on-surface">
+              CBC Learner Directory & Profiles
+            </h1>
+            <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-bold">
+              <span className="material-symbols-outlined text-[14px]">verified</span>
+              <span>Articles 53 & 54 Compliant</span>
+            </span>
+          </div>
           <p className="text-xs text-on-surface-variant mt-0.5">
-            Ministry of Education NEMIS & Biometric verified student registry
+            Ministry of Education NEMIS & Biometric verified student registry · Constitution of Kenya 2010
           </p>
         </div>
 
@@ -82,7 +108,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
             className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-lg hover:bg-primary-container text-sm font-semibold shadow-md transition-all self-start sm:self-auto cursor-pointer"
           >
             <span className="material-symbols-outlined text-[18px]">person_add</span>
-            <span>Admit New Learner</span>
+            <span>Admit Learner (Art. 53)</span>
           </button>
         )}
       </div>
@@ -173,7 +199,14 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                           .join('') || 'ST'}
                       </div>
                       <div>
-                        <div className="font-semibold text-on-surface">{s.name}</div>
+                        <div className="font-semibold text-on-surface flex items-center gap-1.5">
+                          <span>{s.name}</span>
+                          {s.specialNeeds && s.specialNeeds.includes('Article 54') && (
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-200" title={s.specialNeeds}>
+                              Art. 54 SNE
+                            </span>
+                          )}
+                        </div>
                         <div className="text-xs text-on-surface-variant font-data-mono">
                           Adm #{s.admNo} · {s.gender}
                         </div>
@@ -254,13 +287,25 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                       )}
 
                       {!isTeacher && (
-                        <button
-                          onClick={() => setEditingStudent(s)}
-                          title="Edit Profile & Link Guardian"
-                          className="p-1.5 rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors cursor-pointer"
-                        >
-                          <span className="material-symbols-outlined text-[18px]">manage_accounts</span>
-                        </button>
+                        <>
+                          <button
+                            onClick={() => setEditingStudent(s)}
+                            title="Edit Profile & Link Guardian"
+                            className="p-1.5 rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors cursor-pointer"
+                          >
+                            <span className="material-symbols-outlined text-[18px]">manage_accounts</span>
+                          </button>
+                          <button
+                            onClick={() => handleDeleteStudent(s)}
+                            disabled={deletingId === s.id}
+                            title="Delete Learner Record"
+                            className="p-1.5 rounded-lg text-on-surface-variant hover:text-error hover:bg-error/10 transition-colors cursor-pointer disabled:opacity-50"
+                          >
+                            <span className="material-symbols-outlined text-[18px]">
+                              {deletingId === s.id ? 'sync' : 'delete'}
+                            </span>
+                          </button>
+                        </>
                       )}
                     </div>
                   </td>

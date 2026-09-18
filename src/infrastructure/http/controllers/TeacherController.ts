@@ -15,7 +15,7 @@ export const RegisterTeacherSchema = z.object({
   specialization: z.array(z.string()).min(1),
   assignedClassStreamIds: z.array(z.string()).optional(),
   qualification: z.string().optional()
-});
+}).passthrough();
 
 export const AssignStreamSchema = z.object({
   teacherId: z.string().min(1),
@@ -88,6 +88,18 @@ export class TeacherController {
         success: true,
         message: 'Stream assigned to teacher',
         data: result
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public deleteTeacher = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      await this.teacherUseCases.deleteTeacher(req.params.id as string);
+      return res.status(200).json({
+        success: true,
+        message: 'Teacher deleted successfully'
       });
     } catch (err) {
       next(err);

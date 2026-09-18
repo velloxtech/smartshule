@@ -12,13 +12,28 @@ export const FeeStructureView: React.FC = () => {
     setLoading(true);
     try {
       const res = await apiService.getFeeStructures();
-      if (res.success && res.data?.length) {
-        setStructures(res.data);
+      if (res.success) {
+        setStructures(res.data || []);
+      } else {
+        setStructures([]);
       }
     } catch {
-      // Fallback
+      setStructures([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteFeeStructure = async (id: string, title: string) => {
+    if (window.confirm(`Are you sure you want to delete fee structure "${title}"? This cannot be undone.`)) {
+      try {
+        const res = await apiService.deleteFeeStructure(id);
+        if (res.success) {
+          setStructures((prev) => prev.filter((s) => s.id !== id));
+        }
+      } catch (err: any) {
+        alert(err.message || 'Failed to delete fee structure');
+      }
     }
   };
 
@@ -114,6 +129,18 @@ export const FeeStructureView: React.FC = () => {
                     </div>
                   </div>
                 </div>
+
+                <div className="mt-3 pt-3 border-t border-surface-container flex items-center justify-between text-xs">
+                  <span className="text-[10px] text-outline font-data-mono">{s.id}</span>
+                  <button
+                    onClick={() => handleDeleteFeeStructure(s.id, s.title)}
+                    title="Delete Fee Structure"
+                    className="p-1 rounded text-outline hover:text-error hover:bg-error/10 transition-colors cursor-pointer flex items-center gap-1 text-xs"
+                  >
+                    <span className="material-symbols-outlined text-[14px]">delete</span>
+                    <span>Delete</span>
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -133,6 +160,7 @@ export const FeeStructureView: React.FC = () => {
                       <th className="py-3 px-4">Due Date</th>
                       <th className="py-3 px-4 text-center">Items Count</th>
                       <th className="py-3 px-4 text-right font-bold text-primary">Total Term Fee</th>
+                      <th className="py-3 px-4 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-surface-container text-xs">
@@ -146,6 +174,15 @@ export const FeeStructureView: React.FC = () => {
                         <td className="py-3.5 px-4 text-center font-data-mono">{s.items?.length ?? 0} items</td>
                         <td className="py-3.5 px-4 font-data-mono font-bold text-primary text-sm text-right">
                           KES {s.totalAmount?.toLocaleString()}
+                        </td>
+                        <td className="py-3.5 px-4 text-right">
+                          <button
+                            onClick={() => handleDeleteFeeStructure(s.id, s.title)}
+                            title="Delete Fee Structure"
+                            className="p-1 rounded text-outline hover:text-error hover:bg-error/10 transition-colors cursor-pointer"
+                          >
+                            <span className="material-symbols-outlined text-[16px]">delete</span>
+                          </button>
                         </td>
                       </tr>
                     ))}

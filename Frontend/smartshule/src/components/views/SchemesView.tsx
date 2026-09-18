@@ -84,6 +84,32 @@ export const SchemesView: React.FC = () => {
     }
   };
 
+  const handleDeleteScheme = async (schemeId: string, title: string) => {
+    if (window.confirm(`Are you sure you want to delete scheme "${title}"?`)) {
+      try {
+        const res = await apiService.deleteScheme(schemeId);
+        if (res.success) {
+          setSchemes((prev) => prev.filter((s) => s.id !== schemeId));
+        }
+      } catch (err: any) {
+        alert(err.message || 'Error deleting scheme');
+      }
+    }
+  };
+
+  const handleDeleteLessonPlan = async (planId: string, title: string) => {
+    if (window.confirm(`Are you sure you want to delete lesson plan "${title}"?`)) {
+      try {
+        const res = await apiService.deleteLessonPlan(planId);
+        if (res.success) {
+          setLessonPlans((prev) => prev.filter((lp) => lp.id !== planId));
+        }
+      } catch (err: any) {
+        alert(err.message || 'Error deleting lesson plan');
+      }
+    }
+  };
+
   return (
     <div className="space-y-6 pb-12">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -204,7 +230,7 @@ export const SchemesView: React.FC = () => {
                     {s.status}
                   </span>
 
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 items-center">
                     {s.status === 'DRAFT' && (
                       <button
                         onClick={() => handleSubmitScheme(s.id)}
@@ -221,6 +247,13 @@ export const SchemesView: React.FC = () => {
                         Approve & Endorse
                       </button>
                     )}
+                    <button
+                      onClick={() => handleDeleteScheme(s.id, s.title)}
+                      title="Delete Scheme"
+                      className="p-1 rounded text-outline hover:text-error hover:bg-error/10 transition-colors cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">delete</span>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -273,7 +306,14 @@ export const SchemesView: React.FC = () => {
                   </div>
 
                   <div className="mt-3 pt-3 border-t border-surface-container flex items-center justify-between">
-                    <span className="text-[10px] text-outline font-data-mono">{lp.id}</span>
+                    <button
+                      onClick={() => handleDeleteLessonPlan(lp.id, lp.strand)}
+                      title="Delete Lesson Plan"
+                      className="p-1 rounded text-outline hover:text-error hover:bg-error/10 transition-colors cursor-pointer flex items-center gap-1 text-xs"
+                    >
+                      <span className="material-symbols-outlined text-[14px]">delete</span>
+                      <span>Delete</span>
+                    </button>
                     <button
                       onClick={() => setSelectedPlan(lp)}
                       className="text-xs font-bold text-primary hover:underline flex items-center gap-1 cursor-pointer"

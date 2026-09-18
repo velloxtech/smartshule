@@ -14,6 +14,10 @@ export type TabType =
   | 'fee-structure'
   | 'invoices-mpesa'
   | 'defaulters-receipts'
+  | 'cashflow-ledger'
+  | 'expenses-management'
+  | 'capitation-income'
+  | 'financial-reports'
   | 'ediary'
   | 'visual-cbc'
   | 'whatsapp-bot';
@@ -588,6 +592,121 @@ export interface FinanceSummaryData {
   paymentCount: number;
   recentPayments: FeePaymentReceipt[];
   isGuardian?: boolean;
+}
+
+export type ExpenseCategoryType =
+  | 'SALARIES_WAGES'
+  | 'CBC_LEARNING_MATERIALS'
+  | 'UTILITIES_BILLS'
+  | 'MEALS_FEEDING'
+  | 'REPAIRS_MAINTENANCE'
+  | 'TRANSPORT_FUEL'
+  | 'ADMIN_OFFICE'
+  | 'KNEC_EXAMS'
+  | 'CO_CURRICULAR'
+  | 'CAPITAL_DEVELOPMENT'
+  | 'OTHER_EXPENSES';
+
+export type ExpenseStatusType = 'PAID' | 'APPROVED' | 'PENDING' | 'REJECTED';
+
+export interface ExpenseRecord {
+  id: string;
+  schoolId: string;
+  voucherNumber: string;
+  category: ExpenseCategoryType;
+  title: string;
+  amount: number;
+  paymentMethod: 'MPESA' | 'BANK_TRANSFER' | 'BANK_DEPOSIT' | 'CHEQUE' | 'CASH' | 'CARD' | 'PAYSTACK';
+  paymentReference: string;
+  payee: string;
+  expenseDate: string;
+  status: ExpenseStatusType;
+  notes?: string;
+  recordedByUserId: string;
+  approvedByUserId?: string;
+  receiptUrl?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type IncomeSourceType =
+  | 'FEES_COLLECTION'
+  | 'GOVERNMENT_CAPITATION_FPE'
+  | 'GOVERNMENT_CAPITATION_JSS'
+  | 'UNIFORM_SALES'
+  | 'BUS_FACILITY_HIRE'
+  | 'DONATIONS_GRANTS'
+  | 'EXAM_REVISION_BOOKS'
+  | 'OTHER_INCOME';
+
+export interface OtherIncomeRecord {
+  id: string;
+  schoolId: string;
+  receiptNumber: string;
+  source: IncomeSourceType;
+  title: string;
+  amount: number;
+  paymentMethod: 'MPESA' | 'BANK_TRANSFER' | 'BANK_DEPOSIT' | 'CHEQUE' | 'CASH' | 'CARD' | 'PAYSTACK';
+  paymentReference: string;
+  receivedFrom: string;
+  incomeDate: string;
+  notes?: string;
+  recordedByUserId: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface AccountBalanceDetail {
+  balance: number;
+  opening: number;
+  inflows: number;
+  outflows: number;
+}
+
+export interface VoteHeadSummary {
+  category: ExpenseCategoryType;
+  totalSpent: number;
+  transactionCount: number;
+  percentage: number;
+}
+
+export interface IncomeSourceSummary {
+  source: string;
+  totalAmount: number;
+  count: number;
+  percentage: number;
+}
+
+export interface LedgerEntry {
+  id: string;
+  date: string;
+  type: 'INFLOW' | 'OUTFLOW';
+  category: string;
+  title: string;
+  party: string;
+  amount: number;
+  paymentMethod: string;
+  reference: string;
+  status: string;
+}
+
+export interface CashFlowLedgerData {
+  totalMoneyIn: number;
+  totalMoneyOut: number;
+  netCashFlow: number;
+  isSurplus: boolean;
+  feeInflow: number;
+  otherInflow: number;
+  accountBalances: {
+    bank: AccountBalanceDetail;
+    mpesa: AccountBalanceDetail;
+    pettyCash: AccountBalanceDetail;
+    totalLiquidCash: number;
+  };
+  voteHeadBreakdown: VoteHeadSummary[];
+  incomeBreakdown: IncomeSourceSummary[];
+  recentLedger: LedgerEntry[];
+  totalLedgerCount: number;
 }
 
 export interface ParentHelpRequest {

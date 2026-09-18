@@ -393,4 +393,16 @@ export class CbcAssessmentUseCases {
       subjectAnalytics
     };
   }
+
+  public async deleteStrand(id: string): Promise<void> {
+    await this.cbcRepository.deleteStrand(id);
+  }
+
+  public async deleteSubStrand(id: string): Promise<void> {
+    await this.cbcRepository.deleteSubStrand(id);
+  }
+
+  public async deleteFormative(id: string): Promise<void> {
+    await this.cbcRepository.deleteFormative(id);
+  }
 }

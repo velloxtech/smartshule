@@ -27,6 +27,7 @@ export interface IAcademicRepository {
   findClassById(id: string): Promise<ClassRoom | null>;
   findAllClasses(schoolId?: string): Promise<ClassRoom[]>;
   saveClass(classRoom: ClassRoom): Promise<void>;
+  deleteClass(id: string): Promise<void>;
 
   // Streams
   findStreamById(id: string): Promise<Stream | null>;
@@ -34,9 +35,11 @@ export interface IAcademicRepository {
   findAllStreams(): Promise<Stream[]>;
   saveStream(stream: Stream): Promise<void>;
   updateStream(stream: Stream): Promise<void>;
+  deleteStream(id: string): Promise<void>;
 
   // Learning Areas
   findLearningAreaById(id: string): Promise<LearningArea | null>;
   findAllLearningAreas(filters?: { gradeLevel?: CbcGradeLevel; schoolId?: string }): Promise<LearningArea[]>;
   saveLearningArea(area: LearningArea): Promise<void>;
+  deleteLearningArea(id: string): Promise<void>;
 }

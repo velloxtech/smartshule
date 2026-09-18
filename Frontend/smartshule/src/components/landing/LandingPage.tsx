@@ -4,12 +4,14 @@ interface LandingPageProps {
   onNavigateLogin: () => void;
   isAuthenticated?: boolean;
   onNavigatePortal?: () => void;
+  onOpenOnboardSchool?: () => void;
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({
   onNavigateLogin,
   isAuthenticated = false,
   onNavigatePortal,
+  onOpenOnboardSchool,
 }) => {
   const [activePortalTab, setActivePortalTab] = useState<'admin' | 'teacher' | 'finance' | 'parent'>('admin');
 
@@ -79,7 +81,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       {/* Top Notification Banner */}
       <div className="bg-[#7a1228] text-white text-xs py-2 px-4 text-center font-medium flex items-center justify-center gap-2">
         <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-        <span>Competency-Based Curriculum Framework & Automated Assessment CBA Bridge Active</span>
+        <span>Competency-Based Curriculum Framework & Automated Assessment CBA Bridge Active · Kenyan Constitution (2010) Compliant</span>
       </div>
 
       {/* Navigation Bar */}
@@ -91,20 +93,34 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
             <div>
               <div className="font-bold text-xl tracking-tight text-[#7a1228] leading-none">
-                Grace Seeds School
+                SmartShule
               </div>
               <p className="text-[11px] text-slate-500 font-medium">Competency-Based Curriculum System</p>
             </div>
           </div>
 
-          <nav className="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-600">
+          <nav className="hidden lg:flex items-center gap-7 text-sm font-semibold text-slate-600">
             <a href="#features" className="hover:text-[#7a1228] transition-colors">Key Features</a>
+            <a href="#constitution" className="hover:text-[#7a1228] transition-colors flex items-center gap-1">
+              <span className="material-symbols-outlined text-[16px] text-emerald-600">verified</span>
+              <span>Constitution 2010</span>
+            </a>
             <a href="#portals" className="hover:text-[#7a1228] transition-colors">Role Portals</a>
             <a href="#cbc-framework" className="hover:text-[#7a1228] transition-colors">CBC Rubrics</a>
             <a href="#mpesa" className="hover:text-[#7a1228] transition-colors">M-Pesa STK</a>
           </nav>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
+            {onOpenOnboardSchool && (
+              <button
+                onClick={onOpenOnboardSchool}
+                className="hidden sm:flex items-center gap-1.5 px-3.5 py-2 bg-rose-50 hover:bg-rose-100/80 text-[#7a1228] font-bold text-xs rounded-xl border border-rose-200 shadow-xs cursor-pointer transition-all"
+              >
+                <span className="material-symbols-outlined text-[16px] text-emerald-600">account_balance</span>
+                <span>Onboard School</span>
+              </button>
+            )}
+
             <button
               onClick={isAuthenticated && onNavigatePortal ? onNavigatePortal : onNavigateLogin}
               className="px-5 py-2.5 bg-[#7a1228] hover:bg-[#5c0a1a] text-white font-semibold text-sm rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer"
@@ -124,11 +140,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <div className="text-center max-w-3xl mx-auto">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-rose-100/80 border border-rose-200 text-[#7a1228] text-xs font-semibold mb-6">
               <span className="material-symbols-outlined text-[16px] text-[#006a63]">verified</span>
-              <span>Aligned with Competency-Based Curriculum Standards (CBC)</span>
+              <span>Constitution of Kenya (2010) & KICD CBC Standards Aligned</span>
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 leading-[1.15]">
-              Intelligent School Management Built for <span className="text-[#7a1228]">Grace Seeds School</span>
+              Intelligent School Management Built for <span className="text-[#7a1228]">Kenyan CBC Schools</span>
             </h1>
 
             <p className="mt-6 text-lg sm:text-xl text-slate-600 leading-relaxed">
@@ -145,11 +161,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <span>{isAuthenticated ? 'Return to Dashboard' : 'Launch School Portal'}</span>
               </button>
 
+              {onOpenOnboardSchool && (
+                <button
+                  onClick={onOpenOnboardSchool}
+                  className="w-full sm:w-auto px-7 py-4 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 text-base cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[20px]">account_balance</span>
+                  <span>Onboard School (Constitution 2010)</span>
+                </button>
+              )}
+
               <a
-                href="#portals"
-                className="w-full sm:w-auto px-7 py-4 bg-white hover:bg-slate-50 text-slate-700 font-semibold rounded-2xl border border-slate-300 shadow-xs hover:border-slate-400 transition-all flex items-center justify-center gap-2 text-base"
+                href="#constitution"
+                className="w-full sm:w-auto px-6 py-4 bg-white hover:bg-slate-50 text-slate-700 font-semibold rounded-2xl border border-slate-300 shadow-xs hover:border-slate-400 transition-all flex items-center justify-center gap-2 text-base"
               >
-                <span>View Role-Based Portals</span>
+                <span>Constitutional Framework</span>
                 <span className="material-symbols-outlined text-[18px]">arrow_downward</span>
               </a>
             </div>
@@ -270,6 +296,194 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </div>
       </section>
 
+      {/* Kenyan Constitution Compliance Framework Section */}
+      <section id="constitution" className="py-20 bg-gradient-to-b from-slate-50 via-rose-50/30 to-slate-50 border-t border-slate-200 relative overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#7a1228]/10 border border-[#7a1228]/20 text-[#7a1228] text-xs font-bold mb-4 uppercase tracking-wider">
+              <span className="material-symbols-outlined text-[16px]">gavel</span>
+              <span>Constitutional Legal Grounding</span>
+            </div>
+            <h2 className="text-3xl font-extrabold text-slate-900 sm:text-4xl">
+              Anchored in the Constitution of Kenya (2010)
+            </h2>
+            <p className="mt-4 text-base text-slate-600 leading-relaxed">
+              SmartShule is engineered from the ground up to uphold the supreme law of the Republic of Kenya.
+              Every learner admission, educator onboarding, and institutional workflow strictly honors constitutional safeguards.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Pillar 1: Article 53 */}
+            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-12 h-12 rounded-2xl bg-rose-100 text-[#7a1228] flex items-center justify-center font-bold">
+                    <span className="material-symbols-outlined text-[26px]">child_care</span>
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-rose-50 text-[#7a1228] border border-rose-200">
+                    Art. 53 · Children's Rights
+                  </span>
+                </div>
+                <h3 className="text-lg font-bold text-slate-900 mb-2">
+                  Best Interests & Compulsory Education
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed space-y-1.5">
+                  Guarantees every child a name and nationality from birth via Birth Certificate validation for automated NEMIS UPI. Enforces Article 53(1)(b) right to basic education and Article 53(2) paramount best interests principle.
+                </p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2 text-[11px] font-semibold text-emerald-700">
+                <span className="material-symbols-outlined text-[16px]">verified</span>
+                <span>Zero Corporal Punishment (Sec 36)</span>
+              </div>
+            </div>
+
+            {/* Pillar 2: Article 237 */}
+            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-12 h-12 rounded-2xl bg-teal-100 text-teal-800 flex items-center justify-center font-bold">
+                    <span className="material-symbols-outlined text-[26px]">badge</span>
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-teal-50 text-teal-800 border border-teal-200">
+                    Art. 237 · TSC Mandate
+                  </span>
+                </div>
+                <h3 className="text-lg font-bold text-slate-900 mb-2">
+                  Teachers Service Commission Prerequisite
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Under Article 237(2), no educator is onboarded without a verified TSC Registration Number and KICD Competency-Based Assessment (CBA) training credentials.
+                </p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2 text-[11px] font-semibold text-teal-800">
+                <span className="material-symbols-outlined text-[16px]">check_circle</span>
+                <span>Mandatory TSC Registration Check</span>
+              </div>
+            </div>
+
+            {/* Pillar 3: Article 54 */}
+            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
+                    <span className="material-symbols-outlined text-[26px]">accessible_forward</span>
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                    Art. 54 · Special Needs
+                  </span>
+                </div>
+                <h3 className="text-lg font-bold text-slate-900 mb-2">
+                  Inclusive Education & Disability Accommodations
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Integrated with Kenya Institute of Special Education (KISE) protocols. Supports Braille, Kenyan Sign Language (KSL), mobility access, and personalized neurodiverse learning tracks.
+                </p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2 text-[11px] font-semibold text-emerald-800">
+                <span className="material-symbols-outlined text-[16px]">accessibility_new</span>
+                <span>KISE Inclusive CBC Standards</span>
+              </div>
+            </div>
+
+            {/* Pillar 4: Article 31 & DPA 2019 */}
+            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-100 text-indigo-800 flex items-center justify-center font-bold">
+                    <span className="material-symbols-outlined text-[26px]">lock</span>
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-800 border border-indigo-200">
+                    Art. 31 · Data Privacy
+                  </span>
+                </div>
+                <h3 className="text-lg font-bold text-slate-900 mb-2">
+                  Minor Data Privacy & Guardian Consent
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Compliant with Section 33 of the Data Protection Act (2019) and ODPC guidelines. Mandatory statutory parental consent before processing learner biodata, academic marks, and health records.
+                </p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2 text-[11px] font-semibold text-indigo-800">
+                <span className="material-symbols-outlined text-[16px]">verified_user</span>
+                <span>ODPC Registered Data Controller</span>
+              </div>
+            </div>
+
+            {/* Pillar 5: Chapter 11 Devolution */}
+            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold">
+                    <span className="material-symbols-outlined text-[26px]">map</span>
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
+                    Chapter 11 · Devolution
+                  </span>
+                </div>
+                <h3 className="text-lg font-bold text-slate-900 mb-2">
+                  All 47 Kenyan Counties Coordinated
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Harmonizes devolved pre-primary education (ECDE) under County Governments with national primary and junior secondary oversight via Sub-County Education Directorates.
+                </p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2 text-[11px] font-semibold text-amber-800">
+                <span className="material-symbols-outlined text-[16px]">explore</span>
+                <span>All 47 Counties Supported</span>
+              </div>
+            </div>
+
+            {/* Pillar 6: Chapter Six & Article 27 */}
+            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-800 flex items-center justify-center font-bold">
+                    <span className="material-symbols-outlined text-[26px]">gavel</span>
+                  </div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-rose-50 text-rose-800 border border-rose-200">
+                    Chapter 6 · Integrity
+                  </span>
+                </div>
+                <h3 className="text-lg font-bold text-slate-900 mb-2">
+                  Leadership, Integrity & Equal Opportunity
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Mandatory Chapter Six integrity pledges for educators and administrators. Upholds Article 27 non-discrimination, ensuring equal access regardless of gender, religion, or background.
+                </p>
+              </div>
+              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2 text-[11px] font-semibold text-rose-800">
+                <span className="material-symbols-outlined text-[16px]">balance</span>
+                <span>Article 27 Non-Discrimination Policy</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Constitutional CTA Banner */}
+          <div className="mt-12 p-8 rounded-3xl bg-gradient-to-r from-[#7a1228] to-[#5c0a1a] text-white flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl">
+            <div className="space-y-2 text-center md:text-left">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 text-xs font-bold text-amber-300">
+                <span className="material-symbols-outlined text-[16px]">verified</span>
+                <span>Official MoE & TSC Compliance</span>
+              </div>
+              <h3 className="text-2xl font-bold">Onboard Your Institution Under Constitutional Standards</h3>
+              <p className="text-xs text-rose-100 max-w-xl">
+                Align your school's learner admissions, educator registries, and data management with the Constitution of Kenya (2010) in minutes.
+              </p>
+            </div>
+            {onOpenOnboardSchool && (
+              <button
+                onClick={onOpenOnboardSchool}
+                className="px-6 py-3.5 bg-white hover:bg-rose-50 text-[#7a1228] font-bold text-sm rounded-xl shadow-lg transition-all flex items-center gap-2 cursor-pointer shrink-0"
+              >
+                <span className="material-symbols-outlined text-[18px]">account_balance</span>
+                <span>Onboard Institution</span>
+              </button>
+            )}
+          </div>
+        </div>
+      </section>
+
       {/* Role-Based Portals Showcase */}
       <section id="portals" className="py-20 bg-slate-100 border-t border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -382,7 +596,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center text-white">
               <span className="material-symbols-outlined text-[16px]">school</span>
             </div>
-            <span className="font-bold text-white">Grace Seeds School</span>
+            <span className="font-bold text-white">SmartShule</span>
             <span className="text-slate-500">·</span>
             <span>CBC Educational Portal</span>
           </div>
@@ -390,7 +604,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             Standard Competency-Based Curriculum Framework & Continuous Assessment Model.
           </div>
           <div className="flex items-center gap-2 text-slate-300">
-            <span>© {new Date().getFullYear()} Grace Seeds School.</span>
+            <span>© {new Date().getFullYear()} SmartShule.</span>
             <span>•</span>
             <span className="text-white font-semibold flex items-center gap-1">
               Powered by <strong className="text-emerald-400 font-bold tracking-wide">Vellox Tech</strong>

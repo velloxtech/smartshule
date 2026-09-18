@@ -23,7 +23,7 @@ export const WhatsAppBotView: React.FC = () => {
   const [isConnecting, setIsConnecting] = useState(false);
 
   // Send message form state
-  const [recipientPhone, setRecipientPhone] = useState('+254712345678');
+  const [recipientPhone, setRecipientPhone] = useState('');
   const [selectedStudentId, setSelectedStudentId] = useState<string>('');
   const [outboundMessage, setOutboundMessage] = useState('');
   const [isSendingMessage, setIsSendingMessage] = useState(false);
@@ -158,9 +158,10 @@ export const WhatsAppBotView: React.FC = () => {
     const admNo = s ? s.admNo : 'ADM-001';
     const balance = s ? s.feeBalance : 12000;
 
+    const schoolName = user?.schoolName || 'School';
     if (type === 'fee') {
       setOutboundMessage(
-        `Dear Parent/Guardian, this is an official fee reminder from Grace Seeds School. ${learnerName} (Adm: ${admNo}) has an outstanding balance of KES ${balance.toLocaleString()}. You can pay instantly via Stanbic Bank dedicated virtual account or Paystack. Reply '2' for payment details.`
+        `Dear Parent/Guardian, this is an official fee reminder from ${schoolName}. ${learnerName} (Adm: ${admNo}) has an outstanding balance of KES ${balance.toLocaleString()}. You can pay instantly via Stanbic Bank dedicated virtual account or Paystack. Reply '2' for payment details.`
       );
     } else if (type === 'ediary') {
       setOutboundMessage(
@@ -168,7 +169,7 @@ export const WhatsAppBotView: React.FC = () => {
       );
     } else {
       setOutboundMessage(
-        `Dear Parent/Guardian of ${learnerName}, Grace Seeds School kindly reminds you of tomorrow's CBC academic showcase meeting starting at 9:00 AM in the school auditorium.`
+        `Dear Parent/Guardian of ${learnerName}, ${schoolName} kindly reminds you of tomorrow's CBC academic showcase meeting starting at 9:00 AM in the school auditorium.`
       );
     }
   };
@@ -1003,7 +1004,7 @@ export const WhatsAppBotView: React.FC = () => {
                     GS
                   </div>
                   <div>
-                    <h4 className="font-bold text-xs leading-none">Grace Seed Academy CBC Desk</h4>
+                    <h4 className="font-bold text-xs leading-none">{user?.schoolName || 'School'} CBC Desk</h4>
                     <span className="text-[10px] text-emerald-200">
                       {isConnected ? `Online (From: ${connectionState.connectedPhone})` : 'Account Not Linked (Tab 1)'}
                     </span>

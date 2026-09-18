@@ -43,7 +43,7 @@ export class PaystackPaymentAdapter implements IPaystackGateway, IPaymentGateway
         invoiceId: request.invoiceId,
         studentAdmission: request.studentAdmission,
         studentName: request.studentName,
-        schoolName: 'Grace Seed Academy',
+        schoolName: 'Grace Seeds School',
         ...(request.metadata || {})
       }
     };
@@ -69,7 +69,7 @@ export class PaystackPaymentAdapter implements IPaystackGateway, IPaymentGateway
             bankAccountDetails: {
               bankName: 'Stanbic Bank Kenya (Paystack Checkout)',
               accountNumber: `99${Math.floor(10000000 + Math.random() * 90000000)}`,
-              accountName: `Grace Seed Academy - ${request.studentAdmission || 'Fees'}`,
+              accountName: `Grace Seeds School - ${request.studentAdmission || 'Fees'}`,
               currency: 'KES'
             }
           };
@@ -91,7 +91,7 @@ export class PaystackPaymentAdapter implements IPaystackGateway, IPaymentGateway
       bankAccountDetails: {
         bankName: 'Stanbic Bank Kenya / Paystack Bank Rails',
         accountNumber: mockVirtualAccountNumber,
-        accountName: `Grace Seed Academy - ${request.studentAdmission || 'Student Fees'}`,
+        accountName: `Grace Seeds School - ${request.studentAdmission || 'Student Fees'}`,
         currency: 'KES'
       }
     };

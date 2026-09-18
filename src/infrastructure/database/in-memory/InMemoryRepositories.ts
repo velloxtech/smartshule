@@ -21,7 +21,9 @@ import {
 import {
   IFeeRepository,
   InvoiceFilterCriteria,
-  PaymentFilterCriteria
+  PaymentFilterCriteria,
+  ExpenseFilterCriteria,
+  OtherIncomeFilterCriteria
 } from '../../../core/ports/repositories/IFeeRepository';
 import {
   IMediaRepository,
@@ -51,7 +53,7 @@ import { SchemeOfWork } from '../../../core/domain/curriculum-plan/SchemeOfWork'
 import { LessonPlan } from '../../../core/domain/curriculum-plan/LessonPlan';
 import { Timetable, DayOfWeek } from '../../../core/domain/timetable/Timetable';
 import { AttendanceRegister, AttendanceType } from '../../../core/domain/attendance/Attendance';
-import { FeeStructure, StudentInvoice, Payment } from '../../../core/domain/finance/Fee';
+import { FeeStructure, StudentInvoice, Payment, Expense, OtherIncome } from '../../../core/domain/finance/Fee';
 import { ParentHelpRequest } from '../../../core/domain/media/ParentHelpRequest';
 import { StudentProgressPhoto } from '../../../core/domain/media/StudentProgressPhoto';
 import { EDiaryEntry } from '../../../core/domain/ediary/EDiaryEntry';
@@ -357,6 +359,21 @@ export class InMemoryAcademicRepository implements IAcademicRepository {
   public async saveLearningArea(area: LearningArea): Promise<void> {
     this.learningAreas.set(area.id, area);
   }
+
+  public async deleteClass(id: string): Promise<void> {
+    this.classes.delete(id);
+    for (const [sId, s] of this.streams.entries()) {
+      if (s.classRoomId === id) this.streams.delete(sId);
+    }
+  }
+
+  public async deleteStream(id: string): Promise<void> {
+    this.streams.delete(id);
+  }
+
+  public async deleteLearningArea(id: string): Promise<void> {
+    this.learningAreas.delete(id);
+  }
 }
 
 export class InMemoryCbcAssessmentRepository implements ICbcAssessmentRepository {
@@ -381,6 +398,13 @@ export class InMemoryCbcAssessmentRepository implements ICbcAssessmentRepository
     this.strands.set(strand.id, strand);
   }
 
+  public async deleteStrand(id: string): Promise<void> {
+    this.strands.delete(id);
+    for (const [subId, sub] of this.subStrands.entries()) {
+      if (sub.strandId === id) this.subStrands.delete(subId);
+    }
+  }
+
   // SubStrands
   public async findSubStrandById(id: string): Promise<SubStrand | null> {
     return this.subStrands.get(id) || null;
@@ -392,6 +416,10 @@ export class InMemoryCbcAssessmentRepository implements ICbcAssessmentRepository
 
   public async saveSubStrand(subStrand: SubStrand): Promise<void> {
     this.subStrands.set(subStrand.id, subStrand);
+  }
+
+  public async deleteSubStrand(id: string): Promise<void> {
+    this.subStrands.delete(id);
   }
 
   // Formatives
@@ -415,6 +443,10 @@ export class InMemoryCbcAssessmentRepository implements ICbcAssessmentRepository
 
   public async updateFormative(assessment: FormativeAssessment): Promise<void> {
     this.formatives.set(assessment.id, assessment);
+  }
+
+  public async deleteFormative(id: string): Promise<void> {
+    this.formatives.delete(id);
   }
 
   // Summatives
@@ -625,6 +657,8 @@ export class InMemoryFeeRepository implements IFeeRepository {
   private feeStructures: Map<string, FeeStructure> = new Map();
   private invoices: Map<string, StudentInvoice> = new Map();
   private payments: Map<string, Payment> = new Map();
+  private expenses: Map<string, Expense> = new Map();
+  private otherIncomes: Map<string, OtherIncome> = new Map();
 
   // Structures
   public async findFeeStructureById(id: string): Promise<FeeStructure | null> {
@@ -652,6 +686,10 @@ export class InMemoryFeeRepository implements IFeeRepository {
 
   public async updateFeeStructure(feeStructure: FeeStructure): Promise<void> {
     this.feeStructures.set(feeStructure.id, feeStructure);
+  }
+
+  public async deleteFeeStructure(id: string): Promise<void> {
+    this.feeStructures.delete(id);
   }
 
   // Invoices
@@ -725,6 +763,79 @@ export class InMemoryFeeRepository implements IFeeRepository {
 
   public async updatePayment(payment: Payment): Promise<void> {
     this.payments.set(payment.id, payment);
+  }
+
+  // Expenses (Money Out / Outflows)
+  public async findExpenseById(id: string): Promise<Expense | null> {
+    return this.expenses.get(id) || null;
+  }
+
+  public async findExpenseByVoucherNumber(voucherNumber: string): Promise<Expense | null> {
+    for (const exp of this.expenses.values()) {
+      if (exp.voucherNumber === voucherNumber) return exp;
+    }
+    return null;
+  }
+
+  public async findExpenses(filters: ExpenseFilterCriteria): Promise<Expense[]> {
+    let result = Array.from(this.expenses.values());
+    if (filters.schoolId) result = result.filter(e => e.schoolId === filters.schoolId);
+    if (filters.category) result = result.filter(e => e.category === filters.category);
+    if (filters.status) result = result.filter(e => e.status === filters.status);
+    if (filters.startDate) result = result.filter(e => e.expenseDate >= filters.startDate!);
+    if (filters.endDate) result = result.filter(e => e.expenseDate <= filters.endDate!);
+    if (filters.payee) {
+      const p = filters.payee.toLowerCase();
+      result = result.filter(e => e.payee.toLowerCase().includes(p));
+    }
+    // Order newest first
+    return result.sort((a, b) => b.expenseDate.localeCompare(a.expenseDate));
+  }
+
+  public async saveExpense(expense: Expense): Promise<void> {
+    this.expenses.set(expense.id, expense);
+  }
+
+  public async updateExpense(expense: Expense): Promise<void> {
+    this.expenses.set(expense.id, expense);
+  }
+
+  public async deleteExpense(id: string): Promise<void> {
+    this.expenses.delete(id);
+  }
+
+  // Other Income (Money In / Non-Fee Inflows)
+  public async findOtherIncomeById(id: string): Promise<OtherIncome | null> {
+    return this.otherIncomes.get(id) || null;
+  }
+
+  public async findOtherIncomeByReceiptNumber(receiptNumber: string): Promise<OtherIncome | null> {
+    for (const inc of this.otherIncomes.values()) {
+      if (inc.receiptNumber === receiptNumber) return inc;
+    }
+    return null;
+  }
+
+  public async findOtherIncome(filters: OtherIncomeFilterCriteria): Promise<OtherIncome[]> {
+    let result = Array.from(this.otherIncomes.values());
+    if (filters.schoolId) result = result.filter(i => i.schoolId === filters.schoolId);
+    if (filters.source) result = result.filter(i => i.source === filters.source);
+    if (filters.startDate) result = result.filter(i => i.incomeDate >= filters.startDate!);
+    if (filters.endDate) result = result.filter(i => i.incomeDate <= filters.endDate!);
+    // Order newest first
+    return result.sort((a, b) => b.incomeDate.localeCompare(a.incomeDate));
+  }
+
+  public async saveOtherIncome(income: OtherIncome): Promise<void> {
+    this.otherIncomes.set(income.id, income);
+  }
+
+  public async updateOtherIncome(income: OtherIncome): Promise<void> {
+    this.otherIncomes.set(income.id, income);
+  }
+
+  public async deleteOtherIncome(id: string): Promise<void> {
+    this.otherIncomes.delete(id);
   }
 }
 
@@ -822,5 +933,9 @@ export class InMemoryEDiaryRepository implements IEDiaryRepository {
     let list = Array.from(this.entries.values()).filter(e => e.streamId === streamId);
     if (date) list = list.filter(e => e.date === date);
     return list.sort((a, b) => b.date.localeCompare(a.date));
+  }
+
+  public async delete(id: string): Promise<void> {
+    this.entries.delete(id);
   }
 }

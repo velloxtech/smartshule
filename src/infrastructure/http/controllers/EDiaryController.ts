@@ -1,4 +1,4 @@
-import { Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { EDiaryUseCases } from '../../../application/ediary/EDiaryUseCases';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
@@ -77,6 +77,15 @@ export class EDiaryController {
         message: 'eDiary signed and acknowledged successfully',
         data: result
       });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public deleteEntry = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      await this.ediaryUseCases.deleteEntry(req.params.id as string);
+      return res.status(200).json({ success: true, message: 'eDiary entry deleted successfully' });
     } catch (err) {
       next(err);
     }

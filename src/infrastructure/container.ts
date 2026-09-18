@@ -48,7 +48,7 @@ import { AnalyticsUseCases } from '../application/analytics/AnalyticsUseCases';
 import { VisualMediaUseCases } from '../application/media/VisualMediaUseCases';
 import { EDiaryUseCases } from '../application/ediary/EDiaryUseCases';
 
-import { seedDatabase } from './database/seeds/sampleSeedData';
+import { User, UserRole, UserStatus } from '../core/domain/user/User';
 
 export class AppContainer {
   // Repositories
@@ -191,60 +191,25 @@ export class AppContainer {
     });
   }
 
-  public async initSeed() {
-    await seedDatabase(
-      {
-        userRepository: this.userRepository,
-        studentRepository: this.studentRepository,
-        teacherRepository: this.teacherRepository,
-        guardianRepository: this.guardianRepository,
-        academicRepository: this.academicRepository,
-        cbcAssessmentRepository: this.cbcAssessmentRepository,
-        schemeOfWorkRepository: this.schemeOfWorkRepository,
-        lessonPlanRepository: this.lessonPlanRepository,
-        timetableRepository: this.timetableRepository,
-        attendanceRepository: this.attendanceRepository,
-        feeRepository: this.feeRepository
-      },
-      this.passwordHasher
-    );
-
-    // Seed sample eDiary entry
-    const sampleDiary = await this.ediaryUseCases.createEntry({
-      schoolId: 'school-001',
-      streamId: 'stream-g7-east',
-      teacherId: 'usr-teacher-01',
-      teacherName: 'Teacher Sarah Mwangi',
-      date: new Date().toISOString().split('T')[0],
-      title: 'Mathematics (Algebraic Expressions) & Integrated Science Practical',
-      homework: 'Complete exercise 4B on page 67 questions 1 to 10 in the Mathematics textbook. Prepare observations on seed germination.',
-      teacherRemarks: 'All learners actively engaged in group work. Kevin demonstrated good critical thinking in algebra.',
-      requirementsTomorrow: 'Please bring drawing materials and a ruler for Creative Arts tomorrow.'
-    });
-
-    // Seed sample student progress photo
-    await this.visualMediaUseCases.uploadProgressPhoto({
-      schoolId: 'school-001',
-      teacherId: 'usr-teacher-01',
-      studentId: 'student-001',
-      learningAreaId: 'la-math-g7',
-      competencyTag: 'Critical Thinking & Problem Solving',
-      title: 'Practical CBC Geometry & Angle Measurement',
-      description: 'Learner demonstrated high competence in measuring angles and applying geometrical concepts using CBC manipulative kits.',
-      imageDataOrUrl: 'https://images.unsplash.com/photo-1509062522246-3755977927d7?w=600&auto=format&fit=crop&q=80',
-      tags: ['CBC_ASSESSMENT', 'PRACTICAL_EXERCISE', 'MATHEMATICS']
-    });
-
-    // Seed sample parent help request
-    await this.visualMediaUseCases.createHelpRequest({
-      schoolId: 'school-001',
-      guardianUserId: 'usr-guardian-01',
-      studentId: 'student-001',
-      subject: 'Integrated Science',
-      title: 'Question on Plant Transpiration Experiment Step 3',
-      description: 'Kevin is asking whether the leaf in step 3 should be submerged in lukewarm water before applying iodine solution.',
-      imageDataOrUrl: 'https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=600&auto=format&fit=crop&q=80',
-      imageFileName: 'science_homework.jpg'
-    });
+  public async ensureSuperAdmin() {
+    const adminEmail = process.env.DEFAULT_ADMIN_EMAIL || 'admin@smartshule.ac.ke';
+    const existingAdmin = await this.userRepository.findByEmail(adminEmail).catch(() => null);
+    if (!existingAdmin) {
+      const defaultPasswordHash = await this.passwordHasher.hash(process.env.DEFAULT_ADMIN_PASSWORD || 'Admin@123');
+      const superAdmin = User.create(
+        {
+          email: adminEmail,
+          passwordHash: defaultPasswordHash,
+          firstName: process.env.DEFAULT_ADMIN_FIRST_NAME || 'Don',
+          lastName: process.env.DEFAULT_ADMIN_LAST_NAME || 'Mutua',
+          role: UserRole.SUPER_ADMIN,
+          phone: process.env.DEFAULT_ADMIN_PHONE || '+254711000111',
+          status: UserStatus.ACTIVE
+        },
+        'usr-admin-01'
+      );
+      await this.userRepository.save(superAdmin);
+      console.log(`[Auth] Default admin account ensured: ${adminEmail}`);
+    }
   }
 }

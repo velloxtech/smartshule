@@ -45,6 +45,9 @@ import {
   WhatsAppAIDraftResponse,
   WhatsAppAIDispatchRequest,
   WhatsAppAIDispatchResponse,
+  ExpenseRecord,
+  OtherIncomeRecord,
+  CashFlowLedgerData,
 } from '../types';
 
 const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || '/api/v1';
@@ -213,6 +216,12 @@ export const apiService = {
     });
   },
 
+  deleteClass: async (id: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/academics/classes/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
   getStreamsByClass: async (classRoomId: string): Promise<ApiResponse<StreamItem[]>> => {
     return apiFetch<ApiResponse<StreamItem[]>>(`/academics/streams/by-class/${classRoomId}`);
   },
@@ -226,6 +235,12 @@ export const apiService = {
     return apiFetch<ApiResponse<StreamItem>>('/academics/streams', {
       method: 'POST',
       body: JSON.stringify(data),
+    });
+  },
+
+  deleteStream: async (id: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/academics/streams/${id}`, {
+      method: 'DELETE',
     });
   },
 
@@ -247,6 +262,12 @@ export const apiService = {
     return apiFetch<ApiResponse<BackendLearningArea>>('/academics/learning-areas', {
       method: 'POST',
       body: JSON.stringify(data),
+    });
+  },
+
+  deleteLearningArea: async (id: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/academics/learning-areas/${id}`, {
+      method: 'DELETE',
     });
   },
 
@@ -316,6 +337,12 @@ export const apiService = {
     });
   },
 
+  deleteStudent: async (id: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/students/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
   // 4. Teachers & Staff Endpoints
   getMyTeacherProfile: async (): Promise<ApiResponse<any>> => {
     return apiFetch<ApiResponse<any>>('/teachers/me/profile');
@@ -355,6 +382,12 @@ export const apiService = {
     });
   },
 
+  deleteTeacher: async (id: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/teachers/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
   // 5. CBC Competency Assessment Endpoints
   createStrand: async (data: {
     learningAreaId: string;
@@ -377,6 +410,12 @@ export const apiService = {
     return apiFetch<ApiResponse<BackendStrand[]>>(`/cbc/strands/by-learning-area/${learningAreaId}${q}`);
   },
 
+  deleteStrand: async (id: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/cbc/strands/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
   createSubStrand: async (data: {
     strandId: string;
     code: string;
@@ -392,6 +431,12 @@ export const apiService = {
 
   getSubStrandsByStrand: async (strandId: string): Promise<ApiResponse<BackendSubStrand[]>> => {
     return apiFetch<ApiResponse<BackendSubStrand[]>>(`/cbc/sub-strands/by-strand/${strandId}`);
+  },
+
+  deleteSubStrand: async (id: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/cbc/sub-strands/${id}`, {
+      method: 'DELETE',
+    });
   },
 
   recordFormativeAssessment: async (data: {
@@ -430,6 +475,12 @@ export const apiService = {
     if (params?.academicYearId) q.append('academicYearId', params.academicYearId);
     if (params?.subStrandId) q.append('subStrandId', params.subStrandId);
     return apiFetch<ApiResponse<BackendFormativeAssessment[]>>(`/cbc/formative?${q.toString()}`);
+  },
+
+  deleteFormative: async (id: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/cbc/formative/${id}`, {
+      method: 'DELETE',
+    });
   },
 
   recordSummativeAssessment: async (data: {
@@ -556,6 +607,12 @@ export const apiService = {
     return apiFetch<ApiResponse<SchemeOfWork>>(`/curriculum/schemes/${id}`);
   },
 
+  deleteScheme: async (id: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/curriculum/schemes/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
   createLessonPlan: async (data: any): Promise<ApiResponse<LessonPlan>> => {
     return apiFetch<ApiResponse<LessonPlan>>('/curriculum/lesson-plans', {
       method: 'POST',
@@ -577,6 +634,12 @@ export const apiService = {
 
   getLessonPlanById: async (id: string): Promise<ApiResponse<LessonPlan>> => {
     return apiFetch<ApiResponse<LessonPlan>>(`/curriculum/lesson-plans/${id}`);
+  },
+
+  deleteLessonPlan: async (id: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/curriculum/lesson-plans/${id}`, {
+      method: 'DELETE',
+    });
   },
 
   // 7. Timetable Endpoints
@@ -694,6 +757,12 @@ export const apiService = {
     return apiFetch<ApiResponse<FeeStructure[]>>(`/finance/structures?schoolId=${schoolId}`);
   },
 
+  deleteFeeStructure: async (id: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/finance/structures/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
   generateInvoices: async (data: {
     schoolId: string;
     academicYearId: string;
@@ -771,6 +840,84 @@ export const apiService = {
     return apiFetch<ApiResponse<PaystackVerifyResponse>>(`/finance/paystack/verify?reference=${encodeURIComponent(reference)}`);
   },
 
+  // Cash Flow & Financial Ledger (Money In & Money Out)
+  getCashFlowLedger: async (params?: { schoolId?: string; startDate?: string; endDate?: string }): Promise<ApiResponse<CashFlowLedgerData>> => {
+    const q = new URLSearchParams();
+    if (params?.schoolId) q.append('schoolId', params.schoolId);
+    if (params?.startDate) q.append('startDate', params.startDate);
+    if (params?.endDate) q.append('endDate', params.endDate);
+    const qs = q.toString();
+    return apiFetch<ApiResponse<CashFlowLedgerData>>(`/finance/cashflow-ledger${qs ? `?${qs}` : ''}`);
+  },
+
+  getExpenses: async (params?: {
+    schoolId?: string;
+    category?: string;
+    status?: string;
+    startDate?: string;
+    endDate?: string;
+    payee?: string;
+  }): Promise<ApiResponse<ExpenseRecord[]>> => {
+    const q = new URLSearchParams();
+    if (params?.schoolId) q.append('schoolId', params.schoolId);
+    if (params?.category) q.append('category', params.category);
+    if (params?.status) q.append('status', params.status);
+    if (params?.startDate) q.append('startDate', params.startDate);
+    if (params?.endDate) q.append('endDate', params.endDate);
+    if (params?.payee) q.append('payee', params.payee);
+    const qs = q.toString();
+    return apiFetch<ApiResponse<ExpenseRecord[]>>(`/finance/expenses${qs ? `?${qs}` : ''}`);
+  },
+
+  recordExpense: async (data: Partial<ExpenseRecord>): Promise<ApiResponse<ExpenseRecord>> => {
+    return apiFetch<ApiResponse<ExpenseRecord>>('/finance/expenses', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateExpenseStatus: async (id: string, status: string): Promise<ApiResponse<ExpenseRecord>> => {
+    return apiFetch<ApiResponse<ExpenseRecord>>(`/finance/expenses/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+  },
+
+  deleteExpense: async (id: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/finance/expenses/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  getOtherIncome: async (params?: {
+    schoolId?: string;
+    source?: string;
+    startDate?: string;
+    endDate?: string;
+  }): Promise<ApiResponse<OtherIncomeRecord[]>> => {
+    const q = new URLSearchParams();
+    if (params?.schoolId) q.append('schoolId', params.schoolId);
+    if (params?.source) q.append('source', params.source);
+    if (params?.startDate) q.append('startDate', params.startDate);
+    if (params?.endDate) q.append('endDate', params.endDate);
+    const qs = q.toString();
+    return apiFetch<ApiResponse<OtherIncomeRecord[]>>(`/finance/income${qs ? `?${qs}` : ''}`);
+  },
+
+  recordOtherIncome: async (data: Partial<OtherIncomeRecord>): Promise<ApiResponse<OtherIncomeRecord>> => {
+    return apiFetch<ApiResponse<OtherIncomeRecord>>('/finance/income', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  deleteOtherIncome: async (id: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/finance/income/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+
   // 10. Digital eDiary Endpoints
   getStudentEDiary: async (studentId: string): Promise<ApiResponse<EDiaryEntry[]>> => {
     return apiFetch<ApiResponse<EDiaryEntry[]>>(`/ediary/student/${studentId}`);
@@ -805,6 +952,12 @@ export const apiService = {
     return apiFetch<ApiResponse<EDiaryEntry>>(`/ediary/${entryId}/acknowledge`, {
       method: 'POST',
       body: JSON.stringify(data || {}),
+    });
+  },
+
+  deleteEDiaryEntry: async (id: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/ediary/${id}`, {
+      method: 'DELETE',
     });
   },
 

@@ -23,7 +23,9 @@ import {
 import {
   IFeeRepository,
   InvoiceFilterCriteria,
-  PaymentFilterCriteria
+  PaymentFilterCriteria,
+  ExpenseFilterCriteria,
+  OtherIncomeFilterCriteria
 } from '../../../core/ports/repositories/IFeeRepository';
 
 import { User, UserRole, UserStatus } from '../../../core/domain/user/User';
@@ -46,7 +48,19 @@ import { SchemeOfWork, SchemeStatus } from '../../../core/domain/curriculum-plan
 import { LessonPlan } from '../../../core/domain/curriculum-plan/LessonPlan';
 import { Timetable, DayOfWeek } from '../../../core/domain/timetable/Timetable';
 import { AttendanceRegister, AttendanceType } from '../../../core/domain/attendance/Attendance';
-import { FeeStructure, StudentInvoice, Payment, PaymentMethod, PaymentStatus, InvoiceStatus } from '../../../core/domain/finance/Fee';
+import {
+  FeeStructure,
+  StudentInvoice,
+  Payment,
+  PaymentMethod,
+  PaymentStatus,
+  InvoiceStatus,
+  Expense,
+  OtherIncome,
+  ExpenseCategory,
+  ExpenseStatus,
+  IncomeSource
+} from '../../../core/domain/finance/Fee';
 
 // --- Mongoose Schemas ---
 const UserSchema = new Schema({
@@ -382,6 +396,43 @@ const PaymentSchema = new Schema({
   updatedAt: { type: Date, default: Date.now }
 });
 
+const ExpenseSchema = new Schema({
+  _id: { type: String, required: true },
+  schoolId: { type: String, required: true },
+  voucherNumber: { type: String, required: true, unique: true },
+  category: { type: String, required: true },
+  title: { type: String, required: true },
+  amount: { type: Number, required: true },
+  paymentMethod: { type: String, required: true },
+  paymentReference: { type: String, required: true },
+  payee: { type: String, required: true },
+  expenseDate: { type: String, required: true },
+  status: { type: String, default: 'PAID' },
+  notes: String,
+  recordedByUserId: { type: String, required: true },
+  approvedByUserId: String,
+  receiptUrl: String,
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
+
+const OtherIncomeSchema = new Schema({
+  _id: { type: String, required: true },
+  schoolId: { type: String, required: true },
+  receiptNumber: { type: String, required: true, unique: true },
+  source: { type: String, required: true },
+  title: { type: String, required: true },
+  amount: { type: Number, required: true },
+  paymentMethod: { type: String, required: true },
+  paymentReference: { type: String, required: true },
+  receivedFrom: { type: String, required: true },
+  incomeDate: { type: String, required: true },
+  notes: String,
+  recordedByUserId: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
+
 // Compile Models
 const UserModel = mongoose.models.User || mongoose.model('User', UserSchema);
 const StudentModel = mongoose.models.Student || mongoose.model('Student', StudentSchema);
@@ -405,6 +456,8 @@ const AttendanceModel = mongoose.models.AttendanceRegister || mongoose.model('At
 const FeeStructureModel = mongoose.models.FeeStructure || mongoose.model('FeeStructure', FeeStructureSchema);
 const InvoiceModel = mongoose.models.StudentInvoice || mongoose.model('StudentInvoice', StudentInvoiceSchema);
 const PaymentModel = mongoose.models.Payment || mongoose.model('Payment', PaymentSchema);
+const ExpenseModel = mongoose.models.Expense || mongoose.model('Expense', ExpenseSchema);
+const OtherIncomeModel = mongoose.models.OtherIncome || mongoose.model('OtherIncome', OtherIncomeSchema);
 
 // --- Complete MongoDB Repository Implementations ---
 
@@ -677,6 +730,16 @@ export class MongoAcademicRepository implements IAcademicRepository {
   public async saveLearningArea(area: LearningArea): Promise<void> {
     await LearningAreaModel.findOneAndUpdate({ _id: area.id }, { ...area.toJSON(), _id: area.id }, { upsert: true });
   }
+  public async deleteClass(id: string): Promise<void> {
+    await ClassRoomModel.findByIdAndDelete(id);
+    await StreamModel.deleteMany({ classRoomId: id });
+  }
+  public async deleteStream(id: string): Promise<void> {
+    await StreamModel.findByIdAndDelete(id);
+  }
+  public async deleteLearningArea(id: string): Promise<void> {
+    await LearningAreaModel.findByIdAndDelete(id);
+  }
 }
 
 export class MongoCbcAssessmentRepository implements ICbcAssessmentRepository {
@@ -694,6 +757,10 @@ export class MongoCbcAssessmentRepository implements ICbcAssessmentRepository {
   public async saveStrand(strand: Strand): Promise<void> {
     await StrandModel.findOneAndUpdate({ _id: strand.id }, { ...strand.toJSON(), _id: strand.id }, { upsert: true });
   }
+  public async deleteStrand(id: string): Promise<void> {
+    await StrandModel.findByIdAndDelete(id);
+    await SubStrandModel.deleteMany({ strandId: id });
+  }
   public async findSubStrandById(id: string): Promise<SubStrand | null> {
     const doc = await SubStrandModel.findById(id).lean();
     if (!doc) return null;
@@ -705,6 +772,9 @@ export class MongoCbcAssessmentRepository implements ICbcAssessmentRepository {
   }
   public async saveSubStrand(subStrand: SubStrand): Promise<void> {
     await SubStrandModel.findOneAndUpdate({ _id: subStrand.id }, { ...subStrand.toJSON(), _id: subStrand.id }, { upsert: true });
+  }
+  public async deleteSubStrand(id: string): Promise<void> {
+    await SubStrandModel.findByIdAndDelete(id);
   }
   public async findFormativeById(id: string): Promise<FormativeAssessment | null> {
     const doc = await FormativeModel.findById(id).lean();
@@ -726,6 +796,9 @@ export class MongoCbcAssessmentRepository implements ICbcAssessmentRepository {
   }
   public async updateFormative(assessment: FormativeAssessment): Promise<void> {
     await FormativeModel.findByIdAndUpdate(assessment.id, assessment.toJSON());
+  }
+  public async deleteFormative(id: string): Promise<void> {
+    await FormativeModel.findByIdAndDelete(id);
   }
   public async findSummativeById(id: string): Promise<SummativeAssessment | null> {
     const doc = await SummativeModel.findById(id).lean();
@@ -930,6 +1003,9 @@ export class MongoFeeRepository implements IFeeRepository {
   public async updateFeeStructure(feeStructure: FeeStructure): Promise<void> {
     await FeeStructureModel.findByIdAndUpdate(feeStructure.id, feeStructure.toJSON());
   }
+  public async deleteFeeStructure(id: string): Promise<void> {
+    await FeeStructureModel.findByIdAndDelete(id);
+  }
   public async findInvoiceById(id: string): Promise<StudentInvoice | null> {
     const doc = await InvoiceModel.findById(id).lean();
     if (!doc) return null;
@@ -985,4 +1061,83 @@ export class MongoFeeRepository implements IFeeRepository {
   public async updatePayment(payment: Payment): Promise<void> {
     await PaymentModel.findByIdAndUpdate(payment.id, payment.toJSON());
   }
+
+  // Expenses
+  public async findExpenseById(id: string): Promise<Expense | null> {
+    const doc = await ExpenseModel.findById(id).lean();
+    if (!doc) return null;
+    return Expense.create(doc as any, doc._id, doc.createdAt, doc.updatedAt);
+  }
+
+  public async findExpenseByVoucherNumber(voucherNumber: string): Promise<Expense | null> {
+    const doc = await ExpenseModel.findOne({ voucherNumber }).lean();
+    if (!doc) return null;
+    return Expense.create(doc as any, doc._id, doc.createdAt, doc.updatedAt);
+  }
+
+  public async findExpenses(filters: ExpenseFilterCriteria): Promise<Expense[]> {
+    const query: any = {};
+    if (filters.schoolId) query.schoolId = filters.schoolId;
+    if (filters.category) query.category = filters.category;
+    if (filters.status) query.status = filters.status;
+    if (filters.startDate || filters.endDate) {
+      query.expenseDate = {};
+      if (filters.startDate) query.expenseDate.$gte = filters.startDate;
+      if (filters.endDate) query.expenseDate.$lte = filters.endDate;
+    }
+    if (filters.payee) query.payee = { $regex: filters.payee, $options: 'i' };
+    const docs = await ExpenseModel.find(query).sort({ expenseDate: -1 }).lean();
+    return docs.map((d: any) => Expense.create(d, d._id, d.createdAt, d.updatedAt));
+  }
+
+  public async saveExpense(expense: Expense): Promise<void> {
+    await ExpenseModel.findOneAndUpdate({ _id: expense.id }, { ...expense.toJSON(), _id: expense.id }, { upsert: true });
+  }
+
+  public async updateExpense(expense: Expense): Promise<void> {
+    await ExpenseModel.findByIdAndUpdate(expense.id, expense.toJSON());
+  }
+
+  public async deleteExpense(id: string): Promise<void> {
+    await ExpenseModel.findByIdAndDelete(id);
+  }
+
+  // Other Income
+  public async findOtherIncomeById(id: string): Promise<OtherIncome | null> {
+    const doc = await OtherIncomeModel.findById(id).lean();
+    if (!doc) return null;
+    return OtherIncome.create(doc as any, doc._id, doc.createdAt, doc.updatedAt);
+  }
+
+  public async findOtherIncomeByReceiptNumber(receiptNumber: string): Promise<OtherIncome | null> {
+    const doc = await OtherIncomeModel.findOne({ receiptNumber }).lean();
+    if (!doc) return null;
+    return OtherIncome.create(doc as any, doc._id, doc.createdAt, doc.updatedAt);
+  }
+
+  public async findOtherIncome(filters: OtherIncomeFilterCriteria): Promise<OtherIncome[]> {
+    const query: any = {};
+    if (filters.schoolId) query.schoolId = filters.schoolId;
+    if (filters.source) query.source = filters.source;
+    if (filters.startDate || filters.endDate) {
+      query.incomeDate = {};
+      if (filters.startDate) query.incomeDate.$gte = filters.startDate;
+      if (filters.endDate) query.incomeDate.$lte = filters.endDate;
+    }
+    const docs = await OtherIncomeModel.find(query).sort({ incomeDate: -1 }).lean();
+    return docs.map((d: any) => OtherIncome.create(d, d._id, d.createdAt, d.updatedAt));
+  }
+
+  public async saveOtherIncome(income: OtherIncome): Promise<void> {
+    await OtherIncomeModel.findOneAndUpdate({ _id: income.id }, { ...income.toJSON(), _id: income.id }, { upsert: true });
+  }
+
+  public async updateOtherIncome(income: OtherIncome): Promise<void> {
+    await OtherIncomeModel.findByIdAndUpdate(income.id, income.toJSON());
+  }
+
+  public async deleteOtherIncome(id: string): Promise<void> {
+    await OtherIncomeModel.findByIdAndDelete(id);
+  }
 }
+

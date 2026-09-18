@@ -77,7 +77,7 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
   const totalInvoiced = financeSummary?.totalInvoiced || invoices.reduce((acc, inv) => acc + (inv.amountPayable || 0), 0);
   const totalPaid = financeSummary?.totalCollected || propTotalCollected || invoices.reduce((acc, inv) => acc + (inv.amountPaid || 0), 0);
   const totalBalance = financeSummary?.totalOutstanding || Math.max(0, totalInvoiced - totalPaid);
-  const collectionRate = financeSummary?.collectionRatePercentage || (totalInvoiced > 0 ? Math.round((totalPaid / totalInvoiced) * 100) : 100);
+  const collectionRate = financeSummary?.collectionRatePercentage || (totalInvoiced > 0 ? Math.round((totalPaid / totalInvoiced) * 100) : 0);
 
   return (
     <div className="space-y-6 pb-12 font-body">

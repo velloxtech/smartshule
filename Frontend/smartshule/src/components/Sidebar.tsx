@@ -47,7 +47,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
               <div className="flex flex-col leading-tight">
                 <span className="font-headline-md text-body-md text-primary font-bold tracking-tight">
-                  Grace Seeds School
+                  {user?.schoolName || 'SmartShule'}
                 </span>
                 <span className="font-label-md text-[10px] text-on-surface-variant uppercase tracking-wider font-semibold">
                   CBC Portal

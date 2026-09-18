@@ -46,22 +46,34 @@ export const EDiaryView: React.FC = () => {
             setEntries(diaryRes.data);
           }
         } else {
-          // Fallback to demo child
-          const diaryRes = await apiService.getStudentEDiary('student-001');
-          if (diaryRes.success && diaryRes.data) {
-            setEntries(diaryRes.data);
-          }
+          setLinkedStudents([]);
+          setEntries([]);
         }
       } else {
         const diaryRes = await apiService.getStreamEDiary(selectedStreamId);
         if (diaryRes.success && diaryRes.data) {
           setEntries(diaryRes.data);
+        } else {
+          setEntries([]);
         }
       }
     } catch (err) {
       console.error('Error loading eDiary entries:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteEntry = async (entryId: string) => {
+    if (window.confirm('Are you sure you want to delete this eDiary homework entry?')) {
+      try {
+        const res = await apiService.deleteEDiaryEntry(entryId);
+        if (res.success) {
+          setEntries((prev) => prev.filter((e) => e.id !== entryId));
+        }
+      } catch (err: any) {
+        alert(err.message || 'Failed to delete eDiary entry');
+      }
     }
   };
 
@@ -276,6 +288,15 @@ export const EDiaryView: React.FC = () => {
                       <span className="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200 text-xs font-semibold">
                         Awaiting Parent Sign-off
                       </span>
+                    )}
+                    {isTeacher && (
+                      <button
+                        onClick={() => handleDeleteEntry(entry.id)}
+                        title="Delete eDiary Entry"
+                        className="p-1 rounded-lg text-outline hover:text-error hover:bg-error/10 transition-colors cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">delete</span>
+                      </button>
                     )}
                   </div>
                 </div>

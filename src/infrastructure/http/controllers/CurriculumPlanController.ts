@@ -187,4 +187,22 @@ export class CurriculumPlanController {
       next(err);
     }
   };
+
+  public deleteScheme = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      await this.curriculumUseCases.deleteScheme(req.params.id as string);
+      return res.status(200).json({ success: true, message: 'Scheme of work deleted successfully' });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public deleteLessonPlan = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      await this.curriculumUseCases.deleteLessonPlan(req.params.id as string);
+      return res.status(200).json({ success: true, message: 'Lesson plan deleted successfully' });
+    } catch (err) {
+      next(err);
+    }
+  };
 }

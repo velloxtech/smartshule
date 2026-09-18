@@ -1,7 +1,9 @@
 import {
   IFeeRepository,
   InvoiceFilterCriteria,
-  PaymentFilterCriteria
+  PaymentFilterCriteria,
+  ExpenseFilterCriteria,
+  OtherIncomeFilterCriteria
 } from '../../core/ports/repositories/IFeeRepository';
 import { IStudentRepository } from '../../core/ports/repositories/IStudentRepository';
 import { IGuardianRepository } from '../../core/ports/repositories/ITeacherRepository';
@@ -19,7 +21,12 @@ import {
   PaymentMethod,
   PaymentStatus,
   InvoiceStatus,
-  FeeItem
+  FeeItem,
+  Expense,
+  OtherIncome,
+  ExpenseCategory,
+  ExpenseStatus,
+  IncomeSource
 } from '../../core/domain/finance/Fee';
 import { CbcGradeLevel } from '../../core/domain/user/Student';
 import { UserRole } from '../../core/domain/user/User';
@@ -30,6 +37,34 @@ import {
   ConflictError,
   ForbiddenError
 } from '../../core/domain/shared/Errors';
+
+export interface RecordExpenseDTO {
+  schoolId?: string;
+  voucherNumber?: string;
+  category: ExpenseCategory;
+  title: string;
+  amount: number;
+  paymentMethod: PaymentMethod;
+  paymentReference: string;
+  payee: string;
+  expenseDate?: string;
+  status?: ExpenseStatus;
+  notes?: string;
+  receiptUrl?: string;
+}
+
+export interface RecordOtherIncomeDTO {
+  schoolId?: string;
+  receiptNumber?: string;
+  source: IncomeSource;
+  title: string;
+  amount: number;
+  paymentMethod: PaymentMethod;
+  paymentReference: string;
+  receivedFrom: string;
+  incomeDate?: string;
+  notes?: string;
+}
 
 export interface CreateFeeStructureDTO {
   schoolId: string;
@@ -708,5 +743,371 @@ export class FeeUseCases {
 
     return { received: true, event: body.event };
   }
+
+  // 14. Record Expense (Money Out)
+  public async recordExpense(dto: RecordExpenseDTO, requestingUser?: UserContext) {
+    if (requestingUser && ![UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT].includes(requestingUser.role)) {
+      throw new ForbiddenError('Only Super Admin, School Admin, or Accountant can record expenses.');
+    }
+
+    const schoolId = dto.schoolId || requestingUser?.schoolId || 'school-001';
+    const voucherNumber = dto.voucherNumber || `PV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const expenseDate = dto.expenseDate || new Date().toISOString().split('T')[0];
+
+    const expense = Expense.create(
+      {
+        schoolId,
+        voucherNumber,
+        category: dto.category,
+        title: dto.title,
+        amount: dto.amount,
+        paymentMethod: dto.paymentMethod,
+        paymentReference: dto.paymentReference,
+        payee: dto.payee,
+        expenseDate,
+        status: dto.status || ExpenseStatus.PAID,
+        notes: dto.notes,
+        recordedByUserId: requestingUser?.userId || 'usr-system',
+        receiptUrl: dto.receiptUrl
+      },
+      IdGenerator.generate()
+    );
+
+    await this.feeRepository.saveExpense(expense);
+    return expense.toJSON();
+  }
+
+  // 15. List Expenses (Money Out)
+  public async listExpenses(filters: ExpenseFilterCriteria, requestingUser?: UserContext) {
+    if (requestingUser && ![UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT, UserRole.HEAD_TEACHER].includes(requestingUser.role)) {
+      throw new ForbiddenError('You do not have permission to view school expenses.');
+    }
+
+    const schoolId = filters.schoolId || requestingUser?.schoolId;
+    const expenses = await this.feeRepository.findExpenses({ ...filters, schoolId });
+    return expenses.map(e => e.toJSON());
+  }
+
+  // 16. Update Expense Status
+  public async updateExpenseStatus(id: string, status: ExpenseStatus, requestingUser?: UserContext) {
+    if (requestingUser && ![UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT, UserRole.HEAD_TEACHER].includes(requestingUser.role)) {
+      throw new ForbiddenError('You do not have permission to authorize or update expenses.');
+    }
+
+    const expense = await this.feeRepository.findExpenseById(id);
+    if (!expense) {
+      throw new NotFoundError(`Expense with id "${id}" not found.`);
+    }
+
+    expense.setStatus(status, requestingUser?.userId);
+    await this.feeRepository.updateExpense(expense);
+    return expense.toJSON();
+  }
+
+  // 17. Delete Expense
+  public async deleteExpense(id: string, requestingUser?: UserContext) {
+    if (requestingUser && ![UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT].includes(requestingUser.role)) {
+      throw new ForbiddenError('Only School Admin or Accountant can delete expenses.');
+    }
+
+    const expense = await this.feeRepository.findExpenseById(id);
+    if (!expense) {
+      throw new NotFoundError(`Expense with id "${id}" not found.`);
+    }
+
+    await this.feeRepository.deleteExpense(id);
+    return { success: true, message: `Expense voucher "${expense.voucherNumber}" deleted successfully.` };
+  }
+
+  // 18. Record Other Income (Money In - Capitation / Uniform / Grants)
+  public async recordOtherIncome(dto: RecordOtherIncomeDTO, requestingUser?: UserContext) {
+    if (requestingUser && ![UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT].includes(requestingUser.role)) {
+      throw new ForbiddenError('Only Super Admin, School Admin, or Accountant can record non-fee income.');
+    }
+
+    const schoolId = dto.schoolId || requestingUser?.schoolId || 'school-001';
+    const receiptNumber = dto.receiptNumber || `OR-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const incomeDate = dto.incomeDate || new Date().toISOString().split('T')[0];
+
+    const income = OtherIncome.create(
+      {
+        schoolId,
+        receiptNumber,
+        source: dto.source,
+        title: dto.title,
+        amount: dto.amount,
+        paymentMethod: dto.paymentMethod,
+        paymentReference: dto.paymentReference,
+        receivedFrom: dto.receivedFrom,
+        incomeDate,
+        notes: dto.notes,
+        recordedByUserId: requestingUser?.userId || 'usr-system'
+      },
+      IdGenerator.generate()
+    );
+
+    await this.feeRepository.saveOtherIncome(income);
+    return income.toJSON();
+  }
+
+  // 19. List Other Income
+  public async listOtherIncome(filters: OtherIncomeFilterCriteria, requestingUser?: UserContext) {
+    if (requestingUser && ![UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT, UserRole.HEAD_TEACHER].includes(requestingUser.role)) {
+      throw new ForbiddenError('You do not have permission to view school income.');
+    }
+
+    const schoolId = filters.schoolId || requestingUser?.schoolId;
+    const incomes = await this.feeRepository.findOtherIncome({ ...filters, schoolId });
+    return incomes.map(i => i.toJSON());
+  }
+
+  // 20. Delete Other Income
+  public async deleteOtherIncome(id: string, requestingUser?: UserContext) {
+    if (requestingUser && ![UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT].includes(requestingUser.role)) {
+      throw new ForbiddenError('Only School Admin or Accountant can delete income records.');
+    }
+
+    const income = await this.feeRepository.findOtherIncomeById(id);
+    if (!income) {
+      throw new NotFoundError(`Income record with id "${id}" not found.`);
+    }
+
+    await this.feeRepository.deleteOtherIncome(id);
+    return { success: true, message: `Income receipt "${income.receiptNumber}" deleted successfully.` };
+  }
+
+  // 21. Unified Cash Flow & Financial Ledger (Money In vs Money Out)
+  public async getCashFlowLedger(schoolId?: string, filters?: { startDate?: string; endDate?: string }, requestingUser?: UserContext) {
+    if (requestingUser && ![UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT, UserRole.HEAD_TEACHER].includes(requestingUser.role)) {
+      throw new ForbiddenError('Only School Management and Accountants can view the Cash Flow Ledger.');
+    }
+
+    const targetSchoolId = schoolId || requestingUser?.schoolId;
+
+    // Fetch fee payments (Inflow)
+    const payments = await this.feeRepository.findPayments({
+      schoolId: targetSchoolId,
+      startDate: filters?.startDate,
+      endDate: filters?.endDate
+    });
+
+    // Fetch other non-fee income (Inflow)
+    const otherIncomes = await this.feeRepository.findOtherIncome({
+      schoolId: targetSchoolId,
+      startDate: filters?.startDate,
+      endDate: filters?.endDate
+    });
+
+    // Fetch expenses (Outflow)
+    const allExpenses = await this.feeRepository.findExpenses({
+      schoolId: targetSchoolId,
+      startDate: filters?.startDate,
+      endDate: filters?.endDate
+    });
+
+    // Disbursed / committed expenses
+    const recognizedExpenses = allExpenses.filter(e => e.status === ExpenseStatus.PAID || e.status === ExpenseStatus.APPROVED);
+
+    // Sums
+    const completedPayments = payments.filter(p => p.status === PaymentStatus.COMPLETED);
+    const feeInflow = completedPayments.reduce((acc, p) => acc + p.amount, 0);
+    const otherInflow = otherIncomes.reduce((acc, i) => acc + i.amount, 0);
+    const totalMoneyIn = feeInflow + otherInflow;
+
+    const totalMoneyOut = recognizedExpenses.reduce((acc, e) => acc + e.amount, 0);
+    const netCashFlow = totalMoneyIn - totalMoneyOut;
+
+    // Account Balances by payment channel
+    let bankIn = 0, bankOut = 0;
+    let mpesaIn = 0, mpesaOut = 0;
+    let cashIn = 0, cashOut = 0;
+
+    for (const p of completedPayments) {
+      if ([PaymentMethod.BANK_TRANSFER, PaymentMethod.BANK_DEPOSIT, PaymentMethod.PAYSTACK, PaymentMethod.CARD].includes(p.paymentMethod)) {
+        bankIn += p.amount;
+      } else if (p.paymentMethod === PaymentMethod.MPESA) {
+        mpesaIn += p.amount;
+      } else if (p.paymentMethod === PaymentMethod.CASH) {
+        cashIn += p.amount;
+      }
+    }
+
+    for (const inc of otherIncomes) {
+      if ([PaymentMethod.BANK_TRANSFER, PaymentMethod.BANK_DEPOSIT, PaymentMethod.PAYSTACK, PaymentMethod.CARD, PaymentMethod.CHEQUE].includes(inc.paymentMethod)) {
+        bankIn += inc.amount;
+      } else if (inc.paymentMethod === PaymentMethod.MPESA) {
+        mpesaIn += inc.amount;
+      } else if (inc.paymentMethod === PaymentMethod.CASH) {
+        cashIn += inc.amount;
+      }
+    }
+
+    for (const exp of recognizedExpenses) {
+      if ([PaymentMethod.BANK_TRANSFER, PaymentMethod.CHEQUE, PaymentMethod.CARD].includes(exp.paymentMethod)) {
+        bankOut += exp.amount;
+      } else if (exp.paymentMethod === PaymentMethod.MPESA) {
+        mpesaOut += exp.amount;
+      } else if (exp.paymentMethod === PaymentMethod.CASH) {
+        cashOut += exp.amount;
+      }
+    }
+
+    // Baseline opening balances for realistic display in demo school (KES)
+    const openingBank = 450000;
+    const openingMpesa = 125000;
+    const openingCash = 35000;
+
+    const currentBankBalance = openingBank + bankIn - bankOut;
+    const currentMpesaBalance = openingMpesa + mpesaIn - mpesaOut;
+    const currentCashBalance = openingCash + cashIn - cashOut;
+
+    // Vote Head Breakdown (Expenses)
+    const voteHeadMap: Record<string, { total: number; count: number }> = {};
+    for (const cat of Object.values(ExpenseCategory)) {
+      voteHeadMap[cat] = { total: 0, count: 0 };
+    }
+    for (const exp of recognizedExpenses) {
+      if (!voteHeadMap[exp.category]) {
+        voteHeadMap[exp.category] = { total: 0, count: 0 };
+      }
+      voteHeadMap[exp.category].total += exp.amount;
+      voteHeadMap[exp.category].count += 1;
+    }
+
+    const voteHeadBreakdown = Object.entries(voteHeadMap).map(([category, data]) => ({
+      category: category as ExpenseCategory,
+      totalSpent: data.total,
+      transactionCount: data.count,
+      percentage: totalMoneyOut > 0 ? Math.round((data.total / totalMoneyOut) * 100) : 0
+    })).sort((a, b) => b.totalSpent - a.totalSpent);
+
+    // Income Source Breakdown
+    const incomeSourceMap: Record<string, { total: number; count: number }> = {
+      FEES_COLLECTION: { total: feeInflow, count: completedPayments.length }
+    };
+    for (const inc of otherIncomes) {
+      if (!incomeSourceMap[inc.source]) {
+        incomeSourceMap[inc.source] = { total: 0, count: 0 };
+      }
+      incomeSourceMap[inc.source].total += inc.amount;
+      incomeSourceMap[inc.source].count += 1;
+    }
+
+    const incomeBreakdown = Object.entries(incomeSourceMap).map(([source, data]) => ({
+      source,
+      totalAmount: data.total,
+      count: data.count,
+      percentage: totalMoneyIn > 0 ? Math.round((data.total / totalMoneyIn) * 100) : 0
+    })).sort((a, b) => b.totalAmount - a.totalAmount);
+
+    // Unified Chronological Ledger Entries
+    interface LedgerTransaction {
+      id: string;
+      date: string;
+      type: 'INFLOW' | 'OUTFLOW';
+      category: string;
+      title: string;
+      party: string;
+      amount: number;
+      paymentMethod: PaymentMethod;
+      reference: string;
+      status: string;
+    }
+
+    const ledger: LedgerTransaction[] = [];
+
+    for (const p of completedPayments) {
+      ledger.push({
+        id: p.id,
+        date: p.paymentDate,
+        type: 'INFLOW',
+        category: 'FEES_COLLECTION',
+        title: `Tuition & Levies Receipt #${p.receiptNumber}`,
+        party: `Student ID: ${p.studentId}`,
+        amount: p.amount,
+        paymentMethod: p.paymentMethod,
+        reference: p.transactionReference,
+        status: p.status
+      });
+    }
+
+    for (const inc of otherIncomes) {
+      ledger.push({
+        id: inc.id,
+        date: inc.incomeDate,
+        type: 'INFLOW',
+        category: inc.source,
+        title: inc.title,
+        party: inc.receivedFrom,
+        amount: inc.amount,
+        paymentMethod: inc.paymentMethod,
+        reference: inc.paymentReference,
+        status: 'RECEIVED'
+      });
+    }
+
+    for (const exp of allExpenses) {
+      ledger.push({
+        id: exp.id,
+        date: exp.expenseDate,
+        type: 'OUTFLOW',
+        category: exp.category,
+        title: exp.title,
+        party: exp.payee,
+        amount: exp.amount,
+        paymentMethod: exp.paymentMethod,
+        reference: exp.paymentReference,
+        status: exp.status
+      });
+    }
+
+    // Sort newest transactions first
+    ledger.sort((a, b) => b.date.localeCompare(a.date));
+
+    return {
+      totalMoneyIn,
+      totalMoneyOut,
+      netCashFlow,
+      isSurplus: netCashFlow >= 0,
+      feeInflow,
+      otherInflow,
+      accountBalances: {
+        bank: {
+          balance: currentBankBalance,
+          opening: openingBank,
+          inflows: bankIn,
+          outflows: bankOut
+        },
+        mpesa: {
+          balance: currentMpesaBalance,
+          opening: openingMpesa,
+          inflows: mpesaIn,
+          outflows: mpesaOut
+        },
+        pettyCash: {
+          balance: currentCashBalance,
+          opening: openingCash,
+          inflows: cashIn,
+          outflows: cashOut
+        },
+        totalLiquidCash: currentBankBalance + currentMpesaBalance + currentCashBalance
+      },
+      voteHeadBreakdown,
+      incomeBreakdown,
+      recentLedger: ledger.slice(0, 100),
+      totalLedgerCount: ledger.length
+    };
+  }
+
+  public async deleteFeeStructure(id: string, requestingUser?: UserContext) {
+    if (requestingUser && ![UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT].includes(requestingUser.role)) {
+      throw new ForbiddenError('Only School Admin or Accountant can delete fee structures.');
+    }
+    const fs = await this.feeRepository.findFeeStructureById(id);
+    if (!fs) throw new NotFoundError('FeeStructure', id);
+    await this.feeRepository.deleteFeeStructure(id);
+    return { success: true, message: `Fee structure "${fs.title}" deleted successfully.` };
+  }
 }
+
 

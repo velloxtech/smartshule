@@ -96,7 +96,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Grace Seed Academy\",\n  \"code\": \"GSA-2026\",\n  \"centerCode\": \"KNEC-041289\",\n  \"motto\": \"Excellence in Competence & Character\",\n  \"email\": \"admin@smartshule.ac.ke\",\n  \"phone\": \"+254712345678\",\n  \"address\": \"P.O. Box 4567-00100 Nairobi\",\n  \"currency\": \"KES\"\n}"
+              "raw": "{\n  \"name\": \"Grace Seeds School\",\n  \"code\": \"GSA-2026\",\n  \"centerCode\": \"KNEC-041289\",\n  \"motto\": \"Excellence in Competence & Character\",\n  \"email\": \"admin@smartshule.ac.ke\",\n  \"phone\": \"+254712345678\",\n  \"address\": \"P.O. Box 4567-00100 Nairobi\",\n  \"currency\": \"KES\"\n}"
             },
             "url": { "raw": "{{baseUrl}}/academics/school", "host": ["{{baseUrl}}"], "path": ["academics", "school"] }
           }

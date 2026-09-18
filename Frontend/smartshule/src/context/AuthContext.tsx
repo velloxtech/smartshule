@@ -2,50 +2,6 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { AuthUser, UserRole } from '../types';
 import { apiService, setAuthToken } from '../services/api';
 
-export interface DemoAccount {
-  label: string;
-  role: UserRole;
-  email: string;
-  password: string;
-  name: string;
-  description: string;
-}
-
-export const DEMO_ACCOUNTS: DemoAccount[] = [
-  {
-    label: 'Super Administrator',
-    role: UserRole.SUPER_ADMIN,
-    email: 'admin@smartshule.ac.ke',
-    password: 'Admin@123',
-    name: 'Don Mutua',
-    description: 'Full system control, academic configuration, finance and approvals',
-  },
-  {
-    label: 'Science Teacher (Grade 7)',
-    role: UserRole.TEACHER,
-    email: 'sarah.mwangi@smartshule.ac.ke',
-    password: 'Teacher@123',
-    name: 'Sarah Mwangi',
-    description: 'Formative & summative CBC rubrics, lesson plans, daily roll call',
-  },
-  {
-    label: 'Finance Officer / Bursar',
-    role: UserRole.ACCOUNTANT,
-    email: 'finance@smartshule.ac.ke',
-    password: 'Finance@123',
-    name: 'Grace Njeri',
-    description: 'Fee structures, invoices, M-Pesa STK collections, defaulter tracking',
-  },
-  {
-    label: 'Parent / Guardian',
-    role: UserRole.GUARDIAN,
-    email: 'mary.kariuki@gmail.com',
-    password: 'Guardian@123',
-    name: 'Mary Kariuki',
-    description: 'View child CBC report cards, attendance alerts, M-Pesa fee payments',
-  },
-];
-
 interface AuthContextType {
   user: AuthUser | null;
   token: string | null;
@@ -53,7 +9,6 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
-  switchDemoAccount: (account: DemoAccount) => Promise<boolean>;
   refreshProfile: () => Promise<void>;
   error: string | null;
 }
@@ -125,10 +80,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
   };
 
-  const switchDemoAccount = async (account: DemoAccount): Promise<boolean> => {
-    return login(account.email, account.password);
-  };
-
   return (
     <AuthContext.Provider
       value={{
@@ -138,7 +89,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated: !!user,
         login,
         logout,
-        switchDemoAccount,
         refreshProfile,
         error,
       }}

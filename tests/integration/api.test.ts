@@ -2,6 +2,7 @@ import request from 'supertest';
 import { Express } from 'express';
 import { AppContainer } from '../../src/infrastructure/container';
 import { createExpressApp } from '../../src/infrastructure/http/app';
+import { setupTestFixtures } from '../helpers/testFixtures';
 
 describe('SmartShule Hexagonal API Integration Tests', () => {
   let app: Express;
@@ -11,7 +12,7 @@ describe('SmartShule Hexagonal API Integration Tests', () => {
 
   beforeAll(async () => {
     container = new AppContainer();
-    await container.initSeed();
+    await setupTestFixtures(container);
     app = createExpressApp(container);
 
     // Login as Admin
@@ -73,7 +74,7 @@ describe('SmartShule Hexagonal API Integration Tests', () => {
         .set('Authorization', `Bearer ${adminToken}`);
 
       expect(res.status).toBe(200);
-      expect(['Grace Seed Academy', 'Grace Seeds School']).toContain(res.body.data.name);
+      expect(['Grace Seeds School', 'Grace Seeds School']).toContain(res.body.data.name);
       expect(res.body.data.centerCode).toBe('CBA-041289');
     });
 

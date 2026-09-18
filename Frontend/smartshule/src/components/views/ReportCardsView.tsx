@@ -182,11 +182,15 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
               <span className="material-symbols-outlined text-[32px]">school</span>
             </div>
             <div className="text-left">
-              <h2 className="text-2xl font-black text-primary tracking-tight">GRACE SEEDS SCHOOL</h2>
+              <h2 className="text-2xl font-black text-primary tracking-tight">
+                {reportCardData?.school?.name || 'SmartShule CBC Academy'}
+              </h2>
               <p className="text-xs font-semibold text-gray-600">
-                MoE Registration: <strong>MOE/PRI/2026/0981</strong> · Assessment Centre: <strong>CBA-041289</strong>
+                MoE Registration: <strong>{reportCardData?.school?.code || 'MOE/PRI/2026/0981'}</strong> · Assessment Centre: <strong>{reportCardData?.school?.centerCode || 'CBA-041289'}</strong>
               </p>
-              <p className="text-xs italic text-secondary font-medium">&quot;Excellence in Competence & Character&quot;</p>
+              <p className="text-xs italic text-secondary font-medium">
+                &quot;{reportCardData?.school?.motto || 'Excellence in Competence & Character'}&quot;
+              </p>
             </div>
           </div>
 

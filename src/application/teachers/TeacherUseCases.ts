@@ -124,4 +124,13 @@ export class TeacherUseCases {
     await this.teacherRepository.update(teacher);
     return teacher.toJSON();
   }
+
+  public async deleteTeacher(teacherId: string) {
+    const teacher = await this.teacherRepository.findById(teacherId);
+    if (!teacher) throw new NotFoundError('Teacher', teacherId);
+    await this.teacherRepository.delete(teacherId);
+    if (teacher.userId) {
+      await this.userRepository.delete(teacher.userId);
+    }
+  }
 }

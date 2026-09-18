@@ -23,7 +23,9 @@ import {
 import {
   IFeeRepository,
   InvoiceFilterCriteria,
-  PaymentFilterCriteria
+  PaymentFilterCriteria,
+  ExpenseFilterCriteria,
+  OtherIncomeFilterCriteria
 } from '../../../core/ports/repositories/IFeeRepository';
 
 import { User, UserRole, UserStatus } from '../../../core/domain/user/User';
@@ -46,7 +48,16 @@ import { SchemeOfWork, SchemeStatus } from '../../../core/domain/curriculum-plan
 import { LessonPlan } from '../../../core/domain/curriculum-plan/LessonPlan';
 import { Timetable, DayOfWeek } from '../../../core/domain/timetable/Timetable';
 import { AttendanceRegister, AttendanceType } from '../../../core/domain/attendance/Attendance';
-import { FeeStructure, StudentInvoice, Payment, PaymentMethod, PaymentStatus, InvoiceStatus } from '../../../core/domain/finance/Fee';
+import {
+  FeeStructure,
+  StudentInvoice,
+  Payment,
+  PaymentMethod,
+  PaymentStatus,
+  InvoiceStatus,
+  Expense,
+  OtherIncome
+} from '../../../core/domain/finance/Fee';
 
 export class PostgresDatabaseInitializer {
   public static async initializeSchema(pool: Pool): Promise<void> {
@@ -380,6 +391,43 @@ export class PostgresDatabaseInitializer {
         recorded_by_user_id VARCHAR(100) NOT NULL,
         status VARCHAR(50) DEFAULT 'COMPLETED',
         notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS expenses (
+        id VARCHAR(100) PRIMARY KEY,
+        school_id VARCHAR(100) NOT NULL,
+        voucher_number VARCHAR(100) UNIQUE NOT NULL,
+        category VARCHAR(100) NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        amount NUMERIC(12, 2) NOT NULL,
+        payment_method VARCHAR(50) NOT NULL,
+        payment_reference VARCHAR(100) NOT NULL,
+        payee VARCHAR(255) NOT NULL,
+        expense_date VARCHAR(50) NOT NULL,
+        status VARCHAR(50) NOT NULL,
+        notes TEXT,
+        recorded_by_user_id VARCHAR(100) NOT NULL,
+        approved_by_user_id VARCHAR(100),
+        receipt_url VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS other_incomes (
+        id VARCHAR(100) PRIMARY KEY,
+        school_id VARCHAR(100) NOT NULL,
+        receipt_number VARCHAR(100) UNIQUE NOT NULL,
+        source VARCHAR(100) NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        amount NUMERIC(12, 2) NOT NULL,
+        payment_method VARCHAR(50) NOT NULL,
+        payment_reference VARCHAR(100) NOT NULL,
+        received_from VARCHAR(255) NOT NULL,
+        income_date VARCHAR(50) NOT NULL,
+        notes TEXT,
+        recorded_by_user_id VARCHAR(100) NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
@@ -733,6 +781,16 @@ export class PostgresAcademicRepository implements IAcademicRepository {
                ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, updated_at = NOW()`;
     await this.pool.query(q, [la.id, la.name, la.code, la.gradeLevel, la.educationLevel, la.isElective, la.schoolId, la.createdAt, la.updatedAt]);
   }
+  public async deleteClass(id: string): Promise<void> {
+    await this.pool.query('DELETE FROM classrooms WHERE id = $1', [id]);
+    await this.pool.query('DELETE FROM streams WHERE classroom_id = $1', [id]);
+  }
+  public async deleteStream(id: string): Promise<void> {
+    await this.pool.query('DELETE FROM streams WHERE id = $1', [id]);
+  }
+  public async deleteLearningArea(id: string): Promise<void> {
+    await this.pool.query('DELETE FROM learning_areas WHERE id = $1', [id]);
+  }
 }
 
 export class PostgresCbcAssessmentRepository implements ICbcAssessmentRepository {
@@ -753,6 +811,10 @@ export class PostgresCbcAssessmentRepository implements ICbcAssessmentRepository
                ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, updated_at = NOW()`;
     await this.pool.query(q, [s.id, s.learningAreaId, s.gradeLevel, s.code, s.title, s.description, s.createdAt, s.updatedAt]);
   }
+  public async deleteStrand(id: string): Promise<void> {
+    await this.pool.query('DELETE FROM strands WHERE id = $1', [id]);
+    await this.pool.query('DELETE FROM sub_strands WHERE strand_id = $1', [id]);
+  }
   public async findSubStrandById(id: string): Promise<SubStrand | null> {
     const res = await this.pool.query('SELECT * FROM sub_strands WHERE id = $1', [id]);
     if (!res.rows.length) return null;
@@ -768,6 +830,9 @@ export class PostgresCbcAssessmentRepository implements ICbcAssessmentRepository
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, specific_learning_outcomes = EXCLUDED.specific_learning_outcomes, updated_at = NOW()`;
     await this.pool.query(q, [sub.id, sub.strandId, sub.code, sub.title, JSON.stringify(sub.specificLearningOutcomes), JSON.stringify(sub.suggestedExperiences || []), sub.createdAt, sub.updatedAt]);
+  }
+  public async deleteSubStrand(id: string): Promise<void> {
+    await this.pool.query('DELETE FROM sub_strands WHERE id = $1', [id]);
   }
   public async findFormativeById(id: string): Promise<FormativeAssessment | null> {
     const res = await this.pool.query('SELECT * FROM formative_assessments WHERE id = $1', [id]);
@@ -792,6 +857,9 @@ export class PostgresCbcAssessmentRepository implements ICbcAssessmentRepository
     await this.pool.query(q, [f.id, f.studentId, f.teacherId, f.learningAreaId, f.subStrandId, f.termId, f.academicYearId, f.assessmentDate, f.assessmentMethod, f.performanceLevel, f.specificOutcomeTested, f.teacherRemarks, f.evidenceNotes, JSON.stringify(f.targetedCompetencies || []), JSON.stringify(f.valuesObserved || []), f.createdAt, f.updatedAt]);
   }
   public async updateFormative(f: FormativeAssessment): Promise<void> { await this.saveFormative(f); }
+  public async deleteFormative(id: string): Promise<void> {
+    await this.pool.query('DELETE FROM formative_assessments WHERE id = $1', [id]);
+  }
   public async findSummativeById(id: string): Promise<SummativeAssessment | null> {
     const res = await this.pool.query('SELECT * FROM summative_assessments WHERE id = $1', [id]);
     if (!res.rows.length) return null;
@@ -989,6 +1057,9 @@ export class PostgresFeeRepository implements IFeeRepository {
     await this.pool.query(q, [fs.id, fs.schoolId, fs.academicYearId, fs.termId, fs.gradeLevel, fs.title, JSON.stringify(fs.items), fs.dueDate, fs.createdAt, fs.updatedAt]);
   }
   public async updateFeeStructure(fs: FeeStructure): Promise<void> { await this.saveFeeStructure(fs); }
+  public async deleteFeeStructure(id: string): Promise<void> {
+    await this.pool.query('DELETE FROM fee_structures WHERE id = $1', [id]);
+  }
   public async findInvoiceById(id: string): Promise<StudentInvoice | null> {
     const res = await this.pool.query('SELECT * FROM student_invoices WHERE id = $1', [id]);
     if (!res.rows.length) return null;
@@ -1046,4 +1117,87 @@ export class PostgresFeeRepository implements IFeeRepository {
     await this.pool.query(q, [p.id, p.schoolId, p.invoiceId, p.studentId, p.receiptNumber, p.amount, p.paymentMethod, p.transactionReference, p.mpesaPhoneNumber, p.paymentDate, p.recordedByUserId, p.status, p.notes, p.createdAt, p.updatedAt]);
   }
   public async updatePayment(p: Payment): Promise<void> { await this.savePayment(p); }
+
+  // Expenses
+  public async findExpenseById(id: string): Promise<Expense | null> {
+    const res = await this.pool.query('SELECT * FROM expenses WHERE id = $1', [id]);
+    if (!res.rows.length) return null;
+    const r = res.rows[0];
+    return Expense.create({ schoolId: r.school_id, voucherNumber: r.voucher_number, category: r.category, title: r.title, amount: Number(r.amount), paymentMethod: r.payment_method, paymentReference: r.payment_reference, payee: r.payee, expenseDate: r.expense_date, status: r.status, notes: r.notes, recordedByUserId: r.recorded_by_user_id, approvedByUserId: r.approved_by_user_id, receiptUrl: r.receipt_url }, r.id, r.created_at, r.updated_at);
+  }
+
+  public async findExpenseByVoucherNumber(voucherNumber: string): Promise<Expense | null> {
+    const res = await this.pool.query('SELECT * FROM expenses WHERE voucher_number = $1', [voucherNumber]);
+    if (!res.rows.length) return null;
+    const r = res.rows[0];
+    return Expense.create({ schoolId: r.school_id, voucherNumber: r.voucher_number, category: r.category, title: r.title, amount: Number(r.amount), paymentMethod: r.payment_method, paymentReference: r.payment_reference, payee: r.payee, expenseDate: r.expense_date, status: r.status, notes: r.notes, recordedByUserId: r.recorded_by_user_id, approvedByUserId: r.approved_by_user_id, receiptUrl: r.receipt_url }, r.id, r.created_at, r.updated_at);
+  }
+
+  public async findExpenses(filters: ExpenseFilterCriteria): Promise<Expense[]> {
+    let q = 'SELECT * FROM expenses WHERE 1=1';
+    const params: any[] = [];
+    if (filters.schoolId) { params.push(filters.schoolId); q += ` AND school_id = $${params.length}`; }
+    if (filters.category) { params.push(filters.category); q += ` AND category = $${params.length}`; }
+    if (filters.status) { params.push(filters.status); q += ` AND status = $${params.length}`; }
+    if (filters.startDate) { params.push(filters.startDate); q += ` AND expense_date >= $${params.length}`; }
+    if (filters.endDate) { params.push(filters.endDate); q += ` AND expense_date <= $${params.length}`; }
+    if (filters.payee) { params.push(`%${filters.payee}%`); q += ` AND payee ILIKE $${params.length}`; }
+    q += ' ORDER BY expense_date DESC';
+    const res = await this.pool.query(q, params);
+    return res.rows.map(r => Expense.create({ schoolId: r.school_id, voucherNumber: r.voucher_number, category: r.category, title: r.title, amount: Number(r.amount), paymentMethod: r.payment_method, paymentReference: r.payment_reference, payee: r.payee, expenseDate: r.expense_date, status: r.status, notes: r.notes, recordedByUserId: r.recorded_by_user_id, approvedByUserId: r.approved_by_user_id, receiptUrl: r.receipt_url }, r.id, r.created_at, r.updated_at));
+  }
+
+  public async saveExpense(e: Expense): Promise<void> {
+    const q = `INSERT INTO expenses (id, school_id, voucher_number, category, title, amount, payment_method, payment_reference, payee, expense_date, status, notes, recorded_by_user_id, approved_by_user_id, receipt_url, created_at, updated_at)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+               ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, amount = EXCLUDED.amount, status = EXCLUDED.status, updated_at = NOW()`;
+    await this.pool.query(q, [e.id, e.schoolId, e.voucherNumber, e.category, e.title, e.amount, e.paymentMethod, e.paymentReference, e.payee, e.expenseDate, e.status, e.notes, e.recordedByUserId, e.approvedByUserId, e.receiptUrl, e.createdAt, e.updatedAt]);
+  }
+
+  public async updateExpense(e: Expense): Promise<void> { await this.saveExpense(e); }
+
+  public async deleteExpense(id: string): Promise<void> {
+    await this.pool.query('DELETE FROM expenses WHERE id = $1', [id]);
+  }
+
+  // Other Income
+  public async findOtherIncomeById(id: string): Promise<OtherIncome | null> {
+    const res = await this.pool.query('SELECT * FROM other_incomes WHERE id = $1', [id]);
+    if (!res.rows.length) return null;
+    const r = res.rows[0];
+    return OtherIncome.create({ schoolId: r.school_id, receiptNumber: r.receipt_number, source: r.source, title: r.title, amount: Number(r.amount), paymentMethod: r.payment_method, paymentReference: r.payment_reference, receivedFrom: r.received_from, incomeDate: r.income_date, notes: r.notes, recordedByUserId: r.recorded_by_user_id }, r.id, r.created_at, r.updated_at);
+  }
+
+  public async findOtherIncomeByReceiptNumber(receiptNumber: string): Promise<OtherIncome | null> {
+    const res = await this.pool.query('SELECT * FROM other_incomes WHERE receipt_number = $1', [receiptNumber]);
+    if (!res.rows.length) return null;
+    const r = res.rows[0];
+    return OtherIncome.create({ schoolId: r.school_id, receiptNumber: r.receipt_number, source: r.source, title: r.title, amount: Number(r.amount), paymentMethod: r.payment_method, paymentReference: r.payment_reference, receivedFrom: r.received_from, incomeDate: r.income_date, notes: r.notes, recordedByUserId: r.recorded_by_user_id }, r.id, r.created_at, r.updated_at);
+  }
+
+  public async findOtherIncome(filters: OtherIncomeFilterCriteria): Promise<OtherIncome[]> {
+    let q = 'SELECT * FROM other_incomes WHERE 1=1';
+    const params: any[] = [];
+    if (filters.schoolId) { params.push(filters.schoolId); q += ` AND school_id = $${params.length}`; }
+    if (filters.source) { params.push(filters.source); q += ` AND source = $${params.length}`; }
+    if (filters.startDate) { params.push(filters.startDate); q += ` AND income_date >= $${params.length}`; }
+    if (filters.endDate) { params.push(filters.endDate); q += ` AND income_date <= $${params.length}`; }
+    q += ' ORDER BY income_date DESC';
+    const res = await this.pool.query(q, params);
+    return res.rows.map(r => OtherIncome.create({ schoolId: r.school_id, receiptNumber: r.receipt_number, source: r.source, title: r.title, amount: Number(r.amount), paymentMethod: r.payment_method, paymentReference: r.payment_reference, receivedFrom: r.received_from, incomeDate: r.income_date, notes: r.notes, recordedByUserId: r.recorded_by_user_id }, r.id, r.created_at, r.updated_at));
+  }
+
+  public async saveOtherIncome(i: OtherIncome): Promise<void> {
+    const q = `INSERT INTO other_incomes (id, school_id, receipt_number, source, title, amount, payment_method, payment_reference, received_from, income_date, notes, recorded_by_user_id, created_at, updated_at)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+               ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, amount = EXCLUDED.amount, updated_at = NOW()`;
+    await this.pool.query(q, [i.id, i.schoolId, i.receiptNumber, i.source, i.title, i.amount, i.paymentMethod, i.paymentReference, i.receivedFrom, i.incomeDate, i.notes, i.recordedByUserId, i.createdAt, i.updatedAt]);
+  }
+
+  public async updateOtherIncome(i: OtherIncome): Promise<void> { await this.saveOtherIncome(i); }
+
+  public async deleteOtherIncome(id: string): Promise<void> {
+    await this.pool.query('DELETE FROM other_incomes WHERE id = $1', [id]);
+  }
 }
+

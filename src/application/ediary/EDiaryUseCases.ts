@@ -137,4 +137,10 @@ export class EDiaryUseCases {
       entry: entry.toJSON()
     };
   }
+
+  public async deleteEntry(id: string): Promise<void> {
+    const entry = await this.ediaryRepository.findById(id);
+    if (!entry) throw new NotFoundError('eDiary entry', id);
+    await this.ediaryRepository.delete(id);
+  }
 }

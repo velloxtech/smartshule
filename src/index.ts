@@ -7,8 +7,8 @@ import { createExpressApp } from './infrastructure/http/app';
 async function bootstrap() {
   const container = await AppContainer.create();
 
-  // Initialize demo data for instant testing
-  await container.initSeed();
+  // Ensure root administrator account exists for system access
+  await container.ensureSuperAdmin();
 
   const app = createExpressApp(container);
   const PORT = process.env.PORT || 3000;

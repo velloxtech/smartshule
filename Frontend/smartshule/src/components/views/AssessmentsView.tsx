@@ -1,17 +1,37 @@
 import React, { useState } from 'react';
 import { AssessmentRecord, CBCRubric } from '../../types';
+import { apiService } from '../../services/api';
 
 interface AssessmentsViewProps {
   assessments: AssessmentRecord[];
   onOpenNewAssessment: () => void;
+  onDeleteAssessment?: (id: string) => void;
 }
 
 export const AssessmentsView: React.FC<AssessmentsViewProps> = ({
   assessments,
   onOpenNewAssessment,
+  onDeleteAssessment,
 }) => {
   const [selectedRating, setSelectedRating] = useState<string>('All');
   const [selectedSubject, setSelectedSubject] = useState<string>('All');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDeleteAssessment = async (id: string) => {
+    if (window.confirm('Are you sure you want to delete this formative assessment record?')) {
+      setDeletingId(id);
+      try {
+        const res = await apiService.deleteFormative(id);
+        if (res.success) {
+          onDeleteAssessment?.(id);
+        }
+      } catch (err: any) {
+        alert(err.message || 'Failed to delete formative assessment');
+      } finally {
+        setDeletingId(null);
+      }
+    }
+  };
 
   const filtered = assessments.filter((a) => {
     const matchesRating = selectedRating === 'All' || a.rating === selectedRating;
@@ -171,7 +191,19 @@ export const AssessmentsView: React.FC<AssessmentsViewProps> = ({
               </div>
 
               <div className="shrink-0 flex flex-col md:items-end gap-2">
-                {getRatingBadge(item.rating)}
+                <div className="flex items-center gap-2">
+                  {getRatingBadge(item.rating)}
+                  <button
+                    onClick={() => handleDeleteAssessment(item.id)}
+                    disabled={deletingId === item.id}
+                    title="Delete Assessment Record"
+                    className="p-1 rounded text-outline hover:text-error hover:bg-error/10 transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">
+                      {deletingId === item.id ? 'sync' : 'delete'}
+                    </span>
+                  </button>
+                </div>
                 <span className="text-[11px] text-secondary font-medium flex items-center gap-1">
                   <span className="material-symbols-outlined text-[14px]">cloud_done</span> KNEC Synced
                 </span>
