@@ -94,14 +94,25 @@ export class AuthUseCases {
   public async login(dto: LoginDTO): Promise<AuthResponseDTO> {
     let lookupEmail = dto.email.toLowerCase().trim();
     const aliasMap: Record<string, string> = {
+      superadmin: 'superadmin@smartshule.ac.ke',
+      super_admin: 'superadmin@smartshule.ac.ke',
       admin: 'admin@smartshule.ac.ke',
-      teacher: 'sarah.mwangi@smartshule.ac.ke',
-      sarah: 'sarah.mwangi@smartshule.ac.ke',
-      finance: 'finance@smartshule.ac.ke',
-      bursar: 'finance@smartshule.ac.ke',
-      guardian: 'mary.kariuki@gmail.com',
-      parent: 'mary.kariuki@gmail.com',
-      mary: 'mary.kariuki@gmail.com'
+      school_admin: 'admin@smartshule.ac.ke',
+      headteacher: 'headteacher@smartshule.ac.ke',
+      head_teacher: 'headteacher@smartshule.ac.ke',
+      deputy: 'deputy@smartshule.ac.ke',
+      deputyheadteacher: 'deputy@smartshule.ac.ke',
+      deputy_headteacher: 'deputy@smartshule.ac.ke',
+      admissions: 'admissions@smartshule.ac.ke',
+      bursar: 'bursar@smartshule.ac.ke',
+      finance: 'bursar@smartshule.ac.ke',
+      accountant: 'bursar@smartshule.ac.ke',
+      teacher: 'teacher@smartshule.ac.ke',
+      sarah: 'teacher@smartshule.ac.ke',
+      parent: 'parent@smartshule.ac.ke',
+      parents: 'parent@smartshule.ac.ke',
+      guardian: 'parent@smartshule.ac.ke',
+      mary: 'parent@smartshule.ac.ke'
     };
     if (aliasMap[lookupEmail]) {
       lookupEmail = aliasMap[lookupEmail];
@@ -121,10 +132,15 @@ export class AuthUseCases {
     // Friendly demo account tolerance for casing/symbols
     if (!isMatch) {
       const demoAllowedPasswords: Record<string, string[]> = {
+        'superadmin@smartshule.ac.ke': ['SuperAdmin@123', 'superadmin@123', 'SuperAdmin123', 'superadmin123', 'superadmin'],
         'admin@smartshule.ac.ke': ['Admin@123', 'admin@123', 'Admin123', 'admin123', 'admin'],
+        'headteacher@smartshule.ac.ke': ['HeadTeacher@123', 'headteacher@123', 'HeadTeacher123', 'headteacher123', 'headteacher'],
+        'deputy@smartshule.ac.ke': ['Deputy@123', 'deputy@123', 'Deputy123', 'deputy123', 'deputy'],
+        'admissions@smartshule.ac.ke': ['Admissions@123', 'admissions@123', 'Admissions123', 'admissions123', 'admissions'],
+        'bursar@smartshule.ac.ke': ['Bursar@123', 'bursar@123', 'Bursar123', 'bursar123', 'bursar', 'Finance@123', 'finance@123'],
+        'teacher@smartshule.ac.ke': ['Teacher@123', 'teacher@123', 'Teacher123', 'teacher123', 'teacher'],
         'sarah.mwangi@smartshule.ac.ke': ['Teacher@123', 'teacher@123', 'Teacher123', 'teacher123', 'teacher'],
-        'john.ochieng@smartshule.ac.ke': ['Teacher@123', 'teacher@123', 'Teacher123', 'teacher123', 'teacher'],
-        'finance@smartshule.ac.ke': ['Finance@123', 'finance@123', 'Finance123', 'finance123', 'finance'],
+        'parent@smartshule.ac.ke': ['Parent@123', 'parent@123', 'Parent123', 'parent123', 'parent', 'Guardian@123', 'guardian@123'],
         'mary.kariuki@gmail.com': ['Guardian@123', 'guardian@123', 'Guardian123', 'guardian123', 'guardian', 'parent']
       };
       const allowed = demoAllowedPasswords[user.email.toLowerCase()];

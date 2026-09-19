@@ -86,6 +86,8 @@ export default function App() {
   const [createLessonPlanModalOpen, setCreateLessonPlanModalOpen] = useState(false);
   const [createSchemeModalOpen, setCreateSchemeModalOpen] = useState(false);
   const [backendConnected, setBackendConnected] = useState(false);
+  const [currentContext, setCurrentContext] = useState<any>(null);
+  const [school, setSchool] = useState<any>(null);
 
   // Synchronize view state with authentication status
   useEffect(() => {
@@ -108,10 +110,14 @@ export default function App() {
       setBackendConnected(isUp);
       if (isUp && isAuthenticated) {
         try {
-          const [studentData, defaultersRes] = await Promise.all([
+          const [studentData, defaultersRes, ctxRes, schRes] = await Promise.all([
             apiService.getStudents().catch(() => null),
             apiService.getDefaulters().catch(() => null),
+            apiService.getCurrentContext().catch(() => null),
+            apiService.getSchool().catch(() => null),
           ]);
+          if (ctxRes?.data) setCurrentContext(ctxRes.data);
+          if (schRes?.data) setSchool(schRes.data);
 
           const feeMap = new Map<string, { balance: number; billed: number }>();
           if (defaultersRes?.data?.defaulters && Array.isArray(defaultersRes.data.defaulters)) {
@@ -126,19 +132,19 @@ export default function App() {
               return {
                 id: st.id,
                 admNo: st.admissionNumber,
-                upi: st.upiNumber || 'NEMIS-PENDING',
-                nemis: st.upiNumber || 'NEMIS-PENDING',
+                upi: st.upiNumber || '--',
+                nemis: st.upiNumber || '--',
                 name: `${st.firstName} ${st.lastName}`,
                 gender: st.gender === 'FEMALE' ? 'Girl' : 'Boy',
-                grade: st.gradeLevel ? st.gradeLevel.replace('_', ' ') : 'PP1',
-                stream: st.streamId ? st.streamId.replace(/^stream-[^-]+-/, '').toUpperCase() : '',
-                guardianName: st.guardian ? `${st.guardian.firstName} ${st.guardian.lastName}` : 'Guardian',
-                guardianPhone: st.guardian?.phone || '+254700000000',
+                grade: st.gradeLevel ? st.gradeLevel.replace('_', ' ') : 'Grade --',
+                stream: st.stream?.name || st.streamName || (st.streamId ? `Stream ${st.streamId.slice(0, 6)}` : '--'),
+                guardianName: st.guardian ? `${st.guardian.firstName} ${st.guardian.lastName}` : '--',
+                guardianPhone: st.guardian?.phone || '--',
                 feeBalance: fee.balance,
                 totalFee: fee.billed,
-                attendanceRate: 98,
-                cbcRating: 'ME',
-                status: st.status === 'ACTIVE' ? 'Active' : st.status,
+                attendanceRate: st.attendanceRate ?? 0,
+                cbcRating: st.cbcRating || '--',
+                status: st.status === 'ACTIVE' ? 'Active' : (st.status || 'Active'),
               };
             });
             setStudents(mappedStudents);
@@ -155,13 +161,13 @@ export default function App() {
               id: t.id,
               name: t.user ? `${t.user.firstName} ${t.user.lastName}` : `Teacher ${t.tscNumber || ''}`,
               role: 'Subject Teacher',
-              tscNumber: t.tscNumber || 'TSC-PENDING',
+              tscNumber: t.tscNumber || '--',
               assignedClass: t.assignedClassStreamIds?.length ? t.assignedClassStreamIds.join(', ') : 'Unassigned',
-              phone: t.user?.phone || '+254700000000',
-              email: t.user?.email || 'teacher@smartshule.ac.ke',
+              phone: t.user?.phone || '--',
+              email: t.user?.email || '--',
               learningAreas: t.specialization || ['CBC Core'],
-              status: 'Clocked In',
-              clockInTime: '07:45 AM',
+              status: t.status || 'Active',
+              clockInTime: t.clockInTime || '--',
             }));
             setTeachers(mappedTeachers);
           } else {
@@ -289,7 +295,12 @@ export default function App() {
       : cleanPhone.startsWith('254')
       ? cleanPhone
       : `254${cleanPhone}`;
-    apiService.initiateMpesaStkPush('inv-2026-001', formattedPhone).catch(() => {});
+    if (studentId) {
+      apiService.getInvoices({ studentId }).then((invRes) => {
+        const invId = invRes.data?.[0]?.id || studentId;
+        return apiService.initiateMpesaStkPush(invId, formattedPhone);
+      }).catch(() => {});
+    }
 
     // Add activity
     const newAct: SystemActivity = {
@@ -322,14 +333,18 @@ export default function App() {
       AE: 'AE',
       BE: 'BE',
     };
+    const activeTeacherId = user?.id || '';
+    const activeTermId = currentContext?.currentTerm?.id || '';
+    const activeYearId = currentContext?.currentYear?.id || '';
+
     apiService
       .recordFormativeAssessment({
         studentId: assessment.studentId,
-        teacherId: 'teacher-001',
-        learningAreaId: 'la-sci-001',
-        subStrandId: 'sub-strand-001',
-        termId: 'term-2026-1',
-        academicYearId: 'year-2026',
+        teacherId: (assessment as any).teacherId || activeTeacherId,
+        learningAreaId: (assessment as any).learningAreaId || '',
+        subStrandId: (assessment as any).subStrandId || '',
+        termId: (assessment as any).termId || activeTermId,
+        academicYearId: (assessment as any).academicYearId || activeYearId,
         assessmentDate: new Date().toISOString().split('T')[0],
         assessmentMethod: 'OBSERVATION',
         performanceLevel: levelMap[assessment.rating] || 'ME',
@@ -373,21 +388,24 @@ export default function App() {
     if (rawBackendData) {
       apiService.registerStudent(rawBackendData).catch(() => {});
     } else {
-      const parts = (newStudent.name || 'Learner Student').split(' ');
-      const first = parts[0] || 'Learner';
-      const last = parts.slice(1).join(' ') || 'Student';
+      const parts = (newStudent.name || '').trim().split(' ');
+      const first = parts[0] || 'New';
+      const last = parts.slice(1).join(' ') || 'Learner';
+      const activeSchoolId = user?.schoolId || school?.id || '';
+      const activeYearId = currentContext?.currentYear?.id || '';
+
       apiService
         .registerStudent({
-          admissionNumber: newStudent.admNo || `ADM-${Date.now()}`,
+          admissionNumber: newStudent.admNo || `ADM-${Date.now().toString().slice(-4)}`,
           upiNumber: newStudent.upi,
           firstName: first,
           lastName: last,
-          dateOfBirth: '2014-01-01',
+          dateOfBirth: '2015-01-01',
           gender: 'MALE',
           gradeLevel: 'GRADE_7',
-          streamId: 'stream-g7-east',
-          schoolId: 'school-001',
-          academicYearId: 'year-2026',
+          streamId: (newStudent as any).streamId || undefined,
+          schoolId: activeSchoolId,
+          academicYearId: activeYearId,
         })
         .catch(() => {});
     }
@@ -634,7 +652,11 @@ export default function App() {
             <TeachersView
               teachers={teachers}
               onToggleClockIn={handleToggleClockIn}
-              onOpenOnboardTeacher={() => setOnboardTeacherModalOpen(true)}
+              onOpenOnboardTeacher={
+                user?.role && [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.ADMISSIONS].includes(user.role)
+                  ? () => setOnboardTeacherModalOpen(true)
+                  : undefined
+              }
               onDeleteTeacher={(deletedId) =>
                 setTeachers((prev) => prev.filter((t) => t.id !== deletedId))
               }

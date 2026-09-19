@@ -134,14 +134,18 @@ export class TimetableUseCases {
       return timetable.toJSON();
     }
 
+    if (!dto.schoolId || !dto.academicYearId || !dto.termId || !dto.classRoomId || !dto.streamId) {
+      throw new ValidationError('schoolId, academicYearId, termId, classRoomId, and streamId are required to create a new timetable.');
+    }
+
     // Create new timetable if not exists
     const newTimetable = Timetable.create(
       {
-        schoolId: dto.schoolId || 'school-001',
-        academicYearId: dto.academicYearId || 'year-2026',
-        termId: dto.termId || 'term-2026-1',
-        classRoomId: dto.classRoomId || 'class-grade-7',
-        streamId: dto.streamId || 'stream-g7-east',
+        schoolId: dto.schoolId,
+        academicYearId: dto.academicYearId,
+        termId: dto.termId,
+        classRoomId: dto.classRoomId,
+        streamId: dto.streamId,
         slots: dto.slots || [],
         periods: dto.periods,
         days: dto.days,

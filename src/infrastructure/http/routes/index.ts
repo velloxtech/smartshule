@@ -47,7 +47,8 @@ import {
   CreateSchemeSchema,
   AddSchemeEntrySchema,
   ReviewSchemeSchema,
-  CreateLessonPlanSchema
+  CreateLessonPlanSchema,
+  ReviewLessonPlanSchema
 } from '../controllers/CurriculumPlanController';
 
 import {
@@ -165,7 +166,7 @@ export function createApiRouter(container: AppContainer): Router {
   // 4. TEACHER ROUTES
   // ==========================================
   const teacherRouter = Router();
-  teacherRouter.post('/', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN), validateBody(RegisterTeacherSchema), teacherController.registerTeacher);
+  teacherRouter.post('/', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.ADMISSIONS), validateBody(RegisterTeacherSchema), teacherController.registerTeacher);
   teacherRouter.get('/me/profile', authMiddleware, teacherController.getMyTeacherProfile);
   teacherRouter.get('/', authMiddleware, teacherController.listTeachers);
   teacherRouter.get('/:id', authMiddleware, teacherController.getTeacherById);
@@ -200,11 +201,13 @@ export function createApiRouter(container: AppContainer): Router {
   curriculumRouter.post('/schemes', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), validateBody(CreateSchemeSchema), curriculumController.createScheme);
   curriculumRouter.post('/schemes/:id/entries', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER), validateBody(AddSchemeEntrySchema), curriculumController.addSchemeEntry);
   curriculumRouter.post('/schemes/:id/submit', authMiddleware, requireRoles(UserRole.TEACHER), curriculumController.submitScheme);
-  curriculumRouter.post('/schemes/:id/review', authMiddleware, requireRoles(UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), validateBody(ReviewSchemeSchema), curriculumController.reviewScheme);
+  curriculumRouter.post('/schemes/:id/review', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER), validateBody(ReviewSchemeSchema), curriculumController.reviewScheme);
   curriculumRouter.get('/schemes', authMiddleware, curriculumController.listSchemes);
   curriculumRouter.get('/schemes/:id', authMiddleware, curriculumController.getSchemeById);
   curriculumRouter.delete('/schemes/:id', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), curriculumController.deleteScheme);
   curriculumRouter.post('/lesson-plans', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), validateBody(CreateLessonPlanSchema), curriculumController.createLessonPlan);
+  curriculumRouter.post('/lesson-plans/:id/submit', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.ADMIN, UserRole.SUPER_ADMIN), curriculumController.submitLessonPlan);
+  curriculumRouter.post('/lesson-plans/:id/review', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER), validateBody(ReviewLessonPlanSchema), curriculumController.reviewLessonPlan);
   curriculumRouter.get('/lesson-plans', authMiddleware, curriculumController.listLessonPlans);
   curriculumRouter.get('/lesson-plans/:id', authMiddleware, curriculumController.getLessonPlanById);
   curriculumRouter.delete('/lesson-plans/:id', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), curriculumController.deleteLessonPlan);

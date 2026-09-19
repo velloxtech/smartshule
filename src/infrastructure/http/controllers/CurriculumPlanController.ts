@@ -53,6 +53,11 @@ export const ReviewSchemeSchema = z.object({
   remarks: z.string().min(1)
 });
 
+export const ReviewLessonPlanSchema = z.object({
+  approved: z.boolean(),
+  remarks: z.string().min(1)
+});
+
 export const CreateLessonPlanSchema = z.object({
   teacherId: z.string().min(1),
   schemeOfWorkEntryId: z.string().optional(),
@@ -157,6 +162,26 @@ export class CurriculumPlanController {
     try {
       const lessonPlan = await this.curriculumUseCases.createLessonPlan(req.body);
       return res.status(201).json({ success: true, message: 'Lesson plan created successfully', data: lessonPlan });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public submitLessonPlan = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const plan = await this.curriculumUseCases.submitLessonPlanForReview(req.params.id as string);
+      return res.status(200).json({ success: true, message: 'Lesson plan submitted for review', data: plan });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public reviewLessonPlan = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const reviewerUserId = req.user!.userId;
+      const { approved, remarks } = req.body;
+      const plan = await this.curriculumUseCases.reviewLessonPlan(req.params.id as string, reviewerUserId, approved, remarks);
+      return res.status(200).json({ success: true, message: `Lesson plan ${approved ? 'approved' : 'rejected'}`, data: plan });
     } catch (err) {
       next(err);
     }

@@ -49,6 +49,8 @@ import { VisualMediaUseCases } from '../application/media/VisualMediaUseCases';
 import { EDiaryUseCases } from '../application/ediary/EDiaryUseCases';
 
 import { User, UserRole, UserStatus } from '../core/domain/user/User';
+import { Teacher } from '../core/domain/user/Teacher';
+import { Guardian, GuardianRelationship } from '../core/domain/user/Guardian';
 
 export class AppContainer {
   // Repositories
@@ -191,25 +193,142 @@ export class AppContainer {
     });
   }
 
-  public async ensureSuperAdmin() {
-    const adminEmail = process.env.DEFAULT_ADMIN_EMAIL || 'admin@smartshule.ac.ke';
-    const existingAdmin = await this.userRepository.findByEmail(adminEmail).catch(() => null);
-    if (!existingAdmin) {
-      const defaultPasswordHash = await this.passwordHasher.hash(process.env.DEFAULT_ADMIN_PASSWORD || 'Admin@123');
-      const superAdmin = User.create(
-        {
-          email: adminEmail,
-          passwordHash: defaultPasswordHash,
-          firstName: process.env.DEFAULT_ADMIN_FIRST_NAME || 'Don',
-          lastName: process.env.DEFAULT_ADMIN_LAST_NAME || 'Mutua',
-          role: UserRole.SUPER_ADMIN,
-          phone: process.env.DEFAULT_ADMIN_PHONE || '+254711000111',
-          status: UserStatus.ACTIVE
-        },
-        'usr-admin-01'
-      );
-      await this.userRepository.save(superAdmin);
-      console.log(`[Auth] Default admin account ensured: ${adminEmail}`);
+  public async ensureRoleAccounts() {
+    const defaultAccounts = [
+      {
+        id: 'usr-superadmin-01',
+        email: process.env.DEFAULT_SUPERADMIN_EMAIL || 'superadmin@smartshule.ac.ke',
+        password: process.env.DEFAULT_SUPERADMIN_PASSWORD || 'SuperAdmin@123',
+        firstName: 'System',
+        lastName: 'SuperAdmin',
+        role: UserRole.SUPER_ADMIN,
+        phone: '+254700000001'
+      },
+      {
+        id: 'usr-admin-01',
+        email: process.env.DEFAULT_ADMIN_EMAIL || 'admin@smartshule.ac.ke',
+        password: process.env.DEFAULT_ADMIN_PASSWORD || 'Admin@123',
+        firstName: process.env.DEFAULT_ADMIN_FIRST_NAME || 'Don',
+        lastName: process.env.DEFAULT_ADMIN_LAST_NAME || 'Mutua',
+        role: UserRole.ADMIN,
+        phone: process.env.DEFAULT_ADMIN_PHONE || '+254711000111'
+      },
+      {
+        id: 'usr-headteacher-01',
+        email: process.env.DEFAULT_HEADTEACHER_EMAIL || 'headteacher@smartshule.ac.ke',
+        password: process.env.DEFAULT_HEADTEACHER_PASSWORD || 'HeadTeacher@123',
+        firstName: 'Maina',
+        lastName: 'Kariuki',
+        role: UserRole.HEAD_TEACHER,
+        phone: '+254722000222'
+      },
+      {
+        id: 'usr-deputy-01',
+        email: process.env.DEFAULT_DEPUTY_EMAIL || 'deputy@smartshule.ac.ke',
+        password: process.env.DEFAULT_DEPUTY_PASSWORD || 'Deputy@123',
+        firstName: 'Grace',
+        lastName: 'Wambui',
+        role: UserRole.DEPUTY_HEAD_TEACHER,
+        phone: '+254733000333'
+      },
+      {
+        id: 'usr-admissions-01',
+        email: process.env.DEFAULT_ADMISSIONS_EMAIL || 'admissions@smartshule.ac.ke',
+        password: process.env.DEFAULT_ADMISSIONS_PASSWORD || 'Admissions@123',
+        firstName: 'Peter',
+        lastName: 'Otieno',
+        role: UserRole.ADMISSIONS,
+        phone: '+254744000444'
+      },
+      {
+        id: 'usr-bursar-01',
+        email: process.env.DEFAULT_BURSAR_EMAIL || 'bursar@smartshule.ac.ke',
+        password: process.env.DEFAULT_BURSAR_PASSWORD || 'Bursar@123',
+        firstName: 'David',
+        lastName: 'Kamau',
+        role: UserRole.BURSAR,
+        phone: '+254755000555'
+      },
+      {
+        id: 'usr-teacher-01',
+        email: process.env.DEFAULT_TEACHER_EMAIL || 'teacher@smartshule.ac.ke',
+        password: process.env.DEFAULT_TEACHER_PASSWORD || 'Teacher@123',
+        firstName: 'Sarah',
+        lastName: 'Mwangi',
+        role: UserRole.TEACHER,
+        phone: '+254766000666'
+      },
+      {
+        id: 'usr-parent-01',
+        email: process.env.DEFAULT_PARENT_EMAIL || 'parent@smartshule.ac.ke',
+        password: process.env.DEFAULT_PARENT_PASSWORD || 'Parent@123',
+        firstName: 'Mary',
+        lastName: 'Njeri',
+        role: UserRole.PARENT,
+        phone: '+254777000777'
+      }
+    ];
+
+    for (const acc of defaultAccounts) {
+      const existing = await this.userRepository.findByEmail(acc.email).catch(() => null);
+      if (!existing) {
+        const passwordHash = await this.passwordHasher.hash(acc.password);
+        const user = User.create(
+          {
+            email: acc.email,
+            passwordHash,
+            firstName: acc.firstName,
+            lastName: acc.lastName,
+            role: acc.role,
+            phone: acc.phone,
+            status: UserStatus.ACTIVE
+          },
+          acc.id
+        );
+        await this.userRepository.save(user);
+        console.log(`[Auth] Provisioned default account (${acc.role}): ${acc.email}`);
+
+        // If teacher, ensure a linked teacher profile exists
+        if (acc.role === UserRole.TEACHER) {
+          const existingTeacher = await this.teacherRepository.findByUserId(user.id).catch(() => null);
+          if (!existingTeacher) {
+            const teacher = Teacher.create(
+              {
+                userId: user.id,
+                employeeNumber: 'EMP-1001',
+                tscNumber: 'TSC/778899',
+                specialization: ['Mathematics', 'Integrated Science'],
+                assignedClassStreamIds: [],
+                qualification: 'B.Ed (Science)'
+              },
+              'tch-default-01'
+            );
+            await this.teacherRepository.save(teacher);
+          }
+        }
+
+        // If parent, ensure a linked guardian profile exists
+        if (acc.role === UserRole.PARENT || acc.role === UserRole.GUARDIAN) {
+          const existingGuardian = await this.guardianRepository.findByUserId(user.id).catch(() => null);
+          if (!existingGuardian) {
+            const guardian = Guardian.create(
+              {
+                userId: user.id,
+                nationalId: '28475921',
+                relationship: GuardianRelationship.MOTHER,
+                emergencyContact: acc.phone,
+                studentIds: []
+              },
+              'grd-default-01'
+            );
+            await this.guardianRepository.save(guardian);
+          }
+        }
+      }
     }
+  }
+
+  public async ensureSuperAdmin() {
+    await this.ensureRoleAccounts();
   }
 }

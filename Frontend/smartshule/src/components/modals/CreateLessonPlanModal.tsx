@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
+import { ClassRoom, StreamItem, BackendLearningArea } from '../../types';
 
 interface CreateLessonPlanModalProps {
   isOpen: boolean;
@@ -12,19 +14,89 @@ export const CreateLessonPlanModal: React.FC<CreateLessonPlanModalProps> = ({
   onClose,
   onPlanCreated,
 }) => {
-  const [strand, setStrand] = useState('Living Things and Their Environment');
-  const [subStrand, setSubStrand] = useState('Microscope and Cell Structure');
-  const [lessonDate, setLessonDate] = useState('2026-02-12');
+  const { user } = useAuth();
+
+  // Dynamic DB entities
+  const [classes, setClasses] = useState<ClassRoom[]>([]);
+  const [selectedClassRoomId, setSelectedClassRoomId] = useState('');
+  const [streams, setStreams] = useState<StreamItem[]>([]);
+  const [selectedStreamId, setSelectedStreamId] = useState('');
+  const [learningAreas, setLearningAreas] = useState<BackendLearningArea[]>([]);
+  const [selectedLearningAreaId, setSelectedLearningAreaId] = useState('');
+
+  // Form inputs
+  const [strand, setStrand] = useState('');
+  const [subStrand, setSubStrand] = useState('');
+  const [lessonDate, setLessonDate] = useState(new Date().toISOString().split('T')[0]);
   const [durationMinutes] = useState(40);
-  const [rollBoys, setRollBoys] = useState('20');
-  const [rollGirls, setRollGirls] = useState('18');
-  const [outcomes, setOutcomes] = useState('Identify the ocular lens, stage, and objective lenses of a microscope');
-  const [inquiryQuestion, setInquiryQuestion] = useState('Why is proper illumination necessary when using a microscope?');
-  const [resources, setResources] = useState('Standard compound microscope, charts, interactive digital model');
-  const [extendedActivity, setExtendedActivity] = useState('Draw and label the light microscope in science exercise book.');
-  const [teacherReflection, setTeacherReflection] = useState('Learners engaged well with high curiosity during the demonstration.');
+  const [rollBoys, setRollBoys] = useState('0');
+  const [rollGirls, setRollGirls] = useState('0');
+  const [outcomes, setOutcomes] = useState('');
+  const [inquiryQuestion, setInquiryQuestion] = useState('');
+  const [resources, setResources] = useState('');
+  const [extendedActivity, setExtendedActivity] = useState('');
+  const [teacherReflection, setTeacherReflection] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Load classes and learning areas from DB
+  useEffect(() => {
+    if (!isOpen) return;
+
+    async function loadOptions() {
+      try {
+        const [cRes, laRes] = await Promise.all([
+          apiService.getClasses().catch(() => null),
+          apiService.getLearningAreas().catch(() => null),
+        ]);
+
+        if (cRes?.data && Array.isArray(cRes.data) && cRes.data.length > 0) {
+          setClasses(cRes.data);
+          setSelectedClassRoomId(cRes.data[0].id);
+        } else {
+          setClasses([]);
+          setSelectedClassRoomId('');
+        }
+
+        if (laRes?.data && Array.isArray(laRes.data) && laRes.data.length > 0) {
+          setLearningAreas(laRes.data);
+          setSelectedLearningAreaId(laRes.data[0].id);
+        } else {
+          setLearningAreas([]);
+          setSelectedLearningAreaId('');
+        }
+      } catch (err) {
+        console.error('Failed to load initial data for lesson plan modal:', err);
+      }
+    }
+
+    loadOptions();
+  }, [isOpen]);
+
+  // Load streams when selectedClassRoomId changes
+  useEffect(() => {
+    if (!selectedClassRoomId) {
+      setStreams([]);
+      setSelectedStreamId('');
+      return;
+    }
+
+    apiService
+      .getStreamsByClass(selectedClassRoomId)
+      .then((res) => {
+        if (res?.success && res.data && res.data.length > 0) {
+          setStreams(res.data);
+          setSelectedStreamId(res.data[0].id);
+        } else {
+          setStreams([]);
+          setSelectedStreamId('');
+        }
+      })
+      .catch(() => {
+        setStreams([]);
+        setSelectedStreamId('');
+      });
+  }, [selectedClassRoomId]);
 
   if (!isOpen) return null;
 
@@ -33,58 +105,76 @@ export const CreateLessonPlanModal: React.FC<CreateLessonPlanModalProps> = ({
     setIsLoading(true);
     setError(null);
 
+    if (!selectedClassRoomId) {
+      setError('Please select a class for this lesson plan');
+      setIsLoading(false);
+      return;
+    }
+
+    if (!selectedLearningAreaId) {
+      setError('Please select a learning area');
+      setIsLoading(false);
+      return;
+    }
+
+    const teacherId = user?.id || '';
+    if (!teacherId) {
+      setError('Authenticated educator profile required to author lesson plan');
+      setIsLoading(false);
+      return;
+    }
+
     const steps = [
       {
         stepNumber: 1,
         stepTitle: 'Introduction (5 mins)',
         durationMinutes: 5,
-        teacherActivities: 'Introduces lesson with a short riddle about microscopic organisms.',
-        learnerActivities: 'Brainstorm in pairs and name tools used to observe tiny specimens.',
+        teacherActivities: 'Introduces lesson outcomes and sets context through inquiry questions.',
+        learnerActivities: 'Engage actively in answering initial review questions.',
       },
       {
         stepNumber: 2,
-        stepTitle: 'Step 1: Part Identification (15 mins)',
+        stepTitle: 'Step 1: Concept Exploration (15 mins)',
         durationMinutes: 15,
-        teacherActivities: 'Demonstrates handling the microscope correctly; explains lens functions.',
-        learnerActivities: 'Examine microscope at station and identify each labeled part.',
+        teacherActivities: 'Facilitates conceptual demonstration and guided explanation.',
+        learnerActivities: 'Observe demonstration and explore key concepts collaboratively.',
       },
       {
         stepNumber: 3,
-        stepTitle: 'Step 2: Practical Observation (15 mins)',
+        stepTitle: 'Step 2: Practical Application (15 mins)',
         durationMinutes: 15,
-        teacherActivities: 'Guides learners on using coarse and fine adjustment knobs safely.',
-        learnerActivities: 'Practice bringing specimen slide into clear focus under low power.',
+        teacherActivities: 'Guides hands-on practical exercises and provides individual scaffolding.',
+        learnerActivities: 'Carry out guided tasks and document observations.',
       },
       {
         stepNumber: 4,
         stepTitle: 'Conclusion & Summary (5 mins)',
         durationMinutes: 5,
-        teacherActivities: 'Summarizes key takeaway points and equipment safety rules.',
-        learnerActivities: 'Pack equipment securely and record one reflection in learner journal.',
+        teacherActivities: 'Summarizes key takeaway learning points and gives formative feedback.',
+        learnerActivities: 'Record key reflections and clean up learning stations.',
       },
     ];
 
     try {
       const res = await apiService.createLessonPlan({
-        teacherId: 'teacher-001',
-        schemeOfWorkEntryId: 'scheme-entry-01',
-        learningAreaId: 'la-science-7',
-        classRoomId: 'class-grade-7',
-        streamId: 'stream-g7-east',
+        teacherId,
+        learningAreaId: selectedLearningAreaId,
+        classRoomId: selectedClassRoomId,
+        streamId: selectedStreamId || undefined,
         lessonDate,
         durationMinutes,
-        rollBoys: Number(rollBoys),
-        rollGirls: Number(rollGirls),
-        strand,
-        subStrand,
-        specificLearningOutcomes: [outcomes],
-        keyInquiryQuestions: [inquiryQuestion],
+        rollBoys: Number(rollBoys) || 0,
+        rollGirls: Number(rollGirls) || 0,
+        strand: strand.trim(),
+        subStrand: subStrand.trim(),
+        specificLearningOutcomes: [outcomes.trim()],
+        keyInquiryQuestions: [inquiryQuestion.trim()],
         coreCompetenciesAddressed: ['CRITICAL_THINKING_AND_PROBLEM_SOLVING', 'DIGITAL_LITERACY'],
         valuesAddressed: ['RESPONSIBILITY', 'RESPECT'],
-        learningResources: [resources],
+        learningResources: [resources.trim() || 'Textbooks, charts and digital tools'],
         steps,
-        extendedActivity,
-        teacherSelfReflection: teacherReflection,
+        extendedActivity: extendedActivity.trim() || undefined,
+        teacherSelfReflection: teacherReflection.trim() || undefined,
       });
 
       if (res.success && res.data) {
@@ -128,14 +218,80 @@ export const CreateLessonPlanModal: React.FC<CreateLessonPlanModalProps> = ({
             </div>
           )}
 
+          {/* Class, Stream, and Learning Area Selectors */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">
+                Class *
+              </label>
+              <select
+                value={selectedClassRoomId}
+                onChange={(e) => setSelectedClassRoomId(e.target.value)}
+                required
+                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2 text-xs text-on-surface"
+              >
+                {classes.length === 0 ? (
+                  <option value="">No classes found</option>
+                ) : (
+                  classes.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">
+                Stream (Optional)
+              </label>
+              <select
+                value={selectedStreamId}
+                onChange={(e) => setSelectedStreamId(e.target.value)}
+                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2 text-xs text-on-surface"
+              >
+                <option value="">All Streams</option>
+                {streams.map((st) => (
+                  <option key={st.id} value={st.id}>
+                    {st.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">
+                Learning Area *
+              </label>
+              <select
+                value={selectedLearningAreaId}
+                onChange={(e) => setSelectedLearningAreaId(e.target.value)}
+                required
+                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2 text-xs text-on-surface"
+              >
+                {learningAreas.length === 0 ? (
+                  <option value="">No subjects found</option>
+                ) : (
+                  learningAreas.map((la) => (
+                    <option key={la.id} value={la.id}>
+                      {la.name}
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">
-                Curriculum Strand
+                Curriculum Strand *
               </label>
               <input
                 type="text"
                 required
+                placeholder="e.g. Science & Technology"
                 value={strand}
                 onChange={(e) => setStrand(e.target.value)}
                 className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2 text-xs"
@@ -143,11 +299,12 @@ export const CreateLessonPlanModal: React.FC<CreateLessonPlanModalProps> = ({
             </div>
             <div>
               <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">
-                Sub-strand
+                Sub-strand *
               </label>
               <input
                 type="text"
                 required
+                placeholder="e.g. Laboratory Apparatus"
                 value={subStrand}
                 onChange={(e) => setSubStrand(e.target.value)}
                 className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2 text-xs"
@@ -158,7 +315,7 @@ export const CreateLessonPlanModal: React.FC<CreateLessonPlanModalProps> = ({
           <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">
-                Date
+                Date *
               </label>
               <input
                 type="date"
@@ -174,6 +331,7 @@ export const CreateLessonPlanModal: React.FC<CreateLessonPlanModalProps> = ({
               </label>
               <input
                 type="number"
+                min="0"
                 value={rollBoys}
                 onChange={(e) => setRollBoys(e.target.value)}
                 className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2 text-xs font-data-mono"
@@ -185,6 +343,7 @@ export const CreateLessonPlanModal: React.FC<CreateLessonPlanModalProps> = ({
               </label>
               <input
                 type="number"
+                min="0"
                 value={rollGirls}
                 onChange={(e) => setRollGirls(e.target.value)}
                 className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2 text-xs font-data-mono"
@@ -194,11 +353,12 @@ export const CreateLessonPlanModal: React.FC<CreateLessonPlanModalProps> = ({
 
           <div>
             <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">
-              Specific Learning Outcome
+              Specific Learning Outcome *
             </label>
             <input
               type="text"
               required
+              placeholder="e.g. By the end of the lesson, learners should be able to..."
               value={outcomes}
               onChange={(e) => setOutcomes(e.target.value)}
               className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2 text-xs"
@@ -207,11 +367,12 @@ export const CreateLessonPlanModal: React.FC<CreateLessonPlanModalProps> = ({
 
           <div>
             <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">
-              Key Inquiry Question
+              Key Inquiry Question *
             </label>
             <input
               type="text"
               required
+              placeholder="e.g. How do we measure mass accurately?"
               value={inquiryQuestion}
               onChange={(e) => setInquiryQuestion(e.target.value)}
               className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2 text-xs"
@@ -224,7 +385,7 @@ export const CreateLessonPlanModal: React.FC<CreateLessonPlanModalProps> = ({
             </label>
             <input
               type="text"
-              required
+              placeholder="e.g. Textbooks, charts, experimental apparatus"
               value={resources}
               onChange={(e) => setResources(e.target.value)}
               className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2 text-xs"
@@ -233,7 +394,20 @@ export const CreateLessonPlanModal: React.FC<CreateLessonPlanModalProps> = ({
 
           <div className="p-3 rounded-lg bg-surface-container-low space-y-1 text-xs">
             <span className="font-bold text-primary block">Integrated CBC 4-Step Development:</span>
-            <div className="text-on-surface-variant">1. Intro (5m) · 2. Identification (15m) · 3. Practical Focus (15m) · 4. Conclusion (5m)</div>
+            <div className="text-on-surface-variant">1. Intro (5m) · 2. Concept Exploration (15m) · 3. Practical Focus (15m) · 4. Conclusion (5m)</div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">
+              Extended Activity (Optional)
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. Practice questions in exercise book"
+              value={extendedActivity}
+              onChange={(e) => setExtendedActivity(e.target.value)}
+              className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2 text-xs"
+            />
           </div>
 
           <div>
@@ -242,6 +416,7 @@ export const CreateLessonPlanModal: React.FC<CreateLessonPlanModalProps> = ({
             </label>
             <textarea
               rows={2}
+              placeholder="Record pedagogical observations and reflections post-lesson..."
               value={teacherReflection}
               onChange={(e) => setTeacherReflection(e.target.value)}
               className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2 text-xs"

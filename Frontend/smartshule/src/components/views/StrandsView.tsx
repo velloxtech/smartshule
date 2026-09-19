@@ -11,16 +11,16 @@ export const StrandsView: React.FC = () => {
 
   // Add Strand Modal
   const [isAddStrandOpen, setIsAddStrandOpen] = useState(false);
-  const [strandCode, setStrandCode] = useState('STR-02');
-  const [strandTitle, setStrandTitle] = useState('Energy and Change');
-  const [strandDesc, setStrandDesc] = useState('Study of forms of energy and thermal dynamics');
+  const [strandCode, setStrandCode] = useState('');
+  const [strandTitle, setStrandTitle] = useState('');
+  const [strandDesc, setStrandDesc] = useState('');
 
   // Add Sub-strand Modal
   const [isAddSubStrandOpen, setIsAddSubStrandOpen] = useState(false);
   const [selectedStrandId, setSelectedStrandId] = useState<string>('');
-  const [subCode, setSubCode] = useState('SUB-2.1');
-  const [subTitle, setSubTitle] = useState('Conduction, Convection and Radiation');
-  const [outcomesText, setOutcomesText] = useState('Demonstrate heat transfer in liquids and solids safely');
+  const [subCode, setSubCode] = useState('');
+  const [subTitle, setSubTitle] = useState('');
+  const [outcomesText, setOutcomesText] = useState('');
 
   useEffect(() => {
     async function loadAreas() {
@@ -110,16 +110,20 @@ export const StrandsView: React.FC = () => {
 
   const handleCreateStrand = async (e: React.FormEvent) => {
     e.preventDefault();
+    const currentArea = learningAreas.find((a) => a.id === selectedAreaId);
     try {
       const res = await apiService.createStrand({
         learningAreaId: selectedAreaId,
-        gradeLevel: 'GRADE_7',
+        gradeLevel: (currentArea as any)?.gradeLevel || 'GRADE_7',
         code: strandCode,
         title: strandTitle,
         description: strandDesc,
       });
       if (res.success) {
         setIsAddStrandOpen(false);
+        setStrandCode('');
+        setStrandTitle('');
+        setStrandDesc('');
         loadStrands(selectedAreaId);
       }
     } catch (err: any) {
@@ -134,10 +138,13 @@ export const StrandsView: React.FC = () => {
         strandId: selectedStrandId,
         code: subCode,
         title: subTitle,
-        specificLearningOutcomes: [outcomesText],
+        specificLearningOutcomes: outcomesText ? [outcomesText] : [],
       });
       if (res.success) {
         setIsAddSubStrandOpen(false);
+        setSubCode('');
+        setSubTitle('');
+        setOutcomesText('');
         loadStrands(selectedAreaId);
       }
     } catch (err: any) {

@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
+import { AcademicYear, AcademicTerm } from '../../types';
 
 interface CreateFeeStructureModalProps {
   isOpen: boolean;
@@ -13,19 +14,78 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
   onCreated,
 }) => {
   const [gradeLevel, setGradeLevel] = useState('GRADE_7');
-  const [title, setTitle] = useState('Grade 7 Junior Secondary - Term 1 Fee Structure');
-  const [dueDate, setDueDate] = useState('2026-01-31');
-  const [tuition, setTuition] = useState('25000');
-  const [assessment, setAssessment] = useState('6000');
-  const [activity, setActivity] = useState('2500');
-  const [lunch, setLunch] = useState('8500');
+  const [title, setTitle] = useState('');
+  const [dueDate, setDueDate] = useState('');
+  const [tuition, setTuition] = useState('');
+  const [assessment, setAssessment] = useState('');
+  const [activity, setActivity] = useState('');
+  const [lunch, setLunch] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [schoolId, setSchoolId] = useState('');
+  const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
+  const [selectedYearId, setSelectedYearId] = useState('');
+  const [terms, setTerms] = useState<AcademicTerm[]>([]);
+  const [selectedTermId, setSelectedTermId] = useState('');
+
+  useEffect(() => {
+    if (!isOpen) return;
+    async function loadAcademicData() {
+      try {
+        const [schoolRes, contextRes, yearsRes] = await Promise.all([
+          apiService.getSchool().catch(() => null),
+          apiService.getCurrentContext().catch(() => null),
+          apiService.getYears().catch(() => null),
+        ]);
+
+        if (schoolRes?.success && schoolRes.data) {
+          setSchoolId(schoolRes.data.id);
+        }
+
+        if (yearsRes?.success && yearsRes.data && yearsRes.data.length > 0) {
+          setAcademicYears(yearsRes.data);
+          const currentYear = contextRes?.data?.currentYear || yearsRes.data.find(y => y.isCurrent) || yearsRes.data[0];
+          setSelectedYearId(currentYear.id);
+
+          const termsRes = await apiService.getTerms(currentYear.id);
+          if (termsRes?.success && termsRes.data) {
+            setTerms(termsRes.data);
+            const currentTerm = contextRes?.data?.currentTerm || termsRes.data.find(t => t.isCurrent) || termsRes.data[0];
+            if (currentTerm) setSelectedTermId(currentTerm.id);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load academic data for fee structure:', err);
+      }
+    }
+    loadAcademicData();
+  }, [isOpen]);
+
+  const handleYearChange = async (yearId: string) => {
+    setSelectedYearId(yearId);
+    try {
+      const res = await apiService.getTerms(yearId);
+      if (res.success && res.data) {
+        setTerms(res.data);
+        if (res.data.length > 0) setSelectedTermId(res.data[0].id);
+        else setSelectedTermId('');
+      }
+    } catch {
+      setTerms([]);
+      setSelectedTermId('');
+    }
+  };
 
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!selectedYearId || !selectedTermId) {
+      setError('Please select an active academic year and term.');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
@@ -36,13 +96,19 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
       { name: 'Hot Lunch Programme', amount: Number(lunch), isOptional: true, category: 'MEALS' as const },
     ].filter((item) => item.amount > 0);
 
+    if (items.length === 0) {
+      setError('Please enter at least one fee line amount greater than zero.');
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const res = await apiService.createFeeStructure({
-        schoolId: 'school-001',
-        academicYearId: 'year-2026',
-        termId: 'term-2026-1',
+        schoolId,
+        academicYearId: selectedYearId,
+        termId: selectedTermId,
         gradeLevel,
-        title,
+        title: title || `${gradeLevel.replace('_', ' ')} Fee Structure`,
         dueDate,
         items,
       });
@@ -95,10 +161,62 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
             <input
               type="text"
               required
+              placeholder="e.g. Grade 7 Junior Secondary - Term 1"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-sm text-on-surface focus:outline-primary"
             />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">
+                Academic Year
+              </label>
+              <select
+                value={selectedYearId}
+                onChange={(e) => handleYearChange(e.target.value)}
+                required
+                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-xs text-on-surface focus:outline-primary"
+              >
+                {academicYears.length > 0 ? (
+                  <>
+                    <option value="">-- Select Academic Year --</option>
+                    {academicYears.map((y) => (
+                      <option key={y.id} value={y.id}>
+                        {y.name} {y.isCurrent ? '(Active)' : ''}
+                      </option>
+                    ))}
+                  </>
+                ) : (
+                  <option value="">No years created</option>
+                )}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">
+                Term
+              </label>
+              <select
+                value={selectedTermId}
+                onChange={(e) => setSelectedTermId(e.target.value)}
+                required
+                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-xs text-on-surface focus:outline-primary"
+              >
+                {terms.length > 0 ? (
+                  <>
+                    <option value="">-- Select Term --</option>
+                    {terms.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </>
+                ) : (
+                  <option value="">No terms created</option>
+                )}
+              </select>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -121,6 +239,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
                 <option value="GRADE_6">Grade 6</option>
                 <option value="GRADE_7">Grade 7</option>
                 <option value="GRADE_8">Grade 8</option>
+                <option value="GRADE_9">Grade 9</option>
               </select>
             </div>
             <div>
@@ -141,20 +260,20 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
             <span className="text-xs font-bold text-primary block uppercase">Itemized Line Amounts (KES)</span>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-[11px] text-on-surface-variant mb-0.5">Tuition (Mandatory)</label>
+                <label className="block text-[11px] text-on-surface-variant mb-0.5">Tuition (KES)</label>
                 <input
                   type="number"
-                  required
+                  placeholder="0"
                   value={tuition}
                   onChange={(e) => setTuition(e.target.value)}
                   className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2 text-xs font-data-mono"
                 />
               </div>
               <div>
-                <label className="block text-[11px] text-on-surface-variant mb-0.5">CBC Kits (Mandatory)</label>
+                <label className="block text-[11px] text-on-surface-variant mb-0.5">CBC Assessment / Kits</label>
                 <input
                   type="number"
-                  required
+                  placeholder="0"
                   value={assessment}
                   onChange={(e) => setAssessment(e.target.value)}
                   className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2 text-xs font-data-mono"
@@ -164,16 +283,17 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
                 <label className="block text-[11px] text-on-surface-variant mb-0.5">Activity Levy</label>
                 <input
                   type="number"
-                  required
+                  placeholder="0"
                   value={activity}
                   onChange={(e) => setActivity(e.target.value)}
                   className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2 text-xs font-data-mono"
                 />
               </div>
               <div>
-                <label className="block text-[11px] text-on-surface-variant mb-0.5">Lunch (Optional)</label>
+                <label className="block text-[11px] text-on-surface-variant mb-0.5">Lunch / Meals</label>
                 <input
                   type="number"
+                  placeholder="0"
                   value={lunch}
                   onChange={(e) => setLunch(e.target.value)}
                   className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2 text-xs font-data-mono"

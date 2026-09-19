@@ -19,9 +19,11 @@ export const VisualCBCView: React.FC = () => {
 
   // Parent Ask Question Modal
   const [isAskModalOpen, setIsAskModalOpen] = useState(false);
+  const [learningAreas, setLearningAreas] = useState<any[]>([]);
+  const [schoolInfo, setSchoolInfo] = useState<any>(null);
   const [helpTitle, setHelpTitle] = useState('');
   const [helpDescription, setHelpDescription] = useState('');
-  const [helpLearningArea, setHelpLearningArea] = useState('la-math-7');
+  const [helpLearningArea, setHelpLearningArea] = useState('');
   const [helpImageBase64, setHelpImageBase64] = useState<string | null>(null);
   const [helpImagePreview, setHelpImagePreview] = useState<string | null>(null);
   const [helpImageMime, setHelpImageMime] = useState<string>('image/jpeg');
@@ -38,7 +40,7 @@ export const VisualCBCView: React.FC = () => {
   const [progressDesc, setProgressDesc] = useState('');
   const [progressCompetency, setProgressCompetency] = useState('Critical Thinking & Problem Solving');
   const [progressRating, setProgressRating] = useState<CBCRubric>('EE');
-  const [progressTags, setProgressTags] = useState('SciencePractical, Experiment, CBCGrade7');
+  const [progressTags, setProgressTags] = useState('');
   const [progressImageBase64, setProgressImageBase64] = useState<string | null>(null);
   const [progressImagePreview, setProgressImagePreview] = useState<string | null>(null);
   const [progressImageMime, setProgressImageMime] = useState<string>('image/jpeg');
@@ -50,6 +52,18 @@ export const VisualCBCView: React.FC = () => {
   const loadData = async () => {
     setLoading(true);
     try {
+      const [scRes, laRes] = await Promise.all([
+        apiService.getSchool().catch(() => null),
+        apiService.getLearningAreas().catch(() => null),
+      ]);
+      if (scRes?.data) setSchoolInfo(scRes.data);
+      if (laRes?.data && Array.isArray(laRes.data)) {
+        setLearningAreas(laRes.data);
+        if (laRes.data.length > 0 && !helpLearningArea) {
+          setHelpLearningArea(laRes.data[0].id);
+        }
+      }
+
       // Load student list
       if (isGuardian) {
         const portalRes = await apiService.getGuardianPortalData().catch(() => null);
@@ -125,12 +139,24 @@ export const VisualCBCView: React.FC = () => {
       return;
     }
 
-    setIsSubmittingHelp(true);
+    if (!selectedStudentId) {
+      alert('Please select a learner before submitting an inquiry.');
+      setIsSubmittingHelp(false);
+      return;
+    }
+
+    const activeSchoolId = user?.schoolId || schoolInfo?.id || '';
+    if (!activeSchoolId) {
+      alert('School profile not identified. Please configure school first.');
+      setIsSubmittingHelp(false);
+      return;
+    }
+
     try {
       const res = await apiService.uploadHelpRequest({
-        schoolId: 'school-001',
-        studentId: selectedStudentId || 'student-001',
-        learningAreaId: helpLearningArea,
+        schoolId: activeSchoolId,
+        studentId: selectedStudentId,
+        learningAreaId: helpLearningArea || (learningAreas[0]?.id || ''),
         title: helpTitle,
         description: helpDescription,
         photoBase64: helpImageBase64,
@@ -183,6 +209,17 @@ export const VisualCBCView: React.FC = () => {
       return;
     }
 
+    if (!selectedStudentId) {
+      alert('Please select a learner to attach the progress milestone photo.');
+      return;
+    }
+
+    const activeSchoolId = user?.schoolId || schoolInfo?.id || '';
+    if (!activeSchoolId) {
+      alert('School profile not identified.');
+      return;
+    }
+
     setIsSubmittingProgress(true);
     try {
       const tagList = progressTags
@@ -191,8 +228,8 @@ export const VisualCBCView: React.FC = () => {
         .filter(Boolean);
 
       const res = await apiService.uploadProgressPhoto({
-        schoolId: 'school-001',
-        studentId: selectedStudentId || 'student-001',
+        schoolId: activeSchoolId,
+        studentId: selectedStudentId,
         title: progressTitle,
         description: progressDesc,
         competencyDomain: progressCompetency,
@@ -524,11 +561,15 @@ export const VisualCBCView: React.FC = () => {
                   onChange={(e) => setHelpLearningArea(e.target.value)}
                   className="w-full p-2 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs font-semibold"
                 >
-                  <option value="la-math-7">Mathematics</option>
-                  <option value="la-science-7">Integrated Science</option>
-                  <option value="la-english-7">English Language</option>
-                  <option value="la-kiswahili-7">Kiswahili</option>
-                  <option value="la-creative-arts-7">Creative Arts & Sports</option>
+                  {learningAreas.length === 0 ? (
+                    <option value="">No subjects available</option>
+                  ) : (
+                    learningAreas.map((la) => (
+                      <option key={la.id} value={la.id}>
+                        {la.name}
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
 
@@ -565,7 +606,7 @@ export const VisualCBCView: React.FC = () => {
                 <textarea
                   required
                   rows={3}
-                  placeholder="e.g. Kevin worked through the first step but is confused about finding the common denominator."
+                  placeholder="e.g. Learner worked through the first step but is confused about finding the common denominator."
                   value={helpDescription}
                   onChange={(e) => setHelpDescription(e.target.value)}
                   className="w-full p-2.5 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs text-on-surface"
@@ -670,9 +711,13 @@ export const VisualCBCView: React.FC = () => {
                   onChange={(e) => setSelectedStudentId(e.target.value)}
                   className="w-full p-2 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs font-semibold"
                 >
-                  {students.map((s) => (
-                    <option key={s.id} value={s.id}>{s.name} ({s.admNo})</option>
-                  ))}
+                  {students.length === 0 ? (
+                    <option value="">No enrolled learners found</option>
+                  ) : (
+                    students.map((s) => (
+                      <option key={s.id} value={s.id}>{s.name} ({s.admNo})</option>
+                    ))
+                  )}
                 </select>
               </div>
 
@@ -684,10 +729,12 @@ export const VisualCBCView: React.FC = () => {
                     onChange={(e) => setProgressCompetency(e.target.value)}
                     className="w-full p-2 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs font-semibold"
                   >
-                    <option value="Critical Thinking & Problem Solving">Critical Thinking</option>
-                    <option value="Communication & Collaboration">Communication</option>
-                    <option value="Creativity & Imagination">Creativity</option>
+                    <option value="Communication & Collaboration">Communication & Collaboration</option>
+                    <option value="Critical Thinking & Problem Solving">Critical Thinking & Problem Solving</option>
+                    <option value="Creativity & Imagination">Creativity & Imagination</option>
+                    <option value="Citizenship">Citizenship</option>
                     <option value="Digital Literacy">Digital Literacy</option>
+                    <option value="Learning to Learn">Learning to Learn</option>
                     <option value="Self-Efficacy">Self-Efficacy</option>
                   </select>
                 </div>

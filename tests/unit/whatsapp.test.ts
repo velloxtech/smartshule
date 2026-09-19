@@ -10,6 +10,8 @@ import { Guardian, GuardianRelationship } from '../../src/core/domain/user/Guard
 import { FeeStructure, StudentInvoice, Payment, PaymentMethod, PaymentStatus, InvoiceStatus } from '../../src/core/domain/finance/Fee';
 import { AttendanceRegister, AttendanceStatus, AttendanceType } from '../../src/core/domain/attendance/Attendance';
 import { EDiaryEntry } from '../../src/core/domain/ediary/EDiaryEntry';
+import { FormativeAssessment, PerformanceLevel, AssessmentMethod } from '../../src/core/domain/cbc/CbcAssessment';
+import { Timetable, DayOfWeek } from '../../src/core/domain/timetable/Timetable';
 
 describe('WhatsApp Bot & Phone Counter-Checking Unit Tests', () => {
   jest.setTimeout(25000);
@@ -192,6 +194,54 @@ describe('WhatsApp Bot & Phone Counter-Checking Unit Tests', () => {
         'att-001'
       );
       await attendanceRepo.saveRegister(attendance);
+
+      // Seed Formative Assessment
+      const formative = FormativeAssessment.create(
+        {
+          studentId: student.id,
+          teacherId: 't-01',
+          learningAreaId: 'la-01',
+          subStrandId: 'sub-01',
+          termId: 'term-1',
+          academicYearId: 'year-2026',
+          assessmentDate: '2026-02-10',
+          assessmentMethod: AssessmentMethod.OBSERVATION,
+          performanceLevel: PerformanceLevel.EXCEEDING_EXPECTATIONS,
+          specificOutcomeTested: 'Critical Thinking & Problem Solving',
+          teacherRemarks: 'Exemplary Critical Thinking demonstrated.',
+        },
+        'form-001'
+      );
+      await cbcRepo.saveFormative(formative);
+
+      // Seed Timetable
+      const timetable = Timetable.create(
+        {
+          schoolId: 'sch-001',
+          streamId: 'stream-g7',
+          classRoomId: 'cr-01',
+          academicYearId: 'year-2026',
+          termId: 'term-1',
+          isActive: true,
+          slots: [
+            {
+              id: 'slot-1',
+              dayOfWeek: DayOfWeek.MONDAY,
+              periodNumber: 1,
+              startTime: '08:00',
+              endTime: '08:45',
+              learningAreaId: 'la-01',
+              learningAreaName: 'Mathematics',
+              teacherId: 't-01',
+              teacherName: 'Teacher Mark',
+              isBreak: false,
+              isLunch: false,
+            }
+          ],
+        },
+        'tt-001'
+      );
+      await timetableRepo.save(timetable);
 
       whatsAppService = new WhatsAppService(
         userRepo,
@@ -478,7 +528,7 @@ describe('WhatsApp Bot & Phone Counter-Checking Unit Tests', () => {
         // MENU Command
         const resMenu = await whatsAppService.handleInboundMessage('+254711223344', 'MENU', { useAI: true });
         expect(resMenu.intent).toBe('MENU');
-        expect(resMenu.replyText).toContain('Welcome to *Grace Seeds School CBC Portal*');
+        expect(resMenu.replyText).toContain('Welcome to *SmartShule CBC Portal*');
         expect(resMenu.replyText).not.toContain('FEES STATEMENT');
       });
 

@@ -25,6 +25,7 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
   const [mySchemes, setMySchemes] = useState<SchemeOfWork[]>([]);
   const [myLessonPlans, setMyLessonPlans] = useState<LessonPlan[]>([]);
   const [myAssessmentsCount, setMyAssessmentsCount] = useState<number>(0);
+  const [currentContext, setCurrentContext] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   const todayDate = new Date().toISOString().split('T')[0];
@@ -33,19 +34,25 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
     async function loadTeacherData() {
       setLoading(true);
       try {
-        // 1. Teacher Profile
-        const profileRes = await apiService.getMyTeacherProfile().catch(() => null);
+        // 1. Teacher Profile & Academic Context
+        const [profileRes, ctxRes] = await Promise.all([
+          apiService.getMyTeacherProfile().catch(() => null),
+          apiService.getCurrentContext().catch(() => null),
+        ]);
         const profile = profileRes?.data || null;
         setTeacherProfile(profile);
+        const ctx = ctxRes?.data || null;
+        setCurrentContext(ctx);
 
         const assignedStreamId = profile?.assignedClassStreamIds?.[0];
         const teacherId = profile?.id;
+        const termId = ctx?.currentTerm?.id;
 
         // 2. Parallel data fetching
         const [stRes, regRes, ttRes, schRes, lpRes, formRes, sumRes] = await Promise.all([
           apiService.getStudents({ streamId: assignedStreamId || undefined }).catch(() => null),
           assignedStreamId ? apiService.getDailyRegister(assignedStreamId, todayDate).catch(() => null) : Promise.resolve(null),
-          teacherId ? apiService.getTeacherTimetable(teacherId, 'term-2026-1').catch(() => null) : Promise.resolve(null),
+          teacherId ? apiService.getTeacherTimetable(teacherId, termId).catch(() => null) : Promise.resolve(null),
           teacherId ? apiService.getSchemes({ teacherId }).catch(() => null) : Promise.resolve(null),
           teacherId ? apiService.getLessonPlans({ teacherId }).catch(() => null) : Promise.resolve(null),
           apiService.listFormatives().catch(() => null),
@@ -61,7 +68,7 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
             name: `${s.firstName} ${s.lastName}`,
             gender: s.gender === 'FEMALE' ? 'Girl' : 'Boy',
             grade: s.gradeLevel ? s.gradeLevel.replace('_', ' ') : 'Grade --',
-            stream: s.streamId ? s.streamId.replace('stream-g7-', '').toUpperCase() : '--',
+            stream: s.stream?.name || s.streamName || (s.streamId ? `Stream ${s.streamId.slice(0, 6)}` : '--'),
             guardianName: s.guardian ? `${s.guardian.firstName} ${s.guardian.lastName}` : '--',
             guardianPhone: s.guardian?.phone || '--',
             feeBalance: s.feeBalance || 0,
@@ -162,10 +169,14 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
                 <span className="material-symbols-outlined text-[15px]">psychology</span>
                 {specialization}
               </span>
-              <span>·</span>
-              <span className="inline-flex items-center gap-1 font-data-mono text-secondary font-semibold">
-                Term 1, 2026 Session
-              </span>
+              {currentContext?.currentTerm?.name && (
+                <>
+                  <span>·</span>
+                  <span className="inline-flex items-center gap-1 font-data-mono text-secondary font-semibold">
+                    {currentContext.currentTerm.name}{currentContext.currentYear?.year ? `, ${currentContext.currentYear.year}` : ''}
+                  </span>
+                </>
+              )}
             </p>
           </div>
         </div>

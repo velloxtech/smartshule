@@ -10,26 +10,62 @@ export const EDiaryView: React.FC = () => {
 
   const [entries, setEntries] = useState<EDiaryEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedStreamId, setSelectedStreamId] = useState('stream-g7-east');
+  const [selectedStreamId, setSelectedStreamId] = useState('');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
+
+  // Dynamic context
+  const [schoolInfo, setSchoolInfo] = useState<any>(null);
+  const [availableStreams, setAvailableStreams] = useState<Array<{ id: string; name: string; classRoomId: string; className: string }>>([]);
 
   // Guardian Portal linked child
   const [linkedStudents, setLinkedStudents] = useState<Student[]>([]);
-  const [selectedStudentId, setSelectedStudentId] = useState<string>('student-001');
+  const [selectedStudentId, setSelectedStudentId] = useState<string>('');
 
   // Teacher Create Entry Modal
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [newTasks, setNewTasks] = useState([
-    { learningArea: 'Mathematics', description: 'Complete Exercise 4.2 on Linear Equations (Questions 1 to 10)', dueDate: new Date(Date.now() + 86400000).toISOString().slice(0, 10) },
-    { learningArea: 'Integrated Science', description: 'Collect 3 different leaf specimens and mount them in the CBC journal', dueDate: new Date(Date.now() + 86400000).toISOString().slice(0, 10) },
-  ]);
-  const [teacherRemarks, setTeacherRemarks] = useState('Learners showed great enthusiasm in today\'s science practical investigation.');
-  const [tomorrowRequirements, setTomorrowRequirements] = useState('Mathematical set, Manila paper, Clean sports attire for P.E.');
+  const [newTasks, setNewTasks] = useState<Array<{ learningArea: string; description: string; dueDate: string }>>([]);
+  const [teacherRemarks, setTeacherRemarks] = useState('');
+  const [tomorrowRequirements, setTomorrowRequirements] = useState('');
 
   // Guardian Acknowledge Modal
   const [acknowledgingEntryId, setAcknowledgingEntryId] = useState<string | null>(null);
   const [parentNote, setParentNote] = useState('');
   const [isSubmittingAck, setIsSubmittingAck] = useState(false);
+
+  useEffect(() => {
+    async function loadStreams() {
+      try {
+        const [scRes, cRes] = await Promise.all([
+          apiService.getSchool().catch(() => null),
+          apiService.getClasses().catch(() => null),
+        ]);
+        if (scRes?.data) setSchoolInfo(scRes.data);
+        if (cRes?.data && Array.isArray(cRes.data)) {
+          const allStreams: Array<{ id: string; name: string; classRoomId: string; className: string }> = [];
+          for (const c of cRes.data) {
+            const sRes = await apiService.getStreamsByClass(c.id).catch(() => null);
+            if (sRes?.data && Array.isArray(sRes.data)) {
+              sRes.data.forEach((st: any) => {
+                allStreams.push({
+                  id: st.id,
+                  name: st.name,
+                  classRoomId: c.id,
+                  className: c.name,
+                });
+              });
+            }
+          }
+          setAvailableStreams(allStreams);
+          if (allStreams.length > 0 && !selectedStreamId) {
+            setSelectedStreamId(allStreams[0].id);
+          }
+        }
+      } catch (err) {
+        console.error('Error loading streams for eDiary:', err);
+      }
+    }
+    loadStreams();
+  }, []);
 
   const loadData = async () => {
     setLoading(true);
@@ -50,6 +86,10 @@ export const EDiaryView: React.FC = () => {
           setEntries([]);
         }
       } else {
+        if (!selectedStreamId) {
+          setEntries([]);
+          return;
+        }
         const diaryRes = await apiService.getStreamEDiary(selectedStreamId);
         if (diaryRes.success && diaryRes.data) {
           setEntries(diaryRes.data);
@@ -104,9 +144,12 @@ export const EDiaryView: React.FC = () => {
         .map((r) => r.trim())
         .filter(Boolean);
 
+      const matchedStream = availableStreams.find((s) => s.id === selectedStreamId);
+      const targetClassId = matchedStream ? matchedStream.classRoomId : 'general-class';
+
       const res = await apiService.createEDiaryEntry({
-        schoolId: 'school-001',
-        classRoomId: 'class-grade-7',
+        schoolId: user?.schoolId || schoolInfo?.id || '',
+        classRoomId: targetClassId,
         streamId: selectedStreamId,
         date: selectedDate,
         homeworkTasks: newTasks,
@@ -216,8 +259,15 @@ export const EDiaryView: React.FC = () => {
               onChange={(e) => setSelectedStreamId(e.target.value)}
               className="bg-surface-container-lowest border border-outline-variant/40 rounded-lg py-1 px-3 text-xs font-bold text-on-surface"
             >
-              <option value="stream-g7-east">Grade 7 - East</option>
-              <option value="stream-g7-west">Grade 7 - West</option>
+              {availableStreams.length === 0 ? (
+                <option value="">No streams configured</option>
+              ) : (
+                availableStreams.map((st) => (
+                  <option key={st.id} value={st.id}>
+                    {st.className} - {st.name}
+                  </option>
+                ))
+              )}
             </select>
           </div>
           <span className="text-xs text-on-surface-variant">
@@ -410,7 +460,7 @@ export const EDiaryView: React.FC = () => {
                 rows={3}
                 value={parentNote}
                 onChange={(e) => setParentNote(e.target.value)}
-                placeholder="e.g. Homework reviewed and signed. Kevin was able to answer all questions independently."
+                placeholder="e.g. Homework reviewed and signed. Learner was able to complete all tasks."
                 className="w-full p-2.5 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs text-on-surface focus:outline-hidden focus:border-primary"
               ></textarea>
             </div>
@@ -463,8 +513,15 @@ export const EDiaryView: React.FC = () => {
                     onChange={(e) => setSelectedStreamId(e.target.value)}
                     className="w-full p-2 bg-surface-container-low border border-outline-variant/40 rounded-lg text-xs text-on-surface font-semibold"
                   >
-                    <option value="stream-g7-east">Grade 7 - East</option>
-                    <option value="stream-g7-west">Grade 7 - West</option>
+                    {availableStreams.length === 0 ? (
+                      <option value="">No streams configured</option>
+                    ) : (
+                      availableStreams.map((st) => (
+                        <option key={st.id} value={st.id}>
+                          {st.className} - {st.name}
+                        </option>
+                      ))
+                    )}
                   </select>
                 </div>
                 <div>

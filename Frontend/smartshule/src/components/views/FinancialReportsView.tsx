@@ -18,67 +18,67 @@ const DEFAULT_VOTE_HEAD_BUDGETS: Record<ExpenseCategoryType, { code: string; lab
   SALARIES_WAGES: {
     code: 'VH-01',
     label: 'Salaries & Staff Wages',
-    budget: 1800000,
+    budget: 0,
     desc: 'BOM Teaching & Non-teaching staff allowances, NSSF/SHIF statutory deductions',
   },
   CBC_LEARNING_MATERIALS: {
     code: 'VH-02',
     label: 'CBC Learning Materials & Science Kits',
-    budget: 650000,
+    budget: 0,
     desc: 'Learner workbooks, laboratory chemicals, practical arts supplies, stationery',
   },
   UTILITIES_BILLS: {
     code: 'VH-03',
     label: 'Utilities (Power, Water, Internet)',
-    budget: 380000,
+    budget: 0,
     desc: 'Kenya Power electricity, water bowsers, fiber internet connectivity',
   },
   MEALS_FEEDING: {
     code: 'VH-04',
     label: 'Meals & School Feeding Program',
-    budget: 950000,
+    budget: 0,
     desc: 'Cereals, vegetables, milk, gas cylinders, firewood, kitchen consumables',
   },
   REPAIRS_MAINTENANCE: {
     code: 'VH-05',
     label: 'Repairs & Facility Maintenance',
-    budget: 420000,
+    budget: 0,
     desc: 'Classroom painting, desk repairs, plumbing fixes, electrical safety works',
   },
   TRANSPORT_FUEL: {
     code: 'VH-06',
     label: 'Transport, Bus Fuel & Service',
-    budget: 520000,
+    budget: 0,
     desc: 'School bus diesel, routine fleet servicing, NTSA speed-governor inspection',
   },
   ADMIN_OFFICE: {
     code: 'VH-07',
     label: 'Administration & Office Contingency',
-    budget: 290000,
+    budget: 0,
     desc: 'Photocopy paper, communication, bank transaction fees, audit preparation',
   },
   KNEC_EXAMS: {
     code: 'VH-08',
     label: 'KNEC & Internal Assessment Printing',
-    budget: 350000,
+    budget: 0,
     desc: 'KPSEA/KJSEA examination logistics, assessment rubrics, invigilation',
   },
   CO_CURRICULAR: {
     code: 'VH-09',
     label: 'Co-Curricular, Sports & Music Festivals',
-    budget: 310000,
+    budget: 0,
     desc: 'KSSSA games affiliation, ball games kit, drama/music festival travel',
   },
   CAPITAL_DEVELOPMENT: {
     code: 'VH-10',
     label: 'Capital Development & Infrastructure',
-    budget: 1200000,
+    budget: 0,
     desc: 'JSS Laboratory completion, ablution block expansion, perimeter fencing',
   },
   OTHER_EXPENSES: {
     code: 'VH-11',
     label: 'Other Sundry & Emergency Contingencies',
-    budget: 200000,
+    budget: 0,
     desc: 'Health emergencies, sanitation products, first-aid replenishments',
   },
 };
@@ -90,12 +90,39 @@ export const FinancialReportsView: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [school, setSchool] = useState<any>(null);
+  const [academicYears, setAcademicYears] = useState<any[]>([]);
+
   // Period / Filter state
-  const [selectedPeriod, setSelectedPeriod] = useState<string>('TERM_3_2026');
+  const [selectedPeriod, setSelectedPeriod] = useState<string>('CURRENT_PERIOD');
   const [activeReportTab, setActiveReportTab] = useState<'INCOME_EXPENDITURE' | 'VOTE_HEAD_VARIANCE' | 'CASH_POSITION' | 'COMPLIANCE_AUDIT'>('INCOME_EXPENDITURE');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
   const [customBudgetMultiplier, setCustomBudgetMultiplier] = useState<number>(1.0);
+
+  useEffect(() => {
+    async function loadMeta() {
+      try {
+        const [schRes, yrRes, ctxRes] = await Promise.all([
+          apiService.getSchool().catch(() => ({ success: false, data: null })),
+          apiService.getAcademicYears().catch(() => ({ success: false, data: [] })),
+          apiService.getCurrentContext().catch(() => ({ success: false, data: null })),
+        ]);
+        if (schRes.success && schRes.data) {
+          setSchool(schRes.data);
+        }
+        if (yrRes.success && Array.isArray(yrRes.data)) {
+          setAcademicYears(yrRes.data);
+        }
+        if (ctxRes.success && ctxRes.data?.currentTerm?.name) {
+          setSelectedPeriod(`${ctxRes.data.currentTerm.name} ${ctxRes.data.currentYear?.year || ''}`.trim());
+        }
+      } catch {
+        // ignore
+      }
+    }
+    loadMeta();
+  }, []);
 
   const formatKes = (amount: number) => {
     return new Intl.NumberFormat('en-KE', {
@@ -239,9 +266,11 @@ export const FinancialReportsView: React.FC = () => {
 
   // Handle Export CSV
   const handleExportCSV = () => {
+    const schoolName = school?.name || 'SmartShule';
+    const regNo = school?.registrationNumber || school?.code || 'N/A';
     const rows = [
       ['SMARTSHULE FINANCIAL STATEMENT & MOE VOTE HEAD REPORT'],
-      ['School: Grace Seeds School', 'Reg: MOE/PRI/2024/9914', `Period: ${selectedPeriod}`],
+      [`School: ${schoolName}`, `Reg: ${regNo}`, `Period: ${selectedPeriod || 'All'}`],
       ['Generated On:', new Date().toLocaleString('en-KE')],
       [''],
       ['SECTION 1: REVENUE / CASH INFLOWS'],
@@ -275,7 +304,7 @@ export const FinancialReportsView: React.FC = () => {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `MoE_Financial_Statement_${selectedPeriod}_Grace_Seeds.csv`);
+    link.setAttribute('download', `MoE_Financial_Statement_${(selectedPeriod || 'Report').replace(/[^a-zA-Z0-9]/g, '_')}_${schoolName.replace(/[^a-zA-Z0-9]/g, '_')}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -291,10 +320,16 @@ export const FinancialReportsView: React.FC = () => {
       <div className="hidden print:block mb-8 text-center border-b-2 border-black pb-4">
         <h1 className="text-xl font-black uppercase tracking-wider">Republic of Kenya · Ministry of Education</h1>
         <h2 className="text-lg font-bold">BOARD OF MANAGEMENT (BOM) FINANCIAL STATEMENT</h2>
-        <p className="text-sm font-semibold">GRACE SEEDS SCHOOL · MOE CODE: MOE/PRI/2024/9914</p>
-        <p className="text-xs text-gray-700">Sub-County: Westlands · County: Nairobi · PFMA (2012) Capitation Compliance</p>
+        <p className="text-sm font-semibold uppercase">{school?.name || 'SmartShule'} · MOE CODE: {school?.registrationNumber || school?.code || 'N/A'}</p>
+        <p className="text-xs text-gray-700">
+          {[
+            school?.subCounty ? `Sub-County: ${school.subCounty}` : null,
+            school?.county ? `County: ${school.county}` : null,
+            'PFMA (2012) Capitation Compliance',
+          ].filter(Boolean).join(' · ')}
+        </p>
         <div className="mt-2 text-xs font-mono text-gray-600">
-          Reporting Cycle: {selectedPeriod.replace(/_/g, ' ')} · Printed on: {new Date().toLocaleString('en-KE')}
+          Reporting Cycle: {(selectedPeriod || 'Current Period').replace(/_/g, ' ')} · Printed on: {new Date().toLocaleString('en-KE')}
         </div>
       </div>
 
@@ -322,10 +357,17 @@ export const FinancialReportsView: React.FC = () => {
             onChange={(e) => setSelectedPeriod(e.target.value)}
             className="input text-xs py-2 px-3 rounded-lg border border-outline-variant bg-surface text-on-surface font-medium"
           >
-            <option value="TERM_3_2026">Term 3 - 2026 (Active)</option>
-            <option value="TERM_2_2026">Term 2 - 2026</option>
-            <option value="TERM_1_2026">Term 1 - 2026</option>
-            <option value="FULL_YEAR_2026">Annual Financial Year 2026</option>
+            <option value="CURRENT_PERIOD">Current Active Term</option>
+            {academicYears.map((ay) => (
+              <React.Fragment key={ay.id}>
+                <option value={`YEAR_${ay.year}`}>Academic Year {ay.year}</option>
+                {ay.terms?.map((t: any) => (
+                  <option key={t.id} value={`${t.name}_${ay.year}`}>
+                    {t.name} - {ay.year}
+                  </option>
+                ))}
+              </React.Fragment>
+            ))}
             <option value="CUSTOM">Custom Date Range</option>
           </select>
 

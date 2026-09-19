@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Teacher } from '../../types';
+import React, { useState, useEffect } from 'react';
+import { Teacher, UserRole } from '../../types';
 import { apiService } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 
 interface TeachersViewProps {
   teachers: Teacher[];
@@ -15,11 +16,48 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
   onOpenOnboardTeacher,
   onDeleteTeacher,
 }) => {
+  const { user } = useAuth();
+  const canOnboard = Boolean(
+    user?.role && [
+      UserRole.SUPER_ADMIN,
+      UserRole.ADMIN,
+      UserRole.SCHOOL_ADMIN,
+      UserRole.HEAD_TEACHER,
+      UserRole.ADMISSIONS
+    ].includes(user.role)
+  );
   const [search, setSearch] = useState('');
   const [isAssignOpen, setIsAssignOpen] = useState(false);
   const [selectedTeacherId, setSelectedTeacherId] = useState<string>('');
-  const [streamId, setStreamId] = useState('stream-g7-east');
+  const [streamId, setStreamId] = useState('');
+  const [availableStreams, setAvailableStreams] = useState<Array<{ id: string; name: string; className: string }>>([]);
   const [assignLoading, setAssignLoading] = useState(false);
+
+  useEffect(() => {
+    async function loadStreams() {
+      try {
+        const cRes = await apiService.getClasses();
+        if (cRes?.data && Array.isArray(cRes.data)) {
+          const list: Array<{ id: string; name: string; className: string }> = [];
+          for (const c of cRes.data) {
+            const sRes = await apiService.getStreamsByClass(c.id).catch(() => null);
+            if (sRes?.data && Array.isArray(sRes.data)) {
+              sRes.data.forEach((st: any) => {
+                list.push({ id: st.id, name: st.name, className: c.name });
+              });
+            }
+          }
+          setAvailableStreams(list);
+          if (list.length > 0 && !streamId) {
+            setStreamId(list[0].id);
+          }
+        }
+      } catch (err) {
+        console.error('Error loading streams in TeachersView:', err);
+      }
+    }
+    loadStreams();
+  }, []);
   const [assignSuccess, setAssignSuccess] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -93,7 +131,7 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          {onOpenOnboardTeacher && (
+          {onOpenOnboardTeacher && canOnboard && (
             <button
               onClick={onOpenOnboardTeacher}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-primary text-white rounded-lg hover:bg-primary-container text-xs font-semibold shadow-xs transition-all cursor-pointer"
@@ -256,9 +294,15 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
                   onChange={(e) => setStreamId(e.target.value)}
                   className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2"
                 >
-                  <option value="stream-g7-east">Grade 7 - East Stream</option>
-                  <option value="stream-g7-west">Grade 7 - West Stream</option>
-                  <option value="stream-g8-east">Grade 8 - East Stream</option>
+                  {availableStreams.length === 0 ? (
+                    <option value="">No streams found in database</option>
+                  ) : (
+                    availableStreams.map((st) => (
+                      <option key={st.id} value={st.id}>
+                        {st.className} - {st.name} Stream
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
               <div className="pt-2">

@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
 import { BackendLearningArea } from '../../types';
+import { useAuth } from '../../context/AuthContext';
 
 export const LearningAreasView: React.FC = () => {
+  const { user } = useAuth();
   const [learningAreas, setLearningAreas] = useState<BackendLearningArea[]>([]);
+  const [schoolInfo, setSchoolInfo] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isAddOpen, setIsAddOpen] = useState(false);
 
@@ -17,8 +20,12 @@ export const LearningAreasView: React.FC = () => {
   const loadAreas = async () => {
     setLoading(true);
     try {
-      const res = await apiService.getLearningAreas();
-      if (res.success) {
+      const [scRes, res] = await Promise.all([
+        apiService.getSchool().catch(() => null),
+        apiService.getLearningAreas().catch(() => null),
+      ]);
+      if (scRes?.data) setSchoolInfo(scRes.data);
+      if (res?.success) {
         setLearningAreas(res.data || []);
       } else {
         setLearningAreas([]);
@@ -49,6 +56,12 @@ export const LearningAreasView: React.FC = () => {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    const activeSchoolId = user?.schoolId || schoolInfo?.id || '';
+    if (!activeSchoolId) {
+      alert('School profile not identified. Please configure school first.');
+      return;
+    }
+
     try {
       const res = await apiService.createLearningArea({
         name,
@@ -56,10 +69,12 @@ export const LearningAreasView: React.FC = () => {
         gradeLevel,
         educationLevel,
         isElective,
-        schoolId: 'school-001',
+        schoolId: activeSchoolId,
       });
       if (res.success) {
         setIsAddOpen(false);
+        setName('');
+        setCode('');
         loadAreas();
       }
     } catch (err: any) {
@@ -205,12 +220,17 @@ export const LearningAreasView: React.FC = () => {
                     onChange={(e) => setGradeLevel(e.target.value)}
                     className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2"
                   >
+                    <option value="PP1">PP1</option>
+                    <option value="PP2">PP2</option>
+                    <option value="GRADE_1">Grade 1</option>
+                    <option value="GRADE_2">Grade 2</option>
+                    <option value="GRADE_3">Grade 3</option>
+                    <option value="GRADE_4">Grade 4</option>
+                    <option value="GRADE_5">Grade 5</option>
+                    <option value="GRADE_6">Grade 6</option>
                     <option value="GRADE_7">Grade 7</option>
                     <option value="GRADE_8">Grade 8</option>
                     <option value="GRADE_9">Grade 9</option>
-                    <option value="GRADE_6">Grade 6</option>
-                    <option value="GRADE_5">Grade 5</option>
-                    <option value="GRADE_4">Grade 4</option>
                   </select>
                 </div>
               </div>
@@ -221,9 +241,11 @@ export const LearningAreasView: React.FC = () => {
                   onChange={(e) => setEducationLevel(e.target.value)}
                   className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2"
                 >
-                  <option value="JUNIOR_SCHOOL">Junior School</option>
-                  <option value="PRIMARY_SCHOOL">Primary School</option>
-                  <option value="EARLY_YEARS">Early Years</option>
+                  <option value="PRE_PRIMARY">Pre-Primary (PP1 - PP2)</option>
+                  <option value="LOWER_PRIMARY">Lower Primary (Grade 1 - 3)</option>
+                  <option value="UPPER_PRIMARY">Upper Primary (Grade 4 - 6)</option>
+                  <option value="JUNIOR_SCHOOL">Junior Secondary (Grade 7 - 9)</option>
+                  <option value="SENIOR_SCHOOL">Senior Secondary (Grade 10 - 12)</option>
                 </select>
               </div>
               <div className="flex items-center gap-2 pt-1">

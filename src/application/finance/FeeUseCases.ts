@@ -750,7 +750,10 @@ export class FeeUseCases {
       throw new ForbiddenError('Only Super Admin, School Admin, or Accountant can record expenses.');
     }
 
-    const schoolId = dto.schoolId || requestingUser?.schoolId || 'school-001';
+    const schoolId = dto.schoolId || requestingUser?.schoolId;
+    if (!schoolId) {
+      throw new ValidationError('School ID is required to record an expense.');
+    }
     const voucherNumber = dto.voucherNumber || `PV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
     const expenseDate = dto.expenseDate || new Date().toISOString().split('T')[0];
 
@@ -825,7 +828,10 @@ export class FeeUseCases {
       throw new ForbiddenError('Only Super Admin, School Admin, or Accountant can record non-fee income.');
     }
 
-    const schoolId = dto.schoolId || requestingUser?.schoolId || 'school-001';
+    const schoolId = dto.schoolId || requestingUser?.schoolId;
+    if (!schoolId) {
+      throw new ValidationError('School ID is required to record non-fee income.');
+    }
     const receiptNumber = dto.receiptNumber || `OR-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
     const incomeDate = dto.incomeDate || new Date().toISOString().split('T')[0];
 

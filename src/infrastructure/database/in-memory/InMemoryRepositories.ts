@@ -571,9 +571,9 @@ export class InMemoryTimetableRepository implements ITimetableRepository {
     return this.timetables.get(id) || null;
   }
 
-  public async findByStream(streamId: string, termId: string): Promise<Timetable | null> {
+  public async findByStream(streamId: string, termId?: string): Promise<Timetable | null> {
     for (const t of this.timetables.values()) {
-      if (t.streamId === streamId && t.termId === termId) return t;
+      if (t.streamId === streamId && (!termId || t.termId === termId)) return t;
     }
     return null;
   }

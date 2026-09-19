@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
-import { Student } from '../../types';
+import { Student, StudentInvoice } from '../../types';
+import { useAuth } from '../../context/AuthContext';
 
 interface RecordPaymentModalProps {
   isOpen: boolean;
@@ -15,30 +16,84 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
   students,
   onPaymentRecorded,
 }) => {
+  const { user } = useAuth();
   const [selectedStudentId, setSelectedStudentId] = useState(students[0]?.id || '');
+  const [invoices, setInvoices] = useState<StudentInvoice[]>([]);
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string>('');
+  const [schoolId, setSchoolId] = useState<string>(user?.schoolId || '');
+
   const [amount, setAmount] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'BANK_TRANSFER' | 'CASH' | 'CHEQUE'>('BANK_TRANSFER');
-  const [transactionReference, setTransactionReference] = useState(`BNK-${Math.floor(100000 + Math.random() * 900000)}`);
-  const [notes, setNotes] = useState('Term fee payment via direct bank transfer');
+  const [paymentMethod, setPaymentMethod] = useState<
+    'MPESA' | 'BANK_TRANSFER' | 'BANK_DEPOSIT' | 'CHEQUE' | 'CASH' | 'CARD' | 'PAYSTACK'
+  >('MPESA');
+  const [transactionReference, setTransactionReference] = useState('');
+  const [notes, setNotes] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (!schoolId) {
+      apiService.getSchool().then((res) => {
+        if (res?.data) setSchoolId(res.data.id);
+      }).catch(() => {});
+    }
+  }, [isOpen, schoolId]);
+
+  useEffect(() => {
+    if (!selectedStudentId) {
+      setInvoices([]);
+      setSelectedInvoiceId('');
+      return;
+    }
+
+    async function loadInvoices() {
+      try {
+        const res = await apiService.getInvoices({ studentId: selectedStudentId });
+        if (res.success && res.data) {
+          setInvoices(res.data);
+          const unpaid = res.data.find((inv) => (inv.balance || 0) > 0) || res.data[0];
+          if (unpaid) {
+            setSelectedInvoiceId(unpaid.id);
+            if ((unpaid.balance || 0) > 0) {
+              setAmount(unpaid.balance.toString());
+            }
+          } else {
+            setSelectedInvoiceId('');
+          }
+        } else {
+          setInvoices([]);
+          setSelectedInvoiceId('');
+        }
+      } catch {
+        setInvoices([]);
+        setSelectedInvoiceId('');
+      }
+    }
+    loadInvoices();
+  }, [selectedStudentId]);
 
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!selectedInvoiceId) {
+      setError('Please select an active invoice for this student, or generate an invoice first.');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
     try {
       const res = await apiService.recordPayment({
-        schoolId: 'school-001',
-        invoiceId: 'inv-student-001',
+        schoolId,
+        invoiceId: selectedInvoiceId,
         amount: Number(amount),
         paymentMethod,
         transactionReference,
-        recordedByUserId: 'usr-admin-01',
-        notes,
+        recordedByUserId: user?.id || 'admin',
+        notes: notes || undefined,
       });
 
       if (res.success && res.data) {
@@ -91,11 +146,49 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
               onChange={(e) => setSelectedStudentId(e.target.value)}
               className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-sm text-on-surface focus:outline-primary"
             >
-              {students.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name} ({s.admNo}) - Balance: KES {s.feeBalance.toLocaleString()}
-                </option>
-              ))}
+              {students.length === 0 ? (
+                <option value="">No enrolled learners found</option>
+              ) : (
+                <>
+                  <option value="">-- Select Learner --</option>
+                  {students.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} ({s.admNo}) - Balance: KES {s.feeBalance.toLocaleString()}
+                    </option>
+                  ))}
+                </>
+              )}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">
+              Invoice to Settle
+            </label>
+            <select
+              value={selectedInvoiceId}
+              onChange={(e) => {
+                setSelectedInvoiceId(e.target.value);
+                const inv = invoices.find((i) => i.id === e.target.value);
+                if (inv && (inv.balance || 0) > 0) {
+                  setAmount(inv.balance.toString());
+                }
+              }}
+              required
+              className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-xs text-on-surface focus:outline-primary font-data-mono"
+            >
+              {invoices.length === 0 ? (
+                <option value="">No billed invoices found for this learner</option>
+              ) : (
+                <>
+                  <option value="">-- Select Invoice --</option>
+                  {invoices.map((inv) => (
+                    <option key={inv.id} value={inv.id}>
+                      {inv.invoiceNumber} · Bal: KES {(inv.balance || 0).toLocaleString()} (Due: {inv.dueDate})
+                    </option>
+                  ))}
+                </>
+              )}
             </select>
           </div>
 
@@ -109,9 +202,13 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
                 onChange={(e) => setPaymentMethod(e.target.value as any)}
                 className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-sm text-on-surface focus:outline-primary"
               >
-                <option value="BANK_TRANSFER">Bank Wire</option>
-                <option value="CASH">Cash</option>
-                <option value="CHEQUE">Cheque</option>
+                <option value="MPESA">M-Pesa (Till / Paybill)</option>
+                <option value="BANK_TRANSFER">Bank Wire / EFT Transfer</option>
+                <option value="BANK_DEPOSIT">Bank Direct Deposit / Agent Slip</option>
+                <option value="CASH">Cash Office</option>
+                <option value="CHEQUE">Banker's Cheque</option>
+                <option value="PAYSTACK">Paystack Online Payment</option>
+                <option value="CARD">Debit / Credit Card</option>
               </select>
             </div>
             <div>
@@ -121,10 +218,10 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
               <input
                 type="number"
                 required
-                min="100"
+                min="1"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                placeholder="e.g. 15000"
+                placeholder="0"
                 className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-sm text-on-surface focus:outline-primary font-data-mono"
               />
             </div>
@@ -139,6 +236,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
               required
               value={transactionReference}
               onChange={(e) => setTransactionReference(e.target.value)}
+              placeholder="e.g. QHJ8921KL or BNK-829103"
               className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-sm text-on-surface focus:outline-primary font-data-mono"
             />
           </div>
@@ -151,7 +249,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
               type="text"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="e.g. Equity Bank slip #48291"
+              placeholder="e.g. Bank slip number or transaction notes"
               className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-sm text-on-surface focus:outline-primary"
             />
           </div>
@@ -159,7 +257,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
           <div className="pt-2">
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || !selectedInvoiceId || Number(amount) <= 0}
               className="w-full py-2.5 bg-primary text-white font-semibold rounded-lg hover:bg-primary-container text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
               <span className="material-symbols-outlined text-[18px]">print</span>

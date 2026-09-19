@@ -311,6 +311,11 @@ export class PostgresDatabaseInitializer {
         steps JSONB NOT NULL,
         extended_activity TEXT,
         teacher_self_reflection TEXT,
+        status VARCHAR(50) DEFAULT 'DRAFT',
+        submitted_at TIMESTAMP,
+        reviewed_by_user_id VARCHAR(100),
+        reviewed_at TIMESTAMP,
+        review_remarks TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
@@ -434,6 +439,16 @@ export class PostgresDatabaseInitializer {
     `;
 
     await pool.query(ddl);
+
+    // Schema migrations for lesson_plans status & reviews
+    await pool.query(`
+      ALTER TABLE lesson_plans ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'DRAFT';
+      ALTER TABLE lesson_plans ADD COLUMN IF NOT EXISTS submitted_at TIMESTAMP;
+      ALTER TABLE lesson_plans ADD COLUMN IF NOT EXISTS reviewed_by_user_id VARCHAR(100);
+      ALTER TABLE lesson_plans ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMP;
+      ALTER TABLE lesson_plans ADD COLUMN IF NOT EXISTS review_remarks TEXT;
+    `).catch(() => {});
+
     console.log('[PostgreSQL] Database tables initialized successfully.');
   }
 }
@@ -936,21 +951,124 @@ export class PostgresLessonPlanRepository implements ILessonPlanRepository {
     const res = await this.pool.query('SELECT * FROM lesson_plans WHERE id = $1', [id]);
     if (!res.rows.length) return null;
     const r = res.rows[0];
-    return LessonPlan.create({ teacherId: r.teacher_id, schemeOfWorkEntryId: r.scheme_of_work_entry_id, learningAreaId: r.learning_area_id, classRoomId: r.classroom_id, streamId: r.stream_id, lessonDate: r.lesson_date, durationMinutes: r.duration_minutes, rollBoys: r.roll_boys, rollGirls: r.roll_girls, strand: r.strand, subStrand: r.sub_strand, specificLearningOutcomes: typeof r.specific_learning_outcomes === 'string' ? JSON.parse(r.specific_learning_outcomes) : (r.specific_learning_outcomes || []), keyInquiryQuestions: typeof r.key_inquiry_questions === 'string' ? JSON.parse(r.key_inquiry_questions) : (r.key_inquiry_questions || []), coreCompetenciesAddressed: typeof r.core_competencies_addressed === 'string' ? JSON.parse(r.core_competencies_addressed) : (r.core_competencies_addressed || []), valuesAddressed: typeof r.values_addressed === 'string' ? JSON.parse(r.values_addressed) : (r.values_addressed || []), learningResources: typeof r.learning_resources === 'string' ? JSON.parse(r.learning_resources) : (r.learning_resources || []), steps: typeof r.steps === 'string' ? JSON.parse(r.steps) : r.steps, extendedActivity: r.extended_activity, teacherSelfReflection: r.teacher_self_reflection }, r.id, r.created_at, r.updated_at);
+    return LessonPlan.create({
+      teacherId: r.teacher_id,
+      schemeOfWorkEntryId: r.scheme_of_work_entry_id,
+      learningAreaId: r.learning_area_id,
+      classRoomId: r.classroom_id,
+      streamId: r.stream_id,
+      lessonDate: r.lesson_date,
+      durationMinutes: r.duration_minutes,
+      rollBoys: r.roll_boys,
+      rollGirls: r.roll_girls,
+      strand: r.strand,
+      subStrand: r.sub_strand,
+      specificLearningOutcomes: typeof r.specific_learning_outcomes === 'string' ? JSON.parse(r.specific_learning_outcomes) : (r.specific_learning_outcomes || []),
+      keyInquiryQuestions: typeof r.key_inquiry_questions === 'string' ? JSON.parse(r.key_inquiry_questions) : (r.key_inquiry_questions || []),
+      coreCompetenciesAddressed: typeof r.core_competencies_addressed === 'string' ? JSON.parse(r.core_competencies_addressed) : (r.core_competencies_addressed || []),
+      valuesAddressed: typeof r.values_addressed === 'string' ? JSON.parse(r.values_addressed) : (r.values_addressed || []),
+      learningResources: typeof r.learning_resources === 'string' ? JSON.parse(r.learning_resources) : (r.learning_resources || []),
+      steps: typeof r.steps === 'string' ? JSON.parse(r.steps) : r.steps,
+      extendedActivity: r.extended_activity,
+      teacherSelfReflection: r.teacher_self_reflection,
+      status: r.status || 'DRAFT',
+      submittedAt: r.submitted_at ? new Date(r.submitted_at) : undefined,
+      reviewedByUserId: r.reviewed_by_user_id,
+      reviewedAt: r.reviewed_at ? new Date(r.reviewed_at) : undefined,
+      reviewRemarks: r.review_remarks
+    }, r.id, r.created_at, r.updated_at);
   }
   public async findAll(filters?: LessonPlanFilterCriteria): Promise<LessonPlan[]> {
     const res = await this.pool.query('SELECT * FROM lesson_plans');
-    return res.rows.map(r => LessonPlan.create({ teacherId: r.teacher_id, schemeOfWorkEntryId: r.scheme_of_work_entry_id, learningAreaId: r.learning_area_id, classRoomId: r.classroom_id, streamId: r.stream_id, lessonDate: r.lesson_date, durationMinutes: r.duration_minutes, rollBoys: r.roll_boys, rollGirls: r.roll_girls, strand: r.strand, subStrand: r.sub_strand, specificLearningOutcomes: typeof r.specific_learning_outcomes === 'string' ? JSON.parse(r.specific_learning_outcomes) : (r.specific_learning_outcomes || []), keyInquiryQuestions: typeof r.key_inquiry_questions === 'string' ? JSON.parse(r.key_inquiry_questions) : (r.key_inquiry_questions || []), coreCompetenciesAddressed: typeof r.core_competencies_addressed === 'string' ? JSON.parse(r.core_competencies_addressed) : (r.core_competencies_addressed || []), valuesAddressed: typeof r.values_addressed === 'string' ? JSON.parse(r.values_addressed) : (r.values_addressed || []), learningResources: typeof r.learning_resources === 'string' ? JSON.parse(r.learning_resources) : (r.learning_resources || []), steps: typeof r.steps === 'string' ? JSON.parse(r.steps) : r.steps, extendedActivity: r.extended_activity, teacherSelfReflection: r.teacher_self_reflection }, r.id, r.created_at, r.updated_at));
+    return res.rows.map(r => LessonPlan.create({
+      teacherId: r.teacher_id,
+      schemeOfWorkEntryId: r.scheme_of_work_entry_id,
+      learningAreaId: r.learning_area_id,
+      classRoomId: r.classroom_id,
+      streamId: r.stream_id,
+      lessonDate: r.lesson_date,
+      durationMinutes: r.duration_minutes,
+      rollBoys: r.roll_boys,
+      rollGirls: r.roll_girls,
+      strand: r.strand,
+      subStrand: r.sub_strand,
+      specificLearningOutcomes: typeof r.specific_learning_outcomes === 'string' ? JSON.parse(r.specific_learning_outcomes) : (r.specific_learning_outcomes || []),
+      keyInquiryQuestions: typeof r.key_inquiry_questions === 'string' ? JSON.parse(r.key_inquiry_questions) : (r.key_inquiry_questions || []),
+      coreCompetenciesAddressed: typeof r.core_competencies_addressed === 'string' ? JSON.parse(r.core_competencies_addressed) : (r.core_competencies_addressed || []),
+      valuesAddressed: typeof r.values_addressed === 'string' ? JSON.parse(r.values_addressed) : (r.values_addressed || []),
+      learningResources: typeof r.learning_resources === 'string' ? JSON.parse(r.learning_resources) : (r.learning_resources || []),
+      steps: typeof r.steps === 'string' ? JSON.parse(r.steps) : r.steps,
+      extendedActivity: r.extended_activity,
+      teacherSelfReflection: r.teacher_self_reflection,
+      status: r.status || 'DRAFT',
+      submittedAt: r.submitted_at ? new Date(r.submitted_at) : undefined,
+      reviewedByUserId: r.reviewed_by_user_id,
+      reviewedAt: r.reviewed_at ? new Date(r.reviewed_at) : undefined,
+      reviewRemarks: r.review_remarks
+    }, r.id, r.created_at, r.updated_at));
   }
   public async findBySchemeEntryId(schemeEntryId: string): Promise<LessonPlan[]> {
     const res = await this.pool.query('SELECT * FROM lesson_plans WHERE scheme_of_work_entry_id = $1', [schemeEntryId]);
-    return res.rows.map(r => LessonPlan.create({ teacherId: r.teacher_id, schemeOfWorkEntryId: r.scheme_of_work_entry_id, learningAreaId: r.learning_area_id, classRoomId: r.classroom_id, streamId: r.stream_id, lessonDate: r.lesson_date, durationMinutes: r.duration_minutes, rollBoys: r.roll_boys, rollGirls: r.roll_girls, strand: r.strand, subStrand: r.sub_strand, specificLearningOutcomes: typeof r.specific_learning_outcomes === 'string' ? JSON.parse(r.specific_learning_outcomes) : (r.specific_learning_outcomes || []), keyInquiryQuestions: typeof r.key_inquiry_questions === 'string' ? JSON.parse(r.key_inquiry_questions) : (r.key_inquiry_questions || []), coreCompetenciesAddressed: typeof r.core_competencies_addressed === 'string' ? JSON.parse(r.core_competencies_addressed) : (r.core_competencies_addressed || []), valuesAddressed: typeof r.values_addressed === 'string' ? JSON.parse(r.values_addressed) : (r.values_addressed || []), learningResources: typeof r.learning_resources === 'string' ? JSON.parse(r.learning_resources) : (r.learning_resources || []), steps: typeof r.steps === 'string' ? JSON.parse(r.steps) : r.steps, extendedActivity: r.extended_activity, teacherSelfReflection: r.teacher_self_reflection }, r.id, r.created_at, r.updated_at));
+    return res.rows.map(r => LessonPlan.create({
+      teacherId: r.teacher_id,
+      schemeOfWorkEntryId: r.scheme_of_work_entry_id,
+      learningAreaId: r.learning_area_id,
+      classRoomId: r.classroom_id,
+      streamId: r.stream_id,
+      lessonDate: r.lesson_date,
+      durationMinutes: r.duration_minutes,
+      rollBoys: r.roll_boys,
+      rollGirls: r.roll_girls,
+      strand: r.strand,
+      subStrand: r.sub_strand,
+      specificLearningOutcomes: typeof r.specific_learning_outcomes === 'string' ? JSON.parse(r.specific_learning_outcomes) : (r.specific_learning_outcomes || []),
+      keyInquiryQuestions: typeof r.key_inquiry_questions === 'string' ? JSON.parse(r.key_inquiry_questions) : (r.key_inquiry_questions || []),
+      coreCompetenciesAddressed: typeof r.core_competencies_addressed === 'string' ? JSON.parse(r.core_competencies_addressed) : (r.core_competencies_addressed || []),
+      valuesAddressed: typeof r.values_addressed === 'string' ? JSON.parse(r.values_addressed) : (r.values_addressed || []),
+      learningResources: typeof r.learning_resources === 'string' ? JSON.parse(r.learning_resources) : (r.learning_resources || []),
+      steps: typeof r.steps === 'string' ? JSON.parse(r.steps) : r.steps,
+      extendedActivity: r.extended_activity,
+      teacherSelfReflection: r.teacher_self_reflection,
+      status: r.status || 'DRAFT',
+      submittedAt: r.submitted_at ? new Date(r.submitted_at) : undefined,
+      reviewedByUserId: r.reviewed_by_user_id,
+      reviewedAt: r.reviewed_at ? new Date(r.reviewed_at) : undefined,
+      reviewRemarks: r.review_remarks
+    }, r.id, r.created_at, r.updated_at));
   }
   public async save(lp: LessonPlan): Promise<void> {
-    const q = `INSERT INTO lesson_plans (id, scheme_of_work_entry_id, teacher_id, learning_area_id, classroom_id, stream_id, lesson_date, duration_minutes, roll_boys, roll_girls, strand, sub_strand, specific_learning_outcomes, key_inquiry_questions, core_competencies_addressed, values_addressed, learning_resources, steps, extended_activity, teacher_self_reflection, created_at, updated_at)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
-               ON CONFLICT (id) DO UPDATE SET teacher_self_reflection = EXCLUDED.teacher_self_reflection, updated_at = NOW()`;
-    await this.pool.query(q, [lp.id, (lp as any)._props.schemeOfWorkEntryId, lp.teacherId, lp.learningAreaId, lp.classRoomId, lp.streamId, lp.lessonDate, lp.durationMinutes, (lp as any)._props.rollBoys, (lp as any)._props.rollGirls, lp.strand, lp.subStrand, JSON.stringify(lp.specificLearningOutcomes), JSON.stringify((lp as any)._props.keyInquiryQuestions || []), JSON.stringify((lp as any)._props.coreCompetenciesAddressed || []), JSON.stringify((lp as any)._props.valuesAddressed || []), JSON.stringify((lp as any)._props.learningResources || []), JSON.stringify(lp.steps), (lp as any)._props.extendedActivity, lp.teacherSelfReflection, lp.createdAt, lp.updatedAt]);
+    const q = `INSERT INTO lesson_plans (id, scheme_of_work_entry_id, teacher_id, learning_area_id, classroom_id, stream_id, lesson_date, duration_minutes, roll_boys, roll_girls, strand, sub_strand, specific_learning_outcomes, key_inquiry_questions, core_competencies_addressed, values_addressed, learning_resources, steps, extended_activity, teacher_self_reflection, status, submitted_at, reviewed_by_user_id, reviewed_at, review_remarks, created_at, updated_at)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27)
+               ON CONFLICT (id) DO UPDATE SET teacher_self_reflection = EXCLUDED.teacher_self_reflection, status = EXCLUDED.status, submitted_at = EXCLUDED.submitted_at, reviewed_by_user_id = EXCLUDED.reviewed_by_user_id, reviewed_at = EXCLUDED.reviewed_at, review_remarks = EXCLUDED.review_remarks, updated_at = NOW()`;
+    await this.pool.query(q, [
+      lp.id,
+      (lp as any)._props.schemeOfWorkEntryId,
+      lp.teacherId,
+      lp.learningAreaId,
+      lp.classRoomId,
+      lp.streamId,
+      lp.lessonDate,
+      lp.durationMinutes,
+      (lp as any)._props.rollBoys,
+      (lp as any)._props.rollGirls,
+      lp.strand,
+      lp.subStrand,
+      JSON.stringify(lp.specificLearningOutcomes),
+      JSON.stringify((lp as any)._props.keyInquiryQuestions || []),
+      JSON.stringify((lp as any)._props.coreCompetenciesAddressed || []),
+      JSON.stringify((lp as any)._props.valuesAddressed || []),
+      JSON.stringify((lp as any)._props.learningResources || []),
+      JSON.stringify(lp.steps),
+      (lp as any)._props.extendedActivity,
+      lp.teacherSelfReflection,
+      lp.status,
+      lp.submittedAt || null,
+      lp.reviewedByUserId || null,
+      lp.reviewedAt || null,
+      lp.reviewRemarks || null,
+      lp.createdAt,
+      lp.updatedAt
+    ]);
   }
   public async update(lp: LessonPlan): Promise<void> { await this.save(lp); }
   public async delete(id: string): Promise<void> { await this.pool.query('DELETE FROM lesson_plans WHERE id = $1', [id]); }

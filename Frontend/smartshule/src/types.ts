@@ -26,10 +26,15 @@ export type CBCRubric = 'EE' | 'ME' | 'AE' | 'BE';
 
 export enum UserRole {
   SUPER_ADMIN = 'SUPER_ADMIN',
+  ADMIN = 'ADMIN',
   SCHOOL_ADMIN = 'SCHOOL_ADMIN',
   HEAD_TEACHER = 'HEAD_TEACHER',
-  TEACHER = 'TEACHER',
+  DEPUTY_HEAD_TEACHER = 'DEPUTY_HEAD_TEACHER',
+  ADMISSIONS = 'ADMISSIONS',
+  BURSAR = 'BURSAR',
   ACCOUNTANT = 'ACCOUNTANT',
+  TEACHER = 'TEACHER',
+  PARENT = 'PARENT',
   GUARDIAN = 'GUARDIAN',
   STUDENT = 'STUDENT',
 }
@@ -374,6 +379,11 @@ export interface LessonPlan {
   steps: LessonPlanStep[];
   extendedActivity?: string;
   teacherSelfReflection?: string;
+  status?: 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
+  submittedAt?: string;
+  reviewedByUserId?: string;
+  reviewedAt?: string;
+  reviewRemarks?: string;
   createdAt?: string;
 }
 

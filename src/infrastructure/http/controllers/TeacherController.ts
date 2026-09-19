@@ -6,6 +6,7 @@ import { AuthenticatedRequest } from '../middlewares/authMiddleware';
 export const RegisterTeacherSchema = z.object({
   email: z.string().email(),
   password: z.string().optional(),
+  nationalId: z.string().optional(),
   firstName: z.string().min(1),
   lastName: z.string().min(1),
   phone: z.string().optional(),

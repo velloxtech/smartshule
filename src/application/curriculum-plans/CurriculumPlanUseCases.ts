@@ -172,6 +172,29 @@ export class CurriculumPlanUseCases {
     return plan.toJSON();
   }
 
+  public async submitLessonPlanForReview(lessonPlanId: string) {
+    const plan = await this.lessonPlanRepository.findById(lessonPlanId);
+    if (!plan) throw new NotFoundError('Lesson Plan', lessonPlanId);
+
+    plan.submit();
+    await this.lessonPlanRepository.update(plan);
+    return plan.toJSON();
+  }
+
+  public async reviewLessonPlan(lessonPlanId: string, reviewerUserId: string, approved: boolean, remarks: string) {
+    const plan = await this.lessonPlanRepository.findById(lessonPlanId);
+    if (!plan) throw new NotFoundError('Lesson Plan', lessonPlanId);
+
+    if (approved) {
+      plan.approve(reviewerUserId, remarks);
+    } else {
+      plan.reject(reviewerUserId, remarks);
+    }
+
+    await this.lessonPlanRepository.update(plan);
+    return plan.toJSON();
+  }
+
   public async listLessonPlans(filters?: LessonPlanFilterCriteria) {
     const plans = await this.lessonPlanRepository.findAll(filters);
     return plans.map(p => p.toJSON());

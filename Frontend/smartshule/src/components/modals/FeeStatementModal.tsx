@@ -71,19 +71,19 @@ export const FeeStatementModal: React.FC<FeeStatementModalProps> = ({
                 <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30">
                   <span className="text-[11px] text-on-surface-variant uppercase font-semibold">Total Invoiced</span>
                   <div className="text-lg font-bold font-data-mono text-on-surface mt-1">
-                    KES {(statement?.totalInvoiced || 42000).toLocaleString()}
+                    KES {(statement?.totalInvoiced || 0).toLocaleString()}
                   </div>
                 </div>
                 <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30">
                   <span className="text-[11px] text-on-surface-variant uppercase font-semibold">Total Paid</span>
                   <div className="text-lg font-bold font-data-mono text-secondary mt-1">
-                    KES {(statement?.totalPaid || 30000).toLocaleString()}
+                    KES {(statement?.totalPaid || 0).toLocaleString()}
                   </div>
                 </div>
                 <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30">
                   <span className="text-[11px] text-on-surface-variant uppercase font-semibold">Current Balance</span>
                   <div className="text-lg font-bold font-data-mono text-error mt-1">
-                    KES {(statement?.currentBalance || 12000).toLocaleString()}
+                    KES {(statement?.currentBalance || 0).toLocaleString()}
                   </div>
                 </div>
               </div>
@@ -104,29 +104,28 @@ export const FeeStatementModal: React.FC<FeeStatementModalProps> = ({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-outline-variant/20 font-data-mono">
-                      {(statement?.invoices && statement.invoices.length > 0 ? statement.invoices : [
-                        {
-                          invoiceNumber: 'INV-2026-00101',
-                          dueDate: '2026-01-31',
-                          amountPayable: 42000,
-                          amountPaid: 30000,
-                          balance: 12000,
-                          status: 'PARTIALLY_PAID',
-                        },
-                      ]).map((inv: any, i: number) => (
-                        <tr key={i} className="hover:bg-surface-container">
-                          <td className="p-2.5 font-bold text-primary">{inv.invoiceNumber}</td>
-                          <td className="p-2.5 text-on-surface-variant">{inv.dueDate}</td>
-                          <td className="p-2.5 text-right">KES {inv.amountPayable?.toLocaleString()}</td>
-                          <td className="p-2.5 text-right text-secondary">KES {inv.amountPaid?.toLocaleString()}</td>
-                          <td className="p-2.5 text-right text-error font-bold">KES {inv.balance?.toLocaleString()}</td>
-                          <td className="p-2.5 text-center">
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-primary-container text-on-primary-container">
-                              {inv.status}
-                            </span>
+                      {statement?.invoices && statement.invoices.length > 0 ? (
+                        statement.invoices.map((inv: any, i: number) => (
+                          <tr key={i} className="hover:bg-surface-container">
+                            <td className="p-2.5 font-bold text-primary">{inv.invoiceNumber}</td>
+                            <td className="p-2.5 text-on-surface-variant">{inv.dueDate}</td>
+                            <td className="p-2.5 text-right">KES {(inv.amountPayable || inv.amountBilled || 0).toLocaleString()}</td>
+                            <td className="p-2.5 text-right text-secondary">KES {(inv.amountPaid || 0).toLocaleString()}</td>
+                            <td className="p-2.5 text-right text-error font-bold">KES {(inv.balance || 0).toLocaleString()}</td>
+                            <td className="p-2.5 text-center">
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-primary-container text-on-primary-container">
+                                {inv.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={6} className="p-4 text-center text-on-surface-variant font-sans">
+                            No invoices recorded for this learner.
                           </td>
                         </tr>
-                      ))}
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -147,25 +146,25 @@ export const FeeStatementModal: React.FC<FeeStatementModalProps> = ({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-outline-variant/20 font-data-mono">
-                      {(statement?.payments && statement.payments.length > 0 ? statement.payments : [
-                        {
-                          receiptNumber: 'REC-2026-8812',
-                          paymentDate: '2026-01-15',
-                          paymentMethod: 'MPESA',
-                          transactionReference: 'QHJ78912KL',
-                          amount: 30000,
-                        },
-                      ]).map((p: any, i: number) => (
-                        <tr key={i} className="hover:bg-surface-container">
-                          <td className="p-2.5 font-bold text-secondary">{p.receiptNumber}</td>
-                          <td className="p-2.5 text-on-surface-variant">{p.paymentDate}</td>
-                          <td className="p-2.5 text-on-surface">{p.paymentMethod}</td>
-                          <td className="p-2.5 text-on-surface-variant">{p.transactionReference}</td>
-                          <td className="p-2.5 text-right font-bold text-secondary">
-                            KES {p.amount?.toLocaleString()}
+                      {statement?.payments && statement.payments.length > 0 ? (
+                        statement.payments.map((p: any, i: number) => (
+                          <tr key={i} className="hover:bg-surface-container">
+                            <td className="p-2.5 font-bold text-secondary">{p.receiptNumber}</td>
+                            <td className="p-2.5 text-on-surface-variant">{p.paymentDate}</td>
+                            <td className="p-2.5 text-on-surface">{p.paymentMethod}</td>
+                            <td className="p-2.5 text-on-surface-variant">{p.transactionReference}</td>
+                            <td className="p-2.5 text-right font-bold text-secondary">
+                              KES {p.amount?.toLocaleString()}
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={5} className="p-4 text-center text-on-surface-variant font-sans">
+                            No payment receipts recorded for this learner.
                           </td>
                         </tr>
-                      ))}
+                      )}
                     </tbody>
                   </table>
                 </div>

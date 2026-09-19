@@ -50,8 +50,13 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
     }
   };
 
-  const grades = ['All', 'PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8'];
+  const standardGrades = ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'];
+  const studentGrades = Array.from(new Set(students.map((s) => s.grade).filter(Boolean)));
+  const combinedGrades = Array.from(new Set([...standardGrades, ...studentGrades]));
+  const grades = ['All', ...combinedGrades];
   const ratings = ['All', 'EE', 'ME', 'AE', 'BE'];
+
+  const normalizeGrade = (g: string) => (g || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 
   const filtered = students.filter((s) => {
     const matchesSearch =
@@ -59,7 +64,10 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
       s.admNo.includes(search) ||
       s.upi.toLowerCase().includes(search.toLowerCase()) ||
       s.guardianName.toLowerCase().includes(search.toLowerCase());
-    const matchesGrade = selectedGrade === 'All' || s.grade === selectedGrade;
+    const matchesGrade =
+      selectedGrade === 'All' ||
+      s.grade === selectedGrade ||
+      normalizeGrade(s.grade) === normalizeGrade(selectedGrade);
     const matchesRating = selectedRating === 'All' || s.cbcRating === selectedRating;
     return matchesSearch && matchesGrade && matchesRating;
   });

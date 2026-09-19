@@ -118,6 +118,21 @@ export async function setupTestFixtures(container: AppContainer) {
   );
   await container.userRepository.save(guardianUser1);
 
+  const guardianUser2 = User.create(
+    {
+      email: 'john.kariuki@gmail.com',
+      passwordHash: guardianPasswordHash,
+      firstName: 'John',
+      lastName: 'Kariuki',
+      role: UserRole.GUARDIAN,
+      phone: '+254799888777',
+      status: UserStatus.ACTIVE,
+      schoolId
+    },
+    'usr-guardian-02'
+  );
+  await container.userRepository.save(guardianUser2);
+
   const accountantPasswordHash = await passwordHasher.hash('Finance@123');
   const accountantUser = User.create(
     {
@@ -255,6 +270,19 @@ export async function setupTestFixtures(container: AppContainer) {
   );
   await container.guardianRepository.save(guardian);
 
+  const guardian2 = Guardian.create(
+    {
+      userId: guardianUser2.id,
+      nationalId: '29876544',
+      relationship: GuardianRelationship.FATHER,
+      emergencyContact: '+254799888777',
+      occupation: 'Architect',
+      studentIds: ['student-001']
+    },
+    'guardian-002'
+  );
+  await container.guardianRepository.save(guardian2);
+
   // 7. Student Profile
   const studentId = 'student-001';
   const student = Student.create(
@@ -270,7 +298,7 @@ export async function setupTestFixtures(container: AppContainer) {
       streamId,
       schoolId,
       academicYearId,
-      guardianIds: [guardianId],
+      guardianIds: [guardianId, 'guardian-002'],
       status: StudentStatus.ACTIVE
     },
     studentId

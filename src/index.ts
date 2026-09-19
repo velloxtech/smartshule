@@ -7,8 +7,8 @@ import { createExpressApp } from './infrastructure/http/app';
 async function bootstrap() {
   const container = await AppContainer.create();
 
-  // Ensure root administrator account exists for system access
-  await container.ensureSuperAdmin();
+  // Ensure all 8 default role accounts exist for system access
+  await container.ensureRoleAccounts();
 
   const app = createExpressApp(container);
   const PORT = process.env.PORT || 3000;

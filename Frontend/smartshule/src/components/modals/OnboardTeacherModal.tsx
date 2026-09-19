@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import {
   KENYAN_COUNTIES,
   isValidKenyanPhone,
@@ -20,6 +21,8 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
   onClose,
   onTeacherCreated,
 }) => {
+  const { user } = useAuth();
+  const [schoolId, setSchoolId] = useState<string>(user?.schoolId || '');
   const [currentSection, setCurrentSection] = useState<1 | 2 | 3>(1);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -43,6 +46,15 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (!schoolId) {
+      apiService.getSchool().then((res) => {
+        if (res?.data?.id) setSchoolId(res.data.id);
+      }).catch(() => {});
+    }
+  }, [isOpen, schoolId]);
 
   // Update Sub-county when County changes
   const countyObj = KENYAN_COUNTIES.find((c) => c.name === selectedCounty) || KENYAN_COUNTIES[46];
@@ -112,11 +124,12 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
     try {
       const res = await apiService.registerTeacher({
         email: email.trim(),
-        password: 'Teacher@123',
+        password: nationalId.trim(),
+        nationalId: nationalId.trim(),
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         phone: cleanPhone,
-        schoolId: 'school-001',
+        schoolId: user?.schoolId || schoolId,
         employeeNumber: employeeNumber.trim() || `EMP-${Math.floor(1000 + Math.random() * 9000)}`,
         tscNumber: formattedTsc,
         specialization: specArray,
@@ -301,7 +314,10 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
                     placeholder="e.g. 24891028"
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white font-mono"
                   />
-                  <span className="text-[10px] text-slate-500">Official citizen identification</span>
+                  <span className="text-[10px] text-emerald-700 font-semibold flex items-center gap-1 mt-0.5">
+                    <span className="material-symbols-outlined text-[12px]">key</span>
+                    <span>Teacher login password will be set to this National ID</span>
+                  </span>
                 </div>
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
@@ -422,13 +438,16 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
                     onChange={(e) => setQualification(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white"
                   >
+                    <option value="Certificate in Early Childhood (ECDE)">Certificate in Early Childhood (ECDE)</option>
+                    <option value="Diploma in Early Childhood (ECDE)">Diploma in Early Childhood (ECDE)</option>
+                    <option value="Diploma in Primary Teacher Education (DPTE)">Diploma in Primary Teacher Education (DPTE)</option>
+                    <option value="Diploma in Secondary Teacher Education (DSTE)">Diploma in Secondary Teacher Education (DSTE)</option>
                     <option value="B.Ed (Science)">Bachelor of Education (Science)</option>
                     <option value="B.Ed (Arts)">Bachelor of Education (Arts)</option>
                     <option value="B.Ed (Special Needs)">B.Ed Special Needs Education (SNE)</option>
-                    <option value="Diploma in Primary Teacher Education (DPTE)">Diploma in Primary Teacher Education (DPTE)</option>
-                    <option value="Diploma in Early Childhood (ECDE)">Diploma in Early Childhood (ECDE)</option>
                     <option value="Postgraduate Diploma in Education (PGDE)">Postgraduate Diploma in Education (PGDE)</option>
                     <option value="Masters in Education (M.Ed)">Masters in Education (M.Ed)</option>
+                    <option value="Doctor of Philosophy in Education (Ph.D)">Doctor of Philosophy in Education (Ph.D)</option>
                   </select>
                 </div>
                 <div>

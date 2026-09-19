@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { apiService } from '../../services/api';
 
 interface SendSmsModalProps {
   isOpen: boolean;
@@ -11,31 +12,49 @@ export const SendSmsModal: React.FC<SendSmsModalProps> = ({
   onClose,
   defaultTarget = 'absentee',
 }) => {
+  const [school, setSchool] = useState<any>(null);
+  const [totalStudents, setTotalStudents] = useState<number>(0);
+  const [defaulterCount, setDefaulterCount] = useState<number>(0);
+  const [absenteeCount, setAbsenteeCount] = useState<number>(0);
+
   const [target, setTarget] = useState<'absentee' | 'fee' | 'all'>(defaultTarget);
-  const [message, setMessage] = useState(
-    defaultTarget === 'absentee'
-      ? 'Dear Parent, this is to inform you that your child was marked absent from Grace Seeds School today. Please confirm reasons with the class teacher.'
-      : 'Dear Parent, Grace Seeds School kindly requests you to clear the outstanding fee balance via M-Pesa Paybill 174379 before the upcoming assessment window.'
-  );
+  const [message, setMessage] = useState('');
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent'>('idle');
+
+  useEffect(() => {
+    if (!isOpen) return;
+    apiService.getSchool().then((r) => {
+      if (r?.data) {
+        setSchool(r.data);
+      }
+    }).catch(() => {});
+
+    apiService.getStudents().then((r) => {
+      if (r?.data) setTotalStudents(r.data.length);
+    }).catch(() => {});
+
+    apiService.getDefaulters().then((r) => {
+      if (r?.data?.defaulters) setDefaulterCount(r.data.defaulters.length);
+    }).catch(() => {});
+  }, [isOpen]);
+
+  const schoolName = school?.name || 'SmartShule';
+  const senderId = (school?.code || 'SMARTSHULE').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 11) || 'SMARTSHULE';
+
+  useEffect(() => {
+    if (target === 'absentee') {
+      setMessage(`Dear Parent, this is to inform you that your child was marked absent from ${schoolName} today. Please confirm reason with the school.`);
+    } else if (target === 'fee') {
+      setMessage(`Dear Parent, ${schoolName} kindly requests you to clear the outstanding fee balance before the upcoming assessment window.`);
+    } else {
+      setMessage(`Dear Parents and Guardians, please note the upcoming consultative meeting scheduled for next week at ${schoolName}.`);
+    }
+  }, [target, schoolName]);
 
   if (!isOpen) return null;
 
   const handleTargetChange = (newTarget: 'absentee' | 'fee' | 'all') => {
     setTarget(newTarget);
-    if (newTarget === 'absentee') {
-      setMessage(
-        'Dear Parent, this is to inform you that your child was marked absent from Grace Seeds School today. Please confirm reasons with the class teacher.'
-      );
-    } else if (newTarget === 'fee') {
-      setMessage(
-        'Dear Parent, Grace Seeds School kindly requests you to clear the outstanding fee balance via M-Pesa Paybill 174379 before the upcoming assessment window.'
-      );
-    } else {
-      setMessage(
-        'Dear Parents and Guardians, please note the upcoming consultative meeting scheduled for next week at Grace Seeds School main hall.'
-      );
-    }
   };
 
   const handleSend = (e: React.FormEvent) => {
@@ -50,7 +69,7 @@ export const SendSmsModal: React.FC<SendSmsModalProps> = ({
     }, 1200);
   };
 
-  const recipientCount = target === 'absentee' ? 14 : target === 'fee' ? 81 : 1248;
+  const recipientCount = target === 'absentee' ? absenteeCount : target === 'fee' ? defaulterCount : totalStudents;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
@@ -62,7 +81,7 @@ export const SendSmsModal: React.FC<SendSmsModalProps> = ({
             </div>
             <div>
               <h3 className="font-semibold text-base leading-tight">Send Bulk Parent SMS Alert</h3>
-              <p className="text-xs text-rose-100">Telecom SMS Gateway · Sender ID: GRACESEED</p>
+              <p className="text-xs text-rose-100">Telecom SMS Gateway · Sender ID: {senderId}</p>
             </div>
           </div>
           <button
@@ -99,35 +118,35 @@ export const SendSmsModal: React.FC<SendSmsModalProps> = ({
                 <button
                   type="button"
                   onClick={() => handleTargetChange('absentee')}
-                  className={`p-2 rounded-lg text-xs font-medium border text-center transition-all ${
+                  className={`p-2 rounded-lg text-xs font-medium border text-center transition-all cursor-pointer ${
                     target === 'absentee'
                       ? 'bg-primary text-white border-primary shadow-xs'
                       : 'bg-surface-container-low text-on-surface border-outline-variant/30 hover:bg-surface-container'
                   }`}
                 >
-                  Absentees Today (14)
+                  Absentees ({absenteeCount})
                 </button>
                 <button
                   type="button"
                   onClick={() => handleTargetChange('fee')}
-                  className={`p-2 rounded-lg text-xs font-medium border text-center transition-all ${
+                  className={`p-2 rounded-lg text-xs font-medium border text-center transition-all cursor-pointer ${
                     target === 'fee'
                       ? 'bg-primary text-white border-primary shadow-xs'
                       : 'bg-surface-container-low text-on-surface border-outline-variant/30 hover:bg-surface-container'
                   }`}
                 >
-                  Fee Defaulters (81)
+                  Defaulters ({defaulterCount})
                 </button>
                 <button
                   type="button"
                   onClick={() => handleTargetChange('all')}
-                  className={`p-2 rounded-lg text-xs font-medium border text-center transition-all ${
+                  className={`p-2 rounded-lg text-xs font-medium border text-center transition-all cursor-pointer ${
                     target === 'all'
                       ? 'bg-primary text-white border-primary shadow-xs'
                       : 'bg-surface-container-low text-on-surface border-outline-variant/30 hover:bg-surface-container'
                   }`}
                 >
-                  All Parents (1,248)
+                  All Learners ({totalStudents})
                 </button>
               </div>
             </div>
@@ -144,8 +163,8 @@ export const SendSmsModal: React.FC<SendSmsModalProps> = ({
                 className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-sm text-on-surface focus:outline-primary"
               />
               <div className="flex justify-between text-[11px] text-on-surface-variant mt-1">
-                <span>Characters: {message.length} (1 SMS credit/parent)</span>
-                <span>Sender: <strong>GRACESEED</strong></span>
+                <span>Characters: {message.length} (1 SMS credit/recipient)</span>
+                <span>Sender: <strong>{senderId}</strong></span>
               </div>
             </div>
 
@@ -158,13 +177,14 @@ export const SendSmsModal: React.FC<SendSmsModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 text-sm font-medium text-on-surface-variant hover:bg-surface-container rounded-lg"
+                className="px-4 py-2 text-sm font-medium text-on-surface-variant hover:bg-surface-container rounded-lg cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-5 py-2.5 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary-container transition-all flex items-center gap-1.5 shadow-md cursor-pointer"
+                disabled={recipientCount === 0}
+                className="px-5 py-2.5 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary-container disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-1.5 shadow-md cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[18px]">send</span>
                 <span>Send {recipientCount} SMS</span>

@@ -17,7 +17,7 @@ export const AddTimetableSlotModal: React.FC<AddTimetableSlotModalProps> = ({
   isOpen,
   onClose,
   onSlotAdded,
-  timetableId = 'timetable-g7-east',
+  timetableId = '',
   learningAreas: propLearningAreas = [],
   teachers: propTeachers = [],
   initialSlot,
@@ -41,9 +41,9 @@ export const AddTimetableSlotModal: React.FC<AddTimetableSlotModalProps> = ({
   );
   const [startTime, setStartTime] = useState<string>(initialSlot?.startTime || '08:00');
   const [endTime, setEndTime] = useState<string>(initialSlot?.endTime || '08:45');
-  const [learningAreaId, setLearningAreaId] = useState<string>(initialSlot?.learningAreaId || 'la-science-7');
-  const [teacherId, setTeacherId] = useState<string>(initialSlot?.teacherId || 'teacher-001');
-  const [roomName, setRoomName] = useState<string>(initialSlot?.roomName || 'Grade 7 East Room');
+  const [learningAreaId, setLearningAreaId] = useState<string>(initialSlot?.learningAreaId || '');
+  const [teacherId, setTeacherId] = useState<string>(initialSlot?.teacherId || '');
+  const [roomName, setRoomName] = useState<string>(initialSlot?.roomName || '');
   const [isBreak, setIsBreak] = useState<boolean>(initialSlot?.isBreak || false);
   const [breakLabel, setBreakLabel] = useState<string>(initialSlot?.label || '');
   const [isLoading, setIsLoading] = useState(false);
@@ -194,6 +194,7 @@ export const AddTimetableSlotModal: React.FC<AddTimetableSlotModalProps> = ({
                 <option value="6">Period 6 (Lunch)</option>
                 <option value="7">Period 7</option>
                 <option value="8">Period 8</option>
+                <option value="9">Period 9 (Remedial / Co-Curricular)</option>
               </select>
             </div>
           </div>
@@ -263,11 +264,15 @@ export const AddTimetableSlotModal: React.FC<AddTimetableSlotModalProps> = ({
                   onChange={(e) => setLearningAreaId(e.target.value)}
                   className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2 text-xs font-semibold text-on-surface"
                 >
-                  {learningAreas.map((la) => (
-                    <option key={la.id} value={la.id}>
-                      {la.name} ({la.code})
-                    </option>
-                  ))}
+                  {learningAreas.length === 0 ? (
+                    <option value="">No learning areas found</option>
+                  ) : (
+                    learningAreas.map((la) => (
+                      <option key={la.id} value={la.id}>
+                        {la.name} ({la.code})
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
 
@@ -280,11 +285,15 @@ export const AddTimetableSlotModal: React.FC<AddTimetableSlotModalProps> = ({
                   onChange={(e) => setTeacherId(e.target.value)}
                   className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2 text-xs font-semibold text-on-surface"
                 >
-                  {teachers.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name || t.user?.fullName || `Teacher ${t.tscNumber || ''}`}
-                    </option>
-                  ))}
+                  {teachers.length === 0 ? (
+                    <option value="">No teachers found</option>
+                  ) : (
+                    teachers.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name || t.user?.fullName || `Teacher ${t.tscNumber || ''}`}
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
 

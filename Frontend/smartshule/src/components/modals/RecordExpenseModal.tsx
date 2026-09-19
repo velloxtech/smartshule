@@ -31,7 +31,7 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
   const [category, setCategory] = useState<ExpenseCategoryType>('UTILITIES_BILLS');
   const [amount, setAmount] = useState('');
   const [payee, setPayee] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'MPESA' | 'BANK_TRANSFER' | 'CHEQUE' | 'CASH' | 'CARD'>('MPESA');
+  const [paymentMethod, setPaymentMethod] = useState<'MPESA' | 'BANK_TRANSFER' | 'BANK_DEPOSIT' | 'CHEQUE' | 'CASH' | 'CARD'>('MPESA');
   const [paymentReference, setPaymentReference] = useState('');
   const [expenseDate, setExpenseDate] = useState(new Date().toISOString().split('T')[0]);
   const [status, setStatus] = useState<ExpenseStatusType>('PAID');
@@ -232,6 +232,7 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
               >
                 <option value="MPESA">M-Pesa (Till / Paybill)</option>
                 <option value="BANK_TRANSFER">Bank EFT / Wire Transfer</option>
+                <option value="BANK_DEPOSIT">Bank Direct Deposit / Agent Slip</option>
                 <option value="CHEQUE">School Cheque</option>
                 <option value="CASH">Petty Cash Drawer</option>
                 <option value="CARD">Debit / Credit Card</option>

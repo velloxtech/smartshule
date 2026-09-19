@@ -9,6 +9,7 @@ interface RecordIncomeModalProps {
 }
 
 const SOURCE_OPTIONS: { value: IncomeSourceType; label: string; icon: string }[] = [
+  { value: 'FEES_COLLECTION', label: 'Student Fees Collection (Direct Inflow)', icon: 'payments' },
   { value: 'GOVERNMENT_CAPITATION_JSS', label: 'MoE Junior Secondary Capitation Grant (JSS)', icon: 'account_balance' },
   { value: 'GOVERNMENT_CAPITATION_FPE', label: 'MoE Free Primary Capitation Grant (FPE)', icon: 'school' },
   { value: 'UNIFORM_SALES', label: 'School Uniform Store & Merchandise Sales', icon: 'checkroom' },
@@ -27,7 +28,9 @@ export const RecordIncomeModal: React.FC<RecordIncomeModalProps> = ({
   const [source, setSource] = useState<IncomeSourceType>('GOVERNMENT_CAPITATION_JSS');
   const [amount, setAmount] = useState('');
   const [receivedFrom, setReceivedFrom] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'BANK_TRANSFER' | 'BANK_DEPOSIT' | 'MPESA' | 'CHEQUE' | 'CASH'>('BANK_TRANSFER');
+  const [paymentMethod, setPaymentMethod] = useState<
+    'BANK_TRANSFER' | 'BANK_DEPOSIT' | 'MPESA' | 'CHEQUE' | 'CASH' | 'CARD' | 'PAYSTACK'
+  >('BANK_TRANSFER');
   const [paymentReference, setPaymentReference] = useState('');
   const [incomeDate, setIncomeDate] = useState(new Date().toISOString().split('T')[0]);
   const [notes, setNotes] = useState('');
@@ -229,6 +232,8 @@ export const RecordIncomeModal: React.FC<RecordIncomeModalProps> = ({
                 <option value="MPESA">M-Pesa (Till / Paybill)</option>
                 <option value="CHEQUE">Bankers Cheque</option>
                 <option value="CASH">Cash Drawer</option>
+                <option value="PAYSTACK">Paystack Online Payment</option>
+                <option value="CARD">Debit / Credit Card</option>
               </select>
             </div>
 

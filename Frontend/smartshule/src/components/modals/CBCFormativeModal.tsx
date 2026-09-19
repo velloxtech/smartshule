@@ -24,11 +24,11 @@ export const CBCFormativeModal: React.FC<CBCFormativeModalProps> = ({
     initialStudent?.id || (students && students.length > 0 ? students[0].id : '')
   );
   const [learningArea, setLearningArea] = useState<string>(
-    learningAreas && learningAreas.length > 0 ? learningAreas[0].name : 'Mathematics Activities'
+    learningAreas && learningAreas.length > 0 ? learningAreas[0].name : ''
   );
-  const [strand, setStrand] = useState('Numbers & Operations');
-  const [subStrand, setSubStrand] = useState('Fractions & Decimals in Real Life Contexts');
-  const [rating, setRating] = useState<CBCRubric>('EE');
+  const [strand, setStrand] = useState('');
+  const [subStrand, setSubStrand] = useState('');
+  const [rating, setRating] = useState<CBCRubric>('ME');
   const [evidence, setEvidence] = useState('');
   const [saved, setSaved] = useState(false);
 
@@ -39,6 +39,12 @@ export const CBCFormativeModal: React.FC<CBCFormativeModalProps> = ({
       setStudentId(students[0].id);
     }
   }, [initialStudent, students, isOpen]);
+
+  useEffect(() => {
+    if (learningAreas && learningAreas.length > 0 && !learningArea) {
+      setLearningArea(learningAreas[0].name);
+    }
+  }, [learningAreas, isOpen]);
 
   if (!isOpen) return null;
 
@@ -57,7 +63,7 @@ export const CBCFormativeModal: React.FC<CBCFormativeModalProps> = ({
       strand,
       subStrand,
       rating,
-      evidence: evidence || 'Demonstrated consistent competency during practical group exercise.',
+      evidence: evidence || 'Demonstrated expected competency level.',
     };
 
     if (onSave) {

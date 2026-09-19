@@ -8,7 +8,15 @@ import { useAuth } from '../../context/AuthContext';
 export const SchemesView: React.FC = () => {
   const { user } = useAuth();
   const isTeacher = user?.role === UserRole.TEACHER;
-  const isApprover = user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.HEAD_TEACHER || user?.role === UserRole.SCHOOL_ADMIN;
+  const isApprover = Boolean(
+    user?.role && [
+      UserRole.SUPER_ADMIN,
+      UserRole.ADMIN,
+      UserRole.SCHOOL_ADMIN,
+      UserRole.HEAD_TEACHER,
+      UserRole.DEPUTY_HEAD_TEACHER
+    ].includes(user.role)
+  );
 
   const [activeTab, setActiveTab] = useState<'schemes' | 'lesson-plans'>('schemes');
   const [schemes, setSchemes] = useState<SchemeOfWork[]>([]);
@@ -61,15 +69,54 @@ export const SchemesView: React.FC = () => {
 
   const handleApproveScheme = async (schemeId: string) => {
     try {
+      const roleName = user?.role === UserRole.DEPUTY_HEAD_TEACHER ? 'Deputy Head Teacher' : 'Principal / Administration';
       const res = await apiService.reviewScheme(schemeId, {
         approved: true,
-        remarks: 'Approved by Head Teacher. Well-aligned with CBC learning outcomes.',
+        remarks: `Approved by ${roleName}. Well-aligned with CBC learning outcomes.`,
       });
       if (res.success) {
         loadCurriculum();
       }
     } catch (err: any) {
       alert(err.message || 'Error approving scheme');
+    }
+  };
+
+  const handleSubmitLessonPlan = async (planId: string) => {
+    try {
+      const res = await apiService.submitLessonPlan(planId);
+      if (res.success) {
+        loadCurriculum();
+        if (selectedPlan && selectedPlan.id === planId) {
+          setSelectedPlan(res.data);
+        }
+      }
+    } catch (err: any) {
+      alert(err.message || 'Error submitting lesson plan');
+    }
+  };
+
+  const handleReviewLessonPlan = async (planId: string, approved: boolean, customRemarks?: string) => {
+    const roleName = user?.role === UserRole.DEPUTY_HEAD_TEACHER ? 'Deputy Head Teacher' : 'Principal / Administration';
+    const defaultRemarks = approved
+      ? `Approved by ${roleName}. Comprehensive CBC instructional design.`
+      : `Revision requested by ${roleName}. Please enrich learner activities.`;
+    const finalRemarks = customRemarks || (approved ? defaultRemarks : window.prompt('Enter revision feedback remarks:', defaultRemarks));
+    if (!approved && finalRemarks === null) return; // User canceled prompt
+
+    try {
+      const res = await apiService.reviewLessonPlan(planId, {
+        approved,
+        remarks: finalRemarks || defaultRemarks,
+      });
+      if (res.success) {
+        loadCurriculum();
+        if (selectedPlan && selectedPlan.id === planId) {
+          setSelectedPlan(res.data);
+        }
+      }
+    } catch (err: any) {
+      alert(err.message || 'Error reviewing lesson plan');
     }
   };
 
@@ -279,10 +326,36 @@ export const SchemesView: React.FC = () => {
                   className="bg-surface-container-lowest rounded-xl p-5 shadow-xs border border-outline-variant/30 space-y-3 flex flex-col justify-between"
                 >
                   <div>
-                    <div className="flex items-center justify-between border-b border-surface-container pb-2">
-                      <span className="font-data-mono text-xs font-bold text-secondary bg-secondary-container px-2 py-0.5 rounded">
-                        {lp.durationMinutes} Mins · {lp.lessonDate}
-                      </span>
+                    <div className="flex items-center justify-between border-b border-surface-container pb-2 flex-wrap gap-1.5">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-data-mono text-xs font-bold text-secondary bg-secondary-container px-2 py-0.5 rounded">
+                          {lp.durationMinutes} Mins · {lp.lessonDate}
+                        </span>
+                        {lp.status === 'APPROVED' && (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                            <span className="material-symbols-outlined text-[13px]">verified</span>
+                            <span>Approved</span>
+                          </span>
+                        )}
+                        {lp.status === 'SUBMITTED' && (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                            <span className="material-symbols-outlined text-[13px]">pending</span>
+                            <span>Pending Approval</span>
+                          </span>
+                        )}
+                        {lp.status === 'REJECTED' && (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-200">
+                            <span className="material-symbols-outlined text-[13px]">cancel</span>
+                            <span>Revision Needed</span>
+                          </span>
+                        )}
+                        {(!lp.status || lp.status === 'DRAFT') && (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 border border-gray-200">
+                            <span className="material-symbols-outlined text-[13px]">edit_note</span>
+                            <span>Draft</span>
+                          </span>
+                        )}
+                      </div>
                       <span className="text-xs text-outline font-data-mono">
                         Roll: {lp.rollBoys || 20}B / {lp.rollGirls || 18}G
                       </span>
@@ -303,17 +376,65 @@ export const SchemesView: React.FC = () => {
                     <div className="mt-2 text-[11px] text-on-surface-variant flex flex-wrap gap-2">
                       <span>Inquiry: {lp.keyInquiryQuestions?.[0]}</span>
                     </div>
+
+                    {lp.reviewRemarks && (
+                      <div className="mt-2 p-2 rounded bg-slate-50 border border-slate-200 text-[11px] text-slate-700">
+                        <span className="font-bold text-slate-900">Review: </span>
+                        <span>{lp.reviewRemarks}</span>
+                      </div>
+                    )}
                   </div>
 
-                  <div className="mt-3 pt-3 border-t border-surface-container flex items-center justify-between">
-                    <button
-                      onClick={() => handleDeleteLessonPlan(lp.id, lp.strand)}
-                      title="Delete Lesson Plan"
-                      className="p-1 rounded text-outline hover:text-error hover:bg-error/10 transition-colors cursor-pointer flex items-center gap-1 text-xs"
-                    >
-                      <span className="material-symbols-outlined text-[14px]">delete</span>
-                      <span>Delete</span>
-                    </button>
+                  <div className="mt-3 pt-3 border-t border-surface-container flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleDeleteLessonPlan(lp.id, lp.strand)}
+                        title="Delete Lesson Plan"
+                        className="p-1 rounded text-outline hover:text-error hover:bg-error/10 transition-colors cursor-pointer flex items-center gap-1 text-xs"
+                      >
+                        <span className="material-symbols-outlined text-[14px]">delete</span>
+                        <span>Delete</span>
+                      </button>
+
+                      {/* Teacher Submit Action */}
+                      {isTeacher && (!lp.status || lp.status === 'DRAFT' || lp.status === 'REJECTED') && (
+                        <button
+                          onClick={() => handleSubmitLessonPlan(lp.id)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-secondary text-white hover:bg-secondary-container hover:text-on-secondary-container text-xs font-semibold cursor-pointer transition-colors"
+                          title="Submit Lesson Plan for Review"
+                        >
+                          <span className="material-symbols-outlined text-[13px]">send</span>
+                          <span>Submit Plan</span>
+                        </button>
+                      )}
+
+                      {/* Approver Actions (Deputy, Head Teacher, Admin, Super Admin) */}
+                      {isApprover && (
+                        <div className="flex items-center gap-1.5">
+                          {lp.status !== 'APPROVED' && (
+                            <button
+                              onClick={() => handleReviewLessonPlan(lp.id, true)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-emerald-600 text-white hover:bg-emerald-700 text-xs font-semibold cursor-pointer transition-colors"
+                              title="Approve Lesson Plan"
+                            >
+                              <span className="material-symbols-outlined text-[13px]">check_circle</span>
+                              <span>Approve</span>
+                            </button>
+                          )}
+                          {lp.status !== 'REJECTED' && (
+                            <button
+                              onClick={() => handleReviewLessonPlan(lp.id, false)}
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded border border-rose-300 text-rose-700 hover:bg-rose-50 text-xs font-semibold cursor-pointer transition-colors"
+                              title="Request Revision"
+                            >
+                              <span className="material-symbols-outlined text-[13px]">cancel</span>
+                              <span>Reject</span>
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
                     <button
                       onClick={() => setSelectedPlan(lp)}
                       className="text-xs font-bold text-primary hover:underline flex items-center gap-1 cursor-pointer"
@@ -353,6 +474,38 @@ export const SchemesView: React.FC = () => {
             </div>
 
             <div className="p-4 sm:p-5 space-y-3.5 text-xs overflow-y-auto flex-1 overscroll-contain">
+              {/* Approval status banner */}
+              <div className="p-3 rounded-xl border flex items-center justify-between gap-2 bg-slate-50 border-slate-200">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-slate-700">Status:</span>
+                  {selectedPlan.status === 'APPROVED' ? (
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[11px] flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[13px]">verified</span>
+                      <span>Approved</span>
+                    </span>
+                  ) : selectedPlan.status === 'SUBMITTED' ? (
+                    <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold text-[11px] flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[13px]">pending</span>
+                      <span>Pending Approval</span>
+                    </span>
+                  ) : selectedPlan.status === 'REJECTED' ? (
+                    <span className="px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 font-bold text-[11px] flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[13px]">cancel</span>
+                      <span>Revision Requested</span>
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 font-bold text-[11px]">
+                      Draft
+                    </span>
+                  )}
+                </div>
+                {selectedPlan.reviewRemarks && (
+                  <span className="text-[10px] text-slate-500 italic truncate max-w-[200px]">
+                    "{selectedPlan.reviewRemarks}"
+                  </span>
+                )}
+              </div>
+
               <div className="grid grid-cols-2 gap-2 p-3 rounded-lg bg-surface-container-low font-data-mono">
                 <div>Duration: <strong>{selectedPlan.durationMinutes} Minutes</strong></div>
                 <div>Date: <strong>{selectedPlan.lessonDate}</strong></div>
@@ -390,6 +543,49 @@ export const SchemesView: React.FC = () => {
                   <div className="text-xs text-on-surface italic mt-0.5">{selectedPlan.teacherSelfReflection}</div>
                 </div>
               )}
+            </div>
+
+            {/* Modal Review Actions Footer */}
+            <div className="p-3 bg-surface-container-low border-t border-outline-variant/30 flex items-center justify-between gap-2">
+              <button
+                onClick={() => setSelectedPlan(null)}
+                className="px-3 py-1.5 rounded-lg border border-outline text-on-surface hover:bg-surface-container-high text-xs font-semibold cursor-pointer"
+              >
+                Close
+              </button>
+              <div className="flex items-center gap-2">
+                {isTeacher && (!selectedPlan.status || selectedPlan.status === 'DRAFT' || selectedPlan.status === 'REJECTED') && (
+                  <button
+                    onClick={() => handleSubmitLessonPlan(selectedPlan.id)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary text-white hover:bg-secondary-container hover:text-on-secondary-container text-xs font-bold cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[14px]">send</span>
+                    <span>Submit for Approval</span>
+                  </button>
+                )}
+                {isApprover && (
+                  <>
+                    {selectedPlan.status !== 'REJECTED' && (
+                      <button
+                        onClick={() => handleReviewLessonPlan(selectedPlan.id, false)}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-rose-300 text-rose-700 hover:bg-rose-50 text-xs font-bold cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-[14px]">cancel</span>
+                        <span>Reject</span>
+                      </button>
+                    )}
+                    {selectedPlan.status !== 'APPROVED' && (
+                      <button
+                        onClick={() => handleReviewLessonPlan(selectedPlan.id, true)}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 text-xs font-bold cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                        <span>Approve Plan</span>
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>

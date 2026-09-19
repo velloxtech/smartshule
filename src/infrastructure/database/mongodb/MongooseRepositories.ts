@@ -312,6 +312,11 @@ const LessonPlanSchema = new Schema({
   steps: Schema.Types.Mixed,
   extendedActivity: String,
   teacherSelfReflection: String,
+  status: { type: String, default: 'DRAFT' },
+  submittedAt: Date,
+  reviewedByUserId: String,
+  reviewedAt: Date,
+  reviewRemarks: String,
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });

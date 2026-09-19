@@ -257,43 +257,9 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className="text-[11px] text-secondary font-medium">CBA Live Bridge</span>
               </div>
               <div className="flex flex-col gap-sm py-sm max-h-72 overflow-y-auto">
-                <div className="p-sm rounded-lg bg-secondary-container/30 flex gap-sm items-start">
-                  <span className="material-symbols-outlined text-secondary text-[18px]">
-                    check_circle
-                  </span>
-                  <div>
-                    <div className="text-xs font-semibold text-on-surface">M-Pesa STK Inflow</div>
-                    <div className="text-[11px] text-on-surface-variant">
-                      KES 24,000 received for Kevin Omondi (Adm #GSA-2026-082)
-                    </div>
-                    <div className="text-[10px] text-outline mt-0.5">2 mins ago</div>
-                  </div>
-                </div>
-
-                <div className="p-sm rounded-lg bg-primary-fixed/30 flex gap-sm items-start">
-                  <span className="material-symbols-outlined text-primary text-[18px]">
-                    fact_check
-                  </span>
-                  <div>
-                    <div className="text-xs font-semibold text-on-surface">Daily Roll Call Finalized</div>
-                    <div className="text-[11px] text-on-surface-variant">
-                      Tr. Sarah Mwangi completed Grade 4 East attendance (39 present, 1 absent)
-                    </div>
-                    <div className="text-[10px] text-outline mt-0.5">14 mins ago</div>
-                  </div>
-                </div>
-
-                <div className="p-sm rounded-lg bg-surface-container-low flex gap-sm items-start">
-                  <span className="material-symbols-outlined text-primary text-[18px]">
-                    schedule
-                  </span>
-                  <div>
-                    <div className="text-xs font-semibold text-on-surface">KNEC Summative Deadline</div>
-                    <div className="text-[11px] text-on-surface-variant">
-                      Grade 3 - 6 core strand marks portal closes Friday, 29th March
-                    </div>
-                    <div className="text-[10px] text-outline mt-0.5">MoE Advisory</div>
-                  </div>
+                <div className="py-8 text-center text-xs text-on-surface-variant flex flex-col items-center gap-2">
+                  <span className="material-symbols-outlined text-outline text-[24px]">notifications_none</span>
+                  <span>No new notifications</span>
                 </div>
               </div>
             </div>

@@ -22,10 +22,15 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
         icon: 'dashboard',
         allowedRoles: [
           UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
           UserRole.SCHOOL_ADMIN,
           UserRole.HEAD_TEACHER,
-          UserRole.TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
+          UserRole.ADMISSIONS,
+          UserRole.BURSAR,
           UserRole.ACCOUNTANT,
+          UserRole.TEACHER,
+          UserRole.PARENT,
           UserRole.GUARDIAN,
           UserRole.STUDENT,
         ],
@@ -41,10 +46,14 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
         icon: 'group',
         allowedRoles: [
           UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
           UserRole.SCHOOL_ADMIN,
           UserRole.HEAD_TEACHER,
-          UserRole.TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
+          UserRole.ADMISSIONS,
+          UserRole.BURSAR,
           UserRole.ACCOUNTANT,
+          UserRole.TEACHER,
         ],
       },
       {
@@ -53,8 +62,11 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
         icon: 'badge',
         allowedRoles: [
           UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
           UserRole.SCHOOL_ADMIN,
           UserRole.HEAD_TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
+          UserRole.ADMISSIONS,
         ],
       },
       {
@@ -63,8 +75,11 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
         icon: 'meeting_room',
         allowedRoles: [
           UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
           UserRole.SCHOOL_ADMIN,
           UserRole.HEAD_TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
+          UserRole.ADMISSIONS,
           UserRole.TEACHER,
         ],
       },
@@ -74,8 +89,10 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
         icon: 'menu_book',
         allowedRoles: [
           UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
           UserRole.SCHOOL_ADMIN,
           UserRole.HEAD_TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
           UserRole.TEACHER,
           UserRole.STUDENT,
         ],
@@ -91,8 +108,10 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
         icon: 'assignment',
         allowedRoles: [
           UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
           UserRole.SCHOOL_ADMIN,
           UserRole.HEAD_TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
           UserRole.TEACHER,
         ],
       },
@@ -102,8 +121,10 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
         icon: 'account_tree',
         allowedRoles: [
           UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
           UserRole.SCHOOL_ADMIN,
           UserRole.HEAD_TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
           UserRole.TEACHER,
         ],
       },
@@ -113,9 +134,12 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
         icon: 'article',
         allowedRoles: [
           UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
           UserRole.SCHOOL_ADMIN,
           UserRole.HEAD_TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
           UserRole.TEACHER,
+          UserRole.PARENT,
           UserRole.GUARDIAN,
           UserRole.STUDENT,
         ],
@@ -126,8 +150,10 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
         icon: 'monitoring',
         allowedRoles: [
           UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
           UserRole.SCHOOL_ADMIN,
           UserRole.HEAD_TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
           UserRole.TEACHER,
         ],
       },
@@ -142,8 +168,10 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
         icon: 'edit_calendar',
         allowedRoles: [
           UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
           UserRole.SCHOOL_ADMIN,
           UserRole.HEAD_TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
           UserRole.TEACHER,
         ],
       },
@@ -153,9 +181,13 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
         icon: 'calendar_view_week',
         allowedRoles: [
           UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
           UserRole.SCHOOL_ADMIN,
           UserRole.HEAD_TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
+          UserRole.ADMISSIONS,
           UserRole.TEACHER,
+          UserRole.PARENT,
           UserRole.GUARDIAN,
           UserRole.STUDENT,
         ],
@@ -166,9 +198,13 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
         icon: 'checklist',
         allowedRoles: [
           UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
           UserRole.SCHOOL_ADMIN,
           UserRole.HEAD_TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
+          UserRole.ADMISSIONS,
           UserRole.TEACHER,
+          UserRole.PARENT,
           UserRole.GUARDIAN,
         ],
       },
@@ -183,8 +219,10 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
         icon: 'account_balance_wallet',
         allowedRoles: [
           UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
           UserRole.SCHOOL_ADMIN,
           UserRole.HEAD_TEACHER,
+          UserRole.BURSAR,
           UserRole.ACCOUNTANT,
         ],
       },
@@ -194,8 +232,10 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
         icon: 'payments',
         allowedRoles: [
           UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
           UserRole.SCHOOL_ADMIN,
           UserRole.HEAD_TEACHER,
+          UserRole.BURSAR,
           UserRole.ACCOUNTANT,
         ],
       },
@@ -205,8 +245,10 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
         icon: 'domain_add',
         allowedRoles: [
           UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
           UserRole.SCHOOL_ADMIN,
           UserRole.HEAD_TEACHER,
+          UserRole.BURSAR,
           UserRole.ACCOUNTANT,
         ],
       },
@@ -216,8 +258,10 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
         icon: 'analytics',
         allowedRoles: [
           UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
           UserRole.SCHOOL_ADMIN,
           UserRole.HEAD_TEACHER,
+          UserRole.BURSAR,
           UserRole.ACCOUNTANT,
         ],
       },
@@ -227,8 +271,10 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
         icon: 'table_chart',
         allowedRoles: [
           UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
           UserRole.SCHOOL_ADMIN,
           UserRole.HEAD_TEACHER,
+          UserRole.BURSAR,
           UserRole.ACCOUNTANT,
         ],
       },
@@ -238,9 +284,12 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
         icon: 'account_balance',
         allowedRoles: [
           UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
           UserRole.SCHOOL_ADMIN,
           UserRole.HEAD_TEACHER,
+          UserRole.BURSAR,
           UserRole.ACCOUNTANT,
+          UserRole.PARENT,
           UserRole.GUARDIAN,
         ],
       },
@@ -250,8 +299,10 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
         icon: 'point_of_sale',
         allowedRoles: [
           UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
           UserRole.SCHOOL_ADMIN,
           UserRole.HEAD_TEACHER,
+          UserRole.BURSAR,
           UserRole.ACCOUNTANT,
         ],
       },
@@ -266,9 +317,12 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
         icon: 'edit_note',
         allowedRoles: [
           UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
           UserRole.SCHOOL_ADMIN,
           UserRole.HEAD_TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
           UserRole.TEACHER,
+          UserRole.PARENT,
           UserRole.GUARDIAN,
           UserRole.STUDENT,
         ],
@@ -279,9 +333,12 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
         icon: 'photo_camera',
         allowedRoles: [
           UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
           UserRole.SCHOOL_ADMIN,
           UserRole.HEAD_TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
           UserRole.TEACHER,
+          UserRole.PARENT,
           UserRole.GUARDIAN,
         ],
       },
@@ -291,11 +348,16 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
         icon: 'chat',
         allowedRoles: [
           UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
           UserRole.SCHOOL_ADMIN,
           UserRole.HEAD_TEACHER,
-          UserRole.TEACHER,
-          UserRole.GUARDIAN,
+          UserRole.DEPUTY_HEAD_TEACHER,
+          UserRole.ADMISSIONS,
+          UserRole.BURSAR,
           UserRole.ACCOUNTANT,
+          UserRole.TEACHER,
+          UserRole.PARENT,
+          UserRole.GUARDIAN,
         ],
       },
     ],
@@ -325,14 +387,21 @@ export function getRoleDisplayName(role?: UserRole): string {
   switch (role) {
     case UserRole.SUPER_ADMIN:
       return 'Super Administrator';
+    case UserRole.ADMIN:
     case UserRole.SCHOOL_ADMIN:
       return 'School Administrator';
     case UserRole.HEAD_TEACHER:
       return 'Principal / Head Teacher';
+    case UserRole.DEPUTY_HEAD_TEACHER:
+      return 'Deputy Head Teacher';
+    case UserRole.ADMISSIONS:
+      return 'Admissions Officer';
+    case UserRole.BURSAR:
+    case UserRole.ACCOUNTANT:
+      return 'Bursar / Finance Officer';
     case UserRole.TEACHER:
       return 'CBC Educator';
-    case UserRole.ACCOUNTANT:
-      return 'Finance Officer';
+    case UserRole.PARENT:
     case UserRole.GUARDIAN:
       return 'Parent / Guardian';
     case UserRole.STUDENT:
@@ -345,17 +414,26 @@ export function getRoleDisplayName(role?: UserRole): string {
 export function getRoleBadgeStyle(role?: UserRole): { bg: string; text: string } {
   switch (role) {
     case UserRole.SUPER_ADMIN:
-    case UserRole.SCHOOL_ADMIN:
-    case UserRole.HEAD_TEACHER:
       return { bg: 'bg-[#7a1228]/15', text: 'text-[#7a1228]' };
-    case UserRole.TEACHER:
-      return { bg: 'bg-[#006a63]/15', text: 'text-[#006a63]' };
+    case UserRole.ADMIN:
+    case UserRole.SCHOOL_ADMIN:
+      return { bg: 'bg-rose-100', text: 'text-rose-900' };
+    case UserRole.HEAD_TEACHER:
+      return { bg: 'bg-purple-100', text: 'text-purple-900' };
+    case UserRole.DEPUTY_HEAD_TEACHER:
+      return { bg: 'bg-indigo-100', text: 'text-indigo-900' };
+    case UserRole.ADMISSIONS:
+      return { bg: 'bg-blue-100', text: 'text-blue-900' };
+    case UserRole.BURSAR:
     case UserRole.ACCOUNTANT:
-      return { bg: 'bg-[#653400]/15', text: 'text-[#653400]' };
+      return { bg: 'bg-amber-100', text: 'text-amber-900' };
+    case UserRole.TEACHER:
+      return { bg: 'bg-emerald-100', text: 'text-emerald-900' };
+    case UserRole.PARENT:
     case UserRole.GUARDIAN:
-      return { bg: 'bg-[#5b3d91]/15', text: 'text-[#5b3d91]' };
+      return { bg: 'bg-sky-100', text: 'text-sky-900' };
     case UserRole.STUDENT:
-      return { bg: 'bg-[#1b6b93]/15', text: 'text-[#1b6b93]' };
+      return { bg: 'bg-cyan-100', text: 'text-cyan-900' };
     default:
       return { bg: 'bg-gray-100', text: 'text-gray-700' };
   }

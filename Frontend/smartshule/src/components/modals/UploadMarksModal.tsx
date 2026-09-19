@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
-import { Student, BackendLearningArea } from '../../types';
+import { Student, BackendLearningArea, BackendStrand, BackendSubStrand } from '../../types';
+import { useAuth } from '../../context/AuthContext';
 
 interface UploadMarksModalProps {
   isOpen: boolean;
@@ -15,16 +16,21 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
   onMarksUploaded,
   initialStudent,
 }) => {
+  const { user } = useAuth();
   const [students, setStudents] = useState<Student[]>([]);
   const [learningAreas, setLearningAreas] = useState<BackendLearningArea[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState<string>('');
   const [selectedLearningAreaId, setSelectedLearningAreaId] = useState<string>('');
+  const [strands, setStrands] = useState<BackendStrand[]>([]);
+  const [selectedStrandId, setSelectedStrandId] = useState<string>('');
+  const [subStrands, setSubStrands] = useState<BackendSubStrand[]>([]);
+  const [selectedSubStrandId, setSelectedSubStrandId] = useState<string>('');
   const [assessmentType, setAssessmentType] = useState<'SUMMATIVE' | 'FORMATIVE'>('SUMMATIVE');
-  const [termId, setTermId] = useState('term-2026-1');
-  const [academicYearId, setAcademicYearId] = useState('year-2026');
+  const [termId, setTermId] = useState('');
+  const [academicYearId, setAcademicYearId] = useState('');
 
   // Marks inputs
-  const [rawScore, setRawScore] = useState<string>('60');
+  const [rawScore, setRawScore] = useState<string>('');
   const [maxScore, setMaxScore] = useState<string>('100');
   const [customRemarks, setCustomRemarks] = useState<string>('');
   const [isCustomRemarkEdited, setIsCustomRemarkEdited] = useState(false);
@@ -33,16 +39,31 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Load students and learning areas from DB
+  // Load students, learning areas, and academic context from DB
   useEffect(() => {
     if (!isOpen) return;
 
     async function loadData() {
       try {
-        const [stRes, laRes] = await Promise.all([
-          apiService.getStudents(),
-          apiService.getLearningAreas(),
+        const [stRes, laRes, ctxRes, yrRes] = await Promise.all([
+          apiService.getStudents().catch(() => null),
+          apiService.getLearningAreas().catch(() => null),
+          apiService.getCurrentContext().catch(() => null),
+          apiService.getYears().catch(() => null),
         ]);
+
+        if (ctxRes?.data) {
+          if (ctxRes.data.currentYear?.id) setAcademicYearId(ctxRes.data.currentYear.id);
+          if (ctxRes.data.currentTerm?.id) setTermId(ctxRes.data.currentTerm.id);
+        } else if (yrRes?.data && yrRes.data.length > 0) {
+          const currentYear = yrRes.data.find((y: any) => y.isCurrent) || yrRes.data[0];
+          setAcademicYearId(currentYear.id);
+          const tRes = await apiService.getTerms(currentYear.id).catch(() => null);
+          if (tRes?.data && tRes.data.length > 0) {
+            const currentTerm = tRes.data.find((t: any) => t.isCurrent) || tRes.data[0];
+            setTermId(currentTerm.id);
+          }
+        }
 
         if (stRes?.data && Array.isArray(stRes.data)) {
           const mapped: Student[] = stRes.data.map((s: any) => ({
@@ -52,14 +73,14 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
             nemis: s.upiNumber || 'NEMIS-PENDING',
             name: `${s.firstName} ${s.lastName}`,
             gender: s.gender === 'FEMALE' ? 'Girl' : 'Boy',
-            grade: s.gradeLevel ? s.gradeLevel.replace('_', ' ') : 'Grade 7',
-            stream: s.streamId ? s.streamId.replace('stream-g7-', '').toUpperCase() : 'East',
-            guardianName: s.guardian ? `${s.guardian.firstName} ${s.guardian.lastName}` : 'Guardian',
-            guardianPhone: s.guardian?.phone || '+254700000000',
-            feeBalance: 0,
-            totalFee: 0,
-            attendanceRate: 98,
-            cbcRating: 'ME',
+            grade: s.gradeLevel ? s.gradeLevel.replace(/_/g, ' ') : 'CBC Grade',
+            stream: s.stream?.name || s.streamName || (s.streamId ? s.streamId.replace('stream-', '').replace(/_/g, ' ') : ''),
+            guardianName: s.guardian ? `${s.guardian.firstName} ${s.guardian.lastName}` : (s.emergencyContactName || 'N/A'),
+            guardianPhone: s.guardian?.phone || s.emergencyContactPhone || 'N/A',
+            feeBalance: s.feeBalance || 0,
+            totalFee: s.totalFee || 0,
+            attendanceRate: s.attendanceRate ?? 100,
+            cbcRating: s.cbcRating || 'ME',
             status: s.status === 'ACTIVE' ? 'Active' : s.status,
           }));
           setStudents(mapped);
@@ -83,6 +104,54 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
 
     loadData();
   }, [isOpen, initialStudent]);
+
+  // Fetch strands dynamically when learning area changes
+  useEffect(() => {
+    if (!selectedLearningAreaId) {
+      setStrands([]);
+      setSelectedStrandId('');
+      return;
+    }
+    apiService
+      .getStrandsByLearningArea(selectedLearningAreaId)
+      .then((res) => {
+        if (res?.success && res.data && res.data.length > 0) {
+          setStrands(res.data);
+          setSelectedStrandId(res.data[0].id);
+        } else {
+          setStrands([]);
+          setSelectedStrandId('');
+        }
+      })
+      .catch(() => {
+        setStrands([]);
+        setSelectedStrandId('');
+      });
+  }, [selectedLearningAreaId]);
+
+  // Fetch sub-strands dynamically when strand changes
+  useEffect(() => {
+    if (!selectedStrandId) {
+      setSubStrands([]);
+      setSelectedSubStrandId('');
+      return;
+    }
+    apiService
+      .getSubStrandsByStrand(selectedStrandId)
+      .then((res) => {
+        if (res?.success && res.data && res.data.length > 0) {
+          setSubStrands(res.data);
+          setSelectedSubStrandId(res.data[0].id);
+        } else {
+          setSubStrands([]);
+          setSelectedSubStrandId('');
+        }
+      })
+      .catch(() => {
+        setSubStrands([]);
+        setSelectedSubStrandId('');
+      });
+  }, [selectedStrandId]);
 
   // CBC Standard Dynamic Evaluation Engine
   const numScore = parseFloat(rawScore) || 0;
@@ -132,22 +201,38 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
       return;
     }
 
+    if (!selectedLearningAreaId) {
+      setError('Please select a valid learning area');
+      setIsLoading(false);
+      return;
+    }
+
+    if (assessmentType === 'FORMATIVE' && !selectedSubStrandId) {
+      setError('Please select a valid sub-strand for formative assessment. If none exist in the database, please define strands & sub-strands in the curriculum manager.');
+      setIsLoading(false);
+      return;
+    }
+
+    const teacherId = user?.id || '';
+
     try {
       if (assessmentType === 'SUMMATIVE') {
         const payload = {
           studentId: selectedStudentId,
-          teacherId: 'teacher-001',
-          learningAreaId: selectedLearningAreaId || 'la-science-7',
+          teacherId,
+          learningAreaId: selectedLearningAreaId,
           termId,
           academicYearId,
-          strandScores: [
-            {
-              strandId: 'strand-scie-01',
-              performanceLevel,
-              rawScore: numScore,
-              maxScore: numMax,
-            },
-          ],
+          strandScores: selectedStrandId
+            ? [
+                {
+                  strandId: selectedStrandId,
+                  performanceLevel,
+                  rawScore: numScore,
+                  maxScore: numMax,
+                },
+              ]
+            : [],
           overallPerformanceLevel: performanceLevel,
           teacherRemarks: activeRemarks,
           evaluationDate: new Date().toISOString().split('T')[0],
@@ -164,9 +249,9 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
       } else {
         const payload = {
           studentId: selectedStudentId,
-          teacherId: 'teacher-001',
-          learningAreaId: selectedLearningAreaId || 'la-science-7',
-          subStrandId: 'substrand-scie-01',
+          teacherId,
+          learningAreaId: selectedLearningAreaId,
+          subStrandId: selectedSubStrandId,
           termId,
           academicYearId,
           assessmentDate: new Date().toISOString().split('T')[0],
@@ -247,11 +332,15 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
               required
               className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 font-semibold text-on-surface"
             >
-              {students.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name} ({s.admNo}) · {s.grade} {s.stream}
-                </option>
-              ))}
+              {students.length === 0 ? (
+                <option value="">No learners found in database</option>
+              ) : (
+                students.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name} ({s.admNo}) · {s.grade} {s.stream}
+                  </option>
+                ))
+              )}
             </select>
             {currentLearner && (
               <p className="text-[11px] text-on-surface-variant mt-1">
@@ -272,11 +361,15 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                 required
                 className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-on-surface"
               >
-                {learningAreas.map((la) => (
-                  <option key={la.id} value={la.id}>
-                    {la.name} ({la.code})
-                  </option>
-                ))}
+                {learningAreas.length === 0 ? (
+                  <option value="">No learning areas found</option>
+                ) : (
+                  learningAreas.map((la) => (
+                    <option key={la.id} value={la.id}>
+                      {la.name} ({la.code})
+                    </option>
+                  ))
+                )}
               </select>
             </div>
 
@@ -293,6 +386,60 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                 <option value="FORMATIVE">Formative (Continuous Outcome)</option>
               </select>
             </div>
+          </div>
+
+          {/* Dynamic Strands & Sub-Strands */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block font-bold text-on-surface-variant uppercase mb-1">
+                Curriculum Strand {assessmentType === 'FORMATIVE' ? '*' : '(Optional)'}
+              </label>
+              <select
+                value={selectedStrandId}
+                onChange={(e) => setSelectedStrandId(e.target.value)}
+                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-on-surface"
+              >
+                {strands.length === 0 ? (
+                  <option value="">No strands defined for this subject</option>
+                ) : (
+                  <>
+                    <option value="">Select Strand</option>
+                    {strands.map((st) => (
+                      <option key={st.id} value={st.id}>
+                        {st.code ? `[${st.code}] ` : ''}{st.title}
+                      </option>
+                    ))}
+                  </>
+                )}
+              </select>
+            </div>
+
+            {assessmentType === 'FORMATIVE' && (
+              <div>
+                <label className="block font-bold text-on-surface-variant uppercase mb-1">
+                  Sub-Strand *
+                </label>
+                <select
+                  value={selectedSubStrandId}
+                  onChange={(e) => setSelectedSubStrandId(e.target.value)}
+                  required
+                  className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-on-surface"
+                >
+                  {subStrands.length === 0 ? (
+                    <option value="">No sub-strands defined</option>
+                  ) : (
+                    <>
+                      <option value="">Select Sub-Strand</option>
+                      {subStrands.map((sub) => (
+                        <option key={sub.id} value={sub.id}>
+                          {sub.code ? `[${sub.code}] ` : ''}{sub.title}
+                        </option>
+                      ))}
+                    </>
+                  )}
+                </select>
+              </div>
+            )}
           </div>
 
           {/* Numerical Marks Entry */}

@@ -31,11 +31,11 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
   const [middleName, setMiddleName] = useState('');
   const [lastName, setLastName] = useState('');
   const [gender, setGender] = useState<'MALE' | 'FEMALE'>('MALE');
-  const [dob, setDob] = useState('2017-05-14');
+  const [dob, setDob] = useState('');
   const [birthCertNo, setBirthCertNo] = useState('');
   const [selectedCounty, setSelectedCounty] = useState('Nairobi City');
   const [selectedSubCounty, setSelectedSubCounty] = useState('Westlands');
-  const [generatedUpi, setGeneratedUpi] = useState('NEMIS-K2026A');
+  const [generatedUpi, setGeneratedUpi] = useState('');
 
   // Step 2: CBC Academic Placement & Special Needs (Article 54 & 43)
   const [classes, setClasses] = useState<ClassRoom[]>([]);
@@ -46,6 +46,8 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
   const [sneNotes, setSneNotes] = useState('');
   const [medicalConditions, setMedicalConditions] = useState('');
   const [emergencyClinic, setEmergencyClinic] = useState('');
+  const [schoolProfile, setSchoolProfile] = useState<any>(null);
+  const [currentContext, setCurrentContext] = useState<any>(null);
 
   // Step 3: Guardian Biodata & Safeguarding (Article 53(1)(d))
   const [guardianName, setGuardianName] = useState('');
@@ -71,16 +73,30 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
 
   // Update NEMIS UPI when birth cert or names change
   useEffect(() => {
-    setGeneratedUpi(generateNemisUpi(birthCertNo));
+    if (birthCertNo) {
+      setGeneratedUpi(generateNemisUpi(birthCertNo));
+    } else {
+      setGeneratedUpi('');
+    }
   }, [birthCertNo]);
 
   useEffect(() => {
     async function loadDbClasses() {
       try {
-        const res = await apiService.getClasses();
+        const [res, schoolRes, ctxRes] = await Promise.all([
+          apiService.getClasses(),
+          apiService.getSchool().catch(() => null),
+          apiService.getCurrentContext().catch(() => null),
+        ]);
         if (res.success && res.data?.length) {
           setClasses(res.data);
           setSelectedClassId(res.data[0].id);
+        }
+        if (schoolRes && schoolRes.success && schoolRes.data) {
+          setSchoolProfile(schoolRes.data);
+        }
+        if (ctxRes && ctxRes.success && ctxRes.data) {
+          setCurrentContext(ctxRes.data);
         }
       } catch (err) {
         console.error('Failed to load classes for admission modal:', err);
@@ -225,8 +241,8 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
       gradeLevel,
       classroomId: currentClass?.id,
       streamId: streamId || undefined,
-      schoolId: 'school-001',
-      academicYearId: 'year-2026',
+      schoolId: schoolProfile?.id || currentClass?.schoolId || '',
+      academicYearId: currentContext?.currentYear?.id || '',
       medicalConditions: medicalPayload || undefined,
       specialNeeds: specialNeedsPayload,
       birthCertificateNumber: birthCertNo.trim(),
@@ -550,11 +566,15 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                     onChange={(e) => setSelectedClassId(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white"
                   >
-                    {classes.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name} ({c.educationLevel.replace('_', ' ')})
-                      </option>
-                    ))}
+                    {classes.length === 0 ? (
+                      <option value="">No classes configured</option>
+                    ) : (
+                      classes.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name} ({c.educationLevel.replace('_', ' ')})
+                        </option>
+                      ))
+                    )}
                   </select>
                 </div>
                 <div>
@@ -702,8 +722,10 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                     <option value="MOTHER">Mother</option>
                     <option value="FATHER">Father</option>
                     <option value="GUARDIAN">Legal Guardian (Court Appointed)</option>
+                    <option value="SPONSOR">Sponsor / Charitable Trust</option>
+                    <option value="SIBLING">Elder Sibling</option>
                     <option value="FOSTER_PARENT">Foster Parent</option>
-                    <option value="NEXT_OF_KIN">Next of Kin</option>
+                    <option value="NEXT_OF_KIN">Next of Kin / Relative</option>
                   </select>
                 </div>
               </div>
@@ -853,7 +875,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                     <span>Article 53(1)(b) & Article 43(1)(f)</span>
                   </div>
                   <p className="text-slate-600">
-                    Right to free & compulsory basic education. Grace Seeds School ensures equal access without discrimination.
+                    Right to free & compulsory basic education. {schoolProfile?.name || 'SmartShule CBC Portal'} ensures equal access without discrimination.
                   </p>
                 </div>
                 <div className="p-3 bg-white border border-slate-200 rounded-xl">
@@ -895,7 +917,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                     <strong className="text-slate-900 font-bold block mb-0.5">
                       Child Protection & Zero Abuse Declaration (Article 53(1)(d) & Children's Act)
                     </strong>
-                    I certify that all details submitted are truthful. I understand Grace Seeds School enforces zero tolerance for corporal punishment, violence, exploitation, and discrimination against any learner.
+                    I certify that all details submitted are truthful. I understand {schoolProfile?.name || 'the institution'} enforces zero tolerance for corporal punishment, violence, exploitation, and discrimination against any learner.
                   </div>
                 </label>
               </div>

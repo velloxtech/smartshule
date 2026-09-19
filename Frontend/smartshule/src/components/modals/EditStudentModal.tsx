@@ -16,14 +16,15 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
   onStudentUpdated,
 }) => {
   const [gradeLevel, setGradeLevel] = useState('GRADE_7');
-  const [streamId, setStreamId] = useState('stream-g7-east');
-  const [streamName, setStreamName] = useState('East');
+  const [streamId, setStreamId] = useState('');
+  const [streamName, setStreamName] = useState('');
   const [status, setStatus] = useState('ACTIVE');
   const [medicalConditions, setMedicalConditions] = useState('');
   const [specialNeeds, setSpecialNeeds] = useState('');
-  const [guardianId, setGuardianId] = useState('guardian-001');
+  const [guardianId, setGuardianId] = useState('');
   const [isLinkingGuardian, setIsLinkingGuardian] = useState(false);
   const [guardianSuccess, setGuardianSuccess] = useState<string | null>(null);
+  const [availableStreams, setAvailableStreams] = useState<{ id: string; name: string }[]>([]);
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,11 +35,26 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
       // Map grade
       const normalizedGrade = student.grade.toUpperCase().replace(' ', '_');
       setGradeLevel(normalizedGrade.includes('GRADE') || normalizedGrade.includes('PP') ? normalizedGrade : 'GRADE_7');
-      setStreamName(student.stream || 'East');
+      setStreamName(student.stream || '');
       setStatus(student.status?.toUpperCase() || 'ACTIVE');
+      setStreamId('');
+      setGuardianId('');
       setSuccess(null);
-      setError(null);
       setGuardianSuccess(null);
+
+      apiService.getClasses().then(async (cRes) => {
+        if (cRes.success && cRes.data) {
+          const targetClass = cRes.data.find(c => c.name.toLowerCase().includes(student.grade?.toLowerCase() || ''));
+          if (targetClass) {
+            const sRes = await apiService.getStreamsByClass(targetClass.id);
+            if (sRes.success && sRes.data) {
+              setAvailableStreams(sRes.data.map(st => ({ id: st.id, name: st.name })));
+              const currentSt = sRes.data.find(st => st.name.toLowerCase() === student.stream?.toLowerCase());
+              if (currentSt) setStreamId(currentSt.id);
+            }
+          }
+        }
+      }).catch(() => {});
     }
   }, [student]);
 
@@ -180,13 +196,20 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
                 value={streamId}
                 onChange={(e) => {
                   setStreamId(e.target.value);
-                  setStreamName(e.target.value.includes('east') ? 'East' : e.target.value.includes('west') ? 'West' : 'North');
+                  const selectedSt = availableStreams.find(s => s.id === e.target.value);
+                  if (selectedSt) setStreamName(selectedSt.name);
                 }}
                 className="w-full bg-surface-container-low border border-outline-variant/30 rounded-lg px-3 py-2 text-xs focus:outline-primary"
               >
-                <option value="stream-g7-east">East Stream</option>
-                <option value="stream-g7-west">West Stream</option>
-                <option value="stream-g7-north">North Stream</option>
+                {availableStreams.length > 0 ? (
+                  availableStreams.map((st) => (
+                    <option key={st.id} value={st.id}>
+                      {st.name} Stream
+                    </option>
+                  ))
+                ) : (
+                  <option value="">No streams created</option>
+                )}
               </select>
             </div>
           </div>
@@ -202,6 +225,7 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
                 className="w-full bg-surface-container-low border border-outline-variant/30 rounded-lg px-3 py-2 text-xs focus:outline-primary"
               >
                 <option value="ACTIVE">ACTIVE (Enrolled)</option>
+                <option value="INACTIVE">INACTIVE (Dormant)</option>
                 <option value="TRANSFERRED">TRANSFERRED (Nemis Released)</option>
                 <option value="GRADUATED">GRADUATED (Alumni)</option>
                 <option value="SUSPENDED">SUSPENDED</option>
@@ -254,7 +278,7 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
                 type="text"
                 value={guardianId}
                 onChange={(e) => setGuardianId(e.target.value)}
-                placeholder="Guardian ID (e.g. guardian-001)"
+                placeholder="Enter Guardian User ID"
                 className="flex-1 bg-surface-container-lowest border border-outline-variant/30 rounded-lg px-3 py-1.5 text-xs focus:outline-primary font-data-mono"
               />
               <button

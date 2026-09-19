@@ -1,29 +1,36 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
 import { ClassRoom, StreamItem } from '../../types';
+import { useAuth } from '../../context/AuthContext';
 
 export const ClassesView: React.FC = () => {
+  const { user } = useAuth();
   const [classes, setClasses] = useState<ClassRoom[]>([]);
   const [streamsMap, setStreamsMap] = useState<Record<string, StreamItem[]>>({});
+  const [schoolInfo, setSchoolInfo] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isAddClassOpen, setIsAddClassOpen] = useState(false);
   const [isAddStreamOpen, setIsAddStreamOpen] = useState(false);
   const [selectedClassId, setSelectedClassId] = useState<string>('');
 
   // Form states for new class
-  const [newClassName, setNewClassName] = useState('Grade 8');
-  const [newGradeLevel, setNewGradeLevel] = useState('GRADE_8');
-  const [newEduLevel, setNewEduLevel] = useState('JUNIOR_SCHOOL');
+  const [newClassName, setNewClassName] = useState('');
+  const [newGradeLevel, setNewGradeLevel] = useState('GRADE_1');
+  const [newEduLevel, setNewEduLevel] = useState('LOWER_PRIMARY');
 
   // Form states for new stream
-  const [newStreamName, setNewStreamName] = useState('West');
+  const [newStreamName, setNewStreamName] = useState('');
   const [newCapacity, setNewCapacity] = useState('40');
 
   const loadClassesAndStreams = async () => {
     setLoading(true);
     try {
-      const res = await apiService.getClasses();
-      if (res.success) {
+      const [scRes, res] = await Promise.all([
+        apiService.getSchool().catch(() => null),
+        apiService.getClasses().catch(() => null),
+      ]);
+      if (scRes?.data) setSchoolInfo(scRes.data);
+      if (res?.success) {
         const classList = res.data || [];
         setClasses(classList);
         // Fetch streams for all classes
@@ -85,15 +92,21 @@ export const ClassesView: React.FC = () => {
 
   const handleCreateClass = async (e: React.FormEvent) => {
     e.preventDefault();
+    const activeSchoolId = user?.schoolId || schoolInfo?.id || '';
+    if (!activeSchoolId) {
+      alert('School profile not identified. Please configure school first.');
+      return;
+    }
     try {
       const res = await apiService.createClass({
         name: newClassName,
         gradeLevel: newGradeLevel,
         educationLevel: newEduLevel,
-        schoolId: 'school-001',
+        schoolId: activeSchoolId,
       });
       if (res.success) {
         setIsAddClassOpen(false);
+        setNewClassName('');
         loadClassesAndStreams();
       }
     } catch (err: any) {
@@ -298,10 +311,11 @@ export const ClassesView: React.FC = () => {
                     onChange={(e) => setNewEduLevel(e.target.value)}
                     className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2"
                   >
-                    <option value="EARLY_YEARS">Early Years</option>
-                    <option value="PRIMARY_SCHOOL">Primary School</option>
-                    <option value="JUNIOR_SCHOOL">Junior School</option>
-                    <option value="SENIOR_SCHOOL">Senior School</option>
+                    <option value="PRE_PRIMARY">Pre-Primary (PP1 - PP2)</option>
+                    <option value="LOWER_PRIMARY">Lower Primary (Grade 1 - 3)</option>
+                    <option value="UPPER_PRIMARY">Upper Primary (Grade 4 - 6)</option>
+                    <option value="JUNIOR_SCHOOL">Junior Secondary (Grade 7 - 9)</option>
+                    <option value="SENIOR_SCHOOL">Senior Secondary (Grade 10 - 12)</option>
                   </select>
                 </div>
               </div>

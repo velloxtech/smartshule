@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { apiService } from '../../services/api';
+import { DashboardSummary } from '../../types';
 
 interface ExportReportModalProps {
   isOpen: boolean;
@@ -6,11 +8,54 @@ interface ExportReportModalProps {
 }
 
 export const ExportReportModal: React.FC<ExportReportModalProps> = ({ isOpen, onClose }) => {
+  const [loading, setLoading] = useState(false);
+  const [school, setSchool] = useState<any>(null);
+  const [analytics, setAnalytics] = useState<DashboardSummary | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    async function loadData() {
+      setLoading(true);
+      try {
+        const [schoolRes, analyticsRes] = await Promise.all([
+          apiService.getSchool().catch(() => null),
+          apiService.getDashboardAnalytics().catch(() => null),
+        ]);
+        if (schoolRes && schoolRes.success && schoolRes.data) {
+          setSchool(schoolRes.data);
+        }
+        if (analyticsRes && analyticsRes.success && analyticsRes.data) {
+          setAnalytics(analyticsRes.data);
+        }
+      } catch (err) {
+        console.error('Failed to load export report data:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handlePrint = () => {
     window.print();
   };
+
+  const schoolName = school?.name || 'SmartShule CBC Portal';
+  const centerCode = school?.centerCode || 'CBA-REGISTERED';
+  const termName = analytics?.academicPeriod?.term || 'Current Term';
+  const yearName = analytics?.academicPeriod?.year || new Date().getFullYear().toString();
+
+  const totalStudents = analytics?.counts?.totalStudents || 0;
+  const totalTeachers = analytics?.counts?.totalTeachers || 0;
+  const totalCollected = analytics?.finance?.totalCollected || 0;
+  const totalInvoiced = analytics?.finance?.totalInvoiced || 0;
+  const collectionRate = analytics?.finance?.collectionRatePercentage || 0;
+
+  const totalAssessments = analytics?.cbcProficiency?.totalAssessments || 0;
+  const meetingOrExceeding = (analytics?.cbcProficiency?.exceeding || 0) + (analytics?.cbcProficiency?.meeting || 0);
+  const cbcMasteryPct = totalAssessments > 0 ? Math.round((meetingOrExceeding / totalAssessments) * 100) : 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-150">
@@ -22,7 +67,7 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({ isOpen, on
             </div>
             <div>
               <h3 className="font-semibold text-base leading-tight">Executive Summary Report Preview</h3>
-              <p className="text-xs text-rose-100">Grace Seeds School · Term 3, 2026 · Week 2</p>
+              <p className="text-xs text-rose-100">{schoolName} · {termName} {yearName}</p>
             </div>
           </div>
           <button
@@ -39,98 +84,107 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({ isOpen, on
             <div className="text-xs font-bold text-secondary uppercase tracking-widest">
               Ministry of Education · Continuous Assessment Framework
             </div>
-            <h2 className="text-xl font-bold text-primary mt-1">GRACE SEEDS SCHOOL - CBC EXECUTIVE BRIEF</h2>
+            <h2 className="text-xl font-bold text-primary mt-1 uppercase">{schoolName} - CBC EXECUTIVE BRIEF</h2>
             <p className="text-xs text-on-surface-variant mt-0.5">
-              Centre Code: 3829011 · NEMIS Registered · KICD Competency Framework Certified
+              Centre Code: {centerCode} · NEMIS Registered · KICD Competency Framework Certified
             </p>
             <div className="mt-2 text-xs font-data-mono text-outline">
-              Generated on: {new Date().toLocaleDateString('en-KE', { dateStyle: 'full' })} · Week 8
+              Generated on: {new Date().toLocaleDateString('en-KE', { dateStyle: 'full' })}
             </div>
           </div>
 
-          {/* Key Executive Summary Metrics */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="p-3 bg-surface-container-low rounded-xl text-center">
-              <span className="text-[11px] text-on-surface-variant uppercase font-medium">Enrolled</span>
-              <div className="text-xl font-bold text-primary">1,248</div>
-              <span className="text-[11px] text-on-surface-variant">612 B | 636 G</span>
+          {loading ? (
+            <div className="py-12 text-center text-sm text-on-surface-variant flex flex-col items-center gap-2">
+              <span className="material-symbols-outlined animate-spin text-[28px] text-primary">progress_activity</span>
+              <span>Loading executive summary metrics from database...</span>
             </div>
-            <div className="p-3 bg-surface-container-low rounded-xl text-center">
-              <span className="text-[11px] text-on-surface-variant uppercase font-medium">Avg Attendance</span>
-              <div className="text-xl font-bold text-secondary">97.1%</div>
-              <span className="text-[11px] text-secondary font-medium">Exemplary</span>
-            </div>
-            <div className="p-3 bg-surface-container-low rounded-xl text-center">
-              <span className="text-[11px] text-on-surface-variant uppercase font-medium">Fee Collected</span>
-              <div className="text-base font-bold text-primary font-data-mono">KES 8.42M</div>
-              <span className="text-[11px] text-secondary font-semibold">76.2% Target</span>
-            </div>
-            <div className="p-3 bg-surface-container-low rounded-xl text-center">
-              <span className="text-[11px] text-on-surface-variant uppercase font-medium">CBC Mastery</span>
-              <div className="text-xl font-bold text-primary">86.0%</div>
-              <span className="text-[11px] text-secondary font-medium">EE + ME Tier</span>
-            </div>
-          </div>
+          ) : (
+            <>
+              {/* Key Executive Summary Metrics */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="p-3 bg-surface-container-low rounded-xl text-center">
+                  <span className="text-[11px] text-on-surface-variant uppercase font-medium">Enrolled</span>
+                  <div className="text-xl font-bold text-primary">{totalStudents.toLocaleString()}</div>
+                  <span className="text-[11px] text-on-surface-variant">{totalTeachers} Teachers</span>
+                </div>
+                <div className="p-3 bg-surface-container-low rounded-xl text-center">
+                  <span className="text-[11px] text-on-surface-variant uppercase font-medium">Fee Collection</span>
+                  <div className="text-xl font-bold text-secondary">{collectionRate}%</div>
+                  <span className="text-[11px] text-secondary font-medium">Rate</span>
+                </div>
+                <div className="p-3 bg-surface-container-low rounded-xl text-center">
+                  <span className="text-[11px] text-on-surface-variant uppercase font-medium">Fee Collected</span>
+                  <div className="text-base font-bold text-primary font-data-mono">KES {totalCollected.toLocaleString()}</div>
+                  <span className="text-[11px] text-on-surface-variant">of KES {totalInvoiced.toLocaleString()}</span>
+                </div>
+                <div className="p-3 bg-surface-container-low rounded-xl text-center">
+                  <span className="text-[11px] text-on-surface-variant uppercase font-medium">CBC Mastery</span>
+                  <div className="text-xl font-bold text-primary">{cbcMasteryPct}%</div>
+                  <span className="text-[11px] text-secondary font-medium">EE + ME Tier</span>
+                </div>
+              </div>
 
-          {/* Attendance Section */}
-          <div>
-            <h4 className="text-xs font-bold text-primary uppercase tracking-wider mb-2">
-              Grade Attendance Summary
-            </h4>
-            <div className="text-xs space-y-1">
-              <div className="flex justify-between py-1 border-b border-surface-container">
-                <span>PP1 to Grade 2 (Early Years)</span>
-                <span className="font-semibold text-secondary">97.4% Attendance · 7 Late</span>
+              {/* Attendance & Staffing Section */}
+              <div>
+                <h4 className="text-xs font-bold text-primary uppercase tracking-wider mb-2">
+                  Institutional Status
+                </h4>
+                <div className="text-xs space-y-1">
+                  <div className="flex justify-between py-1 border-b border-surface-container">
+                    <span>Enrolled Learners in Database</span>
+                    <span className="font-semibold text-secondary">{totalStudents} Learners</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-surface-container">
+                    <span>Active Teaching Staff</span>
+                    <span className="font-semibold text-secondary">{totalTeachers} Teachers</span>
+                  </div>
+                  <div className="flex justify-between py-1">
+                    <span>CBC Formative & Summative Records Logged</span>
+                    <span className="font-bold text-primary">{totalAssessments} Rubrics</span>
+                  </div>
+                </div>
               </div>
-              <div className="flex justify-between py-1 border-b border-surface-container">
-                <span>Grade 3 to Grade 6 (Middle School)</span>
-                <span className="font-semibold text-secondary">97.0% Attendance · 10 Late</span>
-              </div>
-              <div className="flex justify-between py-1">
-                <span>Teacher Biometric Roll Call Rate</span>
-                <span className="font-bold text-primary">98.5% (42/43 Present)</span>
-              </div>
-            </div>
-          </div>
 
-          {/* Financials Breakdown */}
-          <div>
-            <h4 className="text-xs font-bold text-primary uppercase tracking-wider mb-2">
-              Financial Collection Status
-            </h4>
-            <div className="p-3 bg-surface-container-low rounded-xl text-xs space-y-1.5">
-              <div className="flex justify-between">
-                <span className="text-on-surface-variant">Safaricom Daraja M-Pesa STK:</span>
-                <span className="font-bold font-data-mono text-secondary">KES 5,894,000 (70%)</span>
+              {/* Financials Breakdown */}
+              <div>
+                <h4 className="text-xs font-bold text-primary uppercase tracking-wider mb-2">
+                  Financial Collection Status
+                </h4>
+                <div className="p-3 bg-surface-container-low rounded-xl text-xs space-y-1.5">
+                  <div className="flex justify-between">
+                    <span className="text-on-surface-variant">Total Invoiced:</span>
+                    <span className="font-bold font-data-mono text-primary">KES {totalInvoiced.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-on-surface-variant">Total Cleared:</span>
+                    <span className="font-bold font-data-mono text-secondary">KES {totalCollected.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between border-t border-outline-variant/30 pt-1.5 font-bold">
+                    <span>Outstanding Balance / Arrears:</span>
+                    <span className="font-data-mono text-primary">KES {(analytics?.finance?.totalArrears || 0).toLocaleString()}</span>
+                  </div>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span className="text-on-surface-variant">Equity / KCB Bank Direct Rail:</span>
-                <span className="font-bold font-data-mono text-primary">KES 2,526,000 (30%)</span>
-              </div>
-              <div className="flex justify-between border-t border-outline-variant/30 pt-1.5 font-bold">
-                <span>Total Term Collections to Date:</span>
-                <span className="font-data-mono text-primary">KES 8,420,000 / 11,050,000</span>
-              </div>
-            </div>
-          </div>
 
-          {/* Certification Signoff */}
-          <div className="pt-4 border-t border-outline-variant/30 flex justify-between items-end text-xs">
-            <div>
-              <div className="font-bold text-on-surface">Principal Administrator</div>
-              <div className="text-on-surface-variant">Principal Administrator, Grace Seeds School</div>
-            </div>
-            <div className="text-right">
-              <div className="font-bold text-secondary">Institutional Seal Stamp Verified</div>
-              <div className="text-outline font-data-mono">DIGITAL-SEAL-GSA-89104</div>
-            </div>
-          </div>
+              {/* Certification Signoff */}
+              <div className="pt-4 border-t border-outline-variant/30 flex justify-between items-end text-xs">
+                <div>
+                  <div className="font-bold text-on-surface">Principal Administrator</div>
+                  <div className="text-on-surface-variant">Principal Administrator, {schoolName}</div>
+                </div>
+                <div className="text-right">
+                  <div className="font-bold text-secondary">Institutional System Verification</div>
+                  <div className="text-outline font-data-mono">{centerCode}</div>
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         <div className="p-4 bg-surface-container-low border-t border-outline-variant/30 flex items-center justify-end gap-2 shrink-0">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-on-surface-variant hover:bg-surface-container rounded-lg"
+            className="px-4 py-2 text-sm font-medium text-on-surface-variant hover:bg-surface-container rounded-lg cursor-pointer"
           >
             Close
           </button>
@@ -139,7 +193,7 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({ isOpen, on
             className="px-5 py-2.5 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary-container transition-all flex items-center gap-1.5 shadow-md cursor-pointer"
           >
             <span className="material-symbols-outlined text-[18px]">print</span>
-            <span>Print / Save as PDF</span>
+            <span>Print Official Brief</span>
           </button>
         </div>
       </div>

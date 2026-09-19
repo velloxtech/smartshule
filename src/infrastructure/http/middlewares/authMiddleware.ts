@@ -41,7 +41,24 @@ export function requireRoles(...allowedRoles: UserRole[]) {
       return next(); // Super admin bypass
     }
 
-    if (!allowedRoles.includes(req.user.role)) {
+    const expandedAllowed = new Set<string>();
+    for (const r of allowedRoles) {
+      expandedAllowed.add(r);
+      if (r === UserRole.ADMIN || r === UserRole.SCHOOL_ADMIN) {
+        expandedAllowed.add(UserRole.ADMIN);
+        expandedAllowed.add(UserRole.SCHOOL_ADMIN);
+      }
+      if (r === UserRole.BURSAR || r === UserRole.ACCOUNTANT) {
+        expandedAllowed.add(UserRole.BURSAR);
+        expandedAllowed.add(UserRole.ACCOUNTANT);
+      }
+      if (r === UserRole.PARENT || r === UserRole.GUARDIAN) {
+        expandedAllowed.add(UserRole.PARENT);
+        expandedAllowed.add(UserRole.GUARDIAN);
+      }
+    }
+
+    if (!expandedAllowed.has(req.user.role)) {
       return next(new ForbiddenError(`Required role: ${allowedRoles.join(' or ')}`));
     }
 

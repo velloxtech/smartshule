@@ -173,6 +173,40 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLandi
               </div>
             </form>
 
+            {/* Quick Demo Role Selector */}
+            <div className="pt-2 border-t border-gray-100">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500">
+                  Quick Access Profiles
+                </span>
+                <span className="text-[10px] text-gray-400">Click to autofill</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                {[
+                  { label: 'Super Admin', email: 'superadmin@smartshule.ac.ke', pass: 'SuperAdmin@123', color: 'bg-rose-50 text-rose-900 border-rose-200 hover:bg-rose-100' },
+                  { label: 'Admin', email: 'admin@smartshule.ac.ke', pass: 'Admin@123', color: 'bg-red-50 text-red-900 border-red-200 hover:bg-red-100' },
+                  { label: 'Head Teacher', email: 'headteacher@smartshule.ac.ke', pass: 'HeadTeacher@123', color: 'bg-purple-50 text-purple-900 border-purple-200 hover:bg-purple-100' },
+                  { label: 'Deputy Head', email: 'deputy@smartshule.ac.ke', pass: 'Deputy@123', color: 'bg-indigo-50 text-indigo-900 border-indigo-200 hover:bg-indigo-100' },
+                  { label: 'Admissions', email: 'admissions@smartshule.ac.ke', pass: 'Admissions@123', color: 'bg-blue-50 text-blue-900 border-blue-200 hover:bg-blue-100' },
+                  { label: 'Bursar', email: 'bursar@smartshule.ac.ke', pass: 'Bursar@123', color: 'bg-amber-50 text-amber-900 border-amber-200 hover:bg-amber-100' },
+                  { label: 'Teacher', email: 'teacher@smartshule.ac.ke', pass: 'Teacher@123', color: 'bg-emerald-50 text-emerald-900 border-emerald-200 hover:bg-emerald-100' },
+                  { label: 'Parent', email: 'parent@smartshule.ac.ke', pass: 'Parent@123', color: 'bg-sky-50 text-sky-900 border-sky-200 hover:bg-sky-100' },
+                ].map((persona) => (
+                  <button
+                    key={persona.label}
+                    type="button"
+                    onClick={() => {
+                      setEmail(persona.email);
+                      setPassword(persona.pass);
+                    }}
+                    className={`px-2 py-1.5 rounded-lg border text-[11px] font-semibold text-center transition-all cursor-pointer ${persona.color}`}
+                  >
+                    {persona.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Institution Onboarding Link */}
             {onOpenOnboardSchool && (
               <div className="pt-2 border-t border-gray-100 text-center">

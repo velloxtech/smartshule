@@ -292,7 +292,7 @@ export const OnboardSchoolModal: React.FC<OnboardSchoolModalProps> = ({
                     required
                     value={schoolName}
                     onChange={(e) => setSchoolName(e.target.value)}
-                    placeholder="e.g. Grace Seeds Academy"
+                    placeholder="e.g. Nairobi CBC Academy"
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white"
                   />
                 </div>

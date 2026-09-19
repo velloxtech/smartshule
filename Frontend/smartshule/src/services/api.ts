@@ -161,8 +161,8 @@ export const apiService = {
     });
   },
 
-  getYears: async (schoolId = 'school-001'): Promise<ApiResponse<AcademicYear[]>> => {
-    return apiFetch<ApiResponse<AcademicYear[]>>(`/academics/years?schoolId=${schoolId}`);
+  getYears: async (schoolId?: string): Promise<ApiResponse<AcademicYear[]>> => {
+    return apiFetch<ApiResponse<AcademicYear[]>>(`/academics/years${schoolId ? `?schoolId=${schoolId}` : ''}`);
   },
 
   createYear: async (data: {
@@ -196,12 +196,12 @@ export const apiService = {
     });
   },
 
-  getCurrentContext: async (schoolId = 'school-001'): Promise<ApiResponse<AcademicContext>> => {
-    return apiFetch<ApiResponse<AcademicContext>>(`/academics/context?schoolId=${schoolId}`);
+  getCurrentContext: async (schoolId?: string): Promise<ApiResponse<AcademicContext>> => {
+    return apiFetch<ApiResponse<AcademicContext>>(`/academics/context${schoolId ? `?schoolId=${schoolId}` : ''}`);
   },
 
-  getClasses: async (schoolId = 'school-001'): Promise<ApiResponse<ClassRoom[]>> => {
-    return apiFetch<ApiResponse<ClassRoom[]>>(`/academics/classes?schoolId=${schoolId}`);
+  getClasses: async (schoolId?: string): Promise<ApiResponse<ClassRoom[]>> => {
+    return apiFetch<ApiResponse<ClassRoom[]>>(`/academics/classes${schoolId ? `?schoolId=${schoolId}` : ''}`);
   },
 
   createClass: async (data: {
@@ -642,6 +642,19 @@ export const apiService = {
     });
   },
 
+  submitLessonPlan: async (id: string): Promise<ApiResponse<LessonPlan>> => {
+    return apiFetch<ApiResponse<LessonPlan>>(`/curriculum/lesson-plans/${id}/submit`, {
+      method: 'POST',
+    });
+  },
+
+  reviewLessonPlan: async (id: string, data: { approved: boolean; remarks: string }): Promise<ApiResponse<LessonPlan>> => {
+    return apiFetch<ApiResponse<LessonPlan>>(`/curriculum/lesson-plans/${id}/review`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
   // 7. Timetable Endpoints
   createTimetable: async (data: {
     schoolId: string;
@@ -753,8 +766,8 @@ export const apiService = {
     });
   },
 
-  getFeeStructures: async (schoolId = 'school-001'): Promise<ApiResponse<FeeStructure[]>> => {
-    return apiFetch<ApiResponse<FeeStructure[]>>(`/finance/structures?schoolId=${schoolId}`);
+  getFeeStructures: async (schoolId?: string): Promise<ApiResponse<FeeStructure[]>> => {
+    return apiFetch<ApiResponse<FeeStructure[]>>(`/finance/structures${schoolId ? `?schoolId=${schoolId}` : ''}`);
   },
 
   deleteFeeStructure: async (id: string): Promise<ApiResponse<any>> => {
@@ -780,7 +793,7 @@ export const apiService = {
     schoolId: string;
     invoiceId: string;
     amount: number;
-    paymentMethod: 'MPESA' | 'BANK_TRANSFER' | 'CASH' | 'CHEQUE';
+    paymentMethod: 'MPESA' | 'BANK_TRANSFER' | 'BANK_DEPOSIT' | 'CHEQUE' | 'CASH' | 'CARD' | 'PAYSTACK';
     transactionReference: string;
     mpesaPhoneNumber?: string;
     paymentDate?: string;
@@ -804,15 +817,20 @@ export const apiService = {
     return apiFetch<ApiResponse<any>>(`/finance/statements/${studentId}`);
   },
 
-  getPayments: async (schoolId = 'school-001', studentId?: string): Promise<ApiResponse<any[]>> => {
-    const params = new URLSearchParams({ schoolId });
+  getPayments: async (schoolId?: string, studentId?: string): Promise<ApiResponse<any[]>> => {
+    const params = new URLSearchParams();
+    if (schoolId) params.append('schoolId', schoolId);
     if (studentId) params.append('studentId', studentId);
-    return apiFetch<ApiResponse<any[]>>(`/finance/payments?${params.toString()}`);
+    const qs = params.toString();
+    return apiFetch<ApiResponse<any[]>>(`/finance/payments${qs ? `?${qs}` : ''}`);
   },
 
-  getDefaulters: async (schoolId = 'school-001', minBalance = 1): Promise<ApiResponse<DefaultersReport>> => {
+  getDefaulters: async (schoolId?: string, minBalance = 1): Promise<ApiResponse<DefaultersReport>> => {
+    const params = new URLSearchParams();
+    if (schoolId) params.append('schoolId', schoolId);
+    params.append('minBalance', String(minBalance));
     return apiFetch<ApiResponse<DefaultersReport>>(
-      `/finance/defaulters?schoolId=${schoolId}&minBalance=${minBalance}`
+      `/finance/defaulters?${params.toString()}`
     );
   },
 
@@ -825,8 +843,8 @@ export const apiService = {
     return apiFetch<ApiResponse<StudentInvoice[]>>(`/finance/invoices${qs ? `?${qs}` : ''}`);
   },
 
-  getFinanceSummary: async (schoolId = 'school-001'): Promise<ApiResponse<FinanceSummaryData>> => {
-    return apiFetch<ApiResponse<FinanceSummaryData>>(`/finance/summary?schoolId=${schoolId}`);
+  getFinanceSummary: async (schoolId?: string): Promise<ApiResponse<FinanceSummaryData>> => {
+    return apiFetch<ApiResponse<FinanceSummaryData>>(`/finance/summary${schoolId ? `?schoolId=${schoolId}` : ''}`);
   },
 
   initializePaystack: async (data: PaystackInitializeRequest): Promise<ApiResponse<PaystackInitializeResponse>> => {
@@ -1084,8 +1102,8 @@ export const apiService = {
   },
 
   // 13. Dashboard & Analytics Endpoints
-  getDashboardAnalytics: async (schoolId = 'school-001'): Promise<ApiResponse<DashboardSummary>> => {
-    return apiFetch<ApiResponse<DashboardSummary>>(`/analytics/dashboard?schoolId=${schoolId}`);
+  getDashboardAnalytics: async (schoolId?: string): Promise<ApiResponse<DashboardSummary>> => {
+    return apiFetch<ApiResponse<DashboardSummary>>(`/analytics/dashboard${schoolId ? `?schoolId=${schoolId}` : ''}`);
   },
 
   getGuardianPortalData: async (): Promise<ApiResponse<any>> => {

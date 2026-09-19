@@ -12,27 +12,63 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
 }) => {
   const { user } = useAuth();
   const [teacherProfile, setTeacherProfile] = useState<any>(null);
-  const [streamId, setStreamId] = useState('stream-g7-east');
+  const [streamId, setStreamId] = useState('');
   const [registerDate, setRegisterDate] = useState(new Date().toISOString().split('T')[0]);
   const [students, setStudents] = useState<any[]>([]);
   const [attendanceEntries, setAttendanceEntries] = useState<Record<string, 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED'>>({});
   const [notifyGuardians, setNotifyGuardians] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+
+  // Dynamic context and entities
+  const [schoolInfo, setSchoolInfo] = useState<any>(null);
+  const [currentContext, setCurrentContext] = useState<any>(null);
   const [availableClasses, setAvailableClasses] = useState<any[]>([]);
+  const [availableStreams, setAvailableStreams] = useState<Array<{ id: string; name: string; classRoomId: string; className: string }>>([]);
+
   const isTeacher = user?.role === UserRole.TEACHER;
-  const teacherDisplayName = user?.name || (teacherProfile ? `${teacherProfile.user?.firstName || ''} ${teacherProfile.user?.lastName || ''}`.trim() : 'Class Teacher') || 'Class Teacher';
+  const teacherDisplayName = user?.fullName || user?.name || (teacherProfile ? `${teacherProfile.user?.firstName || ''} ${teacherProfile.user?.lastName || ''}`.trim() : 'Class Teacher') || 'Class Teacher';
 
   useEffect(() => {
-    async function loadClasses() {
+    async function loadInitialData() {
       try {
-        const res = await apiService.getClasses();
-        if (res.success && res.data) {
-          setAvailableClasses(res.data);
+        const [scRes, ctxRes, cRes] = await Promise.all([
+          apiService.getSchool().catch(() => null),
+          apiService.getCurrentContext().catch(() => null),
+          apiService.getClasses().catch(() => null),
+        ]);
+
+        if (scRes?.data) setSchoolInfo(scRes.data);
+        if (ctxRes?.data) setCurrentContext(ctxRes.data);
+
+        if (cRes?.data && Array.isArray(cRes.data)) {
+          setAvailableClasses(cRes.data);
+          const allStreams: Array<{ id: string; name: string; classRoomId: string; className: string }> = [];
+          for (const c of cRes.data) {
+            const sRes = await apiService.getStreamsByClass(c.id).catch(() => null);
+            if (sRes?.data && Array.isArray(sRes.data)) {
+              sRes.data.forEach((st: any) => {
+                allStreams.push({
+                  id: st.id,
+                  name: st.name,
+                  classRoomId: c.id,
+                  className: c.name,
+                });
+              });
+            }
+          }
+          setAvailableStreams(allStreams);
+          if (allStreams.length > 0) {
+            setStreamId(allStreams[0].id);
+          } else if (cRes.data.length > 0) {
+            setStreamId(cRes.data[0].id);
+          }
         }
-      } catch {}
+      } catch (err) {
+        console.error('Failed to load attendance initial data:', err);
+      }
     }
-    loadClasses();
+    loadInitialData();
   }, []);
 
   // Load teacher profile if educator
@@ -57,6 +93,12 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
 
   // Load students & daily register strictly from database
   useEffect(() => {
+    if (!streamId) {
+      setStudents([]);
+      setAttendanceEntries({});
+      return;
+    }
+
     async function loadStudentsAndRegister() {
       try {
         const [stRes, regRes] = await Promise.all([
@@ -100,6 +142,20 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
     setIsSaving(true);
     setSaveMessage(null);
 
+    const activeSchoolId = user?.schoolId || schoolInfo?.id;
+    if (!activeSchoolId) {
+      alert('School ID not found. Please ensure school is set up.');
+      setIsSaving(false);
+      return;
+    }
+
+    const matchedStream = availableStreams.find((s) => s.id === streamId);
+    const targetClassId = matchedStream ? matchedStream.classRoomId : streamId;
+    const targetStreamId = matchedStream ? matchedStream.id : undefined;
+
+    const currentYearId = currentContext?.currentYear?.id || '';
+    const currentTermId = currentContext?.currentTerm?.id || '';
+
     const entries = students.map((s) => ({
       studentId: s.id,
       status: attendanceEntries[s.id] || 'PRESENT',
@@ -107,17 +163,14 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
     }));
 
     try {
-      const targetClassId = streamId.startsWith('class-') ? streamId : 'class-grade-7';
-      const targetStreamId = streamId.startsWith('stream-') ? streamId : undefined;
-
       const res = await apiService.markAttendance({
-        schoolId: 'school-001',
+        schoolId: activeSchoolId,
         classRoomId: targetClassId,
         streamId: targetStreamId,
-        academicYearId: 'year-2026',
-        termId: 'term-2026-1',
+        academicYearId: currentYearId,
+        termId: currentTermId,
         date: registerDate,
-        markedByTeacherId: teacherProfile?.id || 'teacher-001',
+        markedByTeacherId: user?.id || teacherProfile?.id || '',
         notifyGuardiansForAbsence: notifyGuardians,
         entries,
       });
@@ -138,14 +191,11 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
   const lateCount = Object.values(attendanceEntries).filter((st) => st === 'LATE').length;
 
   const getAssignedDisplayName = () => {
-    if (streamId === 'class-pp1') return 'PP1 Class';
-    if (streamId === 'class-pp2') return 'PP2 Class';
-    if (streamId === 'class-grade-1') return 'Grade 1';
-    if (streamId === 'class-grade-7' || streamId === 'stream-g7-east') return 'Grade 7 East';
-    if (streamId === 'stream-g7-west') return 'Grade 7 West';
-    const foundClass = availableClasses.find(c => c.id === streamId);
+    const foundStream = availableStreams.find((s) => s.id === streamId);
+    if (foundStream) return `${foundStream.className} - ${foundStream.name}`;
+    const foundClass = availableClasses.find((c) => c.id === streamId);
     if (foundClass) return foundClass.name;
-    return streamId.replace('class-', '').replace('stream-', '');
+    return streamId || 'Unassigned';
   };
 
   return (
@@ -163,7 +213,7 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
             Biometric & Teacher Roll-Call Register
           </h1>
           <p className="text-xs text-on-surface-variant mt-0.5">
-            Grace Seeds School · Morning roll call records, absence reasons, and parent SMS alerts
+            {schoolInfo?.name || 'SmartShule'} · Morning roll call records, absence reasons, and parent SMS alerts
           </p>
         </div>
 
@@ -194,15 +244,27 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
                 onChange={(e) => setStreamId(e.target.value)}
                 className="bg-surface-container-lowest border border-outline-variant/40 rounded-lg py-1 px-3 text-xs font-semibold text-on-surface cursor-pointer"
               >
-                <optgroup label="Single Classes (No Streams)">
-                  {availableClasses.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </optgroup>
-                <optgroup label="Configured Streams">
-                  <option value="stream-g7-east">Grade 7 - East</option>
-                  <option value="stream-g7-west">Grade 7 - West</option>
-                </optgroup>
+                {availableStreams.length > 0 && (
+                  <optgroup label="Configured Streams">
+                    {availableStreams.map((st) => (
+                      <option key={st.id} value={st.id}>
+                        {st.className} - {st.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {availableClasses.length > 0 && (
+                  <optgroup label="Classes">
+                    {availableClasses.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {availableStreams.length === 0 && availableClasses.length === 0 && (
+                  <option value="">No classes or streams created yet</option>
+                )}
               </select>
             )}
           </div>

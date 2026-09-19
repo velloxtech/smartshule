@@ -593,10 +593,10 @@ export const CashFlowLedgerView: React.FC = () => {
                 onChange={(e) => setSelectedChannel(e.target.value)}
                 className="bg-surface-container border border-outline-variant/30 rounded-xl px-3 py-1.5 text-xs text-on-surface focus:outline-primary"
               >
-                <option value="ALL">All Channels</option>
+                <option value="ALL">All Payment Channels</option>
                 <option value="MPESA">M-Pesa</option>
-                <option value="BANK">Bank / Paystack</option>
-                <option value="CHEQUE">Cheque</option>
+                <option value="BANK">Bank / Paystack / Cards</option>
+                <option value="CHEQUE">School Cheque</option>
                 <option value="CASH">Petty Cash</option>
               </select>
 
@@ -605,17 +605,30 @@ export const CashFlowLedgerView: React.FC = () => {
                 onChange={(e) => setSelectedCategory(e.target.value)}
                 className="bg-surface-container border border-outline-variant/30 rounded-xl px-3 py-1.5 text-xs text-on-surface focus:outline-primary"
               >
-                <option value="ALL">All Categories</option>
-                <option value="FEES_COLLECTION">Fees Collection</option>
-                <option value="GOVERNMENT_CAPITATION_JSS">JSS Capitation</option>
-                <option value="GOVERNMENT_CAPITATION_FPE">FPE Capitation</option>
-                <option value="SALARIES_WAGES">Salaries & Wages</option>
-                <option value="UTILITIES_BILLS">Utilities & Bills</option>
-                <option value="CBC_LEARNING_MATERIALS">CBC Learning Materials</option>
-                <option value="MEALS_FEEDING">Meals & Feeding</option>
-                <option value="TRANSPORT_FUEL">Transport & Fuel</option>
-                <option value="REPAIRS_MAINTENANCE">Repairs & Maintenance</option>
-                <option value="ADMIN_OFFICE">Admin & Stationery</option>
+                <option value="ALL">All Revenue & Vote Head Categories</option>
+                <optgroup label="Income & Inflows">
+                  <option value="FEES_COLLECTION">Student Fees Collection</option>
+                  <option value="GOVERNMENT_CAPITATION_JSS">MoE JSS Capitation Grant</option>
+                  <option value="GOVERNMENT_CAPITATION_FPE">MoE FPE Capitation Grant</option>
+                  <option value="UNIFORM_SALES">Uniform Store Sales</option>
+                  <option value="BUS_FACILITY_HIRE">Bus & Facility Hire</option>
+                  <option value="DONATIONS_GRANTS">Donations & Grants</option>
+                  <option value="EXAM_REVISION_BOOKS">Exam & Revision Books</option>
+                  <option value="OTHER_INCOME">Other Miscellaneous Income</option>
+                </optgroup>
+                <optgroup label="Expenditure & MoE Vote Heads">
+                  <option value="SALARIES_WAGES">Salaries & Wages</option>
+                  <option value="CBC_LEARNING_MATERIALS">CBC Learning Materials</option>
+                  <option value="UTILITIES_BILLS">Utilities & Bills (Power, Water, Net)</option>
+                  <option value="MEALS_FEEDING">Meals & Kitchen Foodstock</option>
+                  <option value="REPAIRS_MAINTENANCE">Repairs & Maintenance</option>
+                  <option value="TRANSPORT_FUEL">Transport & Vehicle Fuel</option>
+                  <option value="ADMIN_OFFICE">Admin & Stationery Printing</option>
+                  <option value="KNEC_EXAMS">KNEC & Exam Logistics</option>
+                  <option value="CO_CURRICULAR">Co-Curricular & Sports</option>
+                  <option value="CAPITAL_DEVELOPMENT">Capital & Infrastructure</option>
+                  <option value="OTHER_EXPENSES">Other Miscellaneous Expenses</option>
+                </optgroup>
               </select>
             </div>
           </div>

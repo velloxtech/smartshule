@@ -10,11 +10,21 @@ export const CompetencyAnalyticsView: React.FC = () => {
     async function loadStats() {
       setLoading(true);
       try {
-        const [dashRes, cbcRes] = await Promise.all([
+        const [dashRes, ctxRes] = await Promise.all([
           apiService.getDashboardAnalytics().catch(() => null),
-          apiService.getCbcAnalytics({ termId: 'term-2026-1', academicYearId: 'year-2026' }).catch(() => null),
+          apiService.getCurrentContext().catch(() => null),
         ]);
         if (dashRes?.success) setDashboardData(dashRes.data);
+
+        const params: any = {};
+        if (ctxRes?.success && ctxRes.data?.currentTerm?.id) {
+          params.termId = ctxRes.data.currentTerm.id;
+        }
+        if (ctxRes?.success && ctxRes.data?.currentYear?.id) {
+          params.academicYearId = ctxRes.data.currentYear.id;
+        }
+
+        const cbcRes = await apiService.getCbcAnalytics(Object.keys(params).length ? params : undefined).catch(() => null);
         if (cbcRes?.success) setAnalytics(cbcRes.data);
       } catch {
         // Fallback

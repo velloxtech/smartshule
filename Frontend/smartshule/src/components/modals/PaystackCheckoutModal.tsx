@@ -32,12 +32,12 @@ export const PaystackCheckoutModal: React.FC<PaystackCheckoutModalProps> = ({
   const [selectedStudentId, setSelectedStudentId] = useState<string>(
     initialStudent?.id || (students.length > 0 ? students[0].id : '')
   );
-  const [payerEmail, setPayerEmail] = useState<string>(user?.email || 'guardian@smartshule.ac.ke');
+  const [payerEmail, setPayerEmail] = useState<string>(user?.email || '');
   const [payerPhone, setPayerPhone] = useState<string>(
-    initialStudent?.guardianPhone || (students.length > 0 ? students[0].guardianPhone : '+254712345678')
+    initialStudent?.guardianPhone || (students.length > 0 ? (students[0].guardianPhone || '') : '')
   );
   const [amount, setAmount] = useState<string>(
-    initialInvoice ? initialInvoice.balance.toString() : (initialStudent && initialStudent.feeBalance > 0 ? initialStudent.feeBalance.toString() : '15000')
+    initialInvoice ? initialInvoice.balance.toString() : (initialStudent && initialStudent.feeBalance > 0 ? initialStudent.feeBalance.toString() : '')
   );
   const [paymentType, setPaymentType] = useState<string>('TUITION');
   const [paymentRail, setPaymentRail] = useState<'bank_transfer' | 'paystack_online'>('bank_transfer');
@@ -94,10 +94,10 @@ export const PaystackCheckoutModal: React.FC<PaystackCheckoutModalProps> = ({
 
     try {
       const res = await apiService.initializePaystack({
-        studentId: currentStudent ? currentStudent.id : 'student-001',
+        studentId: currentStudent?.id || '',
         invoiceId: initialInvoice?.id,
         amount: numAmount,
-        email: payerEmail || 'guardian@smartshule.ac.ke',
+        email: payerEmail || user?.email || '',
         phone: payerPhone,
         paymentType: paymentType as any,
       });
@@ -128,8 +128,8 @@ export const PaystackCheckoutModal: React.FC<PaystackCheckoutModalProps> = ({
       const res = await apiService.verifyPaystack(paystackData.reference);
       if (res.success && res.data && res.data.verified) {
         const txData = {
-          studentName: currentStudent?.name || 'Kevin Kamau Kariuki',
-          admNo: currentStudent?.admNo || 'ADM-2026-001',
+          studentName: currentStudent?.name || 'Learner',
+          admNo: currentStudent?.admNo || '',
           amount: res.data.amount,
           channel: res.data.channel,
           reference: res.data.reference,
@@ -219,10 +219,10 @@ export const PaystackCheckoutModal: React.FC<PaystackCheckoutModalProps> = ({
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="font-bold text-sm text-on-surface">
-                        {currentStudent?.name || 'Kevin Kamau Kariuki'}
+                        {currentStudent ? currentStudent.name : 'Select a learner'}
                       </div>
                       <div className="text-xs text-on-surface-variant">
-                        Adm: <span className="font-data-mono font-bold text-primary">{currentStudent?.admNo || 'ADM-2026-001'}</span> · Grade: {currentStudent?.grade || 'Grade 7'}
+                        Adm: <span className="font-data-mono font-bold text-primary">{currentStudent?.admNo || '--'}</span> · Grade: {currentStudent?.grade || '--'}
                       </div>
                     </div>
                     <div className="text-right">
@@ -305,12 +305,14 @@ export const PaystackCheckoutModal: React.FC<PaystackCheckoutModalProps> = ({
                     onChange={(e) => setPaymentType(e.target.value)}
                     className="w-full p-2 bg-surface-container-lowest border border-outline-variant/40 rounded-xl text-xs font-semibold text-on-surface"
                   >
+                    <option value="GENERAL">General Fee Balance</option>
                     <option value="TUITION">Tuition & Learning</option>
                     <option value="ASSESSMENT">CBC Assessment & KNEC</option>
                     <option value="ACTIVITY">Activity & Sports</option>
+                    <option value="BOARDING">Boarding & Accommodation</option>
                     <option value="MEALS">School Meals / Lunch</option>
                     <option value="TRANSPORT">School Transport</option>
-                    <option value="GENERAL">General Fee Balance</option>
+                    <option value="OTHER">Other School Levies</option>
                   </select>
                 </div>
               </div>
@@ -401,22 +403,24 @@ export const PaystackCheckoutModal: React.FC<PaystackCheckoutModalProps> = ({
                   <span className="text-xs text-on-surface-variant">Account Number:</span>
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-black text-primary font-data-mono tracking-wider">
-                      {paystackData.bankDetails?.accountNumber || '0100982347101'}
+                      {paystackData.bankDetails?.accountNumber || '--'}
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => handleCopy(paystackData.bankDetails?.accountNumber || '0100982347101', 'account')}
-                      className="text-xs text-secondary hover:text-secondary/80 font-bold px-1.5 py-0.5 rounded hover:bg-secondary/10 cursor-pointer"
-                    >
-                      {copiedField === 'account' ? 'Copied!' : 'Copy'}
-                    </button>
+                    {paystackData.bankDetails?.accountNumber && (
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(paystackData.bankDetails?.accountNumber || '', 'account')}
+                        className="text-xs text-secondary hover:text-secondary/80 font-bold px-1.5 py-0.5 rounded hover:bg-secondary/10 cursor-pointer"
+                      >
+                        {copiedField === 'account' ? 'Copied!' : 'Copy'}
+                      </button>
+                    )}
                   </div>
                 </div>
 
                 <div className="flex items-center justify-between pb-2 border-b border-outline-variant/20">
                   <span className="text-xs text-on-surface-variant">Account Name:</span>
                   <span className="text-xs font-semibold text-on-surface">
-                    {paystackData.bankDetails?.accountName || 'Grace Seeds School - Fee Collection'}
+                    {paystackData.bankDetails?.accountName || 'SmartShule - Fee Collection'}
                   </span>
                 </div>
 

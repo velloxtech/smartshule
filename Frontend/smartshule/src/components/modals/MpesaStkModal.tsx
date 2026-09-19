@@ -26,75 +26,87 @@ export const MpesaStkModal: React.FC<MpesaStkModalProps> = ({
   onSuccess,
   onPaymentSuccess,
 }) => {
+  const [school, setSchool] = useState<any>(null);
   const [selectedStudentId, setSelectedStudentId] = useState<string>(
     initialStudent?.id || (students && students.length > 0 ? students[0].id : '')
   );
   const [phone, setPhone] = useState(
-    initialStudent?.guardianPhone || (students && students.length > 0 ? students[0].guardianPhone : '0712 345 678')
+    initialStudent?.guardianPhone || (students && students.length > 0 ? students[0].guardianPhone : '')
   );
   const [amount, setAmount] = useState(
     initialStudent
-      ? (initialStudent.feeBalance > 0 ? initialStudent.feeBalance.toString() : '15000')
-      : (students && students.length > 0 && students[0].feeBalance > 0 ? students[0].feeBalance.toString() : '24000')
+      ? (initialStudent.feeBalance > 0 ? initialStudent.feeBalance.toString() : '')
+      : (students && students.length > 0 && students[0].feeBalance > 0 ? students[0].feeBalance.toString() : '')
   );
   const [step, setStep] = useState<'form' | 'pushing' | 'prompt' | 'success'>('form');
   const [txRef, setTxRef] = useState('QKH' + Math.floor(100000 + Math.random() * 900000) + 'XJ');
 
   useEffect(() => {
+    apiService.getSchool().then(res => {
+      if (res?.success && res.data) setSchool(res.data);
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
     if (initialStudent) {
       setSelectedStudentId(initialStudent.id);
-      setPhone(initialStudent.guardianPhone);
-      setAmount(initialStudent.feeBalance > 0 ? initialStudent.feeBalance.toString() : '15000');
+      setPhone(initialStudent.guardianPhone || '');
+      setAmount(initialStudent.feeBalance > 0 ? initialStudent.feeBalance.toString() : '');
     } else if (students && students.length > 0 && !selectedStudentId) {
       setSelectedStudentId(students[0].id);
-      setPhone(students[0].guardianPhone);
-      setAmount(students[0].feeBalance > 0 ? students[0].feeBalance.toString() : '15000');
+      setPhone(students[0].guardianPhone || '');
+      setAmount(students[0].feeBalance > 0 ? students[0].feeBalance.toString() : '');
     }
-  }, [initialStudent, students, isOpen]);
+  }, [initialStudent, students, selectedStudentId]);
 
   if (!isOpen) return null;
 
   const currentStudent = students.find((s) => s.id === selectedStudentId) || initialStudent || students[0];
 
-  const handleStudentChange = (id: string) => {
-    setSelectedStudentId(id);
-    const s = students.find((st) => st.id === id);
-    if (s) {
-      setPhone(s.guardianPhone);
-      setAmount(s.feeBalance > 0 ? s.feeBalance.toString() : '15000');
+  const handleStudentSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const sId = e.target.value;
+    setSelectedStudentId(sId);
+    const found = students.find((s) => s.id === sId);
+    if (found) {
+      setPhone(found.guardianPhone || '');
+      setAmount(found.feeBalance > 0 ? found.feeBalance.toString() : '');
     }
   };
 
-  const handleSendPush = (e: React.FormEvent) => {
+  const handleTriggerPush = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!amount || Number(amount) <= 0) return;
     setStep('pushing');
     const newRef = 'QKH' + Math.floor(100000 + Math.random() * 900000) + 'XJ';
     setTxRef(newRef);
 
-    let cleanPhone = phone.replace(/[^0-9]/g, '');
+    let cleanPhone = phone.replace(/\D/g, '');
     if (cleanPhone.startsWith('0')) {
       cleanPhone = '254' + cleanPhone.slice(1);
     } else if (!cleanPhone.startsWith('254')) {
       cleanPhone = '254' + cleanPhone;
     }
 
-    apiService.initiateMpesaStkPush('inv-student-001', cleanPhone).catch(() => {});
+    if (currentStudent) {
+      apiService.initiateMpesaStkPush(currentStudent.id, cleanPhone).catch(() => {});
+    }
 
     setTimeout(() => {
       setStep('prompt');
     }, 1200);
   };
 
-  const handleSimulatePinEnter = () => {
-    const paidAmount = Number(amount) || 24000;
-    if (onPaymentSuccess) {
+  const handleConfirmPayment = () => {
+    const paidAmount = Number(amount) || 0;
+    const finalRef = mpesaReceiptCode.trim() || txRef;
+    if (onPaymentSuccess && currentStudent) {
       onPaymentSuccess({
-        studentName: currentStudent ? currentStudent.name : 'Kevin Omondi',
-        admNo: currentStudent ? currentStudent.admNo : 'GSA-2026-082',
-        grade: currentStudent ? currentStudent.grade : 'Grade 4',
+        studentName: currentStudent.name,
+        admNo: currentStudent.admNo,
+        grade: currentStudent.grade,
         amount: paidAmount,
         phone,
-        ref: txRef,
+        ref: finalRef,
       });
     }
     if (onSuccess) {
@@ -142,11 +154,15 @@ export const MpesaStkModal: React.FC<MpesaStkModalProps> = ({
                   onChange={(e) => handleStudentChange(e.target.value)}
                   className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-sm text-on-surface focus:outline-primary"
                 >
-                  {students.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} ({s.admNo} - {s.grade}) · Bal: KES {s.feeBalance.toLocaleString()}
-                    </option>
-                  ))}
+                  {students.length === 0 ? (
+                    <option value="">No enrolled learners found</option>
+                  ) : (
+                    students.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} ({s.admNo} - {s.grade}) · Bal: KES {s.feeBalance.toLocaleString()}
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
 
@@ -230,21 +246,47 @@ export const MpesaStkModal: React.FC<MpesaStkModalProps> = ({
 
           {step === 'prompt' && (
             <div className="space-y-4">
-              <div className="p-4 bg-surface-container-low rounded-xl border border-secondary/30 relative">
-                <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-secondary text-white text-[10px] font-bold uppercase tracking-wider mb-2">
-                  <span>📱 Parent's Phone Screen</span>
+              <div className="p-4 bg-surface-container-low rounded-xl border border-secondary/30 relative space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-secondary text-white text-[10px] font-bold uppercase tracking-wider">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                    <span>STK Push Dispatched</span>
+                  </div>
+                  <span className="text-[11px] font-data-mono font-bold text-on-surface-variant">
+                    {phone}
+                  </span>
                 </div>
-                <div className="bg-slate-900 text-green-400 p-4 rounded-lg font-mono text-xs shadow-inner leading-relaxed">
-                  <p className="font-bold text-white mb-1">Do you want to pay KES {Number(amount).toLocaleString()} to GRACE SEEDS SCHOOL Paybill 174379?</p>
-                  <p className="text-slate-300">Account: {currentStudent.admNo}</p>
-                  <p className="text-yellow-400 mt-2">Enter M-Pesa PIN:</p>
-                  <p className="text-lg tracking-widest text-white mt-1">● ● ● ●</p>
+                <div className="bg-surface-container-lowest p-3 rounded-lg border border-outline-variant/30 space-y-1.5 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-on-surface-variant">Amount Payable:</span>
+                    <span className="font-bold text-secondary font-data-mono">KES {Number(amount).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-on-surface-variant">Account / Adm No:</span>
+                    <span className="font-bold text-on-surface">{currentStudent ? currentStudent.admNo : '--'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-on-surface-variant">Reference ID:</span>
+                    <span className="font-data-mono text-outline text-[11px]">{txRef}</span>
+                  </div>
                 </div>
+                <p className="text-xs text-on-surface-variant text-center pt-1">
+                  A secure push prompt was sent to the parent's handset. Enter the transaction receipt code from SMS or confirm receipt below.
+                </p>
               </div>
 
-              <p className="text-xs text-center text-on-surface-variant">
-                Waiting for parent's biometric confirmation or PIN entry on their mobile phone...
-              </p>
+              <div>
+                <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">
+                  M-Pesa Receipt Code (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={mpesaReceiptCode}
+                  onChange={(e) => setMpesaReceiptCode(e.target.value.toUpperCase())}
+                  placeholder={`e.g. ${txRef}`}
+                  className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-xs text-on-surface font-data-mono focus:outline-primary uppercase"
+                />
+              </div>
 
               <div className="pt-2 flex items-center justify-between gap-2">
                 <button
@@ -256,11 +298,11 @@ export const MpesaStkModal: React.FC<MpesaStkModalProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={handleSimulatePinEnter}
+                  onClick={handleConfirmPayment}
                   className="px-4 py-2.5 bg-secondary text-white text-sm font-semibold rounded-lg hover:bg-[#00504a] transition-all flex items-center gap-1.5 shadow-md cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[18px]">verified</span>
-                  <span>Simulate PIN Entered (Pay)</span>
+                  <span>Confirm Payment Received</span>
                 </button>
               </div>
             </div>
@@ -274,7 +316,7 @@ export const MpesaStkModal: React.FC<MpesaStkModalProps> = ({
               <div>
                 <h4 className="font-bold text-lg text-on-surface">Payment Confirmed!</h4>
                 <p className="text-xs text-on-surface-variant mt-1">
-                  KES {Number(amount).toLocaleString()} credited to Grace Seeds School collection ledger.
+                  KES {Number(amount).toLocaleString()} credited to {school?.name || 'school'} collection ledger.
                 </p>
                 <div className="inline-block mt-3 px-3 py-1 rounded bg-surface-container font-data-mono text-xs font-bold text-primary">
                   Ref: {txRef}

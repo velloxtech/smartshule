@@ -37,6 +37,8 @@ export interface GeminiDraftParams {
     teacherRemarks?: string;
     requirementsTomorrow?: string;
   };
+  schoolName?: string;
+  schoolPhone?: string;
   tone?: 'professional' | 'urgent' | 'friendly' | 'concise';
 }
 
@@ -139,8 +141,11 @@ export class GeminiService {
       ? `Homework: ${ediarySummary.recentHomework || 'Review daily class notes'}. Remarks: ${ediarySummary.teacherRemarks || 'All tasks on schedule'}. Tomorrow's requirements: ${ediarySummary.requirementsTomorrow || 'Standard books and kit'}.`
       : 'eDiary homework not requested.';
 
+    const schoolName = params.schoolName || 'SmartShule CBC Portal';
+    const schoolPhone = params.schoolPhone || '';
+
     const prompt = `
-You are the official SmartShule School Communications Assistant for Grace Seeds School.
+You are the official SmartShule School Communications Assistant for ${schoolName}.
 Your task is to draft a personalized, accurate, polite, and professional WhatsApp message to a real parent/guardian based on the school administrator's command and verified student database records.
 
 COMMAND / INSTRUCTION:
@@ -166,8 +171,8 @@ MANDATORY RULES:
 4. STRICT RELEVANCE: Only include information directly answering the inquiry. DO NOT mention fees, balances, or payments unless the user specifically asked about fees, payments, or invoices.
 5. Keep the message concise and actionable so it reads easily on a mobile WhatsApp screen.
 6. Sign off officially with:
-   *Grace Seeds School Administration*
-   _Admissions & Enquiries: +254 712 345 678_
+   *${schoolName} Administration*
+   ${schoolPhone ? `_Admissions & Enquiries: ${schoolPhone}_` : ''}
 7. Output ONLY the raw WhatsApp message text ready to be sent. Do NOT include any markdown code blocks, backticks, conversational preamble, or explanations.
 `;
 
@@ -192,24 +197,27 @@ MANDATORY RULES:
     const guardianName = guardian.fullName || 'Parent/Guardian';
     const learner = student.fullName;
     const adm = student.admissionNumber;
+    const schoolName = params.schoolName || 'SmartShule CBC Portal';
+    const schoolPhone = params.schoolPhone || '';
+    const contactLine = schoolPhone ? `_Contact: ${schoolPhone}_` : '';
 
     if (/\b(HOMEWORK|EDIARY|DIARY|ASSIGNMENT|ASSIGNMENTS|TASK|TASKS)\b/i.test(cmdUpper)) {
       return (
         `👋 *Dear ${guardianName},*\n\n` +
         `Here is today's CBC eDiary homework notice for *${learner}* (Adm: *${adm}* · ${student.gradeLevel}):\n\n` +
         `📖 *Assigned Homework:*\n` +
-        `${ediarySummary?.recentHomework || 'Please check student exercise books for current assignments.'}\n\n` +
+        `${ediarySummary?.recentHomework || 'No pending homework recorded for today.'}\n\n` +
         `🎒 *Requirements for Tomorrow:*\n` +
-        `${ediarySummary?.requirementsTomorrow || 'Standard learning materials and CBC activity kit.'}\n\n` +
+        `${ediarySummary?.requirementsTomorrow || 'Standard learning materials.'}\n\n` +
         `Please inspect your child's work and acknowledge via the eDiary portal.\n\n` +
         `Warm regards,\n` +
-        `*Grace Seeds School Teaching Staff*\n` +
-        `_Enquiries: +254 712 345 678_`
+        `*${schoolName} Teaching Staff*\n` +
+        contactLine
       );
     }
 
     if (/\b(ATTEND|ATTENDANCE|ABSENT|ABSENCE|ROLLCALL)\b/i.test(cmdUpper)) {
-      const pct = attendanceSummary ? attendanceSummary.percentage : 95;
+      const pct = attendanceSummary ? attendanceSummary.percentage : 0;
       const absent = attendanceSummary ? attendanceSummary.absentCount : 0;
       return (
         `👋 *Dear ${guardianName},*\n\n` +
@@ -219,8 +227,8 @@ MANDATORY RULES:
         `• Recorded Absences: *${absent} day(s)*\n\n` +
         `Consistent attendance is essential for CBC curriculum progress. Please notify us if your child is unwell or unable to attend.\n\n` +
         `Warm regards,\n` +
-        `*Grace Seeds School Administration*\n` +
-        `_Office: +254 712 345 678_`
+        `*${schoolName} Administration*\n` +
+        contactLine
       );
     }
 
@@ -229,12 +237,12 @@ MANDATORY RULES:
         `👋 *Dear ${guardianName},*\n\n` +
         `We are pleased to share a CBC academic update for *${learner}* (Adm: *${adm}* · ${student.gradeLevel}):\n\n` +
         `🌟 *CBC Competency Evaluation:*\n` +
-        `• Overall Performance: *${cbcSummary?.averagePerformance || 'Meeting Expectations (ME)'}*\n` +
-        `• Teacher Remarks: _"${cbcSummary?.teacherRemarks || 'Consistent engagement in class activities and practical projects.'}"_\n\n` +
+        `• Overall Performance: *${cbcSummary?.averagePerformance || 'Recorded in portal'}*\n` +
+        `• Teacher Remarks: _"${cbcSummary?.teacherRemarks || 'Continuous assessment progress recorded in SmartShule.'}"_\n\n` +
         `You can review complete strand-by-strand CBC assessments via the SmartShule parent portal.\n\n` +
         `Warm regards,\n` +
-        `*Grace Seeds School Academic Directorate*\n` +
-        `_Office: +254 712 345 678_`
+        `*${schoolName} Academic Directorate*\n` +
+        contactLine
       );
     }
 
@@ -243,28 +251,27 @@ MANDATORY RULES:
       const paystack = feeSummary?.paystackUrl || `https://pay.smartshule.ac.ke/pay/${student.admissionNumber}`;
       return (
         `👋 *Dear ${guardianName},*\n\n` +
-        `This is an official fee update from *Grace Seeds School* for *${learner}* (Adm: *${adm}* · ${student.gradeLevel}).\n\n` +
+        `This is an official fee update from *${schoolName}* for *${learner}* (Adm: *${adm}* · ${student.gradeLevel}).\n\n` +
         `💰 *Current Outstanding Balance:* KES *${bal}*\n\n` +
         `💳 *Payment Options:*\n` +
         `• *Paystack Instant Online Checkout:* ${paystack}\n` +
-        `• *Stanbic Bank Virtual Account:* 0100012345678 (Ref: *${adm}*)\n` +
-        `• *M-Pesa Paybill:* 522522 | Acc: *${adm}*\n\n` +
+        `• *M-Pesa Paybill:* Acc: *${adm}*\n\n` +
         `Kindly settle the outstanding amount or reach out to our accounts desk.\n\n` +
         `Warm regards,\n` +
-        `*Grace Seeds School Accounts Desk*\n` +
-        `_Enquiries: +254 712 345 678_`
+        `*${schoolName} Accounts Desk*\n` +
+        contactLine
       );
     }
 
     // Default general message
     return (
       `👋 *Dear ${guardianName},*\n\n` +
-      `Official communication from *Grace Seeds School* concerning *${learner}* (Adm: *${adm}* · ${student.gradeLevel}):\n\n` +
+      `Official communication from *${schoolName}* concerning *${learner}* (Adm: *${adm}* · ${student.gradeLevel}):\n\n` +
       `Thank you for your message: "${command}". Our administration desk has received your request.\n\n` +
       `Please contact the school office if you have any questions.\n\n` +
       `Warm regards,\n` +
-      `*Grace Seeds School Administration*\n` +
-      `_Admissions Desk: +254 712 345 678_`
+      `*${schoolName} Administration*\n` +
+      contactLine
     );
   }
 }

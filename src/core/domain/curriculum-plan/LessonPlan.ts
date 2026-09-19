@@ -1,6 +1,13 @@
 import { Entity } from '../shared/Entity';
 import { CoreCompetency, CoreValue } from '../cbc/CbcAssessment';
 
+export enum LessonPlanStatus {
+  DRAFT = 'DRAFT',
+  SUBMITTED = 'SUBMITTED',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED'
+}
+
 export interface LessonDevelopmentStep {
   stepNumber: number; // 1, 2, 3
   stepTitle: string; // "Introduction", "Step 1: Concept Exploration", "Step 2: Practical Group Activity", "Conclusion"
@@ -30,6 +37,11 @@ export interface LessonPlanProps {
   steps: LessonDevelopmentStep[];
   extendedActivity?: string;
   teacherSelfReflection?: string;
+  status?: LessonPlanStatus;
+  submittedAt?: Date;
+  reviewedByUserId?: string;
+  reviewedAt?: Date;
+  reviewRemarks?: string;
 }
 
 export class LessonPlan extends Entity<LessonPlanProps> {
@@ -81,8 +93,50 @@ export class LessonPlan extends Entity<LessonPlanProps> {
     return this._props.teacherSelfReflection;
   }
 
+  public get status(): LessonPlanStatus {
+    return this._props.status || LessonPlanStatus.DRAFT;
+  }
+
+  public get submittedAt(): Date | undefined {
+    return this._props.submittedAt;
+  }
+
+  public get reviewedByUserId(): string | undefined {
+    return this._props.reviewedByUserId;
+  }
+
+  public get reviewedAt(): Date | undefined {
+    return this._props.reviewedAt;
+  }
+
+  public get reviewRemarks(): string | undefined {
+    return this._props.reviewRemarks;
+  }
+
   public setReflection(reflection: string): void {
     this._props.teacherSelfReflection = reflection;
+    this.touch();
+  }
+
+  public submit(): void {
+    this._props.status = LessonPlanStatus.SUBMITTED;
+    this._props.submittedAt = new Date();
+    this.touch();
+  }
+
+  public approve(reviewerUserId: string, remarks?: string): void {
+    this._props.status = LessonPlanStatus.APPROVED;
+    this._props.reviewedByUserId = reviewerUserId;
+    this._props.reviewedAt = new Date();
+    this._props.reviewRemarks = remarks || 'Approved';
+    this.touch();
+  }
+
+  public reject(reviewerUserId: string, remarks: string): void {
+    this._props.status = LessonPlanStatus.REJECTED;
+    this._props.reviewedByUserId = reviewerUserId;
+    this._props.reviewedAt = new Date();
+    this._props.reviewRemarks = remarks;
     this.touch();
   }
 
@@ -111,6 +165,11 @@ export class LessonPlan extends Entity<LessonPlanProps> {
       steps: this.steps,
       extendedActivity: this._props.extendedActivity,
       teacherSelfReflection: this.teacherSelfReflection,
+      status: this.status,
+      submittedAt: this._props.submittedAt,
+      reviewedByUserId: this._props.reviewedByUserId,
+      reviewedAt: this._props.reviewedAt,
+      reviewRemarks: this._props.reviewRemarks,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt
     };

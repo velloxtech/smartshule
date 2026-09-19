@@ -8,6 +8,7 @@ import { IdGenerator, NotFoundError, ConflictError } from '../../core/domain/sha
 export interface RegisterTeacherDTO {
   email: string;
   password?: string;
+  nationalId?: string;
   firstName: string;
   lastName: string;
   phone?: string;
@@ -42,7 +43,8 @@ export class TeacherUseCases {
       throw new ConflictError(`Teacher with Employee Number '${dto.employeeNumber}' already exists.`);
     }
 
-    const rawPassword = dto.password || 'Teacher@123';
+    // Teacher's National ID is used as their initial login password
+    const rawPassword = dto.nationalId?.trim() || dto.password?.trim() || dto.employeeNumber?.trim() || 'Teacher@123';
     const passwordHash = await this.passwordHasher.hash(rawPassword);
 
     const user = User.create(

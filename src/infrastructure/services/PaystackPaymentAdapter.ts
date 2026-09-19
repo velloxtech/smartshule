@@ -32,6 +32,7 @@ export class PaystackPaymentAdapter implements IPaystackGateway, IPaymentGateway
     const reference = request.reference || `PSTK_${Date.now()}_${Math.floor(100000 + Math.random() * 900000)}`;
     const amountInSubunits = Math.round(request.amount * 100);
 
+    const schoolName = request.metadata?.schoolName || 'SmartShule CBC';
     const payload = {
       email: request.email,
       amount: amountInSubunits,
@@ -43,7 +44,7 @@ export class PaystackPaymentAdapter implements IPaystackGateway, IPaymentGateway
         invoiceId: request.invoiceId,
         studentAdmission: request.studentAdmission,
         studentName: request.studentName,
-        schoolName: 'Grace Seeds School',
+        schoolName,
         ...(request.metadata || {})
       }
     };
@@ -69,7 +70,7 @@ export class PaystackPaymentAdapter implements IPaystackGateway, IPaymentGateway
             bankAccountDetails: {
               bankName: 'Stanbic Bank Kenya (Paystack Checkout)',
               accountNumber: `99${Math.floor(10000000 + Math.random() * 90000000)}`,
-              accountName: `Grace Seeds School - ${request.studentAdmission || 'Fees'}`,
+              accountName: `${schoolName} - ${request.studentAdmission || 'Fees'}`,
               currency: 'KES'
             }
           };
@@ -91,7 +92,7 @@ export class PaystackPaymentAdapter implements IPaystackGateway, IPaymentGateway
       bankAccountDetails: {
         bankName: 'Stanbic Bank Kenya / Paystack Bank Rails',
         accountNumber: mockVirtualAccountNumber,
-        accountName: `Grace Seeds School - ${request.studentAdmission || 'Student Fees'}`,
+        accountName: `${schoolName} - ${request.studentAdmission || 'Student Fees'}`,
         currency: 'KES'
       }
     };

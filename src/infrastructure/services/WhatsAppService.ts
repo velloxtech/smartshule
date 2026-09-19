@@ -90,34 +90,6 @@ export class WhatsAppService {
       }
     }
 
-    // Fallback: If demo/test numbers are used in non-seeded environments
-    if (!guardian && !user) {
-      const matchVariants = PhoneUtils.getMatchVariants(phone);
-      for (const variant of matchVariants) {
-        const u = await this.userRepository.findByEmail(variant).catch(() => null);
-        if (u) {
-          user = u;
-          guardian = await this.guardianRepository.findByUserId(u.id);
-          break;
-        }
-      }
-    }
-
-    if (
-      !user &&
-      (phone === '+254799888777' ||
-        phone === '254799888777' ||
-        phone === '0799888777' ||
-        phone === '+254759496975' ||
-        phone === '254759496975' ||
-        phone === '0759496975')
-    ) {
-      user = await this.userRepository.findById('usr-guardian-01');
-      if (user) {
-        guardian = await this.guardianRepository.findByUserId(user.id);
-      }
-    }
-
     // 3. Fetch linked students
     let students: Student[] = [];
     if (guardian && guardian.studentIds && guardian.studentIds.length > 0) {
@@ -133,6 +105,38 @@ export class WhatsAppService {
     return { user, guardian, students };
   }
 
+  public async getSchoolProfile(schoolId?: string): Promise<{
+    name: string;
+    motto: string;
+    phone: string;
+    email: string;
+    address: string;
+    centerCode: string;
+  }> {
+    let name = 'SmartShule';
+    let motto = 'Excellence in Competence & Character';
+    let phone = '+254 700 000 000';
+    let email = 'admin@smartshule.ac.ke';
+    let address = 'Nairobi, Kenya';
+    let centerCode = 'CBA-CENTRE';
+
+    if (this.academicRepository) {
+      try {
+        const s = await this.academicRepository.getSchool(schoolId);
+        if (s) {
+          name = s.name || name;
+          motto = s.motto || motto;
+          phone = s.phone || phone;
+          email = s.email || email;
+          address = s.address || address;
+          centerCode = s.centerCode || centerCode;
+        }
+      } catch {}
+    }
+
+    return { name, motto, phone, email, address, centerCode };
+  }
+
   /**
    * Main query resolver for incoming WhatsApp messages
    */
@@ -146,15 +150,16 @@ export class WhatsAppService {
 
     // 1. COUNTER-CHECK PHONE NUMBER WITH DATABASE
     const { user, guardian, students } = await this.counterCheckPhoneNumber(senderPhone);
+    const school = await this.getSchoolProfile(students[0]?.schoolId || user?.schoolId);
 
     // If caller is completely unknown in the database:
     if (!user && !guardian) {
       return {
         to: senderPhone,
         replyText:
-          `👋 *Jambo! Welcome to Grace Seeds School CBC Portal.*\n\n` +
+          `👋 *Jambo! Welcome to ${school.name} CBC Portal.*\n\n` +
           `We could not find an enrolled student record linked to your phone number (${senderPhone}).\n\n` +
-          `To link your WhatsApp number to your child's CBC profile, please contact the School Admissions Desk at *+254 712 345 678* or email *admin@smartshule.ac.ke*.`,
+          `To link your WhatsApp number to your child's CBC profile, please contact the School Admissions Desk at *${school.phone}* or email *${school.email}*.`,
         intent: 'UNREGISTERED',
       };
     }
@@ -171,9 +176,9 @@ export class WhatsAppService {
           senderName,
           replyText:
             `👋 *Hello Teacher ${firstName}!*\n\n` +
-            `Welcome to the SmartShule Teacher Assistant on WhatsApp.\n` +
+            `Welcome to the ${school.name} Teacher Assistant on WhatsApp.\n` +
             `To access your teaching schedules, roll-call registers, and lesson plans, please log in to the educator portal at https://portal.smartshule.ac.ke.\n\n` +
-            `_School Admin Desk: +254 712 345 678_`,
+            `_School Admin Desk: ${school.phone}_`,
           intent: 'HELP',
         };
       }
@@ -260,7 +265,7 @@ export class WhatsAppService {
       /\bFEE\s+BALANCE\b/i.test(commandUpper) ||
       /\bSCHOOL\s+FEES?\b/i.test(commandUpper)
     ) {
-      return await this.handleFeeBalanceCommand(senderPhone, firstName, senderName, students, targetStudents);
+      return await this.handleFeesCommand(senderPhone, firstName, senderName, students, targetStudents);
     } else if (
       // COMMAND 3: EDIARY / DIARY / HOMEWORK / ASSIGNMENT / TASKS
       commandUpper === '3' ||
@@ -367,9 +372,12 @@ export class WhatsAppService {
     const isMenuKeyword = ['MENU', 'HELP', 'HI', 'HELLO', 'JAMBO', 'START', 'INFO'].includes(commandUpper);
     if (!isMenuKeyword && rawText.length > 2) {
       try {
+        const school = await this.getSchoolProfile(primaryStudent.schoolId);
         const dbProfile = await this.getPersonFullDatabaseProfile(primaryStudent, guardian || undefined, user || undefined);
         const geminiReply = await this.aiService.draftWhatsAppMessage({
           command: `The parent (${firstName}) sent this WhatsApp query: "${rawText}". Answer their inquiry politely, clearly and directly using the student's real database records.`,
+          schoolName: school.name,
+          schoolPhone: school.phone,
           student: {
             fullName: primaryStudent.fullName,
             admissionNumber: primaryStudent.admissionNumber,
@@ -414,7 +422,7 @@ export class WhatsAppService {
 
     const defaultMenu =
       `👋 *Jambo ${firstName}!*\n` +
-      `Welcome to *Grace Seeds School CBC Portal* on WhatsApp.\n\n` +
+      `Welcome to *${school.name} CBC Portal* on WhatsApp.\n\n` +
       `${studentListHeader}\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
       `Please reply with a number or command name:\n\n` +
@@ -443,13 +451,14 @@ export class WhatsAppService {
   // SUB-HANDLERS FOR COMMANDS
   // =========================================================================
 
-  private async handleFeeBalanceCommand(
+  private async handleFeesCommand(
     senderPhone: string,
     firstName: string,
     senderName: string,
     allStudents: Student[],
     targetStudents: Student[]
   ): Promise<WhatsAppResponse> {
+    const school = await this.getSchoolProfile(targetStudents[0]?.schoolId);
     const studentSummary = allStudents.map(s => ({
       id: s.id,
       name: s.fullName,
@@ -488,7 +497,7 @@ export class WhatsAppService {
       }
 
       const reply =
-        `💰 *FEES STATEMENT · Grace Seeds School*\n` +
+        `💰 *FEES STATEMENT · ${school.name}*\n` +
         `━━━━━━━━━━━━━━━━━━━━\n` +
         `👤 *Learner:* ${student.fullName} (Adm: ${student.admissionNumber})\n` +
         `📚 *Grade:* ${student.gradeLevel}\n\n` +
@@ -538,7 +547,7 @@ export class WhatsAppService {
     }
 
     const reply =
-      `💰 *FAMILY FEES STATEMENT · Grace Seeds School*\n` +
+      `💰 *FAMILY FEES STATEMENT · ${school.name}*\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
       `Dear ${firstName}, here is the fee summary for your linked learners:\n\n` +
       studentBreakdowns.join('\n\n') +
@@ -565,6 +574,7 @@ export class WhatsAppService {
     senderName: string,
     student: Student
   ): Promise<WhatsAppResponse> {
+    const school = await this.getSchoolProfile(student.schoolId);
     const invoices = await this.feeRepository.findInvoices({ studentId: student.id });
     const unpaidInvoice = invoices.find(i => i.balance > 0) || invoices[0];
     const balance = unpaidInvoice ? unpaidInvoice.balance : 0;
@@ -581,7 +591,7 @@ export class WhatsAppService {
       `💵 *Amount Due:* *KES ${balance.toLocaleString()}*\n\n` +
       `🏦 *Direct Bank Transfer Details:*\n` +
       `• *Bank:* Stanbic Bank Kenya (Paystack Escrow)\n` +
-      `• *Account Name:* Grace Seeds School - ${admissionNo}\n` +
+      `• *Account Name:* ${school.name} - ${admissionNo}\n` +
       `• *Account No:* 9928172049\n\n` +
       `📱 *M-Pesa Paybill Option:*\n` +
       `• *Business No / Paybill:* 247247\n` +
@@ -606,6 +616,7 @@ export class WhatsAppService {
     senderName: string,
     student: Student
   ): Promise<WhatsAppResponse> {
+    const school = await this.getSchoolProfile(student.schoolId);
     const entries = await this.ediaryRepository.findByStudent(student.id, student.streamId, 3);
 
     if (!entries.length) {
@@ -622,14 +633,14 @@ export class WhatsAppService {
 
     const latest = entries[0];
     const reply =
-      `📖 *eDIARY & HOMEWORK · Grace Seeds School*\n` +
+      `📖 *eDIARY & HOMEWORK · ${school.name}*\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
       `👤 *Learner:* ${student.fullName} (${student.gradeLevel})\n` +
       `📅 *Date:* ${latest.date}\n` +
       `📝 *Topic:* ${latest.title}\n\n` +
       `*Homework / Assignment:*\n${latest.homework}\n\n` +
       `*Teacher Remarks:*\n${latest.teacherRemarks || 'Active participation in class today.'}\n\n` +
-      `*Requirements for Tomorrow:*\n${latest.requirementsTomorrow || 'Standard textbooks and geometry set.'}\n\n` +
+      `*Requirements for Tomorrow:*\n${latest.requirementsTomorrow || 'Standard learning materials.'}\n\n` +
       `_You can digitally acknowledge this entry in the SmartShule Parent Portal._`;
 
     return {
@@ -694,19 +705,54 @@ export class WhatsAppService {
     const summatives = await this.cbcRepository.findSummatives({ studentId: student.id });
     const formatives = await this.cbcRepository.findFormatives({ studentId: student.id });
 
-    // Try finding report card
-    let reportCard = null;
-    try {
-      reportCard = await this.cbcRepository.findReportCard(student.id, 'term-2026-1', 'year-2026');
-    } catch {
-      // Ignore
+    let currentTermId: string | undefined;
+    let currentYearId: string | undefined;
+    if (this.academicRepository) {
+      try {
+        const year = await this.academicRepository.findCurrentYear(student.schoolId);
+        if (year) {
+          currentYearId = year.id;
+          const term = await this.academicRepository.findCurrentTerm(year.id);
+          if (term) currentTermId = term.id;
+        }
+      } catch {}
     }
 
-    const overallLevel = reportCard?.overallPerformanceLevel || 'Meeting Expectations (ME)';
-    const averageScore = reportCard?.overallAverageScore ? `${reportCard.overallAverageScore}%` : '78.5%';
+    // Try finding report card
+    let reportCard = null;
+    if (currentTermId && currentYearId) {
+      try {
+        reportCard = await this.cbcRepository.findReportCard(student.id, currentTermId, currentYearId);
+      } catch {
+        // Ignore
+      }
+    }
+
+    if (!summatives.length && !formatives.length && !reportCard) {
+      return {
+        to: senderPhone,
+        senderName,
+        matchedStudent: student.fullName,
+        replyText:
+          `🌟 *CBC COMPETENCY REPORT · ${student.fullName}*\n` +
+          `━━━━━━━━━━━━━━━━━━━━\n` +
+          `📚 *Grade Level:* ${student.gradeLevel}\n\n` +
+          `No assessment records or report cards have been published for this learner yet.\n` +
+          `Assessments will appear here once recorded by the class teacher.`,
+        intent: 'CBC_PROGRESS',
+      };
+    }
+
+    const overallLevel = reportCard?.overallPerformanceLevel || 'Recorded';
+    const averageScore = reportCard?.overallAverageScore ? `${reportCard.overallAverageScore}%` : 'In Progress';
     const teacherRemarks =
       reportCard?.classTeacherRemarks ||
-      `"${student.firstName} demonstrates commendable initiative in practical learning areas and collaborative tasks."`;
+      formatives[0]?.teacherRemarks ||
+      'Competency assessments recorded in the SmartShule portal.';
+
+    const formativeHighlights = formatives.length > 0
+      ? `• ${formatives.slice(0, 3).map(f => `${f.specificOutcomeTested || 'Continuous Assessment'}: ${f.performanceLevel}`).join('\n• ')}\n\n`
+      : '';
 
     const reply =
       `🌟 *CBC COMPETENCY REPORT · ${student.fullName}*\n` +
@@ -714,13 +760,9 @@ export class WhatsAppService {
       `📚 *Grade Level:* ${student.gradeLevel}\n` +
       `🎯 *Overall Performance Level:* *${overallLevel}*\n` +
       `📊 *Average Score:* *${averageScore}*\n` +
-      `📝 *Summative Assessments Logged:* ${summatives.length || 3}\n` +
-      `🔍 *Formative Rubrics Observed:* ${formatives.length || 8}\n\n` +
-      `*Core Competencies Evaluated:*\n` +
-      `• *Critical Thinking & Problem Solving:* Meeting Expectations (ME)\n` +
-      `• *Creativity & Imagination:* Exceeding Expectations (EE)\n` +
-      `• *Communication & Collaboration:* Meeting Expectations (ME)\n` +
-      `• *Digital Literacy:* Meeting Expectations (ME)\n\n` +
+      `📝 *Summative Assessments Logged:* ${summatives.length}\n` +
+      `🔍 *Formative Rubrics Observed:* ${formatives.length}\n\n` +
+      (formativeHighlights ? `*Recent Competencies Observed:*\n${formativeHighlights}` : '') +
       `*Class Teacher's CBC Remarks:*\n${teacherRemarks}\n\n` +
       `_Full CBC report card with strand breakdowns is available on your Parent Portal._`;
 
@@ -739,23 +781,19 @@ export class WhatsAppService {
     senderName: string,
     student: Student
   ): Promise<WhatsAppResponse> {
-    let slotsText =
-      `• 07:30 - 08:15: Mathematics (Teacher John Ochieng)\n` +
-      `• 08:15 - 09:00: Integrated Science (Teacher Sarah Mwangi)\n` +
-      `• 09:00 - 09:30: ☕ Morning Tea Break\n` +
-      `• 09:30 - 10:15: English Language & Literature\n` +
-      `• 10:15 - 11:00: Kiswahili & Fasihi\n` +
-      `• 11:00 - 11:45: Social Studies & CRE\n` +
-      `• 11:45 - 12:45: 🍽️ Hot Lunch & Recreation\n` +
-      `• 12:45 - 01:30: Pre-Technical & Creative Arts\n` +
-      `• 01:30 - 02:15: Physical & Health Education (PHE)`;
+    let slotsText = '_No timetable slots recorded for this stream yet._';
 
     if (this.timetableRepository && student.streamId) {
       try {
-        const timetable = await this.timetableRepository.findByStream(student.streamId, 'term-2026-1');
+        let termId = '';
+        if (this.academicRepository) {
+          const currentTerm = await this.academicRepository.findCurrentTerm();
+          if (currentTerm) termId = currentTerm.id;
+        }
+        const timetable = await this.timetableRepository.findByStream(student.streamId, termId);
         if (timetable && timetable.slots && Array.isArray(timetable.slots) && timetable.slots.length > 0) {
           slotsText = timetable.slots
-            .slice(0, 7)
+            .slice(0, 10)
             .map(
               (s: any) =>
                 `• ${s.startTime || '08:00'} - ${s.endTime || '08:45'}: ${
@@ -776,7 +814,7 @@ export class WhatsAppService {
       `📚 *Grade Level:* ${student.gradeLevel}\n` +
       `📅 *Schedule for:* *${todayDay}*\n\n` +
       `${slotsText}\n\n` +
-      `_Class sessions start punctually at 07:30 AM. Assembly is on Mondays and Fridays._`;
+      `_For full weekly timetable schedules, please visit the SmartShule Parent Portal._`;
 
     return {
       to: senderPhone,
@@ -795,22 +833,22 @@ export class WhatsAppService {
   ): Promise<WhatsAppResponse> {
     const profiles = students.map((s, idx) => {
       return (
-        `👤 *Learner #${idx + 1}:* ${s.fullName}\n` +
-        `• *Admission Number:* ${s.admissionNumber}\n` +
-        `• *UPI / NEMIS:* ${s.upiNumber || 'Pending NEMIS Assignment'}\n` +
-        `• *Grade Level:* ${s.gradeLevel}\n` +
-        `• *Date of Birth:* ${s.dateOfBirth}\n` +
-        `• *Gender:* ${s.gender}\n` +
-        `• *Status:* ✅ ${s.status}`
+        `📌 *Learner #${idx + 1}:* ${s.fullName}\n` +
+        `   • *Admission Number:* ${s.admissionNumber}\n` +
+        `   • *Grade Level:* ${s.gradeLevel}\n` +
+        `   • *Gender:* ${s.gender}\n` +
+        `   • *Date of Birth:* ${s.dateOfBirth}\n` +
+        `   • *NEMIS / UPI:* ${s.upiNumber || 'Pending Registration'}\n` +
+        `   • *Status:* ${s.status}`
       );
     });
 
     const reply =
-      `👤 *ENROLLED LEARNER PROFILES*\n` +
+      `📋 *ENROLLED LEARNER PROFILES & ENROLMENT*\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
-      `Guardian: *${senderName}* (${senderPhone})\n\n` +
+      `Dear ${firstName}, here are the verified registration records for your child(ren):\n\n` +
       profiles.join('\n\n') +
-      `\n\n_To update medical notes or emergency contacts, visit the SmartShule Parent Portal._`;
+      `\n\n_To update medical notes, dietary needs, or emergency contacts, please visit your Parent Portal profile settings._`;
 
     return {
       to: senderPhone,
@@ -827,23 +865,18 @@ export class WhatsAppService {
     senderName: string,
     student: Student
   ): Promise<WhatsAppResponse> {
-    let schoolName = 'Grace Seeds School';
-    let motto = 'Excellence in Competence & Character';
-    let phone = '+254 712 345 678';
-    let email = 'admin@smartshule.ac.ke';
-    let address = 'P.O. Box 4567-00100 Nairobi, Kenya';
-    let centerCode = 'CBA-041289';
+    const school = await this.getSchoolProfile(student.schoolId);
+    let calendarInfo = 'Contact school administration for current term dates.';
 
     if (this.academicRepository) {
       try {
-        const s = await this.academicRepository.getSchool(student.schoolId);
-        if (s) {
-          schoolName = s.name;
-          motto = s.motto || motto;
-          phone = s.phone || phone;
-          email = s.email || email;
-          address = s.address || address;
-          centerCode = s.centerCode || centerCode;
+        const currentYear = await this.academicRepository.findCurrentYear(student.schoolId);
+        if (currentYear) {
+          const terms = await this.academicRepository.findTermsByYear(currentYear.id);
+          if (terms.length > 0) {
+            calendarInfo = `${currentYear.name} Academic Year\n` +
+              terms.map(t => `• ${t.name}: ${t.startDate} – ${t.endDate}${t.isCurrent ? ' (Active)' : ''}`).join('\n');
+          }
         }
       } catch {
         // Fallback defaults
@@ -853,16 +886,13 @@ export class WhatsAppService {
     const reply =
       `🏫 *SCHOOL INFORMATION & CONTACTS*\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
-      `🏛️ *Institution:* ${schoolName}\n` +
-      `📜 *Motto:* _"${motto}"_\n` +
-      `🏷️ *KNEC / CBC Center Code:* ${centerCode}\n\n` +
-      `📞 *Official Phone:* ${phone}\n` +
-      `✉️ *Email:* ${email}\n` +
-      `📍 *Physical Address:* ${address}\n\n` +
-      `📅 *Term Calendar:* 2026 Academic Year\n` +
-      `• Term 1: Jan 05, 2026 – Apr 03, 2026\n` +
-      `• Term 2: May 04, 2026 – Aug 07, 2026\n` +
-      `• Term 3: Aug 31, 2026 – Nov 20, 2026\n\n` +
+      `🏛️ *Institution:* ${school.name}\n` +
+      `📜 *Motto:* _"${school.motto}"_\n` +
+      `🏷️ *KNEC / CBC Center Code:* ${school.centerCode}\n\n` +
+      `📞 *Official Phone:* ${school.phone}\n` +
+      `✉️ *Email:* ${school.email}\n` +
+      `📍 *Physical Address:* ${school.address}\n\n` +
+      `📅 *Term Calendar:*\n${calendarInfo}\n\n` +
       `_Admissions & Enquiries Desk open Monday–Friday, 08:00 AM – 05:00 PM._`;
 
     return {
@@ -903,12 +933,13 @@ export class WhatsAppService {
       };
     }
 
+    const school = await this.getSchoolProfile(student.schoolId);
     const reply =
-      `❓ *PARENT HELP DESK · Grace Seeds School*\n` +
+      `❓ *PARENT HELP DESK · ${school.name}*\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
       `Dear ${firstName},\n\n` +
       `You can ask homework questions or upload textbook/problem photos directly to teachers using the *SmartShule Visual Help Desk* on your Parent Portal.\n\n` +
-      `Alternatively, reply to this message starting with *ASK:* followed by your question (e.g. _ASK: When is the Grade 7 science project due?_), and our educator will reply shortly.`;
+      `Alternatively, reply to this message starting with *ASK:* followed by your question, and our educator will reply shortly.`;
 
     return {
       to: senderPhone,
@@ -1098,10 +1129,10 @@ export class WhatsAppService {
 
     // 2. Attendance Summary
     const attendanceSummary = {
-      presentCount: 19,
-      absentCount: 1,
-      percentage: 95,
-      lastRecordedDate: new Date().toISOString().split('T')[0],
+      presentCount: 0,
+      absentCount: 0,
+      percentage: 0,
+      lastRecordedDate: '',
     };
 
     try {
@@ -1131,8 +1162,8 @@ export class WhatsAppService {
     // 3. CBC Assessment Summary
     const cbcSummary = {
       recentAssessments: [] as Array<{ learningArea: string; strand: string; scoreLevel: string }>,
-      averagePerformance: 'Meeting Expectations (ME)',
-      teacherRemarks: 'Active participant in CBC competency development and inquiry projects.',
+      averagePerformance: 'Not assessed yet',
+      teacherRemarks: 'No assessment remarks recorded yet.',
     };
 
     try {
@@ -1141,12 +1172,12 @@ export class WhatsAppService {
       const allAssessments = [...(summatives || []), ...(formatives || [])];
       if (allAssessments.length > 0) {
         cbcSummary.recentAssessments = allAssessments.slice(0, 3).map((a: any) => ({
-          learningArea: a.learningAreaId || 'Core CBC Subject',
-          strand: a.strandId || 'Practical & Inquiry Skills',
+          learningArea: a.learningAreaId || 'Learning Area',
+          strand: a.strandId || 'Strand',
           scoreLevel: a.rating || 'ME',
         }));
-        cbcSummary.averagePerformance = 'Meeting Expectations (ME)';
-        cbcSummary.teacherRemarks = (allAssessments[0] as any).teacherRemarks || cbcSummary.teacherRemarks;
+        cbcSummary.averagePerformance = 'Recorded';
+        cbcSummary.teacherRemarks = (allAssessments[0] as any).teacherRemarks || 'Progress recorded in portal.';
       }
     } catch (e) {
       // ignore
@@ -1154,9 +1185,9 @@ export class WhatsAppService {
 
     // 4. eDiary / Homework Summary
     const ediarySummary = {
-      recentHomework: 'Complete Exercise 4B in Mathematics textbook. Observe seed germination progress in Science.',
-      teacherRemarks: 'Learners are making steady progress in all learning areas.',
-      requirementsTomorrow: 'Please pack drawing book and geometry set.',
+      recentHomework: 'No pending homework recorded.',
+      teacherRemarks: 'No teacher remarks recorded.',
+      requirementsTomorrow: 'None specified.',
     };
 
     try {
@@ -1172,6 +1203,8 @@ export class WhatsAppService {
     }
 
     return {
+      student,
+      guardian,
       feeSummary,
       attendanceSummary,
       cbcSummary,
@@ -1217,10 +1250,13 @@ export class WhatsAppService {
       ? `${guardian.relationship} of ${student.fullName}`
       : 'Parent/Guardian';
 
+    const school = await this.getSchoolProfile(student.schoolId);
     const dbProfile = await this.getPersonFullDatabaseProfile(student, guardian, guardianUser);
 
     const draftedMessage = await this.aiService.draftWhatsAppMessage({
       command: params.command,
+      schoolName: school.name,
+      schoolPhone: school.phone,
       student: {
         fullName: student.fullName,
         admissionNumber: student.admissionNumber,

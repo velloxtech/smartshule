@@ -375,8 +375,8 @@ export const ExpensesView: React.FC = () => {
         <div className="p-4 sm:p-5 border-b border-outline-variant/20 space-y-3.5">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             {/* Status Tabs */}
-            <div className="flex items-center gap-1.5 p-1 bg-surface-container rounded-xl self-start">
-              {['ALL', 'PAID', 'APPROVED', 'PENDING'].map((st) => (
+            <div className="flex items-center gap-1.5 p-1 bg-surface-container rounded-xl self-start flex-wrap">
+              {['ALL', 'PAID', 'APPROVED', 'PENDING', 'REJECTED'].map((st) => (
                 <button
                   key={st}
                   onClick={() => setSelectedStatus(st)}
@@ -400,8 +400,8 @@ export const ExpensesView: React.FC = () => {
               >
                 <option value="ALL">All Payment Channels</option>
                 <option value="MPESA">M-Pesa</option>
-                <option value="BANK">Bank Transfer</option>
-                <option value="CHEQUE">Cheque</option>
+                <option value="BANK">Bank / EFT / Deposit</option>
+                <option value="CHEQUE">School Cheque</option>
                 <option value="CASH">Petty Cash</option>
               </select>
 

@@ -15,8 +15,25 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
     initialStudent ? initialStudent.id : (students && students.length > 0 ? students[0].id : '')
   );
   const [reportCardData, setReportCardData] = useState<CbcReportCardData | null>(null);
+  const [currentYear, setCurrentYear] = useState<any>(null);
+  const [currentTerm, setCurrentTerm] = useState<any>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    async function loadContext() {
+      try {
+        const res = await apiService.getCurrentContext();
+        if (res.success && res.data) {
+          setCurrentYear(res.data.currentYear);
+          setCurrentTerm(res.data.currentTerm);
+        }
+      } catch (err) {
+        console.error('Failed to load academic context:', err);
+      }
+    }
+    loadContext();
+  }, []);
 
   useEffect(() => {
     if (initialStudent) {
@@ -26,11 +43,17 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
 
   const student = (students || []).find((s) => s.id === selectedId) || initialStudent || students?.[0];
 
-  const loadReportCard = async (stdId: string) => {
+  const loadReportCard = async (stdId: string, termId?: string, yearId?: string) => {
     if (!stdId) return;
+    const tId = termId || currentTerm?.id;
+    const yId = yearId || currentYear?.id;
+    if (!tId || !yId) {
+      setReportCardData(null);
+      return;
+    }
     setLoading(true);
     try {
-      const res = await apiService.getReportCard(stdId, 'term-2026-1', 'year-2026');
+      const res = await apiService.getReportCard(stdId, tId, yId);
       if (res.success && res.data) {
         setReportCardData(res.data);
       } else {
@@ -44,23 +67,27 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
   };
 
   useEffect(() => {
-    if (student?.id) {
-      loadReportCard(student.id);
+    if (student?.id && currentTerm?.id && currentYear?.id) {
+      loadReportCard(student.id, currentTerm.id, currentYear.id);
     }
-  }, [student?.id]);
+  }, [student?.id, currentTerm?.id, currentYear?.id]);
 
   const handleGenerateReportCard = async () => {
     if (!student) return;
+    if (!currentTerm?.id || !currentYear?.id) {
+      alert('Academic year or term is not configured in the database.');
+      return;
+    }
     setIsGenerating(true);
     try {
       const res = await apiService.generateReportCard({
         studentId: student.id,
-        termId: 'term-2026-1',
-        academicYearId: 'year-2026',
-        classTeacherRemarks: 'Demonstrates exemplary mastery across continuous scientific and mathematical competencies.',
-        headTeacherRemarks: 'A focused, disciplined learner with outstanding leadership and creative problem solving.',
-        closingDate: '2026-04-03',
-        nextTermOpeningDate: '2026-05-04',
+        termId: currentTerm.id,
+        academicYearId: currentYear.id,
+        classTeacherRemarks: `${student.name} demonstrates commendable diligence and active participation in continuous assessment strands.`,
+        headTeacherRemarks: 'Commendable performance throughout the term. Demonstrates core CBC values of responsibility and discipline.',
+        closingDate: currentTerm.endDate ? new Date(currentTerm.endDate).toISOString().split('T')[0] : undefined,
+        nextTermOpeningDate: undefined,
       });
       if (res.success && res.data) {
         setReportCardData(res.data);
@@ -147,11 +174,15 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
             onChange={(e) => setSelectedId(e.target.value)}
             className="bg-surface-container-lowest border border-outline-variant/40 rounded-lg py-2 px-3 text-xs font-semibold text-on-surface shadow-xs"
           >
-            {students.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name} ({s.admNo} - {s.grade})
-              </option>
-            ))}
+            {students.length === 0 ? (
+              <option value="">No enrolled learners found</option>
+            ) : (
+              students.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name} ({s.admNo} - {s.grade})
+                </option>
+              ))
+            )}
           </select>
 
           <button
@@ -186,16 +217,18 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
                 {reportCardData?.school?.name || 'SmartShule CBC Academy'}
               </h2>
               <p className="text-xs font-semibold text-gray-600">
-                MoE Registration: <strong>{reportCardData?.school?.code || 'MOE/PRI/2026/0981'}</strong> · Assessment Centre: <strong>{reportCardData?.school?.centerCode || 'CBA-041289'}</strong>
+                MoE Registration: <strong>{reportCardData?.school?.code || 'N/A'}</strong> · Assessment Centre: <strong>{reportCardData?.school?.centerCode || reportCardData?.school?.knecCode || 'N/A'}</strong>
               </p>
-              <p className="text-xs italic text-secondary font-medium">
-                &quot;{reportCardData?.school?.motto || 'Excellence in Competence & Character'}&quot;
-              </p>
+              {reportCardData?.school?.motto && (
+                <p className="text-xs italic text-secondary font-medium">
+                  &quot;{reportCardData.school.motto}&quot;
+                </p>
+              )}
             </div>
           </div>
 
           <div className="bg-primary/5 py-1.5 px-4 rounded-lg inline-block border border-primary/20 text-xs font-bold text-primary uppercase tracking-widest mt-2">
-            LEARNER COMPETENCY SUMMATIVE EVALUATION REPORT · TERM 3, 2026
+            LEARNER COMPETENCY SUMMATIVE EVALUATION REPORT · {currentTerm?.name ? `${currentTerm.name.toUpperCase()}, ${currentYear?.year || ''}` : 'ACADEMIC ASSESSMENT'}
           </div>
         </div>
 
@@ -208,7 +241,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
           <div>
             <span className="text-gray-500 font-semibold block uppercase text-[10px]">Admission / NEMIS UPI</span>
             <span className="font-data-mono font-bold text-primary">
-              {student.admNo} / {student.upi || 'NEMIS-K9281A'}
+              {student.admNo}{student.upi ? ` / ${student.upi}` : ''}
             </span>
           </div>
           <div>
@@ -306,7 +339,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
             </p>
             <div className="pt-4 border-t border-gray-200 flex justify-between items-center text-[10px] text-gray-500">
               <span>Digital Signature: <strong>Verified / CBA Certified</strong></span>
-              <span>Date: 28th Mar 2026</span>
+              <span>Date: {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
             </div>
           </div>
 
@@ -323,7 +356,9 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
                 <span className="material-symbols-outlined text-[14px]">verified</span>
                 <span>Official School Seal Ratified</span>
               </span>
-              <span>Next Term Opens: <strong>04/05/2026</strong></span>
+              {currentTerm?.endDate && (
+                <span>Next Term Opens: <strong>{new Date(currentTerm.endDate).toLocaleDateString('en-GB')}</strong></span>
+              )}
             </div>
           </div>
         </div>

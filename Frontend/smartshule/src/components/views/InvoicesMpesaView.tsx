@@ -25,6 +25,7 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
 
   const [invoices, setInvoices] = useState<StudentInvoice[]>([]);
   const [financeSummary, setFinanceSummary] = useState<FinanceSummaryData | null>(null);
+  const [school, setSchool] = useState<any>(null);
   const [activeSubTab, setActiveSubTab] = useState<'invoices' | 'transactions'>('invoices');
   const [loading, setLoading] = useState(true);
 
@@ -39,9 +40,10 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
   const loadData = async () => {
     setLoading(true);
     try {
-      const [invRes, summaryRes] = await Promise.all([
+      const [invRes, summaryRes, schoolRes] = await Promise.all([
         apiService.getInvoices().catch(() => null),
         apiService.getFinanceSummary().catch(() => null),
+        apiService.getSchool().catch(() => null),
       ]);
 
       if (invRes?.data && Array.isArray(invRes.data)) {
@@ -49,6 +51,9 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
       }
       if (summaryRes?.data) {
         setFinanceSummary(summaryRes.data);
+      }
+      if (schoolRes?.data) {
+        setSchool(schoolRes.data);
       }
     } catch (err) {
       console.error('Failed to load finance data:', err);
@@ -418,9 +423,13 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
             </div>
             <div className="p-5 sm:p-6 space-y-3 text-xs overflow-y-auto flex-1">
               <div className="text-center pb-2 border-b border-surface-container">
-                <div className="font-bold text-sm text-primary">Grace Seeds School</div>
-                <div className="text-[11px] text-on-surface-variant">KNEC Centre Code: KNEC-041289</div>
-                <div className="text-[10px] text-outline">P.O. Box 4567-00100 Nairobi</div>
+                <div className="font-bold text-sm text-primary uppercase">{school?.name || 'SmartShule'}</div>
+                {(school?.knecCode || school?.registrationNumber) && (
+                  <div className="text-[11px] text-on-surface-variant">Code: {school?.knecCode || school?.registrationNumber}</div>
+                )}
+                {school?.address && (
+                  <div className="text-[10px] text-outline">{school.address}</div>
+                )}
               </div>
               <div className="space-y-1.5 pt-1">
                 <div className="flex justify-between">

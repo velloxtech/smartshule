@@ -29,9 +29,14 @@ export const TimetableView: React.FC = () => {
   const canEditGrid = user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.SCHOOL_ADMIN || user?.role === UserRole.HEAD_TEACHER || isTeacher;
 
   const [viewMode, setViewMode] = useState<'stream' | 'teacher'>(isTeacher ? 'teacher' : 'stream');
-  const [streamId, setStreamId] = useState('stream-g7-east');
-  const [teacherId, setTeacherId] = useState('teacher-001');
+  const [streamId, setStreamId] = useState('');
+  const [teacherId, setTeacherId] = useState('');
   const [teacherProfile, setTeacherProfile] = useState<any>(null);
+
+  // Dynamic context and entities
+  const [schoolInfo, setSchoolInfo] = useState<any>(null);
+  const [currentContext, setCurrentContext] = useState<any>(null);
+  const [availableStreams, setAvailableStreams] = useState<Array<{ id: string; name: string; classRoomId: string; className: string }>>([]);
 
   const [timetable, setTimetable] = useState<TimetableData | null>(null);
   const [teacherSlots, setTeacherSlots] = useState<TimetableSlot[]>([]);
@@ -64,7 +69,45 @@ export const TimetableView: React.FC = () => {
   const [isAddDayOpen, setIsAddDayOpen] = useState(false);
   const [newDayLabel, setNewDayLabel] = useState('Saturday');
 
-  // Initialize teacher profile if educator
+  // Load school, academic context, classes & streams
+  useEffect(() => {
+    async function loadTimetableContext() {
+      try {
+        const [scRes, ctxRes, cRes] = await Promise.all([
+          apiService.getSchool().catch(() => null),
+          apiService.getCurrentContext().catch(() => null),
+          apiService.getClasses().catch(() => null),
+        ]);
+        if (scRes?.data) setSchoolInfo(scRes.data);
+        if (ctxRes?.data) setCurrentContext(ctxRes.data);
+        if (cRes?.data && Array.isArray(cRes.data)) {
+          const allStreams: Array<{ id: string; name: string; classRoomId: string; className: string }> = [];
+          for (const c of cRes.data) {
+            const sRes = await apiService.getStreamsByClass(c.id).catch(() => null);
+            if (sRes?.data && Array.isArray(sRes.data)) {
+              sRes.data.forEach((st: any) => {
+                allStreams.push({
+                  id: st.id,
+                  name: st.name,
+                  classRoomId: c.id,
+                  className: c.name,
+                });
+              });
+            }
+          }
+          setAvailableStreams(allStreams);
+          if (allStreams.length > 0 && !streamId) {
+            setStreamId(allStreams[0].id);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load timetable context:', err);
+      }
+    }
+    loadTimetableContext();
+  }, []);
+
+  // Initialize teacher profile if educator & load teachers list
   useEffect(() => {
     async function initTeacher() {
       if (isTeacher) {
@@ -85,6 +128,9 @@ export const TimetableView: React.FC = () => {
         const tList = await apiService.getTeachers();
         if (tList?.data && Array.isArray(tList.data)) {
           setTeachersList(tList.data);
+          if (tList.data.length > 0 && !teacherId) {
+            setTeacherId(tList.data[0].id);
+          }
         }
       } catch {
         // Keep defaults
@@ -95,9 +141,17 @@ export const TimetableView: React.FC = () => {
 
   const loadTimetable = async () => {
     setLoading(true);
+    const activeTermId = currentContext?.currentTerm?.id || '';
     try {
       if (viewMode === 'stream') {
-        const res = await apiService.getStreamTimetable(streamId, 'term-2026-1');
+        if (!streamId) {
+          setTimetable(null);
+          setPeriods(DEFAULT_PERIODS);
+          setDays(DEFAULT_DAYS);
+          setLoading(false);
+          return;
+        }
+        const res = await apiService.getStreamTimetable(streamId, activeTermId);
         if (res.success && res.data) {
           setTimetable(res.data);
           if (res.data.periods && res.data.periods.length > 0) {
@@ -116,7 +170,12 @@ export const TimetableView: React.FC = () => {
           setDays(DEFAULT_DAYS);
         }
       } else {
-        const res = await apiService.getTeacherTimetable(teacherId, 'term-2026-1');
+        if (!teacherId) {
+          setTeacherSlots([]);
+          setLoading(false);
+          return;
+        }
+        const res = await apiService.getTeacherTimetable(teacherId, activeTermId);
         if (res.success && res.data) {
           setTeacherSlots(res.data);
         } else {
@@ -139,7 +198,7 @@ export const TimetableView: React.FC = () => {
 
   useEffect(() => {
     loadTimetable();
-  }, [viewMode, streamId, teacherId]);
+  }, [viewMode, streamId, teacherId, currentContext]);
 
   const activeSlots: TimetableSlot[] = viewMode === 'stream'
     ? (timetable?.slots || [])
@@ -149,13 +208,18 @@ export const TimetableView: React.FC = () => {
   const handleSaveGrid = async () => {
     setIsSavingGrid(true);
     setSaveSuccessMsg(null);
+
+    const matchedStream = availableStreams.find((s) => s.id === streamId);
+    const targetClassId = matchedStream ? matchedStream.classRoomId : 'general-class';
+    const activeSchoolId = user?.schoolId || schoolInfo?.id || '';
+
     try {
       const res = await apiService.saveTimetableGrid({
         timetableId: timetable?.id || `timetable-${streamId}`,
-        schoolId: 'school-001',
-        academicYearId: 'year-2026',
-        termId: 'term-2026-1',
-        classRoomId: 'class-grade-7',
+        schoolId: activeSchoolId,
+        academicYearId: currentContext?.currentYear?.id || '',
+        termId: currentContext?.currentTerm?.id || '',
+        classRoomId: targetClassId,
         streamId: streamId,
         periods: periods,
         days: days,
@@ -402,8 +466,15 @@ export const TimetableView: React.FC = () => {
               onChange={(e) => setStreamId(e.target.value)}
               className="bg-surface-container-lowest border border-outline-variant/40 rounded-lg py-1 px-3 text-xs font-semibold text-on-surface"
             >
-              <option value="stream-g7-east">Grade 7 - East</option>
-              <option value="stream-g7-west">Grade 7 - West</option>
+              {availableStreams.length === 0 ? (
+                <option value="">No streams configured</option>
+              ) : (
+                availableStreams.map((st) => (
+                  <option key={st.id} value={st.id}>
+                    {st.className} - {st.name}
+                  </option>
+                ))
+              )}
             </select>
             <span className="text-[11px] text-on-surface-variant font-data-mono">
               Grid: {periods.length} Rows × {days.length} Columns
@@ -417,17 +488,14 @@ export const TimetableView: React.FC = () => {
               onChange={(e) => setTeacherId(e.target.value)}
               className="bg-surface-container-lowest border border-outline-variant/40 rounded-lg py-1 px-3 text-xs font-semibold text-on-surface"
             >
-              {teachersList.length > 0 ? (
+              {teachersList.length === 0 ? (
+                <option value="">No teachers available</option>
+              ) : (
                 teachersList.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.name || t.user?.fullName || `Teacher ${t.tscNumber || ''}`}
                   </option>
                 ))
-              ) : (
-                <>
-                  <option value="teacher-001">Tr. Sarah Mwangi (Science)</option>
-                  <option value="teacher-002">Tr. John Ochieng (Mathematics)</option>
-                </>
               )}
             </select>
           </div>

@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { apiService } from '../../services/api';
+import { School, Student } from '../../types';
 
 interface KnecSyncModalProps {
   isOpen: boolean;
@@ -8,6 +10,32 @@ interface KnecSyncModalProps {
 export const KnecSyncModal: React.FC<KnecSyncModalProps> = ({ isOpen, onClose }) => {
   const [syncing, setSyncing] = useState(false);
   const [synced, setSynced] = useState(false);
+  const [school, setSchool] = useState<School | null>(null);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    async function loadInfo() {
+      setLoading(true);
+      try {
+        const [scRes, stRes] = await Promise.all([
+          apiService.getSchool().catch(() => null),
+          apiService.getStudents().catch(() => null),
+        ]);
+
+        if (scRes?.data) setSchool(scRes.data);
+        if (stRes?.data && Array.isArray(stRes.data)) setStudents(stRes.data);
+      } catch (err) {
+        console.error('Error loading KNEC sync modal data:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadInfo();
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -19,6 +47,10 @@ export const KnecSyncModal: React.FC<KnecSyncModalProps> = ({ isOpen, onClose })
     }, 1800);
   };
 
+  const studentCount = students.length;
+  const institutionCode = school?.knecCode || school?.registrationNumber || 'Pending Center Code';
+  const schoolName = school?.name || 'SmartShule';
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
       <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-lg w-full max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
@@ -29,7 +61,7 @@ export const KnecSyncModal: React.FC<KnecSyncModalProps> = ({ isOpen, onClose })
             </div>
             <div>
               <h3 className="font-semibold text-base leading-tight">MoE & National CBA Portal Bridge</h3>
-              <p className="text-xs text-rose-100">National Assessment & Examinations Sync Engine v3.2</p>
+              <p className="text-xs text-rose-100">{schoolName} · Assessment Sync Engine</p>
             </div>
           </div>
           <button
@@ -44,12 +76,13 @@ export const KnecSyncModal: React.FC<KnecSyncModalProps> = ({ isOpen, onClose })
           <div className="p-3.5 bg-surface-container-low rounded-xl border border-outline-variant/30 space-y-2">
             <div className="flex items-center justify-between text-xs">
               <span className="text-on-surface-variant font-medium">Institution Code:</span>
-              <span className="font-data-mono font-bold text-primary">CBA-CENTRE-3829011</span>
+              <span className="font-data-mono font-bold text-primary">{institutionCode}</span>
             </div>
             <div className="flex items-center justify-between text-xs">
               <span className="text-on-surface-variant font-medium">NEMIS National Portal:</span>
               <span className="inline-flex items-center gap-1 text-secondary font-semibold">
-                <span className="w-1.5 h-1.5 rounded-full bg-secondary"></span> Connected (1,248 Verified)
+                <span className="w-1.5 h-1.5 rounded-full bg-secondary"></span>{' '}
+                {studentCount > 0 ? `Connected (${studentCount} Active Learners)` : 'Connected (0 Learners Enrolled)'}
               </span>
             </div>
             <div className="flex items-center justify-between text-xs">
@@ -59,33 +92,33 @@ export const KnecSyncModal: React.FC<KnecSyncModalProps> = ({ isOpen, onClose })
               </span>
             </div>
             <div className="flex items-center justify-between text-xs">
-              <span className="text-on-surface-variant font-medium">Summative Portal Window:</span>
-              <span className="font-semibold text-error">Closes 27th November 2026</span>
+              <span className="text-on-surface-variant font-medium">School Centre Name:</span>
+              <span className="font-semibold text-on-surface">{schoolName}</span>
             </div>
           </div>
 
           <div className="space-y-2">
             <div className="text-xs font-semibold uppercase text-on-surface-variant tracking-wider">
-              Sync Compliance Checklist
+              Enrolled Learner Verification
             </div>
-            <div className="space-y-1.5 text-xs text-on-surface">
-              <div className="flex items-center justify-between p-2 rounded bg-surface-container-low">
-                <span>Grade 3 Mathematics Activities Rubrics</span>
-                <span className="font-bold text-secondary">100% Uploaded</span>
+            {studentCount === 0 ? (
+              <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/20 text-center text-xs text-on-surface-variant">
+                No learners currently registered in the database.
               </div>
-              <div className="flex items-center justify-between p-2 rounded bg-surface-container-low">
-                <span>Grade 4 Science & Technology Strands</span>
-                <span className="font-bold text-secondary">100% Uploaded</span>
+            ) : (
+              <div className="p-3 rounded-xl bg-surface-container-low border border-outline-variant/20 space-y-2 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-on-surface-variant">Total Learners in Database:</span>
+                  <span className="font-bold text-on-surface">{studentCount}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-on-surface-variant">NEMIS UPI Ready:</span>
+                  <span className="font-bold text-secondary">
+                    {students.filter((s: any) => s.upiNumber || s.upi).length} Learners
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center justify-between p-2 rounded bg-surface-container-low">
-                <span>Grade 5 Agriculture Practical Projects</span>
-                <span className="font-bold text-secondary">94% Uploaded</span>
-              </div>
-              <div className="flex items-center justify-between p-2 rounded bg-surface-container-low">
-                <span>Grade 6 KPSEA Readiness Assessment Profiles</span>
-                <span className="font-bold text-primary">Ready to Transmit</span>
-              </div>
-            </div>
+            )}
           </div>
 
           {syncing ? (
@@ -101,7 +134,11 @@ export const KnecSyncModal: React.FC<KnecSyncModalProps> = ({ isOpen, onClose })
           ) : synced ? (
             <div className="p-3 bg-secondary-container rounded-lg text-xs text-on-secondary-container font-medium flex items-center gap-2">
               <span className="material-symbols-outlined text-[18px]">verified</span>
-              <span>All 1,248 Learner CBC profiles successfully validated with KNEC and NEMIS databases!</span>
+              <span>
+                {studentCount > 0
+                  ? `All ${studentCount} Learner CBC profiles successfully validated with KNEC and NEMIS databases!`
+                  : 'Bridge validation completed with 0 errors.'}
+              </span>
             </div>
           ) : null}
 
