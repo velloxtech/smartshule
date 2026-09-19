@@ -207,7 +207,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
     @page { size: portrait; margin: 8mm; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; color: #111; background: #fff; line-height: 1.4; }
     .header { text-align: center; border-bottom: 2px solid #800000; padding-bottom: 12px; margin-bottom: 16px; }
-    .logo { height: 80px; width: 80px; object-fit: contain; margin: 0 auto 8px; display: block; border-radius: 50%; border: 2px solid #800000; padding: 2px; }
+    .logo { height: 135px; width: 135px; object-fit: contain; margin: 0 auto 10px; display: block; border-radius: 16px; border: 2.5px solid #800000; padding: 4px; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
     .school-title { font-size: 24px; font-weight: 900; color: #800000; text-transform: uppercase; margin: 0; letter-spacing: 1.5px; }
     .sub-title { font-size: 13px; font-weight: 700; color: #333; margin: 4px 0 2px; text-transform: uppercase; }
     .meta-info { font-size: 11px; color: #666; margin-bottom: 6px; }
@@ -435,6 +435,16 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
             background-color: #fce8ec !important;
             color: #800000 !important;
           }
+          .printable-header .school-logo-wrapper {
+            width: 135px !important;
+            height: 135px !important;
+            margin-bottom: 12px !important;
+          }
+          .printable-header .school-logo-wrapper img {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: contain !important;
+          }
         }
       `}</style>
 
@@ -513,11 +523,11 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
         {/* Centered School Letterhead Header */}
         <div className="printable-header flex flex-col items-center justify-center text-center pb-5 border-b-2 border-[#800000]">
           {/* Centered School Logo */}
-          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-2 border-[#800000] p-1.5 bg-white flex items-center justify-center shadow-xs mx-auto mb-2 shrink-0">
+          <div className="school-logo-wrapper w-32 h-32 sm:w-40 sm:h-40 rounded-2xl border-2 border-[#800000] p-2 bg-white flex items-center justify-center shadow-md mx-auto mb-3 shrink-0">
             <img
               src="/logo.png"
               alt="Grace Seeds School Logo"
-              className="w-full h-full object-contain"
+              className="w-full h-full object-contain filter drop-shadow-xs"
               onError={(e) => {
                 const target = e.currentTarget;
                 if (!target.src.endsWith('/logo.jpg')) {
