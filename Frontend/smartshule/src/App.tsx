@@ -11,6 +11,11 @@ import { LoginPage } from './components/auth/LoginPage';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { DashboardView } from './components/views/DashboardView';
+import { SuperAdminDashboardView } from './components/views/SuperAdminDashboardView';
+import { HeadTeacherDashboardView } from './components/views/HeadTeacherDashboardView';
+import { DeputyDashboardView } from './components/views/DeputyDashboardView';
+import { AdmissionsDashboardView } from './components/views/AdmissionsDashboardView';
+import { BursarDashboardView } from './components/views/BursarDashboardView';
 import { TeacherDashboardView } from './components/views/TeacherDashboardView';
 import { ParentDashboardView } from './components/views/ParentDashboardView';
 import { StudentsView } from './components/views/StudentsView';
@@ -109,9 +114,12 @@ export default function App() {
       const isUp = await apiService.checkHealth();
       setBackendConnected(isUp);
       if (isUp && isAuthenticated) {
+        const isFinanceOnly = user?.role === UserRole.BURSAR || user?.role === UserRole.ACCOUNTANT;
+        const isParentOnly = user?.role === UserRole.PARENT || user?.role === UserRole.GUARDIAN;
+
         try {
           const [studentData, defaultersRes, ctxRes, schRes] = await Promise.all([
-            apiService.getStudents().catch(() => null),
+            isFinanceOnly || isParentOnly ? Promise.resolve(null) : apiService.getStudents().catch(() => null),
             apiService.getDefaulters().catch(() => null),
             apiService.getCurrentContext().catch(() => null),
             apiService.getSchool().catch(() => null),
@@ -154,53 +162,57 @@ export default function App() {
         } catch {
           setStudents([]);
         }
-        try {
-          const teacherData = await apiService.getTeachers();
-          if (teacherData?.data && Array.isArray(teacherData.data)) {
-            const mappedTeachers: Teacher[] = teacherData.data.map((t: any) => ({
-              id: t.id,
-              name: t.user ? `${t.user.firstName} ${t.user.lastName}` : `Teacher ${t.tscNumber || ''}`,
-              role: 'Subject Teacher',
-              tscNumber: t.tscNumber || '--',
-              assignedClass: t.assignedClassStreamIds?.length ? t.assignedClassStreamIds.join(', ') : 'Unassigned',
-              phone: t.user?.phone || '--',
-              email: t.user?.email || '--',
-              learningAreas: t.specialization || ['CBC Core'],
-              status: t.status || 'Active',
-              clockInTime: t.clockInTime || '--',
-            }));
-            setTeachers(mappedTeachers);
-          } else {
+
+        if (!isFinanceOnly && !isParentOnly) {
+          try {
+            const teacherData = await apiService.getTeachers().catch(() => null);
+            if (teacherData?.data && Array.isArray(teacherData.data)) {
+              const mappedTeachers: Teacher[] = teacherData.data.map((t: any) => ({
+                id: t.id,
+                name: t.user ? `${t.user.firstName} ${t.user.lastName}` : `Teacher ${t.tscNumber || ''}`,
+                role: 'Subject Teacher',
+                tscNumber: t.tscNumber || '--',
+                assignedClass: t.assignedClassStreamIds?.length ? t.assignedClassStreamIds.join(', ') : 'Unassigned',
+                phone: t.user?.phone || '--',
+                email: t.user?.email || '--',
+                learningAreas: t.specialization || ['CBC Core'],
+                status: t.status || 'Active',
+                clockInTime: t.clockInTime || '--',
+              }));
+              setTeachers(mappedTeachers);
+            } else {
+              setTeachers([]);
+            }
+          } catch {
             setTeachers([]);
           }
-        } catch {
-          setTeachers([]);
-        }
-        try {
-          const formativesRes = await apiService.listFormatives().catch(() => null);
-          if (formativesRes?.data && Array.isArray(formativesRes.data)) {
-            const mappedAssessments: AssessmentRecord[] = formativesRes.data.map((f: any) => ({
-              id: f.id,
-              studentId: f.studentId,
-              studentName: f.studentName || 'Learner',
-              admNo: f.admissionNumber || '',
-              grade: f.gradeLevel ? f.gradeLevel.replace('_', ' ') : 'Grade 7',
-              learningArea: f.learningAreaId || 'CBC Learning Area',
-              strand: f.strandId || f.subStrandId || 'Strand',
-              subStrand: f.specificOutcomeTested || 'Sub-strand',
-              rating: f.performanceLevel as any,
-              evidence: f.evidenceNotes || f.teacherRemarks || 'Formative observation',
-              recordedBy: 'CBC Educator',
-              date: f.assessmentDate,
-              targetedCompetencies: f.targetedCompetencies,
-              valuesObserved: f.valuesObserved,
-            }));
-            setAssessments(mappedAssessments);
-          } else {
+
+          try {
+            const formativesRes = await apiService.listFormatives().catch(() => null);
+            if (formativesRes?.data && Array.isArray(formativesRes.data)) {
+              const mappedAssessments: AssessmentRecord[] = formativesRes.data.map((f: any) => ({
+                id: f.id,
+                studentId: f.studentId,
+                studentName: f.studentName || 'Learner',
+                admNo: f.admissionNumber || '',
+                grade: f.gradeLevel ? f.gradeLevel.replace('_', ' ') : 'Grade 7',
+                learningArea: f.learningAreaId || 'CBC Learning Area',
+                strand: f.strandId || f.subStrandId || 'Strand',
+                subStrand: f.specificOutcomeTested || 'Sub-strand',
+                rating: f.performanceLevel as any,
+                evidence: f.evidenceNotes || f.teacherRemarks || 'Formative observation',
+                recordedBy: 'CBC Educator',
+                date: f.assessmentDate,
+                targetedCompetencies: f.targetedCompetencies,
+                valuesObserved: f.valuesObserved,
+              }));
+              setAssessments(mappedAssessments);
+            } else {
+              setAssessments([]);
+            }
+          } catch {
             setAssessments([]);
           }
-        } catch {
-          setAssessments([]);
         }
         try {
           const [analyticsData, paymentsRes] = await Promise.all([
@@ -469,6 +481,29 @@ export default function App() {
     );
   };
 
+  // Guard unpermitted tab access
+  useEffect(() => {
+    if (user && currentTab !== 'dashboard' && !isTabPermitted(currentTab, user.role)) {
+      setCurrentTab('dashboard');
+    }
+  }, [user, currentTab]);
+
+  // Super Admin Purge Demo Data Handler
+  const handlePurgeDemo = async () => {
+    if (!window.confirm('Are you sure you want to purge all demo data? This will clear test students, test teachers, and test ledger records.')) {
+      return;
+    }
+    try {
+      const res = await apiService.purgeAllData();
+      if (res.success) {
+        alert('Demo data successfully purged.');
+        window.location.reload();
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to purge demo data');
+    }
+  };
+
   // Render Public Landing Page
   if (appView === 'landing') {
     return (
@@ -599,53 +634,126 @@ export default function App() {
         {/* Dynamic Route Content */}
         <main className="flex-1 px-4 sm:px-6 lg:px-8 pt-4 max-w-7xl w-full mx-auto">
           {currentTab === 'dashboard' && (
-            user?.role === UserRole.TEACHER ? (
-              <TeacherDashboardView
-                onNavigateTab={(tab) => setCurrentTab(tab)}
-                onOpenUploadMarks={() => setUploadMarksModalOpen(true)}
-                onOpenNewLessonPlan={() => setCreateLessonPlanModalOpen(true)}
-                onOpenNewScheme={() => setCreateSchemeModalOpen(true)}
-              />
-            ) : user?.role === UserRole.GUARDIAN ? (
-              <ParentDashboardView
-                onOpenMpesaWithStudent={(student) => handleOpenPaystack(student)}
-                onOpenPaystackWithStudent={(student) => handleOpenPaystack(student)}
-                onViewReportCard={(student) => handleViewReportCard(student)}
-                onNavigateTab={(tab) => setCurrentTab(tab as any)}
-              />
-            ) : (
-              <DashboardView
-                students={students}
-                teachers={teachers}
-                activities={activities}
-                totalCollectedFee={totalCollectedFee}
-                onOpenMpesa={() => handleOpenMpesa()}
-                onOpenCBCModal={() => handleOpenCbc()}
-                onOpenAdmitModal={() => setAdmitModalOpen(true)}
-                onOpenSmsModal={handleOpenSms}
-                onOpenKnecSync={() => setKnecSyncModalOpen(true)}
-                onOpenExportReport={() => setExportReportModalOpen(true)}
-                onNavigateTab={(tab) => setCurrentTab(tab)}
-              />
-            )
+            (() => {
+              switch (user?.role) {
+                case UserRole.SUPER_ADMIN:
+                  return (
+                    <SuperAdminDashboardView
+                      onNavigateTab={(tab) => setCurrentTab(tab)}
+                      onOpenOnboardSchool={() => setOnboardSchoolModalOpen(true)}
+                      onOpenPurgeDemo={handlePurgeDemo}
+                    />
+                  );
+                case UserRole.HEAD_TEACHER:
+                  return (
+                    <HeadTeacherDashboardView
+                      students={students}
+                      teachers={teachers}
+                      onNavigateTab={(tab) => setCurrentTab(tab)}
+                      onOpenKnecSync={() => setKnecSyncModalOpen(true)}
+                      onOpenExportReport={() => setExportReportModalOpen(true)}
+                    />
+                  );
+                case UserRole.DEPUTY_HEAD_TEACHER:
+                  return (
+                    <DeputyDashboardView
+                      teachers={teachers}
+                      onNavigateTab={(tab) => setCurrentTab(tab)}
+                    />
+                  );
+                case UserRole.ADMISSIONS:
+                  return (
+                    <AdmissionsDashboardView
+                      students={students}
+                      teachers={teachers}
+                      onOpenAdmitModal={() => setAdmitModalOpen(true)}
+                      onOpenOnboardTeacher={() => setOnboardTeacherModalOpen(true)}
+                      onNavigateTab={(tab) => setCurrentTab(tab)}
+                    />
+                  );
+                case UserRole.BURSAR:
+                case UserRole.ACCOUNTANT:
+                  return (
+                    <BursarDashboardView
+                      totalCollectedFee={totalCollectedFee}
+                      onOpenMpesa={() => handleOpenMpesa()}
+                      onOpenSmsModal={handleOpenSms}
+                      onNavigateTab={(tab) => setCurrentTab(tab)}
+                    />
+                  );
+                case UserRole.TEACHER:
+                  return (
+                    <TeacherDashboardView
+                      onNavigateTab={(tab) => setCurrentTab(tab)}
+                      onOpenUploadMarks={() => setUploadMarksModalOpen(true)}
+                      onOpenNewLessonPlan={() => setCreateLessonPlanModalOpen(true)}
+                      onOpenNewScheme={() => setCreateSchemeModalOpen(true)}
+                    />
+                  );
+                case UserRole.PARENT:
+                case UserRole.GUARDIAN:
+                  return (
+                    <ParentDashboardView
+                      onOpenMpesaWithStudent={(student) => handleOpenPaystack(student)}
+                      onOpenPaystackWithStudent={(student) => handleOpenPaystack(student)}
+                      onViewReportCard={(student) => handleViewReportCard(student)}
+                      onNavigateTab={(tab) => setCurrentTab(tab as any)}
+                    />
+                  );
+                case UserRole.ADMIN:
+                case UserRole.SCHOOL_ADMIN:
+                default:
+                  return (
+                    <DashboardView
+                      students={students}
+                      teachers={teachers}
+                      activities={activities}
+                      totalCollectedFee={totalCollectedFee}
+                      onOpenMpesa={() => handleOpenMpesa()}
+                      onOpenCBCModal={() => handleOpenCbc()}
+                      onOpenAdmitModal={() => setAdmitModalOpen(true)}
+                      onOpenSmsModal={handleOpenSms}
+                      onOpenKnecSync={() => setKnecSyncModalOpen(true)}
+                      onOpenExportReport={() => setExportReportModalOpen(true)}
+                      onNavigateTab={(tab) => setCurrentTab(tab)}
+                    />
+                  );
+              }
+            })()
           )}
 
           {currentTab === 'students-guardians' && (
-            <StudentsView
-              students={students}
-              onOpenMpesaWithStudent={handleOpenMpesa}
-              onOpenCBCWithStudent={handleOpenCbc}
-              onOpenAdmitModal={() => setAdmitModalOpen(true)}
-              onViewReportCard={handleViewReportCard}
-              onUpdateStudent={(updated) =>
-                setStudents((prev) =>
-                  prev.map((s) => (s.id === updated.id ? { ...s, ...updated } : s))
-                )
-              }
-              onDeleteStudent={(deletedId) =>
-                setStudents((prev) => prev.filter((s) => s.id !== deletedId))
-              }
-            />
+            user?.role === UserRole.BURSAR || user?.role === UserRole.ACCOUNTANT ? (
+              <div className="p-8 my-8 text-center rounded-2xl bg-amber-50 border border-amber-200 text-amber-950 space-y-3 max-w-lg mx-auto">
+                <span className="material-symbols-outlined text-[48px] text-amber-700">account_balance_wallet</span>
+                <h3 className="text-base font-bold">Finance Department Access Isolation</h3>
+                <p className="text-xs text-amber-800">
+                  The finance department is strictly isolated to fee structures, invoices, cash flow ledgers, and expenses.
+                </p>
+                <button
+                  onClick={() => setCurrentTab('cashflow-ledger')}
+                  className="px-4 py-2 rounded-xl bg-amber-800 text-white font-bold text-xs hover:bg-amber-900 transition-colors cursor-pointer"
+                >
+                  Go to Cash Flow Ledger
+                </button>
+              </div>
+            ) : (
+              <StudentsView
+                students={students}
+                onOpenMpesaWithStudent={handleOpenMpesa}
+                onOpenCBCWithStudent={handleOpenCbc}
+                onOpenAdmitModal={() => setAdmitModalOpen(true)}
+                onViewReportCard={handleViewReportCard}
+                onUpdateStudent={(updated) =>
+                  setStudents((prev) =>
+                    prev.map((s) => (s.id === updated.id ? { ...s, ...updated } : s))
+                  )
+                }
+                onDeleteStudent={(deletedId) =>
+                  setStudents((prev) => prev.filter((s) => s.id !== deletedId))
+                }
+              />
+            )
           )}
 
           {currentTab === 'teachers-staff' && (
@@ -724,7 +832,25 @@ export default function App() {
 
           {currentTab === 'visual-cbc' && <VisualCBCView />}
 
-          {currentTab === 'whatsapp-bot' && <WhatsAppBotView />}
+          {currentTab === 'whatsapp-bot' && (
+            user?.role && [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN].includes(user.role) ? (
+              <WhatsAppBotView />
+            ) : (
+              <div className="p-8 my-8 text-center rounded-2xl bg-rose-50 border border-rose-200 text-rose-950 space-y-3 max-w-lg mx-auto">
+                <span className="material-symbols-outlined text-[48px] text-rose-700">security</span>
+                <h3 className="text-base font-bold">Admin Privileges Required</h3>
+                <p className="text-xs text-rose-800">
+                  The WhatsApp communication interface is strictly restricted to School Administrators. It is not available to other departments.
+                </p>
+                <button
+                  onClick={() => setCurrentTab('dashboard')}
+                  className="px-4 py-2 rounded-xl bg-rose-800 text-white font-bold text-xs hover:bg-rose-900 transition-colors cursor-pointer"
+                >
+                  Return to Dashboard
+                </button>
+              </div>
+            )
+          )}
         </main>
 
         {/* Global Portal Footer & Vellox Tech Watermark */}

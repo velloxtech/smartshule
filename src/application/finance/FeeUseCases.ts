@@ -746,7 +746,7 @@ export class FeeUseCases {
 
   // 14. Record Expense (Money Out)
   public async recordExpense(dto: RecordExpenseDTO, requestingUser?: UserContext) {
-    if (requestingUser && ![UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT].includes(requestingUser.role)) {
+    if (requestingUser && ![UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT, UserRole.BURSAR].includes(requestingUser.role)) {
       throw new ForbiddenError('Only Super Admin, School Admin, or Accountant can record expenses.');
     }
 
@@ -782,7 +782,7 @@ export class FeeUseCases {
 
   // 15. List Expenses (Money Out)
   public async listExpenses(filters: ExpenseFilterCriteria, requestingUser?: UserContext) {
-    if (requestingUser && ![UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT, UserRole.HEAD_TEACHER].includes(requestingUser.role)) {
+    if (requestingUser && ![UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT, UserRole.BURSAR, UserRole.HEAD_TEACHER].includes(requestingUser.role)) {
       throw new ForbiddenError('You do not have permission to view school expenses.');
     }
 
@@ -793,7 +793,7 @@ export class FeeUseCases {
 
   // 16. Update Expense Status
   public async updateExpenseStatus(id: string, status: ExpenseStatus, requestingUser?: UserContext) {
-    if (requestingUser && ![UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT, UserRole.HEAD_TEACHER].includes(requestingUser.role)) {
+    if (requestingUser && ![UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT, UserRole.BURSAR, UserRole.HEAD_TEACHER].includes(requestingUser.role)) {
       throw new ForbiddenError('You do not have permission to authorize or update expenses.');
     }
 
@@ -809,7 +809,7 @@ export class FeeUseCases {
 
   // 17. Delete Expense
   public async deleteExpense(id: string, requestingUser?: UserContext) {
-    if (requestingUser && ![UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT].includes(requestingUser.role)) {
+    if (requestingUser && ![UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT, UserRole.BURSAR].includes(requestingUser.role)) {
       throw new ForbiddenError('Only School Admin or Accountant can delete expenses.');
     }
 
@@ -824,7 +824,7 @@ export class FeeUseCases {
 
   // 18. Record Other Income (Money In - Capitation / Uniform / Grants)
   public async recordOtherIncome(dto: RecordOtherIncomeDTO, requestingUser?: UserContext) {
-    if (requestingUser && ![UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT].includes(requestingUser.role)) {
+    if (requestingUser && ![UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT, UserRole.BURSAR].includes(requestingUser.role)) {
       throw new ForbiddenError('Only Super Admin, School Admin, or Accountant can record non-fee income.');
     }
 
@@ -858,7 +858,7 @@ export class FeeUseCases {
 
   // 19. List Other Income
   public async listOtherIncome(filters: OtherIncomeFilterCriteria, requestingUser?: UserContext) {
-    if (requestingUser && ![UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT, UserRole.HEAD_TEACHER].includes(requestingUser.role)) {
+    if (requestingUser && ![UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT, UserRole.BURSAR, UserRole.HEAD_TEACHER].includes(requestingUser.role)) {
       throw new ForbiddenError('You do not have permission to view school income.');
     }
 
@@ -869,7 +869,7 @@ export class FeeUseCases {
 
   // 20. Delete Other Income
   public async deleteOtherIncome(id: string, requestingUser?: UserContext) {
-    if (requestingUser && ![UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT].includes(requestingUser.role)) {
+    if (requestingUser && ![UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT, UserRole.BURSAR].includes(requestingUser.role)) {
       throw new ForbiddenError('Only School Admin or Accountant can delete income records.');
     }
 
@@ -884,7 +884,7 @@ export class FeeUseCases {
 
   // 21. Unified Cash Flow & Financial Ledger (Money In vs Money Out)
   public async getCashFlowLedger(schoolId?: string, filters?: { startDate?: string; endDate?: string }, requestingUser?: UserContext) {
-    if (requestingUser && ![UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT, UserRole.HEAD_TEACHER].includes(requestingUser.role)) {
+    if (requestingUser && ![UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT, UserRole.BURSAR, UserRole.HEAD_TEACHER].includes(requestingUser.role)) {
       throw new ForbiddenError('Only School Management and Accountants can view the Cash Flow Ledger.');
     }
 
@@ -1106,7 +1106,7 @@ export class FeeUseCases {
   }
 
   public async deleteFeeStructure(id: string, requestingUser?: UserContext) {
-    if (requestingUser && ![UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT].includes(requestingUser.role)) {
+    if (requestingUser && ![UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT, UserRole.BURSAR].includes(requestingUser.role)) {
       throw new ForbiddenError('Only School Admin or Accountant can delete fee structures.');
     }
     const fs = await this.feeRepository.findFeeStructureById(id);

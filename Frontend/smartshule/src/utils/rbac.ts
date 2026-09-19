@@ -51,8 +51,6 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
           UserRole.HEAD_TEACHER,
           UserRole.DEPUTY_HEAD_TEACHER,
           UserRole.ADMISSIONS,
-          UserRole.BURSAR,
-          UserRole.ACCOUNTANT,
           UserRole.TEACHER,
         ],
       },
@@ -350,34 +348,39 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
           UserRole.SUPER_ADMIN,
           UserRole.ADMIN,
           UserRole.SCHOOL_ADMIN,
-          UserRole.HEAD_TEACHER,
-          UserRole.DEPUTY_HEAD_TEACHER,
-          UserRole.ADMISSIONS,
-          UserRole.BURSAR,
-          UserRole.ACCOUNTANT,
-          UserRole.TEACHER,
-          UserRole.PARENT,
-          UserRole.GUARDIAN,
         ],
       },
     ],
   },
 ];
 
+export function normalizeRoleAliases(role?: UserRole): UserRole[] {
+  if (!role) return [];
+  const roles: UserRole[] = [role];
+  if (role === UserRole.ADMIN && !roles.includes(UserRole.SCHOOL_ADMIN)) roles.push(UserRole.SCHOOL_ADMIN);
+  if (role === UserRole.SCHOOL_ADMIN && !roles.includes(UserRole.ADMIN)) roles.push(UserRole.ADMIN);
+  if (role === UserRole.BURSAR && !roles.includes(UserRole.ACCOUNTANT)) roles.push(UserRole.ACCOUNTANT);
+  if (role === UserRole.ACCOUNTANT && !roles.includes(UserRole.BURSAR)) roles.push(UserRole.BURSAR);
+  if (role === UserRole.PARENT && !roles.includes(UserRole.GUARDIAN)) roles.push(UserRole.GUARDIAN);
+  if (role === UserRole.GUARDIAN && !roles.includes(UserRole.PARENT)) roles.push(UserRole.PARENT);
+  return roles;
+}
+
 export function getFilteredNavSections(role?: UserRole): NavGroupDef[] {
-  const userRole = role || UserRole.SUPER_ADMIN;
+  const activeRoles = normalizeRoleAliases(role || UserRole.SUPER_ADMIN);
   return ALL_NAV_SECTIONS.map((section) => ({
     group: section.group,
-    items: section.items.filter((item) => item.allowedRoles.includes(userRole)),
+    items: section.items.filter((item) => item.allowedRoles.some((r) => activeRoles.includes(r))),
   })).filter((section) => section.items.length > 0);
 }
 
 export function isTabPermitted(tab: TabType, role?: UserRole): boolean {
   if (!role) return false;
+  const activeRoles = normalizeRoleAliases(role);
   for (const section of ALL_NAV_SECTIONS) {
     const found = section.items.find((item) => item.id === tab);
     if (found) {
-      return found.allowedRoles.includes(role);
+      return found.allowedRoles.some((r) => activeRoles.includes(r));
     }
   }
   return false;

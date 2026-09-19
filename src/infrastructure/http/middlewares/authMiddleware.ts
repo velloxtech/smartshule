@@ -31,7 +31,8 @@ export function createAuthMiddleware(tokenService: IAuthTokenService) {
   };
 }
 
-export function requireRoles(...allowedRoles: UserRole[]) {
+export function requireRoles(...allowedRoles: (UserRole | UserRole[])[]) {
+  const flatRoles = allowedRoles.flat(Infinity) as UserRole[];
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     if (!req.user) {
       return next(new UnauthorizedError());
@@ -42,7 +43,7 @@ export function requireRoles(...allowedRoles: UserRole[]) {
     }
 
     const expandedAllowed = new Set<string>();
-    for (const r of allowedRoles) {
+    for (const r of flatRoles) {
       expandedAllowed.add(r);
       if (r === UserRole.ADMIN || r === UserRole.SCHOOL_ADMIN) {
         expandedAllowed.add(UserRole.ADMIN);
@@ -59,7 +60,7 @@ export function requireRoles(...allowedRoles: UserRole[]) {
     }
 
     if (!expandedAllowed.has(req.user.role)) {
-      return next(new ForbiddenError(`Required role: ${allowedRoles.join(' or ')}`));
+      return next(new ForbiddenError(`Required role: ${flatRoles.join(' or ')}`));
     }
 
     next();

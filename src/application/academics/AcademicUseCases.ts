@@ -17,8 +17,24 @@ export class AcademicUseCases {
   }
 
   public async getSchool(id?: string) {
-    const school = await this.academicRepository.getSchool(id);
-    if (!school) throw new NotFoundError('School profile');
+    let school = await this.academicRepository.getSchool(id);
+    if (!school) {
+      school = School.create(
+        {
+          name: 'SmartShule CBC Academy',
+          code: 'SCH-001',
+          centerCode: 'KNEC-08291',
+          motto: 'Excellence in CBC Learning',
+          email: 'admin@smartshule.ac.ke',
+          phone: '+254700112233',
+          address: 'Waiyaki Way, Westlands, Nairobi',
+          logoUrl: '/logo.png',
+          currency: 'KES'
+        },
+        id || 'school-001'
+      );
+      await this.academicRepository.saveSchool(school);
+    }
     return school.toJSON();
   }
 

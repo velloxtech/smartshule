@@ -362,4 +362,66 @@ describe('Access Controls, 8 Role Accounts & Lesson Plan Approvals', () => {
       expect(resAdmin.body.data.status).toBe('APPROVED');
     });
   });
+
+  // =================================================================
+  // 4. DEPARTMENTAL ACCESS ISOLATION (WHATSAPP & FINANCE)
+  // =================================================================
+  describe('4. Departmental Access Isolation', () => {
+    it('allows Super Admin and Admin to access WhatsApp management endpoints', async () => {
+      const resAdmin = await request(app)
+        .get('/api/v1/whatsapp/status')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(resAdmin.status).toBe(200);
+      expect(resAdmin.body.success).toBe(true);
+
+      const resSa = await request(app)
+        .get('/api/v1/whatsapp/status')
+        .set('Authorization', `Bearer ${superAdminToken}`);
+
+      expect(resSa.status).toBe(200);
+    });
+
+    it('denies WhatsApp management endpoints to non-admin roles (Teacher, Bursar, Deputy, Admissions, Parent)', async () => {
+      const unauthorizedTokens = [
+        { role: 'TEACHER', token: teacherToken },
+        { role: 'BURSAR', token: bursarToken },
+        { role: 'DEPUTY', token: deputyToken },
+        { role: 'ADMISSIONS', token: admissionsToken },
+        { role: 'PARENT', token: parentToken },
+      ];
+
+      for (const item of unauthorizedTokens) {
+        const res = await request(app)
+          .get('/api/v1/whatsapp/status')
+          .set('Authorization', `Bearer ${item.token}`);
+
+        expect(res.status).toBe(403);
+      }
+    });
+
+    it('allows Bursar to access finance ledgers while denying non-financial roles', async () => {
+      // Bursar can access cashflow ledger
+      const resBursar = await request(app)
+        .get('/api/v1/finance/cashflow-ledger')
+        .set('Authorization', `Bearer ${bursarToken}`);
+
+      expect(resBursar.status).toBe(200);
+
+      // Teacher is denied access to finance cashflow ledger
+      const resTeacher = await request(app)
+        .get('/api/v1/finance/cashflow-ledger')
+        .set('Authorization', `Bearer ${teacherToken}`);
+
+      expect(resTeacher.status).toBe(403);
+
+      // Parent is denied access to finance cashflow ledger
+      const resParent = await request(app)
+        .get('/api/v1/finance/cashflow-ledger')
+        .set('Authorization', `Bearer ${parentToken}`);
+
+      expect(resParent.status).toBe(403);
+    });
+  });
 });
+

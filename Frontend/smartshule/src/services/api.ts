@@ -825,12 +825,21 @@ export const apiService = {
     return apiFetch<ApiResponse<any[]>>(`/finance/payments${qs ? `?${qs}` : ''}`);
   },
 
-  getDefaulters: async (schoolId?: string, minBalance = 1): Promise<ApiResponse<DefaultersReport>> => {
+  getDefaulters: async (
+    schoolIdOrParams?: string | { schoolId?: string; minBalance?: number },
+    minBalance = 1
+  ): Promise<ApiResponse<DefaultersReport>> => {
     const params = new URLSearchParams();
-    if (schoolId) params.append('schoolId', schoolId);
-    params.append('minBalance', String(minBalance));
+    if (typeof schoolIdOrParams === 'object' && schoolIdOrParams !== null) {
+      if (schoolIdOrParams.schoolId) params.append('schoolId', schoolIdOrParams.schoolId);
+      if (schoolIdOrParams.minBalance !== undefined) params.append('minBalance', String(schoolIdOrParams.minBalance));
+    } else {
+      if (schoolIdOrParams) params.append('schoolId', schoolIdOrParams);
+      if (minBalance !== undefined) params.append('minBalance', String(minBalance));
+    }
+    const qs = params.toString();
     return apiFetch<ApiResponse<DefaultersReport>>(
-      `/finance/defaulters?${params.toString()}`
+      `/finance/defaulters${qs ? `?${qs}` : ''}`
     );
   },
 
@@ -1109,4 +1118,11 @@ export const apiService = {
   getGuardianPortalData: async (): Promise<ApiResponse<any>> => {
     return apiFetch<ApiResponse<any>>('/students/guardian/me');
   },
+
+  purgeAllData: async (): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/system/purge-all', {
+      method: 'POST',
+    });
+  },
 };
+
