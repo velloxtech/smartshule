@@ -422,6 +422,77 @@ describe('Access Controls, 8 Role Accounts & Lesson Plan Approvals', () => {
 
       expect(resParent.status).toBe(403);
     });
+
+    it('returns academic context with auto-provisioned terms and session lifecycle notices', async () => {
+      const res = await request(app)
+        .get('/api/v1/academics/context')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.currentTerm).toBeDefined();
+      expect(res.body.data.currentTerm.name).toContain('Term');
+      expect(res.body.data.currentTerm.startDate).toBeDefined();
+      expect(res.body.data.currentTerm.endDate).toBeDefined();
+      expect(res.body.data.currentTerm.status).toBeDefined();
+      expect(res.body.data.allTerms.length).toBeGreaterThanOrEqual(3);
+    });
+
+    it('allows Admin to update term dates and transition terms, while denying Teacher and Bursar', async () => {
+      // Get context to find active term
+      const ctxRes = await request(app)
+        .get('/api/v1/academics/context')
+        .set('Authorization', `Bearer ${adminToken}`);
+      const termId = ctxRes.body.data.currentTerm.id;
+
+      // Admin updates term dates
+      const updateRes = await request(app)
+        .put(`/api/v1/academics/terms/${termId}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          startDate: '2026-08-25',
+          endDate: '2026-10-24',
+        });
+      expect(updateRes.status).toBe(200);
+      expect(updateRes.body.data.startDate).toBe('2026-08-25');
+      expect(updateRes.body.data.endDate).toBe('2026-10-24');
+
+      // Teacher is denied updating term dates (403)
+      const teacherRes = await request(app)
+        .put(`/api/v1/academics/terms/${termId}`)
+        .set('Authorization', `Bearer ${teacherToken}`)
+        .send({
+          startDate: '2026-08-20',
+          endDate: '2026-10-20',
+        });
+      expect(teacherRes.status).toBe(403);
+
+      // Bursar is denied updating term dates (403)
+      const bursarRes = await request(app)
+        .put(`/api/v1/academics/terms/${termId}`)
+        .set('Authorization', `Bearer ${bursarToken}`)
+        .send({
+          startDate: '2026-08-20',
+          endDate: '2026-10-20',
+        });
+      expect(bursarRes.status).toBe(403);
+
+      // Head Teacher can activate another term
+      const otherTerm = ctxRes.body.data.allTerms.find((t: any) => t.id !== termId);
+      if (otherTerm) {
+        const activateRes = await request(app)
+          .post(`/api/v1/academics/terms/${otherTerm.id}/activate`)
+          .set('Authorization', `Bearer ${headTeacherToken}`);
+        expect(activateRes.status).toBe(200);
+        expect(activateRes.body.data.isCurrent).toBe(true);
+
+        // Switch back to original term
+        await request(app)
+          .post(`/api/v1/academics/terms/${termId}/activate`)
+          .set('Authorization', `Bearer ${superAdminToken}`);
+      }
+    });
   });
 });
+
 

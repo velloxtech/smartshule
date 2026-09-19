@@ -33,6 +33,15 @@ export const CreateTermSchema = z.object({
   isCurrent: z.boolean().default(false)
 });
 
+export const UpdateTermSchema = z.object({
+  name: z.string().min(1).optional(),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  termNumber: z.number().int().min(1).max(3).optional(),
+  isCurrent: z.boolean().optional()
+});
+
+
 export const CreateClassRoomSchema = z.object({
   name: z.string().min(1),
   gradeLevel: z.nativeEnum(CbcGradeLevel),
@@ -113,6 +122,43 @@ export class AcademicController {
     }
   };
 
+  public listAllTerms = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const terms = await this.academicUseCases.listAllTerms(req.query.schoolId as string);
+      return res.status(200).json({ success: true, data: terms });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public updateTerm = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const term = await this.academicUseCases.updateAcademicTerm(req.params.id as string, req.body);
+      return res.status(200).json({ success: true, data: term });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public activateTerm = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const term = await this.academicUseCases.activateAcademicTerm(req.params.id as string);
+      return res.status(200).json({ success: true, data: term });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+
+  public transitionTerm = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const term = await this.academicUseCases.transitionTerm(req.query.schoolId as string);
+      return res.status(200).json({ success: true, data: term });
+    } catch (err) {
+      next(err);
+    }
+  };
+
   public getCurrentContext = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const context = await this.academicUseCases.getCurrentAcademicContext(req.query.schoolId as string);
@@ -121,6 +167,7 @@ export class AcademicController {
       next(err);
     }
   };
+
 
   public createClass = async (req: Request, res: Response, next: NextFunction) => {
     try {

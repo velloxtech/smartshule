@@ -196,13 +196,25 @@ export interface AcademicTerm {
   startDate: string;
   endDate: string;
   isCurrent: boolean;
+  status?: 'ACTIVE' | 'UPCOMING' | 'ENDED';
+  daysRemaining?: number;
+  currentWeek?: number;
+  totalWeeks?: number;
+  isEndingSoon?: boolean;
 }
 
 export interface AcademicContext {
   schoolId?: string;
   currentYear: AcademicYear | null;
   currentTerm: AcademicTerm | null;
+  allTerms?: AcademicTerm[];
+  termNotice?: {
+    type: 'ACTIVE' | 'ENDING_SOON' | 'TERM_ENDED' | 'RECESS';
+    message: string;
+    daysRemaining?: number;
+  } | null;
 }
+
 
 export interface ClassRoom {
   id: string;

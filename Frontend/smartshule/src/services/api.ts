@@ -178,8 +178,30 @@ export const apiService = {
     });
   },
 
-  getTerms: async (yearId: string): Promise<ApiResponse<AcademicTerm[]>> => {
-    return apiFetch<ApiResponse<AcademicTerm[]>>(`/academics/terms/by-year/${yearId}`);
+  getTerms: async (yearId?: string): Promise<ApiResponse<AcademicTerm[]>> => {
+    if (yearId) {
+      return apiFetch<ApiResponse<AcademicTerm[]>>(`/academics/terms/by-year/${yearId}`);
+    }
+    return apiFetch<ApiResponse<AcademicTerm[]>>('/academics/terms');
+  },
+
+  updateTerm: async (id: string, data: Partial<AcademicTerm>): Promise<ApiResponse<AcademicTerm>> => {
+    return apiFetch<ApiResponse<AcademicTerm>>(`/academics/terms/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  activateTerm: async (id: string): Promise<ApiResponse<AcademicTerm>> => {
+    return apiFetch<ApiResponse<AcademicTerm>>(`/academics/terms/${id}/activate`, {
+      method: 'POST',
+    });
+  },
+
+  transitionTerm: async (schoolId?: string): Promise<ApiResponse<AcademicTerm>> => {
+    return apiFetch<ApiResponse<AcademicTerm>>(`/academics/terms/transition${schoolId ? `?schoolId=${schoolId}` : ''}`, {
+      method: 'POST',
+    });
   },
 
   createTerm: async (data: {
@@ -195,6 +217,7 @@ export const apiService = {
       body: JSON.stringify(data),
     });
   },
+
 
   getCurrentContext: async (schoolId?: string): Promise<ApiResponse<AcademicContext>> => {
     return apiFetch<ApiResponse<AcademicContext>>(`/academics/context${schoolId ? `?schoolId=${schoolId}` : ''}`);

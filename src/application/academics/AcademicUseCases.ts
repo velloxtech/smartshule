@@ -77,19 +77,226 @@ export class AcademicUseCases {
     return term.toJSON();
   }
 
+  public async updateAcademicTerm(
+    id: string,
+    dto: { name?: string; startDate?: string; endDate?: string; termNumber?: number; isCurrent?: boolean }
+  ) {
+    const term = await this.academicRepository.findTermById(id);
+    if (!term) throw new NotFoundError(`Academic term with id ${id}`);
+
+    if (dto.isCurrent) {
+      const existingTerms = await this.academicRepository.findTermsByYear(term.academicYearId);
+      for (const t of existingTerms) {
+        if (t.id !== id && t.isCurrent) {
+          t.setCurrent(false);
+          await this.academicRepository.updateTerm(t);
+        }
+      }
+    }
+
+    term.updateDetails(dto);
+    await this.academicRepository.updateTerm(term);
+    return term.toJSON();
+  }
+
+  public async activateAcademicTerm(termId: string) {
+    const term = await this.academicRepository.findTermById(termId);
+    if (!term) throw new NotFoundError(`Academic term with id ${termId}`);
+
+    const existingTerms = await this.academicRepository.findTermsByYear(term.academicYearId);
+    for (const t of existingTerms) {
+      if (t.id !== termId && t.isCurrent) {
+        t.setCurrent(false);
+        await this.academicRepository.updateTerm(t);
+      }
+    }
+
+    term.setCurrent(true);
+    await this.academicRepository.updateTerm(term);
+    return term.toJSON();
+  }
+
+  public async transitionTerm(schoolId?: string) {
+    const context = await this.getCurrentAcademicContext(schoolId);
+    if (!context.currentYear) throw new NotFoundError('Active academic year');
+
+    const yearTerms = await this.academicRepository.findTermsByYear(context.currentYear.id);
+    const sortedTerms = yearTerms.sort((a, b) => a.termNumber - b.termNumber);
+
+    const currentTerm = context.currentTerm;
+    let nextTerm: AcademicTerm | null = null;
+
+    if (currentTerm) {
+      const currentIndex = sortedTerms.findIndex(t => t.id === currentTerm.id);
+      if (currentIndex >= 0 && currentIndex < sortedTerms.length - 1) {
+        nextTerm = sortedTerms[currentIndex + 1];
+      }
+    } else if (sortedTerms.length > 0) {
+      nextTerm = sortedTerms[0];
+    }
+
+    if (nextTerm) {
+      return await this.activateAcademicTerm(nextTerm.id);
+    }
+
+    // All terms in this academic year ended -> advance to next academic year Term 1
+    const nextYearNum = parseInt(context.currentYear.name, 10) + 1;
+    const allYears = await this.academicRepository.findAllYears(schoolId);
+    let nextYear = allYears.find(y => y.name === String(nextYearNum));
+
+    if (!nextYear) {
+      nextYear = AcademicYear.create(
+        {
+          name: String(nextYearNum),
+          startDate: `${nextYearNum}-01-05`,
+          endDate: `${nextYearNum}-11-20`,
+          isCurrent: true,
+          schoolId: schoolId || 'school-001'
+        },
+        IdGenerator.generate()
+      );
+      // Unset previous year
+      const oldYear = await this.academicRepository.findYearById(context.currentYear.id);
+      if (oldYear) {
+        oldYear.setCurrent(false);
+        await this.academicRepository.updateYear(oldYear);
+      }
+      await this.academicRepository.saveYear(nextYear);
+    }
+
+    const newTerm1 = AcademicTerm.create(
+      {
+        academicYearId: nextYear.id,
+        termNumber: 1,
+        name: `Term 1 - ${nextYearNum}`,
+        startDate: `${nextYearNum}-01-05`,
+        endDate: `${nextYearNum}-04-03`,
+        isCurrent: true
+      },
+      IdGenerator.generate()
+    );
+
+    if (currentTerm) {
+      const prevTerm = await this.academicRepository.findTermById(currentTerm.id);
+      if (prevTerm) {
+        prevTerm.setCurrent(false);
+        await this.academicRepository.updateTerm(prevTerm);
+      }
+    }
+
+    await this.academicRepository.saveTerm(newTerm1);
+    return newTerm1.toJSON();
+  }
+
   public async listTermsByYear(yearId: string) {
     const terms = await this.academicRepository.findTermsByYear(yearId);
     return terms.map(t => t.toJSON());
   }
 
+  public async listAllTerms(schoolId?: string) {
+    const years = await this.academicRepository.findAllYears(schoolId);
+    let allTerms: AcademicTerm[] = [];
+    for (const year of years) {
+      const terms = await this.academicRepository.findTermsByYear(year.id);
+      allTerms = allTerms.concat(terms);
+    }
+    return allTerms.map(t => t.toJSON());
+  }
+
   public async getCurrentAcademicContext(schoolId?: string) {
-    const currentYear = await this.academicRepository.findCurrentYear(schoolId);
+    let currentYear = await this.academicRepository.findCurrentYear(schoolId);
+    const allYears = await this.academicRepository.findAllYears(schoolId);
+
+    if (!currentYear && allYears.length === 0) {
+      // Auto-provision 2026 Academic Calendar with Kenyan Terms 1, 2, 3
+      currentYear = AcademicYear.create(
+        {
+          name: '2026',
+          startDate: '2026-01-05',
+          endDate: '2026-11-20',
+          isCurrent: true,
+          schoolId: schoolId || 'school-001'
+        },
+        'year-2026'
+      );
+      await this.academicRepository.saveYear(currentYear);
+
+      const term1 = AcademicTerm.create(
+        {
+          academicYearId: currentYear.id,
+          termNumber: 1,
+          name: 'Term 1 - 2026',
+          startDate: '2026-01-05',
+          endDate: '2026-04-03',
+          isCurrent: false
+        },
+        'term-2026-t1'
+      );
+      const term2 = AcademicTerm.create(
+        {
+          academicYearId: currentYear.id,
+          termNumber: 2,
+          name: 'Term 2 - 2026',
+          startDate: '2026-05-04',
+          endDate: '2026-08-07',
+          isCurrent: false
+        },
+        'term-2026-t2'
+      );
+      const term3 = AcademicTerm.create(
+        {
+          academicYearId: currentYear.id,
+          termNumber: 3,
+          name: 'Term 3 - 2026',
+          startDate: '2026-08-24',
+          endDate: '2026-10-23',
+          isCurrent: true
+        },
+        'term-2026-t3'
+      );
+
+      await this.academicRepository.saveTerm(term1);
+      await this.academicRepository.saveTerm(term2);
+      await this.academicRepository.saveTerm(term3);
+    }
+
     const currentTerm = currentYear ? await this.academicRepository.findCurrentTerm(currentYear.id) : null;
+    const yearTerms = currentYear ? await this.academicRepository.findTermsByYear(currentYear.id) : [];
+
+    let termNotice: { type: 'ACTIVE' | 'ENDING_SOON' | 'TERM_ENDED' | 'RECESS'; message: string; daysRemaining?: number } | null = null;
+    if (currentTerm) {
+      const now = new Date();
+      const status = currentTerm.getStatus(now);
+      const daysRemaining = currentTerm.getDaysRemaining(now);
+      if (status === 'ENDED') {
+        termNotice = {
+          type: 'TERM_ENDED',
+          message: `${currentTerm.name} ended on ${currentTerm.endDate}. Academic session transition is recommended.`,
+          daysRemaining: 0
+        };
+      } else if (currentTerm.isEndingSoon(now)) {
+        termNotice = {
+          type: 'ENDING_SOON',
+          message: `${currentTerm.name} concludes in ${daysRemaining} day${daysRemaining === 1 ? '' : 's'} (${currentTerm.endDate}). Ensure all formative and summative marks are synchronized.`,
+          daysRemaining
+        };
+      } else {
+        termNotice = {
+          type: 'ACTIVE',
+          message: `${currentTerm.name} is in active session (Week ${currentTerm.getCurrentWeek(now)} of ${currentTerm.getTotalWeeks()}). ${daysRemaining} days remaining until closing.`,
+          daysRemaining
+        };
+      }
+    }
+
     return {
       currentYear: currentYear ? currentYear.toJSON() : null,
-      currentTerm: currentTerm ? currentTerm.toJSON() : null
+      currentTerm: currentTerm ? currentTerm.toJSON() : null,
+      allTerms: yearTerms.map(t => t.toJSON()),
+      termNotice
     };
   }
+
 
   // Classrooms & Streams
   public async createClassRoom(dto: { name: string; gradeLevel: CbcGradeLevel; educationLevel: EducationLevel; schoolId: string }) {

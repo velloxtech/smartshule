@@ -28,6 +28,7 @@ import {
   SetupSchoolSchema,
   CreateYearSchema,
   CreateTermSchema,
+  UpdateTermSchema,
   CreateClassRoomSchema,
   CreateStreamSchema,
   CreateLearningAreaSchema
@@ -135,7 +136,11 @@ export function createApiRouter(container: AppContainer): Router {
   academicRouter.get('/school', authMiddleware, academicController.getSchool);
   academicRouter.post('/years', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN), validateBody(CreateYearSchema), academicController.createYear);
   academicRouter.get('/years', authMiddleware, academicController.listYears);
-  academicRouter.post('/terms', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN), validateBody(CreateTermSchema), academicController.createTerm);
+  academicRouter.post('/terms', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN, UserRole.HEAD_TEACHER), validateBody(CreateTermSchema), academicController.createTerm);
+  academicRouter.get('/terms', authMiddleware, academicController.listAllTerms);
+  academicRouter.put('/terms/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN, UserRole.HEAD_TEACHER), validateBody(UpdateTermSchema), academicController.updateTerm);
+  academicRouter.post('/terms/:id/activate', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN, UserRole.HEAD_TEACHER), academicController.activateTerm);
+  academicRouter.post('/terms/transition', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN, UserRole.HEAD_TEACHER), academicController.transitionTerm);
   academicRouter.get('/terms/by-year/:yearId', authMiddleware, academicController.listTermsByYear);
   academicRouter.get('/context', authMiddleware, academicController.getCurrentContext);
   academicRouter.post('/classes', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN), validateBody(CreateClassRoomSchema), academicController.createClass);

@@ -53,6 +53,7 @@ import { OnboardSchoolModal } from './components/modals/OnboardSchoolModal';
 import { UploadMarksModal } from './components/modals/UploadMarksModal';
 import { CreateLessonPlanModal } from './components/modals/CreateLessonPlanModal';
 import { CreateSchemeModal } from './components/modals/CreateSchemeModal';
+import { AcademicTermsModal } from './components/modals/AcademicTermsModal';
 
 export default function App() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -60,6 +61,8 @@ export default function App() {
   const [currentTab, setCurrentTab] = useState<TabType>('dashboard');
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [currentTerm, setCurrentTerm] = useState('Term 3 - 2026');
+  const [academicTermsModalOpen, setAcademicTermsModalOpen] = useState(false);
+
 
   // Core Dynamic Data (Live from backend or user actions - initialized empty)
   const [students, setStudents] = useState<Student[]>([]);
@@ -124,8 +127,14 @@ export default function App() {
             apiService.getCurrentContext().catch(() => null),
             apiService.getSchool().catch(() => null),
           ]);
-          if (ctxRes?.data) setCurrentContext(ctxRes.data);
+          if (ctxRes?.data) {
+            setCurrentContext(ctxRes.data);
+            if (ctxRes.data.currentTerm?.name) {
+              setCurrentTerm(ctxRes.data.currentTerm.name);
+            }
+          }
           if (schRes?.data) setSchool(schRes.data);
+
 
           const feeMap = new Map<string, { balance: number; billed: number }>();
           if (defaultersRes?.data?.defaulters && Array.isArray(defaultersRes.data.defaulters)) {
@@ -610,7 +619,7 @@ export default function App() {
 
       {/* Main Content Viewport (offset by sidebar width on desktop) */}
       <div className="lg:pl-64 flex flex-col flex-1 min-w-0">
-        {/* Top Operational Header */}
+        {/* Top Operational Header: Pure Maroon (#800000) */}
         <Header
           onToggleMobile={() => setMobileSidebarOpen(true)}
           currentTerm={currentTerm}
@@ -620,6 +629,8 @@ export default function App() {
           backendConnected={backendConnected}
           onNavigateLanding={() => setAppView('landing')}
           onOpenOnboardSchool={() => setOnboardSchoolModalOpen(true)}
+          onOpenAcademicTermsModal={() => setAcademicTermsModalOpen(true)}
+          academicContext={currentContext}
           onSelectStudent={(student) => {
             handleViewReportCard(student);
           }}
@@ -630,6 +641,44 @@ export default function App() {
             if (action === 'sms') handleOpenSms('all');
           }}
         />
+
+        {/* Term Lifecycle Notice Banner */}
+        {currentContext?.termNotice && (
+          <div
+            className={`px-4 sm:px-6 lg:px-8 py-2 text-xs flex items-center justify-between shadow-xs ${
+              currentContext.termNotice.type === 'TERM_ENDED'
+                ? 'bg-[#550000] text-rose-100 border-b border-[#770000]'
+                : currentContext.termNotice.type === 'ENDING_SOON'
+                ? 'bg-[#660000] text-amber-100 border-b border-[#880000]'
+                : 'bg-[#770000] text-white/90 border-b border-[#990000]'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-[18px]">
+                {currentContext.termNotice.type === 'TERM_ENDED'
+                  ? 'event_busy'
+                  : currentContext.termNotice.type === 'ENDING_SOON'
+                  ? 'hourglass_top'
+                  : 'date_range'}
+              </span>
+              <span className="font-semibold">{currentContext.termNotice.message}</span>
+            </div>
+            {(user?.role === UserRole.SUPER_ADMIN ||
+              user?.role === UserRole.ADMIN ||
+              user?.role === UserRole.SCHOOL_ADMIN ||
+              user?.role === UserRole.HEAD_TEACHER) && (
+              <button
+                onClick={() => setAcademicTermsModalOpen(true)}
+                className="px-3 py-1 bg-white/10 hover:bg-white/20 text-white font-bold rounded-lg transition-colors cursor-pointer text-[11px] shrink-0 border border-white/20"
+              >
+                {currentContext.termNotice.type === 'TERM_ENDED'
+                  ? 'Transition Term'
+                  : 'Term Schedule'}
+              </button>
+            )}
+          </div>
+        )}
+
 
         {/* Dynamic Route Content */}
         <main className="flex-1 px-4 sm:px-6 lg:px-8 pt-4 max-w-7xl w-full mx-auto">
@@ -853,14 +902,25 @@ export default function App() {
           )}
         </main>
 
-        {/* Global Portal Footer & Vellox Tech Watermark */}
-        <footer className="mt-auto py-4 px-6 border-t border-outline-variant/20 text-center text-xs text-on-surface-variant flex flex-wrap items-center justify-between gap-2">
-          <div className="font-semibold text-on-surface">
-            {user?.schoolName || 'SmartShule CBC'} · School Management System
+        {/* Global Portal Footer: Pure Maroon (#800000) & Vellox Tech Watermark */}
+        <footer className="mt-auto py-3.5 px-6 bg-[#800000] border-t border-[#660000] text-center text-xs text-white flex flex-wrap items-center justify-between gap-3 shrink-0 shadow-lg">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="System Live"></span>
+            <span className="font-semibold text-white">
+              {user?.schoolName || 'SmartShule CBC Academy'} · School Management System
+            </span>
+            {currentContext?.currentTerm && (
+              <span className="hidden sm:inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-white/10 text-rose-100 border border-white/15">
+                <span className="material-symbols-outlined text-[13px]">calendar_today</span>
+                {currentContext.currentTerm.name} ({currentContext.currentTerm.status || 'Active'})
+              </span>
+            )}
           </div>
-          <div className="flex items-center gap-1.5 text-xs text-on-surface-variant">
+          <div className="flex items-center gap-2 text-xs text-rose-200">
             <span>Powered by</span>
-            <span className="font-bold text-primary tracking-wide">Vellox Tech</span>
+            <span className="font-bold text-white tracking-wide">Vellox Tech</span>
+            <span className="text-white/40">|</span>
+            <span className="text-[11px] text-emerald-300 font-mono">System Online</span>
           </div>
         </footer>
       </div>
@@ -967,6 +1027,29 @@ export default function App() {
         isOpen={createSchemeModalOpen}
         onClose={() => setCreateSchemeModalOpen(false)}
         onSchemeCreated={() => {}}
+      />
+
+      <AcademicTermsModal
+        isOpen={academicTermsModalOpen}
+        onClose={() => setAcademicTermsModalOpen(false)}
+        academicContext={currentContext}
+        onTermUpdated={() => {
+          // Re-sync academic context from backend
+          apiService.getCurrentContext().then((res) => {
+            if (res.success && res.data) {
+              setCurrentContext(res.data);
+              if (res.data.currentTerm?.name) {
+                setCurrentTerm(res.data.currentTerm.name);
+              }
+            }
+          });
+        }}
+        canManageTerms={
+          user?.role === UserRole.SUPER_ADMIN ||
+          user?.role === UserRole.ADMIN ||
+          user?.role === UserRole.SCHOOL_ADMIN ||
+          user?.role === UserRole.HEAD_TEACHER
+        }
       />
     </div>
   );

@@ -79,7 +79,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col">
       {/* Top Notification Banner */}
-      <div className="bg-[#7a1228] text-white text-xs py-2 px-4 text-center font-medium flex items-center justify-center gap-2">
+      <div className="bg-[#800000] text-white text-xs py-2 px-4 text-center font-medium flex items-center justify-center gap-2 border-b border-[#660000]">
         <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
         <span>Competency-Based Curriculum Framework & Automated Assessment CBA Bridge Active</span>
       </div>
@@ -587,25 +587,25 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </div>
       </section>
 
-      {/* Footer & Vellox Tech Watermark */}
-      <footer className="bg-[#2a040a] text-slate-300 text-xs py-10 border-t border-rose-950">
+      {/* Footer & Vellox Tech Watermark: Pure Maroon (#800000) */}
+      <footer className="bg-[#800000] text-rose-100 text-xs py-10 border-t border-[#660000]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center text-white">
+            <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center text-white border border-white/20">
               <span className="material-symbols-outlined text-[16px]">school</span>
             </div>
             <span className="font-bold text-white">SmartShule</span>
-            <span className="text-slate-500">·</span>
+            <span className="text-white/40">·</span>
             <span>CBC Educational Portal</span>
           </div>
-          <div className="text-slate-400 text-center">
+          <div className="text-rose-200/90 text-center">
             Standard Competency-Based Curriculum Framework & Continuous Assessment Model.
           </div>
-          <div className="flex items-center gap-2 text-slate-300">
+          <div className="flex items-center gap-2 text-rose-200">
             <span>© {new Date().getFullYear()} SmartShule.</span>
             <span>•</span>
             <span className="text-white font-semibold flex items-center gap-1">
-              Powered by <strong className="text-emerald-400 font-bold tracking-wide">Vellox Tech</strong>
+              Powered by <strong className="text-emerald-300 font-bold tracking-wide">Vellox Tech</strong>
             </span>
           </div>
         </div>
