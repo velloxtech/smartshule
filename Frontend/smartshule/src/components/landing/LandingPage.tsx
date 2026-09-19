@@ -81,14 +81,24 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       {/* Top Notification Banner */}
       <div className="bg-[#7a1228] text-white text-xs py-2 px-4 text-center font-medium flex items-center justify-center gap-2">
         <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-        <span>Competency-Based Curriculum Framework & Automated Assessment CBA Bridge Active · Kenyan Constitution (2010) Compliant</span>
+        <span>Competency-Based Curriculum Framework & Automated Assessment CBA Bridge Active</span>
       </div>
 
       {/* Navigation Bar */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#7a1228] text-white flex items-center justify-center font-bold shadow-md shadow-rose-950/20">
+            <img
+              src="/logo.png"
+              alt="School Logo"
+              className="w-10 h-10 rounded-xl object-cover shadow-md shadow-rose-950/20 border border-[#7a1228]/20 shrink-0"
+              onError={(e) => {
+                (e.target as HTMLElement).style.display = 'none';
+                const fallback = (e.target as HTMLElement).nextElementSibling;
+                if (fallback) (fallback as HTMLElement).style.display = 'flex';
+              }}
+            />
+            <div className="w-10 h-10 rounded-xl bg-[#7a1228] text-white hidden items-center justify-center font-bold shadow-md shadow-rose-950/20 shrink-0">
               <span className="material-symbols-outlined text-[24px]">school</span>
             </div>
             <div>
@@ -101,10 +111,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
           <nav className="hidden lg:flex items-center gap-7 text-sm font-semibold text-slate-600">
             <a href="#features" className="hover:text-[#7a1228] transition-colors">Key Features</a>
-            <a href="#constitution" className="hover:text-[#7a1228] transition-colors flex items-center gap-1">
-              <span className="material-symbols-outlined text-[16px] text-emerald-600">verified</span>
-              <span>Constitution 2010</span>
-            </a>
             <a href="#portals" className="hover:text-[#7a1228] transition-colors">Role Portals</a>
             <a href="#cbc-framework" className="hover:text-[#7a1228] transition-colors">CBC Rubrics</a>
             <a href="#mpesa" className="hover:text-[#7a1228] transition-colors">M-Pesa STK</a>
@@ -140,7 +146,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <div className="text-center max-w-3xl mx-auto">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-rose-100/80 border border-rose-200 text-[#7a1228] text-xs font-semibold mb-6">
               <span className="material-symbols-outlined text-[16px] text-[#006a63]">verified</span>
-              <span>Constitution of Kenya (2010) & KICD CBC Standards Aligned</span>
+              <span>KICD CBC Standards & National Education Guidelines Aligned</span>
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 leading-[1.15]">
@@ -167,17 +173,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   className="w-full sm:w-auto px-7 py-4 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 text-base cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[20px]">account_balance</span>
-                  <span>Onboard School (Constitution 2010)</span>
+                  <span>Onboard School</span>
                 </button>
               )}
-
-              <a
-                href="#constitution"
-                className="w-full sm:w-auto px-6 py-4 bg-white hover:bg-slate-50 text-slate-700 font-semibold rounded-2xl border border-slate-300 shadow-xs hover:border-slate-400 transition-all flex items-center justify-center gap-2 text-base"
-              >
-                <span>Constitutional Framework</span>
-                <span className="material-symbols-outlined text-[18px]">arrow_downward</span>
-              </a>
             </div>
           </div>
 
@@ -466,9 +464,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <span className="material-symbols-outlined text-[16px]">verified</span>
                 <span>Official MoE & TSC Compliance</span>
               </div>
-              <h3 className="text-2xl font-bold">Onboard Your Institution Under Constitutional Standards</h3>
+              <h3 className="text-2xl font-bold">Onboard Your Institution Today</h3>
               <p className="text-xs text-rose-100 max-w-xl">
-                Align your school's learner admissions, educator registries, and data management with the Constitution of Kenya (2010) in minutes.
+                Streamline your school's learner admissions, educator registries, and data management in minutes.
               </p>
             </div>
             {onOpenOnboardSchool && (

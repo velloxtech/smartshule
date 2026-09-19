@@ -226,10 +226,6 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Right Actions: MoE Sync, Alerts, Help, Profile */}
       <div className="flex items-center gap-sm md:gap-md">
-        <div className="hidden sm:flex items-center gap-xs px-sm py-xs rounded-lg bg-surface-container-low text-secondary border border-secondary/20">
-          <span className="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
-          <span className="font-label-md text-label-md font-medium">Constitution 2010 Aligned</span>
-        </div>
 
         {/* Notifications */}
         <div className="relative">
@@ -304,19 +300,6 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </div>
 
-        {/* Backend Online Status Dot */}
-        <div
-          className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-[11px] font-medium border ${
-            backendConnected
-              ? 'bg-secondary-container/30 border-secondary/40 text-secondary'
-              : 'bg-error-container/30 border-error/40 text-error'
-          }`}
-          title={backendConnected ? 'Backend Connected (Hexagonal REST API Active)' : 'Connecting to Backend...'}
-        >
-          <span className={`w-2 h-2 rounded-full ${backendConnected ? 'bg-secondary animate-pulse' : 'bg-error'}`}></span>
-          <span className="hidden md:inline">{backendConnected ? 'API Live' : 'Connecting'}</span>
-        </div>
-
         {/* User Profile Menu */}
         <div className="relative">
           <button
@@ -361,7 +344,7 @@ export const Header: React.FC<HeaderProps> = ({
                     className="w-full text-left px-3 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-50 rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
                   >
                     <span className="material-symbols-outlined text-[16px] text-emerald-600">account_balance</span>
-                    <span>Institution Setup (Constitution)</span>
+                    <span>Institution Setup</span>
                   </button>
                 )}
 
