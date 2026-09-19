@@ -15,8 +15,8 @@ export const RegisterStudentSchema = z.object({
   gradeLevel: z.nativeEnum(CbcGradeLevel),
   classroomId: z.string().optional(),
   streamId: z.string().optional(),
-  schoolId: z.string().min(1),
-  academicYearId: z.string().min(1),
+  schoolId: z.string().optional().default('school-001'),
+  academicYearId: z.string().optional().default('year-2026'),
   medicalConditions: z.string().optional(),
   specialNeeds: z.string().optional(),
   guardian: z

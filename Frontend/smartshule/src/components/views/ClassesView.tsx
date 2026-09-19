@@ -221,7 +221,10 @@ export const ClassesView: React.FC = () => {
                           ))}
                         </div>
                       ) : (
-                        <div className="text-outline italic text-[11px]">No streams registered yet</div>
+                        <div className="flex items-center justify-between p-2 rounded bg-surface-container-low text-[11px] text-on-surface-variant">
+                          <span className="font-semibold text-slate-700">Single Class Cohort</span>
+                          <span className="text-[10px] text-slate-400">Streams Optional</span>
+                        </div>
                       )}
                     </div>
                   </div>

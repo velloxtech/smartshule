@@ -269,7 +269,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
         name: fullName,
         gender: gender === 'MALE' ? 'Boy' : 'Girl',
         grade: currentClass?.name || gradeLevel.replace('_', ' '),
-        stream: streamId ? streams.find((s) => s.id === streamId)?.name || 'Stream' : 'General',
+        stream: streamId ? (streams.find((s) => s.id === streamId)?.name || '') : '',
         guardianName: guardianName || `${gFirst} ${gLast}`,
         guardianPhone: cleanPhone,
         feeBalance: Number(totalFee),
@@ -578,15 +578,18 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-                    Stream Allocation
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600">
+                      Stream (Optional)
+                    </label>
+                    <span className="text-[10px] text-slate-400">Optional</span>
+                  </div>
                   <select
                     value={streamId}
                     onChange={(e) => setStreamId(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white"
                   >
-                    <option value="">Integrated Stream (Standard Class)</option>
+                    <option value="">-- No Stream (Single Class) --</option>
                     {streams.map((s) => (
                       <option key={s.id} value={s.id}>
                         Stream {s.name} (Cap: {s.capacity})

@@ -189,27 +189,27 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-on-surface mb-1">
-                Stream Allocation
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold text-on-surface">
+                  Stream (Optional)
+                </label>
+                <span className="text-[10px] text-outline">Optional</span>
+              </div>
               <select
                 value={streamId}
                 onChange={(e) => {
                   setStreamId(e.target.value);
                   const selectedSt = availableStreams.find(s => s.id === e.target.value);
-                  if (selectedSt) setStreamName(selectedSt.name);
+                  setStreamName(selectedSt ? selectedSt.name : '');
                 }}
                 className="w-full bg-surface-container-low border border-outline-variant/30 rounded-lg px-3 py-2 text-xs focus:outline-primary"
               >
-                {availableStreams.length > 0 ? (
-                  availableStreams.map((st) => (
-                    <option key={st.id} value={st.id}>
-                      {st.name} Stream
-                    </option>
-                  ))
-                ) : (
-                  <option value="">No streams created</option>
-                )}
+                <option value="">-- No Stream (Single Class) --</option>
+                {availableStreams.map((st) => (
+                  <option key={st.id} value={st.id}>
+                    {st.name} Stream
+                  </option>
+                ))}
               </select>
             </div>
           </div>

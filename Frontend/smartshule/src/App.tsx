@@ -154,7 +154,7 @@ export default function App() {
                 name: `${st.firstName} ${st.lastName}`,
                 gender: st.gender === 'FEMALE' ? 'Girl' : 'Boy',
                 grade: st.gradeLevel ? st.gradeLevel.replace('_', ' ') : 'Grade --',
-                stream: st.stream?.name || st.streamName || (st.streamId ? `Stream ${st.streamId.slice(0, 6)}` : '--'),
+                stream: st.stream?.name || st.streamName || (st.streamId ? `Stream ${st.streamId.slice(0, 6)}` : ''),
                 guardianName: st.guardian ? `${st.guardian.firstName} ${st.guardian.lastName}` : '--',
                 guardianPhone: st.guardian?.phone || '--',
                 feeBalance: fee.balance,
@@ -436,7 +436,7 @@ export default function App() {
       type: 'nemis',
       icon: 'person_add',
       title: `Learner Admitted: ${created.name}`,
-      description: `Adm #${created.admNo} · ${created.grade} (${created.stream}) · UPI: ${created.upi}`,
+      description: `Adm #${created.admNo} · ${created.grade}${created.stream ? ` (${created.stream})` : ''} · UPI: ${created.upi}`,
       timestamp: 'Just now',
       badgeColor: 'bg-tertiary-container text-white',
     };

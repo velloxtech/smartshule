@@ -227,7 +227,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                   </td>
                   <td className="py-3 px-4">
                     <span className="font-semibold text-on-surface">{s.grade}</span>
-                    <span className="text-xs text-on-surface-variant block">{s.stream} Stream</span>
+                    <span className="text-xs text-on-surface-variant block">{s.stream ? `${s.stream} Stream` : 'Single Cohort'}</span>
                   </td>
                   <td className="py-3 px-4">
                     <div className="font-medium text-on-surface">{s.guardianName}</div>

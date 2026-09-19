@@ -446,11 +446,15 @@ export const LearningAreasView: React.FC = () => {
 
                 <div className="space-y-2">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
-                    Active Streams ({clsStreams.length})
+                    Streams ({clsStreams.length > 0 ? `${clsStreams.length} Active` : 'Optional / None'})
                   </span>
                   {clsStreams.length === 0 ? (
-                    <div className="p-2 rounded-lg bg-white text-xs text-slate-400 text-center">
-                      No streams configured. Click "Add Stream" to assign.
+                    <div className="p-2.5 rounded-xl bg-white border border-dashed border-slate-200 text-xs text-slate-500 flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                        <span className="font-semibold text-slate-700">Single Class Cohort</span>
+                      </div>
+                      <span className="text-[10px] text-slate-400">Streams Optional</span>
                     </div>
                   ) : (
                     clsStreams.map((st) => (

@@ -350,25 +350,6 @@ export class AcademicUseCases {
           IdGenerator.generate()
         );
         await this.academicRepository.saveClass(cls);
-
-        const streamEast = Stream.create(
-          {
-            classRoomId: cls.id,
-            name: 'East',
-            capacity: 40
-          },
-          IdGenerator.generate()
-        );
-        const streamWest = Stream.create(
-          {
-            classRoomId: cls.id,
-            name: 'West',
-            capacity: 40
-          },
-          IdGenerator.generate()
-        );
-        await this.academicRepository.saveStream(streamEast);
-        await this.academicRepository.saveStream(streamWest);
       }
       classes = await this.academicRepository.findAllClasses(schoolId);
     }
