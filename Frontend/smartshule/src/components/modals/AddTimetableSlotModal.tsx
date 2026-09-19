@@ -6,6 +6,9 @@ interface AddTimetableSlotModalProps {
   onClose: () => void;
   onSlotAdded: (data: any) => void;
   timetableId?: string;
+  classRoomId?: string;
+  streamId?: string;
+  termId?: string;
   learningAreas?: any[];
   teachers?: any[];
   initialSlot?: any;
@@ -18,6 +21,9 @@ export const AddTimetableSlotModal: React.FC<AddTimetableSlotModalProps> = ({
   onClose,
   onSlotAdded,
   timetableId = '',
+  classRoomId,
+  streamId,
+  termId,
   learningAreas: propLearningAreas = [],
   teachers: propTeachers = [],
   initialSlot,
@@ -103,7 +109,10 @@ export const AddTimetableSlotModal: React.FC<AddTimetableSlotModalProps> = ({
 
     try {
       const res = await apiService.addTimetableSlot({
-        timetableId,
+        timetableId: timetableId || undefined,
+        classRoomId: classRoomId || undefined,
+        streamId: streamId || undefined,
+        termId: termId || undefined,
         dayOfWeek,
         periodNumber: Number(periodNumber),
         startTime,

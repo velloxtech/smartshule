@@ -44,7 +44,7 @@ export interface TimetableProps {
   academicYearId: string;
   termId: string;
   classRoomId: string;
-  streamId: string;
+  streamId?: string;
   slots: TimetableSlot[];
   periods?: PeriodDefinition[];
   days?: DayDefinition[];
@@ -73,7 +73,7 @@ export class Timetable extends Entity<TimetableProps> {
   }
 
   public get streamId(): string {
-    return this._props.streamId;
+    return this._props.streamId || '';
   }
 
   public get slots(): TimetableSlot[] {

@@ -4,15 +4,18 @@ import { TimetableUseCases } from '../../../application/timetables/TimetableUseC
 import { DayOfWeek } from '../../../core/domain/timetable/Timetable';
 
 export const CreateTimetableSchema = z.object({
-  schoolId: z.string().min(1),
-  academicYearId: z.string().min(1),
-  termId: z.string().min(1),
+  schoolId: z.string().optional().default('school-001'),
+  academicYearId: z.string().optional().default('year-2026'),
+  termId: z.string().optional().default('term-2026-t1'),
   classRoomId: z.string().min(1),
-  streamId: z.string().min(1)
+  streamId: z.string().optional().default('')
 });
 
 export const AddSlotSchema = z.object({
-  timetableId: z.string().min(1),
+  timetableId: z.string().optional(),
+  classRoomId: z.string().optional(),
+  streamId: z.string().optional(),
+  termId: z.string().optional(),
   dayOfWeek: z.nativeEnum(DayOfWeek),
   periodNumber: z.number().int().min(1),
   startTime: z.string().min(1),
@@ -29,8 +32,8 @@ export const SaveGridSchema = z.object({
   timetableId: z.string().optional(),
   streamId: z.string().optional(),
   termId: z.string().optional(),
-  schoolId: z.string().optional(),
-  academicYearId: z.string().optional(),
+  schoolId: z.string().optional().default('school-001'),
+  academicYearId: z.string().optional().default('year-2026'),
   classRoomId: z.string().optional(),
   periods: z.array(z.any()).optional(),
   days: z.array(z.any()).optional(),
@@ -87,8 +90,9 @@ export class TimetableController {
 
   public getStreamTimetable = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { streamId, termId } = req.query;
-      const timetable = await this.timetableUseCases.getStreamTimetable(streamId as string, termId as string);
+      const { streamId, termId, classRoomId } = req.query;
+      const targetId = (streamId as string) || (classRoomId as string);
+      const timetable = await this.timetableUseCases.getStreamTimetable(targetId, termId as string, classRoomId as string);
       return res.status(200).json({ success: true, data: timetable });
     } catch (err) {
       next(err);

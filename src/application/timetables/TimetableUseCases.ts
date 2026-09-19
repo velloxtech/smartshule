@@ -5,16 +5,21 @@ import { Timetable, TimetableSlot, DayOfWeek } from '../../core/domain/timetable
 import { IdGenerator, NotFoundError, ConflictError, ValidationError } from '../../core/domain/shared/Errors';
 
 export interface CreateTimetableDTO {
-  schoolId: string;
-  academicYearId: string;
+  schoolId?: string;
+  academicYearId?: string;
   termId: string;
   classRoomId: string;
-  streamId: string;
+  streamId?: string;
   slots?: TimetableSlot[];
 }
 
 export interface AddSlotDTO {
-  timetableId: string;
+  timetableId?: string;
+  classRoomId?: string;
+  streamId?: string;
+  termId?: string;
+  schoolId?: string;
+  academicYearId?: string;
   dayOfWeek: DayOfWeek;
   periodNumber: number;
   startTime: string;
@@ -35,18 +40,22 @@ export class TimetableUseCases {
   ) {}
 
   public async createTimetable(dto: CreateTimetableDTO) {
-    const existing = await this.timetableRepository.findByStream(dto.streamId, dto.termId);
+    let existing = dto.streamId ? await this.timetableRepository.findByStream(dto.streamId, dto.termId) : null;
+    if (!existing && dto.classRoomId) {
+      const classTimetables = await this.timetableRepository.findByClass(dto.classRoomId, dto.termId);
+      if (classTimetables.length > 0) existing = classTimetables[0];
+    }
     if (existing) {
       return existing.toJSON();
     }
 
     const timetable = Timetable.create(
       {
-        schoolId: dto.schoolId,
-        academicYearId: dto.academicYearId,
+        schoolId: dto.schoolId || 'school-001',
+        academicYearId: dto.academicYearId || 'year-2026',
         termId: dto.termId,
         classRoomId: dto.classRoomId,
-        streamId: dto.streamId,
+        streamId: dto.streamId || '',
         slots: dto.slots || [],
         isActive: true
       },
@@ -58,14 +67,42 @@ export class TimetableUseCases {
   }
 
   public async addOrUpdateSlot(dto: AddSlotDTO) {
-    const timetable = await this.timetableRepository.findById(dto.timetableId);
-    if (!timetable) throw new NotFoundError('Timetable', dto.timetableId);
+    let timetable = dto.timetableId ? await this.timetableRepository.findById(dto.timetableId) : null;
+    if (!timetable && dto.streamId && dto.termId) {
+      timetable = await this.timetableRepository.findByStream(dto.streamId, dto.termId);
+    }
+    if (!timetable && dto.classRoomId && dto.termId) {
+      const classTimetables = await this.timetableRepository.findByClass(dto.classRoomId, dto.termId);
+      if (classTimetables && classTimetables.length > 0) {
+        timetable = classTimetables[0];
+      }
+    }
+    if (!timetable) {
+      // Auto-create timetable
+      const schoolId = dto.schoolId || 'school-001';
+      const academicYearId = dto.academicYearId || 'year-2026';
+      const termId = dto.termId || 'term-2026-t1';
+      const classRoomId = dto.classRoomId || dto.timetableId?.replace('timetable-', '') || 'class-001';
+      timetable = Timetable.create(
+        {
+          schoolId,
+          academicYearId,
+          termId,
+          classRoomId,
+          streamId: dto.streamId || '',
+          slots: [],
+          isActive: true
+        },
+        dto.timetableId && !dto.timetableId.startsWith('timetable-') ? dto.timetableId : IdGenerator.generate()
+      );
+      await this.timetableRepository.save(timetable);
+    }
 
     // Conflict Check 1: Check if teacher is already booked elsewhere at that day & period
     if (dto.teacherId && !dto.isBreak && !dto.isLunch) {
       const teacherSlots = await this.timetableRepository.findByTeacher(dto.teacherId, timetable.termId);
       const conflict = teacherSlots.find(
-        s => s.dayOfWeek === dto.dayOfWeek && s.periodNumber === dto.periodNumber && s.streamId !== timetable.streamId
+        s => s.dayOfWeek === dto.dayOfWeek && s.periodNumber === dto.periodNumber && s.streamId && timetable.streamId && s.streamId !== timetable.streamId
       );
       if (conflict) {
         throw new ConflictError(
@@ -124,8 +161,15 @@ export class TimetableUseCases {
 
     if (dto.timetableId) {
       timetable = await this.timetableRepository.findById(dto.timetableId);
-    } else if (dto.streamId && dto.termId) {
+    }
+    if (!timetable && dto.streamId && dto.termId) {
       timetable = await this.timetableRepository.findByStream(dto.streamId, dto.termId);
+    }
+    if (!timetable && dto.classRoomId && dto.termId) {
+      const classTimetables = await this.timetableRepository.findByClass(dto.classRoomId, dto.termId);
+      if (classTimetables && classTimetables.length > 0) {
+        timetable = classTimetables[0];
+      }
     }
 
     if (timetable) {
@@ -134,18 +178,23 @@ export class TimetableUseCases {
       return timetable.toJSON();
     }
 
-    if (!dto.schoolId || !dto.academicYearId || !dto.termId || !dto.classRoomId || !dto.streamId) {
-      throw new ValidationError('schoolId, academicYearId, termId, classRoomId, and streamId are required to create a new timetable.');
+    const schoolId = dto.schoolId || 'school-001';
+    const academicYearId = dto.academicYearId || 'year-2026';
+    const termId = dto.termId || 'term-2026-t1';
+    const classRoomId = dto.classRoomId;
+
+    if (!classRoomId) {
+      throw new ValidationError('classRoomId is required to create a new timetable.');
     }
 
     // Create new timetable if not exists
     const newTimetable = Timetable.create(
       {
-        schoolId: dto.schoolId,
-        academicYearId: dto.academicYearId,
-        termId: dto.termId,
-        classRoomId: dto.classRoomId,
-        streamId: dto.streamId,
+        schoolId,
+        academicYearId,
+        termId,
+        classRoomId,
+        streamId: dto.streamId || '',
         slots: dto.slots || [],
         periods: dto.periods,
         days: dto.days,
@@ -167,9 +216,21 @@ export class TimetableUseCases {
     return timetable.toJSON();
   }
 
-  public async getStreamTimetable(streamId: string, termId: string) {
-    const timetable = await this.timetableRepository.findByStream(streamId, termId);
-    if (!timetable) throw new NotFoundError('Timetable for this stream');
+  public async getStreamTimetable(streamIdOrClassId?: string, termId?: string, classRoomId?: string) {
+    let timetable = null;
+    if (streamIdOrClassId) {
+      timetable = await this.timetableRepository.findByStream(streamIdOrClassId, termId || '');
+    }
+    if (!timetable) {
+      const targetClass = classRoomId || streamIdOrClassId;
+      if (targetClass) {
+        const classTimetables = await this.timetableRepository.findByClass(targetClass, termId || '');
+        if (classTimetables && classTimetables.length > 0) {
+          timetable = classTimetables[0];
+        }
+      }
+    }
+    if (!timetable) throw new NotFoundError('Timetable for this class or stream');
     return timetable.toJSON();
   }
 

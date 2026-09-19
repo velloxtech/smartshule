@@ -680,11 +680,11 @@ export const apiService = {
 
   // 7. Timetable Endpoints
   createTimetable: async (data: {
-    schoolId: string;
-    academicYearId: string;
+    schoolId?: string;
+    academicYearId?: string;
     termId: string;
     classRoomId: string;
-    streamId: string;
+    streamId?: string;
   }): Promise<ApiResponse<TimetableData>> => {
     return apiFetch<ApiResponse<TimetableData>>('/timetables', {
       method: 'POST',
@@ -699,8 +699,12 @@ export const apiService = {
     });
   },
 
-  getStreamTimetable: async (streamId: string, termId: string): Promise<ApiResponse<TimetableData>> => {
-    return apiFetch<ApiResponse<TimetableData>>(`/timetables/stream?streamId=${streamId}&termId=${termId}`);
+  getStreamTimetable: async (streamId?: string, termId?: string, classRoomId?: string): Promise<ApiResponse<TimetableData>> => {
+    const params = new URLSearchParams();
+    if (streamId) params.append('streamId', streamId);
+    if (termId) params.append('termId', termId);
+    if (classRoomId) params.append('classRoomId', classRoomId);
+    return apiFetch<ApiResponse<TimetableData>>(`/timetables/stream?${params.toString()}`);
   },
 
   getTeacherTimetable: async (teacherId: string, termId: string): Promise<ApiResponse<any[]>> => {
@@ -710,10 +714,10 @@ export const apiService = {
   saveTimetableGrid: async (data: {
     timetableId?: string;
     schoolId?: string;
-    academicYearId: string;
+    academicYearId?: string;
     termId: string;
     classRoomId: string;
-    streamId: string;
+    streamId?: string;
     periods: PeriodDefinition[];
     days: DayDefinition[];
     slots: TimetableSlot[];
