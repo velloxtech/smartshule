@@ -143,15 +143,16 @@ export function createApiRouter(container: AppContainer): Router {
   academicRouter.post('/terms/transition', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN, UserRole.HEAD_TEACHER), academicController.transitionTerm);
   academicRouter.get('/terms/by-year/:yearId', authMiddleware, academicController.listTermsByYear);
   academicRouter.get('/context', authMiddleware, academicController.getCurrentContext);
-  academicRouter.post('/classes', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN), validateBody(CreateClassRoomSchema), academicController.createClass);
+  academicRouter.post('/classes', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN, UserRole.HEAD_TEACHER), validateBody(CreateClassRoomSchema), academicController.createClass);
   academicRouter.get('/classes', authMiddleware, academicController.listClasses);
-  academicRouter.post('/streams', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN), validateBody(CreateStreamSchema), academicController.createStream);
+  academicRouter.post('/streams', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN, UserRole.HEAD_TEACHER), validateBody(CreateStreamSchema), academicController.createStream);
   academicRouter.get('/streams/by-class/:classRoomId', authMiddleware, academicController.listStreamsByClass);
-  academicRouter.post('/learning-areas', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN), validateBody(CreateLearningAreaSchema), academicController.createLearningArea);
+  academicRouter.post('/learning-areas', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN, UserRole.HEAD_TEACHER), validateBody(CreateLearningAreaSchema), academicController.createLearningArea);
   academicRouter.get('/learning-areas', authMiddleware, academicController.listLearningAreas);
-  academicRouter.delete('/classes/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN), academicController.deleteClass);
-  academicRouter.delete('/streams/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN), academicController.deleteStream);
-  academicRouter.delete('/learning-areas/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN), academicController.deleteLearningArea);
+  academicRouter.delete('/classes/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN, UserRole.HEAD_TEACHER), academicController.deleteClass);
+  academicRouter.delete('/streams/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN, UserRole.HEAD_TEACHER), academicController.deleteStream);
+  academicRouter.delete('/learning-areas/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN, UserRole.HEAD_TEACHER), academicController.deleteLearningArea);
+
   router.use('/academics', academicRouter);
 
   // ==========================================

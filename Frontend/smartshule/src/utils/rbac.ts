@@ -83,7 +83,7 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
       },
       {
         id: 'learning-areas',
-        label: 'Learning Areas',
+        label: 'Subjects & Learning Areas',
         icon: 'menu_book',
         allowedRoles: [
           UserRole.SUPER_ADMIN,

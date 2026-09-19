@@ -10,7 +10,7 @@ export const RegisterTeacherSchema = z.object({
   firstName: z.string().min(1),
   lastName: z.string().min(1),
   phone: z.string().optional(),
-  schoolId: z.string().min(1),
+  schoolId: z.string().optional().default('school-001'),
   tscNumber: z.string().optional(),
   employeeNumber: z.string().min(1),
   specialization: z.array(z.string()).min(1),

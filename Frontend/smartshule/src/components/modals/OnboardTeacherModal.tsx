@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { BackendLearningArea, ClassRoom, StreamItem } from '../../types';
 import {
   KENYAN_COUNTIES,
   isValidKenyanPhone,
@@ -22,7 +23,7 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
   onTeacherCreated,
 }) => {
   const { user } = useAuth();
-  const [schoolId, setSchoolId] = useState<string>(user?.schoolId || '');
+  const [schoolId, setSchoolId] = useState<string>(user?.schoolId || 'school-001');
   const [currentSection, setCurrentSection] = useState<1 | 2 | 3>(1);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -37,7 +38,16 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
   const [employeeNumber, setEmployeeNumber] = useState('');
   const [qualification, setQualification] = useState('B.Ed (Science)');
   const [specializations, setSpecializations] = useState('');
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+  const [customSubject, setCustomSubject] = useState('');
   const [cbcCertified, setCbcCertified] = useState(true);
+
+  // Dynamic DB Data: Learning areas, Classes & Streams
+  const [dbLearningAreas, setDbLearningAreas] = useState<BackendLearningArea[]>([]);
+  const [classes, setClasses] = useState<ClassRoom[]>([]);
+  const [streams, setStreams] = useState<StreamItem[]>([]);
+  const [selectedClassId, setSelectedClassId] = useState('');
+  const [selectedStreamId, setSelectedStreamId] = useState('');
 
   // Chapter 6 & Child Protection Pledge
   const [dciClearanceNumber, setDciClearanceNumber] = useState('');
@@ -49,12 +59,60 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
 
   useEffect(() => {
     if (!isOpen) return;
-    if (!schoolId) {
+    if (!schoolId || schoolId === 'school-001') {
       apiService.getSchool().then((res) => {
         if (res?.data?.id) setSchoolId(res.data.id);
       }).catch(() => {});
     }
+
+    // Load database learning areas
+    apiService.getLearningAreas().then((res) => {
+      if (res?.data && Array.isArray(res.data)) {
+        setDbLearningAreas(res.data);
+      }
+    }).catch(() => {});
+
+    // Load database classes
+    apiService.getClasses().then((res) => {
+      if (res?.data && Array.isArray(res.data)) {
+        setClasses(res.data);
+      }
+    }).catch(() => {});
   }, [isOpen, schoolId]);
+
+  // Load streams when class is selected
+  useEffect(() => {
+    if (!selectedClassId) {
+      setStreams([]);
+      setSelectedStreamId('');
+      return;
+    }
+    apiService.getStreamsByClass(selectedClassId).then((res) => {
+      if (res?.data && Array.isArray(res.data)) {
+        setStreams(res.data);
+      } else {
+        setStreams([]);
+      }
+    }).catch(() => {
+      setStreams([]);
+    });
+  }, [selectedClassId]);
+
+  const toggleSubject = (name: string) => {
+    setSelectedSubjects((prev) =>
+      prev.includes(name) ? prev.filter((s) => s !== name) : [...prev, name]
+    );
+  };
+
+  const handleAddCustomSubject = (e: React.KeyboardEvent | React.MouseEvent) => {
+    if ('key' in e && e.key !== 'Enter') return;
+    e.preventDefault();
+    const trimmed = customSubject.trim();
+    if (trimmed && !selectedSubjects.includes(trimmed)) {
+      setSelectedSubjects((prev) => [...prev, trimmed]);
+      setCustomSubject('');
+    }
+  };
 
   // Update Sub-county when County changes
   const countyObj = KENYAN_COUNTIES.find((c) => c.name === selectedCounty) || KENYAN_COUNTIES[46];
@@ -85,12 +143,17 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
         setError('Teachers Service Commission (TSC) number is mandatory under Article 237 (e.g. TSC/123456).');
         return false;
       }
-      const specArray = specializations
-        .split(',')
-        .map((s) => s.trim())
-        .filter((s) => s.length > 0);
+      const specArray = Array.from(
+        new Set([
+          ...selectedSubjects,
+          ...specializations
+            .split(',')
+            .map((s) => s.trim())
+            .filter((s) => s.length > 0),
+        ])
+      );
       if (specArray.length === 0) {
-        setError('Please specify at least one CBC learning area or subject specialization.');
+        setError('Please select or specify at least one CBC learning area or subject specialization.');
         return false;
       }
     } else if (section === 3) {
@@ -113,10 +176,15 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
     setIsLoading(true);
     setError(null);
 
-    const specArray = specializations
-      .split(',')
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0);
+    const specArray = Array.from(
+      new Set([
+        ...selectedSubjects,
+        ...specializations
+          .split(',')
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0),
+      ])
+    );
 
     const formattedTsc = formatTscNumber(tscNumber);
     const cleanPhone = formatKenyanPhone(phone);
@@ -129,14 +197,24 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         phone: cleanPhone,
-        schoolId: user?.schoolId || schoolId,
+        schoolId: user?.schoolId || schoolId || 'school-001',
         employeeNumber: employeeNumber.trim() || `EMP-${Math.floor(1000 + Math.random() * 9000)}`,
         tscNumber: formattedTsc,
         specialization: specArray,
+        assignedClassStreamIds: selectedStreamId ? [selectedStreamId] : [],
         qualification,
       });
 
       if (res.success && res.data) {
+        // Link teacher to stream if selected
+        if (selectedStreamId && res.data.id) {
+          try {
+            await apiService.assignStreamToTeacher(res.data.id, selectedStreamId);
+          } catch {
+            // non-fatal stream link
+          }
+        }
+
         // Attach enriched constitutional metadata
         const enriched = {
           ...res.data,
@@ -146,6 +224,7 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
           cbcCertified,
           chapterSixPledged: true,
           dciClearance: dciClearanceNumber || 'VERIFIED',
+          assignedStreamId: selectedStreamId,
         };
         onTeacherCreated(enriched);
         onClose();
@@ -468,21 +547,156 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-                  Subject Specializations / Learning Areas (Comma Separated) <span className="text-rose-600">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={specializations}
-                  onChange={(e) => setSpecializations(e.target.value)}
-                  placeholder="e.g. Integrated Science, Pre-Technical Studies, Mathematics"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white"
-                />
-                <span className="text-[10px] text-slate-500">
-                  CBC subject clusters aligned with KICD curriculum designs
-                </span>
+              {/* Dynamic Database CBC Subjects Selector */}
+              <div className="space-y-2 p-3.5 bg-slate-50 border border-slate-200 rounded-2xl">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                    CBC Learning Areas & Specializations <span className="text-rose-600">*</span>
+                  </label>
+                  <span className="text-[10px] text-slate-500 font-medium">
+                    Loaded from Database ({dbLearningAreas.length > 0 ? `${dbLearningAreas.length} Available` : 'Standard CBC'})
+                  </span>
+                </div>
+
+                {/* Quick Select Buttons */}
+                <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-1 bg-white border border-slate-200 rounded-xl">
+                  {(dbLearningAreas.length > 0
+                    ? Array.from(new Set(dbLearningAreas.map((la) => la.name)))
+                    : [
+                        'Mathematics',
+                        'English Language',
+                        'Kiswahili Language',
+                        'Integrated Science',
+                        'Social Studies',
+                        'Christian Religious Education (CRE)',
+                        'Agriculture & Nutrition',
+                        'Creative Arts & Sports',
+                        'Pre-Technical Studies',
+                      ]
+                  ).map((subjName) => {
+                    const isSelected = selectedSubjects.includes(subjName);
+                    return (
+                      <button
+                        key={subjName}
+                        type="button"
+                        onClick={() => toggleSubject(subjName)}
+                        className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-all flex items-center gap-1 border cursor-pointer ${
+                          isSelected
+                            ? 'bg-[#7a1228] text-white border-[#7a1228] shadow-xs'
+                            : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 hover:border-slate-300'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-[13px]">
+                          {isSelected ? 'check' : 'add'}
+                        </span>
+                        <span>{subjName}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Selected Subject Chips */}
+                {selectedSubjects.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {selectedSubjects.map((s) => (
+                      <span
+                        key={s}
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold bg-rose-50 text-rose-800 border border-rose-200 px-2 py-0.5 rounded-md"
+                      >
+                        <span>{s}</span>
+                        <button
+                          type="button"
+                          onClick={() => toggleSubject(s)}
+                          className="hover:text-rose-900 cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-[12px]">close</span>
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Add Custom Specialization */}
+                <div className="flex gap-2 pt-1">
+                  <input
+                    type="text"
+                    value={customSubject}
+                    onChange={(e) => setCustomSubject(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleAddCustomSubject(e);
+                    }}
+                    placeholder="Other specialization (e.g. French, Music)..."
+                    className="flex-1 bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 focus:outline-[#7a1228]"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddCustomSubject}
+                    className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold text-xs rounded-lg transition-colors cursor-pointer"
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+
+              {/* Class Teacher Assignment (Classes & Streams from Database) */}
+              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                    Class Teacher Assignment (Optional)
+                  </label>
+                  <span className="text-[10px] text-emerald-700 font-semibold flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[12px]">database</span>
+                    <span>Live Database Streams</span>
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-medium text-slate-600 mb-1">
+                      Assigned Class
+                    </label>
+                    <select
+                      value={selectedClassId}
+                      onChange={(e) => setSelectedClassId(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs text-slate-900 focus:outline-[#7a1228]"
+                    >
+                      <option value="">-- None (Subject Teacher Only) --</option>
+                      {classes.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name} ({c.gradeLevel.replace(/_/g, ' ')})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-medium text-slate-600 mb-1">
+                      Assigned Stream
+                    </label>
+                    <select
+                      value={selectedStreamId}
+                      onChange={(e) => setSelectedStreamId(e.target.value)}
+                      disabled={!selectedClassId}
+                      className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs text-slate-900 focus:outline-[#7a1228] disabled:opacity-50"
+                    >
+                      <option value="">
+                        {!selectedClassId
+                          ? '-- Select class first --'
+                          : streams.length === 0
+                          ? '-- No streams in this class --'
+                          : '-- Select stream --'}
+                      </option>
+                      {streams.map((st) => (
+                        <option key={st.id} value={st.id}>
+                          Stream: {st.name} (Cap: {st.capacity || 40})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <p className="text-[10px] text-slate-500">
+                  Assigning a class and stream designates this educator as the primary class tutor responsible for attendance and pastoral records at Grace Seeds School.
+                </p>
               </div>
             </div>
           )}

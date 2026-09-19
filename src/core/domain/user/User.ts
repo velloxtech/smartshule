@@ -100,7 +100,8 @@ export class User extends Entity<UserProps> {
       role: this.role,
       phone: this.phone,
       status: this.status,
-      schoolId: this.schoolId,
+      schoolId: this.schoolId || 'school-001',
+      schoolName: 'Grace Seeds School',
       createdAt: this.createdAt,
       updatedAt: this.updatedAt
     };

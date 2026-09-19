@@ -240,7 +240,9 @@ export interface BackendLearningArea {
   educationLevel: string;
   isElective: boolean;
   schoolId: string;
+  teacherId?: string;
 }
+
 
 export interface BackendStrand {
   id: string;

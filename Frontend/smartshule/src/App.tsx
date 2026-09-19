@@ -907,7 +907,7 @@ export default function App() {
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="System Live"></span>
             <span className="font-semibold text-white">
-              {user?.schoolName || 'SmartShule CBC Academy'} · School Management System
+              {user?.schoolName || 'Grace Seeds School'} · School Management System
             </span>
             {currentContext?.currentTerm && (
               <span className="hidden sm:inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-white/10 text-rose-100 border border-white/15">

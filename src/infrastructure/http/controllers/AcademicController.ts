@@ -62,8 +62,10 @@ export const CreateLearningAreaSchema = z.object({
   gradeLevel: z.nativeEnum(CbcGradeLevel),
   educationLevel: z.nativeEnum(EducationLevel),
   isElective: z.boolean().default(false),
-  schoolId: z.string().min(1)
+  schoolId: z.string().optional().default('school-001'),
+  teacherId: z.string().optional()
 });
+
 
 export class AcademicController {
   constructor(private readonly academicUseCases: AcademicUseCases) {}

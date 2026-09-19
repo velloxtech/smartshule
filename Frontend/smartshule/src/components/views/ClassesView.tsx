@@ -7,6 +7,7 @@ export const ClassesView: React.FC = () => {
   const { user } = useAuth();
   const [classes, setClasses] = useState<ClassRoom[]>([]);
   const [streamsMap, setStreamsMap] = useState<Record<string, StreamItem[]>>({});
+  const [teachers, setTeachers] = useState<any[]>([]);
   const [schoolInfo, setSchoolInfo] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isAddClassOpen, setIsAddClassOpen] = useState(false);
@@ -21,15 +22,18 @@ export const ClassesView: React.FC = () => {
   // Form states for new stream
   const [newStreamName, setNewStreamName] = useState('');
   const [newCapacity, setNewCapacity] = useState('40');
+  const [newClassTeacherId, setNewClassTeacherId] = useState('');
 
   const loadClassesAndStreams = async () => {
     setLoading(true);
     try {
-      const [scRes, res] = await Promise.all([
+      const [scRes, res, tRes] = await Promise.all([
         apiService.getSchool().catch(() => null),
         apiService.getClasses().catch(() => null),
+        apiService.getTeachers().catch(() => null),
       ]);
       if (scRes?.data) setSchoolInfo(scRes.data);
+      if (tRes?.data && Array.isArray(tRes.data)) setTeachers(tRes.data);
       if (res?.success) {
         const classList = res.data || [];
         setClasses(classList);
@@ -92,11 +96,7 @@ export const ClassesView: React.FC = () => {
 
   const handleCreateClass = async (e: React.FormEvent) => {
     e.preventDefault();
-    const activeSchoolId = user?.schoolId || schoolInfo?.id || '';
-    if (!activeSchoolId) {
-      alert('School profile not identified. Please configure school first.');
-      return;
-    }
+    const activeSchoolId = user?.schoolId || schoolInfo?.id || 'school-001';
     try {
       const res = await apiService.createClass({
         name: newClassName,
@@ -121,9 +121,12 @@ export const ClassesView: React.FC = () => {
         classRoomId: selectedClassId,
         name: newStreamName,
         capacity: Number(newCapacity),
+        classTeacherId: newClassTeacherId || undefined,
       });
       if (res.success) {
         setIsAddStreamOpen(false);
+        setNewStreamName('');
+        setNewClassTeacherId('');
         loadClassesAndStreams();
       }
     } catch (err: any) {
@@ -365,6 +368,24 @@ export const ClassesView: React.FC = () => {
                   onChange={(e) => setNewCapacity(e.target.value)}
                   className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2"
                 />
+              </div>
+              <div>
+                <label className="block font-bold text-on-surface-variant mb-1 uppercase">Class Teacher (Loaded from DB)</label>
+                <select
+                  value={newClassTeacherId}
+                  onChange={(e) => setNewClassTeacherId(e.target.value)}
+                  className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2 text-on-surface"
+                >
+                  <option value="">-- None (Assign Later) --</option>
+                  {teachers.map((t: any) => {
+                    const name = t.user ? `${t.user.firstName} ${t.user.lastName}` : (t.name || t.id);
+                    return (
+                      <option key={t.id} value={t.id}>
+                        {name} ({t.employeeNumber || t.tscNumber || 'Educator'})
+                      </option>
+                    );
+                  })}
+                </select>
               </div>
               <div className="pt-2">
                 <button

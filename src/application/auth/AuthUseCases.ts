@@ -30,6 +30,7 @@ export interface AuthResponseDTO {
     role: UserRole;
     phone?: string;
     schoolId?: string;
+    schoolName?: string;
   };
 }
 
@@ -86,7 +87,8 @@ export class AuthUseCases {
         fullName: user.fullName,
         role: user.role,
         phone: user.phone,
-        schoolId: user.schoolId
+        schoolId: user.schoolId || 'school-001',
+        schoolName: 'Grace Seeds School'
       }
     };
   }
@@ -174,7 +176,8 @@ export class AuthUseCases {
         fullName: user.fullName,
         role: user.role,
         phone: user.phone,
-        schoolId: user.schoolId
+        schoolId: user.schoolId || 'school-001',
+        schoolName: 'Grace Seeds School'
       }
     };
   }

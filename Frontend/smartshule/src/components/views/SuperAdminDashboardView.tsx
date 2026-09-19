@@ -96,7 +96,7 @@ export const SuperAdminDashboardView: React.FC<SuperAdminDashboardViewProps> = (
           </div>
           <div className="mt-3">
             <div className="text-2xl font-black text-on-surface truncate">
-              {user?.schoolName || 'SmartShule CBC Academy'}
+              {user?.schoolName || 'Grace Seeds School'}
             </div>
             <div className="text-[11px] text-emerald-700 font-semibold mt-1 flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>

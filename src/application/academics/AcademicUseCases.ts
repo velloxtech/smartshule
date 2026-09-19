@@ -21,22 +21,39 @@ export class AcademicUseCases {
     if (!school) {
       school = School.create(
         {
-          name: 'SmartShule CBC Academy',
-          code: 'SCH-001',
+          name: 'Grace Seeds School',
+          code: 'GSS-001',
           centerCode: 'KNEC-08291',
-          motto: 'Excellence in CBC Learning',
-          email: 'admin@smartshule.ac.ke',
-          phone: '+254700112233',
-          address: 'Waiyaki Way, Westlands, Nairobi',
+          motto: 'The Future Begins Here',
+          email: 'schoolgraceseeds@gmail.com',
+          phone: '+254745436312',
+          address: 'KEMRI Street, Kisian, Kisumu, Kenya',
           logoUrl: '/logo.png',
           currency: 'KES'
         },
         id || 'school-001'
       );
       await this.academicRepository.saveSchool(school);
+    } else if (school.name === 'SmartShule CBC Academy') {
+      school = School.create(
+        {
+          name: 'Grace Seeds School',
+          code: 'GSS-001',
+          centerCode: school.centerCode || 'KNEC-08291',
+          motto: 'Nurturing Potential, Inspiring Excellence',
+          email: 'admin@graceseeds.ac.ke',
+          phone: school.phone || '+254700112233',
+          address: 'Grace Seeds Campus, Nairobi, Kenya',
+          logoUrl: '/logo.png',
+          currency: 'KES'
+        },
+        school.id
+      );
+      await this.academicRepository.updateSchool(school);
     }
     return school.toJSON();
   }
+
 
   // Academic Year
   public async createAcademicYear(dto: { name: string; startDate: string; endDate: string; isCurrent: boolean; schoolId: string }) {
@@ -306,7 +323,55 @@ export class AcademicUseCases {
   }
 
   public async listClassRooms(schoolId?: string) {
-    const classes = await this.academicRepository.findAllClasses(schoolId);
+    let classes = await this.academicRepository.findAllClasses(schoolId);
+    if (classes.length === 0) {
+      const defaultGrades: Array<{ name: string; gradeLevel: CbcGradeLevel; educationLevel: EducationLevel }> = [
+        { name: 'PP1', gradeLevel: CbcGradeLevel.PP1, educationLevel: EducationLevel.PRE_PRIMARY },
+        { name: 'PP2', gradeLevel: CbcGradeLevel.PP2, educationLevel: EducationLevel.PRE_PRIMARY },
+        { name: 'Grade 1', gradeLevel: CbcGradeLevel.GRADE_1, educationLevel: EducationLevel.LOWER_PRIMARY },
+        { name: 'Grade 2', gradeLevel: CbcGradeLevel.GRADE_2, educationLevel: EducationLevel.LOWER_PRIMARY },
+        { name: 'Grade 3', gradeLevel: CbcGradeLevel.GRADE_3, educationLevel: EducationLevel.LOWER_PRIMARY },
+        { name: 'Grade 4', gradeLevel: CbcGradeLevel.GRADE_4, educationLevel: EducationLevel.UPPER_PRIMARY },
+        { name: 'Grade 5', gradeLevel: CbcGradeLevel.GRADE_5, educationLevel: EducationLevel.UPPER_PRIMARY },
+        { name: 'Grade 6', gradeLevel: CbcGradeLevel.GRADE_6, educationLevel: EducationLevel.UPPER_PRIMARY },
+        { name: 'Grade 7', gradeLevel: CbcGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL },
+        { name: 'Grade 8', gradeLevel: CbcGradeLevel.GRADE_8, educationLevel: EducationLevel.JUNIOR_SCHOOL },
+        { name: 'Grade 9', gradeLevel: CbcGradeLevel.GRADE_9, educationLevel: EducationLevel.JUNIOR_SCHOOL }
+      ];
+
+      for (const dg of defaultGrades) {
+        const cls = ClassRoom.create(
+          {
+            name: dg.name,
+            gradeLevel: dg.gradeLevel,
+            educationLevel: dg.educationLevel,
+            schoolId: schoolId || 'school-001'
+          },
+          IdGenerator.generate()
+        );
+        await this.academicRepository.saveClass(cls);
+
+        const streamEast = Stream.create(
+          {
+            classRoomId: cls.id,
+            name: 'East',
+            capacity: 40
+          },
+          IdGenerator.generate()
+        );
+        const streamWest = Stream.create(
+          {
+            classRoomId: cls.id,
+            name: 'West',
+            capacity: 40
+          },
+          IdGenerator.generate()
+        );
+        await this.academicRepository.saveStream(streamEast);
+        await this.academicRepository.saveStream(streamWest);
+      }
+      classes = await this.academicRepository.findAllClasses(schoolId);
+    }
     return classes.map(c => c.toJSON());
   }
 
@@ -322,16 +387,46 @@ export class AcademicUseCases {
   }
 
   // Learning Areas (Subjects)
-  public async createLearningArea(dto: { name: string; code: string; gradeLevel: CbcGradeLevel; educationLevel: EducationLevel; isElective: boolean; schoolId: string }) {
+  public async createLearningArea(dto: { name: string; code: string; gradeLevel: CbcGradeLevel; educationLevel: EducationLevel; isElective: boolean; schoolId: string; teacherId?: string }) {
     const learningArea = LearningArea.create(dto, IdGenerator.generate());
     await this.academicRepository.saveLearningArea(learningArea);
     return learningArea.toJSON();
   }
 
   public async listLearningAreas(filters?: { gradeLevel?: CbcGradeLevel; schoolId?: string }) {
-    const areas = await this.academicRepository.findAllLearningAreas(filters);
+    let areas = await this.academicRepository.findAllLearningAreas(filters);
+    if (areas.length === 0) {
+      const defaultSubjects = [
+        { name: 'Mathematics', code: 'MATH', gradeLevel: CbcGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
+        { name: 'English Language', code: 'ENG', gradeLevel: CbcGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
+        { name: 'Kiswahili Language', code: 'KISW', gradeLevel: CbcGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
+        { name: 'Integrated Science', code: 'INTSCI', gradeLevel: CbcGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
+        { name: 'Social Studies', code: 'SST', gradeLevel: CbcGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
+        { name: 'Christian Religious Education', code: 'CRE', gradeLevel: CbcGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
+        { name: 'Agriculture & Nutrition', code: 'AGRI', gradeLevel: CbcGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
+        { name: 'Creative Arts & Sports', code: 'ARTS', gradeLevel: CbcGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
+        { name: 'Pre-Technical Studies', code: 'PRETECH', gradeLevel: CbcGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false }
+      ];
+
+      for (const subj of defaultSubjects) {
+        const la = LearningArea.create(
+          {
+            name: subj.name,
+            code: subj.code,
+            gradeLevel: subj.gradeLevel,
+            educationLevel: subj.educationLevel,
+            isElective: subj.isElective,
+            schoolId: filters?.schoolId || 'school-001'
+          },
+          IdGenerator.generate()
+        );
+        await this.academicRepository.saveLearningArea(la);
+      }
+      areas = await this.academicRepository.findAllLearningAreas(filters);
+    }
     return areas.map(a => a.toJSON());
   }
+
 
   public async deleteClass(id: string): Promise<void> {
     await this.academicRepository.deleteClass(id);

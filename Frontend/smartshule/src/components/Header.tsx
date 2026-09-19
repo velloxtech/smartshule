@@ -396,7 +396,7 @@ export const Header: React.FC<HeaderProps> = ({
                   </div>
                 </div>
                 <div className="mt-3 pt-2 border-t border-slate-200 text-[10px] text-slate-400">
-                  {user?.schoolName || 'SmartShule'} · CBC Portal v2.0
+                  {user?.schoolName || 'Grace Seeds School'} · CBC Portal v2.0
                 </div>
               </div>
             )}

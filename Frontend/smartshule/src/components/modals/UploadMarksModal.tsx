@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
-import { Student, BackendLearningArea, BackendStrand, BackendSubStrand } from '../../types';
+import { Student, BackendLearningArea, BackendStrand, BackendSubStrand, ClassRoom, StreamItem } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 
 interface UploadMarksModalProps {
@@ -29,6 +29,12 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
   const [termId, setTermId] = useState('');
   const [academicYearId, setAcademicYearId] = useState('');
 
+  // Class and Stream filters from DB
+  const [classes, setClasses] = useState<ClassRoom[]>([]);
+  const [streams, setStreams] = useState<StreamItem[]>([]);
+  const [filterClassId, setFilterClassId] = useState<string>('');
+  const [filterStreamId, setFilterStreamId] = useState<string>('');
+
   // Marks inputs
   const [rawScore, setRawScore] = useState<string>('');
   const [maxScore, setMaxScore] = useState<string>('100');
@@ -39,18 +45,23 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Load students, learning areas, and academic context from DB
+  // Load students, learning areas, classes, and academic context from DB
   useEffect(() => {
     if (!isOpen) return;
 
     async function loadData() {
       try {
-        const [stRes, laRes, ctxRes, yrRes] = await Promise.all([
+        const [stRes, laRes, ctxRes, yrRes, cRes] = await Promise.all([
           apiService.getStudents().catch(() => null),
           apiService.getLearningAreas().catch(() => null),
           apiService.getCurrentContext().catch(() => null),
           apiService.getYears().catch(() => null),
+          apiService.getClasses().catch(() => null),
         ]);
+
+        if (cRes?.data && Array.isArray(cRes.data)) {
+          setClasses(cRes.data);
+        }
 
         if (ctxRes?.data) {
           if (ctxRes.data.currentYear?.id) setAcademicYearId(ctxRes.data.currentYear.id);
@@ -152,6 +163,56 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
         setSelectedSubStrandId('');
       });
   }, [selectedStrandId]);
+
+  // Load streams when filter class changes
+  useEffect(() => {
+    if (!filterClassId) {
+      setStreams([]);
+      setFilterStreamId('');
+      return;
+    }
+    apiService
+      .getStreamsByClass(filterClassId)
+      .then((res) => {
+        if (res?.data && Array.isArray(res.data)) {
+          setStreams(res.data);
+        } else {
+          setStreams([]);
+        }
+      })
+      .catch(() => setStreams([]));
+  }, [filterClassId]);
+
+  // Filter students by selected class and stream
+  const filteredStudents = students.filter((s) => {
+    if (filterClassId) {
+      const cls = classes.find((c) => c.id === filterClassId);
+      if (cls) {
+        const gradeText = cls.gradeLevel.replace(/_/g, ' ').toLowerCase();
+        const clsName = cls.name.toLowerCase();
+        const sGrade = s.grade.toLowerCase();
+        if (!sGrade.includes(gradeText) && !sGrade.includes(clsName)) {
+          return false;
+        }
+      }
+    }
+    if (filterStreamId) {
+      const stm = streams.find((st) => st.id === filterStreamId);
+      if (stm && !s.stream.toLowerCase().includes(stm.name.toLowerCase())) {
+        return false;
+      }
+    }
+    return true;
+  });
+
+  useEffect(() => {
+    if (filteredStudents.length > 0) {
+      const exists = filteredStudents.some((s) => s.id === selectedStudentId);
+      if (!exists) {
+        setSelectedStudentId(filteredStudents[0].id);
+      }
+    }
+  }, [filterClassId, filterStreamId, filteredStudents, selectedStudentId]);
 
   // CBC Standard Dynamic Evaluation Engine
   const numScore = parseFloat(rawScore) || 0;
@@ -321,6 +382,55 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
             </div>
           )}
 
+          {/* Class & Stream Filters Loaded from Database */}
+          <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
+                Filter Learners by Class & Stream (Live DB)
+              </span>
+              <span className="text-[10px] text-slate-500">
+                {filteredStudents.length} of {students.length} Learners
+              </span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div>
+                <select
+                  value={filterClassId}
+                  onChange={(e) => setFilterClassId(e.target.value)}
+                  className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs text-slate-900 focus:outline-primary"
+                >
+                  <option value="">-- All Classes --</option>
+                  {classes.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} ({c.gradeLevel.replace(/_/g, ' ')})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <select
+                  value={filterStreamId}
+                  onChange={(e) => setFilterStreamId(e.target.value)}
+                  disabled={!filterClassId}
+                  className="w-full bg-white border border-slate-200 rounded-lg p-2 text-xs text-slate-900 focus:outline-primary disabled:opacity-50"
+                >
+                  <option value="">
+                    {!filterClassId
+                      ? '-- Select Class First --'
+                      : streams.length === 0
+                      ? '-- No Streams Found --'
+                      : '-- All Streams --'}
+                  </option>
+                  {streams.map((st) => (
+                    <option key={st.id} value={st.id}>
+                      Stream: {st.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
           {/* Select Learner */}
           <div>
             <label className="block font-bold text-on-surface-variant uppercase mb-1">
@@ -332,10 +442,12 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
               required
               className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 font-semibold text-on-surface"
             >
-              {students.length === 0 ? (
-                <option value="">No learners found in database</option>
+              {filteredStudents.length === 0 ? (
+                <option value="">
+                  {students.length === 0 ? 'No learners found in database' : 'No learners match selected class/stream filter'}
+                </option>
               ) : (
-                students.map((s) => (
+                filteredStudents.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name} ({s.admNo}) · {s.grade} {s.stream}
                   </option>

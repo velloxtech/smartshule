@@ -56,7 +56,7 @@ export class TeacherUseCases {
         role: UserRole.TEACHER,
         phone: dto.phone,
         status: UserStatus.ACTIVE,
-        schoolId: dto.schoolId
+        schoolId: dto.schoolId || 'school-001'
       },
       IdGenerator.generate()
     );

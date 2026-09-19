@@ -103,6 +103,7 @@ export interface LearningAreaProps {
   educationLevel: EducationLevel;
   isElective: boolean;
   schoolId: string;
+  teacherId?: string;
 }
 
 export class LearningArea extends Entity<LearningAreaProps> {
@@ -134,6 +135,15 @@ export class LearningArea extends Entity<LearningAreaProps> {
     return this._props.schoolId;
   }
 
+  public get teacherId(): string | undefined {
+    return this._props.teacherId;
+  }
+
+  public setTeacher(teacherId: string | undefined): void {
+    this._props.teacherId = teacherId;
+    this.touch();
+  }
+
   public toJSON() {
     return {
       id: this.id,
@@ -143,8 +153,10 @@ export class LearningArea extends Entity<LearningAreaProps> {
       educationLevel: this.educationLevel,
       isElective: this.isElective,
       schoolId: this.schoolId,
+      teacherId: this.teacherId,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt
     };
   }
 }
+
