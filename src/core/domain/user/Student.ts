@@ -191,6 +191,11 @@ export class Student extends Entity<StudentProps> {
     this.touch();
   }
 
+  public setProfilePhoto(url?: string): void {
+    this._props.profilePhotoUrl = url;
+    this.touch();
+  }
+
   public toJSON() {
     return {
       id: this.id,

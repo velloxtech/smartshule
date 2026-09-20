@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { TabType, Student, Teacher, SystemActivity, AssessmentRecord, FeeTransaction, UserRole } from './types';
 import { apiService } from './services/api';
 import { useAuth } from './context/AuthContext';
@@ -39,6 +39,7 @@ import { FinancialReportsView } from './components/views/FinancialReportsView';
 import { EDiaryView } from './components/views/EDiaryView';
 import { VisualCBCView } from './components/views/VisualCBCView';
 import { WhatsAppBotView } from './components/views/WhatsAppBotView';
+import { UserManagementView } from './components/views/UserManagementView';
 
 // Modals
 import { MpesaStkModal } from './components/modals/MpesaStkModal';
@@ -49,11 +50,11 @@ import { SendSmsModal } from './components/modals/SendSmsModal';
 import { KnecSyncModal } from './components/modals/KnecSyncModal';
 import { ExportReportModal } from './components/modals/ExportReportModal';
 import { OnboardTeacherModal } from './components/modals/OnboardTeacherModal';
-import { OnboardSchoolModal } from './components/modals/OnboardSchoolModal';
 import { UploadMarksModal } from './components/modals/UploadMarksModal';
 import { CreateLessonPlanModal } from './components/modals/CreateLessonPlanModal';
 import { CreateSchemeModal } from './components/modals/CreateSchemeModal';
 import { AcademicTermsModal } from './components/modals/AcademicTermsModal';
+import { ChangePasswordModal } from './components/modals/ChangePasswordModal';
 
 export default function App() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -62,6 +63,7 @@ export default function App() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [currentTerm, setCurrentTerm] = useState('Term 3 - 2026');
   const [academicTermsModalOpen, setAcademicTermsModalOpen] = useState(false);
+  const [changePasswordModalOpen, setChangePasswordModalOpen] = useState(false);
 
 
   // Core Dynamic Data (Live from backend or user actions - initialized empty)
@@ -74,7 +76,6 @@ export default function App() {
 
   // Modal Visibility States
   const [onboardTeacherModalOpen, setOnboardTeacherModalOpen] = useState(false);
-  const [onboardSchoolModalOpen, setOnboardSchoolModalOpen] = useState(false);
   const [mpesaModalOpen, setMpesaModalOpen] = useState(false);
   const [selectedStudentForMpesa, setSelectedStudentForMpesa] = useState<Student | undefined>(undefined);
   const [paystackModalOpen, setPaystackModalOpen] = useState(false);
@@ -111,6 +112,64 @@ export default function App() {
     }
   }, [user, currentTab]);
 
+  // Refresh students and attached fee balances
+  const refreshStudentsAndFees = useCallback(async () => {
+    try {
+      const [studentData, defaultersRes, invoicesRes] = await Promise.all([
+        apiService.getStudents().catch(() => null),
+        apiService.getDefaulters().catch(() => null),
+        apiService.getInvoices().catch(() => null),
+      ]);
+
+      const feeMap = new Map<string, { balance: number; billed: number }>();
+
+      if (invoicesRes?.data && Array.isArray(invoicesRes.data)) {
+        invoicesRes.data.forEach((inv: any) => {
+          feeMap.set(inv.studentId, { balance: inv.balance ?? 0, billed: inv.amountPayable ?? 0 });
+        });
+      }
+
+      if (defaultersRes?.data?.defaulters && Array.isArray(defaultersRes.data.defaulters)) {
+        defaultersRes.data.defaulters.forEach((d: any) => {
+          if (!feeMap.has(d.studentId) || (feeMap.get(d.studentId)?.balance === 0 && d.balance > 0)) {
+            feeMap.set(d.studentId, { balance: d.balance || 0, billed: d.amountPayable || 0 });
+          }
+        });
+      }
+
+      if (studentData?.data && Array.isArray(studentData.data)) {
+        const mappedStudents: Student[] = studentData.data.map((st: any) => {
+          const fee = feeMap.get(st.id) || { balance: 0, billed: 0 };
+          return {
+            id: st.id,
+            admNo: st.admissionNumber,
+            upi: st.upiNumber || '--',
+            nemis: st.upiNumber || '--',
+            name: `${st.firstName} ${st.lastName}`,
+            gender: st.gender === 'FEMALE' ? 'Girl' : 'Boy',
+            grade: st.gradeLevel ? st.gradeLevel.replace('_', ' ') : 'Grade --',
+            stream: st.stream?.name || st.streamName || (st.streamId ? `Stream ${st.streamId.slice(0, 6)}` : ''),
+            guardianName:
+              st.guardian && (st.guardian.firstName || st.guardian.lastName)
+                ? `${st.guardian.firstName || ''} ${st.guardian.lastName || ''}`.trim()
+                : (st.guardianName || st.emergencyContactName || '--'),
+            guardianPhone: st.guardian?.phone || st.guardianPhone || st.emergencyContactPhone || '--',
+            feeBalance: fee.balance,
+            totalFee: fee.billed,
+            attendanceRate: st.attendanceRate ?? 0,
+            cbcRating: st.cbcRating || '--',
+            status: st.status === 'ACTIVE' ? 'Active' : (st.status || 'Active'),
+          };
+        });
+        setStudents(mappedStudents);
+      } else {
+        setStudents([]);
+      }
+    } catch {
+      setStudents([]);
+    }
+  }, []);
+
   // Sync with Backend API on Mount & Auth State Changes
   useEffect(() => {
     async function syncBackend() {
@@ -121,9 +180,7 @@ export default function App() {
         const isParentOnly = user?.role === UserRole.PARENT || user?.role === UserRole.GUARDIAN;
 
         try {
-          const [studentData, defaultersRes, ctxRes, schRes] = await Promise.all([
-            isFinanceOnly || isParentOnly ? Promise.resolve(null) : apiService.getStudents().catch(() => null),
-            apiService.getDefaulters().catch(() => null),
+          const [ctxRes, schRes] = await Promise.all([
             apiService.getCurrentContext().catch(() => null),
             apiService.getSchool().catch(() => null),
           ]);
@@ -135,38 +192,37 @@ export default function App() {
           }
           if (schRes?.data) setSchool(schRes.data);
 
-
-          const feeMap = new Map<string, { balance: number; billed: number }>();
-          if (defaultersRes?.data?.defaulters && Array.isArray(defaultersRes.data.defaulters)) {
-            defaultersRes.data.defaulters.forEach((d: any) => {
-              feeMap.set(d.studentId, { balance: d.balance || 0, billed: d.amountPayable || 0 });
-            });
-          }
-
-          if (studentData?.data && Array.isArray(studentData.data)) {
-            const mappedStudents: Student[] = studentData.data.map((st: any) => {
-              const fee = feeMap.get(st.id) || { balance: 0, billed: 0 };
-              return {
-                id: st.id,
-                admNo: st.admissionNumber,
-                upi: st.upiNumber || '--',
-                nemis: st.upiNumber || '--',
-                name: `${st.firstName} ${st.lastName}`,
-                gender: st.gender === 'FEMALE' ? 'Girl' : 'Boy',
-                grade: st.gradeLevel ? st.gradeLevel.replace('_', ' ') : 'Grade --',
-                stream: st.stream?.name || st.streamName || (st.streamId ? `Stream ${st.streamId.slice(0, 6)}` : ''),
-                guardianName: st.guardian ? `${st.guardian.firstName} ${st.guardian.lastName}` : '--',
-                guardianPhone: st.guardian?.phone || '--',
-                feeBalance: fee.balance,
-                totalFee: fee.billed,
-                attendanceRate: st.attendanceRate ?? 0,
-                cbcRating: st.cbcRating || '--',
-                status: st.status === 'ACTIVE' ? 'Active' : (st.status || 'Active'),
-              };
-            });
-            setStudents(mappedStudents);
-          } else {
-            setStudents([]);
+          if (isParentOnly) {
+            try {
+              const portalRes = await apiService.getGuardianPortalData().catch(() => null);
+              if (portalRes?.data?.children && Array.isArray(portalRes.data.children)) {
+                const mappedChildren: Student[] = portalRes.data.children.map((c: any) => ({
+                  id: c.id,
+                  name: `${c.firstName} ${c.lastName}`,
+                  admNo: c.admissionNumber,
+                  upi: c.upiNumber || '',
+                  grade: c.gradeLevel ? c.gradeLevel.replace('_', ' ') : 'Grade 7',
+                  stream: c.streamId || 'Stream A',
+                  gender: c.gender || 'Other',
+                  feeBalance: c.fee?.balance ?? 0,
+                  attendanceRate: c.attendance?.attendanceRate ?? 100,
+                  guardianName: portalRes.data.guardian?.user ? `${portalRes.data.guardian.user.firstName} ${portalRes.data.guardian.user.lastName}` : (user?.name || 'Parent'),
+                  guardianPhone: user?.phone || '+254777000777',
+                  medicalConditions: c.medicalConditions || 'None',
+                  emergencyContact: portalRes.data.guardian?.emergencyContact || user?.phone || '+254777000777',
+                  streamId: c.streamId,
+                  classroomId: c.classroomId,
+                  academicYearId: c.academicYearId,
+                }));
+                setStudents(mappedChildren);
+              } else {
+                setStudents([]);
+              }
+            } catch {
+              setStudents([]);
+            }
+          } else if (!isFinanceOnly) {
+            await refreshStudentsAndFees();
           }
         } catch {
           setStudents([]);
@@ -398,49 +454,46 @@ export default function App() {
   };
 
   // Learner Admission Handler
-  const handleAdmitStudent = (newStudent: Omit<Student, 'id'>, rawBackendData?: any) => {
-    const created: Student = {
+  const handleAdmitStudent = async (newStudent: any, rawBackendData?: any) => {
+    const studentWithId: Student = {
       ...newStudent,
-      id: `std-${Date.now()}`,
+      id: newStudent.id || `std-${Date.now()}`,
     };
-    setStudents((prev) => [created, ...prev]);
 
-    // Save to Backend API
-    if (rawBackendData) {
-      apiService.registerStudent(rawBackendData).catch(() => {});
-    } else {
-      const parts = (newStudent.name || '').trim().split(' ');
-      const first = parts[0] || 'New';
-      const last = parts.slice(1).join(' ') || 'Learner';
-      const activeSchoolId = user?.schoolId || school?.id || '';
-      const activeYearId = currentContext?.currentYear?.id || '';
+    setStudents((prev) => [
+      studentWithId,
+      ...prev.filter((s) => s.id !== studentWithId.id && s.admNo !== studentWithId.admNo)
+    ]);
 
-      apiService
-        .registerStudent({
-          admissionNumber: newStudent.admNo || `ADM-${Date.now().toString().slice(-4)}`,
-          upiNumber: newStudent.upi,
-          firstName: first,
-          lastName: last,
-          dateOfBirth: '2015-01-01',
-          gender: 'MALE',
-          gradeLevel: 'GRADE_7',
-          streamId: (newStudent as any).streamId || undefined,
-          schoolId: activeSchoolId,
-          academicYearId: activeYearId,
-        })
-        .catch(() => {});
+    // If for any reason it wasn't registered yet, register it
+    if (!newStudent.id || newStudent.id.startsWith('std-')) {
+      try {
+        if (rawBackendData) {
+          const res = await apiService.registerStudent(rawBackendData);
+          if (res?.success && res.data) {
+            setStudents((prev) =>
+              prev.map((s) => (s.admNo === studentWithId.admNo ? { ...s, id: res.data.id } : s))
+            );
+          }
+        }
+      } catch (err) {
+        console.error('Failed to register student on backend:', err);
+      }
     }
 
     const newAct: SystemActivity = {
       id: `act-${Date.now()}`,
       type: 'nemis',
       icon: 'person_add',
-      title: `Learner Admitted: ${created.name}`,
-      description: `Adm #${created.admNo} · ${created.grade}${created.stream ? ` (${created.stream})` : ''} · UPI: ${created.upi}`,
+      title: `Learner Admitted: ${studentWithId.name}`,
+      description: `Adm #${studentWithId.admNo} · ${studentWithId.grade}${studentWithId.stream ? ` (${studentWithId.stream})` : ''} · ${studentWithId.upi && studentWithId.upi !== '--' ? `UPI: ${studentWithId.upi}` : 'NEMIS: Pending'}`,
       timestamp: 'Just now',
       badgeColor: 'bg-tertiary-container text-white',
     };
     setActivities((prev) => [newAct, ...prev]);
+
+    // Refresh state to ensure fee ledgers and student directories are completely up to date
+    refreshStudentsAndFees();
   };
 
   // Onboard New Teacher Handler
@@ -516,89 +569,32 @@ export default function App() {
   // Render Public Landing Page
   if (appView === 'landing') {
     return (
-      <>
-        <LandingPage
-          onNavigateLogin={() => setAppView('login')}
-          isAuthenticated={isAuthenticated}
-          onNavigatePortal={() => setAppView('portal')}
-          onOpenOnboardSchool={() => setOnboardSchoolModalOpen(true)}
-        />
-        <OnboardSchoolModal
-          isOpen={onboardSchoolModalOpen}
-          onClose={() => setOnboardSchoolModalOpen(false)}
-          onSchoolOnboarded={(schoolData) => {
-            const newAct: SystemActivity = {
-              id: `act-${Date.now()}`,
-              type: 'report',
-              icon: 'account_balance',
-              title: `School Configured: ${schoolData.name}`,
-              description: `MoE #${schoolData.moeRegistrationNo || schoolData.code} · ${schoolData.county || 'Nairobi'} County`,
-              timestamp: 'Just now',
-              badgeColor: 'bg-emerald-600 text-white',
-            };
-            setActivities((prev) => [newAct, ...prev]);
-          }}
-        />
-      </>
+      <LandingPage
+        onNavigateLogin={() => setAppView('login')}
+        isAuthenticated={isAuthenticated}
+        onNavigatePortal={() => setAppView('portal')}
+      />
     );
   }
 
   // Render Single Dedicated Login Page
   if (appView === 'login') {
     return (
-      <>
-        <LoginPage
-          onSuccess={() => setAppView('portal')}
-          onNavigateLanding={() => setAppView('landing')}
-          onOpenOnboardSchool={() => setOnboardSchoolModalOpen(true)}
-        />
-        <OnboardSchoolModal
-          isOpen={onboardSchoolModalOpen}
-          onClose={() => setOnboardSchoolModalOpen(false)}
-          onSchoolOnboarded={(schoolData) => {
-            const newAct: SystemActivity = {
-              id: `act-${Date.now()}`,
-              type: 'report',
-              icon: 'account_balance',
-              title: `School Configured: ${schoolData.name}`,
-              description: `MoE #${schoolData.moeRegistrationNo || schoolData.code} · ${schoolData.county || 'Nairobi'} County`,
-              timestamp: 'Just now',
-              badgeColor: 'bg-emerald-600 text-white',
-            };
-            setActivities((prev) => [newAct, ...prev]);
-          }}
-        />
-      </>
+      <LoginPage
+        onSuccess={() => setAppView('portal')}
+        onNavigateLanding={() => setAppView('landing')}
+      />
     );
   }
 
   // Fallback: If not authenticated, ensure landing view
   if (!isAuthenticated && !isLoading) {
     return (
-      <>
-        <LandingPage
-          onNavigateLogin={() => setAppView('login')}
-          isAuthenticated={false}
-          onNavigatePortal={() => setAppView('portal')}
-          onOpenOnboardSchool={() => setOnboardSchoolModalOpen(true)}
-        />
-        <OnboardSchoolModal
-          isOpen={onboardSchoolModalOpen}
-          onClose={() => setOnboardSchoolModalOpen(false)}
-          onSchoolOnboarded={(schoolData) => {
-            const newAct: SystemActivity = {
-              id: `act-${Date.now()}`,
-              type: 'report',
-              icon: 'account_balance',
-              title: `School Configured: ${schoolData.name}`,
-              description: `MoE #${schoolData.moeRegistrationNo || schoolData.code} · ${schoolData.county || 'Nairobi'} County`,
-              timestamp: 'Just now',
-              badgeColor: 'bg-emerald-600 text-white',
-            };
-            setActivities((prev) => [newAct, ...prev]);
-          }}
-        />
-      </>
+      <LandingPage
+        onNavigateLogin={() => setAppView('login')}
+        isAuthenticated={false}
+        onNavigatePortal={() => setAppView('portal')}
+      />
     );
   }
 
@@ -628,8 +624,8 @@ export default function App() {
           teachers={teachers}
           backendConnected={backendConnected}
           onNavigateLanding={() => setAppView('landing')}
-          onOpenOnboardSchool={() => setOnboardSchoolModalOpen(true)}
           onOpenAcademicTermsModal={() => setAcademicTermsModalOpen(true)}
+          onOpenChangePasswordModal={() => setChangePasswordModalOpen(true)}
           academicContext={currentContext}
           onSelectStudent={(student) => {
             handleViewReportCard(student);
@@ -689,7 +685,6 @@ export default function App() {
                   return (
                     <SuperAdminDashboardView
                       onNavigateTab={(tab) => setCurrentTab(tab)}
-                      onOpenOnboardSchool={() => setOnboardSchoolModalOpen(true)}
                       onOpenPurgeDemo={handlePurgeDemo}
                     />
                   );
@@ -793,6 +788,7 @@ export default function App() {
                 onOpenCBCWithStudent={handleOpenCbc}
                 onOpenAdmitModal={() => setAdmitModalOpen(true)}
                 onViewReportCard={handleViewReportCard}
+                onRefreshStudents={refreshStudentsAndFees}
                 onUpdateStudent={(updated) =>
                   setStudents((prev) =>
                     prev.map((s) => (s.id === updated.id ? { ...s, ...updated } : s))
@@ -816,6 +812,11 @@ export default function App() {
               }
               onDeleteTeacher={(deletedId) =>
                 setTeachers((prev) => prev.filter((t) => t.id !== deletedId))
+              }
+              onAssignTeacher={(teacherId, assignedLabel) =>
+                setTeachers((prev) =>
+                  prev.map((t) => (t.id === teacherId ? { ...t, assignedClass: assignedLabel } : t))
+                )
               }
             />
           )}
@@ -900,6 +901,10 @@ export default function App() {
               </div>
             )
           )}
+
+          {currentTab === 'user-management' && (
+            <UserManagementView onNavigateTab={(tab) => setCurrentTab(tab as any)} />
+          )}
         </main>
 
         {/* Global Portal Footer: Pure Maroon (#800000) & Vellox Tech Watermark */}
@@ -926,23 +931,6 @@ export default function App() {
       </div>
 
       {/* Global Interactive Operational Modals */}
-      <OnboardSchoolModal
-        isOpen={onboardSchoolModalOpen}
-        onClose={() => setOnboardSchoolModalOpen(false)}
-        onSchoolOnboarded={(schoolData) => {
-          const newAct: SystemActivity = {
-            id: `act-${Date.now()}`,
-            type: 'report',
-            icon: 'account_balance',
-            title: `School Configured: ${schoolData.name}`,
-            description: `MoE #${schoolData.moeRegistrationNo || schoolData.code} · ${schoolData.county || 'Nairobi'} County`,
-            timestamp: 'Just now',
-            badgeColor: 'bg-emerald-600 text-white',
-          };
-          setActivities((prev) => [newAct, ...prev]);
-        }}
-      />
-
       <OnboardTeacherModal
         isOpen={onboardTeacherModalOpen}
         onClose={() => setOnboardTeacherModalOpen(false)}
@@ -1050,6 +1038,11 @@ export default function App() {
           user?.role === UserRole.SCHOOL_ADMIN ||
           user?.role === UserRole.HEAD_TEACHER
         }
+      />
+
+      <ChangePasswordModal
+        isOpen={changePasswordModalOpen}
+        onClose={() => setChangePasswordModalOpen(false)}
       />
     </div>
   );

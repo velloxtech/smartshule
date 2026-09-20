@@ -352,6 +352,23 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
       },
     ],
   },
+  {
+    group: 'Administration & System',
+    items: [
+      {
+        id: 'user-management',
+        label: 'User Management & Access',
+        icon: 'manage_accounts',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.HEAD_TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
+        ],
+      },
+    ],
+  },
 ];
 
 export function normalizeRoleAliases(role?: UserRole): UserRole[] {
@@ -391,6 +408,7 @@ export function getRoleDisplayName(role?: UserRole): string {
     case UserRole.SUPER_ADMIN:
       return 'Super Administrator';
     case UserRole.ADMIN:
+      return 'School Director';
     case UserRole.SCHOOL_ADMIN:
       return 'School Administrator';
     case UserRole.HEAD_TEACHER:

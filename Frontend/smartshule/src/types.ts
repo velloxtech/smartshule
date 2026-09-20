@@ -20,7 +20,23 @@ export type TabType =
   | 'financial-reports'
   | 'ediary'
   | 'visual-cbc'
-  | 'whatsapp-bot';
+  | 'whatsapp-bot'
+  | 'user-management';
+
+export interface ManageableUser {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  fullName: string;
+  role: UserRole;
+  phone?: string;
+  status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+  schoolId?: string;
+  schoolName?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
 
 export type CBCRubric = 'EE' | 'ME' | 'AE' | 'BE';
 
@@ -539,6 +555,7 @@ export interface DashboardSummary {
     totalStudents: number;
     activeStudents: number;
     totalTeachers: number;
+    totalNonTeachingStaff?: number;
   };
   finance: {
     totalInvoiced: number;

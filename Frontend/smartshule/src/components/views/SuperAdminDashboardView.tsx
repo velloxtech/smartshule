@@ -5,13 +5,11 @@ import { DashboardSummary } from '../../types';
 
 interface SuperAdminDashboardViewProps {
   onNavigateTab: (tabId: any) => void;
-  onOpenOnboardSchool?: () => void;
   onOpenPurgeDemo?: () => void;
 }
 
 export const SuperAdminDashboardView: React.FC<SuperAdminDashboardViewProps> = ({
   onNavigateTab,
-  onOpenOnboardSchool,
   onOpenPurgeDemo,
 }) => {
   const { user } = useAuth();
@@ -65,15 +63,6 @@ export const SuperAdminDashboardView: React.FC<SuperAdminDashboardViewProps> = (
           </div>
 
           <div className="flex flex-wrap gap-2.5">
-            {onOpenOnboardSchool && (
-              <button
-                onClick={onOpenOnboardSchool}
-                className="px-4 py-2.5 rounded-xl bg-white text-[#7a1228] font-bold text-xs hover:bg-white/95 shadow-md flex items-center gap-2 transition-all cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[18px]">domain_add</span>
-                <span>Onboard Institution</span>
-              </button>
-            )}
             {onOpenPurgeDemo && (
               <button
                 onClick={onOpenPurgeDemo}
@@ -189,7 +178,22 @@ export const SuperAdminDashboardView: React.FC<SuperAdminDashboardViewProps> = (
       </div>
 
       {/* Global Quick Navigation Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div
+          onClick={() => onNavigateTab('user-management')}
+          className="p-5 rounded-2xl bg-white border border-outline-variant/30 hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer flex items-center gap-4 group"
+        >
+          <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+            <span className="material-symbols-outlined text-[26px]">manage_accounts</span>
+          </div>
+          <div>
+            <h3 className="font-bold text-sm text-on-surface">User Management</h3>
+            <p className="text-xs text-on-surface-variant mt-0.5">
+              Edit, suspend, reset & control user logins
+            </p>
+          </div>
+        </div>
+
         <div
           onClick={() => onNavigateTab('students-guardians')}
           className="p-5 rounded-2xl bg-white border border-outline-variant/30 hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer flex items-center gap-4"

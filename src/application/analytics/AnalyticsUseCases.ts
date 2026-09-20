@@ -4,8 +4,10 @@ import { IAcademicRepository } from '../../core/ports/repositories/IAcademicRepo
 import { ICbcAssessmentRepository } from '../../core/ports/repositories/ICbcAssessmentRepository';
 import { IAttendanceRepository } from '../../core/ports/repositories/ITimetableRepository';
 import { IFeeRepository } from '../../core/ports/repositories/IFeeRepository';
+import { IUserRepository } from '../../core/ports/repositories/IUserRepository';
 import { PerformanceLevel } from '../../core/domain/cbc/CbcAssessment';
 import { StudentStatus } from '../../core/domain/user/Student';
+import { UserRole } from '../../core/domain/user/User';
 
 export class AnalyticsUseCases {
   constructor(
@@ -14,7 +16,8 @@ export class AnalyticsUseCases {
     private readonly academicRepository: IAcademicRepository,
     private readonly cbcRepository: ICbcAssessmentRepository,
     private readonly attendanceRepository: IAttendanceRepository,
-    private readonly feeRepository: IFeeRepository
+    private readonly feeRepository: IFeeRepository,
+    private readonly userRepository?: IUserRepository
   ) {}
 
   public async getSchoolDashboardSummary(schoolId?: string) {
@@ -24,6 +27,23 @@ export class AnalyticsUseCases {
     const currentTerm = currentYear ? await this.academicRepository.findCurrentTerm(currentYear.id) : null;
 
     const activeStudents = students.filter(s => s.status === StudentStatus.ACTIVE);
+
+    // Non-teaching staff count (bursars, accountants, admissions, school admins/directors, head teachers)
+    let totalNonTeachingStaff = 0;
+    if (this.userRepository) {
+      const allUsers = await this.userRepository.findAll();
+      totalNonTeachingStaff = allUsers.filter(u => {
+        if (schoolId && u.schoolId && u.schoolId !== schoolId) {
+          return false;
+        }
+        return (
+          u.role !== UserRole.TEACHER &&
+          u.role !== UserRole.STUDENT &&
+          u.role !== UserRole.PARENT &&
+          u.role !== UserRole.GUARDIAN
+        );
+      }).length;
+    }
 
     // Finance totals
     const invoices = await this.feeRepository.findInvoices({ schoolId });
@@ -65,7 +85,8 @@ export class AnalyticsUseCases {
       counts: {
         totalStudents: students.length,
         activeStudents: activeStudents.length,
-        totalTeachers: teachers.length
+        totalTeachers: teachers.length,
+        totalNonTeachingStaff
       },
       finance: {
         totalInvoiced,

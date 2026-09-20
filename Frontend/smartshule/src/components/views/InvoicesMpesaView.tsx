@@ -21,7 +21,7 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
   onOpenMpesaModal,
 }) => {
   const { user } = useAuth();
-  const isGuardian = user?.role === UserRole.GUARDIAN;
+  const isGuardian = user?.role === UserRole.GUARDIAN || user?.role === UserRole.PARENT;
 
   const [invoices, setInvoices] = useState<StudentInvoice[]>([]);
   const [financeSummary, setFinanceSummary] = useState<FinanceSummaryData | null>(null);

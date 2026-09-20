@@ -111,6 +111,13 @@ export const DeputyDashboardView: React.FC<DeputyDashboardViewProps> = ({
               <span className="material-symbols-outlined text-[18px]">calendar_view_week</span>
               <span>Timetable Grid</span>
             </button>
+            <button
+              onClick={() => onNavigateTab('user-management')}
+              className="px-4 py-2.5 rounded-xl bg-indigo-800/80 hover:bg-indigo-800 text-white font-semibold text-xs border border-indigo-400/30 flex items-center gap-2 transition-all cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[18px]">manage_accounts</span>
+              <span>Faculty & User Accounts</span>
+            </button>
           </div>
         </div>
       </div>
@@ -239,7 +246,22 @@ export const DeputyDashboardView: React.FC<DeputyDashboardViewProps> = ({
       </div>
 
       {/* Deputy Operations Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div
+          onClick={() => onNavigateTab('user-management')}
+          className="p-5 rounded-2xl bg-white border border-outline-variant/30 hover:border-indigo-400 hover:shadow-sm transition-all cursor-pointer flex items-center gap-4"
+        >
+          <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center shrink-0">
+            <span className="material-symbols-outlined text-[26px]">manage_accounts</span>
+          </div>
+          <div>
+            <h3 className="font-bold text-sm text-on-surface">User Accounts</h3>
+            <p className="text-xs text-on-surface-variant mt-0.5">
+              Faculty credentials & access status
+            </p>
+          </div>
+        </div>
+
         <div
           onClick={() => onNavigateTab('timetable')}
           className="p-5 rounded-2xl bg-white border border-outline-variant/30 hover:border-indigo-400 hover:shadow-sm transition-all cursor-pointer flex items-center gap-4"
@@ -250,7 +272,7 @@ export const DeputyDashboardView: React.FC<DeputyDashboardViewProps> = ({
           <div>
             <h3 className="font-bold text-sm text-on-surface">Manage Timetable</h3>
             <p className="text-xs text-on-surface-variant mt-0.5">
-              Inspect lesson periods, free teachers, & class schedules
+              Inspect lesson periods, free teachers, & schedules
             </p>
           </div>
         </div>

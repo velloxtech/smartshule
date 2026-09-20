@@ -24,9 +24,9 @@ export class AcademicUseCases {
           name: 'Grace Seeds School',
           code: 'GSS-001',
           centerCode: 'KNEC-08291',
-          motto: 'The Future Begins Here',
+          motto: 'The future Begins Here',
           email: 'schoolgraceseeds@gmail.com',
-          phone: '+254745436312',
+          phone: '0745436312',
           address: 'KEMRI Street, Kisian, Kisumu, Kenya',
           logoUrl: '/logo.png',
           currency: 'KES'
@@ -34,18 +34,24 @@ export class AcademicUseCases {
         id || 'school-001'
       );
       await this.academicRepository.saveSchool(school);
-    } else if (school.name === 'SmartShule CBC Academy') {
+    } else if (
+      school.name === 'SmartShule CBC Academy' ||
+      !school.motto ||
+      school.motto !== 'The future Begins Here' ||
+      school.email !== 'schoolgraceseeds@gmail.com' ||
+      school.phone !== '0745436312'
+    ) {
       school = School.create(
         {
           name: 'Grace Seeds School',
-          code: 'GSS-001',
+          code: school.code || 'GSS-001',
           centerCode: school.centerCode || 'KNEC-08291',
-          motto: 'Nurturing Potential, Inspiring Excellence',
-          email: 'admin@graceseeds.ac.ke',
-          phone: school.phone || '+254700112233',
-          address: 'Grace Seeds Campus, Nairobi, Kenya',
-          logoUrl: '/logo.png',
-          currency: 'KES'
+          motto: 'The future Begins Here',
+          email: 'schoolgraceseeds@gmail.com',
+          phone: '0745436312',
+          address: school.address || 'KEMRI Street, Kisian, Kisumu, Kenya',
+          logoUrl: school.logoUrl || '/logo.png',
+          currency: school.currency || 'KES'
         },
         school.id
       );

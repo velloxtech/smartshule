@@ -13,6 +13,7 @@ interface StudentsViewProps {
   onViewReportCard: (student: Student) => void;
   onUpdateStudent?: (student: Student) => void;
   onDeleteStudent?: (studentId: string) => void;
+  onRefreshStudents?: () => void | Promise<void>;
 }
 
 export const StudentsView: React.FC<StudentsViewProps> = ({
@@ -23,6 +24,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
   onViewReportCard,
   onUpdateStudent,
   onDeleteStudent,
+  onRefreshStudents,
 }) => {
   const { user } = useAuth();
   const isTeacher = user?.role === UserRole.TEACHER;
@@ -33,6 +35,35 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [profileStudent, setProfileStudent] = useState<Student | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isSyncingFees, setIsSyncingFees] = useState(false);
+  const [syncFeedback, setSyncFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  const handleSyncFeeBalances = async () => {
+    try {
+      setIsSyncingFees(true);
+      setSyncFeedback(null);
+      const res = await apiService.syncFeeBalances({ schoolId: user?.schoolId });
+      if (res.success) {
+        setSyncFeedback({
+          type: 'success',
+          message: res.message || `Successfully synced fee structures for ${res.data?.invoicesCreated ?? 0} learner(s).`
+        });
+        await onRefreshStudents?.();
+      } else {
+        setSyncFeedback({
+          type: 'error',
+          message: (res as any).error?.message || 'Failed to sync fee structures.'
+        });
+      }
+    } catch (err: any) {
+      setSyncFeedback({
+        type: 'error',
+        message: err.message || 'Error occurred while syncing fee balances.'
+      });
+    } finally {
+      setIsSyncingFees(false);
+    }
+  };
 
   const handleDeleteStudent = async (s: Student) => {
     if (window.confirm(`Are you sure you want to delete ${s.name} (Adm: ${s.admNo})? This action cannot be undone.`)) {
@@ -111,15 +142,56 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
         </div>
 
         {!isTeacher && (
-          <button
-            onClick={onOpenAdmitModal}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-lg hover:bg-primary-container text-sm font-semibold shadow-md transition-all self-start sm:self-auto cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[18px]">person_add</span>
-            <span>Admit Learner (Art. 53)</span>
-          </button>
+          <div className="flex items-center gap-2.5 self-start sm:self-auto flex-wrap">
+            <button
+              type="button"
+              onClick={handleSyncFeeBalances}
+              disabled={isSyncingFees}
+              title="Look up and attach full class fee structures to any existing learners missing fee invoices"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-surface-container-high text-primary hover:bg-primary/10 border border-primary/30 rounded-lg text-sm font-semibold shadow-xs transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span className={`material-symbols-outlined text-[18px] ${isSyncingFees ? 'animate-spin' : ''}`}>
+                {isSyncingFees ? 'sync' : 'account_balance_wallet'}
+              </span>
+              <span>{isSyncingFees ? 'Syncing Fees...' : 'Sync Fee Balances'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onOpenAdmitModal}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-lg hover:bg-primary-container text-sm font-semibold shadow-md transition-all cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[18px]">person_add</span>
+              <span>Admit Learner (Art. 53)</span>
+            </button>
+          </div>
         )}
       </div>
+
+      {/* Sync Fee Balances Feedback Banner */}
+      {syncFeedback && (
+        <div
+          className={`p-3.5 rounded-xl flex items-center justify-between text-xs font-medium border shadow-xs transition-all ${
+            syncFeedback.type === 'success'
+              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+              : 'bg-red-50 text-red-800 border-red-200'
+          }`}
+        >
+          <div className="flex items-center gap-2.5">
+            <span className="material-symbols-outlined text-[18px]">
+              {syncFeedback.type === 'success' ? 'check_circle' : 'error'}
+            </span>
+            <span>{syncFeedback.message}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSyncFeedback(null)}
+            className="text-on-surface-variant hover:text-on-surface cursor-pointer p-1 rounded-md"
+          >
+            <span className="material-symbols-outlined text-[16px]">close</span>
+          </button>
+        </div>
+      )}
 
       {/* Filter Controls */}
       <div className="bg-surface-container-lowest p-4 rounded-xl shadow-xs border border-outline-variant/30 flex flex-col md:flex-row gap-3 items-center justify-between">

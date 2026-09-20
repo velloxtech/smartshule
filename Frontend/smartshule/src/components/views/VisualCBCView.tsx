@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 
 export const VisualCBCView: React.FC = () => {
   const { user } = useAuth();
-  const isGuardian = user?.role === UserRole.GUARDIAN;
+  const isGuardian = user?.role === UserRole.GUARDIAN || user?.role === UserRole.PARENT;
   const isTeacher = user?.role === UserRole.TEACHER || user?.role === UserRole.HEAD_TEACHER || user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.SCHOOL_ADMIN;
 
   const [activeTab, setActiveTab] = useState<'help_desk' | 'progress_gallery'>('help_desk');

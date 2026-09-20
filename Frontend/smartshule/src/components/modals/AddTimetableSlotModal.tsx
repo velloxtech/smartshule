@@ -55,6 +55,41 @@ export const AddTimetableSlotModal: React.FC<AddTimetableSlotModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const PERIOD_TIME_PRESETS: Record<string, { start: string; end: string; isBreak?: boolean; label?: string }> = {
+    '1': { start: '08:00', end: '08:45', isBreak: false },
+    '2': { start: '08:45', end: '09:30', isBreak: false },
+    '3': { start: '09:30', end: '10:00', isBreak: true, label: 'Mid-Morning Break & Snack' },
+    '4': { start: '10:00', end: '10:45', isBreak: false },
+    '5': { start: '10:45', end: '11:30', isBreak: false },
+    '6': { start: '11:30', end: '12:15', isBreak: false },
+    '7': { start: '12:15', end: '13:00', isBreak: false },
+    '8': { start: '13:00', end: '14:00', isBreak: true, label: 'Lunch Break & Relaxation' },
+    '9': { start: '14:00', end: '14:45', isBreak: false },
+  };
+
+  const handlePeriodChange = (val: string) => {
+    setPeriodNumber(val);
+    const preset = PERIOD_TIME_PRESETS[val];
+    if (preset) {
+      setStartTime(preset.start);
+      setEndTime(preset.end);
+      if (preset.isBreak) {
+        setIsBreak(true);
+        setBreakLabel(preset.label || 'Break');
+      } else {
+        setIsBreak(false);
+        setBreakLabel('');
+      }
+    }
+  };
+
+  const handleBreakToggle = (checked: boolean) => {
+    setIsBreak(checked);
+    if (checked && !breakLabel) {
+      setBreakLabel('Break');
+    }
+  };
+
   // Sync initialSlot when opened
   useEffect(() => {
     if (initialSlot) {
@@ -192,18 +227,18 @@ export const AddTimetableSlotModal: React.FC<AddTimetableSlotModalProps> = ({
               </label>
               <select
                 value={periodNumber}
-                onChange={(e) => setPeriodNumber(e.target.value)}
+                onChange={(e) => handlePeriodChange(e.target.value)}
                 className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2 text-xs font-semibold text-on-surface"
               >
-                <option value="1">Period 1</option>
-                <option value="2">Period 2</option>
-                <option value="3">Period 3 (Break)</option>
-                <option value="4">Period 4</option>
-                <option value="5">Period 5</option>
-                <option value="6">Period 6 (Lunch)</option>
-                <option value="7">Period 7</option>
-                <option value="8">Period 8</option>
-                <option value="9">Period 9 (Remedial / Co-Curricular)</option>
+                <option value="1">Period 1 (08:00 - 08:45)</option>
+                <option value="2">Period 2 (08:45 - 09:30)</option>
+                <option value="3">Period 3 (Break: 09:30 - 10:00)</option>
+                <option value="4">Period 4 (10:00 - 10:45)</option>
+                <option value="5">Period 5 (10:45 - 11:30)</option>
+                <option value="6">Period 6 (11:30 - 12:15)</option>
+                <option value="7">Period 7 (12:15 - 13:00)</option>
+                <option value="8">Period 8 (Lunch: 13:00 - 14:00)</option>
+                <option value="9">Period 9 (14:00 - 14:45)</option>
               </select>
             </div>
           </div>
@@ -240,7 +275,7 @@ export const AddTimetableSlotModal: React.FC<AddTimetableSlotModalProps> = ({
               type="checkbox"
               id="isBreak"
               checked={isBreak}
-              onChange={(e) => setIsBreak(e.target.checked)}
+              onChange={(e) => handleBreakToggle(e.target.checked)}
               className="w-4 h-4 text-primary rounded"
             />
             <label htmlFor="isBreak" className="text-xs font-semibold text-on-surface">

@@ -4,14 +4,12 @@ interface LandingPageProps {
   onNavigateLogin: () => void;
   isAuthenticated?: boolean;
   onNavigatePortal?: () => void;
-  onOpenOnboardSchool?: () => void;
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({
   onNavigateLogin,
   isAuthenticated = false,
   onNavigatePortal,
-  onOpenOnboardSchool,
 }) => {
   const [activePortalTab, setActivePortalTab] = useState<'admin' | 'teacher' | 'finance' | 'parent'>('admin');
 
@@ -103,9 +101,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
             <div>
               <div className="font-bold text-xl tracking-tight text-[#7a1228] leading-none">
-                SmartShule
+                Grace Seeds School
               </div>
-              <p className="text-[11px] text-slate-500 font-medium">Competency-Based Curriculum System</p>
+              <p className="text-[11px] text-slate-500 font-medium">“The future Begins Here” · SmartShule CBC</p>
             </div>
           </div>
 
@@ -117,15 +115,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </nav>
 
           <div className="flex items-center gap-2.5">
-            {onOpenOnboardSchool && (
-              <button
-                onClick={onOpenOnboardSchool}
-                className="hidden sm:flex items-center gap-1.5 px-3.5 py-2 bg-rose-50 hover:bg-rose-100/80 text-[#7a1228] font-bold text-xs rounded-xl border border-rose-200 shadow-xs cursor-pointer transition-all"
-              >
-                <span className="material-symbols-outlined text-[16px] text-emerald-600">account_balance</span>
-                <span>Onboard School</span>
-              </button>
-            )}
 
             <button
               onClick={isAuthenticated && onNavigatePortal ? onNavigatePortal : onNavigateLogin}
@@ -166,16 +155,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <span className="material-symbols-outlined text-[20px]">rocket_launch</span>
                 <span>{isAuthenticated ? 'Return to Dashboard' : 'Launch School Portal'}</span>
               </button>
-
-              {onOpenOnboardSchool && (
-                <button
-                  onClick={onOpenOnboardSchool}
-                  className="w-full sm:w-auto px-7 py-4 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 text-base cursor-pointer"
-                >
-                  <span className="material-symbols-outlined text-[20px]">account_balance</span>
-                  <span>Onboard School</span>
-                </button>
-              )}
             </div>
           </div>
 
@@ -464,20 +443,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <span className="material-symbols-outlined text-[16px]">verified</span>
                 <span>Official MoE & TSC Compliance</span>
               </div>
-              <h3 className="text-2xl font-bold">Onboard Your Institution Today</h3>
+              <h3 className="text-2xl font-bold">Standard Institutional CBC Governance</h3>
               <p className="text-xs text-rose-100 max-w-xl">
-                Streamline your school's learner admissions, educator registries, and data management in minutes.
+                Grace Seeds School operates fully aligned with Ministry of Education CBC standards and KNEC assessments.
               </p>
             </div>
-            {onOpenOnboardSchool && (
-              <button
-                onClick={onOpenOnboardSchool}
-                className="px-6 py-3.5 bg-white hover:bg-rose-50 text-[#7a1228] font-bold text-sm rounded-xl shadow-lg transition-all flex items-center gap-2 cursor-pointer shrink-0"
-              >
-                <span className="material-symbols-outlined text-[18px]">account_balance</span>
-                <span>Onboard Institution</span>
-              </button>
-            )}
+            <button
+              onClick={isAuthenticated && onNavigatePortal ? onNavigatePortal : onNavigateLogin}
+              className="px-6 py-3.5 bg-white hover:bg-rose-50 text-[#7a1228] font-bold text-sm rounded-xl shadow-lg transition-all flex items-center gap-2 cursor-pointer shrink-0"
+            >
+              <span className="material-symbols-outlined text-[18px]">
+                {isAuthenticated ? 'dashboard' : 'login'}
+              </span>
+              <span>{isAuthenticated ? 'Open Dashboard' : 'Sign In to Portal'}</span>
+            </button>
           </div>
         </div>
       </section>
@@ -594,12 +573,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center text-white border border-white/20">
               <span className="material-symbols-outlined text-[16px]">school</span>
             </div>
-            <span className="font-bold text-white">SmartShule</span>
+            <span className="font-bold text-white">Grace Seeds School</span>
             <span className="text-white/40">·</span>
-            <span>CBC Educational Portal</span>
+            <span>&quot;The future Begins Here&quot;</span>
           </div>
-          <div className="text-rose-200/90 text-center">
-            Standard Competency-Based Curriculum Framework & Continuous Assessment Model.
+          <div className="text-rose-200/90 text-center text-xs">
+            KEMRI Street, Kisian, Kisumu · Tel: 0745436312 · Email: schoolgraceseeds@gmail.com
           </div>
           <div className="flex items-center gap-2 text-rose-200">
             <span>© {new Date().getFullYear()} SmartShule.</span>

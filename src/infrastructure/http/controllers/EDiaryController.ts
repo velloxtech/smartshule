@@ -57,7 +57,7 @@ export class EDiaryController {
     try {
       const { streamId } = req.params;
       const { date } = req.query;
-      const entries = await this.ediaryUseCases.listEntriesForStream(streamId as string, date as string);
+      const entries = await this.ediaryUseCases.listEntriesForStream(streamId as string, date as string, req.user);
       return res.status(200).json({ success: true, count: entries.length, data: entries });
     } catch (err) {
       next(err);

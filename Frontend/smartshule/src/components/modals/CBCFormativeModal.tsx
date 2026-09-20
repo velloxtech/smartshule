@@ -11,6 +11,18 @@ interface CBCFormativeModalProps {
   onSaveAssessment?: (record: Omit<AssessmentRecord, 'id' | 'date'>) => void;
 }
 
+const DEFAULT_CBC_LEARNING_AREAS: LearningArea[] = [
+  { id: 'la-math', code: 'MATH', name: 'Mathematics', gradeLevels: [], strands: [] },
+  { id: 'la-eng', code: 'ENG', name: 'English Language', gradeLevels: [], strands: [] },
+  { id: 'la-kisw', code: 'KISW', name: 'Kiswahili Lugha', gradeLevels: [], strands: [] },
+  { id: 'la-sci', code: 'SCI', name: 'Integrated Science', gradeLevels: [], strands: [] },
+  { id: 'la-soc', code: 'SOC', name: 'Social Studies', gradeLevels: [], strands: [] },
+  { id: 'la-cre', code: 'CRE', name: 'CRE / IRE Religious Education', gradeLevels: [], strands: [] },
+  { id: 'la-arts', code: 'ARTS', name: 'Creative Arts & Sports', gradeLevels: [], strands: [] },
+  { id: 'la-agri', code: 'AGRI', name: 'Agriculture & Nutrition', gradeLevels: [], strands: [] },
+  { id: 'la-pretech', code: 'PTECH', name: 'Pre-Technical Studies', gradeLevels: [], strands: [] },
+];
+
 export const CBCFormativeModal: React.FC<CBCFormativeModalProps> = ({
   isOpen,
   onClose,
@@ -20,11 +32,13 @@ export const CBCFormativeModal: React.FC<CBCFormativeModalProps> = ({
   onSave,
   onSaveAssessment,
 }) => {
+  const availableLearningAreas = learningAreas && learningAreas.length > 0 ? learningAreas : DEFAULT_CBC_LEARNING_AREAS;
+
   const [studentId, setStudentId] = useState<string>(
     initialStudent?.id || (students && students.length > 0 ? students[0].id : '')
   );
   const [learningArea, setLearningArea] = useState<string>(
-    learningAreas && learningAreas.length > 0 ? learningAreas[0].name : ''
+    availableLearningAreas[0]?.name || 'Mathematics'
   );
   const [strand, setStrand] = useState('');
   const [subStrand, setSubStrand] = useState('');
@@ -41,10 +55,10 @@ export const CBCFormativeModal: React.FC<CBCFormativeModalProps> = ({
   }, [initialStudent, students, isOpen]);
 
   useEffect(() => {
-    if (learningAreas && learningAreas.length > 0 && !learningArea) {
-      setLearningArea(learningAreas[0].name);
+    if (!learningArea) {
+      setLearningArea(availableLearningAreas[0]?.name || 'Mathematics');
     }
-  }, [learningAreas, isOpen]);
+  }, [availableLearningAreas, isOpen, learningArea]);
 
   if (!isOpen) return null;
 
@@ -171,7 +185,7 @@ export const CBCFormativeModal: React.FC<CBCFormativeModalProps> = ({
                   onChange={(e) => setLearningArea(e.target.value)}
                   className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-sm text-on-surface focus:outline-primary"
                 >
-                  {(learningAreas || []).map((la) => (
+                  {availableLearningAreas.map((la) => (
                     <option key={la.id} value={la.name}>
                       {la.name}
                     </option>

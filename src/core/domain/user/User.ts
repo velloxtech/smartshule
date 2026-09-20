@@ -90,6 +90,16 @@ export class User extends Entity<UserProps> {
     this.touch();
   }
 
+  public updateRole(role: UserRole): void {
+    this._props.role = role;
+    this.touch();
+  }
+
+  public updateEmail(email: string): void {
+    this._props.email = email.toLowerCase();
+    this.touch();
+  }
+
   public toJSON() {
     return {
       id: this.id,

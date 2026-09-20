@@ -8,7 +8,12 @@ import {
   AuthController,
   RegisterUserSchema,
   LoginUserSchema,
-  RefreshTokenSchema
+  RefreshTokenSchema,
+  AdminCreateUserSchema,
+  AdminUpdateUserSchema,
+  AdminSetStatusSchema,
+  AdminResetPasswordSchema,
+  ChangePasswordSchema
 } from '../controllers/AuthController';
 
 import {
@@ -68,6 +73,7 @@ import {
   FinanceController,
   CreateFeeStructureSchema,
   GenerateInvoicesSchema,
+  SyncFeesSchema,
   RecordPaymentSchema,
   PaystackInitSchema,
   MpesaStkPushSchema,
@@ -126,7 +132,28 @@ export function createApiRouter(container: AppContainer): Router {
   authRouter.post('/login', validateBody(LoginUserSchema), authController.login);
   authRouter.post('/refresh', validateBody(RefreshTokenSchema), authController.refresh);
   authRouter.get('/profile', authMiddleware, authController.getProfile);
+  authRouter.post('/change-password', authMiddleware, validateBody(ChangePasswordSchema), authController.changePassword);
   router.use('/auth', authRouter);
+
+  // ==========================================
+  // 1b. USER MANAGEMENT & ACCESS CONTROL
+  // ==========================================
+  const userRouter = Router();
+  const allowedUserManagementRoles = requireRoles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.HEAD_TEACHER,
+    UserRole.DEPUTY_HEAD_TEACHER
+  );
+
+  userRouter.get('/', authMiddleware, allowedUserManagementRoles, authController.listUsers);
+  userRouter.post('/', authMiddleware, allowedUserManagementRoles, validateBody(AdminCreateUserSchema), authController.adminCreateUser);
+  userRouter.put('/:id', authMiddleware, allowedUserManagementRoles, validateBody(AdminUpdateUserSchema), authController.adminUpdateUser);
+  userRouter.patch('/:id/status', authMiddleware, allowedUserManagementRoles, validateBody(AdminSetStatusSchema), authController.adminSetStatus);
+  userRouter.post('/:id/reset-password', authMiddleware, allowedUserManagementRoles, validateBody(AdminResetPasswordSchema), authController.adminResetPassword);
+  userRouter.delete('/:id', authMiddleware, allowedUserManagementRoles, authController.adminDeleteUser);
+  router.use('/users', userRouter);
 
   // ==========================================
   // 2. ACADEMIC STRUCTURE ROUTES
@@ -250,6 +277,7 @@ export function createApiRouter(container: AppContainer): Router {
   financeRouter.get('/structures', authMiddleware, financeController.listFeeStructures);
   financeRouter.delete('/structures/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT), financeController.deleteFeeStructure);
   financeRouter.post('/invoices/generate', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT), validateBody(GenerateInvoicesSchema), financeController.generateInvoices);
+  financeRouter.post('/sync-fees', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT), validateBody(SyncFeesSchema), financeController.syncFees);
   financeRouter.get('/invoices', authMiddleware, financeController.listInvoices); // Parent isolated
   financeRouter.get('/summary', authMiddleware, financeController.getFinanceSummary); // Parent vs Admin summary
   financeRouter.post('/payments', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ACCOUNTANT), validateBody(RecordPaymentSchema), financeController.recordPayment);
@@ -289,6 +317,7 @@ export function createApiRouter(container: AppContainer): Router {
   mediaRouter.post('/help-requests/:id/respond', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), validateBody(RespondHelpRequestSchema), mediaController.respondToHelpRequest);
   mediaRouter.post('/progress-photos', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), validateBody(UploadProgressPhotoSchema), mediaController.uploadProgressPhoto);
   mediaRouter.get('/progress-photos', authMiddleware, mediaController.listProgressPhotos);
+  mediaRouter.post('/upload', authMiddleware, mediaController.uploadGeneralPhoto);
   router.use('/media', mediaRouter);
 
   // ==========================================

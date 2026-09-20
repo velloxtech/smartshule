@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
 import {
   KENYAN_COUNTIES,
@@ -34,8 +34,8 @@ export const OnboardSchoolModal: React.FC<OnboardSchoolModalProps> = ({
   const [motto, setMotto] = useState('');
 
   // Step 2: Devolved County Location
-  const [county, setCounty] = useState('Nairobi City');
-  const [subCounty, setSubCounty] = useState('Westlands');
+  const [county, setCounty] = useState('Kisumu');
+  const [subCounty, setSubCounty] = useState('Kisumu West');
   const [physicalAddress, setPhysicalAddress] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -56,7 +56,14 @@ export const OnboardSchoolModal: React.FC<OnboardSchoolModalProps> = ({
   const [charterArticle54, setCharterArticle54] = useState(false);
   const [charterArticle31, setCharterArticle31] = useState(false);
 
-  const countyObj = KENYAN_COUNTIES.find((c) => c.name === county) || KENYAN_COUNTIES[46];
+  const countyObj = KENYAN_COUNTIES.find((c) => c.name === county) || KENYAN_COUNTIES.find((c) => c.name === 'Kisumu') || KENYAN_COUNTIES[41];
+  useEffect(() => {
+    if (countyObj && countyObj.subCounties.length > 0) {
+      if (!countyObj.subCounties.includes(subCounty)) {
+        setSubCounty(countyObj.subCounties[0]);
+      }
+    }
+  }, [county]);
 
   if (!isOpen) return null;
 

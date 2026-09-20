@@ -114,11 +114,11 @@ export class WhatsAppService {
     centerCode: string;
   }> {
     let name = 'SmartShule';
-    let motto = 'Excellence in Competence & Character';
-    let phone = '+254 700 000 000';
-    let email = 'admin@smartshule.ac.ke';
-    let address = 'Nairobi, Kenya';
-    let centerCode = 'CBA-CENTRE';
+    let motto = 'The future Begins Here';
+    let phone = '0745436312';
+    let email = 'schoolgraceseeds@gmail.com';
+    let address = 'KEMRI Street, Kisian, Kisumu, Kenya';
+    let centerCode = 'KNEC-08291';
 
     if (this.academicRepository) {
       try {

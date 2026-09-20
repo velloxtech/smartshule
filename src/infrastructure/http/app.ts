@@ -15,8 +15,19 @@ export function createExpressApp(container: AppContainer): Express {
   app.use(helmet({ contentSecurityPolicy: false }));
   const corsOrigin = process.env.CORS_ORIGIN || process.env.FRONTEND_URL || '*';
   app.use(cors({ origin: corsOrigin === '*' ? true : [corsOrigin, 'http://localhost:5173', 'http://localhost:3000'] }));
-  app.use(express.json());
-  app.use(express.urlencoded({ extended: true }));
+  app.use(express.json({ limit: '25mb' }));
+  app.use(express.urlencoded({ limit: '25mb', extended: true }));
+
+  // Serve uploads directory statically for photo storage
+  const uploadDir = path.resolve(process.cwd(), 'data', 'uploads');
+  if (!fs.existsSync(uploadDir)) {
+    try {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    } catch {
+      // ignore
+    }
+  }
+  app.use('/uploads', express.static(uploadDir));
 
   if (process.env.NODE_ENV !== 'test') {
     app.use(morgan('dev'));

@@ -133,7 +133,9 @@ export class AppContainer {
       this.cbcAssessmentRepository,
       this.studentRepository,
       this.academicRepository,
-      this.attendanceRepository
+      this.attendanceRepository,
+      this.guardianRepository,
+      this.userRepository
     );
     this.curriculumUseCases = new CurriculumPlanUseCases(this.schemeOfWorkRepository, this.lessonPlanRepository);
     this.timetableUseCases = new TimetableUseCases(this.timetableRepository, this.academicRepository, this.teacherRepository);
@@ -151,7 +153,8 @@ export class AppContainer {
       this.userRepository,
       this.paystackGateway,
       this.notificationService,
-      this.paystackGateway
+      this.paystackGateway,
+      this.academicRepository
     );
     this.analyticsUseCases = new AnalyticsUseCases(
       this.studentRepository,
@@ -159,14 +162,16 @@ export class AppContainer {
       this.academicRepository,
       this.cbcAssessmentRepository,
       this.attendanceRepository,
-      this.feeRepository
+      this.feeRepository,
+      this.userRepository
     );
     this.visualMediaUseCases = new VisualMediaUseCases(
       this.mediaRepository,
       this.studentRepository,
       this.guardianRepository,
       this.teacherRepository,
-      this.imageProcessingService
+      this.imageProcessingService,
+      this.userRepository
     );
     this.ediaryUseCases = new EDiaryUseCases(
       this.ediaryRepository,
@@ -208,10 +213,11 @@ export class AppContainer {
         id: 'usr-admin-01',
         email: process.env.DEFAULT_ADMIN_EMAIL || 'admin@smartshule.ac.ke',
         password: process.env.DEFAULT_ADMIN_PASSWORD || 'Admin@123',
-        firstName: process.env.DEFAULT_ADMIN_FIRST_NAME || 'Don',
-        lastName: process.env.DEFAULT_ADMIN_LAST_NAME || 'Mutua',
+        firstName: process.env.DEFAULT_ADMIN_FIRST_NAME || 'ADMIN',
+        lastName: process.env.DEFAULT_ADMIN_LAST_NAME || 'Director',
         role: UserRole.ADMIN,
-        phone: process.env.DEFAULT_ADMIN_PHONE || '+254711000111'
+        phone: process.env.DEFAULT_ADMIN_PHONE || '+254711000111',
+        schoolId: 'school-001'
       },
       {
         id: 'usr-headteacher-01',
@@ -220,7 +226,8 @@ export class AppContainer {
         firstName: 'Maina',
         lastName: 'Kariuki',
         role: UserRole.HEAD_TEACHER,
-        phone: '+254722000222'
+        phone: '+254722000222',
+        schoolId: 'school-001'
       },
       {
         id: 'usr-deputy-01',
@@ -229,7 +236,8 @@ export class AppContainer {
         firstName: 'Grace',
         lastName: 'Wambui',
         role: UserRole.DEPUTY_HEAD_TEACHER,
-        phone: '+254733000333'
+        phone: '+254733000333',
+        schoolId: 'school-001'
       },
       {
         id: 'usr-admissions-01',
@@ -238,7 +246,8 @@ export class AppContainer {
         firstName: 'Peter',
         lastName: 'Otieno',
         role: UserRole.ADMISSIONS,
-        phone: '+254744000444'
+        phone: '+254744000444',
+        schoolId: 'school-001'
       },
       {
         id: 'usr-bursar-01',
@@ -247,7 +256,8 @@ export class AppContainer {
         firstName: 'David',
         lastName: 'Kamau',
         role: UserRole.BURSAR,
-        phone: '+254755000555'
+        phone: '+254755000555',
+        schoolId: 'school-001'
       },
       {
         id: 'usr-teacher-01',
@@ -256,7 +266,8 @@ export class AppContainer {
         firstName: 'Sarah',
         lastName: 'Mwangi',
         role: UserRole.TEACHER,
-        phone: '+254766000666'
+        phone: '+254766000666',
+        schoolId: 'school-001'
       },
       {
         id: 'usr-parent-01',
@@ -265,14 +276,17 @@ export class AppContainer {
         firstName: 'Mary',
         lastName: 'Njeri',
         role: UserRole.PARENT,
-        phone: '+254777000777'
+        phone: '+254777000777',
+        schoolId: 'school-001'
       }
     ];
 
     for (const acc of defaultAccounts) {
       const existing = await this.userRepository.findByEmail(acc.email).catch(() => null);
+      const passwordHash = await this.passwordHasher.hash(acc.password);
+      let targetUserId = acc.id;
+
       if (!existing) {
-        const passwordHash = await this.passwordHasher.hash(acc.password);
         const user = User.create(
           {
             email: acc.email,
@@ -281,47 +295,80 @@ export class AppContainer {
             lastName: acc.lastName,
             role: acc.role,
             phone: acc.phone,
-            status: UserStatus.ACTIVE
+            status: UserStatus.ACTIVE,
+            schoolId: (acc as any).schoolId
           },
           acc.id
         );
         await this.userRepository.save(user);
         console.log(`[Auth] Provisioned default account (${acc.role}): ${acc.email}`);
-
-        // If teacher, ensure a linked teacher profile exists
-        if (acc.role === UserRole.TEACHER) {
-          const existingTeacher = await this.teacherRepository.findByUserId(user.id).catch(() => null);
-          if (!existingTeacher) {
-            const teacher = Teacher.create(
-              {
-                userId: user.id,
-                employeeNumber: 'EMP-1001',
-                tscNumber: 'TSC/778899',
-                specialization: ['Mathematics', 'Integrated Science'],
-                assignedClassStreamIds: [],
-                qualification: 'B.Ed (Science)'
-              },
-              'tch-default-01'
-            );
-            await this.teacherRepository.save(teacher);
-          }
+      } else {
+        targetUserId = existing.id;
+        if (acc.id === 'usr-admin-01' || acc.email === 'admin@smartshule.ac.ke') {
+          const updatedAdmin = User.create(
+            {
+              email: acc.email,
+              passwordHash,
+              firstName: acc.firstName,
+              lastName: acc.lastName,
+              role: acc.role,
+              phone: acc.phone,
+              status: UserStatus.ACTIVE,
+              schoolId: (acc as any).schoolId || 'school-001'
+            },
+            existing.id
+          );
+          await this.userRepository.save(updatedAdmin);
         }
+      }
 
-        // If parent, ensure a linked guardian profile exists
-        if (acc.role === UserRole.PARENT || acc.role === UserRole.GUARDIAN) {
-          const existingGuardian = await this.guardianRepository.findByUserId(user.id).catch(() => null);
-          if (!existingGuardian) {
-            const guardian = Guardian.create(
-              {
-                userId: user.id,
-                nationalId: '28475921',
-                relationship: GuardianRelationship.MOTHER,
-                emergencyContact: acc.phone,
-                studentIds: []
-              },
-              'grd-default-01'
-            );
-            await this.guardianRepository.save(guardian);
+      // If teacher, ensure a linked teacher profile exists
+      if (acc.role === UserRole.TEACHER) {
+        const existingTeacher = await this.teacherRepository.findByUserId(targetUserId).catch(() => null);
+        if (!existingTeacher) {
+          const teacher = Teacher.create(
+            {
+              userId: targetUserId,
+              employeeNumber: 'EMP-1001',
+              tscNumber: 'TSC/778899',
+              specialization: ['Mathematics', 'Integrated Science'],
+              assignedClassStreamIds: [],
+              qualification: 'B.Ed (Science)'
+            },
+            'tch-default-01'
+          );
+          await this.teacherRepository.save(teacher);
+        }
+      }
+
+      // If parent, ensure a linked guardian profile exists and is linked to a student
+      if (acc.role === UserRole.PARENT || acc.role === UserRole.GUARDIAN) {
+        let existingGuardian = await this.guardianRepository.findByUserId(targetUserId).catch(() => null);
+        const allStudents = await this.studentRepository.findAll().catch(() => []);
+        const linkedStudent = allStudents.find(s => s.id === 'student-001') || allStudents[0];
+
+        if (!existingGuardian) {
+          const guardian = Guardian.create(
+            {
+              userId: targetUserId,
+              nationalId: '28475921',
+              relationship: GuardianRelationship.MOTHER,
+              emergencyContact: acc.phone,
+              studentIds: linkedStudent ? [linkedStudent.id] : []
+            },
+            'grd-default-01'
+          );
+          await this.guardianRepository.save(guardian);
+          if (linkedStudent && !linkedStudent.guardianIds.includes(guardian.id)) {
+            linkedStudent.addGuardian(guardian.id);
+            await this.studentRepository.update(linkedStudent).catch(() => null);
+          }
+        } else if (existingGuardian.studentIds.length === 0 && linkedStudent) {
+          existingGuardian.linkStudent(linkedStudent.id);
+          await this.guardianRepository.update(existingGuardian).catch(() => null);
+          if (!linkedStudent.guardianIds.includes(existingGuardian.id)) {
+            linkedStudent.addGuardian(existingGuardian.id);
+            await this.studentRepository.update(linkedStudent).catch(() => null);
           }
         }
       }

@@ -86,7 +86,7 @@ export class PostgresDatabaseInitializer {
         date_of_birth VARCHAR(50) NOT NULL,
         gender VARCHAR(20) NOT NULL,
         grade_level VARCHAR(50) NOT NULL,
-        stream_id VARCHAR(100) NOT NULL,
+        stream_id VARCHAR(100),
         school_id VARCHAR(100) NOT NULL,
         academic_year_id VARCHAR(100) NOT NULL,
         guardian_ids JSONB DEFAULT '[]',
@@ -255,7 +255,7 @@ export class PostgresDatabaseInitializer {
         term_id VARCHAR(100) NOT NULL,
         academic_year_id VARCHAR(100) NOT NULL,
         grade_level VARCHAR(50) NOT NULL,
-        stream_id VARCHAR(100) NOT NULL,
+        stream_id VARCHAR(100),
         learning_area_assessments JSONB NOT NULL,
         core_competency_assessments JSONB NOT NULL,
         value_assessments JSONB NOT NULL,
@@ -326,7 +326,7 @@ export class PostgresDatabaseInitializer {
         academic_year_id VARCHAR(100) NOT NULL,
         term_id VARCHAR(100) NOT NULL,
         classroom_id VARCHAR(100) NOT NULL,
-        stream_id VARCHAR(100) NOT NULL,
+        stream_id VARCHAR(100),
         slots JSONB NOT NULL,
         is_active BOOLEAN DEFAULT true,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -337,7 +337,7 @@ export class PostgresDatabaseInitializer {
         id VARCHAR(100) PRIMARY KEY,
         school_id VARCHAR(100) NOT NULL,
         classroom_id VARCHAR(100) NOT NULL,
-        stream_id VARCHAR(100) NOT NULL,
+        stream_id VARCHAR(100),
         academic_year_id VARCHAR(100) NOT NULL,
         term_id VARCHAR(100) NOT NULL,
         date VARCHAR(50) NOT NULL,
@@ -385,7 +385,7 @@ export class PostgresDatabaseInitializer {
       CREATE TABLE IF NOT EXISTS payments (
         id VARCHAR(100) PRIMARY KEY,
         school_id VARCHAR(100) NOT NULL,
-        invoice_id VARCHAR(100) NOT NULL,
+        invoice_id VARCHAR(100),
         student_id VARCHAR(100) NOT NULL,
         receipt_number VARCHAR(100) UNIQUE NOT NULL,
         amount NUMERIC NOT NULL,
@@ -440,13 +440,36 @@ export class PostgresDatabaseInitializer {
 
     await pool.query(ddl);
 
-    // Schema migrations for lesson_plans status & reviews
+    // Schema migrations for lesson_plans status & reviews, nullability, and foreign key constraint fixes
     await pool.query(`
       ALTER TABLE lesson_plans ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'DRAFT';
       ALTER TABLE lesson_plans ADD COLUMN IF NOT EXISTS submitted_at TIMESTAMP;
       ALTER TABLE lesson_plans ADD COLUMN IF NOT EXISTS reviewed_by_user_id VARCHAR(100);
       ALTER TABLE lesson_plans ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMP;
       ALTER TABLE lesson_plans ADD COLUMN IF NOT EXISTS review_remarks TEXT;
+
+      ALTER TABLE cbc_report_cards ALTER COLUMN stream_id DROP NOT NULL;
+      ALTER TABLE timetables ALTER COLUMN stream_id DROP NOT NULL;
+      ALTER TABLE attendance_registers ALTER COLUMN stream_id DROP NOT NULL;
+      ALTER TABLE students ALTER COLUMN stream_id DROP NOT NULL;
+      ALTER TABLE payments ALTER COLUMN invoice_id DROP NOT NULL;
+
+      UPDATE students SET stream_id = NULL WHERE stream_id = '' OR TRIM(stream_id) = '';
+      UPDATE cbc_report_cards SET stream_id = NULL WHERE stream_id = '' OR TRIM(stream_id) = '';
+      UPDATE timetables SET stream_id = NULL WHERE stream_id = '' OR TRIM(stream_id) = '';
+      UPDATE attendance_registers SET stream_id = NULL WHERE stream_id = '' OR TRIM(stream_id) = '';
+      UPDATE schemes_of_work SET stream_id = NULL WHERE stream_id = '' OR TRIM(stream_id) = '';
+      UPDATE lesson_plans SET stream_id = NULL WHERE stream_id = '' OR TRIM(stream_id) = '';
+      UPDATE payments SET invoice_id = NULL WHERE invoice_id = '' OR TRIM(invoice_id) = '';
+
+      ALTER TABLE timetables DROP CONSTRAINT IF EXISTS fk_timetables_stream;
+      ALTER TABLE attendance_registers DROP CONSTRAINT IF EXISTS fk_attendance_stream;
+      ALTER TABLE students DROP CONSTRAINT IF EXISTS fk_students_stream;
+      ALTER TABLE formative_assessments DROP CONSTRAINT IF EXISTS fk_formative_teacher;
+      ALTER TABLE summative_assessments DROP CONSTRAINT IF EXISTS fk_summative_teacher;
+      ALTER TABLE schemes_of_work DROP CONSTRAINT IF EXISTS fk_schemes_teacher;
+      ALTER TABLE lesson_plans DROP CONSTRAINT IF EXISTS fk_lesson_plans_teacher;
+      ALTER TABLE payments DROP CONSTRAINT IF EXISTS fk_payments_invoice;
     `).catch(() => {});
 
     console.log('[PostgreSQL] Database tables initialized successfully.');
@@ -496,7 +519,19 @@ export class PostgresUserRepository implements IUserRepository {
     const q = `INSERT INTO users (id, email, password_hash, first_name, last_name, role, phone, status, school_id, created_at, updated_at)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
                ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, password_hash = EXCLUDED.password_hash, first_name = EXCLUDED.first_name, last_name = EXCLUDED.last_name, role = EXCLUDED.role, phone = EXCLUDED.phone, status = EXCLUDED.status, school_id = EXCLUDED.school_id, updated_at = NOW()`;
-    await this.pool.query(q, [user.id, user.email, user.passwordHash, user.firstName, user.lastName, user.role, user.phone, user.status, user.schoolId, user.createdAt, user.updatedAt]);
+    await this.pool.query(q, [
+      user.id,
+      user.email,
+      user.passwordHash,
+      user.firstName,
+      user.lastName,
+      user.role,
+      user.phone || null,
+      user.status,
+      (user.schoolId && user.schoolId.trim() !== '') ? user.schoolId : null,
+      user.createdAt,
+      user.updatedAt
+    ]);
   }
   public async update(user: User): Promise<void> { await this.save(user); }
   public async delete(id: string): Promise<void> { await this.pool.query('DELETE FROM users WHERE id = $1', [id]); }
@@ -577,10 +612,10 @@ export class PostgresStudentRepository implements IStudentRepository {
       s.dateOfBirth,
       s.gender,
       s.gradeLevel,
-      s.classroomId || null,
-      s.streamId || null,
+      (s.classroomId && s.classroomId.trim() !== '') ? s.classroomId : null,
+      (s.streamId && s.streamId.trim() !== '') ? s.streamId : null,
       s.schoolId,
-      s.academicYearId,
+      (s.academicYearId && s.academicYearId.trim() !== '') ? s.academicYearId : null,
       JSON.stringify(s.guardianIds),
       s.medicalConditions || null,
       s.specialNeeds || null,
@@ -777,7 +812,7 @@ export class PostgresAcademicRepository implements IAcademicRepository {
     const q = `INSERT INTO streams (id, classroom_id, name, capacity, class_teacher_id, created_at, updated_at)
                VALUES ($1, $2, $3, $4, $5, $6, $7)
                ON CONFLICT (id) DO UPDATE SET class_teacher_id = EXCLUDED.class_teacher_id, updated_at = NOW()`;
-    await this.pool.query(q, [s.id, s.classRoomId, s.name, s.capacity, s.classTeacherId, s.createdAt, s.updatedAt]);
+    await this.pool.query(q, [s.id, s.classRoomId, s.name, s.capacity, (s.classTeacherId && s.classTeacherId.trim() !== '') ? s.classTeacherId : null, s.createdAt, s.updatedAt]);
   }
   public async updateStream(s: Stream): Promise<void> { await this.saveStream(s); }
   public async findLearningAreaById(id: string): Promise<LearningArea | null> {
@@ -797,13 +832,28 @@ export class PostgresAcademicRepository implements IAcademicRepository {
     await this.pool.query(q, [la.id, la.name, la.code, la.gradeLevel, la.educationLevel, la.isElective, la.schoolId, la.createdAt, la.updatedAt]);
   }
   public async deleteClass(id: string): Promise<void> {
-    await this.pool.query('DELETE FROM classrooms WHERE id = $1', [id]);
+    await this.pool.query('UPDATE students SET classroom_id = NULL WHERE classroom_id = $1', [id]);
+    await this.pool.query('DELETE FROM timetables WHERE classroom_id = $1', [id]);
+    await this.pool.query('DELETE FROM attendance_registers WHERE classroom_id = $1', [id]);
     await this.pool.query('DELETE FROM streams WHERE classroom_id = $1', [id]);
+    await this.pool.query('DELETE FROM classrooms WHERE id = $1', [id]);
   }
   public async deleteStream(id: string): Promise<void> {
+    await this.pool.query('UPDATE students SET stream_id = NULL WHERE stream_id = $1', [id]);
+    await this.pool.query('UPDATE timetables SET stream_id = NULL WHERE stream_id = $1', [id]);
+    await this.pool.query('UPDATE attendance_registers SET stream_id = NULL WHERE stream_id = $1', [id]);
     await this.pool.query('DELETE FROM streams WHERE id = $1', [id]);
   }
   public async deleteLearningArea(id: string): Promise<void> {
+    await this.pool.query('DELETE FROM formative_assessments WHERE learning_area_id = $1', [id]);
+    await this.pool.query('DELETE FROM summative_assessments WHERE learning_area_id = $1', [id]);
+    await this.pool.query('DELETE FROM lesson_plans WHERE learning_area_id = $1', [id]);
+    await this.pool.query('DELETE FROM schemes_of_work WHERE learning_area_id = $1', [id]);
+    const strands = await this.pool.query('SELECT id FROM strands WHERE learning_area_id = $1', [id]);
+    for (const str of strands.rows) {
+      await this.pool.query('DELETE FROM sub_strands WHERE strand_id = $1', [str.id]);
+    }
+    await this.pool.query('DELETE FROM strands WHERE learning_area_id = $1', [id]);
     await this.pool.query('DELETE FROM learning_areas WHERE id = $1', [id]);
   }
 }
@@ -827,8 +877,8 @@ export class PostgresCbcAssessmentRepository implements ICbcAssessmentRepository
     await this.pool.query(q, [s.id, s.learningAreaId, s.gradeLevel, s.code, s.title, s.description, s.createdAt, s.updatedAt]);
   }
   public async deleteStrand(id: string): Promise<void> {
-    await this.pool.query('DELETE FROM strands WHERE id = $1', [id]);
     await this.pool.query('DELETE FROM sub_strands WHERE strand_id = $1', [id]);
+    await this.pool.query('DELETE FROM strands WHERE id = $1', [id]);
   }
   public async findSubStrandById(id: string): Promise<SubStrand | null> {
     const res = await this.pool.query('SELECT * FROM sub_strands WHERE id = $1', [id]);
@@ -869,7 +919,25 @@ export class PostgresCbcAssessmentRepository implements ICbcAssessmentRepository
     const q = `INSERT INTO formative_assessments (id, student_id, teacher_id, learning_area_id, sub_strand_id, term_id, academic_year_id, assessment_date, assessment_method, performance_level, specific_outcome_tested, teacher_remarks, evidence_notes, targeted_competencies, values_observed, created_at, updated_at)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
                ON CONFLICT (id) DO UPDATE SET performance_level = EXCLUDED.performance_level, teacher_remarks = EXCLUDED.teacher_remarks, updated_at = NOW()`;
-    await this.pool.query(q, [f.id, f.studentId, f.teacherId, f.learningAreaId, f.subStrandId, f.termId, f.academicYearId, f.assessmentDate, f.assessmentMethod, f.performanceLevel, f.specificOutcomeTested, f.teacherRemarks, f.evidenceNotes, JSON.stringify(f.targetedCompetencies || []), JSON.stringify(f.valuesObserved || []), f.createdAt, f.updatedAt]);
+    await this.pool.query(q, [
+      f.id,
+      f.studentId,
+      (f.teacherId && f.teacherId.trim() !== '') ? f.teacherId : null,
+      f.learningAreaId,
+      (f.subStrandId && f.subStrandId.trim() !== '') ? f.subStrandId : null,
+      f.termId,
+      f.academicYearId,
+      f.assessmentDate,
+      f.assessmentMethod,
+      f.performanceLevel,
+      f.specificOutcomeTested,
+      f.teacherRemarks || null,
+      f.evidenceNotes || null,
+      JSON.stringify(f.targetedCompetencies || []),
+      JSON.stringify(f.valuesObserved || []),
+      f.createdAt,
+      f.updatedAt
+    ]);
   }
   public async updateFormative(f: FormativeAssessment): Promise<void> { await this.saveFormative(f); }
   public async deleteFormative(id: string): Promise<void> {
@@ -895,7 +963,20 @@ export class PostgresCbcAssessmentRepository implements ICbcAssessmentRepository
     const q = `INSERT INTO summative_assessments (id, student_id, teacher_id, learning_area_id, term_id, academic_year_id, strand_scores, overall_performance_level, teacher_remarks, evaluation_date, created_at, updated_at)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
                ON CONFLICT (id) DO UPDATE SET overall_performance_level = EXCLUDED.overall_performance_level, strand_scores = EXCLUDED.strand_scores, updated_at = NOW()`;
-    await this.pool.query(q, [s.id, s.studentId, s.teacherId, s.learningAreaId, s.termId, s.academicYearId, JSON.stringify(s.strandScores), s.overallPerformanceLevel, s.teacherRemarks, s.evaluationDate, s.createdAt, s.updatedAt]);
+    await this.pool.query(q, [
+      s.id,
+      s.studentId,
+      (s.teacherId && s.teacherId.trim() !== '') ? s.teacherId : null,
+      s.learningAreaId,
+      s.termId,
+      s.academicYearId,
+      JSON.stringify(s.strandScores),
+      s.overallPerformanceLevel,
+      s.teacherRemarks,
+      s.evaluationDate,
+      s.createdAt,
+      s.updatedAt
+    ]);
   }
   public async updateSummative(s: SummativeAssessment): Promise<void> { await this.saveSummative(s); }
   public async findReportCardById(id: string): Promise<CbcReportCard | null> {
@@ -918,7 +999,25 @@ export class PostgresCbcAssessmentRepository implements ICbcAssessmentRepository
     const q = `INSERT INTO cbc_report_cards (id, student_id, term_id, academic_year_id, grade_level, stream_id, learning_area_assessments, core_competency_assessments, value_assessments, attendance_days_present, attendance_days_total, class_teacher_remarks, head_teacher_remarks, overall_average_score, overall_performance_level, created_at, updated_at)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
                ON CONFLICT (id) DO UPDATE SET overall_average_score = EXCLUDED.overall_average_score, updated_at = NOW()`;
-    await this.pool.query(q, [rc.id, rc.studentId, rc.termId, rc.academicYearId, rc.gradeLevel, rc.streamId, JSON.stringify(rc.learningAreaAssessments), JSON.stringify(rc.coreCompetencyAssessments), JSON.stringify(rc.valueAssessments), rc.attendanceDaysPresent, rc.attendanceDaysTotal, rc.classTeacherRemarks, rc.headTeacherRemarks, rc.overallAverageScore, rc.overallPerformanceLevel, rc.createdAt, rc.updatedAt]);
+    await this.pool.query(q, [
+      rc.id,
+      rc.studentId,
+      rc.termId,
+      rc.academicYearId,
+      rc.gradeLevel,
+      (rc.streamId && rc.streamId.trim() !== '') ? rc.streamId : null,
+      JSON.stringify(rc.learningAreaAssessments),
+      JSON.stringify(rc.coreCompetencyAssessments),
+      JSON.stringify(rc.valueAssessments),
+      rc.attendanceDaysPresent,
+      rc.attendanceDaysTotal,
+      rc.classTeacherRemarks,
+      rc.headTeacherRemarks,
+      rc.overallAverageScore,
+      rc.overallPerformanceLevel,
+      rc.createdAt,
+      rc.updatedAt
+    ]);
   }
   public async updateReportCard(rc: CbcReportCard): Promise<void> { await this.saveReportCard(rc); }
 }
@@ -939,7 +1038,24 @@ export class PostgresSchemeOfWorkRepository implements ISchemeOfWorkRepository {
     const q = `INSERT INTO schemes_of_work (id, teacher_id, learning_area_id, classroom_id, stream_id, academic_year_id, term_id, title, entries, status, submitted_at, reviewed_by_user_id, reviewed_at, review_remarks, created_at, updated_at)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
                ON CONFLICT (id) DO UPDATE SET entries = EXCLUDED.entries, status = EXCLUDED.status, updated_at = NOW()`;
-    await this.pool.query(q, [s.id, s.teacherId, s.learningAreaId, s.classRoomId, s.streamId, s.academicYearId, s.termId, s.title, JSON.stringify(s.entries), s.status, (s as any)._props.submittedAt, (s as any)._props.reviewedByUserId, (s as any)._props.reviewedAt, s.reviewRemarks, s.createdAt, s.updatedAt]);
+    await this.pool.query(q, [
+      s.id,
+      (s.teacherId && s.teacherId.trim() !== '') ? s.teacherId : null,
+      s.learningAreaId,
+      (s.classRoomId && s.classRoomId.trim() !== '') ? s.classRoomId : null,
+      (s.streamId && s.streamId.trim() !== '') ? s.streamId : null,
+      s.academicYearId,
+      s.termId,
+      s.title,
+      JSON.stringify(s.entries),
+      s.status,
+      (s as any)._props.submittedAt || null,
+      ((s as any)._props.reviewedByUserId && (s as any)._props.reviewedByUserId.trim() !== '') ? (s as any)._props.reviewedByUserId : null,
+      (s as any)._props.reviewedAt || null,
+      s.reviewRemarks || null,
+      s.createdAt,
+      s.updatedAt
+    ]);
   }
   public async update(s: SchemeOfWork): Promise<void> { await this.save(s); }
   public async delete(id: string): Promise<void> { await this.pool.query('DELETE FROM schemes_of_work WHERE id = $1', [id]); }
@@ -1042,11 +1158,11 @@ export class PostgresLessonPlanRepository implements ILessonPlanRepository {
                ON CONFLICT (id) DO UPDATE SET teacher_self_reflection = EXCLUDED.teacher_self_reflection, status = EXCLUDED.status, submitted_at = EXCLUDED.submitted_at, reviewed_by_user_id = EXCLUDED.reviewed_by_user_id, reviewed_at = EXCLUDED.reviewed_at, review_remarks = EXCLUDED.review_remarks, updated_at = NOW()`;
     await this.pool.query(q, [
       lp.id,
-      (lp as any)._props.schemeOfWorkEntryId,
-      lp.teacherId,
+      ((lp as any)._props.schemeOfWorkEntryId && (lp as any)._props.schemeOfWorkEntryId.trim() !== '') ? (lp as any)._props.schemeOfWorkEntryId : null,
+      (lp.teacherId && lp.teacherId.trim() !== '') ? lp.teacherId : null,
       lp.learningAreaId,
-      lp.classRoomId,
-      lp.streamId,
+      (lp.classRoomId && lp.classRoomId.trim() !== '') ? lp.classRoomId : null,
+      (lp.streamId && lp.streamId.trim() !== '') ? lp.streamId : null,
       lp.lessonDate,
       lp.durationMinutes,
       (lp as any)._props.rollBoys,
@@ -1059,11 +1175,11 @@ export class PostgresLessonPlanRepository implements ILessonPlanRepository {
       JSON.stringify((lp as any)._props.valuesAddressed || []),
       JSON.stringify((lp as any)._props.learningResources || []),
       JSON.stringify(lp.steps),
-      (lp as any)._props.extendedActivity,
-      lp.teacherSelfReflection,
+      (lp as any)._props.extendedActivity || null,
+      lp.teacherSelfReflection || null,
       lp.status,
       lp.submittedAt || null,
-      lp.reviewedByUserId || null,
+      (lp.reviewedByUserId && lp.reviewedByUserId.trim() !== '') ? lp.reviewedByUserId : null,
       lp.reviewedAt || null,
       lp.reviewRemarks || null,
       lp.createdAt,
@@ -1117,7 +1233,18 @@ export class PostgresTimetableRepository implements ITimetableRepository {
     const q = `INSERT INTO timetables (id, school_id, academic_year_id, term_id, classroom_id, stream_id, slots, is_active, created_at, updated_at)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
                ON CONFLICT (id) DO UPDATE SET slots = EXCLUDED.slots, updated_at = NOW()`;
-    await this.pool.query(q, [tt.id, tt.schoolId, tt.academicYearId, tt.termId, tt.classRoomId, tt.streamId, JSON.stringify(tt.slots), tt.isActive, tt.createdAt, tt.updatedAt]);
+    await this.pool.query(q, [
+      tt.id,
+      tt.schoolId,
+      tt.academicYearId,
+      tt.termId,
+      tt.classRoomId,
+      (tt.streamId && tt.streamId.trim() !== '') ? tt.streamId : null,
+      JSON.stringify(tt.slots),
+      tt.isActive,
+      tt.createdAt,
+      tt.updatedAt
+    ]);
   }
   public async update(tt: Timetable): Promise<void> { await this.save(tt); }
   public async delete(id: string): Promise<void> { await this.pool.query('DELETE FROM timetables WHERE id = $1', [id]); }
@@ -1131,21 +1258,63 @@ export class PostgresAttendanceRepository implements IAttendanceRepository {
     const r = res.rows[0];
     return AttendanceRegister.create({ schoolId: r.school_id, classRoomId: r.classroom_id, streamId: r.stream_id, academicYearId: r.academic_year_id, termId: r.term_id, date: r.date, type: r.type, lessonId: r.lesson_id, markedByTeacherId: r.marked_by_teacher_id, entries: typeof r.entries === 'string' ? JSON.parse(r.entries) : r.entries }, r.id, r.created_at, r.updated_at);
   }
-  public async findRegister(streamId: string, date: string, type: AttendanceType): Promise<AttendanceRegister | null> {
-    const res = await this.pool.query('SELECT * FROM attendance_registers WHERE stream_id = $1 AND date = $2 AND type = $3 LIMIT 1', [streamId, date, type]);
-    if (!res.rows.length) return null;
-    const r = res.rows[0];
-    return AttendanceRegister.create({ schoolId: r.school_id, classRoomId: r.classroom_id, streamId: r.stream_id, academicYearId: r.academic_year_id, termId: r.term_id, date: r.date, type: r.type, lessonId: r.lesson_id, markedByTeacherId: r.marked_by_teacher_id, entries: typeof r.entries === 'string' ? JSON.parse(r.entries) : r.entries }, r.id, r.created_at, r.updated_at);
+  public async findRegister(streamId: string, date: string, type: AttendanceType, classRoomId?: string): Promise<AttendanceRegister | null> {
+    if (streamId && streamId.trim() !== '') {
+      const res = await this.pool.query(
+        'SELECT * FROM attendance_registers WHERE stream_id = $1 AND date = $2 AND type = $3 LIMIT 1',
+        [streamId, date, type]
+      );
+      if (res.rows.length) {
+        const r = res.rows[0];
+        return AttendanceRegister.create({ schoolId: r.school_id, classRoomId: r.classroom_id, streamId: r.stream_id, academicYearId: r.academic_year_id, termId: r.term_id, date: r.date, type: r.type, lessonId: r.lesson_id, markedByTeacherId: r.marked_by_teacher_id, entries: typeof r.entries === 'string' ? JSON.parse(r.entries) : r.entries }, r.id, r.created_at, r.updated_at);
+      }
+    }
+    if (classRoomId && classRoomId.trim() !== '') {
+      const res = await this.pool.query(
+        'SELECT * FROM attendance_registers WHERE classroom_id = $1 AND (stream_id IS NULL OR stream_id = \'\') AND date = $2 AND type = $3 LIMIT 1',
+        [classRoomId, date, type]
+      );
+      if (res.rows.length) {
+        const r = res.rows[0];
+        return AttendanceRegister.create({ schoolId: r.school_id, classRoomId: r.classroom_id, streamId: r.stream_id, academicYearId: r.academic_year_id, termId: r.term_id, date: r.date, type: r.type, lessonId: r.lesson_id, markedByTeacherId: r.marked_by_teacher_id, entries: typeof r.entries === 'string' ? JSON.parse(r.entries) : r.entries }, r.id, r.created_at, r.updated_at);
+      }
+    }
+    return null;
   }
   public async findRegisters(filters: AttendanceFilterCriteria): Promise<AttendanceRegister[]> {
-    const res = await this.pool.query('SELECT * FROM attendance_registers');
+    let q = 'SELECT * FROM attendance_registers WHERE 1=1';
+    const params: any[] = [];
+    if (filters.schoolId) { params.push(filters.schoolId); q += ` AND school_id = $${params.length}`; }
+    if (filters.classRoomId) { params.push(filters.classRoomId); q += ` AND classroom_id = $${params.length}`; }
+    if (filters.streamId) { params.push(filters.streamId); q += ` AND stream_id = $${params.length}`; }
+    if (filters.termId) { params.push(filters.termId); q += ` AND term_id = $${params.length}`; }
+    if (filters.academicYearId) { params.push(filters.academicYearId); q += ` AND academic_year_id = $${params.length}`; }
+    if (filters.startDate) { params.push(filters.startDate); q += ` AND date >= $${params.length}`; }
+    if (filters.endDate) { params.push(filters.endDate); q += ` AND date <= $${params.length}`; }
+    if (filters.type) { params.push(filters.type); q += ` AND type = $${params.length}`; }
+    q += ' ORDER BY date DESC';
+    const res = await this.pool.query(q, params);
     return res.rows.map(r => AttendanceRegister.create({ schoolId: r.school_id, classRoomId: r.classroom_id, streamId: r.stream_id, academicYearId: r.academic_year_id, termId: r.term_id, date: r.date, type: r.type, lessonId: r.lesson_id, markedByTeacherId: r.marked_by_teacher_id, entries: typeof r.entries === 'string' ? JSON.parse(r.entries) : r.entries }, r.id, r.created_at, r.updated_at));
   }
   public async saveRegister(reg: AttendanceRegister): Promise<void> {
     const q = `INSERT INTO attendance_registers (id, school_id, classroom_id, stream_id, academic_year_id, term_id, date, type, lesson_id, marked_by_teacher_id, entries, created_at, updated_at)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
                ON CONFLICT (id) DO UPDATE SET entries = EXCLUDED.entries, updated_at = NOW()`;
-    await this.pool.query(q, [reg.id, reg.schoolId, reg.classRoomId, reg.streamId, reg.academicYearId, reg.termId, reg.date, reg.type, (reg as any)._props.lessonId, reg.markedByTeacherId, JSON.stringify(reg.entries), reg.createdAt, reg.updatedAt]);
+    await this.pool.query(q, [
+      reg.id,
+      reg.schoolId,
+      reg.classRoomId,
+      (reg.streamId && reg.streamId.trim() !== '') ? reg.streamId : null,
+      reg.academicYearId,
+      reg.termId,
+      reg.date,
+      reg.type,
+      ((reg as any)._props.lessonId && (reg as any)._props.lessonId.trim() !== '') ? (reg as any)._props.lessonId : null,
+      (reg.markedByTeacherId && reg.markedByTeacherId.trim() !== '') ? reg.markedByTeacherId : null,
+      JSON.stringify(reg.entries),
+      reg.createdAt,
+      reg.updatedAt
+    ]);
   }
   public async updateRegister(reg: AttendanceRegister): Promise<void> { await this.saveRegister(reg); }
 }
@@ -1232,7 +1401,23 @@ export class PostgresFeeRepository implements IFeeRepository {
     const q = `INSERT INTO payments (id, school_id, invoice_id, student_id, receipt_number, amount, payment_method, transaction_reference, mpesa_phone_number, payment_date, recorded_by_user_id, status, notes, created_at, updated_at)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
                ON CONFLICT (id) DO NOTHING`;
-    await this.pool.query(q, [p.id, p.schoolId, p.invoiceId, p.studentId, p.receiptNumber, p.amount, p.paymentMethod, p.transactionReference, p.mpesaPhoneNumber, p.paymentDate, p.recordedByUserId, p.status, p.notes, p.createdAt, p.updatedAt]);
+    await this.pool.query(q, [
+      p.id,
+      p.schoolId,
+      (p.invoiceId && p.invoiceId.trim() !== '') ? p.invoiceId : null,
+      p.studentId,
+      p.receiptNumber,
+      p.amount,
+      p.paymentMethod,
+      p.transactionReference,
+      p.mpesaPhoneNumber || null,
+      p.paymentDate,
+      (p.recordedByUserId && p.recordedByUserId.trim() !== '') ? p.recordedByUserId : null,
+      p.status,
+      p.notes || null,
+      p.createdAt,
+      p.updatedAt
+    ]);
   }
   public async updatePayment(p: Payment): Promise<void> { await this.savePayment(p); }
 
@@ -1269,7 +1454,25 @@ export class PostgresFeeRepository implements IFeeRepository {
     const q = `INSERT INTO expenses (id, school_id, voucher_number, category, title, amount, payment_method, payment_reference, payee, expense_date, status, notes, recorded_by_user_id, approved_by_user_id, receipt_url, created_at, updated_at)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
                ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, amount = EXCLUDED.amount, status = EXCLUDED.status, updated_at = NOW()`;
-    await this.pool.query(q, [e.id, e.schoolId, e.voucherNumber, e.category, e.title, e.amount, e.paymentMethod, e.paymentReference, e.payee, e.expenseDate, e.status, e.notes, e.recordedByUserId, e.approvedByUserId, e.receiptUrl, e.createdAt, e.updatedAt]);
+    await this.pool.query(q, [
+      e.id,
+      e.schoolId,
+      e.voucherNumber,
+      e.category,
+      e.title,
+      e.amount,
+      e.paymentMethod,
+      e.paymentReference,
+      e.payee,
+      e.expenseDate,
+      e.status,
+      e.notes || null,
+      (e.recordedByUserId && e.recordedByUserId.trim() !== '') ? e.recordedByUserId : null,
+      (e.approvedByUserId && e.approvedByUserId.trim() !== '') ? e.approvedByUserId : null,
+      e.receiptUrl || null,
+      e.createdAt,
+      e.updatedAt
+    ]);
   }
 
   public async updateExpense(e: Expense): Promise<void> { await this.saveExpense(e); }
@@ -1309,7 +1512,22 @@ export class PostgresFeeRepository implements IFeeRepository {
     const q = `INSERT INTO other_incomes (id, school_id, receipt_number, source, title, amount, payment_method, payment_reference, received_from, income_date, notes, recorded_by_user_id, created_at, updated_at)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
                ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, amount = EXCLUDED.amount, updated_at = NOW()`;
-    await this.pool.query(q, [i.id, i.schoolId, i.receiptNumber, i.source, i.title, i.amount, i.paymentMethod, i.paymentReference, i.receivedFrom, i.incomeDate, i.notes, i.recordedByUserId, i.createdAt, i.updatedAt]);
+    await this.pool.query(q, [
+      i.id,
+      i.schoolId,
+      i.receiptNumber,
+      i.source,
+      i.title,
+      i.amount,
+      i.paymentMethod,
+      i.paymentReference,
+      i.receivedFrom,
+      i.incomeDate,
+      i.notes || null,
+      (i.recordedByUserId && i.recordedByUserId.trim() !== '') ? i.recordedByUserId : null,
+      i.createdAt,
+      i.updatedAt
+    ]);
   }
 
   public async updateOtherIncome(i: OtherIncome): Promise<void> { await this.saveOtherIncome(i); }

@@ -17,8 +17,10 @@ export const RegisterStudentSchema = z.object({
   streamId: z.string().optional(),
   schoolId: z.string().optional().default('school-001'),
   academicYearId: z.string().optional().default('year-2026'),
+  termId: z.string().optional(),
   medicalConditions: z.string().optional(),
   specialNeeds: z.string().optional(),
+  profilePhotoUrl: z.string().optional(),
   guardian: z
     .object({
       firstName: z.string().min(1),
@@ -46,8 +48,9 @@ export const UpdateStudentSchema = z.object({
   classroomId: z.string().optional(),
   streamId: z.string().optional(),
   academicYearId: z.string().optional(),
-  status: z.nativeEnum(StudentStatus).optional()
-});
+  status: z.nativeEnum(StudentStatus).optional(),
+  profilePhotoUrl: z.string().optional()
+}).passthrough();
 
 export class StudentController {
   constructor(private readonly studentUseCases: StudentUseCases) {}
@@ -80,7 +83,7 @@ export class StudentController {
 
   public getStudentById = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const student = await this.studentUseCases.getStudentById(req.params.id as string);
+      const student = await this.studentUseCases.getStudentById(req.params.id as string, (req as any).user);
       return res.status(200).json({
         success: true,
         data: student
@@ -99,7 +102,8 @@ export class StudentController {
         classroomId: classroomId as string,
         streamId: streamId as string,
         academicYearId: academicYearId as string,
-        search: search as string
+        search: search as string,
+        requestingUser: (req as any).user
       });
       return res.status(200).json({
         success: true,

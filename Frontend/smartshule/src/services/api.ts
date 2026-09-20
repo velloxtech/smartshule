@@ -1,6 +1,7 @@
 import {
   AuthResponse,
   AuthUser,
+  ManageableUser,
   ApiResponse,
   Student,
   Teacher,
@@ -147,6 +148,71 @@ export const apiService = {
 
   getProfile: async (): Promise<ApiResponse<AuthUser>> => {
     return apiFetch<ApiResponse<AuthUser>>('/auth/profile');
+  },
+
+  changePassword: async (data: { currentPassword: string; newPassword: string }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  // 1b. User Management & Access Control Endpoints
+  getUsers: async (filters?: { role?: string; search?: string }): Promise<ApiResponse<ManageableUser[]>> => {
+    const params = new URLSearchParams();
+    if (filters?.role) params.append('role', filters.role);
+    if (filters?.search) params.append('search', filters.search);
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    return apiFetch<ApiResponse<ManageableUser[]>>(`/users${qs}`);
+  },
+
+  createUser: async (data: {
+    email: string;
+    password: string;
+    firstName: string;
+    lastName: string;
+    role: string;
+    phone?: string;
+    schoolId?: string;
+    status?: string;
+  }): Promise<ApiResponse<ManageableUser>> => {
+    return apiFetch<ApiResponse<ManageableUser>>('/users', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateUser: async (
+    id: string,
+    data: { firstName?: string; lastName?: string; phone?: string; role?: string; email?: string }
+  ): Promise<ApiResponse<ManageableUser>> => {
+    return apiFetch<ApiResponse<ManageableUser>>(`/users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  setUserStatus: async (
+    id: string,
+    status: 'ACTIVE' | 'SUSPENDED' | 'INACTIVE'
+  ): Promise<ApiResponse<ManageableUser>> => {
+    return apiFetch<ApiResponse<ManageableUser>>(`/users/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+  },
+
+  resetUserPassword: async (id: string, newPassword: string): Promise<ApiResponse<{ message: string }>> => {
+    return apiFetch<ApiResponse<{ message: string }>>(`/users/${id}/reset-password`, {
+      method: 'POST',
+      body: JSON.stringify({ newPassword }),
+    });
+  },
+
+  deleteUser: async (id: string): Promise<ApiResponse<{ message: string }>> => {
+    return apiFetch<ApiResponse<{ message: string }>>(`/users/${id}`, {
+      method: 'DELETE',
+    });
   },
 
   // 2. Academic Structure Endpoints
@@ -298,6 +364,7 @@ export const apiService = {
   getStudents: async (filters?: {
     schoolId?: string;
     gradeLevel?: string;
+    classroomId?: string;
     streamId?: string;
     academicYearId?: string;
     search?: string;
@@ -305,6 +372,7 @@ export const apiService = {
     const q = new URLSearchParams();
     if (filters?.schoolId) q.append('schoolId', filters.schoolId);
     if (filters?.gradeLevel) q.append('gradeLevel', filters.gradeLevel);
+    if (filters?.classroomId) q.append('classroomId', filters.classroomId);
     if (filters?.streamId) q.append('streamId', filters.streamId);
     if (filters?.academicYearId) q.append('academicYearId', filters.academicYearId);
     if (filters?.search) q.append('search', filters.search);
@@ -324,9 +392,11 @@ export const apiService = {
     dateOfBirth: string;
     gender: 'MALE' | 'FEMALE' | 'OTHER';
     gradeLevel: string;
-    streamId: string;
+    classroomId?: string;
+    streamId?: string;
     schoolId: string;
     academicYearId: string;
+    termId?: string;
     medicalConditions?: string;
     specialNeeds?: string;
     guardian?: {
@@ -738,7 +808,7 @@ export const apiService = {
   markAttendance: async (data: {
     schoolId: string;
     classRoomId: string;
-    streamId: string;
+    streamId?: string;
     academicYearId: string;
     termId: string;
     date: string;
@@ -757,10 +827,11 @@ export const apiService = {
     });
   },
 
-  getDailyRegister: async (streamId: string, date: string, type = 'DAILY_MORNING'): Promise<ApiResponse<AttendanceRegister>> => {
-    return apiFetch<ApiResponse<AttendanceRegister>>(
-      `/attendance/daily?streamId=${streamId}&date=${date}&type=${type}`
-    );
+  getDailyRegister: async (streamId: string, date: string, type = 'DAILY_MORNING', classRoomId?: string): Promise<ApiResponse<AttendanceRegister>> => {
+    let url = `/attendance/daily?date=${date}&type=${type}`;
+    if (streamId) url += `&streamId=${encodeURIComponent(streamId)}`;
+    if (classRoomId) url += `&classRoomId=${encodeURIComponent(classRoomId)}`;
+    return apiFetch<ApiResponse<AttendanceRegister>>(url);
   },
 
   getAttendanceReport: async (params: {
@@ -813,6 +884,22 @@ export const apiService = {
     return apiFetch<ApiResponse<any>>('/finance/invoices/generate', {
       method: 'POST',
       body: JSON.stringify(data),
+    });
+  },
+
+  syncFeeBalances: async (data?: {
+    schoolId?: string;
+    academicYearId?: string;
+    termId?: string;
+    gradeLevel?: string;
+  }): Promise<ApiResponse<{
+    totalStudentsEvaluated: number;
+    invoicesCreated: number;
+    syncedInvoices: any[];
+  }>> => {
+    return apiFetch<ApiResponse<any>>('/finance/sync-fees', {
+      method: 'POST',
+      body: JSON.stringify(data || {}),
     });
   },
 
@@ -1021,13 +1108,21 @@ export const apiService = {
     studentId: string;
     title: string;
     description: string;
-    photoBase64: string;
+    photoBase64?: string;
+    imageDataOrUrl?: string;
     mimeType?: string;
     learningAreaId?: string;
+    subject?: string;
   }): Promise<ApiResponse<ParentHelpRequest>> => {
+    const payload = {
+      ...data,
+      subject: data.subject || data.learningAreaId || 'General Inquiry',
+      imageDataOrUrl: data.imageDataOrUrl || data.photoBase64,
+      photoBase64: data.photoBase64 || data.imageDataOrUrl,
+    };
     return apiFetch<ApiResponse<ParentHelpRequest>>('/media/help-requests', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
     });
   },
 
@@ -1041,12 +1136,18 @@ export const apiService = {
   },
 
   respondHelpRequest: async (requestId: string, data: {
+    response?: string;
     responseMessage: string;
     responsePhotoBase64?: string;
   }): Promise<ApiResponse<ParentHelpRequest>> => {
+    const payload = {
+      ...data,
+      response: data.response || data.responseMessage,
+      responseMessage: data.responseMessage || data.response,
+    };
     return apiFetch<ApiResponse<ParentHelpRequest>>(`/media/help-requests/${requestId}/respond`, {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
     });
   },
 
@@ -1055,16 +1156,41 @@ export const apiService = {
     studentId: string;
     title: string;
     description: string;
-    photoBase64: string;
+    photoBase64?: string;
+    imageDataOrUrl?: string;
     mimeType?: string;
     learningAreaId?: string;
     competencyDomain?: string;
+    competencyTag?: string;
     tags?: string[];
     rating?: string;
   }): Promise<ApiResponse<StudentProgressPhoto>> => {
+    const payload = {
+      ...data,
+      imageDataOrUrl: data.imageDataOrUrl || data.photoBase64,
+      photoBase64: data.photoBase64 || data.imageDataOrUrl,
+      competencyTag: data.competencyTag || data.competencyDomain || 'General CBC Progress',
+      competencyDomain: data.competencyDomain || data.competencyTag || 'General CBC Progress',
+    };
     return apiFetch<ApiResponse<StudentProgressPhoto>>('/media/progress-photos', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
+    });
+  },
+
+  uploadPhoto: async (data: {
+    imageDataOrUrl?: string;
+    photoBase64?: string;
+    image?: string;
+    filename?: string;
+  }): Promise<ApiResponse<{ url: string; imageUrl: string; photoUrl: string; thumbnailUrl: string; metadata: any }>> => {
+    const payload = {
+      ...data,
+      imageDataOrUrl: data.imageDataOrUrl || data.photoBase64 || data.image,
+    };
+    return apiFetch<ApiResponse<{ url: string; imageUrl: string; photoUrl: string; thumbnailUrl: string; metadata: any }>>('/media/upload', {
+      method: 'POST',
+      body: JSON.stringify(payload),
     });
   },
 

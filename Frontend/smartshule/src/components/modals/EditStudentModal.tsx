@@ -44,7 +44,10 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
 
       apiService.getClasses().then(async (cRes) => {
         if (cRes.success && cRes.data) {
-          const targetClass = cRes.data.find(c => c.name.toLowerCase().includes(student.grade?.toLowerCase() || ''));
+          const targetClass = cRes.data.find(c => 
+            c.gradeLevel === normalizedGrade || 
+            c.name.toLowerCase().includes(student.grade?.toLowerCase() || '')
+          );
           if (targetClass) {
             const sRes = await apiService.getStreamsByClass(targetClass.id);
             if (sRes.success && sRes.data) {
@@ -57,6 +60,35 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
       }).catch(() => {});
     }
   }, [student]);
+
+  // Dynamically load streams when grade level dropdown changes
+  const handleGradeChange = async (newGrade: string) => {
+    setGradeLevel(newGrade);
+    setStreamId('');
+    setStreamName('');
+    try {
+      const cRes = await apiService.getClasses();
+      if (cRes.success && cRes.data) {
+        const gradeSearch = newGrade.replace('_', ' ').toLowerCase();
+        const targetClass = cRes.data.find(c => 
+          c.gradeLevel === newGrade || 
+          c.name.toLowerCase().includes(gradeSearch)
+        );
+        if (targetClass) {
+          const sRes = await apiService.getStreamsByClass(targetClass.id);
+          if (sRes.success && sRes.data) {
+            setAvailableStreams(sRes.data.map(st => ({ id: st.id, name: st.name })));
+          } else {
+            setAvailableStreams([]);
+          }
+        } else {
+          setAvailableStreams([]);
+        }
+      }
+    } catch {
+      setAvailableStreams([]);
+    }
+  };
 
   if (!isOpen || !student) return null;
 
@@ -171,7 +203,7 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
               </label>
               <select
                 value={gradeLevel}
-                onChange={(e) => setGradeLevel(e.target.value)}
+                onChange={(e) => handleGradeChange(e.target.value)}
                 className="w-full bg-surface-container-low border border-outline-variant/30 rounded-lg px-3 py-2 text-xs focus:outline-primary"
               >
                 <option value="PP1">PP1 (Pre-Primary 1)</option>

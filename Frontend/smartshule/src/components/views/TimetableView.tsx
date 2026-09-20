@@ -26,7 +26,8 @@ const DEFAULT_DAYS: DayDefinition[] = [
 export const TimetableView: React.FC = () => {
   const { user } = useAuth();
   const isTeacher = user?.role === UserRole.TEACHER;
-  const canEditGrid = user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.SCHOOL_ADMIN || user?.role === UserRole.HEAD_TEACHER || isTeacher;
+  const isParent = user?.role === UserRole.PARENT || user?.role === UserRole.GUARDIAN;
+  const canEditGrid = !isParent && (user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.SCHOOL_ADMIN || user?.role === UserRole.HEAD_TEACHER || isTeacher);
 
   const [viewMode, setViewMode] = useState<'class' | 'teacher'>(isTeacher ? 'teacher' : 'class');
   
@@ -36,6 +37,9 @@ export const TimetableView: React.FC = () => {
   const [classStreams, setClassStreams] = useState<any[]>([]);
   const [selectedStreamId, setSelectedStreamId] = useState('');
   
+  const [parentChildren, setParentChildren] = useState<any[]>([]);
+  const [selectedChildId, setSelectedChildId] = useState<string>('');
+
   const [teacherId, setTeacherId] = useState('');
   const [teacherProfile, setTeacherProfile] = useState<any>(null);
   const [teachersList, setTeachersList] = useState<any[]>([]);
@@ -97,6 +101,26 @@ export const TimetableView: React.FC = () => {
     }
     loadTimetableContext();
   }, []);
+
+  // Parent context: lock timetable to parent's child
+  useEffect(() => {
+    if (!isParent) return;
+    async function loadParentTimetableContext() {
+      try {
+        const portalRes = await apiService.getGuardianPortalData().catch(() => null);
+        if (portalRes?.data?.children && Array.isArray(portalRes.data.children) && portalRes.data.children.length > 0) {
+          setParentChildren(portalRes.data.children);
+          const firstChild = portalRes.data.children[0];
+          setSelectedChildId(firstChild.id);
+          if (firstChild.classroomId) setSelectedClassId(firstChild.classroomId);
+          if (firstChild.streamId) setSelectedStreamId(firstChild.streamId);
+        }
+      } catch (err) {
+        console.error('Failed to load parent children for timetable:', err);
+      }
+    }
+    loadParentTimetableContext();
+  }, [isParent]);
 
   // When selected class changes, load its optional streams
   useEffect(() => {
@@ -231,7 +255,7 @@ export const TimetableView: React.FC = () => {
     setIsSavingGrid(true);
     setSaveSuccessMsg(null);
 
-    const activeSchoolId = user?.schoolId || schoolInfo?.id || 'school-grace-seeds-id';
+    const activeSchoolId = user?.schoolId || schoolInfo?.id || 'school-001';
 
     try {
       const res = await apiService.saveTimetableGrid({
@@ -421,7 +445,7 @@ export const TimetableView: React.FC = () => {
     <img src="/logo.png" alt="Grace Seeds School Logo" class="logo" />
     <h1 class="school-title">GRACE SEEDS SCHOOL</h1>
     <div class="sub-title">MINISTRY OF EDUCATION · CBC MASTER TIMETABLE</div>
-    <div class="meta-info">P.O. Box 12345-00100, Nairobi, Kenya · Tel: +254 700 000 000 · Email: info@graceseeds.ac.ke</div>
+    <div class="meta-info">KEMRI Street, Kisian, Kisumu, Kenya · Tel: 0745436312 · Email: schoolgraceseeds@gmail.com</div>
     <div class="badge">Master Timetable · ${titleContext} · ${termName} ${yearName}</div>
   </div>
   <div class="meta-grid">
@@ -662,30 +686,79 @@ export const TimetableView: React.FC = () => {
 
       {/* Control Filters (Class, Stream, Teacher Selection) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl bg-surface-container-low border border-outline-variant/30 no-print">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setViewMode('class')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              viewMode === 'class'
-                ? 'bg-[#800000] text-white shadow-xs'
-                : 'bg-surface-container text-on-surface-variant hover:text-on-surface'
-            }`}
-          >
-            Class Schedule
-          </button>
-          <button
-            onClick={() => setViewMode('teacher')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              viewMode === 'teacher'
-                ? 'bg-[#800000] text-white shadow-xs'
-                : 'bg-surface-container text-on-surface-variant hover:text-on-surface'
-            }`}
-          >
-            Teacher Individual View
-          </button>
-        </div>
+        {isParent ? (
+          <div className="flex items-center gap-2">
+            <span className="px-3 py-1.5 rounded-lg text-xs font-bold bg-[#800000] text-white shadow-xs flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-[15px]">school</span>
+              <span>Child Class Timetable</span>
+            </span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setViewMode('class')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                viewMode === 'class'
+                  ? 'bg-[#800000] text-white shadow-xs'
+                  : 'bg-surface-container text-on-surface-variant hover:text-on-surface'
+              }`}
+            >
+              Class Schedule
+            </button>
+            <button
+              onClick={() => setViewMode('teacher')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                viewMode === 'teacher'
+                  ? 'bg-[#800000] text-white shadow-xs'
+                  : 'bg-surface-container text-on-surface-variant hover:text-on-surface'
+              }`}
+            >
+              Teacher Individual View
+            </button>
+          </div>
+        )}
 
-        {viewMode === 'class' ? (
+        {isParent ? (
+          <div className="flex flex-wrap items-center gap-3">
+            {parentChildren.length > 1 ? (
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-semibold text-on-surface-variant">Learner:</span>
+                <select
+                  value={selectedChildId}
+                  onChange={(e) => {
+                    const cId = e.target.value;
+                    setSelectedChildId(cId);
+                    const child = parentChildren.find((c) => c.id === cId);
+                    if (child) {
+                      if (child.classroomId) setSelectedClassId(child.classroomId);
+                      if (child.streamId) setSelectedStreamId(child.streamId);
+                    }
+                  }}
+                  className="bg-surface-container-lowest border border-outline-variant/40 rounded-lg py-1.5 px-3 text-xs font-bold text-on-surface shadow-xs"
+                >
+                  {parentChildren.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.firstName} {c.lastName} ({c.gradeLevel ? c.gradeLevel.replace('_', ' ') : 'Primary'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : parentChildren.length === 1 ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-on-surface">
+                  {parentChildren[0].firstName} {parentChildren[0].lastName}
+                </span>
+                <span className="px-2 py-0.5 rounded bg-surface-container-high text-on-surface-variant text-[11px] font-semibold">
+                  {parentChildren[0].gradeLevel ? parentChildren[0].gradeLevel.replace('_', ' ') : 'Primary'}
+                </span>
+              </div>
+            ) : null}
+
+            <span className="text-[11px] text-on-surface-variant font-data-mono">
+              {activeClassName}{selectedStreamName ? ` - ${selectedStreamName}` : ''}
+            </span>
+          </div>
+        ) : viewMode === 'class' ? (
           <div className="flex flex-wrap items-center gap-3">
             {/* Primary Class Selector */}
             <div className="flex items-center gap-1.5">
@@ -777,7 +850,7 @@ export const TimetableView: React.FC = () => {
             MINISTRY OF EDUCATION · CBC MASTER TIMETABLE
           </p>
           <p className="text-[11px] text-gray-500 font-medium">
-            P.O. Box 12345-00100, Nairobi, Kenya · Tel: +254 700 000 000 · Email: info@graceseeds.ac.ke
+            KEMRI Street, Kisian, Kisumu, Kenya · Tel: 0745436312 · Email: schoolgraceseeds@gmail.com
           </p>
 
           <div className="mt-2.5 inline-flex flex-wrap items-center justify-center gap-2 px-4 py-1.5 bg-[#800000] text-white rounded-lg text-xs font-bold uppercase tracking-wider shadow-xs">

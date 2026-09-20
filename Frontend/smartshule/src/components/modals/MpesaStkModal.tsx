@@ -40,6 +40,7 @@ export const MpesaStkModal: React.FC<MpesaStkModalProps> = ({
   );
   const [step, setStep] = useState<'form' | 'pushing' | 'prompt' | 'success'>('form');
   const [txRef, setTxRef] = useState('QKH' + Math.floor(100000 + Math.random() * 900000) + 'XJ');
+  const [mpesaReceiptCode, setMpesaReceiptCode] = useState('');
 
   useEffect(() => {
     apiService.getSchool().then(res => {
@@ -63,14 +64,17 @@ export const MpesaStkModal: React.FC<MpesaStkModalProps> = ({
 
   const currentStudent = students.find((s) => s.id === selectedStudentId) || initialStudent || students[0];
 
-  const handleStudentSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const sId = e.target.value;
+  const handleStudentChange = (sId: string) => {
     setSelectedStudentId(sId);
     const found = students.find((s) => s.id === sId);
     if (found) {
       setPhone(found.guardianPhone || '');
       setAmount(found.feeBalance > 0 ? found.feeBalance.toString() : '');
     }
+  };
+
+  const handleStudentSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    handleStudentChange(e.target.value);
   };
 
   const handleTriggerPush = (e: React.FormEvent) => {
@@ -95,6 +99,8 @@ export const MpesaStkModal: React.FC<MpesaStkModalProps> = ({
       setStep('prompt');
     }, 1200);
   };
+
+  const handleSendPush = handleTriggerPush;
 
   const handleConfirmPayment = () => {
     const paidAmount = Number(amount) || 0;

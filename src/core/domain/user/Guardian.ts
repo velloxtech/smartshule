@@ -46,6 +46,11 @@ export class Guardian extends Entity<GuardianProps> {
     return this._props.studentIds;
   }
 
+  public setUserId(userId: string): void {
+    this._props.userId = userId;
+    this.touch();
+  }
+
   public linkStudent(studentId: string): void {
     if (!this._props.studentIds.includes(studentId)) {
       this._props.studentIds.push(studentId);

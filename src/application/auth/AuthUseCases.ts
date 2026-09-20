@@ -211,4 +211,127 @@ export class AuthUseCases {
     }
     return user.toJSON();
   }
+
+  public async changePassword(userId: string, dto: { currentPassword: string; newPassword: string }) {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new NotFoundError('User', userId);
+    }
+
+    const isMatch = await this.passwordHasher.compare(dto.currentPassword, user.passwordHash);
+    if (!isMatch) {
+      throw new UnauthorizedError('Current password is incorrect.');
+    }
+
+    const newHash = await this.passwordHasher.hash(dto.newPassword);
+    user.updatePassword(newHash);
+    await this.userRepository.update(user);
+    return { success: true, message: 'Password changed successfully.' };
+  }
+
+  public async listUsers(filters?: { schoolId?: string; role?: string; search?: string }) {
+    const users = await this.userRepository.findAll({
+      schoolId: filters?.schoolId,
+      role: filters?.role
+    });
+
+    let result = users.map(u => u.toJSON());
+    if (filters?.search && filters.search.trim() !== '') {
+      const q = filters.search.toLowerCase().trim();
+      result = result.filter(u =>
+        u.fullName.toLowerCase().includes(q) ||
+        u.email.toLowerCase().includes(q) ||
+        (u.phone && u.phone.includes(q)) ||
+        u.role.toLowerCase().includes(q)
+      );
+    }
+
+    return result;
+  }
+
+  public async adminCreateUser(dto: RegisterUserDTO & { status?: UserStatus }) {
+    const existing = await this.userRepository.findByEmail(dto.email.toLowerCase().trim());
+    if (existing) {
+      throw new ConflictError(`User with email '${dto.email}' already exists.`);
+    }
+
+    const passwordHash = await this.passwordHasher.hash(dto.password);
+    const userId = IdGenerator.generate();
+
+    const user = User.create(
+      {
+        email: dto.email.toLowerCase().trim(),
+        passwordHash,
+        firstName: dto.firstName.trim(),
+        lastName: dto.lastName.trim(),
+        role: dto.role,
+        phone: dto.phone?.trim(),
+        status: dto.status || UserStatus.ACTIVE,
+        schoolId: dto.schoolId || 'school-001'
+      },
+      userId
+    );
+
+    await this.userRepository.save(user);
+    return user.toJSON();
+  }
+
+  public async adminUpdateUser(
+    userId: string,
+    dto: { firstName?: string; lastName?: string; phone?: string; role?: UserRole; email?: string }
+  ) {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new NotFoundError('User', userId);
+    }
+
+    if (dto.email && dto.email.toLowerCase().trim() !== user.email.toLowerCase()) {
+      const existing = await this.userRepository.findByEmail(dto.email.toLowerCase().trim());
+      if (existing && existing.id !== userId) {
+        throw new ConflictError(`Email '${dto.email}' is already in use by another user.`);
+      }
+      user.updateEmail(dto.email.trim());
+    }
+
+    user.updateProfile(dto.firstName?.trim(), dto.lastName?.trim(), dto.phone?.trim());
+
+    if (dto.role) {
+      user.updateRole(dto.role);
+    }
+
+    await this.userRepository.update(user);
+    return user.toJSON();
+  }
+
+  public async adminSetStatus(userId: string, status: UserStatus) {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new NotFoundError('User', userId);
+    }
+
+    user.setStatus(status);
+    await this.userRepository.update(user);
+    return user.toJSON();
+  }
+
+  public async adminResetPassword(userId: string, newPassword: string) {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new NotFoundError('User', userId);
+    }
+
+    const newPasswordHash = await this.passwordHasher.hash(newPassword);
+    user.updatePassword(newPasswordHash);
+    await this.userRepository.update(user);
+    return { id: user.id, email: user.email, message: 'Password reset successfully' };
+  }
+
+  public async adminDeleteUser(userId: string) {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new NotFoundError('User', userId);
+    }
+
+    await this.userRepository.delete(userId);
+  }
 }

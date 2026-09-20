@@ -35,6 +35,13 @@ export const GenerateInvoicesSchema = z.object({
   studentId: z.string().optional()
 });
 
+export const SyncFeesSchema = z.object({
+  schoolId: z.string().optional(),
+  academicYearId: z.string().optional(),
+  termId: z.string().optional(),
+  gradeLevel: z.nativeEnum(CbcGradeLevel).optional()
+}).passthrough();
+
 export const RecordPaymentSchema = z.object({
   schoolId: z.string().min(1),
   invoiceId: z.string().min(1),
@@ -129,6 +136,19 @@ export class FinanceController {
     try {
       const result = await this.feeUseCases.generateInvoices(req.body);
       return res.status(201).json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public syncFees = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const userSchoolId = req.user?.schoolId;
+      const result = await this.feeUseCases.syncStudentFeeBalances({
+        ...req.body,
+        schoolId: req.body?.schoolId || userSchoolId
+      });
+      return res.status(200).json(result);
     } catch (err) {
       next(err);
     }

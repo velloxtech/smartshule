@@ -9,13 +9,12 @@ import {
   formatKenyanPhone,
   isValidBirthCert,
   isValidKenyanNationalId,
-  generateNemisUpi,
 } from '../../utils/kenyanConstitution';
 
 interface AdmitLearnerModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAdmit: (newLearner: Omit<Student, 'id'>, rawBackendData?: any) => void;
+  onAdmit: (newLearner: any, rawBackendData?: any) => void | Promise<void>;
 }
 
 export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
@@ -25,23 +24,27 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
 }) => {
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Step 1: Learner Identity & Nationality (Article 53(1)(a))
+  // Step 1: Learner Identity & School Admission (Given by school)
+  const [admissionNumber, setAdmissionNumber] = useState('');
+  const [nemisUpi, setNemisUpi] = useState('');
   const [firstName, setFirstName] = useState('');
   const [middleName, setMiddleName] = useState('');
   const [lastName, setLastName] = useState('');
   const [gender, setGender] = useState<'MALE' | 'FEMALE'>('MALE');
   const [dob, setDob] = useState('');
   const [birthCertNo, setBirthCertNo] = useState('');
-  const [selectedCounty, setSelectedCounty] = useState('Nairobi City');
-  const [selectedSubCounty, setSelectedSubCounty] = useState('Westlands');
-  const [generatedUpi, setGeneratedUpi] = useState('');
+  const [selectedCounty, setSelectedCounty] = useState('Kisumu');
+  const [selectedSubCounty, setSelectedSubCounty] = useState('Kisumu West');
 
-  // Step 2: CBC Academic Placement & Special Needs (Article 54 & 43)
+  // Step 2: CBC Academic Placement, Fee Structure & Special Needs
   const [classes, setClasses] = useState<ClassRoom[]>([]);
   const [streams, setStreams] = useState<StreamItem[]>([]);
   const [selectedClassId, setSelectedClassId] = useState('');
   const [streamId, setStreamId] = useState('');
+  const [feeStructures, setFeeStructures] = useState<any[]>([]);
+  const [matchedFeeStructure, setMatchedFeeStructure] = useState<any | null>(null);
   const [sneCategory, setSneCategory] = useState('NONE');
   const [sneNotes, setSneNotes] = useState('');
   const [medicalConditions, setMedicalConditions] = useState('');
@@ -64,29 +67,23 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
   const [totalFee, setTotalFee] = useState('0');
 
   // Update Sub-counties when County changes
-  const countyObj = KENYAN_COUNTIES.find((c) => c.name === selectedCounty) || KENYAN_COUNTIES[46];
+  const countyObj = KENYAN_COUNTIES.find((c) => c.name === selectedCounty) || KENYAN_COUNTIES.find((c) => c.name === 'Kisumu') || KENYAN_COUNTIES[41];
   useEffect(() => {
     if (countyObj && countyObj.subCounties.length > 0) {
-      setSelectedSubCounty(countyObj.subCounties[0]);
+      if (!countyObj.subCounties.includes(selectedSubCounty)) {
+        setSelectedSubCounty(countyObj.subCounties[0]);
+      }
     }
   }, [selectedCounty]);
-
-  // Update NEMIS UPI when birth cert or names change
-  useEffect(() => {
-    if (birthCertNo) {
-      setGeneratedUpi(generateNemisUpi(birthCertNo));
-    } else {
-      setGeneratedUpi('');
-    }
-  }, [birthCertNo]);
 
   useEffect(() => {
     async function loadDbClasses() {
       try {
-        const [res, schoolRes, ctxRes] = await Promise.all([
+        const [res, schoolRes, ctxRes, feesRes] = await Promise.all([
           apiService.getClasses(),
           apiService.getSchool().catch(() => null),
           apiService.getCurrentContext().catch(() => null),
+          apiService.getFeeStructures().catch(() => null),
         ]);
         if (res.success && res.data?.length) {
           setClasses(res.data);
@@ -98,16 +95,65 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
         if (ctxRes && ctxRes.success && ctxRes.data) {
           setCurrentContext(ctxRes.data);
         }
+        if (feesRes && feesRes.success && Array.isArray(feesRes.data)) {
+          setFeeStructures(feesRes.data);
+        }
       } catch (err) {
-        console.error('Failed to load classes for admission modal:', err);
+        console.error('Failed to load initial data for admission modal:', err);
       }
     }
     if (isOpen) {
       loadDbClasses();
       setCurrentStep(1);
       setValidationError(null);
+      setIsSubmitting(false);
+      setAdmissionNumber('');
+      setNemisUpi('');
+      setFirstName('');
+      setMiddleName('');
+      setLastName('');
+      setDob('');
+      setBirthCertNo('');
+      setGender('MALE');
+      setSelectedCounty('Kisumu');
+      setSelectedSubCounty('Kisumu West');
+      setGuardianName('');
+      setGuardianPhone('+2547');
+      setGuardianEmail('');
+      setGuardianNationalId('');
+      setGuardianRelationship('MOTHER');
+      setAlternateContactName('');
+      setAlternateContactPhone('');
+      setSneCategory('NONE');
+      setSneNotes('');
+      setMedicalConditions('');
+      setEmergencyClinic('');
+      setConsentDataProtection(false);
+      setConsentChildProtection(false);
     }
   }, [isOpen]);
+
+  // Look for the class fee structure and compute full fee
+  useEffect(() => {
+    const currentCls = classes.find((c) => c.id === selectedClassId) || classes[0];
+    if (!currentCls) return;
+
+    const matched = feeStructures.find((fs) => fs.gradeLevel === currentCls.gradeLevel);
+    setMatchedFeeStructure(matched || null);
+
+    if (matched) {
+      const total = matched.items && matched.items.length > 0
+        ? matched.items.reduce((sum: number, item: any) => sum + (Number(item.amount) || 0), 0)
+        : (matched.totalAmount || 0);
+      setTotalFee(String(total));
+    } else {
+      // Standard CBC fee for level if not yet customized in DB
+      const isJSS = ['GRADE_7', 'GRADE_8', 'GRADE_9'].includes(currentCls.gradeLevel);
+      const isUpper = ['GRADE_4', 'GRADE_5', 'GRADE_6'].includes(currentCls.gradeLevel);
+      const defaultTotal = isJSS ? 42000 : (isUpper ? 30000 : 26000);
+      setTotalFee(String(defaultTotal));
+    }
+  }, [selectedClassId, classes, feeStructures]);
 
   useEffect(() => {
     async function loadStreamsForClass() {
@@ -141,15 +187,15 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
   const validateStep = (step: number): boolean => {
     setValidationError(null);
     if (step === 1) {
+      if (!admissionNumber.trim()) {
+        setValidationError('Admission Number is required. Please enter the official school admission number.');
+        return false;
+      }
       if (!firstName.trim() || !lastName.trim()) {
         setValidationError('Learner first and last name are required under Article 53(1)(a).');
         return false;
       }
-      if (!birthCertNo.trim()) {
-        setValidationError('Birth Certificate Entry No. is mandatory under Article 53(1)(a) to verify nationality and issue NEMIS UPI.');
-        return false;
-      }
-      if (!isValidBirthCert(birthCertNo)) {
+      if (birthCertNo.trim() && !isValidBirthCert(birthCertNo)) {
         setValidationError('Please enter a valid Kenyan Birth Certificate Entry Number (e.g. 10482932).');
         return false;
       }
@@ -203,12 +249,12 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateStep(4)) return;
 
-    const admNo = 'ADM-2026-' + Math.floor(100 + Math.random() * 900);
-    const upi = generatedUpi;
+    const admNo = admissionNumber.trim();
+    const upi = nemisUpi.trim() || undefined;
     const fullName = [firstName, middleName, lastName].filter(Boolean).join(' ').trim();
 
     const guardianParts = guardianName.trim().split(' ');
@@ -216,6 +262,11 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
     const gLast = guardianParts.slice(1).join(' ') || 'Parent';
 
     const cleanPhone = formatKenyanPhone(guardianPhone);
+    const safeName = gFirst.toLowerCase().replace(/[^a-z0-9]/g, '') || 'guardian';
+    const safeGuardianEmail =
+      guardianEmail.trim() && guardianEmail.includes('@')
+        ? guardianEmail.trim()
+        : `${safeName}.${Date.now().toString().slice(-4)}@smartshule.ac.ke`;
 
     const specialNeedsPayload =
       sneCategory !== 'NONE'
@@ -241,18 +292,19 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
       gradeLevel,
       classroomId: currentClass?.id,
       streamId: streamId || undefined,
-      schoolId: schoolProfile?.id || currentClass?.schoolId || '',
-      academicYearId: currentContext?.currentYear?.id || '',
+      schoolId: schoolProfile?.id || currentClass?.schoolId || 'school-001',
+      academicYearId: currentContext?.currentYear?.id || 'year-2026',
+      termId: currentContext?.currentTerm?.id || 'term-2026-t1',
       medicalConditions: medicalPayload || undefined,
       specialNeeds: specialNeedsPayload,
-      birthCertificateNumber: birthCertNo.trim(),
+      birthCertificateNumber: birthCertNo.trim() || undefined,
       county: selectedCounty,
       subCounty: selectedSubCounty,
       dataProtectionConsent: true,
       guardian: {
         firstName: gFirst,
         lastName: gLast,
-        email: guardianEmail.trim() || `${gFirst.toLowerCase()}@gmail.com`,
+        email: safeGuardianEmail,
         phone: cleanPhone,
         nationalId: guardianNationalId.trim() || undefined,
         relationship: guardianRelationship,
@@ -261,30 +313,45 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
       },
     };
 
-    onAdmit(
-      {
-        admNo,
-        upi,
-        nemis: upi,
-        name: fullName,
-        gender: gender === 'MALE' ? 'Boy' : 'Girl',
-        grade: currentClass?.name || gradeLevel.replace('_', ' '),
-        stream: streamId ? (streams.find((s) => s.id === streamId)?.name || '') : '',
-        guardianName: guardianName || `${gFirst} ${gLast}`,
-        guardianPhone: cleanPhone,
-        feeBalance: Number(totalFee),
-        totalFee: Number(totalFee),
-        attendanceRate: 100,
-        cbcRating: 'ME',
-        status: 'Active',
-        dateOfBirth: dob,
-        specialNeeds: specialNeedsPayload,
-        medicalConditions: medicalPayload || undefined,
-      },
-      rawPayload
-    );
+    setIsSubmitting(true);
+    setValidationError(null);
 
-    onClose();
+    try {
+      const res = await apiService.registerStudent(rawPayload);
+      if (res && res.success && res.data) {
+        const admitted = res.data;
+        const studentObj: Student = {
+          id: admitted.id,
+          admNo: admitted.admissionNumber || admNo,
+          upi: admitted.upiNumber || upi || '--',
+          nemis: admitted.upiNumber || upi || '--',
+          name: fullName,
+          gender: gender === 'MALE' ? 'Boy' : 'Girl',
+          grade: currentClass?.name || gradeLevel.replace('_', ' '),
+          stream: streamId ? (streams.find((s) => s.id === streamId)?.name || '') : '',
+          guardianName: guardianName || `${gFirst} ${gLast}`,
+          guardianPhone: cleanPhone,
+          feeBalance: admitted.invoice ? admitted.invoice.balance : Number(totalFee),
+          totalFee: admitted.invoice ? admitted.invoice.amountPayable : Number(totalFee),
+          attendanceRate: 100,
+          cbcRating: 'ME',
+          status: 'Active',
+          dateOfBirth: dob,
+          specialNeeds: specialNeedsPayload,
+          medicalConditions: medicalPayload || undefined,
+        };
+
+        await onAdmit(studentObj, rawPayload);
+        onClose();
+      } else {
+        setValidationError((res as any)?.error?.message || (res as any)?.message || 'Failed to admit learner. Please check admission details.');
+      }
+    } catch (err: any) {
+      console.error('Admission error:', err);
+      setValidationError(err.message || 'An error occurred while saving the learner admission.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -397,8 +464,39 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                   badge
                 </span>
                 <div>
-                  <strong className="font-semibold block">Constitutional Identity Mandate (Article 53(1)(a)):</strong>
-                  Every child has the right to a name and nationality from birth. The Birth Certificate Number is verified to issue the official MoE NEMIS Unique Personal Identifier (UPI).
+                  <strong className="font-semibold block">Institutional Admission & Identity (Article 53(1)(a)):</strong>
+                  Every child has the right to a name and nationality. The school assigns the official admission number upon enrollment, and the birth certificate verifies nationality.
+                </div>
+              </div>
+
+              {/* School Admission Number & Optional NEMIS UPI */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                    School Admission Number <span className="text-rose-600">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={admissionNumber}
+                    onChange={(e) => setAdmissionNumber(e.target.value)}
+                    placeholder="e.g. ADM-2026-001 or GSS-104"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white font-mono"
+                  />
+                  <span className="text-[10px] text-slate-500">Official institutional admission number given by the school</span>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                    MoE NEMIS / UPI Number <span className="text-slate-400 font-normal">(Optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={nemisUpi}
+                    onChange={(e) => setNemisUpi(e.target.value)}
+                    placeholder="e.g. NEMIS-K9281A (leave blank if pending)"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white font-mono"
+                  />
+                  <span className="text-[10px] text-slate-500">Ministry of Education UPI (not auto-generated)</span>
                 </div>
               </div>
 
@@ -471,33 +569,21 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-                    Birth Certificate Entry # <span className="text-rose-600">*</span>
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600">
+                    Birth Certificate Entry #
                   </label>
-                  <input
-                    type="text"
-                    required
-                    value={birthCertNo}
-                    onChange={(e) => setBirthCertNo(e.target.value)}
-                    placeholder="e.g. 10482932 or B/C-9281A"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white font-mono"
-                  />
-                  <span className="text-[10px] text-slate-500">Ministry of Civil Registration entry number</span>
+                  <span className="text-[10px] text-slate-400 font-normal">(Optional / Pending)</span>
                 </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-                    NEMIS / CBA UPI (Auto-Generated)
-                  </label>
-                  <div className="w-full bg-slate-100 border border-slate-200 rounded-xl p-2.5 text-sm font-bold font-mono text-[#006a63] flex items-center justify-between">
-                    <span>{generatedUpi}</span>
-                    <span className="text-[10px] font-sans font-semibold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded">
-                      MoE CBA Ready
-                    </span>
-                  </div>
-                  <span className="text-[10px] text-slate-500">Unique Personal Identifier for KICD & KNEC tracking</span>
-                </div>
+                <input
+                  type="text"
+                  value={birthCertNo}
+                  onChange={(e) => setBirthCertNo(e.target.value)}
+                  placeholder="e.g. 10482932 or leave blank if pending"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white font-mono"
+                />
+                <span className="text-[10px] text-slate-500">Ministry of Civil Registration entry number (optional if pending document)</span>
               </div>
 
               {/* Devolution: Kenyan County & Sub-county */}
@@ -597,6 +683,52 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                     ))}
                   </select>
                 </div>
+              </div>
+
+              {/* Class Fee Structure Card (Look up class fee structure and bill in full) */}
+              <div className="p-4 bg-amber-50/70 border border-amber-200 rounded-2xl text-slate-800">
+                <div className="flex items-center justify-between mb-2.5">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-amber-700 text-lg">receipt_long</span>
+                    <span className="text-xs font-bold uppercase tracking-wider text-amber-900">
+                      Class Fee Structure — {matchedFeeStructure?.title || `${currentClass?.name || gradeLevel.replace('_', ' ')} Fee Structure`}
+                    </span>
+                  </div>
+                  <span className="text-xs font-bold font-mono px-2 py-0.5 rounded-full bg-amber-200/80 text-amber-950">
+                    Billed in Full
+                  </span>
+                </div>
+
+                <p className="text-[11px] text-slate-600 mb-3">
+                  Upon admission, this learner is billed in full with the complete line items of the class fee structure.
+                </p>
+
+                {matchedFeeStructure?.items && matchedFeeStructure.items.length > 0 ? (
+                  <div className="space-y-1.5 bg-white/90 rounded-xl p-3 border border-amber-100 divide-y divide-slate-100">
+                    {matchedFeeStructure.items.map((item: any, idx: number) => (
+                      <div key={item.id || idx} className="flex items-center justify-between text-xs pt-1.5 first:pt-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
+                          <span className="font-medium text-slate-800">{item.name}</span>
+                          <span className="text-[10px] text-slate-400 uppercase font-mono">({item.category})</span>
+                        </div>
+                        <span className="font-mono font-semibold text-slate-900">KES {Number(item.amount).toLocaleString()}</span>
+                      </div>
+                    ))}
+                    <div className="flex items-center justify-between text-xs pt-2.5 font-bold text-amber-950 border-t border-amber-200">
+                      <span>Total Class Fee Structure (Invoiced in Full):</span>
+                      <span className="font-mono text-sm text-[#7a1228]">KES {Number(totalFee).toLocaleString()}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-white/90 rounded-xl p-3 border border-amber-100 text-xs flex items-center justify-between">
+                    <div>
+                      <span className="font-semibold text-slate-800">Standard CBC Grade Fee Structure</span>
+                      <p className="text-[11px] text-slate-500">Will be generated and billed in full upon admission.</p>
+                    </div>
+                    <span className="font-mono font-bold text-sm text-[#7a1228]">KES {Number(totalFee).toLocaleString()}</span>
+                  </div>
+                )}
               </div>
 
               {/* SNE Inclusion Category */}
@@ -833,8 +965,8 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                   <span className="text-sm">
                     {[firstName, middleName, lastName].filter(Boolean).join(' ')}
                   </span>
-                  <span className="font-mono text-[#006a63] bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                    {generatedUpi}
+                  <span className="font-mono text-[#006a63] bg-emerald-50 px-2.5 py-0.5 rounded-lg border border-emerald-200 text-xs font-semibold">
+                    {admissionNumber ? `Adm: ${admissionNumber}` : 'Pending Adm'} {nemisUpi ? `· UPI: ${nemisUpi}` : ''}
                   </span>
                 </div>
 
@@ -960,10 +1092,13 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
             ) : (
               <button
                 type="submit"
-                className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer ml-auto"
+                disabled={isSubmitting}
+                className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer ml-auto"
               >
-                <span className="material-symbols-outlined text-[18px]">how_to_reg</span>
-                <span>Confirm Constitutional Admission</span>
+                <span className={`material-symbols-outlined text-[18px] ${isSubmitting ? 'animate-spin' : ''}`}>
+                  {isSubmitting ? 'sync' : 'how_to_reg'}
+                </span>
+                <span>{isSubmitting ? 'Admitting Learner...' : 'Confirm Constitutional Admission'}</span>
               </button>
             )}
           </div>

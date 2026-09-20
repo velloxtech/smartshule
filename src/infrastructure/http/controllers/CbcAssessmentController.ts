@@ -136,7 +136,8 @@ export class CbcAssessmentController {
         learningAreaId: learningAreaId as string,
         termId: termId as string,
         academicYearId: academicYearId as string,
-        subStrandId: subStrandId as string
+        subStrandId: subStrandId as string,
+        requestingUser: (req as any).user
       });
       return res.status(200).json({ success: true, count: list.length, data: list });
     } catch (err) {
@@ -164,7 +165,8 @@ export class CbcAssessmentController {
         studentId: studentId as string,
         learningAreaId: learningAreaId as string,
         termId: termId as string,
-        academicYearId: academicYearId as string
+        academicYearId: academicYearId as string,
+        requestingUser: (req as any).user
       });
       return res.status(200).json({ success: true, count: list.length, data: list });
     } catch (err) {
@@ -191,7 +193,8 @@ export class CbcAssessmentController {
       const report = await this.cbcUseCases.getReportCard(
         studentId as string,
         termId as string,
-        academicYearId as string
+        academicYearId as string,
+        (req as any).user
       );
       return res.status(200).json({ success: true, data: report });
     } catch (err) {
@@ -206,7 +209,8 @@ export class CbcAssessmentController {
         gradeLevel: gradeLevel as CbcGradeLevel,
         learningAreaId: learningAreaId as string,
         termId: termId as string,
-        academicYearId: academicYearId as string
+        academicYearId: academicYearId as string,
+        requestingUser: (req as any).user
       });
       return res.status(200).json({ success: true, data: analytics });
     } catch (err) {

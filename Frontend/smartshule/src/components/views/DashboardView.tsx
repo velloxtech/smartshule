@@ -67,12 +67,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const currentTotalFee = summaryData?.finance?.totalCollected !== undefined
     ? summaryData.finance.totalCollected
     : totalCollectedFee;
+  const feeArrears = summaryData?.finance?.totalArrears !== undefined
+    ? summaryData.finance.totalArrears
+    : students.reduce((acc, s) => acc + (s.feeBalance || 0), 0);
   const targetFee = summaryData?.finance?.totalInvoiced !== undefined
     ? summaryData.finance.totalInvoiced
-    : students.reduce((acc, s) => acc + (s.totalFee || 0), 0);
+    : (currentTotalFee + feeArrears > 0 ? currentTotalFee + feeArrears : students.reduce((acc, s) => acc + (s.totalFee || 0), 0));
   const feePct = summaryData?.finance?.collectionRatePercentage !== undefined
     ? summaryData.finance.collectionRatePercentage
     : (targetFee > 0 ? Number(Math.min(100, (currentTotalFee / targetFee) * 100).toFixed(1)) : 0);
+
+  const totalTeachersCount = summaryData?.counts?.totalTeachers ?? teachers.length;
+  const totalNonTeachingStaffCount = summaryData?.counts?.totalNonTeachingStaff ?? 5;
 
   const totalAssessments = summaryData?.cbcProficiency?.totalAssessments || 0;
   const cbcBenchmarkPct = totalAssessments > 0
@@ -174,7 +180,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   // Check user roles
   const isTeacher = user?.role === UserRole.TEACHER;
   const isFinance = user?.role === UserRole.ACCOUNTANT;
-  const isGuardian = user?.role === UserRole.GUARDIAN;
+  const isGuardian = user?.role === UserRole.GUARDIAN || user?.role === UserRole.PARENT;
   const isStudent = user?.role === UserRole.STUDENT;
 
   return (
@@ -201,6 +207,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <span className="font-label-md text-label-md font-semibold tracking-wider">
                 {academicPeriodLabel}
               </span>
+            </div>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-50 text-[#800000] border border-rose-200 text-xs font-semibold italic shadow-2xs">
+              <span className="material-symbols-outlined text-[14px]">school</span>
+              <span>&quot;The future Begins Here&quot;</span>
             </div>
           </div>
         </div>
@@ -234,6 +244,32 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 id="quickActionMenu"
                 className="absolute right-0 mt-xs w-56 max-w-[calc(100vw-2rem)] rounded-lg bg-surface-container-lowest p-xs shadow-xl z-50 border border-outline-variant/30 flex flex-col gap-base animate-in fade-in slide-in-from-top-1"
               >
+                <button
+                  onClick={() => {
+                    setQuickActionOpen(false);
+                    onNavigateTab('user-management');
+                  }}
+                  className="flex items-center gap-xs px-sm py-xs rounded-lg text-purple-900 hover:bg-purple-50 transition-colors text-left w-full cursor-pointer font-medium"
+                >
+                  <span className="material-symbols-outlined text-purple-700 text-[18px]">
+                    manage_accounts
+                  </span>
+                  <span className="font-body-md text-body-md">User Accounts & Access</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setQuickActionOpen(false);
+                    onNavigateTab('whatsapp-bot');
+                  }}
+                  className="flex items-center gap-xs px-sm py-xs rounded-lg text-emerald-800 hover:bg-emerald-50 transition-colors text-left w-full cursor-pointer font-medium"
+                >
+                  <span className="material-symbols-outlined text-emerald-600 text-[18px]">
+                    chat
+                  </span>
+                  <span className="font-body-md text-body-md">WhatsApp Parent Desk</span>
+                </button>
+
                 <button
                   onClick={() => {
                     setQuickActionOpen(false);
@@ -289,33 +325,74 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </div>
 
-      {/* 4 High-Impact KPI Summaries */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-md my-sm">
-        {/* Total Enrolled Learners */}
+      {/* School Director WhatsApp Module Quick Access Banner */}
+      <div className="rounded-2xl bg-gradient-to-r from-emerald-900 via-teal-950 to-slate-900 text-white p-4 sm:p-5 shadow-sm my-2 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border border-emerald-600/30">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-400 shrink-0 shadow-inner">
+            <span className="material-symbols-outlined text-[28px] sm:text-[32px]">chat</span>
+          </div>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="font-bold text-base sm:text-lg text-white tracking-tight">
+                WhatsApp Parent Desk Module
+              </h2>
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                Director Access Enabled
+              </span>
+            </div>
+            <p className="text-xs sm:text-sm text-emerald-100/80 mt-0.5 max-w-2xl">
+              Real-time communication with parents: instant fee balance checks, Paystack invoice links, CBC digital reports, attendance notices, and AI assistance.
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 self-stretch sm:self-auto shrink-0">
+          <button
+            onClick={() => onNavigateTab('user-management')}
+            className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs sm:text-sm border border-white/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+            type="button"
+          >
+            <span className="material-symbols-outlined text-[18px]">manage_accounts</span>
+            <span>User Management</span>
+          </button>
+          <button
+            onClick={() => onNavigateTab('whatsapp-bot')}
+            className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer hover:shadow-emerald-500/25"
+            type="button"
+          >
+            <span className="material-symbols-outlined text-[18px]">forum</span>
+            <span>Open WhatsApp Module</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 5 Director High-Impact KPI Summaries */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 my-2">
+        {/* 1. Total Number of Learners */}
         <div
           onClick={() => onNavigateTab('students-guardians')}
-          className="rounded-xl bg-surface-container-lowest p-md flex flex-col justify-between shadow-xs relative overflow-hidden group hover:shadow-md transition-all cursor-pointer"
+          className="rounded-xl bg-surface-container-lowest p-md flex flex-col justify-between shadow-xs relative overflow-hidden group hover:shadow-md transition-all cursor-pointer border border-outline-variant/30 hover:border-primary/40"
         >
           <div className="absolute -right-3 -top-3 w-16 h-16 rounded-full bg-primary/5 flex items-center justify-center">
             <span className="material-symbols-outlined text-primary/30 text-[32px]">groups</span>
           </div>
           <div>
             <div className="flex items-center justify-between">
-              <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">
-                Total Enrolled
+              <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider font-semibold">
+                Total Learners
               </span>
-              <span className="inline-flex items-center text-secondary font-label-md text-label-md font-semibold">
-                <span className="material-symbols-outlined text-[14px]">arrow_upward</span> +4.2%
+              <span className="inline-flex items-center text-primary font-label-md text-label-md font-semibold text-xs">
+                <span className="material-symbols-outlined text-[14px] mr-0.5">school</span> Active
               </span>
             </div>
             <div className="flex items-baseline gap-xs mt-xs">
-              <span className="font-display text-display text-on-surface font-bold">
+              <span className="font-display text-display text-on-surface font-bold text-2xl lg:text-3xl">
                 {totalStudents.toLocaleString()}
               </span>
               <span className="font-label-md text-label-md text-on-surface-variant">learners</span>
             </div>
           </div>
-          <div className="mt-md pt-sm bg-surface-container-low/50 rounded-lg p-xs flex items-center justify-between">
+          <div className="mt-md pt-sm bg-surface-container-low/50 rounded-lg p-xs flex items-center justify-between text-xs">
             <div className="flex items-center gap-xs">
               <span className="w-2 h-2 rounded-full bg-primary"></span>
               <span className="font-data-mono text-data-mono text-on-surface">{boysCount} Boys</span>
@@ -328,130 +405,144 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </div>
 
-        {/* Teacher Attendance Today */}
-        <div
-          onClick={() => onNavigateTab('teachers-staff')}
-          className="rounded-xl bg-surface-container-lowest p-md flex flex-col justify-between shadow-xs relative overflow-hidden group hover:shadow-md transition-all cursor-pointer"
-        >
-          <div className="absolute -right-3 -top-3 w-16 h-16 rounded-full bg-secondary/10 flex items-center justify-center">
-            <span className="material-symbols-outlined text-secondary/40 text-[32px]">co_present</span>
-          </div>
-          <div>
-            <div className="flex items-center justify-between">
-              <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">
-                Teacher Presence
-              </span>
-              <span className="inline-flex items-center px-xs py-0.5 rounded bg-secondary-container text-on-secondary-container font-label-md text-label-md">
-                Active
-              </span>
-            </div>
-            <div className="flex items-baseline gap-xs mt-xs">
-              <span className="font-display text-display text-secondary font-bold">
-                {teachers.length > 0
-                  ? `${((teachers.filter((t) => t.status === 'Clocked In').length / teachers.length) * 100).toFixed(1)}%`
-                  : '0.0%'}
-              </span>
-              <span className="font-label-md text-label-md text-on-surface-variant">present</span>
-            </div>
-          </div>
-          <div className="mt-md pt-sm bg-surface-container-low/50 rounded-lg p-xs flex items-center justify-between">
-            <div className="flex items-center gap-xs">
-              <span className="material-symbols-outlined text-secondary text-[16px]">check_circle</span>
-              <span className="font-data-mono text-data-mono text-on-surface">
-                {teachers.filter((t) => t.status === 'Clocked In').length}/{teachers.length} Clocked in
-              </span>
-            </div>
-            {teachers.some((t) => t.status === 'Absent' || t.status === 'On Leave') ? (
-              <span className="font-label-md text-label-md text-error font-medium">
-                {teachers.filter((t) => t.status === 'Absent' || t.status === 'On Leave').length} Absent
-              </span>
-            ) : (
-              <span className="font-label-md text-label-md text-on-surface-variant font-medium">
-                0 Absent
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Term Fee Collection */}
+        {/* 2. Fee Paid (Collected) */}
         <div
           onClick={() => onNavigateTab('invoices-mpesa')}
-          className="rounded-xl bg-surface-container-lowest p-md flex flex-col justify-between shadow-xs relative overflow-hidden group hover:shadow-md transition-all cursor-pointer"
+          className="rounded-xl bg-surface-container-lowest p-md flex flex-col justify-between shadow-xs relative overflow-hidden group hover:shadow-md transition-all cursor-pointer border border-outline-variant/30 hover:border-emerald-500/40"
         >
-          <div className="absolute -right-3 -top-3 w-16 h-16 rounded-full bg-primary/5 flex items-center justify-center">
-            <span className="material-symbols-outlined text-primary/30 text-[32px]">
-              account_balance_wallet
+          <div className="absolute -right-3 -top-3 w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center">
+            <span className="material-symbols-outlined text-emerald-600/40 text-[32px]">
+              payments
             </span>
           </div>
           <div>
             <div className="flex items-center justify-between">
-              <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">
-                Fee Collection
+              <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider font-semibold">
+                Fee Paid
               </span>
-              {currentTotalFee > 0 ? (
-                <span className="inline-flex items-center text-secondary font-label-md text-label-md font-semibold">
-                  <span className="material-symbols-outlined text-[14px]">arrow_upward</span> Inflow Active
-                </span>
-              ) : (
-                <span className="inline-flex items-center text-on-surface-variant font-label-md text-label-md font-semibold">
-                  No records
-                </span>
-              )}
+              <span className="inline-flex items-center text-emerald-800 font-label-md text-label-md font-semibold text-[11px] bg-emerald-50 px-1.5 py-0.5 rounded">
+                <span className="material-symbols-outlined text-[13px] mr-0.5">check_circle</span> Collected
+              </span>
             </div>
             <div className="flex flex-col mt-xs">
-              <span className="font-headline-lg text-headline-lg text-on-surface font-bold tracking-tight">
+              <span className="font-headline-lg text-headline-lg text-emerald-700 font-bold tracking-tight text-xl lg:text-2xl">
                 KES {currentTotalFee.toLocaleString()}
               </span>
-              <span className="font-label-md text-label-md text-on-surface-variant">
+              <span className="font-label-md text-label-md text-on-surface-variant text-xs mt-0.5">
                 Target: KES {targetFee.toLocaleString()}
               </span>
             </div>
           </div>
           <div className="mt-md pt-sm flex flex-col gap-xs">
-            <div className="flex justify-between font-label-md text-label-md">
-              <span className="text-on-surface-variant">Target Reached</span>
-              <span className="font-bold text-primary">
-                {feePct}%
-              </span>
+            <div className="flex justify-between font-label-md text-label-md text-xs">
+              <span className="text-on-surface-variant">Collection Rate</span>
+              <span className="font-bold text-emerald-700">{feePct}%</span>
             </div>
-            <div className="w-full h-2 rounded-full bg-surface-container-highest overflow-hidden">
+            <div className="w-full h-1.5 rounded-full bg-surface-container-highest overflow-hidden">
               <div
-                className="h-full bg-primary rounded-full transition-all duration-500"
+                className="h-full bg-emerald-600 rounded-full transition-all duration-500"
                 style={{ width: `${Math.min(100, feePct)}%` }}
               ></div>
             </div>
           </div>
         </div>
 
-        {/* CBC Competency Benchmark */}
+        {/* 3. Fee Arrears (Outstanding) */}
         <div
-          onClick={() => onNavigateTab('assessments')}
-          className="rounded-xl bg-surface-container-lowest p-md flex flex-col justify-between shadow-xs relative overflow-hidden group hover:shadow-md transition-all cursor-pointer"
+          onClick={() => onNavigateTab('defaulters-receipts')}
+          className="rounded-xl bg-surface-container-lowest p-md flex flex-col justify-between shadow-xs relative overflow-hidden group hover:shadow-md transition-all cursor-pointer border border-outline-variant/30 hover:border-rose-500/40"
         >
-          <div className="absolute -right-3 -top-3 w-16 h-16 rounded-full bg-secondary/10 flex items-center justify-center">
-            <span className="material-symbols-outlined text-secondary/40 text-[32px]">stars</span>
+          <div className="absolute -right-3 -top-3 w-16 h-16 rounded-full bg-rose-500/10 flex items-center justify-center">
+            <span className="material-symbols-outlined text-rose-600/40 text-[32px]">
+              pending_actions
+            </span>
           </div>
           <div>
             <div className="flex items-center justify-between">
-              <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">
-                CBC Benchmark
+              <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider font-semibold">
+                Fee Arrears
               </span>
-              <span className="px-xs py-0.5 rounded bg-primary-fixed text-on-primary-fixed font-label-md text-label-md font-medium">
-                KICD Norm
+              <span className="inline-flex items-center text-rose-800 font-label-md text-label-md font-semibold text-[11px] bg-rose-50 px-1.5 py-0.5 rounded">
+                <span className="material-symbols-outlined text-[13px] mr-0.5">warning</span> Outstanding
+              </span>
+            </div>
+            <div className="flex flex-col mt-xs">
+              <span className="font-headline-lg text-headline-lg text-rose-700 font-bold tracking-tight text-xl lg:text-2xl">
+                KES {feeArrears.toLocaleString()}
+              </span>
+              <span className="font-label-md text-label-md text-on-surface-variant text-xs mt-0.5">
+                Unpaid across learners
+              </span>
+            </div>
+          </div>
+          <div className="mt-md pt-sm bg-rose-50/70 rounded-lg p-xs flex items-center justify-between text-xs text-rose-900 font-medium">
+            <span>Send Defaulters SMS</span>
+            <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+          </div>
+        </div>
+
+        {/* 4. Number of Teachers */}
+        <div
+          onClick={() => onNavigateTab('teachers-staff')}
+          className="rounded-xl bg-surface-container-lowest p-md flex flex-col justify-between shadow-xs relative overflow-hidden group hover:shadow-md transition-all cursor-pointer border border-outline-variant/30 hover:border-indigo-500/40"
+        >
+          <div className="absolute -right-3 -top-3 w-16 h-16 rounded-full bg-indigo-500/10 flex items-center justify-center">
+            <span className="material-symbols-outlined text-indigo-600/40 text-[32px]">co_present</span>
+          </div>
+          <div>
+            <div className="flex items-center justify-between">
+              <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider font-semibold">
+                Teachers
+              </span>
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-800 font-label-md text-label-md font-semibold text-[11px]">
+                Teaching Staff
               </span>
             </div>
             <div className="flex items-baseline gap-xs mt-xs">
-              <span className="font-display text-display text-primary font-bold">{cbcBenchmarkPct}%</span>
-              <span className="font-label-md text-label-md text-secondary font-semibold">EE / ME</span>
+              <span className="font-display text-display text-indigo-900 font-bold text-2xl lg:text-3xl">
+                {totalTeachersCount}
+              </span>
+              <span className="font-label-md text-label-md text-on-surface-variant">educators</span>
             </div>
           </div>
-          <div className="mt-md pt-sm bg-surface-container-low/50 rounded-lg p-xs flex items-center justify-between">
-            <span className="font-label-md text-label-md text-on-surface-variant">
-              Exceeding + Meeting
-            </span>
-            <span className="font-label-md text-label-md text-secondary font-semibold">
-              {totalAssessments > 0 ? `${cbcBenchmarkPct}% Proficient` : 'No assessments'}
-            </span>
+          <div className="mt-md pt-sm bg-surface-container-low/50 rounded-lg p-xs flex items-center justify-between text-xs">
+            <div className="flex items-center gap-xs">
+              <span className="material-symbols-outlined text-secondary text-[15px]">check_circle</span>
+              <span className="font-data-mono text-data-mono text-on-surface">
+                {teachers.filter((t) => t.status === 'Clocked In').length}/{totalTeachersCount} Clocked In
+              </span>
+            </div>
+            <span className="text-on-surface-variant font-medium">Active Today</span>
+          </div>
+        </div>
+
+        {/* 5. Number of Non-Teaching Staff */}
+        <div
+          onClick={() => onNavigateTab('teachers-staff')}
+          className="rounded-xl bg-surface-container-lowest p-md flex flex-col justify-between shadow-xs relative overflow-hidden group hover:shadow-md transition-all cursor-pointer border border-outline-variant/30 hover:border-purple-500/40"
+        >
+          <div className="absolute -right-3 -top-3 w-16 h-16 rounded-full bg-purple-500/10 flex items-center justify-center">
+            <span className="material-symbols-outlined text-purple-600/40 text-[32px]">badge</span>
+          </div>
+          <div>
+            <div className="flex items-center justify-between">
+              <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider font-semibold">
+                Non-Teaching Staff
+              </span>
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-purple-50 text-purple-800 font-label-md text-label-md font-semibold text-[11px]">
+                Operations & Admin
+              </span>
+            </div>
+            <div className="flex items-baseline gap-xs mt-xs">
+              <span className="font-display text-display text-purple-900 font-bold text-2xl lg:text-3xl">
+                {totalNonTeachingStaffCount}
+              </span>
+              <span className="font-label-md text-label-md text-on-surface-variant">personnel</span>
+            </div>
+          </div>
+          <div className="mt-md pt-sm bg-surface-container-low/50 rounded-lg p-xs flex items-center justify-between text-xs text-on-surface-variant">
+            <span>Bursar, Admissions, Admin</span>
+            <span className="font-semibold text-purple-700">Support</span>
           </div>
         </div>
       </div>

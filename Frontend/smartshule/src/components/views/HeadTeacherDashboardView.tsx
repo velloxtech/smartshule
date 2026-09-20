@@ -95,6 +95,13 @@ export const HeadTeacherDashboardView: React.FC<HeadTeacherDashboardViewProps> =
                 <span>MoE Report</span>
               </button>
             )}
+            <button
+              onClick={() => onNavigateTab('user-management')}
+              className="px-4 py-2.5 rounded-xl bg-purple-800/80 hover:bg-purple-800 text-white font-semibold text-xs border border-purple-400/30 flex items-center gap-2 transition-all cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[18px]">manage_accounts</span>
+              <span>User & Staff Accounts</span>
+            </button>
           </div>
         </div>
       </div>
@@ -257,6 +264,17 @@ export const HeadTeacherDashboardView: React.FC<HeadTeacherDashboardViewProps> =
                 <div>
                   <div className="text-xs font-bold text-on-surface">Master Timetable</div>
                   <div className="text-[11px] text-on-surface-variant">Verify teacher duty & subject allocation</div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => onNavigateTab('user-management')}
+                className="w-full p-3 rounded-xl border border-outline-variant/30 hover:bg-purple-50/50 hover:border-purple-300 transition-all flex items-center gap-3 text-left cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-purple-700 text-[22px]">manage_accounts</span>
+                <div>
+                  <div className="text-xs font-bold text-on-surface">User Accounts & Access</div>
+                  <div className="text-[11px] text-on-surface-variant">Manage staff credentials & account status</div>
                 </div>
               </button>
             </div>

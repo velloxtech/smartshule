@@ -2,6 +2,7 @@ import request from 'supertest';
 import { createExpressApp } from '../../src/infrastructure/http/app';
 import { AppContainer } from '../../src/infrastructure/container';
 import { UserRole } from '../../src/core/domain/user/User';
+import { Student, StudentGender, CbcGradeLevel, StudentStatus } from '../../src/core/domain/user/Student';
 import { setupTestFixtures } from '../helpers/testFixtures';
 
 describe('Access Controls, 8 Role Accounts & Lesson Plan Approvals', () => {
@@ -491,6 +492,305 @@ describe('Access Controls, 8 Role Accounts & Lesson Plan Approvals', () => {
           .post(`/api/v1/academics/terms/${termId}/activate`)
           .set('Authorization', `Bearer ${superAdminToken}`);
       }
+    });
+  });
+
+  describe('5. User Management & Access Control', () => {
+    let createdUserId: string;
+
+    it('allows Super Admin, Admin, Head Teacher, and Deputy to list users', async () => {
+      const saRes = await request(app)
+        .get('/api/v1/users')
+        .set('Authorization', `Bearer ${superAdminToken}`);
+      expect(saRes.status).toBe(200);
+      expect(Array.isArray(saRes.body.data)).toBe(true);
+
+      const adminRes = await request(app)
+        .get('/api/v1/users')
+        .set('Authorization', `Bearer ${adminToken}`);
+      expect(adminRes.status).toBe(200);
+
+      const htRes = await request(app)
+        .get('/api/v1/users')
+        .set('Authorization', `Bearer ${headTeacherToken}`);
+      expect(htRes.status).toBe(200);
+
+      const deputyRes = await request(app)
+        .get('/api/v1/users')
+        .set('Authorization', `Bearer ${deputyToken}`);
+      expect(deputyRes.status).toBe(200);
+    });
+
+    it('denies user management listing to non-admin roles (Teacher, Parent, Bursar)', async () => {
+      const teacherRes = await request(app)
+        .get('/api/v1/users')
+        .set('Authorization', `Bearer ${teacherToken}`);
+      expect(teacherRes.status).toBe(403);
+
+      const parentRes = await request(app)
+        .get('/api/v1/users')
+        .set('Authorization', `Bearer ${parentToken}`);
+      expect(parentRes.status).toBe(403);
+    });
+
+    it('allows Admin to create, update, suspend, reset password, and delete a user account', async () => {
+      // 1. Create
+      const createRes = await request(app)
+        .post('/api/v1/users')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          email: 'test.staff@smartshule.ac.ke',
+          password: 'StaffInitial@123',
+          firstName: 'Brian',
+          lastName: 'Oduor',
+          role: UserRole.TEACHER,
+          phone: '+254711223344'
+        });
+      expect(createRes.status).toBe(201);
+      expect(createRes.body.data.email).toBe('test.staff@smartshule.ac.ke');
+      createdUserId = createRes.body.data.id;
+
+      // 2. Update
+      const updateRes = await request(app)
+        .put(`/api/v1/users/${createdUserId}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          firstName: 'Brian Updated',
+          phone: '+254799000111'
+        });
+      expect(updateRes.status).toBe(200);
+      expect(updateRes.body.data.fullName).toBe('Brian Updated Oduor');
+
+      // 3. Suspend
+      const suspendRes = await request(app)
+        .patch(`/api/v1/users/${createdUserId}/status`)
+        .set('Authorization', `Bearer ${headTeacherToken}`)
+        .send({ status: 'SUSPENDED' });
+      expect(suspendRes.status).toBe(200);
+      expect(suspendRes.body.data.status).toBe('SUSPENDED');
+
+      // Suspended user cannot login
+      const failedLogin = await request(app)
+        .post('/api/v1/auth/login')
+        .send({
+          email: 'test.staff@smartshule.ac.ke',
+          password: 'StaffInitial@123'
+        });
+      expect(failedLogin.status).toBe(401);
+
+      // Reactivate
+      const reactivateRes = await request(app)
+        .patch(`/api/v1/users/${createdUserId}/status`)
+        .set('Authorization', `Bearer ${deputyToken}`)
+        .send({ status: 'ACTIVE' });
+      expect(reactivateRes.status).toBe(200);
+      expect(reactivateRes.body.data.status).toBe('ACTIVE');
+
+      // 4. Reset password
+      const resetRes = await request(app)
+        .post(`/api/v1/users/${createdUserId}/reset-password`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ newPassword: 'NewStaffPassword@456' });
+      expect(resetRes.status).toBe(200);
+
+      // Verify login with new password
+      const successLogin = await request(app)
+        .post('/api/v1/auth/login')
+        .send({
+          email: 'test.staff@smartshule.ac.ke',
+          password: 'NewStaffPassword@456'
+        });
+      expect(successLogin.status).toBe(200);
+
+      // 5. Delete
+      const deleteRes = await request(app)
+        .delete(`/api/v1/users/${createdUserId}`)
+        .set('Authorization', `Bearer ${superAdminToken}`);
+      expect(deleteRes.status).toBe(200);
+    });
+
+    it('allows an authenticated user to change their own password via /api/v1/auth/change-password', async () => {
+      // Create a temporary user to test self-service password change
+      const tempUserRes = await request(app)
+        .post('/api/v1/users')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          email: 'pwdchange.test@smartshule.ac.ke',
+          password: 'InitialPassword@123',
+          firstName: 'Password',
+          lastName: 'Tester',
+          role: UserRole.TEACHER,
+          phone: '+254700998877'
+        });
+      expect(tempUserRes.status).toBe(201);
+      const tempUserId = tempUserRes.body.data.id;
+
+      // Log in as the temporary user to get their token
+      const loginRes = await request(app)
+        .post('/api/v1/auth/login')
+        .send({
+          email: 'pwdchange.test@smartshule.ac.ke',
+          password: 'InitialPassword@123'
+        });
+      expect(loginRes.status).toBe(200);
+      const userToken = loginRes.body.data.accessToken;
+
+      // Attempt to change password with WRONG current password -> expect 401
+      const wrongPwdRes = await request(app)
+        .post('/api/v1/auth/change-password')
+        .set('Authorization', `Bearer ${userToken}`)
+        .send({
+          currentPassword: 'WrongPassword@999',
+          newPassword: 'MyNewSecretPassword@456'
+        });
+      expect(wrongPwdRes.status).toBe(401);
+
+      // Successfully change password with CORRECT current password -> expect 200
+      const changeRes = await request(app)
+        .post('/api/v1/auth/change-password')
+        .set('Authorization', `Bearer ${userToken}`)
+        .send({
+          currentPassword: 'InitialPassword@123',
+          newPassword: 'MyNewSecretPassword@456'
+        });
+      expect(changeRes.status).toBe(200);
+      expect(changeRes.body.success).toBe(true);
+
+      // Verify that old password no longer works
+      const oldLoginRes = await request(app)
+        .post('/api/v1/auth/login')
+        .send({
+          email: 'pwdchange.test@smartshule.ac.ke',
+          password: 'InitialPassword@123'
+        });
+      expect(oldLoginRes.status).toBe(401);
+
+      // Verify that new password works
+      const newLoginRes = await request(app)
+        .post('/api/v1/auth/login')
+        .send({
+          email: 'pwdchange.test@smartshule.ac.ke',
+          password: 'MyNewSecretPassword@456'
+        });
+      expect(newLoginRes.status).toBe(200);
+
+      // Clean up test user
+      await request(app)
+        .delete(`/api/v1/users/${tempUserId}`)
+        .set('Authorization', `Bearer ${superAdminToken}`);
+    });
+  });
+
+  // =================================================================
+  // 6. Strict Parent Data Isolation & Child Ownership Enforcement
+  // =================================================================
+  describe('6. Strict Parent Data Isolation & Child Ownership Enforcement', () => {
+    const unlinkedStudentId = 'student-unlinked-999';
+
+    beforeAll(async () => {
+      // Register an unlinked student belonging to another family
+      const unlinkedStudent = Student.create(
+        {
+          admissionNumber: 'ADM-2026-999',
+          upiNumber: 'NEMIS-X9999Z',
+          firstName: 'Brian',
+          lastName: 'Oduor',
+          dateOfBirth: '2013-08-10',
+          gender: StudentGender.MALE,
+          gradeLevel: CbcGradeLevel.GRADE_7,
+          streamId: 'stream-g7-east',
+          schoolId: 'school-001',
+          academicYearId: 'year-2026',
+          guardianIds: ['guardian-other-999'],
+          status: StudentStatus.ACTIVE
+        },
+        unlinkedStudentId
+      );
+      await container.studentRepository.save(unlinkedStudent);
+    });
+
+    it('returns only the parent’s own linked child when listing students via GET /students', async () => {
+      const res = await request(app)
+        .get('/api/v1/students')
+        .set('Authorization', `Bearer ${parentToken}`);
+
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.body.data)).toBe(true);
+      const studentIds = res.body.data.map((s: any) => s.id);
+      expect(studentIds).toContain('student-001');
+      expect(studentIds).not.toContain(unlinkedStudentId);
+    });
+
+    it('denies parent from accessing an unlinked student’s profile via GET /students/:id (403 Forbidden)', async () => {
+      // Accessing linked child works
+      const ownChildRes = await request(app)
+        .get('/api/v1/students/student-001')
+        .set('Authorization', `Bearer ${parentToken}`);
+      expect(ownChildRes.status).toBe(200);
+      expect(ownChildRes.body.data.id).toBe('student-001');
+
+      // Accessing unlinked student is blocked
+      const unlinkedRes = await request(app)
+        .get(`/api/v1/students/${unlinkedStudentId}`)
+        .set('Authorization', `Bearer ${parentToken}`);
+      expect(unlinkedRes.status).toBe(403);
+      expect(unlinkedRes.body.error.message).toMatch(/Access denied/i);
+    });
+
+    it('denies parent from viewing daily roll-call register via GET /attendance/daily (403 Forbidden)', async () => {
+      const res = await request(app)
+        .get('/api/v1/attendance/daily?date=2026-09-20&type=DAILY_MORNING')
+        .set('Authorization', `Bearer ${parentToken}`);
+      expect(res.status).toBe(403);
+    });
+
+    it('denies parent from accessing another learner’s attendance record via GET /attendance/student/:id (403 Forbidden)', async () => {
+      const res = await request(app)
+        .get(`/api/v1/attendance/student/${unlinkedStudentId}?termId=term-2026-3&academicYearId=year-2026`)
+        .set('Authorization', `Bearer ${parentToken}`);
+      expect(res.status).toBe(403);
+    });
+
+    it('denies parent from accessing school-wide CBC analytics via GET /cbc/analytics (403 Forbidden)', async () => {
+      const res = await request(app)
+        .get('/api/v1/cbc/analytics?termId=term-2026-3&academicYearId=year-2026')
+        .set('Authorization', `Bearer ${parentToken}`);
+      expect(res.status).toBe(403);
+    });
+
+    it('denies parent from viewing an unlinked learner’s report card via GET /cbc/report-cards (403 Forbidden)', async () => {
+      const res = await request(app)
+        .get(`/api/v1/cbc/report-cards?studentId=${unlinkedStudentId}&termId=term-2026-3&academicYearId=year-2026`)
+        .set('Authorization', `Bearer ${parentToken}`);
+      expect(res.status).toBe(403);
+    });
+
+    it('denies parent from viewing another learner’s fee statement via GET /finance/statements/:id (403 Forbidden)', async () => {
+      const res = await request(app)
+        .get(`/api/v1/finance/statements/${unlinkedStudentId}`)
+        .set('Authorization', `Bearer ${parentToken}`);
+      expect(res.status).toBe(403);
+    });
+
+    it('denies parent from viewing another learner’s eDiary entries via GET /ediary/student/:id (403 Forbidden)', async () => {
+      const res = await request(app)
+        .get(`/api/v1/ediary/student/${unlinkedStudentId}`)
+        .set('Authorization', `Bearer ${parentToken}`);
+      expect(res.status).toBe(403);
+    });
+
+    it('denies parent from viewing another learner’s progress photos via GET /media/progress-photos?studentId=:id (403 Forbidden)', async () => {
+      const res = await request(app)
+        .get(`/api/v1/media/progress-photos?studentId=${unlinkedStudentId}`)
+        .set('Authorization', `Bearer ${parentToken}`);
+      expect(res.status).toBe(403);
+    });
+
+    it('denies parent from accessing fee defaulters report via GET /finance/defaulters (403 Forbidden)', async () => {
+      const res = await request(app)
+        .get('/api/v1/finance/defaulters')
+        .set('Authorization', `Bearer ${parentToken}`);
+      expect(res.status).toBe(403);
     });
   });
 });

@@ -13,9 +13,8 @@ interface HeaderProps {
   teachers: Teacher[];
   onSelectStudent?: (student: Student) => void;
   onOpenQuickAction?: (action: string) => void;
-  onNavigateLanding?: () => void;
-  onOpenOnboardSchool?: () => void;
   onOpenAcademicTermsModal?: () => void;
+  onOpenChangePasswordModal?: () => void;
   academicContext?: AcademicContext | null;
   backendConnected?: boolean;
 }
@@ -28,8 +27,8 @@ export const Header: React.FC<HeaderProps> = ({
   teachers,
   onSelectStudent,
   onNavigateLanding,
-  onOpenOnboardSchool,
   onOpenAcademicTermsModal,
+  onOpenChangePasswordModal,
   academicContext,
   backendConnected = true,
 }) => {
@@ -77,17 +76,19 @@ export const Header: React.FC<HeaderProps> = ({
     user?.role === UserRole.SCHOOL_ADMIN ||
     user?.role === UserRole.HEAD_TEACHER;
 
+  const isParent = user?.role === UserRole.PARENT || user?.role === UserRole.GUARDIAN;
+
   const filteredStudents = searchQuery.trim()
     ? students.filter(
         (s) =>
           s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
           s.admNo.includes(searchQuery) ||
-          s.upi.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (s.upi && s.upi.toLowerCase().includes(searchQuery.toLowerCase())) ||
           s.grade.toLowerCase().includes(searchQuery.toLowerCase())
       )
     : [];
 
-  const filteredTeachers = searchQuery.trim()
+  const filteredTeachers = (!isParent && searchQuery.trim())
     ? teachers.filter(
         (t) =>
           t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -236,7 +237,7 @@ export const Header: React.FC<HeaderProps> = ({
             </span>
             <input
               className="w-full bg-transparent py-1.5 text-xs text-white placeholder:text-white/60 focus:outline-none"
-              placeholder="Search students, teachers, CBC strands..."
+              placeholder={isParent ? 'Search your child by name or Adm No...' : 'Search students, teachers, CBC strands...'}
               type="text"
               value={searchQuery}
               onChange={(e) => {
@@ -450,19 +451,6 @@ export const Header: React.FC<HeaderProps> = ({
                     </button>
                   )}
 
-                  {onOpenOnboardSchool && (
-                    <button
-                      onClick={() => {
-                        setUserMenuOpen(false);
-                        onOpenOnboardSchool();
-                      }}
-                      className="w-full text-left px-3 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-50 rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
-                    >
-                      <span className="material-symbols-outlined text-[16px] text-emerald-600">account_balance</span>
-                      <span>Institution Setup</span>
-                    </button>
-                  )}
-
                   {onNavigateLanding && (
                     <button
                       onClick={() => {
@@ -473,6 +461,19 @@ export const Header: React.FC<HeaderProps> = ({
                     >
                       <span className="material-symbols-outlined text-[16px] text-[#800000]">public</span>
                       <span>View Public Landing Page</span>
+                    </button>
+                  )}
+
+                  {onOpenChangePasswordModal && (
+                    <button
+                      onClick={() => {
+                        setUserMenuOpen(false);
+                        onOpenChangePasswordModal();
+                      }}
+                      className="w-full text-left px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-100 rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[16px] text-amber-700">lock_reset</span>
+                      <span>Change My Password</span>
                     </button>
                   )}
 

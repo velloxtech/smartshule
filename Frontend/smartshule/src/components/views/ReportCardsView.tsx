@@ -22,11 +22,35 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const authData = (() => {
+    try {
+      const raw = localStorage.getItem('smartshule_auth');
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  })();
+  const isParent = authData?.user?.role === 'PARENT' || authData?.user?.role === 'GUARDIAN';
+
   // Sync propStudents or fetch from DB if empty
   useEffect(() => {
     if (propStudents && propStudents.length > 0) {
       setStudents(propStudents);
       if (!selectedId) setSelectedId(propStudents[0].id);
+    } else if (isParent) {
+      apiService.getGuardianPortalData().then((res) => {
+        if (res?.data?.children && Array.isArray(res.data.children) && res.data.children.length > 0) {
+          const mapped = res.data.children.map((c: any) => ({
+            id: c.id,
+            name: `${c.firstName} ${c.lastName}`,
+            admNo: c.admissionNumber,
+            grade: c.gradeLevel ? c.gradeLevel.replace('_', ' ') : 'Grade 7',
+            stream: c.streamId || 'Stream A',
+          }));
+          setStudents(mapped);
+          if (!selectedId) setSelectedId(mapped[0].id);
+        }
+      }).catch(() => {});
     } else {
       apiService.getStudents().then((res) => {
         if (res?.data && Array.isArray(res.data) && res.data.length > 0) {
@@ -35,7 +59,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
         }
       }).catch(() => {});
     }
-  }, [propStudents]);
+  }, [propStudents, isParent]);
 
   // Load school & academic context
   useEffect(() => {
@@ -132,10 +156,10 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
   const schoolName = schoolInfo?.name || 'Grace Seeds School';
   const schoolCode = schoolInfo?.registrationNumber || schoolInfo?.code || 'MOE/PRI/2026/04882';
   const knecCode = schoolInfo?.centerCode || schoolInfo?.knecCode || '41802105';
-  const schoolMotto = schoolInfo?.motto || 'Nurturing Excellence and Integrity';
-  const schoolAddress = schoolInfo?.address || 'P.O. Box 12345-00100, Nairobi, Kenya';
-  const schoolPhone = schoolInfo?.phone || '+254 700 000 000';
-  const schoolEmail = schoolInfo?.email || 'info@graceseeds.ac.ke';
+  const schoolMotto = schoolInfo?.motto || 'The future Begins Here';
+  const schoolAddress = schoolInfo?.address || 'KEMRI Street, Kisian, Kisumu, Kenya';
+  const schoolPhone = schoolInfo?.phone || '0745436312';
+  const schoolEmail = schoolInfo?.email || 'schoolgraceseeds@gmail.com';
 
   const evaluations = reportCardData?.learningAreaAssessments || [];
   const daysPresent = (reportCardData as any)?.attendanceDaysPresent ?? reportCardData?.attendanceStats?.daysPresent ?? 58;
@@ -251,7 +275,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
     <img src="/logo.png" alt="Grace Seeds School Logo" class="logo" />
     <h1 class="school-title">GRACE SEEDS SCHOOL</h1>
     <div class="sub-title">MINISTRY OF EDUCATION · CBC SUMMATIVE EVALUATION REPORT</div>
-    <div class="meta-info">MoE Reg: ${schoolCode} · KNEC Centre: ${knecCode} · ${schoolAddress}</div>
+    <div class="meta-info">MoE Reg: ${schoolCode} · KNEC Centre: ${knecCode} · ${schoolAddress} · Tel: ${schoolPhone} · Email: ${schoolEmail}</div>
     <div class="motto">&quot;${schoolMotto}&quot;</div>
     <div class="badge">Official Learner Progress Dossier · ${termName} ${yearName}</div>
   </div>
@@ -485,15 +509,17 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
           </select>
 
           {/* Auto Compile Button */}
-          <button
-            onClick={handleGenerateReportCard}
-            disabled={isGenerating}
-            className="px-3.5 py-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-bold border border-outline-variant/30 transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-            title="Recompile strand assessments and formative evaluations"
-          >
-            <span className="material-symbols-outlined text-[16px]">auto_fix_high</span>
-            <span>{isGenerating ? 'Compiling...' : 'Auto-Compile Dossier'}</span>
-          </button>
+          {!isParent && (
+            <button
+              onClick={handleGenerateReportCard}
+              disabled={isGenerating}
+              className="px-3.5 py-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-bold border border-outline-variant/30 transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              title="Recompile strand assessments and formative evaluations"
+            >
+              <span className="material-symbols-outlined text-[16px]">auto_fix_high</span>
+              <span>{isGenerating ? 'Compiling...' : 'Auto-Compile Dossier'}</span>
+            </button>
+          )}
 
           {/* Download / Print PDF Button */}
           <button
@@ -544,7 +570,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
             MINISTRY OF EDUCATION · CBC SUMMATIVE EVALUATION REPORT
           </p>
           <p className="text-[11px] text-gray-600 font-medium mt-0.5">
-            MoE Reg: <strong>{schoolCode}</strong> · Assessment Centre: <strong>{knecCode}</strong> · {schoolAddress}
+            MoE Reg: <strong>{schoolCode}</strong> · Assessment Centre: <strong>{knecCode}</strong> · {schoolAddress} · Tel: <strong>{schoolPhone}</strong> · Email: <strong>{schoolEmail}</strong>
           </p>
           <p className="text-xs italic text-[#800000] font-semibold mt-0.5">
             &quot;{schoolMotto}&quot;

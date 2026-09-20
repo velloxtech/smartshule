@@ -24,7 +24,7 @@ export interface AttendanceFilterCriteria {
 
 export interface IAttendanceRepository {
   findRegisterById(id: string): Promise<AttendanceRegister | null>;
-  findRegister(streamId: string, date: string, type: AttendanceType): Promise<AttendanceRegister | null>;
+  findRegister(streamId: string, date: string, type: AttendanceType, classRoomId?: string): Promise<AttendanceRegister | null>;
   findRegisters(filters: AttendanceFilterCriteria): Promise<AttendanceRegister[]>;
   saveRegister(register: AttendanceRegister): Promise<void>;
   updateRegister(register: AttendanceRegister): Promise<void>;

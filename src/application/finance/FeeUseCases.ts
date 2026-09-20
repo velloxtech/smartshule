@@ -8,6 +8,8 @@ import {
 import { IStudentRepository } from '../../core/ports/repositories/IStudentRepository';
 import { IGuardianRepository } from '../../core/ports/repositories/ITeacherRepository';
 import { IUserRepository } from '../../core/ports/repositories/IUserRepository';
+import { IAcademicRepository } from '../../core/ports/repositories/IAcademicRepository';
+import { Guardian } from '../../core/domain/user/Guardian';
 import {
   IPaymentGateway,
   IPaystackGateway,
@@ -128,7 +130,8 @@ export class FeeUseCases {
     private readonly userRepository: IUserRepository,
     private readonly paymentGateway: IPaymentGateway,
     private readonly notificationService: INotificationService,
-    paystackGateway?: IPaystackGateway
+    paystackGateway?: IPaystackGateway,
+    private readonly academicRepository?: IAcademicRepository
   ) {
     this.paystack = paystackGateway || (paymentGateway as any);
   }
@@ -251,6 +254,160 @@ export class FeeUseCases {
     };
   }
 
+  public async syncStudentFeeBalances(dto: {
+    schoolId?: string;
+    academicYearId?: string;
+    termId?: string;
+    gradeLevel?: CbcGradeLevel;
+  }) {
+    const schoolId = dto.schoolId || 'school-001';
+    let academicYearId = dto.academicYearId;
+    let termId = dto.termId;
+
+    if (!academicYearId && this.academicRepository) {
+      const currentYear = await this.academicRepository.findCurrentYear(schoolId);
+      academicYearId = currentYear?.id || 'year-2026';
+    }
+    if (!academicYearId) academicYearId = 'year-2026';
+
+    if (!termId && this.academicRepository) {
+      const currentTerm = await this.academicRepository.findCurrentTerm(academicYearId);
+      termId = currentTerm?.id;
+    }
+    if (!termId) termId = 'term-2026-t1';
+
+    const filter: any = { schoolId };
+    if (dto.gradeLevel) filter.gradeLevel = dto.gradeLevel;
+    const students = await this.studentRepository.findAll(filter);
+
+    const syncedStudents: any[] = [];
+    const createdInvoices: any[] = [];
+
+    for (const student of students) {
+      // Check if student already has an invoice for this term & year
+      const existingInvoices = await this.feeRepository.findInvoices({
+        studentId: student.id,
+        termId,
+        academicYearId
+      });
+
+      if (existingInvoices.length > 0) {
+        continue;
+      }
+
+      // Look up fee structure for student's grade level
+      let feeStructure = await this.feeRepository.findFeeStructure(student.gradeLevel, termId, academicYearId);
+      if (!feeStructure) {
+        const allStructures = await this.feeRepository.findAllFeeStructures(schoolId);
+        feeStructure = allStructures.find(fs => fs.gradeLevel === student.gradeLevel) || null;
+      }
+
+      // If no fee structure exists for this grade in the DB, create standard CBC fee structure
+      if (!feeStructure) {
+        const isJSS = ['GRADE_7', 'GRADE_8', 'GRADE_9'].includes(student.gradeLevel);
+        const isUpperPrimary = ['GRADE_4', 'GRADE_5', 'GRADE_6'].includes(student.gradeLevel);
+        const isLowerPrimary = ['GRADE_1', 'GRADE_2', 'GRADE_3'].includes(student.gradeLevel);
+
+        const gradeName = student.gradeLevel.replace('_', ' ');
+        const tuitionAmount = isJSS ? 25000 : (isUpperPrimary ? 18000 : (isLowerPrimary ? 15000 : 12000));
+        const assessmentAmount = isJSS ? 6000 : (isUpperPrimary ? 4000 : 3000);
+        const activityAmount = isJSS ? 2500 : 2000;
+        const lunchAmount = isJSS ? 8500 : 6000;
+
+        const defaultItems = [
+          {
+            id: IdGenerator.generate(),
+            name: 'Tuition Fee',
+            amount: tuitionAmount,
+            category: 'TUITION' as const,
+            isOptional: false
+          },
+          {
+            id: IdGenerator.generate(),
+            name: isJSS ? 'CBC Assessment & Practical Science Kits' : 'CBC Assessment & Learning Materials',
+            amount: assessmentAmount,
+            category: 'ASSESSMENT' as const,
+            isOptional: false
+          },
+          {
+            id: IdGenerator.generate(),
+            name: 'Activity & Co-Curricular Levy',
+            amount: activityAmount,
+            category: 'ACTIVITY' as const,
+            isOptional: false
+          },
+          {
+            id: IdGenerator.generate(),
+            name: 'Hot Lunch Programme',
+            amount: lunchAmount,
+            category: 'MEALS' as const,
+            isOptional: false
+          }
+        ];
+
+        feeStructure = FeeStructure.create(
+          {
+            schoolId,
+            academicYearId: academicYearId || 'year-2026',
+            termId: termId || 'term-2026-t1',
+            gradeLevel: student.gradeLevel,
+            title: `${gradeName} Fee Structure`,
+            items: defaultItems,
+            dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+          },
+          IdGenerator.generate()
+        );
+
+        await this.feeRepository.saveFeeStructure(feeStructure);
+      }
+
+      const invoiceNumber = `INV-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
+      const dueDate = feeStructure.dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+      const invoice = StudentInvoice.create(
+        {
+          schoolId: student.schoolId,
+          studentId: student.id,
+          feeStructureId: feeStructure.id,
+          academicYearId: feeStructure.academicYearId || academicYearId,
+          termId: feeStructure.termId || termId,
+          invoiceNumber,
+          items: feeStructure.items,
+          amountBilled: feeStructure.totalAmount,
+          discountAmount: 0,
+          amountPayable: feeStructure.totalAmount,
+          amountPaid: 0,
+          balance: feeStructure.totalAmount,
+          status: InvoiceStatus.UNPAID,
+          dueDate
+        },
+        IdGenerator.generate()
+      );
+
+      await this.feeRepository.saveInvoice(invoice);
+      createdInvoices.push(invoice.toJSON());
+      syncedStudents.push({
+        studentId: student.id,
+        studentName: `${student.firstName} ${student.lastName}`,
+        admissionNumber: student.admissionNumber,
+        gradeLevel: student.gradeLevel,
+        amountBilled: feeStructure.totalAmount,
+        invoiceNumber
+      });
+    }
+
+    return {
+      success: true,
+      message: syncedStudents.length > 0
+        ? `Successfully attached class fee structures in full for ${syncedStudents.length} student(s).`
+        : 'All existing students already have class fee structures and invoices attached.',
+      syncedCount: syncedStudents.length,
+      totalStudents: students.length,
+      syncedStudents,
+      invoices: createdInvoices
+    };
+  }
+
   // 3. Payment Processing
   public async recordPayment(dto: RecordPaymentDTO) {
     const invoice = await this.feeRepository.findInvoiceById(dto.invoiceId);
@@ -346,6 +503,38 @@ export class FeeUseCases {
   }
 
   // 6. Fee Statement & Reports
+  private async getGuardianForUser(userId: string): Promise<Guardian | null> {
+    let guardian = await this.guardianRepository.findByUserId(userId);
+    if (!guardian) {
+      const user = await this.userRepository.findById(userId);
+      if (user && user.phone) {
+        guardian = await this.guardianRepository.findByPhone(user.phone);
+      }
+      if (!guardian) {
+        const allG = await this.guardianRepository.findAll();
+        guardian = allG.find(g => g.emergencyContact === user?.phone || g.userId === userId) || null;
+      }
+      if (guardian && user) {
+        guardian.setUserId(user.id);
+        await this.guardianRepository.update(guardian);
+      }
+    }
+
+    // Link demo parent if needed
+    if (guardian && (!guardian.studentIds || guardian.studentIds.length === 0)) {
+      const user = await this.userRepository.findById(userId);
+      if (user && (user.email === 'parent@smartshule.ac.ke' || user.id === 'usr-parent-01')) {
+        const allS = await this.studentRepository.findAll();
+        if (allS.length > 0) {
+          const targetS = allS.find(s => s.id === 'student-001') || allS[0];
+          guardian.linkStudent(targetS.id);
+          await this.guardianRepository.update(guardian);
+        }
+      }
+    }
+    return guardian;
+  }
+
   // 6. Invoices Query with Parent Isolation
   public async listInvoices(filters: {
     schoolId?: string;
@@ -357,8 +546,8 @@ export class FeeUseCases {
     let studentIdsToQuery: string[] | undefined = undefined;
 
     // Strict Parent Data Isolation: A parent can only see invoices of their own children
-    if (filters.requestingUser?.role === UserRole.GUARDIAN) {
-      const guardian = await this.guardianRepository.findByUserId(filters.requestingUser.userId);
+    if (filters.requestingUser?.role === UserRole.GUARDIAN || filters.requestingUser?.role === UserRole.PARENT) {
+      const guardian = await this.getGuardianForUser(filters.requestingUser.userId);
       if (!guardian || !guardian.studentIds.length) {
         return [];
       }
@@ -399,8 +588,8 @@ export class FeeUseCases {
 
   // 7. Fee Statement with Parent Isolation
   public async getStudentFeeStatement(studentId: string, requestingUser?: UserContext) {
-    if (requestingUser?.role === UserRole.GUARDIAN) {
-      const guardian = await this.guardianRepository.findByUserId(requestingUser.userId);
+    if (requestingUser?.role === UserRole.GUARDIAN || requestingUser?.role === UserRole.PARENT) {
+      const guardian = await this.getGuardianForUser(requestingUser.userId);
       if (!guardian || !guardian.studentIds.includes(studentId)) {
         throw new ForbiddenError('Access denied: You are only authorized to view fee statements for your linked children.');
       }
@@ -433,7 +622,7 @@ export class FeeUseCases {
 
   // 8. Defaulters Report (Strictly forbidden for Parents)
   public async getFeeDefaultersReport(schoolId?: string, minBalance = 1, requestingUser?: UserContext) {
-    if (requestingUser?.role === UserRole.GUARDIAN || requestingUser?.role === UserRole.STUDENT) {
+    if (requestingUser?.role === UserRole.GUARDIAN || requestingUser?.role === UserRole.PARENT || requestingUser?.role === UserRole.STUDENT) {
       throw new ForbiddenError('Access denied: Parents and students cannot view school-wide defaulters reports.');
     }
 
@@ -479,8 +668,8 @@ export class FeeUseCases {
   public async listPayments(filters: { schoolId?: string; studentId?: string; requestingUser?: UserContext }) {
     let studentIdsToQuery: string[] | undefined = undefined;
 
-    if (filters.requestingUser?.role === UserRole.GUARDIAN) {
-      const guardian = await this.guardianRepository.findByUserId(filters.requestingUser.userId);
+    if (filters.requestingUser?.role === UserRole.GUARDIAN || filters.requestingUser?.role === UserRole.PARENT) {
+      const guardian = await this.getGuardianForUser(filters.requestingUser.userId);
       if (!guardian || !guardian.studentIds.length) {
         return [];
       }
@@ -519,8 +708,8 @@ export class FeeUseCases {
   // 10. Financial Summary (Role Isolated)
   public async getFinanceSummary(schoolId?: string, requestingUser?: UserContext) {
     // Case 1: Parent View - strictly only their children
-    if (requestingUser?.role === UserRole.GUARDIAN) {
-      const guardian = await this.guardianRepository.findByUserId(requestingUser.userId);
+    if (requestingUser?.role === UserRole.GUARDIAN || requestingUser?.role === UserRole.PARENT) {
+      const guardian = await this.getGuardianForUser(requestingUser.userId);
       if (!guardian || !guardian.studentIds.length) {
         return {
           isParentView: true,
@@ -587,8 +776,8 @@ export class FeeUseCases {
     if (!invoice) throw new NotFoundError('Invoice', dto.invoiceId);
 
     // If guardian, ensure invoice belongs to their child
-    if (dto.requestingUser?.role === UserRole.GUARDIAN) {
-      const guardian = await this.guardianRepository.findByUserId(dto.requestingUser.userId);
+    if (dto.requestingUser?.role === UserRole.GUARDIAN || dto.requestingUser?.role === UserRole.PARENT) {
+      const guardian = await this.getGuardianForUser(dto.requestingUser.userId);
       if (!guardian || !guardian.studentIds.includes(invoice.studentId)) {
         throw new ForbiddenError('Access denied: You cannot pay invoices for other parents.');
       }

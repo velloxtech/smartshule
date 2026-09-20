@@ -30,8 +30,8 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
   const [nationalId, setNationalId] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('+2547');
-  const [selectedCounty, setSelectedCounty] = useState('Nairobi City');
-  const [selectedSubCounty, setSelectedSubCounty] = useState('Westlands');
+  const [selectedCounty, setSelectedCounty] = useState('Kisumu');
+  const [selectedSubCounty, setSelectedSubCounty] = useState('Kisumu West');
 
   // Article 237 TSC Mandate
   const [tscNumber, setTscNumber] = useState('');
@@ -115,7 +115,14 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
   };
 
   // Update Sub-county when County changes
-  const countyObj = KENYAN_COUNTIES.find((c) => c.name === selectedCounty) || KENYAN_COUNTIES[46];
+  const countyObj = KENYAN_COUNTIES.find((c) => c.name === selectedCounty) || KENYAN_COUNTIES.find((c) => c.name === 'Kisumu') || KENYAN_COUNTIES[41];
+  useEffect(() => {
+    if (countyObj && countyObj.subCounties.length > 0) {
+      if (!countyObj.subCounties.includes(selectedSubCounty)) {
+        setSelectedSubCounty(countyObj.subCounties[0]);
+      }
+    }
+  }, [selectedCounty]);
 
   if (!isOpen) return null;
 

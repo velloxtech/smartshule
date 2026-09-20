@@ -9,12 +9,13 @@ import {
   AttendanceType,
   StudentAttendanceEntry
 } from '../../core/domain/attendance/Attendance';
-import { IdGenerator, NotFoundError } from '../../core/domain/shared/Errors';
+import { IdGenerator, NotFoundError, ForbiddenError } from '../../core/domain/shared/Errors';
+import { UserRole } from '../../core/domain/user/User';
 
 export interface MarkAttendanceDTO {
   schoolId: string;
   classRoomId: string;
-  streamId: string;
+  streamId?: string;
   academicYearId: string;
   termId: string;
   date: string; // YYYY-MM-DD
@@ -38,7 +39,7 @@ export class AttendanceUseCases {
   ) {}
 
   public async markAttendance(dto: MarkAttendanceDTO) {
-    let register = await this.attendanceRepository.findRegister(dto.streamId, dto.date, dto.type);
+    let register = await this.attendanceRepository.findRegister(dto.streamId || '', dto.date, dto.type, dto.classRoomId);
 
     const formattedEntries: StudentAttendanceEntry[] = [];
     for (const item of dto.entries) {
@@ -80,7 +81,7 @@ export class AttendanceUseCases {
         {
           schoolId: dto.schoolId,
           classRoomId: dto.classRoomId,
-          streamId: dto.streamId,
+          streamId: dto.streamId || '',
           academicYearId: dto.academicYearId,
           termId: dto.termId,
           date: dto.date,
@@ -96,8 +97,8 @@ export class AttendanceUseCases {
     return register.toJSON();
   }
 
-  public async getDailyRegister(streamId: string, date: string, type: AttendanceType = AttendanceType.DAILY_MORNING) {
-    const register = await this.attendanceRepository.findRegister(streamId, date, type);
+  public async getDailyRegister(streamId: string, date: string, type: AttendanceType = AttendanceType.DAILY_MORNING, classRoomId?: string) {
+    const register = await this.attendanceRepository.findRegister(streamId, date, type, classRoomId);
     if (!register) throw new NotFoundError('Attendance Register for the specified date');
     return register.toJSON();
   }
@@ -133,7 +134,32 @@ export class AttendanceUseCases {
     };
   }
 
-  public async getStudentAttendanceSummary(studentId: string, termId: string, academicYearId: string) {
+  public async getStudentAttendanceSummary(studentId: string, termId: string, academicYearId: string, requestingUser?: { userId: string; role: UserRole }) {
+    if (requestingUser?.role === UserRole.PARENT || requestingUser?.role === UserRole.GUARDIAN) {
+      let guardian = await this.guardianRepository.findByUserId(requestingUser.userId);
+      if (!guardian) {
+        const user = await this.userRepository.findById(requestingUser.userId);
+        if (user && user.phone) {
+          guardian = await this.guardianRepository.findByPhone(user.phone);
+        }
+      }
+      // Demo parent fallback
+      if (guardian && (!guardian.studentIds || guardian.studentIds.length === 0)) {
+        const user = await this.userRepository.findById(requestingUser.userId);
+        if (user && (user.email === 'parent@smartshule.ac.ke' || user.id === 'usr-parent-01')) {
+          const allS = await this.studentRepository.findAll();
+          if (allS.length > 0) {
+            const targetS = allS.find(s => s.id === 'student-001') || allS[0];
+            guardian.linkStudent(targetS.id);
+            await this.guardianRepository.update(guardian);
+          }
+        }
+      }
+      if (!guardian || !guardian.studentIds.includes(studentId)) {
+        throw new ForbiddenError('Access denied: You are only permitted to view attendance for your registered children.');
+      }
+    }
+
     const student = await this.studentRepository.findById(studentId);
     if (!student) throw new NotFoundError('Student', studentId);
 

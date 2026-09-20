@@ -1,3 +1,6 @@
+import fs from 'fs';
+import path from 'path';
+import env from '../config/env';
 import { ValidationError } from '../../core/domain/shared/Errors';
 
 export interface ProcessedImageResult {
@@ -13,17 +16,32 @@ export interface ProcessedImageResult {
 }
 
 export class ImageProcessingService {
-  private readonly maxSizeBytes = 10 * 1024 * 1024; // 10MB max
+  private readonly maxSizeBytes = 25 * 1024 * 1024; // 25MB max
   private readonly allowedMimeTypes = [
     'image/jpeg',
     'image/jpg',
+    'image/pjpeg',
     'image/png',
+    'image/x-png',
     'image/webp',
-    'image/gif'
+    'image/gif',
+    'image/svg+xml'
   ];
 
+  private getUploadDirectory(): string {
+    const uploadDir = env.storage?.uploadDir || path.resolve(process.cwd(), 'data', 'uploads');
+    try {
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+    } catch {
+      // ignore
+    }
+    return uploadDir;
+  }
+
   /**
-   * Process and validate an image payload (Data URI or URL)
+   * Process, validate, and optionally persist an image payload (Data URI, Base64, or URL)
    */
   public async processImage(
     imageDataOrUrl: string,
@@ -33,11 +51,13 @@ export class ImageProcessingService {
       throw new ValidationError('Image data is required');
     }
 
-    // Case 1: Standard URL (HTTP/HTTPS)
-    if (imageDataOrUrl.startsWith('http://') || imageDataOrUrl.startsWith('https://')) {
+    const trimmed = imageDataOrUrl.trim();
+
+    // Case 1: Standard URL (HTTP/HTTPS) or already an upload path
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('/uploads/')) {
       return {
-        imageUrl: imageDataOrUrl,
-        thumbnailUrl: imageDataOrUrl,
+        imageUrl: trimmed,
+        thumbnailUrl: trimmed,
         metadata: {
           format: this.extractExtension(filename),
           sizeBytes: 150000,
@@ -46,57 +66,71 @@ export class ImageProcessingService {
       };
     }
 
+    let mimeType = 'image/jpeg';
+    let base64Data = '';
+
     // Case 2: Base64 Data URI (e.g. data:image/png;base64,...)
-    if (imageDataOrUrl.startsWith('data:')) {
-      const matches = imageDataOrUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-      if (!matches || matches.length !== 3) {
+    if (trimmed.startsWith('data:')) {
+      const commaIndex = trimmed.indexOf(',');
+      if (commaIndex === -1) {
         throw new ValidationError('Invalid base64 image data URI format');
       }
 
-      const mimeType = matches[1].toLowerCase();
-      const base64Data = matches[2];
+      const header = trimmed.substring(0, commaIndex);
+      base64Data = trimmed.substring(commaIndex + 1).replace(/\s+/g, '');
 
-      if (!this.allowedMimeTypes.includes(mimeType)) {
+      const mimeMatch = header.match(/^data:([^;]+)/i);
+      if (mimeMatch) {
+        mimeType = mimeMatch[1].toLowerCase();
+      }
+
+      if (!this.allowedMimeTypes.includes(mimeType) && !mimeType.startsWith('image/')) {
         throw new ValidationError(
           `Unsupported image format '${mimeType}'. Allowed formats: JPG, PNG, WEBP, GIF.`
         );
       }
-
-      const sizeBytes = Math.round((base64Data.length * 3) / 4);
-      if (sizeBytes > this.maxSizeBytes) {
-        throw new ValidationError(
-          `Image size exceeds maximum limit of 10MB (file is ${(sizeBytes / (1024 * 1024)).toFixed(2)}MB)`
-        );
-      }
-
-      const format = mimeType.split('/')[1];
-
-      // Generate a lightweight thumbnail data URI (first 1000 chars or resized placeholder)
-      // If the image is small (< 100KB), thumbnail can match image; otherwise lightweight representation
-      const thumbnailUrl = imageDataOrUrl;
-
-      return {
-        imageUrl: imageDataOrUrl,
-        thumbnailUrl,
-        metadata: {
-          format,
-          sizeBytes,
-          width: 800,
-          height: 600,
-          processedAt: new Date().toISOString()
-        }
-      };
+    } else {
+      // Case 3: Raw base64 string without data prefix
+      base64Data = trimmed.replace(/\s+/g, '');
+      const ext = this.extractExtension(filename);
+      mimeType = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
     }
 
-    // Case 3: Raw base64 string without data prefix
-    const sizeBytes = Math.round((imageDataOrUrl.length * 3) / 4);
-    const dataUri = `data:image/jpeg;base64,${imageDataOrUrl}`;
+    const sizeBytes = Math.round((base64Data.length * 3) / 4);
+    if (sizeBytes > this.maxSizeBytes) {
+      throw new ValidationError(
+        `Image size exceeds maximum limit of 25MB (file is ${(sizeBytes / (1024 * 1024)).toFixed(2)}MB)`
+      );
+    }
+
+    let format = mimeType.replace('image/', '').replace('x-', '').replace('+xml', '');
+    if (format === 'pjpeg') format = 'jpeg';
+
+    let imageUrl = `data:${mimeType};base64,${base64Data}`;
+    let thumbnailUrl = imageUrl;
+
+    // Persist file to local uploads directory for fast retrieval & static serving
+    try {
+      const uploadDir = this.getUploadDirectory();
+      const ext = format === 'jpeg' ? 'jpg' : format;
+      const cleanFileName = `img-${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${ext}`;
+      const fullPath = path.join(uploadDir, cleanFileName);
+
+      const buffer = Buffer.from(base64Data, 'base64');
+      fs.writeFileSync(fullPath, buffer);
+
+      imageUrl = `/uploads/${cleanFileName}`;
+      thumbnailUrl = `/uploads/${cleanFileName}`;
+    } catch (diskErr) {
+      // If disk write fails, graceful fallback keeps the data URI so user image is never lost
+      console.warn('[ImageProcessingService] Could not write to disk, using data URI fallback:', diskErr);
+    }
 
     return {
-      imageUrl: dataUri,
-      thumbnailUrl: dataUri,
+      imageUrl,
+      thumbnailUrl,
       metadata: {
-        format: 'jpeg',
+        format,
         sizeBytes,
         width: 800,
         height: 600,

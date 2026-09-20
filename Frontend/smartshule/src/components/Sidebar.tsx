@@ -56,11 +56,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <span className="material-symbols-outlined text-[20px] text-white">school</span>
               </div>
               <div className="flex flex-col leading-tight">
-                <span className="font-headline-md text-body-md text-primary font-bold tracking-tight">
+                <span className="font-headline-md text-body-md text-primary font-bold tracking-tight truncate max-w-[145px]">
                   {user?.schoolName || 'Grace Seeds School'}
                 </span>
-                <span className="font-label-md text-[10px] text-primary/70 uppercase tracking-wider font-semibold">
-                  CBC Portal
+                <span className="font-label-md text-[9.5px] text-primary/80 italic truncate max-w-[145px]" title="The future Begins Here">
+                  &quot;The future Begins Here&quot;
                 </span>
               </div>
             </div>

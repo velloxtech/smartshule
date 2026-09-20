@@ -4,10 +4,9 @@ import { useAuth } from '../../context/AuthContext';
 interface LoginPageProps {
   onSuccess: () => void;
   onNavigateLanding: () => void;
-  onOpenOnboardSchool?: () => void;
 }
 
-export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLanding, onOpenOnboardSchool }) => {
+export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLanding }) => {
   const { login, isLoading, error: authError } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -63,17 +62,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLandi
         </button>
 
         <div className="flex items-center gap-2">
-          {onOpenOnboardSchool && (
-            <button
-              type="button"
-              onClick={onOpenOnboardSchool}
-              className="hidden sm:flex items-center gap-1.5 text-xs font-bold text-amber-300 hover:text-amber-200 bg-white/10 hover:bg-white/20 px-3.5 py-2 rounded-lg transition-colors cursor-pointer border border-amber-300/30"
-            >
-              <span className="material-symbols-outlined text-[16px]">account_balance</span>
-              <span>Onboard School</span>
-            </button>
-          )}
-
           <button
             type="button"
             onClick={onNavigateLanding}
@@ -194,7 +182,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLandi
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                 {[
                   { label: 'Super Admin', email: 'superadmin@smartshule.ac.ke', pass: 'SuperAdmin@123', color: 'bg-rose-50 text-rose-900 border-rose-200 hover:bg-rose-100' },
-                  { label: 'Admin', email: 'admin@smartshule.ac.ke', pass: 'Admin@123', color: 'bg-red-50 text-red-900 border-red-200 hover:bg-red-100' },
+                  { label: 'ADMIN (Director)', email: 'admin@smartshule.ac.ke', pass: 'Admin@123', color: 'bg-red-50 text-red-900 border-red-200 hover:bg-red-100 ring-1 ring-red-300 font-bold' },
                   { label: 'Head Teacher', email: 'headteacher@smartshule.ac.ke', pass: 'HeadTeacher@123', color: 'bg-purple-50 text-purple-900 border-purple-200 hover:bg-purple-100' },
                   { label: 'Deputy Head', email: 'deputy@smartshule.ac.ke', pass: 'Deputy@123', color: 'bg-indigo-50 text-indigo-900 border-indigo-200 hover:bg-indigo-100' },
                   { label: 'Admissions', email: 'admissions@smartshule.ac.ke', pass: 'Admissions@123', color: 'bg-blue-50 text-blue-900 border-blue-200 hover:bg-blue-100' },
@@ -217,20 +205,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLandi
               </div>
             </div>
 
-            {/* Institution Onboarding Link */}
-            {onOpenOnboardSchool && (
-              <div className="pt-2 border-t border-gray-100 text-center">
-                <p className="text-[11px] text-gray-500 mb-2">Setting up a new institution or branch?</p>
-                <button
-                  type="button"
-                  onClick={onOpenOnboardSchool}
-                  className="w-full py-2.5 px-3 rounded-xl border border-emerald-600/30 hover:bg-emerald-50 text-emerald-800 font-bold text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <span className="material-symbols-outlined text-[16px] text-emerald-600">account_balance</span>
-                  <span>Onboard School</span>
-                </button>
-              </div>
-            )}
           </div>
 
           {/* Card Footer Security Note */}
@@ -246,7 +220,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLandi
 
       {/* Page Footer & Vellox Tech Watermark */}
       <footer className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 text-center text-xs text-rose-200/80 flex flex-col items-center justify-center gap-1">
-        <p>SmartShule · Competency-Based Curriculum System</p>
+        <p>Grace Seeds School · &quot;The future Begins Here&quot;</p>
+        <p className="text-[11px] text-rose-300/70">SmartShule · Competency-Based Curriculum System</p>
         <div className="flex items-center gap-1.5 text-xs text-rose-100 font-medium">
           <span>Powered by</span>
           <span className="font-bold text-white tracking-wide">Vellox Tech</span>

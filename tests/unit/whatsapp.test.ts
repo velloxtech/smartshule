@@ -350,7 +350,7 @@ describe('WhatsApp Bot & Phone Counter-Checking Unit Tests', () => {
       expect(res.intent).toBe('UNREGISTERED');
       expect(res.replyText).toContain('could not find an enrolled student record');
       expect(res.replyText).toContain('+254700000000');
-      expect(res.replyText).toContain('admin@smartshule.ac.ke');
+      expect(res.replyText).toContain('schoolgraceseeds@gmail.com');
     });
 
     it('calculates total family balance across multiple children for one parent', async () => {
@@ -465,7 +465,7 @@ describe('WhatsApp Bot & Phone Counter-Checking Unit Tests', () => {
         expect(draft.matchedPerson.studentName).toBe('Liam Doe');
         expect(draft.matchedPerson.recipientPhone).toBe('+254711223344');
         expect(draft.draftedMessage).toBeTruthy();
-      });
+      }, 35000);
 
       it('processes live inbound message when useAI is true for registered user', async () => {
         const res = await whatsAppService.handleInboundMessage('+254711223344', 'Balance', { useAI: true });

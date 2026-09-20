@@ -18,6 +18,7 @@ export interface ProgressPhotoProps {
     processedAt?: string;
   };
   tags: string[];
+  rating?: string;
 }
 
 export class StudentProgressPhoto extends Entity<ProgressPhotoProps> {
@@ -74,20 +75,35 @@ export class StudentProgressPhoto extends Entity<ProgressPhotoProps> {
     return this._props.tags;
   }
 
+  public get rating(): string | undefined {
+    return this._props.rating;
+  }
+
   public toJSON() {
     return {
       id: this.id,
       schoolId: this.schoolId,
       teacherId: this.teacherId,
+      teacherUserId: this.teacherId,
       studentId: this.studentId,
       learningAreaId: this.learningAreaId,
       competencyTag: this.competencyTag,
+      competencyDomain: this.competencyTag,
       title: this.title,
       description: this.description,
       imageUrl: this.imageUrl,
-      thumbnailUrl: this.thumbnailUrl,
+      photoUrl: this.imageUrl,
+      thumbnailUrl: this.thumbnailUrl || this.imageUrl,
       imageMetadata: this.imageMetadata,
+      photoMetadata: this.imageMetadata ? {
+        fileSize: this.imageMetadata.sizeBytes || 0,
+        mimeType: `image/${this.imageMetadata.format || 'jpeg'}`,
+        width: this.imageMetadata.width || 800,
+        height: this.imageMetadata.height || 600
+      } : undefined,
       tags: this.tags,
+      rating: this.rating,
+      recordedDate: this.createdAt.toISOString(),
       createdAt: this.createdAt,
       updatedAt: this.updatedAt
     };

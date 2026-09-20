@@ -82,7 +82,16 @@ export class TimetableUseCases {
       const schoolId = dto.schoolId || 'school-001';
       const academicYearId = dto.academicYearId || 'year-2026';
       const termId = dto.termId || 'term-2026-t1';
-      const classRoomId = dto.classRoomId || dto.timetableId?.replace('timetable-', '') || 'class-001';
+      let classRoomId = dto.classRoomId || dto.timetableId?.replace('timetable-', '');
+      const classes = await this.academicRepository.findAllClasses(schoolId);
+      const foundClass = classes.find(c => c.id === classRoomId);
+      if (foundClass) {
+        classRoomId = foundClass.id;
+      } else if (classes.length > 0) {
+        classRoomId = classes[0].id;
+      } else {
+        classRoomId = 'class-001';
+      }
       timetable = Timetable.create(
         {
           schoolId,

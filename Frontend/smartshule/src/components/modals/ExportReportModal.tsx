@@ -42,7 +42,7 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({ isOpen, on
     window.print();
   };
 
-  const schoolName = school?.name || 'SmartShule CBC Portal';
+  const schoolName = school?.name || 'Grace Seeds School';
   const centerCode = school?.centerCode || 'CBA-REGISTERED';
   const termName = analytics?.academicPeriod?.term || 'Current Term';
   const yearName = analytics?.academicPeriod?.year || new Date().getFullYear().toString();
@@ -86,7 +86,7 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({ isOpen, on
             </div>
             <h2 className="text-xl font-bold text-primary mt-1 uppercase">{schoolName} - CBC EXECUTIVE BRIEF</h2>
             <p className="text-xs text-on-surface-variant mt-0.5">
-              Centre Code: {centerCode} · NEMIS Registered · KICD Competency Framework Certified
+              Centre Code: {centerCode} · Tel: {school?.phone || '0745436312'} · Email: {school?.email || 'schoolgraceseeds@gmail.com'}
             </p>
             <div className="mt-2 text-xs font-data-mono text-outline">
               Generated on: {new Date().toLocaleDateString('en-KE', { dateStyle: 'full' })}
