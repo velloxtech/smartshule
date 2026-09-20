@@ -50,8 +50,32 @@ import {
   OtherIncomeRecord,
   CashFlowLedgerData,
 } from '../types';
+function resolveApiBaseUrl(): string {
+  let url = ((import.meta as any).env?.VITE_API_URL || '').trim();
 
-const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || '/api/v1';
+  // If accidentally pasted with markdown link formatting: [url](url) or [text](url)
+  const mdMatch = url.match(/\((https?:\/\/[^\s)]+)\)/);
+  if (mdMatch) {
+    url = mdMatch[1];
+  } else if (url.startsWith('[') && url.includes(']')) {
+    url = url.replace(/^\[+/, '').replace(/\]+.*$/, '');
+  }
+
+  // Remove trailing slashes
+  url = url.replace(/\/+$/, '');
+
+  // If running on Render static hosting and no explicit full URL is set, fallback to companion backend
+  if (!url || url === '/api/v1') {
+    if (typeof window !== 'undefined' && window.location.hostname.includes('onrender.com')) {
+      return 'https://smartshule-vwhn.onrender.com/api/v1';
+    }
+    return url || '/api/v1';
+  }
+
+  return url;
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 let authToken: string | null = localStorage.getItem('smartshule_token') || null;
 
@@ -113,7 +137,10 @@ export const apiService = {
   // Health & Status Check
   checkHealth: async (): Promise<boolean> => {
     try {
-      const res = await fetch('/health');
+      const healthUrl = API_BASE_URL.startsWith('http')
+        ? `${API_BASE_URL.replace(/\/api\/v1\/?$/, '')}/health`
+        : '/health';
+      const res = await fetch(healthUrl);
       return res.ok;
     } catch {
       return false;

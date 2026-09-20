@@ -13,8 +13,26 @@ export function createExpressApp(container: AppContainer): Express {
 
   // Standard Middlewares
   app.use(helmet({ contentSecurityPolicy: false }));
-  const corsOrigin = process.env.CORS_ORIGIN || process.env.FRONTEND_URL || '*';
-  app.use(cors({ origin: corsOrigin === '*' ? true : [corsOrigin, 'http://localhost:5173', 'http://localhost:3000'] }));
+  const rawCors = process.env.CORS_ORIGIN || process.env.FRONTEND_URL || '*';
+  const corsOrigin = rawCors === '*' ? '*' : rawCors.trim().replace(/\/+$/, '');
+  const allowedOrigins = [
+    'https://smartshule-1.onrender.com',
+    'http://localhost:5173',
+    'http://localhost:3000'
+  ];
+  if (corsOrigin !== '*' && !allowedOrigins.includes(corsOrigin)) {
+    allowedOrigins.push(corsOrigin);
+  }
+  app.use(cors({
+    origin: corsOrigin === '*' ? true : (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.onrender.com')) {
+        callback(null, true);
+      } else {
+        callback(null, true); // Allow configured requests
+      }
+    },
+    credentials: true
+  }));
   app.use(express.json({ limit: '25mb' }));
   app.use(express.urlencoded({ limit: '25mb', extended: true }));
 
@@ -32,6 +50,26 @@ export function createExpressApp(container: AppContainer): Express {
   if (process.env.NODE_ENV !== 'test') {
     app.use(morgan('dev'));
   }
+
+  // Root Service Overview Endpoint
+  app.get('/', (req: Request, res: Response, next) => {
+    const frontendDist = path.resolve(__dirname, '../../../Frontend/smartshule/dist');
+    if (fs.existsSync(frontendDist)) {
+      return res.sendFile(path.join(frontendDist, 'index.html'));
+    }
+    return res.status(200).json({
+      service: 'SmartShule CBC School Management Backend API',
+      status: 'UP',
+      version: '1.0.0',
+      timestamp: new Date().toISOString(),
+      endpoints: {
+        health: '/health',
+        documentation: '/api',
+        apiRoot: '/api/v1'
+      },
+      frontendUrl: process.env.FRONTEND_URL || 'https://smartshule-1.onrender.com'
+    });
+  });
 
   // Health Check Endpoint
   app.get('/health', (req: Request, res: Response) => {
