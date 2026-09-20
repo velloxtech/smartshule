@@ -30,6 +30,9 @@ export interface UserProps {
   phone?: string;
   status: UserStatus;
   schoolId?: string;
+  mustChangePassword?: boolean;
+  resetPasswordToken?: string;
+  resetPasswordExpires?: Date;
 }
 
 export class User extends Entity<UserProps> {
@@ -73,6 +76,29 @@ export class User extends Entity<UserProps> {
     return this._props.schoolId;
   }
 
+  public get mustChangePassword(): boolean {
+    return this._props.mustChangePassword ?? false;
+  }
+
+  public get resetPasswordToken(): string | undefined {
+    return this._props.resetPasswordToken;
+  }
+
+  public get resetPasswordExpires(): Date | undefined {
+    return this._props.resetPasswordExpires;
+  }
+
+  public setMustChangePassword(mustChange: boolean): void {
+    this._props.mustChangePassword = mustChange;
+    this.touch();
+  }
+
+  public setResetPasswordToken(token?: string, expires?: Date): void {
+    this._props.resetPasswordToken = token;
+    this._props.resetPasswordExpires = expires;
+    this.touch();
+  }
+
   public updateProfile(firstName?: string, lastName?: string, phone?: string): void {
     if (firstName) this._props.firstName = firstName;
     if (lastName) this._props.lastName = lastName;
@@ -82,6 +108,9 @@ export class User extends Entity<UserProps> {
 
   public updatePassword(newPasswordHash: string): void {
     this._props.passwordHash = newPasswordHash;
+    this._props.mustChangePassword = false;
+    this._props.resetPasswordToken = undefined;
+    this._props.resetPasswordExpires = undefined;
     this.touch();
   }
 
@@ -112,6 +141,7 @@ export class User extends Entity<UserProps> {
       status: this.status,
       schoolId: this.schoolId || 'school-001',
       schoolName: 'Grace Seeds School',
+      mustChangePassword: this.mustChangePassword,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt
     };

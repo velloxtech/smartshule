@@ -74,8 +74,20 @@ export const EDiaryView: React.FC = () => {
         // Load parent's children
         const pRes = await apiService.getGuardianPortalData().catch(() => null);
         if (pRes?.data?.children && Array.isArray(pRes.data.children) && pRes.data.children.length > 0) {
-          const firstChild = pRes.data.children[0];
-          setLinkedStudents(pRes.data.children);
+          const mappedChildren: Student[] = pRes.data.children.map((st: any) => ({
+            ...st,
+            name:
+              st.name ||
+              st.fullName ||
+              `${st.firstName || ''} ${st.lastName || ''}`.trim() ||
+              'Learner',
+            admNo: st.admNo || st.admissionNumber || 'N/A',
+            grade: st.grade || (st.gradeLevel ? st.gradeLevel.replace(/_/g, ' ') : 'CBC'),
+            stream: st.stream || st.streamName || '',
+            profilePhotoUrl: st.profilePhotoUrl,
+          }));
+          const firstChild = mappedChildren[0];
+          setLinkedStudents(mappedChildren);
           setSelectedStudentId(firstChild.id);
           const diaryRes = await apiService.getStudentEDiary(firstChild.id);
           if (diaryRes.success && diaryRes.data) {

@@ -305,6 +305,93 @@ describe('New Features Integration Tests', () => {
         expect(photo.studentId).toBe('student-001');
       });
     });
+
+    it('Teacher can upload progress photo using photoBase64, competencyDomain, and rating', async () => {
+      const res = await request(app)
+        .post('/api/v1/media/progress-photos')
+        .set('Authorization', `Bearer ${teacherToken}`)
+        .send({
+          schoolId: 'school-001',
+          studentId: 'student-001',
+          learningAreaId: 'la-science-g7',
+          competencyDomain: 'Critical Thinking & Problem Solving',
+          rating: 'EE',
+          title: 'Robotics Assembly Milestone',
+          description: 'Learner built and programmed a motorized car model.',
+          photoBase64: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=',
+          tags: 'Robotics, Coding, CBC_PRACTICAL'
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.data.id).toBeDefined();
+      expect(res.body.data.rating).toBe('EE');
+      expect(res.body.data.competencyDomain).toBe('Critical Thinking & Problem Solving');
+      expect(res.body.data.photoUrl).toBeDefined();
+      expect(res.body.data.imageUrl).toBeDefined();
+    });
+
+    it('User can upload general photo via POST /api/v1/media/upload', async () => {
+      const res = await request(app)
+        .post('/api/v1/media/upload')
+        .set('Authorization', `Bearer ${teacherToken}`)
+        .send({
+          photoBase64: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+          filename: 'student_passport.png'
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.url).toBeDefined();
+      expect(res.body.data.metadata).toBeDefined();
+    });
+
+    it('Teacher can respond to help request using responseMessage', async () => {
+      // First create a request
+      const createRes = await request(app)
+        .post('/api/v1/media/help-requests')
+        .set('Authorization', `Bearer ${guardianToken}`)
+        .send({
+          schoolId: 'school-001',
+          studentId: 'student-001',
+          title: 'Fractions query',
+          description: 'Need help with step 2',
+          learningAreaId: 'la-math-g7',
+          photoBase64: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
+        });
+
+      expect(createRes.status).toBe(201);
+      const reqId = createRes.body.data.id;
+
+      const respondRes = await request(app)
+        .post(`/api/v1/media/help-requests/${reqId}/respond`)
+        .set('Authorization', `Bearer ${teacherToken}`)
+        .send({
+          responseMessage: 'Multiply both numerators first before simplifying.'
+        });
+
+      expect(respondRes.status).toBe(200);
+      expect(respondRes.body.data.status).toBe('RESOLVED');
+      expect(respondRes.body.data.teacherResponse).toBe('Multiply both numerators first before simplifying.');
+    });
+
+    it('Can update student with profilePhotoUrl and retrieve it', async () => {
+      const updateRes = await request(app)
+        .put('/api/v1/students/student-001')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          profilePhotoUrl: '/uploads/sample-learner.jpg'
+        });
+
+      expect(updateRes.status).toBe(200);
+      expect(updateRes.body.data.profilePhotoUrl).toBe('/uploads/sample-learner.jpg');
+
+      const getRes = await request(app)
+        .get('/api/v1/students/student-001')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(getRes.status).toBe(200);
+      expect(getRes.body.data.profilePhotoUrl).toBe('/uploads/sample-learner.jpg');
+    });
   });
 
   // ==========================================
@@ -484,6 +571,113 @@ describe('New Features Integration Tests', () => {
       expect(res.body.data.days.length).toBe(6);
       expect(res.body.data.slots.length).toBe(1);
       expect(res.body.data.slots[0].dayOfWeek).toBe('SATURDAY');
+    });
+  });
+
+  // ==========================================
+  // 7. EMAIL AUTH, FORGOT PASSWORD & FIRST-TIME PASSWORD CHANGE
+  // ==========================================
+  describe('Email Authentication, Forgot Password & Default ID Password Flow', () => {
+    it('Parent account can log in using their National ID as default password and flags mustChangePassword', async () => {
+      const loginRes = await request(app).post('/api/v1/auth/login').send({
+        email: 'mary.kariuki@gmail.com',
+        password: '29876543' // National ID from guardian profile in DB
+      });
+
+      expect(loginRes.status).toBe(200);
+      expect(loginRes.body.success).toBe(true);
+      expect(['PARENT', 'GUARDIAN']).toContain(loginRes.body.data.user.role);
+      expect(loginRes.body.data.user.mustChangePassword).toBe(true);
+    });
+
+    it('Parent can change password using their default National ID password, which clears mustChangePassword', async () => {
+      // 1. Log in with National ID
+      const loginRes = await request(app).post('/api/v1/auth/login').send({
+        email: 'mary.kariuki@gmail.com',
+        password: '29876543'
+      });
+      const pToken = loginRes.body.data.accessToken;
+
+      // 2. Change password
+      const changeRes = await request(app)
+        .post('/api/v1/auth/change-password')
+        .set('Authorization', `Bearer ${pToken}`)
+        .send({
+          currentPassword: '29876543',
+          newPassword: 'MyNewSecureParentPass@2026'
+        });
+
+      expect(changeRes.status).toBe(200);
+      expect(changeRes.body.success).toBe(true);
+
+      // 3. Subsequent login with new password succeeds and mustChangePassword is false
+      const reLogin = await request(app).post('/api/v1/auth/login').send({
+        email: 'mary.kariuki@gmail.com',
+        password: 'MyNewSecureParentPass@2026'
+      });
+      expect(reLogin.status).toBe(200);
+      expect(reLogin.body.data.user.mustChangePassword).toBe(false);
+    });
+
+    it('Forgot password sends 6-digit verification code via email authentication system', async () => {
+      const forgotRes = await request(app).post('/api/v1/auth/forgot-password').send({
+        email: 'sarah.mwangi@smartshule.ac.ke'
+      });
+
+      expect(forgotRes.status).toBe(200);
+      expect(forgotRes.body.success).toBe(true);
+      expect(forgotRes.body.message).toContain('password reset');
+      expect(forgotRes.body.debugCode).toBeDefined();
+      expect(forgotRes.body.debugCode.length).toBe(6);
+    });
+
+    it('Forgot password returns safe message for unknown email without leaking account existence', async () => {
+      const res = await request(app).post('/api/v1/auth/forgot-password').send({
+        email: 'nonexistent.user.test@gmail.com'
+      });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.debugCode).toBeUndefined();
+    });
+
+    it('Reset password rejects invalid verification code with 401', async () => {
+      const res = await request(app).post('/api/v1/auth/reset-password').send({
+        email: 'sarah.mwangi@smartshule.ac.ke',
+        resetCode: '000000',
+        newPassword: 'NewTeacherPassword@2026'
+      });
+
+      expect(res.status).toBe(401);
+      expect(res.body.message).toContain('Invalid');
+    });
+
+    it('Reset password successfully sets new password when valid code is supplied', async () => {
+      // 1. Request reset code
+      const forgotRes = await request(app).post('/api/v1/auth/forgot-password').send({
+        email: 'sarah.mwangi@smartshule.ac.ke'
+      });
+      const validCode = forgotRes.body.debugCode;
+
+      // 2. Reset password
+      const resetRes = await request(app).post('/api/v1/auth/reset-password').send({
+        email: 'sarah.mwangi@smartshule.ac.ke',
+        resetCode: validCode,
+        newPassword: 'BrandNewTeacherPass@2026'
+      });
+
+      expect(resetRes.status).toBe(200);
+      expect(resetRes.body.success).toBe(true);
+
+      // 3. Log in with the newly reset password
+      const newLogin = await request(app).post('/api/v1/auth/login').send({
+        email: 'sarah.mwangi@smartshule.ac.ke',
+        password: 'BrandNewTeacherPass@2026'
+      });
+
+      expect(newLogin.status).toBe(200);
+      expect(newLogin.body.success).toBe(true);
+      expect(newLogin.body.data.user.email).toBe('sarah.mwangi@smartshule.ac.ke');
     });
   });
 });

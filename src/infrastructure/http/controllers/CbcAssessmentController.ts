@@ -26,16 +26,16 @@ export const CreateSubStrandSchema = z.object({
 });
 
 export const RecordFormativeSchema = z.object({
-  studentId: z.string().min(1),
-  teacherId: z.string().min(1),
-  learningAreaId: z.string().min(1),
-  subStrandId: z.string().min(1),
-  termId: z.string().min(1),
-  academicYearId: z.string().min(1),
-  assessmentDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  studentId: z.string().min(1, 'Student ID is required'),
+  teacherId: z.string().optional(),
+  learningAreaId: z.string().min(1, 'Learning area is required'),
+  subStrandId: z.string().min(1, 'Sub-strand is required'),
+  termId: z.string().optional(),
+  academicYearId: z.string().optional(),
+  assessmentDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date format must be YYYY-MM-DD').optional(),
   assessmentMethod: z.nativeEnum(AssessmentMethod),
   performanceLevel: z.nativeEnum(PerformanceLevel),
-  specificOutcomeTested: z.string().min(1),
+  specificOutcomeTested: z.string().min(1, 'Specific outcome tested is required'),
   teacherRemarks: z.string().optional(),
   evidenceNotes: z.string().optional(),
   targetedCompetencies: z.array(z.nativeEnum(CoreCompetency)).optional(),
@@ -43,11 +43,11 @@ export const RecordFormativeSchema = z.object({
 });
 
 export const RecordSummativeSchema = z.object({
-  studentId: z.string().min(1),
-  teacherId: z.string().min(1),
-  learningAreaId: z.string().min(1),
-  termId: z.string().min(1),
-  academicYearId: z.string().min(1),
+  studentId: z.string().min(1, 'Student ID is required'),
+  teacherId: z.string().optional(),
+  learningAreaId: z.string().min(1, 'Learning area is required'),
+  termId: z.string().optional(),
+  academicYearId: z.string().optional(),
   strandScores: z.array(
     z.object({
       strandId: z.string().min(1),
@@ -55,10 +55,10 @@ export const RecordSummativeSchema = z.object({
       rawScore: z.number().optional(),
       maxScore: z.number().optional()
     })
-  ).min(1),
+  ).default([]),
   overallPerformanceLevel: z.nativeEnum(PerformanceLevel),
-  teacherRemarks: z.string().min(1),
-  evaluationDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
+  teacherRemarks: z.string().optional().default('Meeting CBC curriculum learning expectations.'),
+  evaluationDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date format must be YYYY-MM-DD').optional()
 });
 
 export const GenerateReportCardSchema = z.object({
@@ -117,7 +117,14 @@ export class CbcAssessmentController {
 
   public recordFormative = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const assessment = await this.cbcUseCases.recordFormativeAssessment(req.body);
+      const user = (req as any).user;
+      const teacherId = (req.body.teacherId && req.body.teacherId.trim() !== '')
+        ? req.body.teacherId
+        : (user?.userId || user?.id || 'tch-default-01');
+      const assessment = await this.cbcUseCases.recordFormativeAssessment({
+        ...req.body,
+        teacherId
+      });
       return res.status(201).json({
         success: true,
         message: 'Formative assessment recorded successfully',
@@ -147,7 +154,14 @@ export class CbcAssessmentController {
 
   public recordSummative = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const assessment = await this.cbcUseCases.recordSummativeAssessment(req.body);
+      const user = (req as any).user;
+      const teacherId = (req.body.teacherId && req.body.teacherId.trim() !== '')
+        ? req.body.teacherId
+        : (user?.userId || user?.id || 'tch-default-01');
+      const assessment = await this.cbcUseCases.recordSummativeAssessment({
+        ...req.body,
+        teacherId
+      });
       return res.status(201).json({
         success: true,
         message: 'Summative assessment recorded successfully',

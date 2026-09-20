@@ -5,6 +5,7 @@ export function errorHandler(err: any, req: Request, res: Response, next: NextFu
   if (err instanceof DomainError) {
     return res.status(err.statusCode).json({
       success: false,
+      message: err.message,
       error: {
         code: err.code,
         message: err.message,
@@ -17,9 +18,10 @@ export function errorHandler(err: any, req: Request, res: Response, next: NextFu
   if (err.name === 'ZodError') {
     return res.status(400).json({
       success: false,
+      message: err.errors?.[0]?.message || 'Invalid request input data',
       error: {
         code: 'VALIDATION_ERROR',
-        message: 'Invalid request input data',
+        message: err.errors?.[0]?.message || 'Invalid request input data',
         details: err.errors
       }
     });

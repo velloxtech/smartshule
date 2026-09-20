@@ -116,7 +116,13 @@ export class AppContainer {
   }
 
   private initUseCases() {
-    this.authUseCases = new AuthUseCases(this.userRepository, this.passwordHasher, this.tokenService);
+    this.authUseCases = new AuthUseCases(
+      this.userRepository,
+      this.passwordHasher,
+      this.tokenService,
+      this.notificationService,
+      this.guardianRepository
+    );
     this.studentUseCases = new StudentUseCases(
       this.studentRepository,
       this.guardianRepository,
@@ -287,6 +293,7 @@ export class AppContainer {
       let targetUserId = acc.id;
 
       if (!existing) {
+        const isParentRole = acc.role === UserRole.PARENT || acc.role === UserRole.GUARDIAN;
         const user = User.create(
           {
             email: acc.email,
@@ -296,7 +303,8 @@ export class AppContainer {
             role: acc.role,
             phone: acc.phone,
             status: UserStatus.ACTIVE,
-            schoolId: (acc as any).schoolId
+            schoolId: (acc as any).schoolId,
+            mustChangePassword: isParentRole
           },
           acc.id
         );

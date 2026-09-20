@@ -90,10 +90,18 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
 
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
+    let detailsMsg = '';
+    if (errorData.error?.details) {
+      if (Array.isArray(errorData.error.details)) {
+        detailsMsg = errorData.error.details.map((d: any) => d.message || JSON.stringify(d)).join('; ');
+      } else if (typeof errorData.error.details === 'string') {
+        detailsMsg = errorData.error.details;
+      }
+    }
     const message =
+      detailsMsg ||
       errorData.error?.message ||
       errorData.message ||
-      (errorData.error?.details && JSON.stringify(errorData.error.details)) ||
       `API Error: ${res.status}`;
     throw new Error(message);
   }
@@ -152,6 +160,24 @@ export const apiService = {
 
   changePassword: async (data: { currentPassword: string; newPassword: string }): Promise<ApiResponse<any>> => {
     return apiFetch<ApiResponse<any>>('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  forgotPassword: async (email: string): Promise<ApiResponse<{ message?: string; debugCode?: string }>> => {
+    return apiFetch<ApiResponse<{ message?: string; debugCode?: string }>>('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  },
+
+  resetPassword: async (data: {
+    email: string;
+    resetCode: string;
+    newPassword: string;
+  }): Promise<ApiResponse<{ message?: string }>> => {
+    return apiFetch<ApiResponse<{ message?: string }>>('/auth/reset-password', {
       method: 'POST',
       body: JSON.stringify(data),
     });

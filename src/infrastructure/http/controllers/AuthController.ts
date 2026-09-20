@@ -55,6 +55,16 @@ export const ChangePasswordSchema = z.object({
   newPassword: z.string().min(6, 'New password must be at least 6 characters long')
 });
 
+export const ForgotPasswordSchema = z.object({
+  email: z.string().min(1, 'Email or identifier is required')
+});
+
+export const ResetPasswordSchema = z.object({
+  email: z.string().min(1, 'Email is required'),
+  resetCode: z.string().min(4, 'Reset verification code is required'),
+  newPassword: z.string().min(6, 'New password must be at least 6 characters long')
+});
+
 export class AuthController {
   constructor(private readonly authUseCases: AuthUseCases) {}
 
@@ -120,6 +130,31 @@ export class AuthController {
         success: true,
         message: 'Password changed successfully',
         data: result
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public forgotPassword = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await this.authUseCases.requestPasswordReset(req.body.email);
+      return res.status(200).json({
+        success: true,
+        message: result.message,
+        debugCode: result.debugCode
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public resetPassword = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await this.authUseCases.resetPasswordWithCode(req.body);
+      return res.status(200).json({
+        success: true,
+        message: result.message
       });
     } catch (err) {
       next(err);

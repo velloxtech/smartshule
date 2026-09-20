@@ -92,6 +92,7 @@ export default function App() {
   const [exportReportModalOpen, setExportReportModalOpen] = useState(false);
   const [selectedStudentForReport, setSelectedStudentForReport] = useState<Student | undefined>(undefined);
   const [uploadMarksModalOpen, setUploadMarksModalOpen] = useState(false);
+  const [uploadMarksInitialStudent, setUploadMarksInitialStudent] = useState<Student | undefined>(undefined);
   const [createLessonPlanModalOpen, setCreateLessonPlanModalOpen] = useState(false);
   const [createSchemeModalOpen, setCreateSchemeModalOpen] = useState(false);
   const [backendConnected, setBackendConnected] = useState(false);
@@ -140,14 +141,19 @@ export default function App() {
       if (studentData?.data && Array.isArray(studentData.data)) {
         const mappedStudents: Student[] = studentData.data.map((st: any) => {
           const fee = feeMap.get(st.id) || { balance: 0, billed: 0 };
+          const fullName =
+            st.name ||
+            st.fullName ||
+            `${st.firstName || ''} ${st.lastName || ''}`.trim() ||
+            'Learner';
           return {
             id: st.id,
-            admNo: st.admissionNumber,
-            upi: st.upiNumber || '--',
-            nemis: st.upiNumber || '--',
-            name: `${st.firstName} ${st.lastName}`,
-            gender: st.gender === 'FEMALE' ? 'Girl' : 'Boy',
-            grade: st.gradeLevel ? st.gradeLevel.replace('_', ' ') : 'Grade --',
+            admNo: st.admissionNumber || st.admNo || 'N/A',
+            upi: st.upiNumber || st.upi || '--',
+            nemis: st.upiNumber || st.nemis || '--',
+            name: fullName,
+            gender: st.gender === 'FEMALE' || st.gender === 'Girl' ? 'Girl' : 'Boy',
+            grade: st.grade || (st.gradeLevel ? st.gradeLevel.replace(/_/g, ' ') : 'Grade --'),
             stream: st.stream?.name || st.streamName || (st.streamId ? `Stream ${st.streamId.slice(0, 6)}` : ''),
             guardianName:
               st.guardian && (st.guardian.firstName || st.guardian.lastName)
@@ -158,7 +164,11 @@ export default function App() {
             totalFee: fee.billed,
             attendanceRate: st.attendanceRate ?? 0,
             cbcRating: st.cbcRating || '--',
-            status: st.status === 'ACTIVE' ? 'Active' : (st.status || 'Active'),
+            status: st.status === 'ACTIVE' || st.status === 'Active' ? 'Active' : (st.status || 'Active'),
+            profilePhotoUrl: st.profilePhotoUrl,
+            dateOfBirth: st.dateOfBirth,
+            medicalConditions: st.medicalConditions,
+            specialNeeds: st.specialNeeds,
           };
         });
         setStudents(mappedStudents);
@@ -729,7 +739,10 @@ export default function App() {
                   return (
                     <TeacherDashboardView
                       onNavigateTab={(tab) => setCurrentTab(tab)}
-                      onOpenUploadMarks={() => setUploadMarksModalOpen(true)}
+                      onOpenUploadMarks={(student) => {
+                        setUploadMarksInitialStudent(student);
+                        setUploadMarksModalOpen(true);
+                      }}
                       onOpenNewLessonPlan={() => setCreateLessonPlanModalOpen(true)}
                       onOpenNewScheme={() => setCreateSchemeModalOpen(true)}
                     />
@@ -1001,8 +1014,12 @@ export default function App() {
 
       <UploadMarksModal
         isOpen={uploadMarksModalOpen}
-        onClose={() => setUploadMarksModalOpen(false)}
+        onClose={() => {
+          setUploadMarksModalOpen(false);
+          setUploadMarksInitialStudent(undefined);
+        }}
         onMarksUploaded={() => {}}
+        initialStudent={uploadMarksInitialStudent}
       />
 
       <CreateLessonPlanModal
@@ -1041,8 +1058,16 @@ export default function App() {
       />
 
       <ChangePasswordModal
-        isOpen={changePasswordModalOpen}
-        onClose={() => setChangePasswordModalOpen(false)}
+        isOpen={changePasswordModalOpen || Boolean(user?.mustChangePassword)}
+        isForced={Boolean(user?.mustChangePassword)}
+        onClose={() => {
+          if (!user?.mustChangePassword) {
+            setChangePasswordModalOpen(false);
+          }
+        }}
+        onSuccessCallback={() => {
+          setChangePasswordModalOpen(false);
+        }}
       />
     </div>
   );

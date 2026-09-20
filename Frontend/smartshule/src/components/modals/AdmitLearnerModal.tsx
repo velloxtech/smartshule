@@ -37,6 +37,8 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
   const [birthCertNo, setBirthCertNo] = useState('');
   const [selectedCounty, setSelectedCounty] = useState('Kisumu');
   const [selectedSubCounty, setSelectedSubCounty] = useState('Kisumu West');
+  const [profilePhotoUrl, setProfilePhotoUrl] = useState('');
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
   // Step 2: CBC Academic Placement, Fee Structure & Special Needs
   const [classes, setClasses] = useState<ClassRoom[]>([]);
@@ -130,8 +132,36 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
       setEmergencyClinic('');
       setConsentDataProtection(false);
       setConsentChildProtection(false);
+      setProfilePhotoUrl('');
     }
   }, [isOpen]);
+
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      alert('Please select a valid image file (JPEG, PNG, WEBP)');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64 = reader.result as string;
+      setIsUploadingPhoto(true);
+      try {
+        const uploadRes = await apiService.uploadPhoto({ imageDataOrUrl: base64, filename: file.name });
+        if (uploadRes.success && uploadRes.data?.url) {
+          setProfilePhotoUrl(uploadRes.data.url);
+        } else {
+          setProfilePhotoUrl(base64);
+        }
+      } catch {
+        setProfilePhotoUrl(base64);
+      } finally {
+        setIsUploadingPhoto(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Look for the class fee structure and compute full fee
   useEffect(() => {
@@ -300,6 +330,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
       birthCertificateNumber: birthCertNo.trim() || undefined,
       county: selectedCounty,
       subCounty: selectedSubCounty,
+      profilePhotoUrl: profilePhotoUrl || undefined,
       dataProtectionConsent: true,
       guardian: {
         firstName: gFirst,
@@ -320,7 +351,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
       const res = await apiService.registerStudent(rawPayload);
       if (res && res.success && res.data) {
         const admitted = res.data;
-        const studentObj: Student = {
+        const studentObj: any = {
           id: admitted.id,
           admNo: admitted.admissionNumber || admNo,
           upi: admitted.upiNumber || upi || '--',
@@ -333,6 +364,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
           guardianPhone: cleanPhone,
           feeBalance: admitted.invoice ? admitted.invoice.balance : Number(totalFee),
           totalFee: admitted.invoice ? admitted.invoice.amountPayable : Number(totalFee),
+          profilePhotoUrl: admitted.profilePhotoUrl || profilePhotoUrl || undefined,
           attendanceRate: 100,
           cbcRating: 'ME',
           status: 'Active',
@@ -467,6 +499,31 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                   <strong className="font-semibold block">Institutional Admission & Identity (Article 53(1)(a)):</strong>
                   Every child has the right to a name and nationality. The school assigns the official admission number upon enrollment, and the birth certificate verifies nationality.
                 </div>
+              </div>
+
+              {/* Optional Learner Passport Photo */}
+              <div className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                <div className="w-12 h-12 rounded-full bg-slate-200 border border-slate-300 flex items-center justify-center font-bold text-slate-600 shrink-0 overflow-hidden">
+                  {profilePhotoUrl ? (
+                    <img src={profilePhotoUrl} alt="Learner Preview" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="material-symbols-outlined text-2xl text-slate-400">person</span>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <div className="text-xs font-bold text-slate-800">Learner Passport Photo (Optional)</div>
+                  <div className="text-[10px] text-slate-500">Attach passport or ID photo for learner registration card</div>
+                </div>
+                <label className="inline-flex items-center gap-1 px-3 py-1.5 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg text-xs font-semibold text-slate-700 cursor-pointer shadow-xs transition-colors">
+                  <span className="material-symbols-outlined text-sm">photo_camera</span>
+                  <span>{isUploadingPhoto ? 'Uploading...' : profilePhotoUrl ? 'Change' : 'Upload'}</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoSelect}
+                    className="hidden"
+                  />
+                </label>
               </div>
 
               {/* School Admission Number & Optional NEMIS UPI */}

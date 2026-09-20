@@ -1,5 +1,6 @@
 import { IUserRepository } from '../../core/ports/repositories/IUserRepository';
-import { IAuthTokenService, IPasswordHasher } from '../../core/ports/services/IExternalServices';
+import { IGuardianRepository } from '../../core/ports/repositories/ITeacherRepository';
+import { IAuthTokenService, IPasswordHasher, INotificationService } from '../../core/ports/services/IExternalServices';
 import { User, UserRole, UserStatus } from '../../core/domain/user/User';
 import { IdGenerator, ConflictError, UnauthorizedError, NotFoundError } from '../../core/domain/shared/Errors';
 
@@ -11,6 +12,7 @@ export interface RegisterUserDTO {
   role: UserRole;
   phone?: string;
   schoolId?: string;
+  mustChangePassword?: boolean;
 }
 
 export interface LoginDTO {
@@ -31,6 +33,7 @@ export interface AuthResponseDTO {
     phone?: string;
     schoolId?: string;
     schoolName?: string;
+    mustChangePassword?: boolean;
   };
 }
 
@@ -38,7 +41,9 @@ export class AuthUseCases {
   constructor(
     private readonly userRepository: IUserRepository,
     private readonly passwordHasher: IPasswordHasher,
-    private readonly tokenService: IAuthTokenService
+    private readonly tokenService: IAuthTokenService,
+    private readonly notificationService?: INotificationService,
+    private readonly guardianRepository?: IGuardianRepository
   ) {}
 
   public async register(dto: RegisterUserDTO): Promise<AuthResponseDTO> {
@@ -120,7 +125,17 @@ export class AuthUseCases {
       lookupEmail = aliasMap[lookupEmail];
     }
 
-    const user = await this.userRepository.findByEmail(lookupEmail);
+    let user = await this.userRepository.findByEmail(lookupEmail);
+    if (!user && (lookupEmail === 'teacher' || lookupEmail === 'teacher@smartshule.ac.ke')) {
+      user = await this.userRepository.findByEmail('sarah.mwangi@smartshule.ac.ke');
+    }
+    if (!user && (lookupEmail === 'parent' || lookupEmail === 'parent@smartshule.ac.ke')) {
+      user = await this.userRepository.findByEmail('mary.kariuki@gmail.com');
+    }
+    if (!user) {
+      user = await this.userRepository.findByPhone(dto.email.trim());
+    }
+
     if (!user) {
       throw new UnauthorizedError('Invalid email or password.');
     }
@@ -130,29 +145,35 @@ export class AuthUseCases {
     }
 
     let isMatch = await this.passwordHasher.compare(dto.password, user.passwordHash);
+    const isParentRole = user.role === UserRole.PARENT || user.role === UserRole.GUARDIAN;
+    let isDefaultIdPassword = false;
 
-    // Friendly demo account tolerance for casing/symbols
-    if (!isMatch) {
-      const demoAllowedPasswords: Record<string, string[]> = {
-        'superadmin@smartshule.ac.ke': ['SuperAdmin@123', 'superadmin@123', 'SuperAdmin123', 'superadmin123', 'superadmin'],
-        'admin@smartshule.ac.ke': ['Admin@123', 'admin@123', 'Admin123', 'admin123', 'admin'],
-        'headteacher@smartshule.ac.ke': ['HeadTeacher@123', 'headteacher@123', 'HeadTeacher123', 'headteacher123', 'headteacher'],
-        'deputy@smartshule.ac.ke': ['Deputy@123', 'deputy@123', 'Deputy123', 'deputy123', 'deputy'],
-        'admissions@smartshule.ac.ke': ['Admissions@123', 'admissions@123', 'Admissions123', 'admissions123', 'admissions'],
-        'bursar@smartshule.ac.ke': ['Bursar@123', 'bursar@123', 'Bursar123', 'bursar123', 'bursar', 'Finance@123', 'finance@123'],
-        'teacher@smartshule.ac.ke': ['Teacher@123', 'teacher@123', 'Teacher123', 'teacher123', 'teacher'],
-        'sarah.mwangi@smartshule.ac.ke': ['Teacher@123', 'teacher@123', 'Teacher123', 'teacher123', 'teacher'],
-        'parent@smartshule.ac.ke': ['Parent@123', 'parent@123', 'Parent123', 'parent123', 'parent', 'Guardian@123', 'guardian@123'],
-        'mary.kariuki@gmail.com': ['Guardian@123', 'guardian@123', 'Guardian123', 'guardian123', 'guardian', 'parent']
-      };
-      const allowed = demoAllowedPasswords[user.email.toLowerCase()];
-      if (allowed && allowed.includes(dto.password)) {
+    // For parent accounts, check if default National ID was supplied
+    if (!isMatch && isParentRole && this.guardianRepository) {
+      const g = await this.guardianRepository.findByUserId(user.id);
+      if (g && g.nationalId && g.nationalId.trim() === dto.password.trim()) {
         isMatch = true;
+        isDefaultIdPassword = true;
       }
     }
 
     if (!isMatch) {
       throw new UnauthorizedError('Invalid email or password.');
+    }
+
+    // Check if guardian authenticated with their National ID
+    if (this.guardianRepository && isParentRole && !isDefaultIdPassword) {
+      const g = await this.guardianRepository.findByUserId(user.id);
+      if (g && g.nationalId && g.nationalId.trim() === dto.password.trim()) {
+        isDefaultIdPassword = true;
+      }
+    }
+
+    let mustChangePassword = user.mustChangePassword;
+    if (isParentRole && isDefaultIdPassword) {
+      mustChangePassword = true;
+      user.setMustChangePassword(true);
+      await this.userRepository.update(user);
     }
 
     const tokenPayload = {
@@ -177,7 +198,8 @@ export class AuthUseCases {
         role: user.role,
         phone: user.phone,
         schoolId: user.schoolId || 'school-001',
-        schoolName: 'Grace Seeds School'
+        schoolName: 'Grace Seeds School',
+        mustChangePassword: Boolean(mustChangePassword)
       }
     };
   }
@@ -218,15 +240,154 @@ export class AuthUseCases {
       throw new NotFoundError('User', userId);
     }
 
-    const isMatch = await this.passwordHasher.compare(dto.currentPassword, user.passwordHash);
+    let isMatch = await this.passwordHasher.compare(dto.currentPassword, user.passwordHash);
+    if (!isMatch && this.guardianRepository && (user.role === UserRole.PARENT || user.role === UserRole.GUARDIAN)) {
+      const g = await this.guardianRepository.findByUserId(user.id);
+      if (g && g.nationalId && g.nationalId.trim() === dto.currentPassword.trim()) {
+        isMatch = true;
+      }
+    }
+
     if (!isMatch) {
       throw new UnauthorizedError('Current password is incorrect.');
     }
 
     const newHash = await this.passwordHasher.hash(dto.newPassword);
     user.updatePassword(newHash);
+    user.setMustChangePassword(false);
     await this.userRepository.update(user);
-    return { success: true, message: 'Password changed successfully.' };
+    return { success: true, message: 'Password changed successfully.', user: user.toJSON() };
+  }
+
+  public async requestPasswordReset(emailOrPhone: string): Promise<{ success: boolean; message: string; debugCode?: string }> {
+    let lookupEmail = emailOrPhone.toLowerCase().trim();
+    const aliasMap: Record<string, string> = {
+      superadmin: 'superadmin@smartshule.ac.ke',
+      admin: 'admin@smartshule.ac.ke',
+      headteacher: 'headteacher@smartshule.ac.ke',
+      deputy: 'deputy@smartshule.ac.ke',
+      admissions: 'admissions@smartshule.ac.ke',
+      bursar: 'bursar@smartshule.ac.ke',
+      teacher: 'teacher@smartshule.ac.ke',
+      sarah: 'teacher@smartshule.ac.ke',
+      parent: 'parent@smartshule.ac.ke',
+      guardian: 'parent@smartshule.ac.ke',
+      mary: 'parent@smartshule.ac.ke'
+    };
+    if (aliasMap[lookupEmail]) {
+      lookupEmail = aliasMap[lookupEmail];
+    }
+
+    let user = await this.userRepository.findByEmail(lookupEmail);
+    if (!user) {
+      user = await this.userRepository.findByPhone(emailOrPhone.trim());
+    }
+
+    if (!user) {
+      // Safe response to prevent account enumeration
+      return {
+        success: true,
+        message: 'If an account is associated with this email, a 6-digit password reset code has been sent.'
+      };
+    }
+
+    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
+
+    user.setResetPasswordToken(resetCode, expires);
+    await this.userRepository.update(user);
+
+    if (this.notificationService) {
+      const subject = `SmartShule Password Reset Code: ${resetCode}`;
+      const body = `Dear ${user.fullName},\n\nYour 6-digit SmartShule CBC Portal password reset verification code is:\n\n    ${resetCode}\n\nThis code expires in 15 minutes.\n\nGrace Seeds School · Kisumu County\n"The future Begins Here"\nTel: 0745436312 | schoolgraceseeds@gmail.com`;
+
+      const html = `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 580px; margin: 0 auto; padding: 24px; border: 1px solid #e5e7eb; border-radius: 16px;">
+          <div style="background: #7a1228; padding: 20px; border-radius: 12px; text-align: center; color: white;">
+            <h2 style="margin: 0; font-size: 22px; font-weight: bold;">SmartShule CBC Portal</h2>
+            <p style="margin: 4px 0 0; font-size: 13px; color: #fecdd3;">Grace Seeds School · Kisumu County</p>
+          </div>
+          <div style="padding: 24px 8px; color: #1f2937;">
+            <p style="font-size: 14px; margin: 0 0 16px;">Dear <strong>${user.fullName}</strong>,</p>
+            <p style="font-size: 14px; line-height: 1.5; color: #4b5563;">You requested to reset your password for your account (<strong>${user.email}</strong>). Use the verification code below to set a new password:</p>
+            <div style="background-color: #fff1f2; border: 2px dashed #7a1228; border-radius: 12px; padding: 18px; text-align: center; margin: 24px 0;">
+              <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #9f1239; font-weight: bold;">Your 6-Digit Verification Code</div>
+              <div style="font-size: 34px; font-weight: 800; letter-spacing: 8px; color: #7a1228; margin-top: 6px; font-family: monospace;">${resetCode}</div>
+            </div>
+            <p style="font-size: 13px; color: #6b7280; line-height: 1.5;">This code will expire in <strong>15 minutes</strong>. If you did not request a password reset, you can safely ignore this email.</p>
+          </div>
+          <div style="border-top: 1px solid #f3f4f6; padding-top: 16px; text-align: center; font-size: 12px; color: #9ca3af;">
+            <p style="margin: 0 0 4px;">Grace Seeds School · "The future Begins Here"</p>
+            <p style="margin: 0;">Tel: 0745436312 · Email: schoolgraceseeds@gmail.com</p>
+          </div>
+        </div>
+      `;
+
+      await this.notificationService.sendEmail(user.email, subject, body, html).catch((err) => {
+        console.warn(`[Auth] Email dispatch error: ${err.message}`);
+      });
+
+      if (user.phone) {
+        await this.notificationService.sendSms(
+          user.phone,
+          `SmartShule reset code: ${resetCode}. Valid for 15 mins. Do not share.`
+        ).catch(() => null);
+      }
+    }
+
+    return {
+      success: true,
+      message: 'A 6-digit password reset verification code has been sent to your email.',
+      debugCode: process.env.NODE_ENV === 'test' ? resetCode : undefined
+    };
+  }
+
+  public async resetPasswordWithCode(dto: { email: string; resetCode: string; newPassword: string }): Promise<{ success: boolean; message: string }> {
+    let lookupEmail = dto.email.toLowerCase().trim();
+    const aliasMap: Record<string, string> = {
+      superadmin: 'superadmin@smartshule.ac.ke',
+      admin: 'admin@smartshule.ac.ke',
+      headteacher: 'headteacher@smartshule.ac.ke',
+      deputy: 'deputy@smartshule.ac.ke',
+      admissions: 'admissions@smartshule.ac.ke',
+      bursar: 'bursar@smartshule.ac.ke',
+      teacher: 'teacher@smartshule.ac.ke',
+      parent: 'parent@smartshule.ac.ke',
+      guardian: 'parent@smartshule.ac.ke'
+    };
+    if (aliasMap[lookupEmail]) lookupEmail = aliasMap[lookupEmail];
+
+    const user = await this.userRepository.findByEmail(lookupEmail);
+    if (!user) {
+      throw new UnauthorizedError('Invalid email or reset code.');
+    }
+
+    if (!user.resetPasswordToken || user.resetPasswordToken !== dto.resetCode.trim()) {
+      throw new UnauthorizedError('Invalid verification code.');
+    }
+
+    if (!user.resetPasswordExpires || user.resetPasswordExpires < new Date()) {
+      throw new UnauthorizedError('Password reset code has expired. Please request a new code.');
+    }
+
+    const newHash = await this.passwordHasher.hash(dto.newPassword);
+    user.updatePassword(newHash);
+    user.setMustChangePassword(false);
+    user.setResetPasswordToken(undefined, undefined);
+    await this.userRepository.update(user);
+
+    if (this.notificationService) {
+      this.notificationService.sendEmail(
+        user.email,
+        'SmartShule Password Successfully Reset',
+        `Dear ${user.fullName},\n\nYour SmartShule CBC Portal password has been successfully updated.\n\nGrace Seeds School · "The future Begins Here"`
+      ).catch(() => null);
+    }
+
+    return {
+      success: true,
+      message: 'Your password has been successfully reset. You can now log in with your new password.'
+    };
   }
 
   public async listUsers(filters?: { schoolId?: string; role?: string; search?: string }) {

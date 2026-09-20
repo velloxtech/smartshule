@@ -16,8 +16,8 @@ export class PaystackPaymentAdapter implements IPaystackGateway, IPaymentGateway
   private readonly baseUrl: string;
 
   constructor(
-    secretKey = process.env.PAYSTACK_SECRET_KEY || 'sk_test_smartshule_paystack_secret_key_2026',
-    publicKey = process.env.PAYSTACK_PUBLIC_KEY || 'pk_test_smartshule_paystack_public_key_2026',
+    secretKey = process.env.PAYSTACK_SECRET_KEY || '',
+    publicKey = process.env.PAYSTACK_PUBLIC_KEY || '',
     baseUrl = process.env.PAYSTACK_BASE_URL || 'https://api.paystack.co'
   ) {
     this.secretKey = secretKey;

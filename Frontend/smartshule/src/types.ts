@@ -65,6 +65,7 @@ export interface AuthUser {
   phone?: string;
   schoolId?: string;
   status?: string;
+  mustChangePassword?: boolean;
 }
 
 export interface AuthResponse {
@@ -99,6 +100,10 @@ export interface Student {
   dateOfBirth?: string;
   medicalConditions?: string;
   specialNeeds?: string;
+  profilePhotoUrl?: string;
+  classroomId?: string;
+  streamId?: string;
+  gradeLevel?: string;
 }
 
 export interface Teacher {

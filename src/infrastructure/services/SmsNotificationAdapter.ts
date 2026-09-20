@@ -96,10 +96,31 @@ export class SmsNotificationAdapter implements INotificationService {
     };
   }
 
+  private sentEmails: Array<{ to: string; subject: string; body: string; htmlBody?: string; sentAt: Date }> = [];
+
+  public getSentEmails() {
+    return [...this.sentEmails];
+  }
+
+  public getLastSentEmail() {
+    return this.sentEmails[this.sentEmails.length - 1] || null;
+  }
+
+  public clearSentEmails() {
+    this.sentEmails = [];
+  }
+
   public async sendEmail(toEmail: string, subject: string, body: string, htmlBody?: string): Promise<{ success: boolean }> {
     const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
-    const smtpUser = process.env.SMTP_USER || 'notifications@smartshule.ac.ke';
-    const fromAddress = process.env.EMAIL_FROM || 'notifications@smartshule.ac.ke';
+    const fromAddress = process.env.EMAIL_FROM || 'schoolgraceseeds@gmail.com';
+
+    this.sentEmails.push({
+      to: toEmail,
+      subject,
+      body,
+      htmlBody,
+      sentAt: new Date(),
+    });
 
     console.log(`[EMAIL OUTBOUND via ${smtpHost}] From: ${fromAddress} | To: ${toEmail} | Subject: "${subject}"`);
     return {

@@ -3,7 +3,7 @@ import { IUserRepository } from '../../core/ports/repositories/IUserRepository';
 import { IPasswordHasher } from '../../core/ports/services/IExternalServices';
 import { Teacher } from '../../core/domain/user/Teacher';
 import { User, UserRole, UserStatus } from '../../core/domain/user/User';
-import { IdGenerator, NotFoundError, ConflictError } from '../../core/domain/shared/Errors';
+import { IdGenerator, NotFoundError, ConflictError, ValidationError } from '../../core/domain/shared/Errors';
 
 export interface RegisterTeacherDTO {
   email: string;
@@ -43,8 +43,11 @@ export class TeacherUseCases {
       throw new ConflictError(`Teacher with Employee Number '${dto.employeeNumber}' already exists.`);
     }
 
-    // Teacher's National ID is used as their initial login password
-    const rawPassword = dto.nationalId?.trim() || dto.password?.trim() || dto.employeeNumber?.trim() || 'Teacher@123';
+    // Teacher's National ID or Employee Number is used as their initial login password
+    const rawPassword = dto.password?.trim() || dto.nationalId?.trim() || dto.employeeNumber?.trim() || process.env.DEFAULT_TEACHER_PASSWORD || dto.phone?.trim() || '';
+    if (!rawPassword) {
+      throw new ValidationError('A password, National ID, or Employee Number is required to initialize teacher account.');
+    }
     const passwordHash = await this.passwordHasher.hash(rawPassword);
 
     const user = User.create(

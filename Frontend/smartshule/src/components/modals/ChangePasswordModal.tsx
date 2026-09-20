@@ -5,10 +5,17 @@ import { useAuth } from '../../context/AuthContext';
 interface ChangePasswordModalProps {
   isOpen: boolean;
   onClose: () => void;
+  isForced?: boolean;
+  onSuccessCallback?: () => void;
 }
 
-export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen, onClose }) => {
-  const { user } = useAuth();
+export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
+  isOpen,
+  onClose,
+  isForced = false,
+  onSuccessCallback,
+}) => {
+  const { user, updateUser, logout } = useAuth();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -87,13 +94,17 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
 
       if (res.success) {
         setSuccess('Your password has been changed successfully!');
+        updateUser({ mustChangePassword: false });
         setTimeout(() => {
+          if (onSuccessCallback) {
+            onSuccessCallback();
+          }
           onClose();
           setCurrentPassword('');
           setNewPassword('');
           setConfirmPassword('');
           setSuccess(null);
-        }, 1500);
+        }, 1200);
       }
     } catch (err: any) {
       setError(err.message || 'Failed to change password. Please verify your current password.');
@@ -112,21 +123,39 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
               <span className="material-symbols-outlined text-[20px] text-rose-200">lock_reset</span>
             </div>
             <div>
-              <h3 className="font-bold text-sm">Change Your Password</h3>
+              <h3 className="font-bold text-sm">
+                {isForced ? 'Mandatory: Set New Password' : 'Change Your Password'}
+              </h3>
               <p className="text-[11px] text-rose-200">{user?.fullName || user?.email}</p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            disabled={loading}
-            className="text-rose-100 hover:text-white cursor-pointer p-1 rounded-lg hover:bg-white/10 transition-colors"
-          >
-            <span className="material-symbols-outlined text-[18px]">close</span>
-          </button>
+          {!isForced && (
+            <button
+              onClick={onClose}
+              disabled={loading}
+              className="text-rose-100 hover:text-white cursor-pointer p-1 rounded-lg hover:bg-white/10 transition-colors"
+            >
+              <span className="material-symbols-outlined text-[18px]">close</span>
+            </button>
+          )}
         </div>
 
         {/* Body Form */}
         <form onSubmit={handleSubmit} className="p-5 space-y-4 text-xs">
+          {isForced && (
+            <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start gap-2.5">
+              <span className="material-symbols-outlined text-amber-600 text-[20px] shrink-0 mt-0.5">
+                shield_person
+              </span>
+              <div>
+                <p className="font-bold">First-Time Login Security Setup</p>
+                <p className="text-[11px] text-amber-800 mt-0.5">
+                  You logged in using your default National ID password. To secure your account and protect your learner&apos;s data, please choose a private password before continuing.
+                </p>
+              </div>
+            </div>
+          )}
+
           {error && (
             <div className="p-3 rounded-xl bg-error-container text-on-error-container text-xs font-semibold flex items-center gap-2 border border-error/20 animate-in fade-in">
               <span className="material-symbols-outlined text-error text-[18px]">error</span>
@@ -144,7 +173,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
           {/* Current Password */}
           <div>
             <label className="block font-bold text-on-surface-variant mb-1 uppercase text-[10px] tracking-wider">
-              Current Password <span className="text-error">*</span>
+              {isForced ? 'Default ID Password' : 'Current Password'} <span className="text-error">*</span>
             </label>
             <div className="relative">
               <input
@@ -152,7 +181,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
                 required
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder="Enter current password..."
+                placeholder={user?.role === 'PARENT' || user?.role === 'GUARDIAN' ? 'Enter default National ID (e.g. 28475921)...' : 'Enter current password...'}
                 className="w-full bg-surface-container-low border border-outline-variant/60 rounded-lg p-2.5 text-xs text-on-surface focus:outline-primary pr-9"
               />
               <button
@@ -165,7 +194,9 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
                 </span>
               </button>
             </div>
-            <p className="text-[10px] text-outline mt-1">Required to verify account ownership.</p>
+            <p className="text-[10px] text-outline mt-1">
+              {isForced ? 'Enter the National ID or default password you just used to log in.' : 'Required to verify account ownership.'}
+            </p>
           </div>
 
           {/* New Password */}
@@ -276,24 +307,36 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
           </div>
 
           {/* Action Buttons */}
-          <div className="pt-2 flex items-center justify-end gap-2 border-t border-outline-variant/20">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={loading}
-              className="px-3.5 py-2 rounded-lg border border-outline-variant/60 text-xs font-semibold text-on-surface hover:bg-surface-container transition-colors cursor-pointer"
-            >
-              Cancel
-            </button>
+          <div className="pt-2 flex items-center justify-between border-t border-outline-variant/20">
+            {isForced ? (
+              <button
+                type="button"
+                onClick={logout}
+                disabled={loading}
+                className="text-[11px] text-rose-700 hover:text-rose-900 font-semibold flex items-center gap-1 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[15px]">logout</span>
+                <span>Sign Out</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={loading}
+                className="px-3.5 py-2 rounded-lg border border-outline-variant/60 text-xs font-semibold text-on-surface hover:bg-surface-container transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+            )}
             <button
               type="submit"
               disabled={loading || Boolean(passwordsMismatch)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary-container disabled:opacity-50 transition-all cursor-pointer shadow-xs"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#7a1228] text-white text-xs font-bold rounded-lg hover:bg-[#5c0a1a] disabled:opacity-50 transition-all cursor-pointer shadow-xs ml-auto"
             >
               <span className="material-symbols-outlined text-[16px]">
                 {loading ? 'sync' : 'key'}
               </span>
-              <span>{loading ? 'Updating...' : 'Update Password'}</span>
+              <span>{loading ? 'Updating Password...' : isForced ? 'Set Password & Enter Portal' : 'Update Password'}</span>
             </button>
           </div>
         </form>

@@ -30,7 +30,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"admin@smartshule.ac.ke\",\n  \"password\": \"Admin@123\"\n}"
+              "raw": "{\n  \"email\": \"admin@smartshule.ac.ke\",\n  \"password\": \"{{adminPassword}}\"\n}"
             },
             "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
           }
@@ -56,7 +56,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"sarah.mwangi@smartshule.ac.ke\",\n  \"password\": \"Teacher@123\"\n}"
+              "raw": "{\n  \"email\": \"sarah.mwangi@smartshule.ac.ke\",\n  \"password\": \"{{teacherPassword}}\"\n}"
             },
             "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth", "login"] }
           }
@@ -68,7 +68,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"accountant@smartshule.ac.ke\",\n  \"password\": \"Accountant@123\",\n  \"firstName\": \"James\",\n  \"lastName\": \"Koech\",\n  \"role\": \"ACCOUNTANT\",\n  \"phone\": \"+254712000333\",\n  \"schoolId\": \"{{schoolId}}\"\n}"
+              "raw": "{\n  \"email\": \"accountant@smartshule.ac.ke\",\n  \"password\": \"{{initialPassword}}\",\n  \"firstName\": \"James\",\n  \"lastName\": \"Koech\",\n  \"role\": \"ACCOUNTANT\",\n  \"phone\": \"+254712000333\",\n  \"schoolId\": \"{{schoolId}}\"\n}"
             },
             "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth", "register"] }
           }

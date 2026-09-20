@@ -101,7 +101,9 @@ export class StudentUseCases {
       // Check if user already exists for guardian
       let guardianUser = await this.userRepository.findByEmail(dto.guardian.email.toLowerCase());
       if (!guardianUser) {
-        const defaultPasswordHash = await this.passwordHasher.hash('Guardian@123');
+        // Use National ID / Phone as default password for parent account, requiring password change on first login
+        const parentDefaultPassword = dto.guardian.nationalId?.trim() || dto.guardian.phone?.trim() || process.env.DEFAULT_PARENT_PASSWORD || dto.admissionNumber;
+        const defaultPasswordHash = await this.passwordHasher.hash(parentDefaultPassword);
         guardianUser = User.create(
           {
             email: dto.guardian.email.toLowerCase(),
@@ -111,7 +113,8 @@ export class StudentUseCases {
             role: UserRole.GUARDIAN,
             phone: dto.guardian.phone,
             status: UserStatus.ACTIVE,
-            schoolId: dto.schoolId
+            schoolId: dto.schoolId,
+            mustChangePassword: true
           },
           IdGenerator.generate()
         );

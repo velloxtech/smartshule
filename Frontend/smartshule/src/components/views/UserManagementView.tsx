@@ -28,7 +28,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = () => {
   const [newEmail, setNewEmail] = useState('');
   const [newPhone, setNewPhone] = useState('');
   const [newRole, setNewRole] = useState<UserRole>(UserRole.TEACHER);
-  const [newPassword, setNewPassword] = useState('ChangeMe123!');
+  const [newPassword, setNewPassword] = useState('');
   const [submittingCreate, setSubmittingCreate] = useState(false);
 
   // Edit form state
@@ -126,7 +126,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = () => {
         setNewLastName('');
         setNewEmail('');
         setNewPhone('');
-        setNewPassword('ChangeMe123!');
+        setNewPassword('');
       }
     } catch (err: any) {
       showToast('error', err.message || 'Failed to create user account');

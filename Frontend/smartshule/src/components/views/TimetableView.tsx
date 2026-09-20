@@ -417,94 +417,295 @@ export const TimetableView: React.FC = () => {
   <meta charset="utf-8">
   <title>Grace Seeds School Timetable - ${titleContext}</title>
   <style>
-    @page { size: landscape; margin: 8mm; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; color: #111; background: #fff; }
-    .header { text-align: center; border-bottom: 2px solid #800000; padding-bottom: 12px; margin-bottom: 16px; }
-    .logo { height: 135px; width: 135px; object-fit: contain; margin: 0 auto 10px; display: block; border-radius: 16px; border: 2.5px solid #800000; padding: 4px; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-    .school-title { font-size: 24px; font-weight: 900; color: #800000; text-transform: uppercase; margin: 0; letter-spacing: 1.5px; }
-    .sub-title { font-size: 13px; font-weight: 700; color: #333; margin: 4px 0 2px; }
-    .meta-info { font-size: 11px; color: #666; margin-bottom: 8px; }
-    .badge { display: inline-block; background: #800000; color: #fff; padding: 4px 16px; font-size: 11px; font-weight: 700; border-radius: 4px; text-transform: uppercase; }
-    .meta-grid { display: flex; justify-content: space-between; border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 16px; font-size: 12px; }
-    .meta-item strong { display: block; color: #555; font-size: 10px; text-transform: uppercase; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-    th, td { border: 1px solid #777; padding: 6px 8px; text-align: left; vertical-align: top; }
-    th { background: #fdf2f2; color: #800000; font-size: 12px; font-weight: 700; }
-    .period-time { font-size: 10px; color: #666; font-family: monospace; }
-    .break-cell { background: #fef8ee; text-align: center; font-style: italic; color: #886200; font-weight: bold; }
-    .subject { font-weight: bold; font-size: 12px; color: #111; }
-    .teacher { font-size: 11px; color: #444; }
-    .room { font-size: 10px; color: #777; font-family: monospace; }
-    .footer { display: flex; justify-content: space-between; margin-top: 30px; border-top: 1px solid #ccc; padding-top: 15px; font-size: 11px; }
-    .sig-box { width: 30%; }
-    .sig-line { border-bottom: 1px solid #666; height: 35px; margin-bottom: 4px; }
+    @page {
+      size: A4 landscape;
+      margin: 4mm 6mm;
+    }
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #fff;
+      color: #111;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      font-size: 8.5px;
+      line-height: 1.15;
+    }
+    .timetable-wrapper {
+      max-height: 200mm;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      page-break-inside: avoid;
+      page-break-after: avoid;
+    }
+    /* Compact Horizontal Header Bar */
+    .header-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1.5px solid #800000;
+      padding-bottom: 3px;
+      margin-bottom: 4px;
+    }
+    .brand-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .logo {
+      height: 40px;
+      width: 40px;
+      object-fit: contain;
+      border-radius: 6px;
+      border: 1.5px solid #800000;
+      padding: 2px;
+      background: #fff;
+    }
+    .school-title {
+      font-size: 15px;
+      font-weight: 900;
+      color: #800000;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin: 0;
+      line-height: 1.1;
+    }
+    .sub-title {
+      font-size: 8px;
+      font-weight: 700;
+      color: #333;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin: 1px 0 0;
+    }
+    .meta-info {
+      font-size: 7.5px;
+      color: #555;
+      margin: 1px 0 0;
+    }
+    .header-right {
+      text-align: right;
+    }
+    .badge {
+      display: inline-block;
+      background: #800000;
+      color: #fff;
+      padding: 2.5px 8px;
+      font-size: 9px;
+      font-weight: 800;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .meta-pill-row {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 3px;
+      font-size: 8px;
+      color: #333;
+    }
+    .meta-pill-row strong {
+      color: #800000;
+    }
+    /* Table Styling */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+    th, td {
+      border: 1px solid #777;
+      padding: 2px 3px;
+      vertical-align: top;
+      word-wrap: break-word;
+      overflow: hidden;
+    }
+    th {
+      background: #fdf2f2;
+      color: #800000;
+      font-size: 8.5px;
+      font-weight: 800;
+      text-transform: uppercase;
+      text-align: center;
+      padding: 3px 2px;
+    }
+    .col-period {
+      width: 85px;
+      background: #fbfbfb;
+    }
+    .period-title {
+      font-weight: 800;
+      color: #800000;
+      font-size: 8px;
+      line-height: 1.1;
+    }
+    .period-time {
+      font-size: 7.5px;
+      color: #555;
+      font-family: monospace;
+      display: block;
+      margin-top: 1px;
+    }
+    .break-tag {
+      display: inline-block;
+      margin-top: 1px;
+      color: #b45309;
+      font-weight: 700;
+      font-size: 7px;
+      text-transform: uppercase;
+    }
+    .slot-card {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .subject {
+      font-weight: 800;
+      font-size: 8.5px;
+      color: #111;
+      line-height: 1.15;
+    }
+    .teacher {
+      font-size: 7.5px;
+      color: #444;
+      margin-top: 1px;
+      line-height: 1.1;
+    }
+    .room {
+      font-size: 7px;
+      color: #666;
+      font-family: monospace;
+      margin-top: 1px;
+    }
+    .break-cell {
+      background: #fef8ee;
+      text-align: center;
+      vertical-align: middle;
+      color: #886200;
+      font-weight: 800;
+      font-size: 8px;
+      padding: 3px;
+    }
+    .empty-cell {
+      text-align: center;
+      vertical-align: middle;
+      color: #ccc;
+      font-size: 8px;
+    }
+    /* Footer Signatures */
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 4px;
+      border-top: 1px solid #aaa;
+      padding-top: 3px;
+    }
+    .sig-box {
+      width: 31%;
+    }
+    .sig-title {
+      font-weight: 700;
+      font-size: 8px;
+      color: #222;
+    }
+    .sig-line {
+      border-bottom: 1px solid #666;
+      height: 14px;
+      margin-bottom: 2px;
+    }
+    .sig-caption {
+      font-size: 7px;
+      color: #666;
+      font-style: italic;
+    }
   </style>
 </head>
 <body>
-  <div class="header">
-    <img src="/logo.png" alt="Grace Seeds School Logo" class="logo" />
-    <h1 class="school-title">GRACE SEEDS SCHOOL</h1>
-    <div class="sub-title">MINISTRY OF EDUCATION · CBC MASTER TIMETABLE</div>
-    <div class="meta-info">KEMRI Street, Kisian, Kisumu, Kenya · Tel: 0745436312 · Email: schoolgraceseeds@gmail.com</div>
-    <div class="badge">Master Timetable · ${titleContext} · ${termName} ${yearName}</div>
-  </div>
-  <div class="meta-grid">
-    <div class="meta-item"><strong>Class/Entity:</strong> ${titleContext}</div>
-    <div class="meta-item"><strong>Cohort/Stream:</strong> ${selectedStreamName || 'Main Cohort'}</div>
-    <div class="meta-item"><strong>Academic Session:</strong> ${yearName} - ${termName}</div>
-    <div class="meta-item"><strong>Effective Date:</strong> ${new Date().toLocaleDateString('en-GB')}</div>
-  </div>
-  <table>
-    <thead>
-      <tr>
-        <th style="width: 140px;">Period / Time</th>
-        ${days.map(d => `<th>${d.label}</th>`).join('')}
-      </tr>
-    </thead>
-    <tbody>
-      ${periods.map(p => `
-        <tr>
-          <td>
-            <strong>${p.name}</strong><br/>
-            <span class="period-time">${p.startTime} - ${p.endTime}</span>
-            ${p.isBreak ? `<br/><small style="color: #b45309; font-weight: bold;">${p.isLunch ? 'Lunch' : 'Break'}</small>` : ''}
-          </td>
-          ${days.map(d => {
-            const s = activeSlots.find(sl => sl.dayOfWeek === d.dayOfWeek && sl.periodNumber === p.periodNumber);
-            if (s) {
-              if (s.isBreak) {
-                return `<td class="break-cell">${s.label || (s.isLunch ? 'Lunch & Rest' : 'Break')}</td>`;
-              }
-              return `<td>
-                <div class="subject">${s.learningAreaName || 'Subject'}</div>
-                <div class="teacher">${s.teacherName || ''}</div>
-                <div class="room">${s.roomName ? s.roomName + ' · ' : ''}${s.startTime}-${s.endTime}</div>
-              </td>`;
-            }
-            if (p.isBreak) {
-              return `<td class="break-cell">${p.name}</td>`;
-            }
-            return `<td style="color: #bbb; text-align: center;">—</td>`;
-          }).join('')}
-        </tr>
-      `).join('')}
-    </tbody>
-  </table>
-  <div class="footer">
-    <div class="sig-box">
-      <div><strong>Class Teacher:</strong></div>
-      <div class="sig-line"></div>
-      <small>Signature & Date</small>
+  <div class="timetable-wrapper">
+    <div>
+      <div class="header-bar">
+        <div class="brand-left">
+          <img src="/logo.png" alt="Grace Seeds School Logo" class="logo" />
+          <div>
+            <h1 class="school-title">GRACE SEEDS SCHOOL</h1>
+            <div class="sub-title">MINISTRY OF EDUCATION · CBC MASTER TIMETABLE</div>
+            <div class="meta-info">KEMRI Street, Kisian, Kisumu · Tel: 0745436312 · schoolgraceseeds@gmail.com</div>
+          </div>
+        </div>
+        <div class="header-right">
+          <div class="badge">Master Timetable · ${titleContext}</div>
+          <div class="meta-pill-row">
+            <span><strong>Cohort:</strong> ${selectedStreamName || 'Main Cohort'}</span>
+            <span><strong>Session:</strong> ${yearName} - ${termName}</span>
+            <span><strong>Date:</strong> ${new Date().toLocaleDateString('en-GB')}</span>
+          </div>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th class="col-period">Period / Time</th>
+            ${days.map(d => `<th>${d.label}</th>`).join('')}
+          </tr>
+        </thead>
+        <tbody>
+          ${periods.map(p => `
+            <tr>
+              <td class="col-period">
+                <div class="period-title">${p.name}</div>
+                <span class="period-time">${p.startTime} - ${p.endTime}</span>
+                ${p.isBreak ? `<span class="break-tag">${p.isLunch ? 'Lunch' : 'Break'}</span>` : ''}
+              </td>
+              ${days.map(d => {
+                const s = activeSlots.find(sl => sl.dayOfWeek === d.dayOfWeek && sl.periodNumber === p.periodNumber);
+                if (s) {
+                  if (s.isBreak) {
+                    return `<td class="break-cell">${s.label || (s.isLunch ? 'Lunch & Rest' : 'Break')}</td>`;
+                  }
+                  return `<td>
+                    <div class="slot-card">
+                      <div>
+                        <div class="subject">${s.learningAreaName || 'Subject'}</div>
+                        <div class="teacher">${s.teacherName || ''}</div>
+                      </div>
+                      <div class="room">${s.roomName ? s.roomName + ' · ' : ''}${s.startTime}-${s.endTime}</div>
+                    </div>
+                  </td>`;
+                }
+                if (p.isBreak) {
+                  return `<td class="break-cell">${p.name}</td>`;
+                }
+                return `<td class="empty-cell">—</td>`;
+              }).join('')}
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
     </div>
-    <div class="sig-box">
-      <div><strong>Deputy Headteacher (Academics):</strong></div>
-      <div class="sig-line"></div>
-      <small>Signature & Date</small>
-    </div>
-    <div class="sig-box">
-      <div><strong>Principal / Headteacher:</strong></div>
-      <div class="sig-line"></div>
-      <small>Official Stamp & Signature</small>
+    <div class="footer">
+      <div class="sig-box">
+        <div class="sig-title">Class Teacher:</div>
+        <div class="sig-line"></div>
+        <div class="sig-caption">Signature & Date</div>
+      </div>
+      <div class="sig-box">
+        <div class="sig-title">Deputy Headteacher (Academics):</div>
+        <div class="sig-line"></div>
+        <div class="sig-caption">Signature & Date</div>
+      </div>
+      <div class="sig-box">
+        <div class="sig-title">Principal / Headteacher:</div>
+        <div class="sig-line"></div>
+        <div class="sig-caption">Official Stamp & Signature</div>
+      </div>
     </div>
   </div>
 </body>
@@ -523,18 +724,22 @@ export const TimetableView: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12 font-body">
-      {/* Print CSS Injected Styles */}
+      {/* Print CSS Injected Styles Calibrated for Strict 1-Page A4 Landscape Output */}
       <style>{`
         @media print {
           @page {
-            size: landscape;
-            margin: 8mm;
+            size: A4 landscape;
+            margin: 4mm 6mm !important;
           }
-          body {
+          html, body {
             background: #ffffff !important;
             color: #000000 !important;
+            font-size: 8.5px !important;
+            line-height: 1.15 !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
+            margin: 0 !important;
+            padding: 0 !important;
           }
           header, aside, #main-sidebar, nav, footer, .no-print {
             display: none !important;
@@ -552,39 +757,60 @@ export const TimetableView: React.FC = () => {
             padding: 0 !important;
             width: 100% !important;
             background: #ffffff !important;
+            max-height: 200mm !important;
+            page-break-inside: avoid !important;
+            page-break-after: avoid !important;
           }
           .printable-header {
-            border-bottom: 2px solid #800000 !important;
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            text-align: left !important;
+            border-bottom: 1.5px solid #800000 !important;
             border-radius: 0 !important;
             box-shadow: none !important;
-            padding-bottom: 8px !important;
-            margin-bottom: 12px !important;
+            padding-bottom: 3px !important;
+            margin-bottom: 4px !important;
             background: transparent !important;
           }
-          .timetable-grid-table {
-            width: 100% !important;
-            border-collapse: collapse !important;
-          }
-          .timetable-grid-table th, .timetable-grid-table td {
-            border: 1px solid #666 !important;
-            page-break-inside: avoid !important;
-          }
-          .timetable-grid-table th {
-            background-color: #fce8ec !important;
-            color: #800000 !important;
-          }
           .printable-header .school-logo-wrapper {
-            width: 135px !important;
-            height: 135px !important;
-            margin-bottom: 12px !important;
+            width: 40px !important;
+            height: 40px !important;
+            margin: 0 !important;
+            padding: 2px !important;
+            border: 1.5px solid #800000 !important;
+            border-radius: 6px !important;
+            flex-shrink: 0 !important;
           }
           .printable-header .school-logo-wrapper img {
             width: 100% !important;
             height: 100% !important;
             object-fit: contain !important;
           }
+          .timetable-grid-table {
+            width: 100% !important;
+            table-layout: fixed !important;
+            border-collapse: collapse !important;
+            page-break-inside: avoid !important;
+          }
+          .timetable-grid-table th, .timetable-grid-table td {
+            border: 1px solid #777 !important;
+            padding: 1.5px 3px !important;
+            page-break-inside: avoid !important;
+            vertical-align: top !important;
+            overflow: hidden !important;
+          }
+          .timetable-grid-table th {
+            background-color: #fce8ec !important;
+            color: #800000 !important;
+            font-size: 8.5px !important;
+            font-weight: bold !important;
+            text-align: center !important;
+          }
           .print-only-signatures {
             display: grid !important;
+            page-break-inside: avoid !important;
           }
         }
       `}</style>
@@ -824,46 +1050,62 @@ export const TimetableView: React.FC = () => {
       </div>
 
       {/* Main Printable Card (Contains Centered School Logo, Letterhead, and Grid) */}
-      <div className="printable-card bg-surface-container-lowest rounded-2xl shadow-xs border border-outline-variant/30 p-4 sm:p-6 space-y-4">
+      <div className="printable-card bg-surface-container-lowest rounded-2xl shadow-xs border border-outline-variant/30 p-4 sm:p-6 print:p-0 space-y-4 print:space-y-1">
         
-        {/* Centered School Letterhead Header */}
-        <div className="printable-header flex flex-col items-center justify-center text-center pb-4 border-b-2 border-[#800000]">
-          {/* Centered Logo */}
-          <div className="school-logo-wrapper w-32 h-32 sm:w-40 sm:h-40 rounded-2xl border-2 border-[#800000] p-2 bg-white flex items-center justify-center shadow-md mx-auto mb-3 shrink-0">
-            <img
-              src="/logo.png"
-              alt="Grace Seeds School Logo"
-              className="w-full h-full object-contain filter drop-shadow-xs"
-              onError={(e) => {
-                const target = e.currentTarget;
-                if (!target.src.endsWith('/logo.jpg')) {
-                  target.src = '/logo.jpg';
-                }
-              }}
-            />
+        {/* Centered School Letterhead Header (Horizontal Flex in Print for Single-Page Fit) */}
+        <div className="printable-header flex flex-col items-center justify-center text-center pb-4 print:pb-1 border-b-2 border-[#800000] print:flex-row print:justify-between print:items-center print:text-left">
+          {/* Brand Left (Logo + Titles) */}
+          <div className="flex flex-col items-center print:flex-row print:items-center print:gap-2.5">
+            <div className="school-logo-wrapper w-28 h-28 sm:w-32 sm:h-32 print:w-10 print:h-10 rounded-2xl print:rounded-md border-2 print:border border-[#800000] p-1.5 print:p-0.5 bg-white flex items-center justify-center shadow-md print:shadow-none mx-auto mb-2 print:mb-0 shrink-0">
+              <img
+                src="/logo.png"
+                alt="Grace Seeds School Logo"
+                className="w-full h-full object-contain filter drop-shadow-xs print:drop-shadow-none"
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  if (!target.src.endsWith('/logo.jpg')) {
+                    target.src = '/logo.jpg';
+                  }
+                }}
+              />
+            </div>
+
+            <div className="text-center print:text-left">
+              <h2 className="text-xl sm:text-2xl print:text-[14px] font-black uppercase text-[#800000] tracking-wider leading-tight">
+                GRACE SEEDS SCHOOL
+              </h2>
+              <p className="text-xs print:text-[8px] font-bold text-gray-700 uppercase tracking-wide mt-0.5 print:mt-0">
+                MINISTRY OF EDUCATION · CBC MASTER TIMETABLE
+              </p>
+              <p className="text-[11px] print:text-[7.5px] text-gray-500 font-medium">
+                KEMRI Street, Kisian, Kisumu · Tel: 0745436312 · schoolgraceseeds@gmail.com
+              </p>
+            </div>
           </div>
 
-          <h2 className="text-xl sm:text-2xl font-black uppercase text-[#800000] tracking-wider leading-tight">
-            GRACE SEEDS SCHOOL
-          </h2>
-          <p className="text-xs font-bold text-gray-700 uppercase tracking-wide mt-0.5">
-            MINISTRY OF EDUCATION · CBC MASTER TIMETABLE
-          </p>
-          <p className="text-[11px] text-gray-500 font-medium">
-            KEMRI Street, Kisian, Kisumu, Kenya · Tel: 0745436312 · Email: schoolgraceseeds@gmail.com
-          </p>
+          {/* Context & Metadata Right */}
+          <div className="mt-2.5 print:mt-0 flex flex-col items-center print:items-end">
+            <div className="inline-flex flex-wrap items-center justify-center gap-1.5 px-3.5 py-1.5 print:py-0.5 print:px-2 bg-[#800000] text-white rounded-lg print:rounded text-xs print:text-[8.5px] font-bold uppercase tracking-wider shadow-xs">
+              <span>{viewMode === 'class' ? 'Class Schedule' : 'Teacher Schedule'}</span>
+              <span>·</span>
+              <span>{viewMode === 'class' ? activeClassName : activeTeacherName}</span>
+              {viewMode === 'class' && selectedStreamName && <span>({selectedStreamName})</span>}
+              <span className="no-print">·</span>
+              <span className="no-print">{currentContext?.currentTerm?.name || 'Term 3'} ({currentContext?.currentYear?.name || '2026'})</span>
+            </div>
 
-          <div className="mt-2.5 inline-flex flex-wrap items-center justify-center gap-2 px-4 py-1.5 bg-[#800000] text-white rounded-lg text-xs font-bold uppercase tracking-wider shadow-xs">
-            <span>{viewMode === 'class' ? 'Class Schedule' : 'Teacher Schedule'}</span>
-            <span>·</span>
-            <span>{viewMode === 'class' ? activeClassName : activeTeacherName}</span>
-            {viewMode === 'class' && selectedStreamName && <span>({selectedStreamName})</span>}
-            <span>·</span>
-            <span>{currentContext?.currentTerm?.name || 'Term 3'} ({currentContext?.currentYear?.name || '2026'})</span>
+            {/* Print metadata inline bar */}
+            <div className="hidden print:flex items-center gap-2 mt-1 text-[7.5px] text-gray-600">
+              <span><strong className="text-gray-800 uppercase text-[7px]">Cohort:</strong> {selectedStreamName || 'Main Cohort'}</span>
+              <span>·</span>
+              <span><strong className="text-gray-800 uppercase text-[7px]">Session:</strong> {currentContext?.currentYear?.name || '2026'} - {currentContext?.currentTerm?.name || 'Term 3'}</span>
+              <span>·</span>
+              <span><strong className="text-gray-800 uppercase text-[7px]">Date:</strong> {new Date().toLocaleDateString('en-GB')}</span>
+            </div>
           </div>
 
-          {/* Metadata Bar */}
-          <div className="w-full grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 mt-3 border-t border-gray-200 text-left text-xs">
+          {/* Screen-only Metadata Bar */}
+          <div className="w-full grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 mt-3 border-t border-gray-200 text-left text-xs no-print">
             <div>
               <span className="text-gray-500 font-semibold block text-[10px] uppercase">Entity:</span>
               <span className="font-bold text-gray-900">{viewMode === 'class' ? activeClassName : activeTeacherName}</span>
@@ -886,9 +1128,9 @@ export const TimetableView: React.FC = () => {
         {/* Timetable Grid Table */}
         <div className="overflow-x-auto">
           <table className="timetable-grid-table w-full text-left text-xs border-collapse">
-            <thead className="bg-surface-container-low text-on-surface-variant uppercase font-semibold border-b border-outline-variant/30">
+            <thead className="bg-surface-container-low text-on-surface-variant uppercase font-semibold border-b border-outline-variant/30 print:bg-rose-50">
               <tr>
-                <th className="py-2.5 px-3 w-36 border-r border-surface-container">
+                <th className="py-2.5 px-3 print:py-1 print:px-1.5 w-36 print:w-[85px] border-r border-surface-container print:border-gray-400 text-xs print:text-[8.5px]">
                   <div className="flex items-center justify-between">
                     <span>Period / Time</span>
                     {canEditGrid && (
@@ -903,9 +1145,9 @@ export const TimetableView: React.FC = () => {
                   </div>
                 </th>
                 {days.map((d) => (
-                  <th key={d.dayOfWeek} className="py-2.5 px-3 min-w-[160px] border-r border-surface-container last:border-r-0">
+                  <th key={d.dayOfWeek} className="py-2.5 px-3 print:py-1 print:px-1 min-w-[160px] print:min-w-0 border-r border-surface-container last:border-r-0 print:border-gray-400 text-xs print:text-[8.5px]">
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-on-surface">{d.label}</span>
+                      <span className="font-bold text-on-surface print:text-[#800000]">{d.label}</span>
                       {canEditGrid && days.length > 1 && (
                         <button
                           type="button"
@@ -928,17 +1170,17 @@ export const TimetableView: React.FC = () => {
                   className={pDef.isBreak ? 'bg-amber-500/5' : 'hover:bg-surface-container-low/20 transition-colors'}
                 >
                   {/* Period Time Header with Edit Controls */}
-                  <td className="py-2.5 px-3 border-r border-surface-container font-data-mono align-top">
+                  <td className="py-2.5 px-3 print:py-0.5 print:px-1.5 border-r border-surface-container print:border-gray-400 font-data-mono align-top print:bg-[#fbfbfb]">
                     <div className="flex items-start justify-between">
                       <div>
-                        <span className="font-bold text-[#800000] block">
+                        <span className="font-bold text-[#800000] block text-xs print:text-[8px] leading-tight">
                           P{pDef.periodNumber} · {pDef.name}
                         </span>
-                        <span className="text-[11px] text-outline font-normal block mt-0.5">
+                        <span className="text-[11px] print:text-[7px] text-outline font-normal block mt-0.5 print:mt-0">
                           {pDef.startTime} - {pDef.endTime}
                         </span>
                         {pDef.isBreak && (
-                          <span className="inline-block mt-1 px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-800 text-[10px] font-bold">
+                          <span className="inline-block mt-1 print:mt-0 px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-800 text-[10px] print:text-[6.5px] font-bold">
                             {pDef.isLunch ? 'Lunch' : 'Break'}
                           </span>
                         )}
@@ -979,30 +1221,30 @@ export const TimetableView: React.FC = () => {
                       <td
                         key={`${d.dayOfWeek}-${pDef.periodNumber}`}
                         onClick={() => handleCellClick(d.dayOfWeek, pDef, slot)}
-                        className={`py-2 px-2 border-r border-surface-container last:border-r-0 align-top transition-colors ${
+                        className={`py-2 px-2 print:py-0.5 print:px-1 border-r border-surface-container last:border-r-0 print:border-gray-400 align-top transition-colors ${
                           canEditGrid ? 'cursor-pointer hover:bg-rose-50/30' : ''
                         }`}
                       >
                         {slot ? (
                           slot.isBreak ? (
-                            <div className="h-full min-h-[52px] rounded-lg bg-amber-50 border border-amber-200/60 p-2 flex flex-col justify-center items-center text-center print:bg-gray-50 print:border-gray-300">
+                            <div className="h-full min-h-[52px] print:min-h-0 print:h-auto rounded-lg print:rounded-none bg-amber-50 border border-amber-200/60 print:border-none p-2 print:p-0.5 flex flex-col justify-center items-center text-center print:bg-[#fef8ee]">
                               <span className="material-symbols-outlined text-amber-700 text-sm no-print">coffee</span>
-                              <span className="text-[11px] font-bold text-amber-900 mt-0.5">
+                              <span className="text-[11px] print:text-[8px] font-bold text-amber-900 print:text-[#886200] mt-0.5 print:mt-0">
                                 {slot.label || (slot.isLunch ? 'Lunch & Rest' : 'Morning Break')}
                               </span>
                             </div>
                           ) : (
-                            <div className="h-full min-h-[52px] rounded-lg bg-surface-container-lowest border border-outline-variant/30 p-2 shadow-xs hover:border-[#800000]/50 transition-all flex flex-col justify-between">
+                            <div className="h-full min-h-[52px] print:min-h-0 print:h-auto rounded-lg print:rounded-none bg-surface-container-lowest border border-outline-variant/30 print:border-none p-2 print:p-0.5 shadow-xs print:shadow-none hover:border-[#800000]/50 transition-all flex flex-col justify-between">
                               <div>
-                                <div className="font-bold text-on-surface text-xs leading-tight">
+                                <div className="font-bold text-on-surface text-xs print:text-[8.5px] leading-tight print:leading-snug">
                                   {slot.learningAreaName || 'Learning Area'}
                                 </div>
-                                <div className="text-[11px] text-on-surface-variant mt-1 flex items-center gap-1">
+                                <div className="text-[11px] print:text-[7.5px] text-on-surface-variant mt-1 print:mt-0 flex items-center gap-1">
                                   <span className="material-symbols-outlined text-[13px] text-secondary no-print">person</span>
                                   <span className="truncate font-medium">{slot.teacherName || 'Assigned Teacher'}</span>
                                 </div>
                               </div>
-                              <div className="mt-2 pt-1 border-t border-surface-container-high flex items-center justify-between text-[10px] text-outline font-data-mono">
+                              <div className="mt-2 print:mt-0.5 pt-1 print:pt-0 border-t print:border-none border-surface-container-high flex items-center justify-between text-[10px] print:text-[7px] text-outline font-data-mono">
                                 <span>{slot.roomName || 'Room'}</span>
                                 <span className="text-[#800000] font-semibold">
                                   {slot.startTime}-{slot.endTime}
@@ -1011,20 +1253,20 @@ export const TimetableView: React.FC = () => {
                             </div>
                           )
                         ) : pDef.isBreak ? (
-                          <div className="h-full min-h-[52px] rounded-lg bg-surface-container-low/50 border border-dashed border-outline-variant/30 p-2 flex flex-col justify-center items-center text-center">
-                            <span className="text-[11px] text-outline italic">
+                          <div className="h-full min-h-[52px] print:min-h-0 print:h-auto rounded-lg print:rounded-none bg-surface-container-low/50 border border-dashed border-outline-variant/30 print:border-none p-2 print:p-0.5 flex flex-col justify-center items-center text-center print:bg-[#fef8ee]">
+                            <span className="text-[11px] print:text-[8px] text-outline italic print:text-[#886200] print:font-bold">
                               {pDef.name || 'Break'}
                             </span>
                           </div>
                         ) : (
-                          <div className="h-full min-h-[52px] rounded-lg border border-dashed border-outline-variant/30 p-2 flex flex-col justify-center items-center text-center text-outline hover:text-[#800000] hover:border-[#800000] transition-all group">
+                          <div className="h-full min-h-[52px] print:min-h-0 print:h-auto rounded-lg print:rounded-none border border-dashed border-outline-variant/30 print:border-none p-2 print:p-0.5 flex flex-col justify-center items-center text-center text-outline hover:text-[#800000] hover:border-[#800000] transition-all group">
                             {canEditGrid && (
                               <div className="no-print flex flex-col items-center">
                                 <span className="material-symbols-outlined text-xs group-hover:scale-110 transition-transform">add</span>
                                 <span className="text-[10px] font-semibold mt-0.5">Empty Slot</span>
                               </div>
                             )}
-                            <span className="hidden print:inline text-gray-400">—</span>
+                            <span className="hidden print:inline text-gray-400 text-[8px]">—</span>
                           </div>
                         )}
                       </td>
@@ -1037,21 +1279,21 @@ export const TimetableView: React.FC = () => {
         </div>
 
         {/* Official Verification Signatures Block (Visible in Print & at bottom of document) */}
-        <div className="print-only-signatures mt-8 pt-6 border-t-2 border-gray-300 grid grid-cols-1 sm:grid-cols-3 gap-6 text-xs">
-          <div className="space-y-2">
-            <p className="font-bold text-gray-800">Class Teacher:</p>
-            <div className="border-b border-gray-400 h-10 print:h-8"></div>
-            <p className="text-[10px] text-gray-500 italic">Signature & Date</p>
+        <div className="print-only-signatures mt-8 print:mt-2 pt-6 print:pt-1 border-t-2 print:border-t border-gray-300 grid grid-cols-1 sm:grid-cols-3 gap-6 print:gap-3 text-xs print:text-[8px]">
+          <div className="space-y-2 print:space-y-0.5">
+            <p className="font-bold text-gray-800 print:text-[8px]">Class Teacher:</p>
+            <div className="border-b border-gray-400 h-10 print:h-3.5"></div>
+            <p className="text-[10px] print:text-[7px] text-gray-500 italic">Signature & Date</p>
           </div>
-          <div className="space-y-2">
-            <p className="font-bold text-gray-800">Deputy Headteacher (Academics):</p>
-            <div className="border-b border-gray-400 h-10 print:h-8"></div>
-            <p className="text-[10px] text-gray-500 italic">Signature & Date</p>
+          <div className="space-y-2 print:space-y-0.5">
+            <p className="font-bold text-gray-800 print:text-[8px]">Deputy Headteacher (Academics):</p>
+            <div className="border-b border-gray-400 h-10 print:h-3.5"></div>
+            <p className="text-[10px] print:text-[7px] text-gray-500 italic">Signature & Date</p>
           </div>
-          <div className="space-y-2">
-            <p className="font-bold text-gray-800">Principal / Headteacher:</p>
-            <div className="border-b border-gray-400 h-10 print:h-8"></div>
-            <p className="text-[10px] text-gray-500 italic">Official School Stamp & Signature</p>
+          <div className="space-y-2 print:space-y-0.5">
+            <p className="font-bold text-gray-800 print:text-[8px]">Principal / Headteacher:</p>
+            <div className="border-b border-gray-400 h-10 print:h-3.5"></div>
+            <p className="text-[10px] print:text-[7px] text-gray-500 italic">Official School Stamp & Signature</p>
           </div>
         </div>
 

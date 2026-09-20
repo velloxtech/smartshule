@@ -54,8 +54,16 @@ export const LearnerProfileModal: React.FC<LearnerProfileModalProps> = ({
         {/* Maroon Academic Header */}
         <div className="bg-[#7a1228] text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-full bg-white/10 text-white flex items-center justify-center font-bold text-base shrink-0">
-              {student.name.split(' ').map((n) => n[0]).join('')}
+            <div className="w-12 h-12 rounded-full bg-white/10 text-white flex items-center justify-center font-bold text-base shrink-0 overflow-hidden border border-white/20">
+              {(studentDetails?.profilePhotoUrl || (student as any).profilePhotoUrl) ? (
+                <img
+                  src={studentDetails?.profilePhotoUrl || (student as any).profilePhotoUrl}
+                  alt={student.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                student.name.split(' ').map((n) => n[0]).join('')
+              )}
             </div>
             <div>
               <h3 className="font-semibold text-base leading-tight">{student.name}</h3>

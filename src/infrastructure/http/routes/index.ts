@@ -13,7 +13,9 @@ import {
   AdminUpdateUserSchema,
   AdminSetStatusSchema,
   AdminResetPasswordSchema,
-  ChangePasswordSchema
+  ChangePasswordSchema,
+  ForgotPasswordSchema,
+  ResetPasswordSchema
 } from '../controllers/AuthController';
 
 import {
@@ -133,6 +135,8 @@ export function createApiRouter(container: AppContainer): Router {
   authRouter.post('/refresh', validateBody(RefreshTokenSchema), authController.refresh);
   authRouter.get('/profile', authMiddleware, authController.getProfile);
   authRouter.post('/change-password', authMiddleware, validateBody(ChangePasswordSchema), authController.changePassword);
+  authRouter.post('/forgot-password', validateBody(ForgotPasswordSchema), authController.forgotPassword);
+  authRouter.post('/reset-password', validateBody(ResetPasswordSchema), authController.resetPassword);
   router.use('/auth', authRouter);
 
   // ==========================================

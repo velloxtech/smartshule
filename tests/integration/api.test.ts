@@ -185,6 +185,51 @@ describe('SmartShule Hexagonal API Integration Tests', () => {
       expect(res.body.data.performanceScore).toBe(3);
     });
 
+    it('POST /api/v1/cbc/summative records summative assessment with strand breakdown', async () => {
+      const res = await request(app)
+        .post('/api/v1/cbc/summative')
+        .set('Authorization', `Bearer ${teacherToken}`)
+        .send({
+          studentId: 'student-001',
+          teacherId: 'teacher-001',
+          learningAreaId: 'la-science-7',
+          termId: 'term-2026-1',
+          academicYearId: 'year-2026',
+          strandScores: [
+            {
+              strandId: 'strand-scie-01',
+              performanceLevel: 'EE',
+              rawScore: 85,
+              maxScore: 100
+            }
+          ],
+          overallPerformanceLevel: 'EE',
+          teacherRemarks: 'Exceeds expectations in scientific principles and application.',
+          evaluationDate: '2026-03-20'
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.data.overallPerformanceLevel).toBe('EE');
+      expect(res.body.data.strandScores.length).toBe(1);
+    });
+
+    it('POST /api/v1/cbc/summative records overall assessment without strand breakdown (optional strands)', async () => {
+      const res = await request(app)
+        .post('/api/v1/cbc/summative')
+        .set('Authorization', `Bearer ${teacherToken}`)
+        .send({
+          studentId: 'student-001',
+          learningAreaId: 'la-science-7',
+          overallPerformanceLevel: 'ME',
+          teacherRemarks: 'Meets expectations in general curriculum learning areas.',
+          strandScores: []
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.data.overallPerformanceLevel).toBe('ME');
+      expect(res.body.data.strandScores).toEqual([]);
+    });
+
     it('POST /api/v1/cbc/report-cards/generate compiles CBC Report Card', async () => {
       const res = await request(app)
         .post('/api/v1/cbc/report-cards/generate')

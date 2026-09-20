@@ -100,11 +100,17 @@ export class DatabaseFactory {
       };
     }
 
-    // 2. POSTGRESQL
+   // 2. POSTGRESQL
     if (normalizedType === 'postgres' || normalizedType === 'postgresql') {
       const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/smartshule';
       console.log(`[Database] Connecting to PostgreSQL: ${connectionString.replace(/:[^:@]+@/, ':****@')}`);
-      const pool = new Pool({ connectionString });
+      
+      // Explicitly enable SSL for Supabase connections
+      const isSupabase = connectionString.includes('supabase');
+      const pool = new Pool({ 
+        connectionString,
+        ssl: isSupabase ? { rejectUnauthorized: false } : false
+      });
       
       // Auto-create all tables on start
       await PostgresDatabaseInitializer.initializeSchema(pool);

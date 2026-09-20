@@ -53,12 +53,12 @@ export interface CreateSubStrandDTO {
 
 export interface RecordFormativeDTO {
   studentId: string;
-  teacherId: string;
+  teacherId?: string;
   learningAreaId: string;
   subStrandId: string;
-  termId: string;
-  academicYearId: string;
-  assessmentDate: string;
+  termId?: string;
+  academicYearId?: string;
+  assessmentDate?: string;
   assessmentMethod: AssessmentMethod;
   performanceLevel: PerformanceLevel;
   specificOutcomeTested: string;
@@ -70,14 +70,14 @@ export interface RecordFormativeDTO {
 
 export interface RecordSummativeDTO {
   studentId: string;
-  teacherId: string;
+  teacherId?: string;
   learningAreaId: string;
-  termId: string;
-  academicYearId: string;
-  strandScores: { strandId: string; performanceLevel: PerformanceLevel; rawScore?: number; maxScore?: number }[];
+  termId?: string;
+  academicYearId?: string;
+  strandScores?: { strandId: string; performanceLevel: PerformanceLevel; rawScore?: number; maxScore?: number }[];
   overallPerformanceLevel: PerformanceLevel;
-  teacherRemarks: string;
-  evaluationDate: string;
+  teacherRemarks?: string;
+  evaluationDate?: string;
 }
 
 export interface GenerateReportCardDTO {
@@ -167,7 +167,33 @@ export class CbcAssessmentUseCases {
     const subStrand = await this.cbcRepository.findSubStrandById(dto.subStrandId);
     if (!subStrand) throw new NotFoundError('SubStrand', dto.subStrandId);
 
-    const assessment = FormativeAssessment.create(dto, IdGenerator.generate());
+    let termId = dto.termId;
+    let academicYearId = dto.academicYearId;
+    if (!academicYearId || !termId) {
+      try {
+        const activeYear = await this.academicRepository.findCurrentYear();
+        if (activeYear) {
+          academicYearId = academicYearId || activeYear.id;
+          const terms = await this.academicRepository.findTermsByYear(activeYear.id);
+          const activeTerm = terms.find(t => t.isCurrent) || terms[0];
+          if (activeTerm) {
+            termId = termId || activeTerm.id;
+          }
+        }
+      } catch {
+        // Continue with defaults
+      }
+    }
+
+    const teacherId = (dto.teacherId && dto.teacherId.trim() !== '') ? dto.teacherId : 'tch-default-01';
+
+    const assessment = FormativeAssessment.create({
+      ...dto,
+      teacherId,
+      termId: termId || 'term-default',
+      academicYearId: academicYearId || 'year-default',
+      assessmentDate: dto.assessmentDate || new Date().toISOString().split('T')[0]
+    }, IdGenerator.generate());
     await this.cbcRepository.saveFormative(assessment);
     return assessment.toJSON();
   }
@@ -203,29 +229,52 @@ export class CbcAssessmentUseCases {
     const student = await this.studentRepository.findById(dto.studentId);
     if (!student) throw new NotFoundError('Student', dto.studentId);
 
+    let termId = dto.termId;
+    let academicYearId = dto.academicYearId;
+    if (!academicYearId || !termId) {
+      try {
+        const activeYear = await this.academicRepository.findCurrentYear();
+        if (activeYear) {
+          academicYearId = academicYearId || activeYear.id;
+          const terms = await this.academicRepository.findTermsByYear(activeYear.id);
+          const activeTerm = terms.find(t => t.isCurrent) || terms[0];
+          if (activeTerm) {
+            termId = termId || activeTerm.id;
+          }
+        }
+      } catch {
+        // Continue with defaults
+      }
+    }
+
+    const teacherId = (dto.teacherId && dto.teacherId.trim() !== '') ? dto.teacherId : 'tch-default-01';
+
     const strandScores: StrandAssessmentScore[] = [];
-    for (const item of dto.strandScores) {
-      const strand = await this.cbcRepository.findStrandById(item.strandId);
-      strandScores.push({
-        strandId: item.strandId,
-        strandTitle: strand ? strand.title : 'General Strand',
-        performanceLevel: item.performanceLevel,
-        rawScore: item.rawScore,
-        maxScore: item.maxScore
-      });
+    if (dto.strandScores && Array.isArray(dto.strandScores)) {
+      for (const item of dto.strandScores) {
+        if (!item || !item.strandId) continue;
+        const strand = await this.cbcRepository.findStrandById(item.strandId);
+        strandScores.push({
+          strandId: item.strandId,
+          strandTitle: strand ? strand.title : 'General Strand',
+          performanceLevel: item.performanceLevel,
+          rawScore: item.rawScore,
+          maxScore: item.maxScore
+        });
+      }
     }
 
     const assessment = SummativeAssessment.create(
       {
         studentId: dto.studentId,
-        teacherId: dto.teacherId,
+        teacherId,
         learningAreaId: dto.learningAreaId,
-        termId: dto.termId,
-        academicYearId: dto.academicYearId,
+        termId: termId || 'term-default',
+        academicYearId: academicYearId || 'year-default',
         strandScores,
         overallPerformanceLevel: dto.overallPerformanceLevel,
-        teacherRemarks: dto.teacherRemarks,
-        evaluationDate: dto.evaluationDate
+        teacherRemarks: dto.teacherRemarks || 'Meeting CBC curriculum learning expectations.',
+        evaluationDate: dto.evaluationDate || new Date().toISOString().split('T')[0]
       },
       IdGenerator.generate()
     );

@@ -25,6 +25,8 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
   const [isLinkingGuardian, setIsLinkingGuardian] = useState(false);
   const [guardianSuccess, setGuardianSuccess] = useState<string | null>(null);
   const [availableStreams, setAvailableStreams] = useState<{ id: string; name: string }[]>([]);
+  const [profilePhotoUrl, setProfilePhotoUrl] = useState<string>('');
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,6 +41,7 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
       setStatus(student.status?.toUpperCase() || 'ACTIVE');
       setStreamId('');
       setGuardianId('');
+      setProfilePhotoUrl((student as any).profilePhotoUrl || '');
       setSuccess(null);
       setGuardianSuccess(null);
 
@@ -92,6 +95,33 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
 
   if (!isOpen || !student) return null;
 
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      alert('Please select a valid image file (JPEG, PNG, WEBP)');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64 = reader.result as string;
+      setIsUploadingPhoto(true);
+      try {
+        const uploadRes = await apiService.uploadPhoto({ imageDataOrUrl: base64, filename: file.name });
+        if (uploadRes.success && uploadRes.data?.url) {
+          setProfilePhotoUrl(uploadRes.data.url);
+        } else {
+          setProfilePhotoUrl(base64);
+        }
+      } catch {
+        setProfilePhotoUrl(base64);
+      } finally {
+        setIsUploadingPhoto(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -105,15 +135,17 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
         status,
         medicalConditions: medicalConditions || undefined,
         specialNeeds: specialNeeds || undefined,
+        profilePhotoUrl: profilePhotoUrl || undefined,
       };
 
       await apiService.updateStudent(student.id, updateData);
 
-      const updatedStudent: Student = {
+      const updatedStudent: any = {
         ...student,
         grade: gradeLevel.replace('_', ' '),
         stream: streamName,
         status: status === 'ACTIVE' ? 'Active' : status,
+        profilePhotoUrl: profilePhotoUrl || (student as any).profilePhotoUrl,
       };
 
       onStudentUpdated(updatedStudent);
@@ -182,6 +214,32 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
               <span>{success}</span>
             </div>
           )}
+
+          {/* Learner Photo & Identification Header */}
+          <div className="flex items-center gap-4 bg-surface-container-low p-3 rounded-xl">
+            <div className="w-14 h-14 rounded-full bg-primary/10 border-2 border-primary/20 flex items-center justify-center font-bold text-primary shrink-0 overflow-hidden relative">
+              {profilePhotoUrl ? (
+                <img src={profilePhotoUrl} alt={student.name} className="w-full h-full object-cover" />
+              ) : (
+                student.name.split(' ').map((n) => n[0]).join('')
+              )}
+            </div>
+            <div className="flex-1">
+              <label className="block text-[11px] font-bold text-on-surface mb-1">
+                Learner Passport / ID Photo
+              </label>
+              <label className="inline-flex items-center gap-1.5 px-3 py-1 bg-surface-container-high hover:bg-primary/10 border border-outline-variant/40 rounded-lg text-xs font-semibold text-primary cursor-pointer transition-all">
+                <span className="material-symbols-outlined text-sm">photo_camera</span>
+                <span>{isUploadingPhoto ? 'Uploading...' : profilePhotoUrl ? 'Change Photo' : 'Upload Photo'}</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoSelect}
+                  className="hidden"
+                />
+              </label>
+            </div>
+          </div>
 
           <div className="grid grid-cols-2 gap-3 bg-surface-container-low p-3 rounded-xl text-xs">
             <div>

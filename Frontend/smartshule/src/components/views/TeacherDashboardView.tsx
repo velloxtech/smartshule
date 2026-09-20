@@ -5,7 +5,7 @@ import { Student, TimetableSlot, SchemeOfWork, LessonPlan } from '../../types';
 
 interface TeacherDashboardViewProps {
   onNavigateTab: (tabId: any) => void;
-  onOpenUploadMarks: () => void;
+  onOpenUploadMarks: (student?: Student) => void;
   onOpenNewLessonPlan: () => void;
   onOpenNewScheme: () => void;
 }
@@ -588,7 +588,7 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
                     <td className="py-3.5 px-4 font-data-mono text-outline">{st.guardianPhone}</td>
                     <td className="py-3.5 px-4 text-right">
                       <button
-                        onClick={onOpenUploadMarks}
+                        onClick={() => onOpenUploadMarks(st)}
                         className="px-2.5 py-1 rounded bg-[#7a1228] text-white font-bold text-xs hover:bg-[#5e0d1e] transition-colors cursor-pointer mr-1.5"
                       >
                         Grade

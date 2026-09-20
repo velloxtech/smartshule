@@ -270,13 +270,24 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                 <tr key={s.id} className="hover:bg-surface-container-low/50 transition-colors">
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">
-                        {(s.name || '')
-                          .split(' ')
-                          .filter(Boolean)
-                          .map((n) => n[0])
-                          .slice(0, 2)
-                          .join('') || 'ST'}
+                      <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden border border-outline-variant/30">
+                        {(s as any).profilePhotoUrl ? (
+                          <img
+                            src={(s as any).profilePhotoUrl}
+                            alt={s.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLElement).style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          (s.name || '')
+                            .split(' ')
+                            .filter(Boolean)
+                            .map((n) => n[0])
+                            .slice(0, 2)
+                            .join('') || 'ST'
+                        )}
                       </div>
                       <div>
                         <div className="font-semibold text-on-surface flex items-center gap-1.5">
