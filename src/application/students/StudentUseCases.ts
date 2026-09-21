@@ -11,6 +11,7 @@ import { User, UserRole, UserStatus } from '../../core/domain/user/User';
 import { IdGenerator, NotFoundError, ConflictError, ValidationError, ForbiddenError } from '../../core/domain/shared/Errors';
 import { IPasswordHasher } from '../../core/ports/services/IExternalServices';
 import { StudentInvoice, InvoiceStatus, FeeStructure } from '../../core/domain/finance/Fee';
+import { ClassRoom, EducationLevel } from '../../core/domain/academic/ClassRoom';
 
 export interface UserContext {
   userId: string;
@@ -142,16 +143,37 @@ export class StudentUseCases {
 
     const studentId = IdGenerator.generate();
 
-    // Verify classroom exists in database
+    // Verify classroom exists in database (or auto-provision if not found)
     let classroomId = dto.classroomId;
     if (this.academicRepository) {
       const classes = await this.academicRepository.findAllClasses(dto.schoolId);
-      const matchedClass = dto.classroomId
+      let matchedClass = dto.classroomId
         ? classes.find(c => c.id === dto.classroomId)
         : classes.find(c => c.gradeLevel === dto.gradeLevel);
 
       if (!matchedClass) {
-        throw new ValidationError(`Class for grade '${dto.gradeLevel}' does not exist in the database. Please create the class first.`);
+        const gradeName = dto.gradeLevel.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        const educationLevel = ['PLAYGROUP', 'PP1', 'PP2'].includes(dto.gradeLevel)
+          ? EducationLevel.PRE_PRIMARY
+          : ['GRADE_1', 'GRADE_2', 'GRADE_3'].includes(dto.gradeLevel)
+          ? EducationLevel.LOWER_PRIMARY
+          : ['GRADE_4', 'GRADE_5', 'GRADE_6'].includes(dto.gradeLevel)
+          ? EducationLevel.UPPER_PRIMARY
+          : ['GRADE_7', 'GRADE_8', 'GRADE_9'].includes(dto.gradeLevel)
+          ? EducationLevel.JUNIOR_SCHOOL
+          : EducationLevel.SENIOR_SCHOOL;
+
+        const newClass = ClassRoom.create(
+          {
+            name: gradeName,
+            gradeLevel: dto.gradeLevel,
+            educationLevel,
+            schoolId: dto.schoolId || 'school-001'
+          },
+          IdGenerator.generate()
+        );
+        await this.academicRepository.saveClass(newClass);
+        matchedClass = newClass;
       }
       classroomId = matchedClass.id;
     }

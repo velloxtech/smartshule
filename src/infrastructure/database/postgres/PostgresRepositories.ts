@@ -86,6 +86,7 @@ export class PostgresDatabaseInitializer {
         date_of_birth VARCHAR(50) NOT NULL,
         gender VARCHAR(20) NOT NULL,
         grade_level VARCHAR(50) NOT NULL,
+        classroom_id VARCHAR(100),
         stream_id VARCHAR(100),
         school_id VARCHAR(100) NOT NULL,
         academic_year_id VARCHAR(100) NOT NULL,
@@ -447,6 +448,17 @@ export class PostgresDatabaseInitializer {
       ALTER TABLE lesson_plans ADD COLUMN IF NOT EXISTS reviewed_by_user_id VARCHAR(100);
       ALTER TABLE lesson_plans ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMP;
       ALTER TABLE lesson_plans ADD COLUMN IF NOT EXISTS review_remarks TEXT;
+      ALTER TABLE students ADD COLUMN IF NOT EXISTS classroom_id VARCHAR(100);
+
+      DO $$ 
+      BEGIN 
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'classrooms' AND column_name = 'classroomId') THEN 
+          ALTER TABLE classrooms RENAME COLUMN "classroomId" TO id; 
+        END IF; 
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'classrooms' AND column_name = 'gradeLevel') THEN 
+          ALTER TABLE classrooms RENAME COLUMN "gradeLevel" TO grade_level; 
+        END IF; 
+      END $$;
 
       ALTER TABLE cbc_report_cards ALTER COLUMN stream_id DROP NOT NULL;
       ALTER TABLE timetables ALTER COLUMN stream_id DROP NOT NULL;
@@ -778,15 +790,27 @@ export class PostgresAcademicRepository implements IAcademicRepository {
     await this.pool.query(q, [t.id, t.academicYearId, t.termNumber, t.name, t.startDate, t.endDate, t.isCurrent, t.createdAt, t.updatedAt]);
   }
   public async updateTerm(t: AcademicTerm): Promise<void> { await this.saveTerm(t); }
+  private mapClassRoom(r: any): ClassRoom {
+    return ClassRoom.create(
+      {
+        name: r.name,
+        gradeLevel: (r.grade_level || r.gradeLevel),
+        educationLevel: (r.education_level || r.educationLevel),
+        schoolId: (r.school_id || r.schoolId)
+      },
+      (r.id || r.classroomId),
+      r.created_at || r.createdAt,
+      r.updated_at || r.updatedAt
+    );
+  }
   public async findClassById(id: string): Promise<ClassRoom | null> {
     const res = await this.pool.query('SELECT * FROM classrooms WHERE id = $1', [id]);
     if (!res.rows.length) return null;
-    const r = res.rows[0];
-    return ClassRoom.create({ name: r.name, gradeLevel: r.grade_level, educationLevel: r.education_level, schoolId: r.school_id }, r.id, r.created_at, r.updated_at);
+    return this.mapClassRoom(res.rows[0]);
   }
   public async findAllClasses(schoolId?: string): Promise<ClassRoom[]> {
     const res = await this.pool.query('SELECT * FROM classrooms');
-    return res.rows.map(r => ClassRoom.create({ name: r.name, gradeLevel: r.grade_level, educationLevel: r.education_level, schoolId: r.school_id }, r.id, r.created_at, r.updated_at));
+    return res.rows.map(r => this.mapClassRoom(r));
   }
   public async saveClass(c: ClassRoom): Promise<void> {
     const q = `INSERT INTO classrooms (id, name, grade_level, education_level, school_id, created_at, updated_at)
