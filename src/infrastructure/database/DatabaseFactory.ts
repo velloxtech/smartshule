@@ -105,11 +105,22 @@ export class DatabaseFactory {
       const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/smartshule';
       console.log(`[Database] Connecting to PostgreSQL: ${connectionString.replace(/:[^:@]+@/, ':****@')}`);
       
-      // Explicitly enable SSL for Supabase connections
+      // Enable SSL for cloud connections (Supabase, Render, neon, or sslmode=require)
       const isSupabase = connectionString.includes('supabase');
+      const isRender = connectionString.includes('render.com');
+      const hasSslMode = connectionString.includes('sslmode=require');
+      const isCloudProd = process.env.NODE_ENV === 'production' &&
+        !connectionString.includes('localhost') &&
+        !connectionString.includes('127.0.0.1') &&
+        !connectionString.includes('@postgres:');
+
+      const requiresSsl = isSupabase || isRender || hasSslMode || isCloudProd;
       const pool = new Pool({ 
         connectionString,
-        ssl: isSupabase ? { rejectUnauthorized: false } : false
+        ssl: requiresSsl ? { rejectUnauthorized: false } : false,
+        connectionTimeoutMillis: 10000,
+        idleTimeoutMillis: 30000,
+        max: 20
       });
       
       // Auto-create all tables on start

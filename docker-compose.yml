@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  # ============================================================================
+  # SmartShule Unified Full-Stack Application Service
+  # ============================================================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: smartshule-app
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - DB_TYPE=postgres
+      - DATABASE_URL=postgresql://smartshule_user:smartshule_pass@postgres:5432/smartshule_db
+      - JWT_SECRET=smartshule_super_secure_jwt_secret_change_me_in_production_32chars
+      - JWT_REFRESH_SECRET=smartshule_super_secure_refresh_secret_change_me_in_production_32chars
+      - CORS_ORIGIN=*
+      - STORAGE_PROVIDER=local
+      - SMS_PROVIDER=simulator
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - smartshule_data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 25s
+
+  # ============================================================================
+  # PostgreSQL 16 Database Service
+  # ============================================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: smartshule-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: smartshule_user
+      POSTGRES_PASSWORD: smartshule_pass
+      POSTGRES_DB: smartshule_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U smartshule_user -d smartshule_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  smartshule_data:
+    name: smartshule_app_data
+  postgres_data:
+    name: smartshule_postgres_data

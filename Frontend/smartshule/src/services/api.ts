@@ -64,9 +64,9 @@ function resolveApiBaseUrl(): string {
   // Remove trailing slashes
   url = url.replace(/\/+$/, '');
 
-  // If running on Render static hosting and no explicit full URL is set, fallback to companion backend
+  // If running on legacy Render static hosting and no explicit full URL is set, fallback to companion backend
   if (!url || url === '/api/v1') {
-    if (typeof window !== 'undefined' && window.location.hostname.includes('onrender.com')) {
+    if (typeof window !== 'undefined' && window.location.hostname === 'smartshule-1.onrender.com') {
       return 'https://smartshule-vwhn.onrender.com/api/v1';
     }
     return url || '/api/v1';

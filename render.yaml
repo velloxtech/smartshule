@@ -1,0 +1,42 @@
+# ==============================================================================
+# Render Blueprint Configuration (render.yaml)
+# Connect your repository to Render for automated full-stack deployment with Supabase
+# ==============================================================================
+
+services:
+  # ----------------------------------------------------------------------------
+  # Full-Stack Web Service (Node.js API + Embedded React Frontend)
+  # ----------------------------------------------------------------------------
+  - type: web
+    name: smartshule
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    region: oregon
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DB_TYPE
+        value: postgres
+      # Set your Supabase connection string in the Render Dashboard under Environment
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: CORS_ORIGIN
+        value: "*"
+      - key: STORAGE_PROVIDER
+        value: local
+      - key: SMS_PROVIDER
+        value: africastalking
+      - key: MPESA_ENV
+        value: sandbox
+      - key: MPESA_SHORTCODE
+        value: "174379"

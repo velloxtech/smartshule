@@ -1,0 +1,8 @@
+node_modules
+smartshule/node_modules
+dist
+smartshule/dist
+.git
+.env
+.env.*
+!.env.example

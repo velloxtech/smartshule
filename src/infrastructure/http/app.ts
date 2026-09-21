@@ -51,10 +51,28 @@ export function createExpressApp(container: AppContainer): Express {
     app.use(morgan('dev'));
   }
 
+  // Helper to locate Frontend production distribution
+  const resolveFrontendDist = (): string | null => {
+    const candidatePaths = [
+      process.env.FRONTEND_DIST_PATH,
+      path.resolve(process.cwd(), 'Frontend/smartshule/dist'),
+      path.resolve(__dirname, '../../../Frontend/smartshule/dist'),
+      path.resolve(__dirname, '../../../../Frontend/smartshule/dist')
+    ].filter(Boolean) as string[];
+
+    for (const candidate of candidatePaths) {
+      if (fs.existsSync(path.join(candidate, 'index.html'))) {
+        return candidate;
+      }
+    }
+    return null;
+  };
+
+  const frontendDist = resolveFrontendDist();
+
   // Root Service Overview Endpoint
   app.get('/', (req: Request, res: Response, next) => {
-    const frontendDist = path.resolve(__dirname, '../../../Frontend/smartshule/dist');
-    if (fs.existsSync(frontendDist)) {
+    if (frontendDist) {
       return res.sendFile(path.join(frontendDist, 'index.html'));
     }
     return res.status(200).json({
@@ -107,11 +125,10 @@ export function createExpressApp(container: AppContainer): Express {
   app.use('/api/v1', createApiRouter(container));
 
   // Serve Frontend production build if dist exists
-  const frontendDist = path.resolve(__dirname, '../../../Frontend/smartshule/dist');
-  if (fs.existsSync(frontendDist)) {
+  if (frontendDist) {
     app.use(express.static(frontendDist));
     app.use((req: Request, res: Response, next) => {
-      if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/health')) {
+      if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/health') && !req.path.startsWith('/uploads')) {
         return res.sendFile(path.join(frontendDist, 'index.html'));
       }
       next();
