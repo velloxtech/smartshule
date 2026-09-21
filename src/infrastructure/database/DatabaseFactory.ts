@@ -102,7 +102,18 @@ export class DatabaseFactory {
 
    // 2. POSTGRESQL
     if (normalizedType === 'postgres' || normalizedType === 'postgresql') {
-      const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/smartshule';
+      let connectionString = (process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/smartshule').trim();
+
+      // Clean surrounding quotes or accidental wrappers
+      if ((connectionString.startsWith('"') && connectionString.endsWith('"')) || 
+          (connectionString.startsWith("'") && connectionString.endsWith("'"))) {
+        connectionString = connectionString.slice(1, -1).trim();
+      }
+
+      if (connectionString.includes('[') || connectionString.includes(']') || connectionString.includes('YOUR-PASSWORD')) {
+        console.warn('⚠️ [Database Warning] Your DATABASE_URL contains brackets "[" or "]" or "YOUR-PASSWORD". Ensure your real database password is substituted without brackets!');
+      }
+
       console.log(`[Database] Connecting to PostgreSQL: ${connectionString.replace(/:[^:@]+@/, ':****@')}`);
       
       // Enable SSL for cloud connections (Supabase, Render, neon, or sslmode=require)
@@ -123,9 +134,23 @@ export class DatabaseFactory {
         max: 20
       });
       
-      // Auto-create all tables on start
-      await PostgresDatabaseInitializer.initializeSchema(pool);
-      console.log('[Database] PostgreSQL connected and tables initialized successfully.');
+      try {
+        // Auto-create all tables on start
+        await PostgresDatabaseInitializer.initializeSchema(pool);
+        console.log('[Database] PostgreSQL connected and tables initialized successfully.');
+      } catch (err: any) {
+        if (err?.code === '28P01') {
+          console.error('========================================================================');
+          console.error('❌ [DATABASE AUTHENTICATION FAILED - Code 28P01]');
+          console.error('PostgreSQL rejected the password in DATABASE_URL.');
+          console.error('Common causes:');
+          console.error('1. Special characters in password: If your password has @, #, $, %, &, :, etc., they must be URL-encoded (e.g. @ -> %40, # -> %23).');
+          console.error('2. Wrong password: Reset your password in Supabase Dashboard -> Project Settings -> Database -> Reset Database Password.');
+          console.error('3. Make sure no placeholder brackets [ ] remain around the password.');
+          console.error('========================================================================');
+        }
+        throw err;
+      }
 
       return {
         userRepository: new PostgresUserRepository(pool),
