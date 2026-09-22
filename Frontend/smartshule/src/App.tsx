@@ -40,6 +40,7 @@ import { EDiaryView } from './components/views/EDiaryView';
 import { VisualCBCView } from './components/views/VisualCBCView';
 import { WhatsAppBotView } from './components/views/WhatsAppBotView';
 import { UserManagementView } from './components/views/UserManagementView';
+import RecordsOfWorkView from './components/views/RecordsOfWorkView';
 
 // Modals
 import { MpesaStkModal } from './components/modals/MpesaStkModal';
@@ -685,7 +686,6 @@ export default function App() {
           </div>
         )}
 
-
         {/* Dynamic Route Content */}
         <main className="flex-1 px-4 sm:px-6 lg:px-8 pt-4 max-w-7xl w-full mx-auto">
           {currentTab === 'dashboard' && (
@@ -860,6 +860,8 @@ export default function App() {
           {currentTab === 'cbc-analytics' && <CompetencyAnalyticsView />}
 
           {currentTab === 'schemes-lesson-plans' && <SchemesView />}
+
+          {currentTab === 'records-of-work' && <RecordsOfWorkView />}
 
           {currentTab === 'timetable' && <TimetableView />}
 

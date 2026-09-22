@@ -116,7 +116,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <button
                       key={item.id}
                       onClick={() => {
-                        onSelectTab(item.id);
+                        onSelectTab(item.id as TabType);
                         onCloseMobile();
                       }}
                       className={`flex items-center gap-sm px-sm py-2 text-left w-full transition-all rounded-lg cursor-pointer ${

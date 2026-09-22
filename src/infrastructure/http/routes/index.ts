@@ -59,6 +59,8 @@ import {
   ReviewLessonPlanSchema
 } from '../controllers/CurriculumPlanController';
 
+import { RecordOfWorkController } from '../controllers/RecordOfWorkController';
+
 import {
   TimetableController,
   CreateTimetableSchema,
@@ -118,6 +120,7 @@ export function createApiRouter(container: AppContainer): Router {
   const academicController = new AcademicController(container.academicUseCases);
   const cbcController = new CbcAssessmentController(container.cbcUseCases);
   const curriculumController = new CurriculumPlanController(container.curriculumUseCases);
+  const recordOfWorkController = new RecordOfWorkController(container.recordOfWorkUseCases);
   const timetableController = new TimetableController(container.timetableUseCases);
   const attendanceController = new AttendanceController(container.attendanceUseCases);
   const financeController = new FinanceController(container.feeUseCases);
@@ -242,12 +245,20 @@ export function createApiRouter(container: AppContainer): Router {
   curriculumRouter.get('/schemes', authMiddleware, curriculumController.listSchemes);
   curriculumRouter.get('/schemes/:id', authMiddleware, curriculumController.getSchemeById);
   curriculumRouter.delete('/schemes/:id', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), curriculumController.deleteScheme);
+  
   curriculumRouter.post('/lesson-plans', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), validateBody(CreateLessonPlanSchema), curriculumController.createLessonPlan);
   curriculumRouter.post('/lesson-plans/:id/submit', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.ADMIN, UserRole.SUPER_ADMIN), curriculumController.submitLessonPlan);
   curriculumRouter.post('/lesson-plans/:id/review', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER), validateBody(ReviewLessonPlanSchema), curriculumController.reviewLessonPlan);
   curriculumRouter.get('/lesson-plans', authMiddleware, curriculumController.listLessonPlans);
   curriculumRouter.get('/lesson-plans/:id', authMiddleware, curriculumController.getLessonPlanById);
   curriculumRouter.delete('/lesson-plans/:id', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), curriculumController.deleteLessonPlan);
+  
+  // RECORDS OF WORK ROUTES
+  curriculumRouter.post('/records-of-work', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), recordOfWorkController.create);
+  curriculumRouter.get('/records-of-work', authMiddleware, recordOfWorkController.getAll);
+  curriculumRouter.put('/records-of-work/:id', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), recordOfWorkController.update);
+  curriculumRouter.delete('/records-of-work/:id', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), recordOfWorkController.delete);
+
   router.use('/curriculum', curriculumRouter);
 
   // ==========================================

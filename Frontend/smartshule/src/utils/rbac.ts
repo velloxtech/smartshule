@@ -173,6 +173,20 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
           UserRole.TEACHER,
         ],
       },
+      // ADDED RECORDS OF WORK HERE
+      {
+        id: 'records-of-work',
+        label: 'Records of Work',
+        icon: 'auto_stories',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.HEAD_TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
+          UserRole.TEACHER,
+        ],
+      },
       {
         id: 'timetable',
         label: 'Class Timetable',

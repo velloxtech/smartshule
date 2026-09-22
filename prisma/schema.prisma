@@ -340,3 +340,21 @@ model Payment {
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 }
+
+model RecordOfWork {
+  id                   String   @id @default(uuid())
+  teacherId            String   // Links to the teacher making the record
+  academicYearId       String?
+  termId               String?
+  week                 Int
+  day                  String
+  period               String?
+  subjectAndGrade      String
+  strandAndWorkCovered String
+  reference            String
+  comments             String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@map("records_of_work")
+}
