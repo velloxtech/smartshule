@@ -8,6 +8,10 @@ import { ITimetableRepository, IAttendanceRepository } from '../core/ports/repos
 import { IFeeRepository } from '../core/ports/repositories/IFeeRepository';
 import { IMediaRepository } from '../core/ports/repositories/IMediaRepository';
 import { IEDiaryRepository } from '../core/ports/repositories/IEDiaryRepository';
+import { IRecordOfWorkRepository } from '../core/ports/repositories/IRecordOfWorkRepository'; // <-- Added Import
+import { PostgresRecordOfWorkRepository } from './database/postgres/PostgresRecordOfWorkRepository'; // Adjusted path to the exact file created earlier
+import { RecordOfWorkUseCases } from '../application/curriculum-plans/RecordOfWorkUseCases';
+import { PrismaClient } from '@prisma/client'; // <-- Added Import for Prisma
 
 import {
   InMemoryUserRepository,
@@ -67,6 +71,7 @@ export class AppContainer {
   public feeRepository: IFeeRepository;
   public mediaRepository: IMediaRepository;
   public ediaryRepository: IEDiaryRepository;
+  public recordOfWorkRepository: IRecordOfWorkRepository; // <-- Added Property
 
   // Services
   public readonly tokenService = new JwtAuthTokenService();
@@ -91,6 +96,7 @@ export class AppContainer {
   public analyticsUseCases!: AnalyticsUseCases;
   public visualMediaUseCases!: VisualMediaUseCases;
   public ediaryUseCases!: EDiaryUseCases;
+  public recordOfWorkUseCases!: RecordOfWorkUseCases; // <-- Added Property
 
   constructor(customRepositories?: Partial<RepositoryBundle>) {
     this.userRepository = customRepositories?.userRepository || new InMemoryUserRepository();
@@ -106,6 +112,9 @@ export class AppContainer {
     this.feeRepository = customRepositories?.feeRepository || new InMemoryFeeRepository();
     this.mediaRepository = customRepositories?.mediaRepository || new InMemoryMediaRepository();
     this.ediaryRepository = customRepositories?.ediaryRepository || new InMemoryEDiaryRepository();
+    
+    // Fallback to Postgres if DatabaseFactory doesn't map it yet
+    this.recordOfWorkRepository = (customRepositories as any)?.recordOfWorkRepository || new PostgresRecordOfWorkRepository(new PrismaClient()); // <-- Added Initialization
 
     this.initUseCases();
   }
@@ -144,6 +153,10 @@ export class AppContainer {
       this.userRepository
     );
     this.curriculumUseCases = new CurriculumPlanUseCases(this.schemeOfWorkRepository, this.lessonPlanRepository);
+    
+    // <-- Initialize the new Records of Work Use Case here
+    this.recordOfWorkUseCases = new RecordOfWorkUseCases(this.recordOfWorkRepository); 
+    
     this.timetableUseCases = new TimetableUseCases(this.timetableRepository, this.academicRepository, this.teacherRepository);
     this.attendanceUseCases = new AttendanceUseCases(
       this.attendanceRepository,
@@ -205,6 +218,7 @@ export class AppContainer {
   }
 
   public async ensureRoleAccounts() {
+    // ... [No changes needed in your default account provisioning block] ...
     const defaultAccounts = [
       {
         id: 'usr-superadmin-01',
