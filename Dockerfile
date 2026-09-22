@@ -42,8 +42,8 @@
   COPY src/ ./src/
   COPY prisma/ ./prisma/
   
-  # Force Prisma 7 CLI to avoid Prisma 8 breaking changes
-  RUN npx prisma@7 generate
+  # Force Prisma 5 CLI to maintain compatibility with the current schema.prisma format
+  RUN npx prisma@5 generate
   
   # Compile TypeScript into JavaScript (outputs to /app/dist)
   RUN npm run build
@@ -72,8 +72,8 @@
   # Install production-only dependencies
   RUN npm ci --only=production --ignore-scripts && npm cache clean --force
   
-  # Force Prisma 7 CLI for the production environment engine
-  RUN npx prisma@7 generate
+  # Force Prisma 5 CLI for the production environment engine
+  RUN npx prisma@5 generate
   
   # Copy compiled backend from backend-builder
   COPY --from=backend-builder /app/dist ./dist
@@ -100,3 +100,4 @@
   # Start container using entrypoint script
   ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
   CMD ["node", "dist/index.js"]
+  
