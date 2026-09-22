@@ -40,12 +40,9 @@
   # Copy backend TypeScript source code and configuration
   COPY tsconfig.json ./
   COPY src/ ./src/
-  COPY prisma/ ./prisma/
-  
-  # Force Prisma 5 CLI to maintain compatibility with the current schema.prisma format
-  RUN npx prisma@5 generate
   
   # Compile TypeScript into JavaScript (outputs to /app/dist)
+  # Note: DB access uses `pg` + initializeSchema; Prisma generate is not required at build time.
   RUN npm run build
   
   
@@ -65,15 +62,11 @@
       apt-get install -y --no-install-recommends curl openssl ca-certificates && \
       rm -rf /var/lib/apt/lists/*
   
-  # Copy backend dependency manifests and Prisma schema
+  # Copy backend dependency manifests
   COPY package*.json ./
-  COPY prisma/ ./prisma/
   
   # Install production-only dependencies
-  RUN npm ci --only=production --ignore-scripts && npm cache clean --force
-  
-  # Force Prisma 5 CLI for the production environment engine
-  RUN npx prisma@5 generate
+  RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
   
   # Copy compiled backend from backend-builder
   COPY --from=backend-builder /app/dist ./dist
