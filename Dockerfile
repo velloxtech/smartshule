@@ -42,8 +42,8 @@
   COPY src/ ./src/
   COPY prisma/ ./prisma/
   
-  # Generate Prisma Client BEFORE compiling TypeScript to fix the TS2305 error
-  RUN npx prisma generate
+  # Force Prisma 7 CLI to avoid Prisma 8 breaking changes
+  RUN npx prisma@7 generate
   
   # Compile TypeScript into JavaScript (outputs to /app/dist)
   RUN npm run build
@@ -72,8 +72,8 @@
   # Install production-only dependencies
   RUN npm ci --only=production --ignore-scripts && npm cache clean --force
   
-  # Generate Prisma Client for the production environment engine
-  RUN npx prisma generate
+  # Force Prisma 7 CLI for the production environment engine
+  RUN npx prisma@7 generate
   
   # Copy compiled backend from backend-builder
   COPY --from=backend-builder /app/dist ./dist
