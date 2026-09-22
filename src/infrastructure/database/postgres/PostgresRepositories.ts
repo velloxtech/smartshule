@@ -437,6 +437,22 @@ export class PostgresDatabaseInitializer {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+
+      CREATE TABLE IF NOT EXISTS records_of_work (
+        id VARCHAR(100) PRIMARY KEY,
+        teacher_id VARCHAR(100) NOT NULL,
+        academic_year_id VARCHAR(100),
+        term_id VARCHAR(100),
+        week INT NOT NULL,
+        day VARCHAR(50) NOT NULL,
+        period VARCHAR(50),
+        subject_and_grade VARCHAR(255) NOT NULL,
+        strand_and_work_covered TEXT NOT NULL,
+        reference TEXT NOT NULL,
+        comments TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
     `;
 
     await pool.query(ddl);
@@ -1558,72 +1574,5 @@ export class PostgresFeeRepository implements IFeeRepository {
 
   public async deleteOtherIncome(id: string): Promise<void> {
     await this.pool.query('DELETE FROM other_incomes WHERE id = $1', [id]);
-  }
-}
-
-import { PrismaClient } from '@prisma/client';
-import { IRecordOfWorkRepository } from '../../../core/ports/repositories/IRecordOfWorkRepository';
-import { RecordOfWork } from '../../../core/domain/curriculum-plan/RecordOfWork';
-
-export class PostgresRecordOfWorkRepository implements IRecordOfWorkRepository {
-  constructor(private prisma: PrismaClient) {}
-
-  private mapToDomain(data: any): RecordOfWork {
-    return new RecordOfWork(
-      data.id, data.teacherId, data.week, data.day, data.subjectAndGrade, 
-      data.strandAndWorkCovered, data.reference, data.academicYearId, 
-      data.termId, data.period, data.comments, data.createdAt, data.updatedAt
-    );
-  }
-
-  async create(record: Partial<RecordOfWork>): Promise<RecordOfWork> {
-    const data = await this.prisma.recordOfWork.create({
-      data: {
-        teacherId: record.teacherId!,
-        week: record.week!,
-        day: record.day!,
-        subjectAndGrade: record.subjectAndGrade!,
-        strandAndWorkCovered: record.strandAndWorkCovered!,
-        reference: record.reference!,
-        academicYearId: record.academicYearId,
-        termId: record.termId,
-        period: record.period,
-        comments: record.comments,
-      },
-    });
-    return this.mapToDomain(data);
-  }
-
-  async update(id: string, record: Partial<RecordOfWork>): Promise<RecordOfWork | null> {
-    const data = await this.prisma.recordOfWork.update({
-      where: { id },
-      data: record,
-    });
-    return this.mapToDomain(data);
-  }
-
-  async delete(id: string): Promise<boolean> {
-    await this.prisma.recordOfWork.delete({ where: { id } });
-    return true;
-  }
-
-  async findById(id: string): Promise<RecordOfWork | null> {
-    const data = await this.prisma.recordOfWork.findUnique({ where: { id } });
-    return data ? this.mapToDomain(data) : null;
-  }
-
-  async findByTeacherId(teacherId: string): Promise<RecordOfWork[]> {
-    const data = await this.prisma.recordOfWork.findMany({ 
-      where: { teacherId },
-      orderBy: [{ week: 'asc' }, { createdAt: 'desc' }]
-    });
-    return data.map(this.mapToDomain);
-  }
-
-  async findAll(): Promise<RecordOfWork[]> {
-    const data = await this.prisma.recordOfWork.findMany({
-       orderBy: [{ week: 'asc' }, { createdAt: 'desc' }]
-    });
-    return data.map(this.mapToDomain);
   }
 }

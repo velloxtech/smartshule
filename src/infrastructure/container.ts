@@ -8,10 +8,9 @@ import { ITimetableRepository, IAttendanceRepository } from '../core/ports/repos
 import { IFeeRepository } from '../core/ports/repositories/IFeeRepository';
 import { IMediaRepository } from '../core/ports/repositories/IMediaRepository';
 import { IEDiaryRepository } from '../core/ports/repositories/IEDiaryRepository';
-import { IRecordOfWorkRepository } from '../core/ports/repositories/IRecordOfWorkRepository'; // <-- Added Import
-import { PostgresRecordOfWorkRepository } from './database/postgres/PostgresRecordOfWorkRepository'; // Adjusted path to the exact file created earlier
+import { IRecordOfWorkRepository } from '../core/ports/repositories/IRecordOfWorkRepository';
+import { InMemoryRecordOfWorkRepository } from './database/postgres/PostgresRecordOfWorkRepository';
 import { RecordOfWorkUseCases } from '../application/curriculum-plans/RecordOfWorkUseCases';
-import { PrismaClient } from '@prisma/client'; // <-- Added Import for Prisma
 
 import {
   InMemoryUserRepository,
@@ -113,8 +112,9 @@ export class AppContainer {
     this.mediaRepository = customRepositories?.mediaRepository || new InMemoryMediaRepository();
     this.ediaryRepository = customRepositories?.ediaryRepository || new InMemoryEDiaryRepository();
     
-    // Fallback to Postgres if DatabaseFactory doesn't map it yet
-    this.recordOfWorkRepository = (customRepositories as any)?.recordOfWorkRepository || new PostgresRecordOfWorkRepository(new PrismaClient()); // <-- Added Initialization
+    // Prefer DatabaseFactory wiring; fall back to in-memory for non-postgres bundles
+    this.recordOfWorkRepository =
+      customRepositories?.recordOfWorkRepository || new InMemoryRecordOfWorkRepository();
 
     this.initUseCases();
   }

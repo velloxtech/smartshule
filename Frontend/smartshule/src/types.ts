@@ -9,6 +9,7 @@ export type TabType =
   | 'report-cards'
   | 'cbc-analytics'
   | 'schemes-lesson-plans'
+  | 'records-of-work'
   | 'timetable'
   | 'attendance-register'
   | 'fee-structure'
