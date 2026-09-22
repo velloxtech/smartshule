@@ -66,6 +66,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
   // Step 4: Constitutional Declarations & Data Privacy (Article 31 & DPA 2019)
   const [consentDataProtection, setConsentDataProtection] = useState(false);
   const [consentChildProtection, setConsentChildProtection] = useState(false);
+  const [consentSchoolDataUse, setConsentSchoolDataUse] = useState(false);
   const [totalFee, setTotalFee] = useState('0');
 
   // Update Sub-counties when County changes
@@ -132,6 +133,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
       setEmergencyClinic('');
       setConsentDataProtection(false);
       setConsentChildProtection(false);
+      setConsentSchoolDataUse(false);
       setProfilePhotoUrl('');
     }
   }, [isOpen]);
@@ -258,6 +260,10 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
       }
       if (!consentChildProtection) {
         setValidationError('Please acknowledge adherence to the Article 53 Child Protection Charter.');
+        return false;
+      }
+      if (!consentSchoolDataUse) {
+        setValidationError('Please consent to the school using the admission data collected in this form for learner enrolment and school administration.');
         return false;
       }
     }
@@ -1110,6 +1116,32 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                       Child Protection & Zero Abuse Declaration (Article 53(1)(d) & Children's Act)
                     </strong>
                     I certify that all details submitted are truthful. I understand {schoolProfile?.name || 'the institution'} enforces zero tolerance for corporal punishment, violence, exploitation, and discrimination against any learner.
+                  </div>
+                </label>
+
+                <label className="flex items-start gap-3 p-3 bg-emerald-50/60 border border-emerald-200 rounded-xl cursor-pointer hover:bg-emerald-50 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={consentSchoolDataUse}
+                    onChange={(e) => setConsentSchoolDataUse(e.target.checked)}
+                    className="mt-0.5 w-4 h-4 rounded text-[#7a1228] focus:ring-[#7a1228] border-slate-300"
+                  />
+                  <div className="text-xs text-slate-700 leading-snug">
+                    <strong className="text-slate-900 font-bold block mb-0.5">
+                      School Use of Collected Admission Data
+                    </strong>
+                    I, {guardianName || 'the parent/guardian'}, authorize{' '}
+                    {schoolProfile?.name || 'the school'} to use the information collected in this
+                    admission form — including learner identity (
+                    {[firstName, middleName, lastName].filter(Boolean).join(' ') || 'learner name'},
+                    admission {admissionNumber || 'pending'}, DOB {dob || 'n/a'}, birth certificate{' '}
+                    {birthCertNo || 'n/a'}, county {selectedCounty}/{selectedSubCounty}), academic
+                    placement ({currentClass?.name || 'class'}
+                    {streamId ? ` / ${streams.find((s) => s.id === streamId)?.name}` : ''}), SNE/medical
+                    notes, and my contact details ({formatKenyanPhone(guardianPhone)}
+                    {guardianEmail ? `, ${guardianEmail}` : ''}) — for enrolment, class placement,
+                    fee billing, parent communication, safeguarding, and lawful school administration
+                    only. I understand this data will not be sold or shared for unrelated commercial use.
                   </div>
                 </label>
               </div>
