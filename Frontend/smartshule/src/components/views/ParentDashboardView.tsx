@@ -4,7 +4,6 @@ import { useAuth } from '../../context/AuthContext';
 
 interface ParentDashboardViewProps {
   onOpenMpesaWithStudent?: (student: any) => void;
-  onOpenPaystackWithStudent?: (student: any) => void;
   onOpenKcbBuniWithStudent?: (student: any) => void;
   onViewReportCard: (student: any) => void;
   onNavigateTab?: (tab: string) => void;
@@ -12,7 +11,6 @@ interface ParentDashboardViewProps {
 
 export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
   onOpenMpesaWithStudent,
-  onOpenPaystackWithStudent,
   onOpenKcbBuniWithStudent,
   onViewReportCard,
   onNavigateTab,
@@ -194,8 +192,6 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                   };
                   if (onOpenKcbBuniWithStudent) {
                     onOpenKcbBuniWithStudent(studentObj);
-                  } else if (onOpenPaystackWithStudent) {
-                    onOpenPaystackWithStudent(studentObj);
                   } else if (onOpenMpesaWithStudent) {
                     onOpenMpesaWithStudent(studentObj);
                   }

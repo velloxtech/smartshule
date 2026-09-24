@@ -33,12 +33,13 @@ export const env = {
     refreshExpiry: process.env.JWT_REFRESH_EXPIRY || '7d',
   },
 
-  // 4. Paystack Payment Gateway API
-  paystack: {
-    secretKey: process.env.PAYSTACK_SECRET_KEY || '',
-    publicKey: process.env.PAYSTACK_PUBLIC_KEY || '',
-    baseUrl: process.env.PAYSTACK_BASE_URL || 'https://api.paystack.co',
-    webhookSecret: process.env.PAYSTACK_WEBHOOK_SECRET || '',
+  // 4. KCB Buni Developer Gateway API
+  kcbBuni: {
+    consumerKey: process.env.KCB_BUNI_CONSUMER_KEY || '',
+    consumerSecret: process.env.KCB_BUNI_CONSUMER_SECRET || '',
+    baseUrl: process.env.KCB_BUNI_BASE_URL || 'https://uat.buni.kcbgroup.com',
+    shortCode: process.env.KCB_BUNI_SHORTCODE || '522123',
+    callbackUrl: process.env.KCB_BUNI_CALLBACK_URL || 'http://localhost:3000/api/v1/finance/kcb-buni/callback',
   },
 
   // 5. WhatsApp API (Multi-Device Baileys & Meta Cloud API)

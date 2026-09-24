@@ -85,7 +85,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
     }
   };
 
-  const standardGrades = ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'];
+  const standardGrades = ['Playgroup', 'PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'];
   const studentGrades = Array.from(new Set(students.map((s) => s.grade).filter(Boolean)));
   const combinedGrades = Array.from(new Set([...standardGrades, ...studentGrades]));
   const grades = ['All', ...combinedGrades];

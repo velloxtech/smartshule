@@ -79,8 +79,8 @@ export default function App() {
   const [onboardTeacherModalOpen, setOnboardTeacherModalOpen] = useState(false);
   const [mpesaModalOpen, setMpesaModalOpen] = useState(false);
   const [selectedStudentForMpesa, setSelectedStudentForMpesa] = useState<Student | undefined>(undefined);
-  const [paystackModalOpen, setPaystackModalOpen] = useState(false);
-  const [selectedStudentForPaystack, setSelectedStudentForPaystack] = useState<Student | undefined>(undefined);
+  const [kcbBuniModalOpen, setKcbBuniModalOpen] = useState(false);
+  const [selectedStudentForKcbBuni, setSelectedStudentForKcbBuni] = useState<Student | undefined>(undefined);
 
   const [cbcModalOpen, setCbcModalOpen] = useState(false);
   const [selectedStudentForCbc, setSelectedStudentForCbc] = useState<Student | undefined>(undefined);
@@ -327,9 +327,9 @@ export default function App() {
     setMpesaModalOpen(true);
   };
 
-  const handleOpenPaystack = (student?: Student) => {
-    setSelectedStudentForPaystack(student || (students && students.length > 0 ? students[0] : undefined));
-    setPaystackModalOpen(true);
+  const handleOpenKcbBuni = (student?: Student) => {
+    setSelectedStudentForKcbBuni(student || (students && students.length > 0 ? students[0] : undefined));
+    setKcbBuniModalOpen(true);
   };
 
   const handleOpenCbc = (student?: Student) => {
@@ -767,9 +767,8 @@ export default function App() {
                 case UserRole.GUARDIAN:
                   return (
                     <ParentDashboardView
-                      onOpenMpesaWithStudent={(student) => handleOpenPaystack(student)}
-                      onOpenPaystackWithStudent={(student) => handleOpenPaystack(student)}
-                      onOpenKcbBuniWithStudent={(student) => handleOpenPaystack(student)}
+                      onOpenMpesaWithStudent={(student) => handleOpenKcbBuni(student)}
+                      onOpenKcbBuniWithStudent={(student) => handleOpenKcbBuni(student)}
                       onViewReportCard={(student) => handleViewReportCard(student)}
                       onNavigateTab={(tab) => setCurrentTab(tab as any)}
                     />
@@ -971,10 +970,10 @@ export default function App() {
       />
 
       <KcbBuniPaymentModal
-        isOpen={paystackModalOpen}
-        onClose={() => setPaystackModalOpen(false)}
+        isOpen={kcbBuniModalOpen}
+        onClose={() => setKcbBuniModalOpen(false)}
         students={students}
-        initialStudent={selectedStudentForPaystack}
+        initialStudent={selectedStudentForKcbBuni}
         onPaymentSuccess={(tx) => {
           const newTx: FeeTransaction = {
             id: `tx-${Date.now()}`,
@@ -990,7 +989,7 @@ export default function App() {
           };
           setTransactions((prev) => [newTx, ...prev]);
           setTotalCollectedFee((prev) => prev + tx.amount);
-          setPaystackModalOpen(false);
+          setKcbBuniModalOpen(false);
         }}
       />
 

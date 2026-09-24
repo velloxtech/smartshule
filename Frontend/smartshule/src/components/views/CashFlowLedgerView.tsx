@@ -96,7 +96,7 @@ export const CashFlowLedgerView: React.FC = () => {
       // Channel filter
       if (selectedChannel !== 'ALL') {
         if (selectedChannel === 'MPESA' && tx.paymentMethod !== 'MPESA') return false;
-        if (selectedChannel === 'BANK' && !['BANK_TRANSFER', 'BANK_DEPOSIT', 'PAYSTACK', 'CARD'].includes(tx.paymentMethod)) return false;
+        if (selectedChannel === 'BANK' && !['BANK_TRANSFER', 'BANK_DEPOSIT', 'KCB_BUNI', 'CARD'].includes(tx.paymentMethod)) return false;
         if (selectedChannel === 'CASH' && tx.paymentMethod !== 'CASH') return false;
         if (selectedChannel === 'CHEQUE' && tx.paymentMethod !== 'CHEQUE') return false;
       }
@@ -595,7 +595,7 @@ export const CashFlowLedgerView: React.FC = () => {
               >
                 <option value="ALL">All Payment Channels</option>
                 <option value="MPESA">M-Pesa</option>
-                <option value="BANK">Bank / Paystack / Cards</option>
+                <option value="BANK">Bank / KCB Buni / Cards</option>
                 <option value="CHEQUE">School Cheque</option>
                 <option value="CASH">Petty Cash</option>
               </select>

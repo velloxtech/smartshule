@@ -329,7 +329,8 @@ export const LearningAreasView: React.FC = () => {
             onChange={(e) => setSelectedGradeFilter(e.target.value)}
             className="w-full sm:w-auto bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs text-slate-900 focus:outline-[#800000]"
           >
-            <option value="ALL">All Grades (PP1 - Grade 9)</option>
+            <option value="ALL">All Grades (Playgroup - Grade 9)</option>
+            <option value="PLAYGROUP">Playgroup</option>
             <option value="PP1">Pre-Primary 1 (PP1)</option>
             <option value="PP2">Pre-Primary 2 (PP2)</option>
             <option value="GRADE_1">Grade 1</option>
@@ -536,6 +537,7 @@ export const LearningAreasView: React.FC = () => {
                     onChange={(e) => setSubjectGradeLevel(e.target.value)}
                     className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-[#800000]"
                   >
+                    <option value="PLAYGROUP">Playgroup</option>
                     <option value="PP1">Pre-Primary 1 (PP1)</option>
                     <option value="PP2">Pre-Primary 2 (PP2)</option>
                     <option value="GRADE_1">Grade 1</option>
@@ -560,7 +562,7 @@ export const LearningAreasView: React.FC = () => {
                   onChange={(e) => setSubjectEducationLevel(e.target.value)}
                   className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-[#800000]"
                 >
-                  <option value="PRE_PRIMARY">Pre-Primary (PP1 - PP2)</option>
+                  <option value="PRE_PRIMARY">Pre-Primary (Playgroup - PP2)</option>
                   <option value="LOWER_PRIMARY">Lower Primary (Grade 1 - 3)</option>
                   <option value="UPPER_PRIMARY">Upper Primary (Grade 4 - 6)</option>
                   <option value="JUNIOR_SCHOOL">Junior Secondary (Grade 7 - 9)</option>
@@ -750,6 +752,7 @@ export const LearningAreasView: React.FC = () => {
                   onChange={(e) => setClassGradeLevel(e.target.value)}
                   className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-[#800000]"
                 >
+                  <option value="PLAYGROUP">Playgroup</option>
                   <option value="PP1">Pre-Primary 1 (PP1)</option>
                   <option value="PP2">Pre-Primary 2 (PP2)</option>
                   <option value="GRADE_1">Grade 1</option>
@@ -773,7 +776,7 @@ export const LearningAreasView: React.FC = () => {
                   onChange={(e) => setClassEducationLevel(e.target.value)}
                   className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-[#800000]"
                 >
-                  <option value="PRE_PRIMARY">Pre-Primary (PP1 - PP2)</option>
+                  <option value="PRE_PRIMARY">Pre-Primary (Playgroup - PP2)</option>
                   <option value="LOWER_PRIMARY">Lower Primary (Grade 1 - 3)</option>
                   <option value="UPPER_PRIMARY">Upper Primary (Grade 4 - 6)</option>
                   <option value="JUNIOR_SCHOOL">Junior Secondary (Grade 7 - 9)</option>

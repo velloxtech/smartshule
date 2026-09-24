@@ -3,7 +3,6 @@ import { CbcGradeLevel } from '../user/Student';
 
 export enum PaymentMethod {
   KCB_BUNI = 'KCB_BUNI',
-  PAYSTACK = 'PAYSTACK',
   BANK_TRANSFER = 'BANK_TRANSFER',
   BANK_DEPOSIT = 'BANK_DEPOSIT',
   CARD = 'CARD',

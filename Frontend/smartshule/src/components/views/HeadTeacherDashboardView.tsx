@@ -116,7 +116,7 @@ export const HeadTeacherDashboardView: React.FC<HeadTeacherDashboardViewProps> =
           <div className="mt-3">
             <div className="text-2xl font-black text-on-surface">{students.length}</div>
             <div className="text-[11px] text-purple-700 font-semibold mt-1">
-              Active across PP1 through Grade 9
+              Active across Playgroup through Grade 9
             </div>
           </div>
         </div>

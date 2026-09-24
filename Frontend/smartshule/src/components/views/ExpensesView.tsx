@@ -104,7 +104,7 @@ export const ExpensesView: React.FC = () => {
     return expenses.filter((e) => {
       if (selectedChannel !== 'ALL') {
         if (selectedChannel === 'MPESA' && e.paymentMethod !== 'MPESA') return false;
-        if (selectedChannel === 'BANK' && !['BANK_TRANSFER', 'BANK_DEPOSIT', 'PAYSTACK', 'CARD'].includes(e.paymentMethod)) return false;
+        if (selectedChannel === 'BANK' && !['BANK_TRANSFER', 'BANK_DEPOSIT', 'KCB_BUNI', 'CARD'].includes(e.paymentMethod)) return false;
         if (selectedChannel === 'CHEQUE' && e.paymentMethod !== 'CHEQUE') return false;
         if (selectedChannel === 'CASH' && e.paymentMethod !== 'CASH') return false;
       }

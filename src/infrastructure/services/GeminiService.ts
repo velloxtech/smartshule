@@ -17,8 +17,8 @@ export interface GeminiDraftParams {
     totalBilled: number;
     totalPaid: number;
     balance: number;
-    paystackUrl?: string;
-    stanbicAccount?: string;
+    paymentUrl?: string;
+    kcbAccount?: string;
     dueDate?: string;
   };
   attendanceSummary?: {
@@ -126,7 +126,7 @@ export class GeminiService {
     const grade = student.gradeLevel;
 
     const feeText = feeSummary
-      ? `Outstanding Balance: KES ${feeSummary.balance.toLocaleString()} (Total Billed: KES ${feeSummary.totalBilled.toLocaleString()}, Paid: KES ${feeSummary.totalPaid.toLocaleString()}). Stanbic Bank: ${feeSummary.stanbicAccount || '0100012345678 (Ref: ' + admNo + ')'}. Paystack: ${feeSummary.paystackUrl || 'https://pay.smartshule.ac.ke/fees/' + admNo}.`
+      ? `Outstanding Balance: KES ${feeSummary.balance.toLocaleString()} (Total Billed: KES ${feeSummary.totalBilled.toLocaleString()}, Paid: KES ${feeSummary.totalPaid.toLocaleString()}). KCB Bank Paybill: ${feeSummary.kcbAccount || '522123 (Ref: ' + admNo + ')'}. Online Payment: ${feeSummary.paymentUrl || 'https://pay.smartshule.ac.ke/fees/' + admNo}.`
       : 'Fee details not requested or not available.';
 
     const attendanceText = attendanceSummary
@@ -248,14 +248,14 @@ MANDATORY RULES:
 
     if (/\b(FEE|FEES|BALANCE|BAL|PAY|PAYMENT|ARREARS|DUE|INVOICE|INVOICES|STATEMENT|STATEMENTS)\b/i.test(cmdUpper)) {
       const bal = feeSummary ? feeSummary.balance.toLocaleString() : '0';
-      const paystack = feeSummary?.paystackUrl || `https://pay.smartshule.ac.ke/pay/${student.admissionNumber}`;
+      const paymentLink = feeSummary?.paymentUrl || `https://pay.smartshule.ac.ke/pay/${student.admissionNumber}`;
       return (
         `👋 *Dear ${guardianName},*\n\n` +
         `This is an official fee update from *${schoolName}* for *${learner}* (Adm: *${adm}* · ${student.gradeLevel}).\n\n` +
         `💰 *Current Outstanding Balance:* KES *${bal}*\n\n` +
         `💳 *Payment Options:*\n` +
-        `• *Paystack Instant Online Checkout:* ${paystack}\n` +
-        `• *M-Pesa Paybill:* Acc: *${adm}*\n\n` +
+        `• *Online Payment (Card / Bank):* ${paymentLink}\n` +
+        `• *KCB / M-Pesa Paybill:* 522123 (Acc: *${adm}*)\n\n` +
         `Kindly settle the outstanding amount or reach out to our accounts desk.\n\n` +
         `Warm regards,\n` +
         `*${schoolName} Accounts Desk*\n` +

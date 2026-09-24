@@ -24,7 +24,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
 
   const [amount, setAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<
-    'MPESA' | 'BANK_TRANSFER' | 'BANK_DEPOSIT' | 'CHEQUE' | 'CASH' | 'CARD' | 'PAYSTACK'
+    'MPESA' | 'BANK_TRANSFER' | 'BANK_DEPOSIT' | 'CHEQUE' | 'CASH' | 'CARD' | 'KCB_BUNI'
   >('MPESA');
   const [transactionReference, setTransactionReference] = useState('');
   const [notes, setNotes] = useState('');
@@ -207,7 +207,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
                 <option value="BANK_DEPOSIT">Bank Direct Deposit / Agent Slip</option>
                 <option value="CASH">Cash Office</option>
                 <option value="CHEQUE">Banker's Cheque</option>
-                <option value="PAYSTACK">Paystack Online Payment</option>
+                <option value="KCB_BUNI">KCB Buni Online Payment</option>
                 <option value="CARD">Debit / Credit Card</option>
               </select>
             </div>

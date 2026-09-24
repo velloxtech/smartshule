@@ -30,9 +30,6 @@ import {
   PeriodDefinition,
   DayDefinition,
   TimetableSlot,
-  PaystackInitializeRequest,
-  PaystackInitializeResponse,
-  PaystackVerifyResponse,
   FeePaymentReceipt,
   FinanceSummaryData,
   ParentHelpRequest,
@@ -1030,7 +1027,7 @@ export const apiService = {
     schoolId: string;
     invoiceId: string;
     amount: number;
-    paymentMethod: 'MPESA' | 'BANK_TRANSFER' | 'BANK_DEPOSIT' | 'CHEQUE' | 'CASH' | 'CARD' | 'PAYSTACK' | 'KCB_BUNI';
+    paymentMethod: 'MPESA' | 'BANK_TRANSFER' | 'BANK_DEPOSIT' | 'CHEQUE' | 'CASH' | 'CARD' | 'KCB_BUNI';
     transactionReference: string;
     mpesaPhoneNumber?: string;
     paymentDate?: string;
@@ -1123,17 +1120,6 @@ export const apiService = {
 
   getFinanceSummary: async (schoolId?: string): Promise<ApiResponse<FinanceSummaryData>> => {
     return apiFetch<ApiResponse<FinanceSummaryData>>(`/finance/summary${schoolId ? `?schoolId=${schoolId}` : ''}`);
-  },
-
-  initializePaystack: async (data: PaystackInitializeRequest): Promise<ApiResponse<PaystackInitializeResponse>> => {
-    return apiFetch<ApiResponse<PaystackInitializeResponse>>('/finance/paystack/initialize', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  },
-
-  verifyPaystack: async (reference: string): Promise<ApiResponse<PaystackVerifyResponse>> => {
-    return apiFetch<ApiResponse<PaystackVerifyResponse>>(`/finance/paystack/verify?reference=${encodeURIComponent(reference)}`);
   },
 
   // Cash Flow & Financial Ledger (Money In & Money Out)

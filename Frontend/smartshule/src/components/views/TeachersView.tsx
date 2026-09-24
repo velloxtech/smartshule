@@ -12,6 +12,7 @@ interface TeachersViewProps {
 }
 
 const CBC_STANDARD_CLASSES = [
+  { name: 'Playgroup', gradeLevel: 'PLAYGROUP', educationLevel: 'PRE_PRIMARY' },
   { name: 'Pre-Primary 1 (PP1)', gradeLevel: 'PP1', educationLevel: 'PRE_PRIMARY' },
   { name: 'Pre-Primary 2 (PP2)', gradeLevel: 'PP2', educationLevel: 'PRE_PRIMARY' },
   { name: 'Grade 1', gradeLevel: 'GRADE_1', educationLevel: 'LOWER_PRIMARY' },

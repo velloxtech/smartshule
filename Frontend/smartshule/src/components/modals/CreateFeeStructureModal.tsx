@@ -229,6 +229,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
                 onChange={(e) => setGradeLevel(e.target.value)}
                 className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-sm text-on-surface focus:outline-primary"
               >
+                <option value="PLAYGROUP">Playgroup</option>
                 <option value="PP1">PP1</option>
                 <option value="PP2">PP2</option>
                 <option value="GRADE_1">Grade 1</option>

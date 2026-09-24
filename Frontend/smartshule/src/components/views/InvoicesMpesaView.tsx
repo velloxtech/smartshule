@@ -370,7 +370,7 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
                         <span className="material-symbols-outlined text-3xl text-outline">receipt_long</span>
                         <p className="font-semibold text-sm">No Payment Transactions Recorded</p>
                         <p className="text-xs text-on-surface-variant">
-                          Payments made through Paystack bank transfers, virtual accounts, or cards will appear here.
+                          Payments made through KCB Buni bank transfers, paybill, or cards will appear here.
                         </p>
                       </div>
                     </td>
@@ -383,7 +383,7 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
                       <td className="py-3 px-4 font-data-mono text-outline">{tx.admNo}</td>
                       <td className="py-3 px-4">
                         <span className="px-2 py-0.5 rounded bg-surface-container text-on-surface font-semibold text-[11px]">
-                          {tx.channel || 'Paystack Bank'}
+                          {tx.channel || 'KCB Bank'}
                         </span>
                       </td>
                       <td className="py-3 px-4 text-right font-data-mono font-bold text-secondary">
@@ -446,7 +446,7 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
                 </div>
                 <div className="flex justify-between">
                   <span className="text-on-surface-variant">Payment Rail:</span>
-                  <span className="font-semibold text-on-surface">{selectedTx.channel || 'Paystack Bank'}</span>
+                  <span className="font-semibold text-on-surface">{selectedTx.channel || 'KCB Bank'}</span>
                 </div>
                 <div className="flex justify-between pt-2 border-t border-surface-container">
                   <span className="font-bold text-on-surface">Amount Paid:</span>

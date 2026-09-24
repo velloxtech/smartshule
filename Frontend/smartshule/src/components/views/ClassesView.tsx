@@ -149,7 +149,7 @@ export const ClassesView: React.FC = () => {
             Classes, Streams & Learner Distribution
           </h1>
           <p className="text-xs text-on-surface-variant mt-0.5">
-            PP1 through Grade 9 CBC streams, education cycles, and classroom allocations
+            Playgroup through Grade 9 CBC streams, education cycles, and classroom allocations
           </p>
         </div>
 
@@ -297,6 +297,7 @@ export const ClassesView: React.FC = () => {
                     onChange={(e) => setNewGradeLevel(e.target.value)}
                     className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2"
                   >
+                    <option value="PLAYGROUP">Playgroup</option>
                     <option value="PP1">PP1</option>
                     <option value="PP2">PP2</option>
                     <option value="GRADE_1">Grade 1</option>
@@ -317,7 +318,7 @@ export const ClassesView: React.FC = () => {
                     onChange={(e) => setNewEduLevel(e.target.value)}
                     className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2"
                   >
-                    <option value="PRE_PRIMARY">Pre-Primary (PP1 - PP2)</option>
+                    <option value="PRE_PRIMARY">Pre-Primary (Playgroup - PP2)</option>
                     <option value="LOWER_PRIMARY">Lower Primary (Grade 1 - 3)</option>
                     <option value="UPPER_PRIMARY">Upper Primary (Grade 4 - 6)</option>
                     <option value="JUNIOR_SCHOOL">Junior Secondary (Grade 7 - 9)</option>

@@ -332,6 +332,7 @@ export class AcademicUseCases {
     let classes = await this.academicRepository.findAllClasses(schoolId);
     if (classes.length === 0) {
       const defaultGrades: Array<{ name: string; gradeLevel: CbcGradeLevel; educationLevel: EducationLevel }> = [
+        { name: 'Playgroup', gradeLevel: CbcGradeLevel.PLAYGROUP, educationLevel: EducationLevel.PRE_PRIMARY },
         { name: 'PP1', gradeLevel: CbcGradeLevel.PP1, educationLevel: EducationLevel.PRE_PRIMARY },
         { name: 'PP2', gradeLevel: CbcGradeLevel.PP2, educationLevel: EducationLevel.PRE_PRIMARY },
         { name: 'Grade 1', gradeLevel: CbcGradeLevel.GRADE_1, educationLevel: EducationLevel.LOWER_PRIMARY },
@@ -359,7 +360,28 @@ export class AcademicUseCases {
       }
       classes = await this.academicRepository.findAllClasses(schoolId);
     }
-    return classes.map(c => c.toJSON());
+
+    const gradeHierarchy: Record<string, number> = {
+      [CbcGradeLevel.PLAYGROUP]: 0,
+      [CbcGradeLevel.PP1]: 1,
+      [CbcGradeLevel.PP2]: 2,
+      [CbcGradeLevel.GRADE_1]: 3,
+      [CbcGradeLevel.GRADE_2]: 4,
+      [CbcGradeLevel.GRADE_3]: 5,
+      [CbcGradeLevel.GRADE_4]: 6,
+      [CbcGradeLevel.GRADE_5]: 7,
+      [CbcGradeLevel.GRADE_6]: 8,
+      [CbcGradeLevel.GRADE_7]: 9,
+      [CbcGradeLevel.GRADE_8]: 10,
+      [CbcGradeLevel.GRADE_9]: 11,
+      [CbcGradeLevel.SENIOR_1]: 12,
+      [CbcGradeLevel.SENIOR_2]: 13,
+      [CbcGradeLevel.SENIOR_3]: 14,
+    };
+
+    return classes
+      .sort((a, b) => (gradeHierarchy[a.gradeLevel] ?? 99) - (gradeHierarchy[b.gradeLevel] ?? 99))
+      .map(c => c.toJSON());
   }
 
   public async createStream(dto: { classRoomId: string; name: string; capacity: number; classTeacherId?: string }) {

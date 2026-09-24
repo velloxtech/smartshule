@@ -342,7 +342,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </span>
             </div>
             <p className="text-xs sm:text-sm text-emerald-100/80 mt-0.5 max-w-2xl">
-              Real-time communication with parents: instant fee balance checks, Paystack invoice links, CBC digital reports, attendance notices, and AI assistance.
+              Real-time communication with parents: instant fee balance checks, online payment links, CBC digital reports, attendance notices, and AI assistance.
             </p>
           </div>
         </div>
@@ -826,7 +826,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
             <div className="flex items-center gap-xs">
               <span className="inline-flex items-center gap-xs font-label-md text-label-md text-secondary bg-secondary-container px-sm py-xs rounded-lg font-medium">
-                <span className="w-2 h-2 rounded-full bg-secondary"></span> M-Pesa & Paystack Channels
+                <span className="w-2 h-2 rounded-full bg-secondary"></span> M-Pesa & KCB Bank Channels
               </span>
             </div>
           </div>

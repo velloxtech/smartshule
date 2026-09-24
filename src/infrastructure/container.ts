@@ -31,7 +31,6 @@ import {
 import { DatabaseFactory, RepositoryBundle } from './database/DatabaseFactory';
 import { JwtAuthTokenService } from './services/JwtAuthTokenService';
 import { BcryptPasswordHasher } from './services/BcryptPasswordHasher';
-import { PaystackPaymentAdapter } from './services/PaystackPaymentAdapter';
 import { MpesaDarajaPaymentAdapter } from './services/MpesaDarajaPaymentAdapter';
 import { KcbBuniPaymentAdapter } from './services/KcbBuniPaymentAdapter';
 import { SmsNotificationAdapter } from './services/SmsNotificationAdapter';
@@ -76,7 +75,6 @@ export class AppContainer {
   // Services
   public readonly tokenService = new JwtAuthTokenService();
   public readonly passwordHasher = new BcryptPasswordHasher();
-  public readonly paystackGateway = new PaystackPaymentAdapter();
   public readonly kcbBuniGateway = new KcbBuniPaymentAdapter();
   public readonly paymentGateway = this.kcbBuniGateway; // KCB Buni API platform integration
   public readonly notificationService = new SmsNotificationAdapter();
@@ -174,7 +172,6 @@ export class AppContainer {
       this.userRepository,
       this.paymentGateway,
       this.notificationService,
-      this.paystackGateway,
       this.academicRepository,
       this.kcbBuniGateway
     );
@@ -209,7 +206,6 @@ export class AppContainer {
       this.ediaryRepository,
       this.attendanceRepository,
       this.cbcAssessmentRepository,
-      this.paystackGateway,
       this.academicRepository,
       this.timetableRepository
     );

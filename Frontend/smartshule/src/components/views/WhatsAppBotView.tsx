@@ -382,7 +382,7 @@ export const WhatsAppBotView: React.FC = () => {
             <span className="material-symbols-outlined text-base">smart_toy</span>
             <span>24/7 AI Parser</span>
           </div>
-          <span className="text-[11px] text-outline mt-1 block">Fees, Paystack, Attendance, eDiary</span>
+          <span className="text-[11px] text-outline mt-1 block">Fees, KCB Buni, Attendance, eDiary</span>
         </div>
       </div>
 

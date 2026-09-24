@@ -87,7 +87,7 @@ export const AdmissionsDashboardView: React.FC<AdmissionsDashboardViewProps> = (
           <div className="mt-3">
             <div className="text-2xl font-black text-on-surface">{totalLearners}</div>
             <div className="text-[11px] text-blue-700 font-semibold mt-1">
-              Active across PP1 through Grade 9
+              Active across Playgroup through Grade 9
             </div>
           </div>
         </div>

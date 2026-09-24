@@ -82,7 +82,6 @@ import {
   GenerateInvoicesSchema,
   SyncFeesSchema,
   RecordPaymentSchema,
-  PaystackInitSchema,
   MpesaStkPushSchema,
   KcbBuniStkPushSchema,
   KcbBuniValidationSchema,
@@ -295,7 +294,7 @@ export function createApiRouter(container: AppContainer): Router {
   router.use('/attendance', attendanceRouter);
 
   // ==========================================
-  // 9. FINANCE & FEE PAYMENTS (PAYSTACK / BANK) ROUTES
+  // 9. FINANCE & FEE PAYMENTS (KCB BUNI / BANK) ROUTES
   // ==========================================
   const financeRouter = Router();
   financeRouter.post('/structures', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT), validateBody(CreateFeeStructureSchema), financeController.createFeeStructure);
@@ -317,10 +316,6 @@ export function createApiRouter(container: AppContainer): Router {
   financeRouter.get('/kcb-buni/status/:checkoutRequestId', authMiddleware, financeController.queryKcbBuniStatus);
   financeRouter.get('/kcb-buni/config', financeController.getKcbBuniConfig);
 
-  // Paystack Bank & Card Rails
-  financeRouter.post('/paystack/initialize', authMiddleware, validateBody(PaystackInitSchema), financeController.initiatePaystack);
-  financeRouter.get('/paystack/verify/:reference', authMiddleware, financeController.verifyPaystack);
-  financeRouter.post('/paystack/webhook', financeController.paystackWebhook);
   // Legacy M-Pesa routes maintained
   financeRouter.post('/mpesa/stk-push', authMiddleware, validateBody(MpesaStkPushSchema), financeController.initiateMpesa);
   financeRouter.post('/mpesa/callback', financeController.mpesaCallback);

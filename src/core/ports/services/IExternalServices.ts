@@ -118,50 +118,6 @@ export interface IKcbBuniPaymentGateway extends IPaymentGateway {
   getBaseUrl(): string;
 }
 
-export interface PaystackInitializeRequest {
-  email: string;
-  amount: number; // in KES
-  reference?: string;
-  invoiceId: string;
-  studentAdmission?: string;
-  studentName?: string;
-  callbackUrl?: string;
-  channels?: string[];
-  metadata?: Record<string, any>;
-}
-
-export interface PaystackInitializeResponse {
-  authorizationUrl: string;
-  accessCode: string;
-  reference: string;
-  bankAccountDetails?: {
-    bankName: string;
-    accountNumber: string;
-    accountName: string;
-    currency: string;
-  };
-}
-
-export interface PaystackVerifyResponse {
-  status: 'success' | 'failed' | 'abandoned';
-  reference: string;
-  amount: number; // in KES
-  paidAt?: string;
-  channel?: string;
-  gatewayResponse?: string;
-  customer?: {
-    email: string;
-    name?: string;
-  };
-  metadata?: Record<string, any>;
-}
-
-export interface IPaystackGateway {
-  initializeTransaction(request: PaystackInitializeRequest): Promise<PaystackInitializeResponse>;
-  verifyTransaction(reference: string): Promise<PaystackVerifyResponse>;
-  verifyWebhookSignature(rawBody: string | Buffer, signature: string): boolean;
-}
-
 export interface INotificationService {
   sendSms(toPhoneNumber: string, message: string): Promise<{ success: boolean; messageId: string }>;
   sendEmail(toEmail: string, subject: string, body: string, htmlBody?: string): Promise<{ success: boolean }>;

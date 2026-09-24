@@ -292,7 +292,7 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
       },
       {
         id: 'invoices-mpesa',
-        label: 'Bank & Paystack Invoices',
+        label: 'Bank & KCB Invoices',
         icon: 'account_balance',
         allowedRoles: [
           UserRole.SUPER_ADMIN,

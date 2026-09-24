@@ -127,7 +127,7 @@ export const SuperAdminDashboardView: React.FC<SuperAdminDashboardViewProps> = (
             <div className="text-2xl font-black text-on-surface">
               KES {totalFeeCollected.toLocaleString()}
             </div>
-            <div className="text-[11px] text-on-surface-variant mt-1">Live Paystack & M-Pesa verified inflow</div>
+            <div className="text-[11px] text-on-surface-variant mt-1">Live KCB Buni & M-Pesa verified inflow</div>
           </div>
         </div>
       </div>

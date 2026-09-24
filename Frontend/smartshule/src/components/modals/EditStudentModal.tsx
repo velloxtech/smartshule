@@ -36,7 +36,7 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
     if (student) {
       // Map grade
       const normalizedGrade = student.grade.toUpperCase().replace(' ', '_');
-      setGradeLevel(normalizedGrade.includes('GRADE') || normalizedGrade.includes('PP') ? normalizedGrade : 'GRADE_7');
+      setGradeLevel(normalizedGrade.includes('GRADE') || normalizedGrade.includes('PP') || normalizedGrade.includes('PLAYGROUP') ? normalizedGrade : 'GRADE_7');
       setStreamName(student.stream || '');
       setStatus(student.status?.toUpperCase() || 'ACTIVE');
       setStreamId('');
@@ -264,6 +264,7 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
                 onChange={(e) => handleGradeChange(e.target.value)}
                 className="w-full bg-surface-container-low border border-outline-variant/30 rounded-lg px-3 py-2 text-xs focus:outline-primary"
               >
+                <option value="PLAYGROUP">Playgroup (Daycare / Playgroup)</option>
                 <option value="PP1">PP1 (Pre-Primary 1)</option>
                 <option value="PP2">PP2 (Pre-Primary 2)</option>
                 <option value="GRADE_1">Grade 1</option>

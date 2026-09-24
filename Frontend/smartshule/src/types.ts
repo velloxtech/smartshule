@@ -579,28 +579,6 @@ export interface DashboardSummary {
   };
 }
 
-export interface PaystackInitializeRequest {
-  studentId: string;
-  invoiceId?: string;
-  amount: number;
-  email: string;
-  phone?: string;
-  callbackUrl?: string;
-  paymentType?: 'TUITION' | 'ASSESSMENT' | 'ACTIVITY' | 'BOARDING' | 'MEALS' | 'TRANSPORT' | 'OTHER' | 'GENERAL';
-}
-
-export interface PaystackInitializeResponse {
-  authorizationUrl: string;
-  accessCode: string;
-  reference: string;
-  bankDetails: {
-    bankName: string;
-    accountNumber: string;
-    accountName: string;
-    paymentReference: string;
-  };
-}
-
 export interface KcbBuniConfig {
   gateway: string;
   bankName: string;
@@ -635,19 +613,6 @@ export interface KcbBuniStkPushResponse {
   amount: number;
 }
 
-export interface PaystackVerifyResponse {
-  status: 'success' | 'failed' | 'abandoned' | 'pending';
-  reference: string;
-  amount: number;
-  channel: string;
-  currency: string;
-  paidAt?: string;
-  receiptNumber?: string;
-  studentId: string;
-  invoiceId?: string;
-  verified: boolean;
-}
-
 export interface FeePaymentReceipt {
   id: string;
   schoolId: string;
@@ -655,7 +620,7 @@ export interface FeePaymentReceipt {
   invoiceId?: string;
   receiptNumber: string;
   amount: number;
-  method: 'CASH' | 'BANK_DEPOSIT' | 'MPESA' | 'PAYSTACK' | 'CARD';
+  method: 'CASH' | 'BANK_DEPOSIT' | 'MPESA' | 'KCB_BUNI' | 'CARD';
   transactionReference: string;
   paidBy: string;
   paidAt: string;
@@ -698,7 +663,7 @@ export interface ExpenseRecord {
   category: ExpenseCategoryType;
   title: string;
   amount: number;
-  paymentMethod: 'MPESA' | 'BANK_TRANSFER' | 'BANK_DEPOSIT' | 'CHEQUE' | 'CASH' | 'CARD' | 'PAYSTACK';
+  paymentMethod: 'MPESA' | 'BANK_TRANSFER' | 'BANK_DEPOSIT' | 'CHEQUE' | 'CASH' | 'CARD' | 'KCB_BUNI';
   paymentReference: string;
   payee: string;
   expenseDate: string;
@@ -728,7 +693,7 @@ export interface OtherIncomeRecord {
   source: IncomeSourceType;
   title: string;
   amount: number;
-  paymentMethod: 'MPESA' | 'BANK_TRANSFER' | 'BANK_DEPOSIT' | 'CHEQUE' | 'CASH' | 'CARD' | 'PAYSTACK';
+  paymentMethod: 'MPESA' | 'BANK_TRANSFER' | 'BANK_DEPOSIT' | 'CHEQUE' | 'CASH' | 'CARD' | 'KCB_BUNI';
   paymentReference: string;
   receivedFrom: string;
   incomeDate: string;

@@ -12,7 +12,6 @@ import { IAcademicRepository } from '../../core/ports/repositories/IAcademicRepo
 import { Guardian } from '../../core/domain/user/Guardian';
 import {
   IPaymentGateway,
-  IPaystackGateway,
   INotificationService,
   MpesaCallbackData,
   IKcbBuniPaymentGateway,
@@ -118,17 +117,6 @@ export interface KcbBuniStkDTO {
   callbackUrl?: string;
 }
 
-export interface PaystackInitDTO {
-  invoiceId: string;
-  amount?: number;
-  email?: string;
-  callbackUrl?: string;
-  requestingUser?: {
-    userId: string;
-    role: UserRole;
-  };
-}
-
 export interface UserContext {
   userId: string;
   role: UserRole;
@@ -136,7 +124,6 @@ export interface UserContext {
 }
 
 export class FeeUseCases {
-  private readonly paystack: IPaystackGateway;
   private readonly kcbBuniGateway: IKcbBuniPaymentGateway;
   private readonly pendingKcbTransactions = new Map<string, {
     invoiceId: string;
@@ -153,11 +140,9 @@ export class FeeUseCases {
     private readonly userRepository: IUserRepository,
     private readonly paymentGateway: IPaymentGateway,
     private readonly notificationService: INotificationService,
-    paystackGateway?: IPaystackGateway,
     private readonly academicRepository?: IAcademicRepository,
     kcbBuniGateway?: IKcbBuniPaymentGateway
   ) {
-    this.paystack = paystackGateway || (paymentGateway as any);
     this.kcbBuniGateway = kcbBuniGateway || (paymentGateway as any);
   }
 
@@ -1180,170 +1165,7 @@ export class FeeUseCases {
     };
   }
 
-  // 11. Paystack Transaction Initialization
-  public async initializePaystackPayment(dto: PaystackInitDTO) {
-    const invoice = await this.feeRepository.findInvoiceById(dto.invoiceId);
-    if (!invoice) throw new NotFoundError('Invoice', dto.invoiceId);
-
-    // If guardian, ensure invoice belongs to their child
-    if (dto.requestingUser?.role === UserRole.GUARDIAN || dto.requestingUser?.role === UserRole.PARENT) {
-      const guardian = await this.getGuardianForUser(dto.requestingUser.userId);
-      if (!guardian || !guardian.studentIds.includes(invoice.studentId)) {
-        throw new ForbiddenError('Access denied: You cannot pay invoices for other parents.');
-      }
-    }
-
-    const student = await this.studentRepository.findById(invoice.studentId);
-    const payAmount = dto.amount && dto.amount > 0 ? dto.amount : invoice.balance;
-
-    if (payAmount <= 0) {
-      throw new ValidationError('Invoice balance is already settled');
-    }
-
-    const studentAdmission = student ? student.admissionNumber : 'ADM-GEN';
-    const studentName = student ? student.fullName : 'Learner';
-
-    let payerEmail = dto.email;
-    if (!payerEmail && dto.requestingUser) {
-      const user = await this.userRepository.findById(dto.requestingUser.userId);
-      if (user) payerEmail = user.email;
-    }
-    if (!payerEmail) {
-      payerEmail = `parent.${studentAdmission.toLowerCase()}@smartshule.ac.ke`;
-    }
-
-    const initResult = await this.paystack.initializeTransaction({
-      email: payerEmail,
-      amount: payAmount,
-      invoiceId: invoice.id,
-      studentAdmission,
-      studentName,
-      callbackUrl: dto.callbackUrl,
-      channels: ['bank_transfer', 'bank', 'card', 'ussd', 'mobile_money'],
-      metadata: {
-        invoiceId: invoice.id,
-        invoiceNumber: invoice.invoiceNumber,
-        studentId: invoice.studentId,
-        studentAdmission,
-        schoolId: invoice.schoolId
-      }
-    });
-
-    return {
-      invoiceId: invoice.id,
-      invoiceNumber: invoice.invoiceNumber,
-      amount: payAmount,
-      currency: 'KES',
-      studentName,
-      studentAdmission,
-      ...initResult
-    };
-  }
-
-  // 12. Paystack Verification & Payment Settlement
-  public async verifyPaystackPayment(reference: string) {
-    // Check if payment already exists for this reference (idempotency)
-    const existingPayment = await this.feeRepository.findPaymentByReference(reference);
-    if (existingPayment) {
-      const invoice = await this.feeRepository.findInvoiceById(existingPayment.invoiceId);
-      return {
-        alreadyProcessed: true,
-        payment: existingPayment.toJSON(),
-        updatedInvoice: invoice ? invoice.toJSON() : null,
-        message: 'Payment has already been processed.'
-      };
-    }
-
-    const verifyResult = await this.paystack.verifyTransaction(reference);
-
-    if (verifyResult.status !== 'success') {
-      return {
-        success: false,
-        status: verifyResult.status,
-        message: verifyResult.gatewayResponse || 'Paystack payment verification failed.'
-      };
-    }
-
-    // Determine invoice from metadata or first pending invoice
-    const invoiceId = verifyResult.metadata?.invoiceId;
-    let invoice: StudentInvoice | null = null;
-    if (invoiceId) {
-      invoice = await this.feeRepository.findInvoiceById(invoiceId);
-    }
-
-    if (!invoice) {
-      // Fallback: search for matching unpaid invoice
-      const allInvoices = await this.feeRepository.findInvoices({});
-      invoice = allInvoices.find(i => i.balance > 0) || allInvoices[0];
-    }
-
-    if (!invoice) {
-      throw new NotFoundError('Invoice for Paystack settlement', reference);
-    }
-
-    const paidAmount = verifyResult.amount || invoice.balance;
-    const receiptNumber = `REC-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
-
-    const payment = Payment.create(
-      {
-        schoolId: invoice.schoolId,
-        invoiceId: invoice.id,
-        studentId: invoice.studentId,
-        receiptNumber,
-        amount: paidAmount,
-        paymentMethod: PaymentMethod.BANK_TRANSFER,
-        transactionReference: reference,
-        paymentDate: verifyResult.paidAt ? verifyResult.paidAt.split('T')[0] : new Date().toISOString().split('T')[0],
-        recordedByUserId: 'usr-paystack-gateway',
-        status: PaymentStatus.COMPLETED,
-        notes: `Paystack Bank Transfer / Card Rail. Ref: ${reference}. Channel: ${verifyResult.channel || 'bank_transfer'}`
-      },
-      IdGenerator.generate()
-    );
-
-    invoice.recordPayment(paidAmount);
-    await this.feeRepository.updateInvoice(invoice);
-    await this.feeRepository.savePayment(payment);
-
-    // Send confirmation notification
-    const student = await this.studentRepository.findById(invoice.studentId);
-    if (student) {
-      const guardians = await this.guardianRepository.findByStudentId(student.id);
-      for (const g of guardians) {
-        const u = await this.userRepository.findById(g.userId);
-        if (u && u.phone) {
-          await this.notificationService.sendSms(
-            u.phone,
-            `SmartShule Bank Settlement: Confirmed KES ${paidAmount} for ${student.fullName} (Adm: ${student.admissionNumber}). Paystack Ref: ${reference}. Receipt #${receiptNumber}. New balance: KES ${invoice.balance}.`
-          );
-        }
-      }
-    }
-
-    return {
-      success: true,
-      receiptNumber,
-      payment: payment.toJSON(),
-      updatedInvoice: invoice.toJSON(),
-      message: 'Payment successfully settled via Paystack Bank Gateway!'
-    };
-  }
-
-  // 13. Paystack Webhook Handler
-  public async handlePaystackWebhook(body: any, signature: string) {
-    const isValid = this.paystack.verifyWebhookSignature(JSON.stringify(body), signature);
-    if (!isValid) {
-      throw new ForbiddenError('Invalid Paystack webhook signature');
-    }
-
-    if (body.event === 'charge.success' && body.data?.reference) {
-      return this.verifyPaystackPayment(body.data.reference);
-    }
-
-    return { received: true, event: body.event };
-  }
-
-  // 14. Record Expense (Money Out)
+  // 11. Record Expense (Money Out)
   public async recordExpense(dto: RecordExpenseDTO, requestingUser?: UserContext) {
     if (requestingUser && ![UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT, UserRole.BURSAR].includes(requestingUser.role)) {
       throw new ForbiddenError('Only Super Admin, School Admin, or Accountant can record expenses.');
@@ -1528,7 +1350,7 @@ export class FeeUseCases {
     let cashIn = 0, cashOut = 0;
 
     for (const p of completedPayments) {
-      if ([PaymentMethod.BANK_TRANSFER, PaymentMethod.BANK_DEPOSIT, PaymentMethod.PAYSTACK, PaymentMethod.CARD].includes(p.paymentMethod)) {
+      if ([PaymentMethod.KCB_BUNI, PaymentMethod.BANK_TRANSFER, PaymentMethod.BANK_DEPOSIT, PaymentMethod.CARD].includes(p.paymentMethod)) {
         bankIn += p.amount;
       } else if (p.paymentMethod === PaymentMethod.MPESA) {
         mpesaIn += p.amount;
@@ -1538,7 +1360,7 @@ export class FeeUseCases {
     }
 
     for (const inc of otherIncomes) {
-      if ([PaymentMethod.BANK_TRANSFER, PaymentMethod.BANK_DEPOSIT, PaymentMethod.PAYSTACK, PaymentMethod.CARD, PaymentMethod.CHEQUE].includes(inc.paymentMethod)) {
+      if ([PaymentMethod.KCB_BUNI, PaymentMethod.BANK_TRANSFER, PaymentMethod.BANK_DEPOSIT, PaymentMethod.CARD, PaymentMethod.CHEQUE].includes(inc.paymentMethod)) {
         bankIn += inc.amount;
       } else if (inc.paymentMethod === PaymentMethod.MPESA) {
         mpesaIn += inc.amount;

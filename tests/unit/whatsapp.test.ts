@@ -251,7 +251,6 @@ describe('WhatsApp Bot & Phone Counter-Checking Unit Tests', () => {
         ediaryRepo,
         attendanceRepo,
         cbcRepo,
-        undefined,
         academicRepo,
         timetableRepo
       );
@@ -280,13 +279,13 @@ describe('WhatsApp Bot & Phone Counter-Checking Unit Tests', () => {
       expect(res.replyText).toContain('QWE123RTY'); // Transaction reference
     });
 
-    it('generates Paystack and M-Pesa payment details when user types "PAY"', async () => {
+    it('generates KCB and M-Pesa payment details when user types "PAY"', async () => {
       const res = await whatsAppService.handleInboundMessage('+254711223344', 'PAY');
 
       expect(res.intent).toBe('PAYMENT');
-      expect(res.replyText).toContain('Paystack Bank Gateway');
-      expect(res.replyText).toContain('Stanbic Bank');
-      expect(res.replyText).toContain('247247');
+      expect(res.replyText).toContain('KCB Bank Gateway');
+      expect(res.replyText).toContain('KCB Bank Kenya');
+      expect(res.replyText).toContain('522123');
       expect(res.replyText).toContain('ADM-1001');
     });
 
@@ -480,7 +479,7 @@ describe('WhatsApp Bot & Phone Counter-Checking Unit Tests', () => {
         // Command 2: Payment
         const res2 = await whatsAppService.handleInboundMessage('+254711223344', '2', { useAI: true });
         expect(res2.intent).toBe('PAYMENT');
-        expect(res2.replyText).toContain('Paystack Bank Gateway');
+        expect(res2.replyText).toContain('KCB Bank Gateway');
         expect(res2.replyText).not.toContain('FEES STATEMENT');
 
         // Command 3: eDiary / Homework

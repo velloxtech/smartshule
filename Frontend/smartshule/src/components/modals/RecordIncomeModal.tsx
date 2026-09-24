@@ -29,7 +29,7 @@ export const RecordIncomeModal: React.FC<RecordIncomeModalProps> = ({
   const [amount, setAmount] = useState('');
   const [receivedFrom, setReceivedFrom] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<
-    'BANK_TRANSFER' | 'BANK_DEPOSIT' | 'MPESA' | 'CHEQUE' | 'CASH' | 'CARD' | 'PAYSTACK'
+    'BANK_TRANSFER' | 'BANK_DEPOSIT' | 'MPESA' | 'CHEQUE' | 'CASH' | 'CARD' | 'KCB_BUNI'
   >('BANK_TRANSFER');
   const [paymentReference, setPaymentReference] = useState('');
   const [incomeDate, setIncomeDate] = useState(new Date().toISOString().split('T')[0]);
@@ -232,7 +232,7 @@ export const RecordIncomeModal: React.FC<RecordIncomeModalProps> = ({
                 <option value="MPESA">M-Pesa (Till / Paybill)</option>
                 <option value="CHEQUE">Bankers Cheque</option>
                 <option value="CASH">Cash Drawer</option>
-                <option value="PAYSTACK">Paystack Online Payment</option>
+                <option value="KCB_BUNI">KCB Buni Online Payment</option>
                 <option value="CARD">Debit / Credit Card</option>
               </select>
             </div>

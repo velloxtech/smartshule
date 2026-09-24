@@ -210,45 +210,6 @@ describe('New Features Integration Tests', () => {
 
 
   // ==========================================
-  // 2. PAYSTACK INTEGRATION (BANK TRANSFER / CARD)
-  // ==========================================
-  describe('Paystack Bank & Card Payment Gateway', () => {
-    it('Parents can initialize Paystack payment for their child invoice', async () => {
-      // Fetch guardian invoice
-      const invRes = await request(app)
-        .get('/api/v1/finance/invoices')
-        .set('Authorization', `Bearer ${guardianToken}`);
-
-      const invoice = invRes.body.data[0];
-
-      const res = await request(app)
-        .post('/api/v1/finance/paystack/initialize')
-        .set('Authorization', `Bearer ${guardianToken}`)
-        .send({
-          invoiceId: invoice.id,
-          amount: 5000
-        });
-
-      expect(res.status).toBe(200);
-      expect(res.body.data.authorizationUrl).toBeDefined();
-      expect(res.body.data.reference).toBeDefined();
-      expect(res.body.data.bankAccountDetails).toBeDefined();
-      expect(res.body.data.bankAccountDetails.bankName).toContain('Stanbic Bank');
-    });
-
-    it('Verifying a Paystack reference completes transaction and updates invoice', async () => {
-      const ref = `PSTK_TEST_${Date.now()}`;
-      const res = await request(app)
-        .get(`/api/v1/finance/paystack/verify/${ref}`)
-        .set('Authorization', `Bearer ${adminToken}`);
-
-      expect(res.status).toBe(200);
-      expect(res.body.data.success).toBe(true);
-      expect(res.body.data.receiptNumber).toBeDefined();
-    });
-  });
-
-  // ==========================================
   // 3. IMAGE PROCESSING & VISUAL PROGRESS / HELP
   // ==========================================
   describe('Image Processing: Parent Help & Student Progress', () => {
@@ -458,7 +419,7 @@ describe('New Features Integration Tests', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.data.replyText).toContain('Fee Balance');
-      expect(res.body.data.replyText).toContain('Pay Fees via Paystack');
+      expect(res.body.data.replyText).toContain('Pay Fees via KCB Bank');
       expect(res.body.data.replyText).toContain('eDiary & Homework');
       expect(res.body.data.intent).toBe('MENU');
     });
@@ -477,7 +438,7 @@ describe('New Features Integration Tests', () => {
       expect(res.body.data.intent).toBe('FEES');
     });
 
-    it('Simulating "2" generates instant Paystack payment link', async () => {
+    it('Simulating "2" generates instant KCB payment link', async () => {
       const res = await request(app)
         .post('/api/v1/whatsapp/simulate')
         .send({
@@ -486,8 +447,8 @@ describe('New Features Integration Tests', () => {
         });
 
       expect(res.status).toBe(200);
-      expect(res.body.data.replyText).toContain('Paystack Bank Gateway');
-      expect(res.body.data.replyText).toContain('checkout.paystack.com');
+      expect(res.body.data.replyText).toContain('KCB Bank Gateway');
+      expect(res.body.data.replyText).toContain('522123');
       expect(res.body.data.intent).toBe('PAYMENT');
     });
 

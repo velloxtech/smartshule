@@ -330,7 +330,7 @@ export class WhatsAppController {
         webhookUrl: '/api/v1/whatsapp/webhook',
         supportedCommands: [
           { command: '1 or BALANCE', description: 'Query student fee balance, statement & last payments (supports multi-child)' },
-          { command: '2 or PAY', description: 'Get instant Paystack bank checkout link & M-Pesa paybill instructions' },
+          { command: '2 or PAY', description: 'Get instant KCB Bank checkout link & M-Pesa paybill instructions' },
           { command: '3 or EDIARY', description: 'View today\'s homework, tasks & teacher remarks' },
           { command: '4 or ATTENDANCE', description: 'Check daily roll-call status and term attendance percentage' },
           { command: '5 or RESULTS', description: 'View CBC competency performance levels, average score & grades' },

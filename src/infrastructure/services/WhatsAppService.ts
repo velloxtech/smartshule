@@ -6,7 +6,6 @@ import { IEDiaryRepository } from '../../core/ports/repositories/IEDiaryReposito
 import { IAttendanceRepository, ITimetableRepository } from '../../core/ports/repositories/ITimetableRepository';
 import { ICbcAssessmentRepository } from '../../core/ports/repositories/ICbcAssessmentRepository';
 import { IAcademicRepository } from '../../core/ports/repositories/IAcademicRepository';
-import { IPaystackGateway } from '../../core/ports/services/IExternalServices';
 import { PaymentStatus } from '../../core/domain/finance/Fee';
 import { Student } from '../../core/domain/user/Student';
 import { Guardian } from '../../core/domain/user/Guardian';
@@ -46,7 +45,6 @@ export class WhatsAppService {
     private readonly ediaryRepository: IEDiaryRepository,
     private readonly attendanceRepository: IAttendanceRepository,
     private readonly cbcRepository: ICbcAssessmentRepository,
-    private readonly paystackGateway?: IPaystackGateway,
     private readonly academicRepository?: IAcademicRepository,
     private readonly timetableRepository?: ITimetableRepository,
     geminiService?: GeminiService
@@ -243,7 +241,7 @@ export class WhatsAppService {
       commandUpper === 'PAY' ||
       commandUpper.startsWith('PAY ') ||
       commandUpper.startsWith('PAY:') ||
-      /\b(PAYMENT|PAYMENTS|LIPA|CHECKOUT|MPESA|M-PESA|PAYSTACK)\b/i.test(commandUpper) ||
+      /\b(PAYMENT|PAYMENTS|LIPA|CHECKOUT|MPESA|M-PESA|KCB|BUNI)\b/i.test(commandUpper) ||
       /\bPAY\s+FEES?\b/i.test(commandUpper)
     ) {
       return await this.handlePaymentCommand(senderPhone, firstName, senderName, primaryStudent);
@@ -427,7 +425,7 @@ export class WhatsAppService {
       `━━━━━━━━━━━━━━━━━━━━\n` +
       `Please reply with a number or command name:\n\n` +
       `*1* or *BALANCE* ➔ 💰 Fee Balance & Statements\n` +
-      `*2* or *PAY* ➔ 💳 Pay Fees via Paystack Bank / M-Pesa\n` +
+      `*2* or *PAY* ➔ 💳 Pay Fees via KCB Bank / M-Pesa\n` +
       `*3* or *EDIARY* ➔ 📖 Today's eDiary & Homework\n` +
       `*4* or *ATTENDANCE* ➔ 📅 Daily Attendance & Roll-Call\n` +
       `*5* or *RESULTS* ➔ 🌟 CBC Competency Report & Grades\n` +
@@ -507,7 +505,7 @@ export class WhatsAppService {
         `• *Status:* ${balance <= 0 ? '✅ FULLY CLEARED' : '⚠️ PENDING PAYMENT'}` +
         `${invoiceLine}` +
         `${lastPaymentLine}\n\n` +
-        `💳 *To Pay Fees via Bank / M-Pesa:* Reply with *2* or *PAY* to get instant Paystack checkout link & bank transfer details.`;
+        `💳 *To Pay Fees via Bank / M-Pesa:* Reply with *2* or *PAY* to get instant KCB Bank & M-Pesa payment details.`;
 
       return {
         to: senderPhone,
@@ -580,26 +578,26 @@ export class WhatsAppService {
     const balance = unpaidInvoice ? unpaidInvoice.balance : 0;
     const admissionNo = student.admissionNumber;
 
-    const ref = `PSTK_WA_${Date.now()}`;
-    const payLink = `https://checkout.paystack.com/smartshule-wa?ref=${ref}&adm=${admissionNo}&amount=${balance}`;
+    const ref = `KCB_WA_${Date.now()}`;
+    const payLink = `https://pay.smartshule.ac.ke/pay/${admissionNo}`;
 
     const reply =
-      `💳 *PAY FEES · Paystack Bank Gateway*\n` +
+      `💳 *PAY FEES · KCB Bank Gateway*\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
       `👤 *Learner:* ${student.fullName} (Adm: ${admissionNo})\n` +
       `📄 *Invoice #:* ${unpaidInvoice ? unpaidInvoice.invoiceNumber : 'INV-CURRENT'}\n` +
       `💵 *Amount Due:* *KES ${balance.toLocaleString()}*\n\n` +
       `🏦 *Direct Bank Transfer Details:*\n` +
-      `• *Bank:* Stanbic Bank Kenya (Paystack Escrow)\n` +
+      `• *Bank:* KCB Bank Kenya\n` +
       `• *Account Name:* ${school.name} - ${admissionNo}\n` +
-      `• *Account No:* 9928172049\n\n` +
+      `• *Account No:* 1234567890\n\n` +
       `📱 *M-Pesa Paybill Option:*\n` +
-      `• *Business No / Paybill:* 247247\n` +
+      `• *Business No / Paybill:* 522123\n` +
       `• *Account No:* ${admissionNo}\n` +
       `• *Amount:* ${balance > 0 ? balance : 1000}\n\n` +
-      `🔗 *Or click here for instant Paystack Checkout (Card / Bank Transfer):*\n` +
+      `🔗 *Or click here for online payment (Card / M-Pesa / Bank):*\n` +
       `${payLink}\n\n` +
-      `_Payments are automatically verified and instant SMS receipts are dispatched to your number._`;
+      `_Payments are automatically verified via KCB Buni API and instant SMS receipts are dispatched to your number._`;
 
     return {
       to: senderPhone,
@@ -1105,8 +1103,8 @@ export class WhatsAppService {
       totalBilled: 0,
       totalPaid: 0,
       balance: 0,
-      paystackUrl: `https://pay.smartshule.ac.ke/pay/${student.admissionNumber}`,
-      stanbicAccount: `0100012345678 (Ref: ${student.admissionNumber})`,
+      paymentUrl: `https://pay.smartshule.ac.ke/pay/${student.admissionNumber}`,
+      kcbAccount: `522123 (Ref: ${student.admissionNumber})`,
       dueDate: '2026-01-31',
     };
 

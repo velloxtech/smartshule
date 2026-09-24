@@ -54,13 +54,6 @@ export const RecordPaymentSchema = z.object({
   notes: z.string().optional()
 });
 
-export const PaystackInitSchema = z.object({
-  invoiceId: z.string().min(1),
-  amount: z.number().positive().optional(),
-  email: z.string().email().optional(),
-  callbackUrl: z.string().url().optional()
-});
-
 export const MpesaStkPushSchema = z.object({
   invoiceId: z.string().min(1),
   phoneNumber: z.string().regex(/^2547\d{8}$|^2541\d{8}$/, 'Must be valid phone format: 2547XXXXXXXX or 2541XXXXXXXX')
@@ -255,49 +248,6 @@ export class FinanceController {
         req.user
       );
       return res.status(200).json({ success: true, data: summary });
-    } catch (err) {
-      next(err);
-    }
-  };
-
-  // ==========================================
-  // PAYSTACK INTEGRATION (BANK TRANSFER / CARD)
-  // ==========================================
-  public initiatePaystack = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    try {
-      const result = await this.feeUseCases.initializePaystackPayment({
-        ...req.body,
-        requestingUser: req.user
-      });
-      return res.status(200).json({
-        success: true,
-        message: 'Paystack checkout session created',
-        data: result
-      });
-    } catch (err) {
-      next(err);
-    }
-  };
-
-  public verifyPaystack = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    try {
-      const { reference } = req.params;
-      const result = await this.feeUseCases.verifyPaystackPayment(reference as string);
-      return res.status(200).json({
-        success: true,
-        message: 'Payment verification completed',
-        data: result
-      });
-    } catch (err) {
-      next(err);
-    }
-  };
-
-  public paystackWebhook = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const signature = req.headers['x-paystack-signature'] as string;
-      const result = await this.feeUseCases.handlePaystackWebhook(req.body, signature);
-      return res.status(200).json({ status: 'ok', data: result });
     } catch (err) {
       next(err);
     }
