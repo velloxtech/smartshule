@@ -3,7 +3,7 @@ import { createExpressApp } from '../../src/infrastructure/http/app';
 import { AppContainer } from '../../src/infrastructure/container';
 import { UserRole } from '../../src/core/domain/user/User';
 import { Student, StudentGender, CbcGradeLevel, StudentStatus } from '../../src/core/domain/user/Student';
-import { setupTestFixtures } from '../helpers/testFixtures';
+import { setupTestFixtures, setupTestRoleAccounts } from '../helpers/testFixtures';
 
 describe('Access Controls, 8 Role Accounts & Lesson Plan Approvals', () => {
   let app: any;
@@ -22,8 +22,8 @@ describe('Access Controls, 8 Role Accounts & Lesson Plan Approvals', () => {
   beforeAll(async () => {
     container = new AppContainer();
     await setupTestFixtures(container);
-    // Ensure all 8 default role accounts exist
-    await container.ensureRoleAccounts();
+    // Ensure all 8 test role accounts exist
+    await setupTestRoleAccounts(container);
     app = createExpressApp(container);
 
     // 1. Super Admin

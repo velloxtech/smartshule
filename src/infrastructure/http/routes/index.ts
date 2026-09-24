@@ -21,7 +21,9 @@ import {
 import {
   StudentController,
   RegisterStudentSchema,
-  UpdateStudentSchema
+  UpdateStudentSchema,
+  PromoteStudentSchema,
+  BulkPromoteStudentsSchema
 } from '../controllers/StudentController';
 
 import {
@@ -81,6 +83,9 @@ import {
   RecordPaymentSchema,
   PaystackInitSchema,
   MpesaStkPushSchema,
+  KcbBuniStkPushSchema,
+  KcbBuniValidationSchema,
+  KcbBuniConfirmationSchema,
   RecordExpenseSchema,
   UpdateExpenseStatusSchema,
   RecordOtherIncomeSchema
@@ -193,13 +198,15 @@ export function createApiRouter(container: AppContainer): Router {
   // 3. STUDENT & GUARDIAN ROUTES
   // ==========================================
   const studentRouter = Router();
-  studentRouter.post('/', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), validateBody(RegisterStudentSchema), studentController.registerStudent);
+  studentRouter.post('/', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.ADMISSIONS), validateBody(RegisterStudentSchema), studentController.registerStudent);
+  studentRouter.post('/promote-bulk', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.ADMISSIONS), validateBody(BulkPromoteStudentsSchema), studentController.promoteStudentsBulk);
+  studentRouter.post('/:id/promote', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.ADMISSIONS), validateBody(PromoteStudentSchema), studentController.promoteStudent);
   studentRouter.get('/guardian/me', authMiddleware, studentController.getGuardianPortalData);
   studentRouter.get('/', authMiddleware, studentController.listStudents);
   studentRouter.get('/:id', authMiddleware, studentController.getStudentById);
-  studentRouter.put('/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), validateBody(UpdateStudentSchema), studentController.updateStudent);
-  studentRouter.delete('/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), studentController.deleteStudent);
-  studentRouter.post('/link-guardian', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN), studentController.linkGuardian);
+  studentRouter.put('/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.ADMISSIONS), validateBody(UpdateStudentSchema), studentController.updateStudent);
+  studentRouter.delete('/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), studentController.deleteStudent);
+  studentRouter.post('/link-guardian', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN), studentController.linkGuardian);
   router.use('/students', studentRouter);
 
   // ==========================================
@@ -299,6 +306,14 @@ export function createApiRouter(container: AppContainer): Router {
   financeRouter.get('/payments', authMiddleware, financeController.listPayments); // Parent isolated
   financeRouter.get('/statements/:studentId', authMiddleware, financeController.getFeeStatement); // Parent isolated
   financeRouter.get('/defaulters', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT, UserRole.HEAD_TEACHER), financeController.getDefaulters);
+  // KCB Buni Developer API Platform Integration
+  financeRouter.post('/kcb-buni/stk-push', authMiddleware, validateBody(KcbBuniStkPushSchema), financeController.initiateKcbBuniStk);
+  financeRouter.post('/kcb-buni/callback', financeController.kcbBuniCallback);
+  financeRouter.post('/kcb-buni/validate', validateBody(KcbBuniValidationSchema), financeController.validateKcbBuniBill);
+  financeRouter.post('/kcb-buni/confirm', validateBody(KcbBuniConfirmationSchema), financeController.confirmKcbBuniBill);
+  financeRouter.get('/kcb-buni/status/:checkoutRequestId', authMiddleware, financeController.queryKcbBuniStatus);
+  financeRouter.get('/kcb-buni/config', financeController.getKcbBuniConfig);
+
   // Paystack Bank & Card Rails
   financeRouter.post('/paystack/initialize', authMiddleware, validateBody(PaystackInitSchema), financeController.initiatePaystack);
   financeRouter.get('/paystack/verify/:reference', authMiddleware, financeController.verifyPaystack);

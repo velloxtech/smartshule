@@ -14,7 +14,14 @@ import {
   IPaymentGateway,
   IPaystackGateway,
   INotificationService,
-  MpesaCallbackData
+  MpesaCallbackData,
+  IKcbBuniPaymentGateway,
+  KcbBuniStkPushRequest,
+  KcbBuniStkPushResponse,
+  KcbBuniCallbackData,
+  KcbBuniBillValidationRequest,
+  KcbBuniBillValidationResponse,
+  KcbBuniBillConfirmationRequest
 } from '../../core/ports/services/IExternalServices';
 import {
   FeeStructure,
@@ -103,6 +110,14 @@ export interface StkPushPaymentDTO {
   phoneNumber: string; // 2547XXXXXXXX
 }
 
+export interface KcbBuniStkDTO {
+  invoiceId: string;
+  phoneNumber: string; // 2547XXXXXXXX or 07XXXXXXXX
+  amount?: number;
+  description?: string;
+  callbackUrl?: string;
+}
+
 export interface PaystackInitDTO {
   invoiceId: string;
   amount?: number;
@@ -122,6 +137,14 @@ export interface UserContext {
 
 export class FeeUseCases {
   private readonly paystack: IPaystackGateway;
+  private readonly kcbBuniGateway: IKcbBuniPaymentGateway;
+  private readonly pendingKcbTransactions = new Map<string, {
+    invoiceId: string;
+    studentId: string;
+    admissionNumber: string;
+    amount: number;
+    initiatedAt: Date;
+  }>();
 
   constructor(
     private readonly feeRepository: IFeeRepository,
@@ -131,9 +154,11 @@ export class FeeUseCases {
     private readonly paymentGateway: IPaymentGateway,
     private readonly notificationService: INotificationService,
     paystackGateway?: IPaystackGateway,
-    private readonly academicRepository?: IAcademicRepository
+    private readonly academicRepository?: IAcademicRepository,
+    kcbBuniGateway?: IKcbBuniPaymentGateway
   ) {
     this.paystack = paystackGateway || (paymentGateway as any);
+    this.kcbBuniGateway = kcbBuniGateway || (paymentGateway as any);
   }
 
   // 1. Fee Structure
@@ -179,6 +204,27 @@ export class FeeUseCases {
         throw new NotFoundError(`Fee structure for grade ${student.gradeLevel}, term ${dto.termId}`);
       }
 
+      // Check for previous unpaid balances to carry forward
+      const priorInvoices = await this.feeRepository.findInvoices({ studentId: student.id });
+      const unpaidPriorInvoices = priorInvoices.filter(
+        inv => inv.status !== InvoiceStatus.CARRIED_FORWARD &&
+               inv.balance > 0 &&
+               !(inv.termId === dto.termId && inv.academicYearId === dto.academicYearId)
+      );
+      const carriedForwardBalance = unpaidPriorInvoices.reduce((sum, inv) => sum + inv.balance, 0);
+
+      const invoiceItems = [...feeStructure.items];
+      if (carriedForwardBalance > 0) {
+        invoiceItems.push({
+          id: IdGenerator.generate(),
+          name: 'Arrears / Previous Balance Carried Forward',
+          amount: carriedForwardBalance,
+          category: 'OTHER',
+          isOptional: false
+        });
+      }
+
+      const totalAmount = feeStructure.totalAmount + carriedForwardBalance;
       const invoiceNumber = `INV-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
       const invoice = StudentInvoice.create(
         {
@@ -188,12 +234,12 @@ export class FeeUseCases {
           academicYearId: dto.academicYearId,
           termId: dto.termId,
           invoiceNumber,
-          items: feeStructure.items,
-          amountBilled: feeStructure.totalAmount,
+          items: invoiceItems,
+          amountBilled: totalAmount,
           discountAmount: 0,
-          amountPayable: feeStructure.totalAmount,
+          amountPayable: totalAmount,
           amountPaid: 0,
-          balance: feeStructure.totalAmount,
+          balance: totalAmount,
           status: InvoiceStatus.UNPAID,
           dueDate: feeStructure.dueDate
         },
@@ -201,6 +247,14 @@ export class FeeUseCases {
       );
 
       await this.feeRepository.saveInvoice(invoice);
+
+      if (carriedForwardBalance > 0) {
+        for (const prevInv of unpaidPriorInvoices) {
+          prevInv.markCarriedForward();
+          await this.feeRepository.updateInvoice(prevInv);
+        }
+      }
+
       generatedInvoices.push(invoice.toJSON());
     } else {
       // Case 2: Batch generation for all students in grade
@@ -222,6 +276,27 @@ export class FeeUseCases {
 
         if (existingInvoices.length > 0) continue;
 
+        // Check for previous unpaid balances to carry forward
+        const priorInvoices = await this.feeRepository.findInvoices({ studentId: student.id });
+        const unpaidPriorInvoices = priorInvoices.filter(
+          inv => inv.status !== InvoiceStatus.CARRIED_FORWARD &&
+                 inv.balance > 0 &&
+                 !(inv.termId === dto.termId && inv.academicYearId === dto.academicYearId)
+        );
+        const carriedForwardBalance = unpaidPriorInvoices.reduce((sum, inv) => sum + inv.balance, 0);
+
+        const invoiceItems = [...feeStructure.items];
+        if (carriedForwardBalance > 0) {
+          invoiceItems.push({
+            id: IdGenerator.generate(),
+            name: 'Arrears / Previous Balance Carried Forward',
+            amount: carriedForwardBalance,
+            category: 'OTHER',
+            isOptional: false
+          });
+        }
+
+        const totalAmount = feeStructure.totalAmount + carriedForwardBalance;
         const invoiceNumber = `INV-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
         const invoice = StudentInvoice.create(
           {
@@ -231,12 +306,12 @@ export class FeeUseCases {
             academicYearId: dto.academicYearId,
             termId: dto.termId,
             invoiceNumber,
-            items: feeStructure.items,
-            amountBilled: feeStructure.totalAmount,
+            items: invoiceItems,
+            amountBilled: totalAmount,
             discountAmount: 0,
-            amountPayable: feeStructure.totalAmount,
+            amountPayable: totalAmount,
             amountPaid: 0,
-            balance: feeStructure.totalAmount,
+            balance: totalAmount,
             status: InvoiceStatus.UNPAID,
             dueDate: feeStructure.dueDate
           },
@@ -244,6 +319,14 @@ export class FeeUseCases {
         );
 
         await this.feeRepository.saveInvoice(invoice);
+
+        if (carriedForwardBalance > 0) {
+          for (const prevInv of unpaidPriorInvoices) {
+            prevInv.markCarriedForward();
+            await this.feeRepository.updateInvoice(prevInv);
+          }
+        }
+
         generatedInvoices.push(invoice.toJSON());
       }
     }
@@ -312,7 +395,7 @@ export class FeeUseCases {
         const tuitionAmount = isJSS ? 25000 : (isUpperPrimary ? 18000 : (isLowerPrimary ? 15000 : 12000));
         const assessmentAmount = isJSS ? 6000 : (isUpperPrimary ? 4000 : 3000);
         const activityAmount = isJSS ? 2500 : 2000;
-        const lunchAmount = isJSS ? 8500 : 6000;
+        const admissionAmount = isJSS ? 5000 : 3500;
 
         const defaultItems = [
           {
@@ -338,9 +421,9 @@ export class FeeUseCases {
           },
           {
             id: IdGenerator.generate(),
-            name: 'Hot Lunch Programme',
-            amount: lunchAmount,
-            category: 'MEALS' as const,
+            name: 'Admission Fee',
+            amount: admissionAmount,
+            category: 'ADMISSION' as const,
             isOptional: false
           }
         ];
@@ -363,21 +446,45 @@ export class FeeUseCases {
 
       const invoiceNumber = `INV-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
       const dueDate = feeStructure.dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const targetYear = feeStructure.academicYearId || academicYearId;
+      const targetTerm = feeStructure.termId || termId;
+
+      // Check for previous unpaid balances to carry forward
+      const priorInvoices = await this.feeRepository.findInvoices({ studentId: student.id });
+      const unpaidPriorInvoices = priorInvoices.filter(
+        inv => inv.status !== InvoiceStatus.CARRIED_FORWARD &&
+               inv.balance > 0 &&
+               !(inv.termId === targetTerm && inv.academicYearId === targetYear)
+      );
+      const carriedForwardBalance = unpaidPriorInvoices.reduce((sum, inv) => sum + inv.balance, 0);
+
+      const invoiceItems = [...feeStructure.items];
+      if (carriedForwardBalance > 0) {
+        invoiceItems.push({
+          id: IdGenerator.generate(),
+          name: 'Arrears / Previous Balance Carried Forward',
+          amount: carriedForwardBalance,
+          category: 'OTHER',
+          isOptional: false
+        });
+      }
+
+      const totalAmount = feeStructure.totalAmount + carriedForwardBalance;
 
       const invoice = StudentInvoice.create(
         {
           schoolId: student.schoolId,
           studentId: student.id,
           feeStructureId: feeStructure.id,
-          academicYearId: feeStructure.academicYearId || academicYearId,
-          termId: feeStructure.termId || termId,
+          academicYearId: targetYear,
+          termId: targetTerm,
           invoiceNumber,
-          items: feeStructure.items,
-          amountBilled: feeStructure.totalAmount,
+          items: invoiceItems,
+          amountBilled: totalAmount,
           discountAmount: 0,
-          amountPayable: feeStructure.totalAmount,
+          amountPayable: totalAmount,
           amountPaid: 0,
-          balance: feeStructure.totalAmount,
+          balance: totalAmount,
           status: InvoiceStatus.UNPAID,
           dueDate
         },
@@ -385,13 +492,21 @@ export class FeeUseCases {
       );
 
       await this.feeRepository.saveInvoice(invoice);
+
+      if (carriedForwardBalance > 0) {
+        for (const prevInv of unpaidPriorInvoices) {
+          prevInv.markCarriedForward();
+          await this.feeRepository.updateInvoice(prevInv);
+        }
+      }
+
       createdInvoices.push(invoice.toJSON());
       syncedStudents.push({
         studentId: student.id,
         studentName: `${student.firstName} ${student.lastName}`,
         admissionNumber: student.admissionNumber,
         gradeLevel: student.gradeLevel,
-        amountBilled: feeStructure.totalAmount,
+        amountBilled: totalAmount,
         invoiceNumber
       });
     }
@@ -459,46 +574,334 @@ export class FeeUseCases {
     };
   }
 
-  // 4. M-Pesa STK Push
-  public async initiateMpesaStk(dto: StkPushPaymentDTO) {
+  // 4. KCB Buni M-Pesa Express STK Push
+  public async initiateKcbBuniStkPush(dto: KcbBuniStkDTO) {
     const invoice = await this.feeRepository.findInvoiceById(dto.invoiceId);
     if (!invoice) throw new NotFoundError('Invoice', dto.invoiceId);
 
     const student = await this.studentRepository.findById(invoice.studentId);
     const admission = student ? student.admissionNumber : 'UNKNOWN';
 
-    const stkResponse = await this.paymentGateway.initiateStkPush({
+    const payAmount = dto.amount && dto.amount > 0 ? dto.amount : invoice.balance;
+    if (payAmount <= 0) {
+      throw new ValidationError('Invoice balance is already settled');
+    }
+
+    const stkResponse = await this.kcbBuniGateway.initiateKcbBuniStk({
       phoneNumber: dto.phoneNumber,
-      amount: invoice.balance,
-      invoiceId: invoice.id,
+      amount: payAmount,
+      invoiceNumber: invoice.invoiceNumber,
       studentAdmission: admission,
-      description: `SmartShule Fees - ${admission}`
+      description: dto.description || `Fees - ${admission}`,
+      callbackUrl: dto.callbackUrl
     });
+
+    if (stkResponse.checkoutRequestId) {
+      this.pendingKcbTransactions.set(stkResponse.checkoutRequestId, {
+        invoiceId: invoice.id,
+        studentId: invoice.studentId,
+        admissionNumber: admission,
+        amount: payAmount,
+        initiatedAt: new Date()
+      });
+    }
 
     return {
       invoiceId: invoice.id,
+      invoiceNumber: invoice.invoiceNumber,
+      studentAdmission: admission,
+      studentName: student ? student.fullName : 'Learner',
+      amount: payAmount,
       ...stkResponse
     };
   }
 
-  // 5. M-Pesa Webhook Callback
-  public async handleMpesaCallback(payload: unknown) {
-    const callbackData: MpesaCallbackData = await this.paymentGateway.processCallback(payload);
+  // Legacy M-Pesa STK alias pointing to KCB Buni API
+  public async initiateMpesaStk(dto: StkPushPaymentDTO) {
+    return this.initiateKcbBuniStkPush({
+      invoiceId: dto.invoiceId,
+      phoneNumber: dto.phoneNumber
+    });
+  }
+
+  // 5. KCB Buni Webhook Callback Handler
+  public async handleKcbBuniCallback(payload: unknown) {
+    const callbackData: KcbBuniCallbackData = await this.kcbBuniGateway.processCallback(payload);
 
     if (callbackData.resultCode === 0 && callbackData.amount && callbackData.mpesaReceiptNumber) {
-      // Find matching invoice via reference or pending tracker
-      // In production, checkoutRequestId is matched with stored pending transaction
+      // Check idempotency
+      const existingPayment = await this.feeRepository.findPaymentByReference(callbackData.mpesaReceiptNumber);
+      if (existingPayment) {
+        return {
+          status: 'SUCCESS',
+          alreadyProcessed: true,
+          receiptNumber: callbackData.mpesaReceiptNumber,
+          amount: callbackData.amount,
+          message: 'Payment already recorded previously.'
+        };
+      }
+
+      // Match invoice from pending transaction or unpaid invoices
+      const pending = this.pendingKcbTransactions.get(callbackData.checkoutRequestId);
+      let invoice: StudentInvoice | null = null;
+      if (pending) {
+        invoice = await this.feeRepository.findInvoiceById(pending.invoiceId);
+      }
+      if (!invoice) {
+        const allInvoices = await this.feeRepository.findInvoices({});
+        invoice = allInvoices.find(i => i.balance > 0) || allInvoices[0];
+      }
+
+      const paidAmount = callbackData.amount;
+      const receiptNumber = `REC-KCB-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
+
+      const payment = Payment.create(
+        {
+          schoolId: invoice ? invoice.schoolId : 'default',
+          invoiceId: invoice ? invoice.id : 'unknown',
+          studentId: invoice ? invoice.studentId : (pending ? pending.studentId : 'unknown'),
+          receiptNumber,
+          amount: paidAmount,
+          paymentMethod: PaymentMethod.KCB_BUNI,
+          transactionReference: callbackData.mpesaReceiptNumber,
+          mpesaPhoneNumber: callbackData.phoneNumber,
+          paymentDate: callbackData.transactionDate
+            ? callbackData.transactionDate.split('T')[0]
+            : new Date().toISOString().split('T')[0],
+          recordedByUserId: 'usr-kcb-buni-gateway',
+          status: PaymentStatus.COMPLETED,
+          notes: `KCB Buni M-Pesa Express. CheckoutReq: ${callbackData.checkoutRequestId}`
+        },
+        IdGenerator.generate()
+      );
+
+      if (invoice) {
+        invoice.recordPayment(paidAmount);
+        await this.feeRepository.updateInvoice(invoice);
+      }
+      await this.feeRepository.savePayment(payment);
+      this.pendingKcbTransactions.delete(callbackData.checkoutRequestId);
+
+      if (invoice) {
+        const student = await this.studentRepository.findById(invoice.studentId);
+        if (student) {
+          const guardians = await this.guardianRepository.findByStudentId(student.id);
+          for (const g of guardians) {
+            const u = await this.userRepository.findById(g.userId);
+            if (u && u.phone) {
+              await this.notificationService.sendSms(
+                u.phone,
+                `SmartShule KCB Buni: Received KES ${paidAmount} for ${student.fullName} (Adm: ${student.admissionNumber}). Receipt #${receiptNumber} (Ref: ${callbackData.mpesaReceiptNumber}). Balance: KES ${invoice.balance}.`
+              );
+            }
+          }
+        }
+      }
+
       return {
         status: 'SUCCESS',
         receiptNumber: callbackData.mpesaReceiptNumber,
-        amount: callbackData.amount,
-        message: 'Payment processed successfully via M-Pesa'
+        amount: paidAmount,
+        invoiceId: invoice ? invoice.id : undefined,
+        message: 'Payment processed successfully via KCB Buni Gateway'
       };
     }
 
     return {
       status: 'FAILED',
+      resultCode: callbackData.resultCode,
       resultDesc: callbackData.resultDesc
+    };
+  }
+
+  // Legacy M-Pesa Callback alias
+  public async handleMpesaCallback(payload: unknown) {
+    return this.handleKcbBuniCallback(payload);
+  }
+
+  // 6. KCB Buni Bill Validation (C2B / Paybill 522123 Account Validation)
+  public async validateKcbBuniBillPayment(dto: KcbBuniBillValidationRequest): Promise<KcbBuniBillValidationResponse> {
+    const billRef = (dto.billReferenceNumber || '').trim();
+    if (!billRef) {
+      return {
+        resultCode: 'C2B00012',
+        resultDesc: 'Invalid Account Number: Student admission number is required.'
+      };
+    }
+
+    let student = await this.studentRepository.findByAdmissionNumber(billRef);
+    if (!student) {
+      const allStudents = await this.studentRepository.findAll();
+      student = allStudents.find(
+        s => s.admissionNumber.toLowerCase() === billRef.toLowerCase()
+      ) || null;
+    }
+
+    if (!student) {
+      return {
+        resultCode: 'C2B00012',
+        resultDesc: `Validation Failed: No student found with admission number ${billRef}`
+      };
+    }
+
+    const invoices = await this.feeRepository.findInvoices({ studentId: student.id });
+    const balance = invoices.reduce((sum, inv) => sum + inv.balance, 0);
+
+    return {
+      resultCode: '0',
+      resultDesc: 'Validation Successful',
+      studentName: student.fullName,
+      currentBalance: balance
+    };
+  }
+
+  // 7. KCB Buni Bill Confirmation (C2B / Paybill 522123 Confirmation)
+  public async confirmKcbBuniBillPayment(dto: KcbBuniBillConfirmationRequest) {
+    const billRef = (dto.billReferenceNumber || '').trim();
+    let student = await this.studentRepository.findByAdmissionNumber(billRef);
+    if (!student) {
+      const allStudents = await this.studentRepository.findAll();
+      student = allStudents.find(
+        s => s.admissionNumber.toLowerCase() === billRef.toLowerCase()
+      ) || null;
+    }
+
+    if (!student) {
+      throw new NotFoundError('Student with admission number', billRef);
+    }
+
+    // Check for idempotency
+    const existingPayment = await this.feeRepository.findPaymentByReference(dto.transactionId);
+    if (existingPayment) {
+      return {
+        resultCode: '0',
+        resultDesc: 'Payment already confirmed previously',
+        paymentId: existingPayment.id,
+        receiptNumber: existingPayment.receiptNumber
+      };
+    }
+
+    const invoices = await this.feeRepository.findInvoices({ studentId: student.id });
+    const unpaidInvoices = invoices.filter(inv => inv.balance > 0);
+
+    let remainingAmount = dto.transactionAmount;
+    const receiptNumber = `REC-KCB-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
+    const primaryInvoiceId = unpaidInvoices.length > 0 ? unpaidInvoices[0].id : (invoices[0]?.id || 'unknown');
+
+    for (const inv of unpaidInvoices) {
+      if (remainingAmount <= 0) break;
+      const toApply = Math.min(inv.balance, remainingAmount);
+      inv.recordPayment(toApply);
+      await this.feeRepository.updateInvoice(inv);
+      remainingAmount -= toApply;
+    }
+
+    const payment = Payment.create(
+      {
+        schoolId: student.schoolId,
+        invoiceId: primaryInvoiceId,
+        studentId: student.id,
+        receiptNumber,
+        amount: dto.transactionAmount,
+        paymentMethod: PaymentMethod.KCB_BUNI,
+        transactionReference: dto.transactionId,
+        mpesaPhoneNumber: dto.phoneNumber,
+        paymentDate: dto.transactionTime
+          ? dto.transactionTime.split('T')[0]
+          : new Date().toISOString().split('T')[0],
+        recordedByUserId: 'usr-kcb-buni-c2b',
+        status: PaymentStatus.COMPLETED,
+        notes: `KCB Buni Paybill 522123 Confirmation. Channel: ${dto.channel || 'KCB_APP'}. Sender: ${dto.senderName || 'Parent'}`
+      },
+      IdGenerator.generate()
+    );
+
+    await this.feeRepository.savePayment(payment);
+
+    // Send SMS receipt confirmation to guardians
+    const guardians = await this.guardianRepository.findByStudentId(student.id);
+    for (const g of guardians) {
+      const u = await this.userRepository.findById(g.userId);
+      if (u && u.phone) {
+        await this.notificationService.sendSms(
+          u.phone,
+          `SmartShule KCB Bank: Received KES ${dto.transactionAmount} for ${student.fullName} (Adm: ${student.admissionNumber}) via KCB Paybill 522123. Ref: ${dto.transactionId}. Receipt #${receiptNumber}.`
+        );
+      }
+    }
+
+    return {
+      resultCode: '0',
+      resultDesc: 'Payment confirmed successfully',
+      paymentId: payment.id,
+      receiptNumber,
+      studentId: student.id
+    };
+  }
+
+  // 8. Query Transaction Status via KCB Buni API
+  public async queryKcbBuniStatus(checkoutRequestId: string) {
+    const statusResult = await this.kcbBuniGateway.queryTransactionStatus(checkoutRequestId);
+
+    // Settle pending transaction if confirmed successful and not yet recorded
+    if (statusResult.success && statusResult.receiptNumber) {
+      const pending = this.pendingKcbTransactions.get(checkoutRequestId);
+      const existingPayment = await this.feeRepository.findPaymentByReference(statusResult.receiptNumber);
+
+      if (pending && !existingPayment) {
+        const invoice = await this.feeRepository.findInvoiceById(pending.invoiceId);
+        const receiptNumber = `REC-KCB-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
+
+        const payment = Payment.create(
+          {
+            schoolId: invoice ? invoice.schoolId : 'default',
+            invoiceId: pending.invoiceId,
+            studentId: pending.studentId,
+            receiptNumber,
+            amount: pending.amount,
+            paymentMethod: PaymentMethod.KCB_BUNI,
+            transactionReference: statusResult.receiptNumber,
+            paymentDate: new Date().toISOString().split('T')[0],
+            recordedByUserId: 'usr-kcb-buni-status-query',
+            status: PaymentStatus.COMPLETED,
+            notes: `KCB Buni Status Query Confirmation. CheckoutReq: ${checkoutRequestId}`
+          },
+          IdGenerator.generate()
+        );
+
+        if (invoice) {
+          invoice.recordPayment(pending.amount);
+          await this.feeRepository.updateInvoice(invoice);
+        }
+        await this.feeRepository.savePayment(payment);
+        this.pendingKcbTransactions.delete(checkoutRequestId);
+      }
+    }
+
+    return statusResult;
+  }
+
+  // 9. KCB Buni Configuration for Client Portal
+  public getKcbBuniConfig() {
+    return {
+      gateway: 'KCB_BUNI',
+      bankName: 'KCB Bank Kenya',
+      paybillNumber: this.kcbBuniGateway.getShortCode ? this.kcbBuniGateway.getShortCode() : '522123',
+      accountNumberFormat: 'Student Admission Number (e.g. ADM-2026-001)',
+      supportedChannels: ['KCB_BUNI_STK', 'MPESA_PAYBILL_522123', 'KCB_APP', 'VOOMA', 'BANK_TRANSFER'],
+      instructions: {
+        mpesaPaybill: {
+          paybill: this.kcbBuniGateway.getShortCode ? this.kcbBuniGateway.getShortCode() : '522123',
+          accountPrompt: 'Enter Student Admission Number',
+          description: 'Go to M-Pesa -> Lipa na M-Pesa -> Paybill -> Business No: 522123 -> Account: Student Admission Number'
+        },
+        kcbApp: {
+          description: 'Pay via KCB App / Vooma -> Paybill 522123 -> Student Admission Number'
+        },
+        stkPush: {
+          description: 'Direct STK Push prompt to your phone via KCB Buni API'
+        }
+      }
     };
   }
 
@@ -601,7 +1004,14 @@ export class FeeUseCases {
     const invoices = await this.feeRepository.findInvoices({ studentId });
     const payments = await this.feeRepository.findPayments({ studentId });
 
-    const totalBilled = invoices.reduce((sum, inv) => sum + inv.amountPayable, 0);
+    const totalBilled = invoices.reduce((sum, inv) => {
+      const arrearsAmount = inv.items
+        ? inv.items
+            .filter(item => item.name.toLowerCase().includes('carried forward') || item.name.toLowerCase().includes('arrears'))
+            .reduce((s, it) => s + it.amount, 0)
+        : 0;
+      return sum + (inv.amountPayable - arrearsAmount);
+    }, 0);
     const totalPaid = payments
       .filter(p => p.status === PaymentStatus.COMPLETED)
       .reduce((sum, p) => sum + p.amount, 0);
@@ -627,7 +1037,7 @@ export class FeeUseCases {
     }
 
     const invoices = await this.feeRepository.findInvoices({ schoolId });
-    const defaulterInvoices = invoices.filter(i => i.balance >= minBalance);
+    const defaulterInvoices = invoices.filter(i => i.balance >= minBalance && i.status !== InvoiceStatus.CARRIED_FORWARD);
 
     const totalInvoiced = invoices.reduce((sum, inv) => sum + inv.amountPayable, 0);
     const totalCollected = invoices.reduce((sum, inv) => sum + inv.amountPaid, 0);

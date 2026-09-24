@@ -44,7 +44,7 @@ import RecordsOfWorkView from './components/views/RecordsOfWorkView';
 
 // Modals
 import { MpesaStkModal } from './components/modals/MpesaStkModal';
-import { PaystackCheckoutModal } from './components/modals/PaystackCheckoutModal';
+import { KcbBuniPaymentModal } from './components/modals/KcbBuniPaymentModal';
 import { CBCFormativeModal } from './components/modals/CBCFormativeModal';
 import { AdmitLearnerModal } from './components/modals/AdmitLearnerModal';
 import { SendSmsModal } from './components/modals/SendSmsModal';
@@ -753,6 +753,7 @@ export default function App() {
                     <ParentDashboardView
                       onOpenMpesaWithStudent={(student) => handleOpenPaystack(student)}
                       onOpenPaystackWithStudent={(student) => handleOpenPaystack(student)}
+                      onOpenKcbBuniWithStudent={(student) => handleOpenPaystack(student)}
                       onViewReportCard={(student) => handleViewReportCard(student)}
                       onNavigateTab={(tab) => setCurrentTab(tab as any)}
                     />
@@ -952,7 +953,7 @@ export default function App() {
         onTeacherCreated={handleTeacherCreated}
       />
 
-      <PaystackCheckoutModal
+      <KcbBuniPaymentModal
         isOpen={paystackModalOpen}
         onClose={() => setPaystackModalOpen(false)}
         students={students}
@@ -965,7 +966,7 @@ export default function App() {
             admNo: tx.admNo,
             grade: 'Grade Level',
             amount: tx.amount,
-            channel: tx.channel || 'Paystack Bank',
+            channel: tx.channel || 'KCB Buni Paybill 522123',
             phone: '+254700000000',
             timestamp: 'Just now',
             status: 'Completed',

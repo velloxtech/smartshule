@@ -132,12 +132,12 @@ export const MpesaStkModal: React.FC<MpesaStkModalProps> = ({
         {/* Modal Header */}
         <div className="bg-[#7a1228] text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-[#006a63] flex items-center justify-center text-white font-bold shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-[#006a40] flex items-center justify-center text-white font-bold shrink-0">
               <span className="material-symbols-outlined text-[24px]">point_of_sale</span>
             </div>
             <div>
-              <h3 className="font-semibold text-base leading-tight">M-Pesa STK Push Collection</h3>
-              <p className="text-xs text-rose-100">Safaricom Daraja API v2.0 · Paybill 891230</p>
+              <h3 className="font-semibold text-base leading-tight">KCB Buni M-Pesa Express</h3>
+              <p className="text-xs text-rose-100">KCB Bank Kenya API Platform · Paybill 522123</p>
             </div>
           </div>
           <button
@@ -212,9 +212,9 @@ export const MpesaStkModal: React.FC<MpesaStkModalProps> = ({
               <div className="p-3 bg-secondary-container/40 rounded-xl flex items-center justify-between text-xs text-on-secondary-container">
                 <span className="flex items-center gap-1.5 font-medium">
                   <span className="w-2 h-2 rounded-full bg-secondary"></span>
-                  Paybill Account:
+                  KCB Paybill 522123 Account:
                 </span>
-                <span className="font-data-mono font-bold">GSA-{currentStudent?.admNo}</span>
+                <span className="font-data-mono font-bold">{currentStudent?.admNo}</span>
               </div>
 
               <div className="pt-2 flex items-center justify-end gap-2">
@@ -242,9 +242,9 @@ export const MpesaStkModal: React.FC<MpesaStkModalProps> = ({
                 <span className="material-symbols-outlined text-[32px]">sync</span>
               </div>
               <div>
-                <div className="text-base font-bold text-on-surface">Connecting to Safaricom Daraja...</div>
+                <div className="text-base font-bold text-on-surface">Connecting to KCB Buni API Platform...</div>
                 <p className="text-xs text-on-surface-variant mt-1">
-                  Dispatching USSD Push payload to {phone}
+                  Dispatching M-Pesa Express push prompt to {phone} via KCB Paybill 522123
                 </p>
               </div>
             </div>

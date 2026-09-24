@@ -19,7 +19,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
   const [tuition, setTuition] = useState('');
   const [assessment, setAssessment] = useState('');
   const [activity, setActivity] = useState('');
-  const [lunch, setLunch] = useState('');
+  const [admissionFee, setAdmissionFee] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -93,7 +93,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
       { name: 'Tuition Fee', amount: Number(tuition), isOptional: false, category: 'TUITION' as const },
       { name: 'CBC Assessment & Science Kits', amount: Number(assessment), isOptional: false, category: 'ASSESSMENT' as const },
       { name: 'Activity & Co-Curricular Levy', amount: Number(activity), isOptional: false, category: 'ACTIVITY' as const },
-      { name: 'Hot Lunch Programme', amount: Number(lunch), isOptional: true, category: 'MEALS' as const },
+      { name: 'Admission Fee', amount: Number(admissionFee), isOptional: false, category: 'ADMISSION' as const },
     ].filter((item) => item.amount > 0);
 
     if (items.length === 0) {
@@ -290,12 +290,12 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
                 />
               </div>
               <div>
-                <label className="block text-[11px] text-on-surface-variant mb-0.5">Lunch / Meals</label>
+                <label className="block text-[11px] text-on-surface-variant mb-0.5">Admission Fee (KES)</label>
                 <input
                   type="number"
                   placeholder="0"
-                  value={lunch}
-                  onChange={(e) => setLunch(e.target.value)}
+                  value={admissionFee}
+                  onChange={(e) => setAdmissionFee(e.target.value)}
                   className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2 text-xs font-data-mono"
                 />
               </div>

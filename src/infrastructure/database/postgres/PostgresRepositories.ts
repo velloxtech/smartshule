@@ -1411,7 +1411,7 @@ export class PostgresFeeRepository implements IFeeRepository {
   public async saveInvoice(inv: StudentInvoice): Promise<void> {
     const q = `INSERT INTO student_invoices (id, school_id, student_id, fee_structure_id, academic_year_id, term_id, invoice_number, items, amount_billed, discount_amount, amount_payable, amount_paid, balance, status, due_date, created_at, updated_at)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
-               ON CONFLICT (id) DO UPDATE SET amount_paid = EXCLUDED.amount_paid, balance = EXCLUDED.balance, status = EXCLUDED.status, updated_at = NOW()`;
+               ON CONFLICT (id) DO UPDATE SET items = EXCLUDED.items, amount_billed = EXCLUDED.amount_billed, discount_amount = EXCLUDED.discount_amount, amount_payable = EXCLUDED.amount_payable, amount_paid = EXCLUDED.amount_paid, balance = EXCLUDED.balance, status = EXCLUDED.status, updated_at = NOW()`;
     await this.pool.query(q, [inv.id, inv.schoolId, inv.studentId, inv.feeStructureId, inv.academicYearId, inv.termId, inv.invoiceNumber, JSON.stringify(inv.items), inv.amountBilled, inv.discountAmount, inv.amountPayable, inv.amountPaid, inv.balance, inv.status, inv.dueDate, inv.createdAt, inv.updatedAt]);
   }
   public async updateInvoice(inv: StudentInvoice): Promise<void> { await this.saveInvoice(inv); }

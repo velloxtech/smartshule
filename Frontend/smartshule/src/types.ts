@@ -493,7 +493,7 @@ export interface FeeItem {
   id: string;
   name: string;
   amount: number;
-  category: 'TUITION' | 'ASSESSMENT' | 'ACTIVITY' | 'BOARDING' | 'MEALS' | 'TRANSPORT' | 'OTHER';
+  category: 'TUITION' | 'ASSESSMENT' | 'ACTIVITY' | 'BOARDING' | 'MEALS' | 'TRANSPORT' | 'ADMISSION' | 'OTHER';
   isOptional: boolean;
 }
 
@@ -525,7 +525,7 @@ export interface StudentInvoice {
   amountPayable: number;
   amountPaid: number;
   balance: number;
-  status: 'PENDING' | 'PARTIALLY_PAID' | 'PAID' | 'CANCELLED';
+  status: 'PENDING' | 'UNPAID' | 'PARTIALLY_PAID' | 'PAID' | 'CANCELLED' | 'CARRIED_FORWARD' | 'OVERDUE';
   dueDate: string;
 }
 
@@ -598,6 +598,40 @@ export interface PaystackInitializeResponse {
     accountName: string;
     paymentReference: string;
   };
+}
+
+export interface KcbBuniConfig {
+  gateway: string;
+  bankName: string;
+  paybillNumber: string;
+  accountNumberFormat: string;
+  supportedChannels: string[];
+  instructions: {
+    mpesaPaybill: {
+      paybill: string;
+      accountPrompt: string;
+      description: string;
+    };
+    kcbApp: {
+      description: string;
+    };
+    stkPush: {
+      description: string;
+    };
+  };
+}
+
+export interface KcbBuniStkPushResponse {
+  checkoutRequestId: string;
+  merchantRequestId: string;
+  responseCode: string;
+  responseDescription: string;
+  customerMessage: string;
+  invoiceId: string;
+  invoiceNumber: string;
+  studentAdmission: string;
+  studentName: string;
+  amount: number;
 }
 
 export interface PaystackVerifyResponse {

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Student, CBCRubric, UserRole } from '../../types';
 import { EditStudentModal } from '../modals/EditStudentModal';
 import { LearnerProfileModal } from '../modals/LearnerProfileModal';
+import { PromoteStudentModal } from '../modals/PromoteStudentModal';
 import { useAuth } from '../../context/AuthContext';
 import { apiService } from '../../services/api';
 
@@ -34,6 +35,9 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
   const [selectedRating, setSelectedRating] = useState('All');
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [profileStudent, setProfileStudent] = useState<Student | null>(null);
+  const [promotingStudent, setPromotingStudent] = useState<Student | null>(null);
+  const [isBulkPromoteOpen, setIsBulkPromoteOpen] = useState(false);
+  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isSyncingFees, setIsSyncingFees] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -158,6 +162,16 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
 
             <button
               type="button"
+              onClick={() => setIsBulkPromoteOpen(true)}
+              title="Promote selected learners or current grade cohort to the next CBC grade"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-surface-container-high text-primary hover:bg-primary/10 border border-primary/30 rounded-lg text-sm font-semibold shadow-xs transition-all cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[18px]">upgrade</span>
+              <span>{selectedStudentIds.length > 0 ? `Promote Selected (${selectedStudentIds.length})` : 'Promote Cohort'}</span>
+            </button>
+
+            <button
+              type="button"
               onClick={onOpenAdmitModal}
               className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-lg hover:bg-primary-container text-sm font-semibold shadow-md transition-all cursor-pointer"
             >
@@ -241,6 +255,20 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
           <table className="w-full text-left text-xs">
             <thead className="bg-surface-container-low text-on-surface-variant uppercase font-semibold border-b border-outline-variant/30">
               <tr>
+                {!isTeacher && (
+                  <th className="py-3 px-3 w-8">
+                    <input
+                      type="checkbox"
+                      aria-label="Select all learners"
+                      checked={filtered.length > 0 && selectedStudentIds.length === filtered.length}
+                      onChange={(e) => {
+                        if (e.target.checked) setSelectedStudentIds(filtered.map((s) => s.id));
+                        else setSelectedStudentIds([]);
+                      }}
+                      className="rounded text-primary focus:ring-primary border-outline-variant cursor-pointer"
+                    />
+                  </th>
+                )}
                 <th className="py-3 px-4">Learner Details</th>
                 <th className="py-3 px-4">MoE UPI / NEMIS</th>
                 <th className="py-3 px-4">Grade & Stream</th>
@@ -257,7 +285,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
             <tbody className="divide-y divide-surface-container">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-on-surface-variant">
+                  <td colSpan={isTeacher ? 7 : 8} className="py-12 text-center text-on-surface-variant">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <span className="material-symbols-outlined text-4xl text-outline">group_off</span>
                       <p className="font-semibold text-sm">No learners found</p>
@@ -268,6 +296,23 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
               ) : (
                 filtered.map((s) => (
                 <tr key={s.id} className="hover:bg-surface-container-low/50 transition-colors">
+                  {!isTeacher && (
+                    <td className="py-3 px-3">
+                      <input
+                        type="checkbox"
+                        aria-label={`Select ${s.name}`}
+                        checked={selectedStudentIds.includes(s.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedStudentIds((prev) => [...prev, s.id]);
+                          } else {
+                            setSelectedStudentIds((prev) => prev.filter((id) => id !== s.id));
+                          }
+                        }}
+                        className="rounded text-primary focus:ring-primary border-outline-variant cursor-pointer"
+                      />
+                    </td>
+                  )}
                   <td className="py-3 px-4">
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden border border-outline-variant/30">
@@ -380,6 +425,13 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                       {!isTeacher && (
                         <>
                           <button
+                            onClick={() => setPromotingStudent(s)}
+                            title="Promote Learner to Next Grade & Carry Forward Balance"
+                            className="p-1.5 rounded-lg text-primary hover:bg-primary/10 transition-colors cursor-pointer"
+                          >
+                            <span className="material-symbols-outlined text-[18px]">upgrade</span>
+                          </button>
+                          <button
                             onClick={() => setEditingStudent(s)}
                             title="Edit Profile & Link Guardian"
                             className="p-1.5 rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors cursor-pointer"
@@ -427,6 +479,33 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
         onStudentUpdated={(updated) => {
           onUpdateStudent?.(updated);
           setEditingStudent(null);
+        }}
+      />
+
+      {/* Promote Learner Modal (Single) */}
+      <PromoteStudentModal
+        isOpen={!!promotingStudent}
+        student={promotingStudent}
+        onClose={() => setPromotingStudent(null)}
+        onPromoted={async () => {
+          setPromotingStudent(null);
+          await onRefreshStudents?.();
+        }}
+      />
+
+      {/* Bulk Promote Learners Modal */}
+      <PromoteStudentModal
+        isOpen={isBulkPromoteOpen}
+        selectedStudents={
+          selectedStudentIds.length > 0
+            ? students.filter((s) => selectedStudentIds.includes(s.id))
+            : (selectedGrade !== 'All' ? filtered : filtered)
+        }
+        onClose={() => setIsBulkPromoteOpen(false)}
+        onPromoted={async () => {
+          setIsBulkPromoteOpen(false);
+          setSelectedStudentIds([]);
+          await onRefreshStudents?.();
         }}
       />
     </div>

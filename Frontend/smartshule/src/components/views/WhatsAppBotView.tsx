@@ -31,7 +31,7 @@ export const WhatsAppBotView: React.FC = () => {
   const [sendErrorMsg, setSendErrorMsg] = useState<string | null>(null);
 
   // Gemini AI Draft & Dispatch state (Real WhatsApp Person Dispatch)
-  const [aiCommand, setAiCommand] = useState('Draft fee balance reminder with Paystack link');
+  const [aiCommand, setAiCommand] = useState('Draft fee balance reminder with KCB Paybill 522123 details');
   const [aiSelectedStudentId, setAiSelectedStudentId] = useState<string>('');
   const [aiTone, setAiTone] = useState<'professional' | 'urgent' | 'friendly' | 'concise'>('professional');
   const [isAiDrafting, setIsAiDrafting] = useState(false);
@@ -161,7 +161,7 @@ export const WhatsAppBotView: React.FC = () => {
     const schoolName = user?.schoolName || 'School';
     if (type === 'fee') {
       setOutboundMessage(
-        `Dear Parent/Guardian, this is an official fee reminder from ${schoolName}. ${learnerName} (Adm: ${admNo}) has an outstanding balance of KES ${balance.toLocaleString()}. You can pay instantly via Stanbic Bank dedicated virtual account or Paystack. Reply '2' for payment details.`
+        `Dear Parent/Guardian, this is an official fee reminder from ${schoolName}. ${learnerName} (Adm: ${admNo}) has an outstanding balance of KES ${balance.toLocaleString()}. You can pay instantly via KCB Paybill 522123 (Account: ${admNo}) or KCB Buni STK Push. Reply '2' for payment details.`
       );
     } else if (type === 'ediary') {
       setOutboundMessage(
@@ -848,12 +848,12 @@ export const WhatsAppBotView: React.FC = () => {
                   </label>
                   <div className="flex flex-wrap gap-1.5">
                     {[
-                      { label: '💰 Fee Arrears & Paystack Link', cmd: 'Draft fee balance reminder with Paystack online checkout link and Stanbic bank details' },
+                      { label: '💰 Fee Arrears & KCB Paybill', cmd: 'Draft fee balance reminder with KCB Paybill 522123 and student admission number instructions' },
                       { label: '📖 Daily Homework / eDiary', cmd: 'Draft daily CBC eDiary homework notice, teacher remarks and tomorrow requirements' },
                       { label: '🌟 CBC Performance Report', cmd: 'Draft CBC academic competency report summary with grades and teacher remarks' },
                       { label: '📅 Attendance & Roll-Call', cmd: 'Draft official attendance summary and term roll-call status' },
                       { label: '📢 Academic Showcase Notice', cmd: 'Draft reminder for tomorrow CBC academic showcase meeting starting at 9:00 AM' },
-                      { label: '💳 Paystack Bank Checkout', cmd: 'Send Paystack instant online fee payment instructions' },
+                      { label: '💳 KCB Buni M-Pesa Express', cmd: 'Send KCB Buni M-Pesa Express and Paybill 522123 instant fee payment instructions' },
                     ].map((item) => (
                       <button
                         key={item.label}

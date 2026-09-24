@@ -10,8 +10,45 @@ import { Guardian, GuardianRelationship } from '../../core/domain/user/Guardian'
 import { User, UserRole, UserStatus } from '../../core/domain/user/User';
 import { IdGenerator, NotFoundError, ConflictError, ValidationError, ForbiddenError } from '../../core/domain/shared/Errors';
 import { IPasswordHasher } from '../../core/ports/services/IExternalServices';
-import { StudentInvoice, InvoiceStatus, FeeStructure } from '../../core/domain/finance/Fee';
+import { StudentInvoice, InvoiceStatus, FeeStructure, FeeItem } from '../../core/domain/finance/Fee';
 import { ClassRoom, EducationLevel } from '../../core/domain/academic/ClassRoom';
+
+export const CBC_GRADE_PROGRESSION: Record<CbcGradeLevel, CbcGradeLevel | 'GRADUATED'> = {
+  [CbcGradeLevel.PLAYGROUP]: CbcGradeLevel.PP1,
+  [CbcGradeLevel.PP1]: CbcGradeLevel.PP2,
+  [CbcGradeLevel.PP2]: CbcGradeLevel.GRADE_1,
+  [CbcGradeLevel.GRADE_1]: CbcGradeLevel.GRADE_2,
+  [CbcGradeLevel.GRADE_2]: CbcGradeLevel.GRADE_3,
+  [CbcGradeLevel.GRADE_3]: CbcGradeLevel.GRADE_4,
+  [CbcGradeLevel.GRADE_4]: CbcGradeLevel.GRADE_5,
+  [CbcGradeLevel.GRADE_5]: CbcGradeLevel.GRADE_6,
+  [CbcGradeLevel.GRADE_6]: CbcGradeLevel.GRADE_7,
+  [CbcGradeLevel.GRADE_7]: CbcGradeLevel.GRADE_8,
+  [CbcGradeLevel.GRADE_8]: CbcGradeLevel.GRADE_9,
+  [CbcGradeLevel.GRADE_9]: CbcGradeLevel.SENIOR_1,
+  [CbcGradeLevel.SENIOR_1]: CbcGradeLevel.SENIOR_2,
+  [CbcGradeLevel.SENIOR_2]: CbcGradeLevel.SENIOR_3,
+  [CbcGradeLevel.SENIOR_3]: 'GRADUATED',
+};
+
+export interface PromoteStudentDTO {
+  targetGradeLevel?: CbcGradeLevel;
+  targetAcademicYearId?: string;
+  targetTermId?: string;
+  targetClassroomId?: string;
+  targetStreamId?: string;
+  carryForwardBalance?: boolean;
+}
+
+export interface BulkPromoteStudentsDTO {
+  studentIds: string[];
+  targetGradeLevel?: CbcGradeLevel;
+  targetAcademicYearId?: string;
+  targetTermId?: string;
+  targetClassroomId?: string;
+  targetStreamId?: string;
+  carryForwardBalance?: boolean;
+}
 
 export interface UserContext {
   userId: string;
@@ -256,7 +293,7 @@ export class StudentUseCases {
           const tuitionAmount = isJSS ? 25000 : (isUpperPrimary ? 18000 : (isLowerPrimary ? 15000 : 12000));
           const assessmentAmount = isJSS ? 6000 : (isUpperPrimary ? 4000 : 3000);
           const activityAmount = isJSS ? 2500 : 2000;
-          const lunchAmount = isJSS ? 8500 : 6000;
+          const admissionAmount = isJSS ? 5000 : 3500;
 
           const defaultItems = [
             {
@@ -282,9 +319,9 @@ export class StudentUseCases {
             },
             {
               id: IdGenerator.generate(),
-              name: 'Hot Lunch Programme',
-              amount: lunchAmount,
-              category: 'MEALS' as const,
+              name: 'Admission Fee',
+              amount: admissionAmount,
+              category: 'ADMISSION' as const,
               isOptional: false
             }
           ];
@@ -636,7 +673,14 @@ export class StudentUseCases {
         if (this.feeRepository) {
           const invoices = await this.feeRepository.findInvoices({ studentId: s.id });
           const payments = await this.feeRepository.findPayments({ studentId: s.id });
-          const totalBilled = invoices.reduce((acc, inv) => acc + inv.amountPayable, 0);
+          const totalBilled = invoices.reduce((acc, inv) => {
+            const arrears = inv.items
+              ? inv.items
+                  .filter(it => it.name.toLowerCase().includes('carried forward') || it.name.toLowerCase().includes('arrears'))
+                  .reduce((s, it) => s + it.amount, 0)
+              : 0;
+            return acc + (inv.amountPayable - arrears);
+          }, 0);
           const totalPaid = payments.filter(p => p.status === 'COMPLETED').reduce((acc, p) => acc + p.amount, 0);
           feeInfo = {
             totalBilled,
@@ -691,6 +735,252 @@ export class StudentUseCases {
         user: user ? user.toJSON() : null
       },
       children: childrenDetails
+    };
+  }
+
+  public async promoteStudent(studentId: string, dto: PromoteStudentDTO = {}) {
+    const student = await this.studentRepository.findById(studentId);
+    if (!student) {
+      throw new NotFoundError('Student', studentId);
+    }
+
+    const previousGrade = student.gradeLevel;
+    const nextGrade = dto.targetGradeLevel || CBC_GRADE_PROGRESSION[student.gradeLevel];
+
+    if (nextGrade === 'GRADUATED') {
+      student.setStatus(StudentStatus.GRADUATED);
+      await this.studentRepository.update(student);
+      return {
+        student: student.toJSON(),
+        previousGrade,
+        newGrade: 'GRADUATED',
+        status: StudentStatus.GRADUATED,
+        carriedForwardBalance: 0,
+        invoice: null,
+        message: `${student.fullName} has completed senior secondary and graduated successfully.`
+      };
+    }
+
+    let targetAcademicYearId = dto.targetAcademicYearId;
+    let targetTermId = dto.targetTermId;
+
+    if (!targetAcademicYearId && this.academicRepository) {
+      const currentYear = await this.academicRepository.findCurrentYear(student.schoolId);
+      targetAcademicYearId = currentYear?.id || student.academicYearId || 'year-2026';
+    }
+    if (!targetAcademicYearId) targetAcademicYearId = student.academicYearId || 'year-2026';
+
+    if (!targetTermId && this.academicRepository) {
+      const currentTerm = await this.academicRepository.findCurrentTerm(targetAcademicYearId);
+      targetTermId = currentTerm?.id || 'term-2026-t1';
+    }
+    if (!targetTermId) targetTermId = 'term-2026-t1';
+
+    // Update student's grade, stream, classroom, academic year
+    student.promoteOrTransfer(
+      nextGrade as CbcGradeLevel,
+      dto.targetClassroomId || student.classroomId,
+      dto.targetStreamId !== undefined ? dto.targetStreamId : student.streamId,
+      targetAcademicYearId
+    );
+    student.setStatus(StudentStatus.ACTIVE);
+    await this.studentRepository.update(student);
+
+    let carriedForwardBalance = 0;
+    let newInvoice: any = null;
+
+    if (this.feeRepository && dto.carryForwardBalance !== false) {
+      try {
+        // 1. Calculate prior unpaid balance across all invoices
+        const priorInvoices = await this.feeRepository.findInvoices({ studentId: student.id });
+        const unpaidInvoices = priorInvoices.filter(
+          inv => inv.status !== InvoiceStatus.CARRIED_FORWARD &&
+                 inv.balance > 0 &&
+                 !(inv.termId === targetTermId && inv.academicYearId === targetAcademicYearId)
+        );
+        carriedForwardBalance = unpaidInvoices.reduce((sum, inv) => sum + inv.balance, 0);
+
+        // 2. Find or create fee structure for nextGrade
+        let feeStructure = await this.feeRepository.findFeeStructure(nextGrade as CbcGradeLevel, targetTermId, targetAcademicYearId);
+        if (!feeStructure) {
+          const allStructures = await this.feeRepository.findAllFeeStructures(student.schoolId);
+          feeStructure = allStructures.find(fs => fs.gradeLevel === nextGrade) || null;
+        }
+
+        if (!feeStructure) {
+          const isJSS = ['GRADE_7', 'GRADE_8', 'GRADE_9'].includes(nextGrade);
+          const isUpperPrimary = ['GRADE_4', 'GRADE_5', 'GRADE_6'].includes(nextGrade);
+          const isLowerPrimary = ['GRADE_1', 'GRADE_2', 'GRADE_3'].includes(nextGrade);
+
+          const gradeName = nextGrade.replace('_', ' ');
+          const tuitionAmount = isJSS ? 25000 : (isUpperPrimary ? 18000 : (isLowerPrimary ? 15000 : 12000));
+          const assessmentAmount = isJSS ? 6000 : (isUpperPrimary ? 4000 : 3000);
+          const activityAmount = isJSS ? 2500 : 2000;
+          const admissionAmount = isJSS ? 5000 : 3500;
+
+          const defaultItems: FeeItem[] = [
+            {
+              id: IdGenerator.generate(),
+              name: 'Tuition Fee',
+              amount: tuitionAmount,
+              category: 'TUITION',
+              isOptional: false
+            },
+            {
+              id: IdGenerator.generate(),
+              name: isJSS ? 'CBC Assessment & Practical Science Kits' : 'CBC Assessment & Learning Materials',
+              amount: assessmentAmount,
+              category: 'ASSESSMENT',
+              isOptional: false
+            },
+            {
+              id: IdGenerator.generate(),
+              name: 'Activity & Co-Curricular Levy',
+              amount: activityAmount,
+              category: 'ACTIVITY',
+              isOptional: false
+            },
+            {
+              id: IdGenerator.generate(),
+              name: 'Admission Fee',
+              amount: admissionAmount,
+              category: 'ADMISSION',
+              isOptional: false
+            }
+          ];
+
+          feeStructure = FeeStructure.create(
+            {
+              schoolId: student.schoolId,
+              academicYearId: targetAcademicYearId,
+              termId: targetTermId,
+              gradeLevel: nextGrade as CbcGradeLevel,
+              title: `${gradeName} Fee Structure`,
+              items: defaultItems,
+              dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+            },
+            IdGenerator.generate()
+          );
+
+          await this.feeRepository.saveFeeStructure(feeStructure);
+        }
+
+        // 3. Create or update target invoice
+        const existingTargetInvoices = await this.feeRepository.findInvoices({
+          studentId: student.id,
+          termId: targetTermId,
+          academicYearId: targetAcademicYearId
+        });
+
+        if (existingTargetInvoices.length > 0) {
+          const inv = existingTargetInvoices[0];
+          if (carriedForwardBalance > 0) {
+            const hasArrears = inv.items.some(
+              it => it.name.toLowerCase().includes('carried forward') || it.name.toLowerCase().includes('arrears')
+            );
+            if (!hasArrears) {
+              const arrearsItem: FeeItem = {
+                id: IdGenerator.generate(),
+                name: 'Arrears / Previous Balance Carried Forward',
+                amount: carriedForwardBalance,
+                category: 'OTHER',
+                isOptional: false
+              };
+              inv.appendFeeItem(arrearsItem);
+              await this.feeRepository.updateInvoice(inv);
+            }
+          }
+          newInvoice = inv.toJSON();
+        } else {
+          const invoiceItems: FeeItem[] = [...feeStructure.items];
+          if (carriedForwardBalance > 0) {
+            invoiceItems.push({
+              id: IdGenerator.generate(),
+              name: 'Arrears / Previous Balance Carried Forward',
+              amount: carriedForwardBalance,
+              category: 'OTHER',
+              isOptional: false
+            });
+          }
+
+          const totalAmount = feeStructure.totalAmount + carriedForwardBalance;
+          const invoiceNumber = `INV-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
+          const dueDate = feeStructure.dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+          const invoice = StudentInvoice.create(
+            {
+              schoolId: student.schoolId,
+              studentId: student.id,
+              feeStructureId: feeStructure.id,
+              academicYearId: targetAcademicYearId,
+              termId: targetTermId,
+              invoiceNumber,
+              items: invoiceItems,
+              amountBilled: totalAmount,
+              discountAmount: 0,
+              amountPayable: totalAmount,
+              amountPaid: 0,
+              balance: totalAmount,
+              status: InvoiceStatus.UNPAID,
+              dueDate
+            },
+            IdGenerator.generate()
+          );
+
+          await this.feeRepository.saveInvoice(invoice);
+          newInvoice = invoice.toJSON();
+        }
+
+        // 4. Mark prior unpaid invoices as CARRIED_FORWARD
+        if (carriedForwardBalance > 0) {
+          for (const prevInv of unpaidInvoices) {
+            prevInv.markCarriedForward();
+            await this.feeRepository.updateInvoice(prevInv);
+          }
+        }
+      } catch (err) {
+        console.error('[StudentUseCases] Error during fee carry-forward on promotion:', err);
+      }
+    }
+
+    return {
+      student: student.toJSON(),
+      previousGrade,
+      newGrade: nextGrade,
+      carriedForwardBalance,
+      invoice: newInvoice,
+      message: carriedForwardBalance > 0
+        ? `Successfully promoted ${student.fullName} from ${previousGrade} to ${nextGrade}. Previous balance of KES ${carriedForwardBalance.toLocaleString()} carried forward.`
+        : `Successfully promoted ${student.fullName} from ${previousGrade} to ${nextGrade}.`
+    };
+  }
+
+  public async promoteStudentsBulk(dto: BulkPromoteStudentsDTO) {
+    const results: any[] = [];
+    const errors: any[] = [];
+
+    for (const studentId of dto.studentIds) {
+      try {
+        const res = await this.promoteStudent(studentId, {
+          targetGradeLevel: dto.targetGradeLevel,
+          targetAcademicYearId: dto.targetAcademicYearId,
+          targetTermId: dto.targetTermId,
+          targetClassroomId: dto.targetClassroomId,
+          targetStreamId: dto.targetStreamId,
+          carryForwardBalance: dto.carryForwardBalance
+        });
+        results.push(res);
+      } catch (err: any) {
+        errors.push({ studentId, error: err.message });
+      }
+    }
+
+    return {
+      totalRequested: dto.studentIds.length,
+      promotedCount: results.length,
+      failedCount: errors.length,
+      promoted: results,
+      errors
     };
   }
 

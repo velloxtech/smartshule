@@ -52,6 +52,25 @@ export const UpdateStudentSchema = z.object({
   profilePhotoUrl: z.string().optional()
 }).passthrough();
 
+export const PromoteStudentSchema = z.object({
+  targetGradeLevel: z.nativeEnum(CbcGradeLevel).optional(),
+  targetAcademicYearId: z.string().optional(),
+  targetTermId: z.string().optional(),
+  targetClassroomId: z.string().optional(),
+  targetStreamId: z.string().optional(),
+  carryForwardBalance: z.boolean().optional().default(true)
+}).passthrough();
+
+export const BulkPromoteStudentsSchema = z.object({
+  studentIds: z.array(z.string().min(1)).min(1),
+  targetGradeLevel: z.nativeEnum(CbcGradeLevel).optional(),
+  targetAcademicYearId: z.string().optional(),
+  targetTermId: z.string().optional(),
+  targetClassroomId: z.string().optional(),
+  targetStreamId: z.string().optional(),
+  carryForwardBalance: z.boolean().optional().default(true)
+}).passthrough();
+
 export class StudentController {
   constructor(private readonly studentUseCases: StudentUseCases) {}
 
@@ -138,6 +157,32 @@ export class StudentController {
       return res.status(200).json({
         success: true,
         data
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public promoteStudent = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await this.studentUseCases.promoteStudent(req.params.id as string, req.body);
+      return res.status(200).json({
+        success: true,
+        message: result.message,
+        data: result
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public promoteStudentsBulk = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await this.studentUseCases.promoteStudentsBulk(req.body);
+      return res.status(200).json({
+        success: true,
+        message: `Successfully processed promotion for ${result.promotedCount} student(s).`,
+        data: result
       });
     } catch (err) {
       next(err);

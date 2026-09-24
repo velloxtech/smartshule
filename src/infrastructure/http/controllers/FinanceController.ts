@@ -22,7 +22,7 @@ export const CreateFeeStructureSchema = z.object({
       name: z.string().min(1),
       amount: z.number().positive(),
       isOptional: z.boolean().default(false),
-      category: z.enum(['TUITION', 'ASSESSMENT', 'ACTIVITY', 'BOARDING', 'MEALS', 'TRANSPORT', 'OTHER'])
+      category: z.enum(['TUITION', 'ASSESSMENT', 'ACTIVITY', 'BOARDING', 'MEALS', 'TRANSPORT', 'ADMISSION', 'OTHER'])
     })
   ).min(1)
 });
@@ -65,6 +65,30 @@ export const MpesaStkPushSchema = z.object({
   invoiceId: z.string().min(1),
   phoneNumber: z.string().regex(/^2547\d{8}$|^2541\d{8}$/, 'Must be valid phone format: 2547XXXXXXXX or 2541XXXXXXXX')
 });
+
+export const KcbBuniStkPushSchema = z.object({
+  invoiceId: z.string().min(1),
+  phoneNumber: z.string().min(9, 'Must be a valid mobile phone number'),
+  amount: z.number().positive().optional(),
+  description: z.string().optional()
+});
+
+export const KcbBuniValidationSchema = z.object({
+  billReferenceNumber: z.string().min(1, 'Student admission number is required'),
+  amount: z.number().optional().default(0),
+  phoneNumber: z.string().optional(),
+  transactionType: z.string().optional()
+}).passthrough();
+
+export const KcbBuniConfirmationSchema = z.object({
+  transactionId: z.string().min(1),
+  transactionTime: z.string().optional().default(() => new Date().toISOString()),
+  billReferenceNumber: z.string().min(1),
+  transactionAmount: z.number().positive(),
+  phoneNumber: z.string().optional(),
+  senderName: z.string().optional(),
+  channel: z.enum(['MPESA', 'KCB_APP', 'VOOMA', 'BANK_BRANCH', 'AGENT']).optional()
+}).passthrough();
 
 export const RecordExpenseSchema = z.object({
   schoolId: z.string().optional(),
@@ -274,6 +298,78 @@ export class FinanceController {
       const signature = req.headers['x-paystack-signature'] as string;
       const result = await this.feeUseCases.handlePaystackWebhook(req.body, signature);
       return res.status(200).json({ status: 'ok', data: result });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  // ==========================================
+  // KCB BUNI DEVELOPER API PLATFORM INTEGRATION
+  // ==========================================
+  public initiateKcbBuniStk = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await this.feeUseCases.initiateKcbBuniStkPush(req.body);
+      return res.status(200).json({
+        success: true,
+        message: 'KCB Buni M-Pesa Express prompt sent successfully',
+        data: result
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public kcbBuniCallback = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await this.feeUseCases.handleKcbBuniCallback(req.body);
+      return res.status(200).json({
+        ResultCode: 0,
+        ResultDesc: 'Accepted',
+        data: result
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public validateKcbBuniBill = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await this.feeUseCases.validateKcbBuniBillPayment(req.body);
+      return res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public confirmKcbBuniBill = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await this.feeUseCases.confirmKcbBuniBillPayment(req.body);
+      return res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public queryKcbBuniStatus = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const checkoutRequestId = req.params.checkoutRequestId as string;
+      const result = await this.feeUseCases.queryKcbBuniStatus(checkoutRequestId);
+      return res.status(200).json({
+        success: true,
+        data: result
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public getKcbBuniConfig = async (_req: Request, res: Response, next: NextFunction) => {
+    try {
+      const config = this.feeUseCases.getKcbBuniConfig();
+      return res.status(200).json({
+        success: true,
+        data: config
+      });
     } catch (err) {
       next(err);
     }

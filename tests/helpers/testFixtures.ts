@@ -902,3 +902,109 @@ export async function setupTestFixtures(container: AppContainer) {
     // Media fixtures optional
   }
 }
+
+export async function setupTestRoleAccounts(container: AppContainer) {
+  const defaultAccounts = [
+    {
+      id: 'usr-superadmin-01',
+      email: 'superadmin@smartshule.ac.ke',
+      password: 'SuperAdmin@123',
+      firstName: 'System',
+      lastName: 'SuperAdmin',
+      role: UserRole.SUPER_ADMIN,
+      phone: '+254700000001'
+    },
+    {
+      id: 'usr-admin-01',
+      email: 'admin@smartshule.ac.ke',
+      password: 'Admin@123',
+      firstName: 'ADMIN',
+      lastName: 'Director',
+      role: UserRole.ADMIN,
+      phone: '+254711000111',
+      schoolId: 'school-001'
+    },
+    {
+      id: 'usr-headteacher-01',
+      email: 'headteacher@smartshule.ac.ke',
+      password: 'HeadTeacher@123',
+      firstName: 'Maina',
+      lastName: 'Kariuki',
+      role: UserRole.HEAD_TEACHER,
+      phone: '+254722000222',
+      schoolId: 'school-001'
+    },
+    {
+      id: 'usr-deputy-01',
+      email: 'deputy@smartshule.ac.ke',
+      password: 'Deputy@123',
+      firstName: 'Grace',
+      lastName: 'Wambui',
+      role: UserRole.DEPUTY_HEAD_TEACHER,
+      phone: '+254733000333',
+      schoolId: 'school-001'
+    },
+    {
+      id: 'usr-admissions-01',
+      email: 'admissions@smartshule.ac.ke',
+      password: 'Admissions@123',
+      firstName: 'Peter',
+      lastName: 'Otieno',
+      role: UserRole.ADMISSIONS,
+      phone: '+254744000444',
+      schoolId: 'school-001'
+    },
+    {
+      id: 'usr-bursar-01',
+      email: 'bursar@smartshule.ac.ke',
+      password: 'Bursar@123',
+      firstName: 'David',
+      lastName: 'Kamau',
+      role: UserRole.BURSAR,
+      phone: '+254755000555',
+      schoolId: 'school-001'
+    },
+    {
+      id: 'usr-teacher-01',
+      email: 'teacher@smartshule.ac.ke',
+      password: 'Teacher@123',
+      firstName: 'Sarah',
+      lastName: 'Mwangi',
+      role: UserRole.TEACHER,
+      phone: '+254766000666',
+      schoolId: 'school-001'
+    },
+    {
+      id: 'usr-parent-01',
+      email: 'parent@smartshule.ac.ke',
+      password: 'Parent@123',
+      firstName: 'Mary',
+      lastName: 'Njeri',
+      role: UserRole.PARENT,
+      phone: '+254777000777',
+      schoolId: 'school-001'
+    }
+  ];
+
+  for (const acc of defaultAccounts) {
+    const existing = await container.userRepository.findByEmail(acc.email).catch(() => null);
+    const passwordHash = await container.passwordHasher.hash(acc.password);
+    if (!existing) {
+      const user = User.create(
+        {
+          email: acc.email,
+          passwordHash,
+          firstName: acc.firstName,
+          lastName: acc.lastName,
+          role: acc.role,
+          phone: acc.phone,
+          status: UserStatus.ACTIVE,
+          schoolId: (acc as any).schoolId,
+          mustChangePassword: false
+        },
+        acc.id
+      );
+      await container.userRepository.save(user);
+    }
+  }
+}

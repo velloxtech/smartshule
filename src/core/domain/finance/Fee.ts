@@ -2,6 +2,7 @@ import { Entity } from '../shared/Entity';
 import { CbcGradeLevel } from '../user/Student';
 
 export enum PaymentMethod {
+  KCB_BUNI = 'KCB_BUNI',
   PAYSTACK = 'PAYSTACK',
   BANK_TRANSFER = 'BANK_TRANSFER',
   BANK_DEPOSIT = 'BANK_DEPOSIT',
@@ -21,15 +22,16 @@ export enum InvoiceStatus {
   UNPAID = 'UNPAID',
   PARTIALLY_PAID = 'PARTIALLY_PAID',
   PAID = 'PAID',
-  OVERDUE = 'OVERDUE'
+  OVERDUE = 'OVERDUE',
+  CARRIED_FORWARD = 'CARRIED_FORWARD'
 }
 
 export interface FeeItem {
   id: string;
-  name: string; // e.g. "Tuition", "CBC Assessment & Practical Material", "Activity & Games", "Lunch Programme"
+  name: string; // e.g. "Tuition", "CBC Assessment & Practical Material", "Activity & Games", "Admission Fee"
   amount: number;
   isOptional: boolean;
-  category: 'TUITION' | 'ASSESSMENT' | 'ACTIVITY' | 'BOARDING' | 'MEALS' | 'TRANSPORT' | 'OTHER';
+  category: 'TUITION' | 'ASSESSMENT' | 'ACTIVITY' | 'BOARDING' | 'MEALS' | 'TRANSPORT' | 'ADMISSION' | 'OTHER';
 }
 
 // 1. Fee Structure Entity
@@ -197,6 +199,20 @@ export class StudentInvoice extends Entity<StudentInvoiceProps> {
     this._props.discountAmount = discount;
     this._props.amountPayable = Math.max(0, this._props.amountBilled - discount);
     this._props.balance = Math.max(0, this._props.amountPayable - this._props.amountPaid);
+    this.touch();
+  }
+
+  public markCarriedForward(): void {
+    this._props.status = InvoiceStatus.CARRIED_FORWARD;
+    this._props.balance = 0;
+    this.touch();
+  }
+
+  public appendFeeItem(item: FeeItem): void {
+    this._props.items.push(item);
+    this._props.amountBilled += item.amount;
+    this._props.amountPayable += item.amount;
+    this._props.balance += item.amount;
     this.touch();
   }
 

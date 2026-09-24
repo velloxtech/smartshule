@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 interface ParentDashboardViewProps {
   onOpenMpesaWithStudent?: (student: any) => void;
   onOpenPaystackWithStudent?: (student: any) => void;
+  onOpenKcbBuniWithStudent?: (student: any) => void;
   onViewReportCard: (student: any) => void;
   onNavigateTab?: (tab: string) => void;
 }
@@ -12,6 +13,7 @@ interface ParentDashboardViewProps {
 export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
   onOpenMpesaWithStudent,
   onOpenPaystackWithStudent,
+  onOpenKcbBuniWithStudent,
   onViewReportCard,
   onNavigateTab,
 }) => {
@@ -190,16 +192,18 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                     cbcRating: 'ME',
                     status: currentChild.status || 'Active'
                   };
-                  if (onOpenPaystackWithStudent) {
+                  if (onOpenKcbBuniWithStudent) {
+                    onOpenKcbBuniWithStudent(studentObj);
+                  } else if (onOpenPaystackWithStudent) {
                     onOpenPaystackWithStudent(studentObj);
                   } else if (onOpenMpesaWithStudent) {
                     onOpenMpesaWithStudent(studentObj);
                   }
                 }}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-primary to-[#500b1a] text-white rounded-lg hover:shadow-xs text-xs font-bold transition-all cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-[#005a36] to-[#006a40] text-white rounded-lg hover:shadow-xs text-xs font-bold transition-all cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[16px]">account_balance</span>
-                <span>Pay Fees via Paystack Bank</span>
+                <span>Pay via KCB Buni (M-Pesa / Paybill 522123)</span>
               </button>
             </div>
           </div>
@@ -293,8 +297,8 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
               <div className="text-2xl font-bold font-data-mono text-secondary mt-1">
                 KES {(currentChild.fee?.totalPaid || 0).toLocaleString()}
               </div>
-              <span className="text-[11px] text-outline mt-1 block">
-                Reconciled via Stanbic Bank & Paystack Gateway
+              <span className="text-[11px] text-emerald-700 font-semibold mt-1 block">
+                Official Paybill: 522123 · Reconciled via KCB Buni
               </span>
             </div>
           </div>

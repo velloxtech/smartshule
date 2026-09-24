@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FeeTransaction, Student, StudentInvoice, FinanceSummaryData, UserRole } from '../../types';
 import { GenerateInvoicesModal } from '../modals/GenerateInvoicesModal';
 import { RecordPaymentModal } from '../modals/RecordPaymentModal';
-import { PaystackCheckoutModal } from '../modals/PaystackCheckoutModal';
+import { KcbBuniPaymentModal } from '../modals/KcbBuniPaymentModal';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
@@ -32,7 +32,7 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
   // Modals
   const [isGenInvoicesOpen, setIsGenInvoicesOpen] = useState(false);
   const [isRecordPayOpen, setIsRecordPayOpen] = useState(false);
-  const [isPaystackOpen, setIsPaystackOpen] = useState(false);
+  const [isKcbBuniOpen, setIsKcbBuniOpen] = useState(false);
   const [selectedInvoiceForPay, setSelectedInvoiceForPay] = useState<StudentInvoice | undefined>(undefined);
   const [selectedStudentForPay, setSelectedStudentForPay] = useState<Student | undefined>(undefined);
   const [selectedTx, setSelectedTx] = useState<any | null>(null);
@@ -70,13 +70,13 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
     setSelectedInvoiceForPay(inv);
     const linkedStudent = students.find((s) => s.id === inv.studentId);
     setSelectedStudentForPay(linkedStudent);
-    setIsPaystackOpen(true);
+    setIsKcbBuniOpen(true);
   };
 
   const handleGeneralPayment = () => {
     setSelectedInvoiceForPay(undefined);
     setSelectedStudentForPay(students[0]);
-    setIsPaystackOpen(true);
+    setIsKcbBuniOpen(true);
   };
 
   const totalInvoiced = financeSummary?.totalInvoiced || invoices.reduce((acc, inv) => acc + (inv.amountPayable || 0), 0);
@@ -94,17 +94,17 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
             <span>/</span>
             <span>Finance & Billing</span>
             <span>/</span>
-            <span className="text-primary font-semibold">
-              {isGuardian ? 'My Child Fees & Paystack Payments' : 'Paystack Bank Gateway & Invoicing'}
+            <span className="text-[#006a40] font-semibold">
+              {isGuardian ? 'My Child Fees & KCB Payments' : 'KCB Buni Payment Gateway & Invoicing'}
             </span>
           </div>
           <h1 className="font-headline-lg text-headline-lg text-on-surface mt-1">
-            {isGuardian ? 'Parent Fee Ledger & Instant Bank Settlement' : 'Paystack Bank Transfer Gateway & Invoicing'}
+            {isGuardian ? 'Parent Fee Ledger & Instant KCB Bank Settlement' : 'KCB Buni Payment Platform & Invoicing'}
           </h1>
           <p className="text-xs text-on-surface-variant mt-0.5">
             {isGuardian
-              ? 'View official school invoices for your linked learners and clear balances via Dedicated Stanbic Virtual Account or Card'
-              : 'Direct bank settlement via Stanbic Bank Kenya virtual accounts, online card rails, and automatic fee reconciliation'}
+              ? 'View official school invoices for your linked learners and clear balances via KCB Buni STK Push, Paybill 522123, or KCB Bank'
+              : 'Direct fee collection via KCB Bank Kenya Paybill 522123, real-time Buni STK Push APIs, and automated reconciliation'}
           </p>
         </div>
 
@@ -131,33 +131,33 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
 
           <button
             onClick={handleGeneralPayment}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-primary to-[#500b1a] text-white rounded-lg hover:shadow-md text-xs font-bold transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-[#005a36] to-[#006a40] text-white rounded-lg hover:shadow-md text-xs font-bold transition-all cursor-pointer"
           >
             <span className="material-symbols-outlined text-[16px]">account_balance</span>
-            <span>Pay with Paystack (Bank / Card)</span>
+            <span>Pay with KCB Buni (M-Pesa / Bank)</span>
           </button>
         </div>
       </div>
 
       {/* Gateway & Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {/* Dedicated Bank Rail Card */}
+        {/* Dedicated KCB Bank Rail Card */}
         <div className="p-5 rounded-xl bg-surface-container-lowest border border-outline-variant/30 flex items-center justify-between shadow-xs">
           <div>
             <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
               Settlement Bank Rail
             </span>
             <div className="flex items-center gap-2 mt-1">
-              <span className="text-base font-bold font-data-mono text-primary">Stanbic Bank Kenya</span>
+              <span className="text-base font-bold font-data-mono text-[#006a40]">KCB Bank Kenya</span>
               <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
-                Online
+                Paybill 522123
               </span>
             </div>
-            <span className="text-[11px] text-secondary font-semibold mt-1 block">
-              Paystack Bank Virtual Accounts Active
+            <span className="text-[11px] text-emerald-700 font-semibold mt-1 block">
+              KCB Buni API Platform Active
             </span>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold">
+          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-[#006a40] flex items-center justify-center font-bold">
             <span className="material-symbols-outlined text-[26px]">account_balance</span>
           </div>
         </div>
@@ -314,10 +314,10 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
                           {inv.balance > 0 ? (
                             <button
                               onClick={() => handlePayInvoice(inv)}
-                              className="px-2.5 py-1.5 bg-gradient-to-r from-primary to-[#500b1a] text-white rounded-lg text-xs font-bold hover:shadow-xs transition-all cursor-pointer inline-flex items-center gap-1"
+                              className="px-2.5 py-1.5 bg-[#006a40] hover:bg-[#005a36] text-white rounded-lg text-xs font-bold hover:shadow-xs transition-all cursor-pointer inline-flex items-center gap-1"
                             >
                               <span className="material-symbols-outlined text-[13px]">payments</span>
-                              <span>Pay via Paystack</span>
+                              <span>Pay with KCB Buni</span>
                             </button>
                           ) : (
                             <span className="text-xs font-bold text-secondary flex items-center justify-end gap-1">
@@ -343,9 +343,9 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
             <h3 className="font-bold text-sm text-primary uppercase tracking-wider">
               {isGuardian ? 'My Child Payment Receipts' : 'Live Reconciled Inflow Ledger'}
             </h3>
-            <span className="text-xs text-secondary font-bold flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
-              Paystack Real-Time Webhook Active
+            <span className="text-xs text-emerald-700 font-bold flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span>
+              KCB Buni Real-Time Webhook Active
             </span>
           </div>
 
@@ -469,11 +469,11 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
         </div>
       )}
 
-      {/* Paystack Checkout Modal */}
-      <PaystackCheckoutModal
-        isOpen={isPaystackOpen}
+      {/* KCB Buni Payment Modal */}
+      <KcbBuniPaymentModal
+        isOpen={isKcbBuniOpen}
         onClose={() => {
-          setIsPaystackOpen(false);
+          setIsKcbBuniOpen(false);
           setSelectedInvoiceForPay(undefined);
           setSelectedStudentForPay(undefined);
         }}

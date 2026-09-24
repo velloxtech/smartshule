@@ -33,6 +33,7 @@ import { JwtAuthTokenService } from './services/JwtAuthTokenService';
 import { BcryptPasswordHasher } from './services/BcryptPasswordHasher';
 import { PaystackPaymentAdapter } from './services/PaystackPaymentAdapter';
 import { MpesaDarajaPaymentAdapter } from './services/MpesaDarajaPaymentAdapter';
+import { KcbBuniPaymentAdapter } from './services/KcbBuniPaymentAdapter';
 import { SmsNotificationAdapter } from './services/SmsNotificationAdapter';
 import { ImageProcessingService } from './services/ImageProcessingService';
 import { WhatsAppService } from './services/WhatsAppService';
@@ -76,7 +77,8 @@ export class AppContainer {
   public readonly tokenService = new JwtAuthTokenService();
   public readonly passwordHasher = new BcryptPasswordHasher();
   public readonly paystackGateway = new PaystackPaymentAdapter();
-  public readonly paymentGateway = new MpesaDarajaPaymentAdapter(); // legacy fallback
+  public readonly kcbBuniGateway = new KcbBuniPaymentAdapter();
+  public readonly paymentGateway = this.kcbBuniGateway; // KCB Buni API platform integration
   public readonly notificationService = new SmsNotificationAdapter();
   public readonly imageProcessingService = new ImageProcessingService();
   public readonly whatsAppClientManager = new WhatsAppClientManager();
@@ -170,10 +172,11 @@ export class AppContainer {
       this.studentRepository,
       this.guardianRepository,
       this.userRepository,
-      this.paystackGateway,
+      this.paymentGateway,
       this.notificationService,
       this.paystackGateway,
-      this.academicRepository
+      this.academicRepository,
+      this.kcbBuniGateway
     );
     this.analyticsUseCases = new AnalyticsUseCases(
       this.studentRepository,
@@ -217,8 +220,7 @@ export class AppContainer {
     });
   }
 
-  public async ensureRoleAccounts() {
-    // ... [No changes needed in your default account provisioning block] ...
+  public async ensureAdminAccounts() {
     const defaultAccounts = [
       {
         id: 'usr-superadmin-01',
@@ -238,76 +240,14 @@ export class AppContainer {
         role: UserRole.ADMIN,
         phone: process.env.DEFAULT_ADMIN_PHONE || '+254711000111',
         schoolId: 'school-001'
-      },
-      {
-        id: 'usr-headteacher-01',
-        email: process.env.DEFAULT_HEADTEACHER_EMAIL || 'headteacher@smartshule.ac.ke',
-        password: process.env.DEFAULT_HEADTEACHER_PASSWORD || 'HeadTeacher@123',
-        firstName: 'Maina',
-        lastName: 'Kariuki',
-        role: UserRole.HEAD_TEACHER,
-        phone: '+254722000222',
-        schoolId: 'school-001'
-      },
-      {
-        id: 'usr-deputy-01',
-        email: process.env.DEFAULT_DEPUTY_EMAIL || 'deputy@smartshule.ac.ke',
-        password: process.env.DEFAULT_DEPUTY_PASSWORD || 'Deputy@123',
-        firstName: 'Grace',
-        lastName: 'Wambui',
-        role: UserRole.DEPUTY_HEAD_TEACHER,
-        phone: '+254733000333',
-        schoolId: 'school-001'
-      },
-      {
-        id: 'usr-admissions-01',
-        email: process.env.DEFAULT_ADMISSIONS_EMAIL || 'admissions@smartshule.ac.ke',
-        password: process.env.DEFAULT_ADMISSIONS_PASSWORD || 'Admissions@123',
-        firstName: 'Peter',
-        lastName: 'Otieno',
-        role: UserRole.ADMISSIONS,
-        phone: '+254744000444',
-        schoolId: 'school-001'
-      },
-      {
-        id: 'usr-bursar-01',
-        email: process.env.DEFAULT_BURSAR_EMAIL || 'bursar@smartshule.ac.ke',
-        password: process.env.DEFAULT_BURSAR_PASSWORD || 'Bursar@123',
-        firstName: 'David',
-        lastName: 'Kamau',
-        role: UserRole.BURSAR,
-        phone: '+254755000555',
-        schoolId: 'school-001'
-      },
-      {
-        id: 'usr-teacher-01',
-        email: process.env.DEFAULT_TEACHER_EMAIL || 'teacher@smartshule.ac.ke',
-        password: process.env.DEFAULT_TEACHER_PASSWORD || 'Teacher@123',
-        firstName: 'Sarah',
-        lastName: 'Mwangi',
-        role: UserRole.TEACHER,
-        phone: '+254766000666',
-        schoolId: 'school-001'
-      },
-      {
-        id: 'usr-parent-01',
-        email: process.env.DEFAULT_PARENT_EMAIL || 'parent@smartshule.ac.ke',
-        password: process.env.DEFAULT_PARENT_PASSWORD || 'Parent@123',
-        firstName: 'Mary',
-        lastName: 'Njeri',
-        role: UserRole.PARENT,
-        phone: '+254777000777',
-        schoolId: 'school-001'
       }
     ];
 
     for (const acc of defaultAccounts) {
       const existing = await this.userRepository.findByEmail(acc.email).catch(() => null);
       const passwordHash = await this.passwordHasher.hash(acc.password);
-      let targetUserId = acc.id;
 
       if (!existing) {
-        const isParentRole = acc.role === UserRole.PARENT || acc.role === UserRole.GUARDIAN;
         const user = User.create(
           {
             email: acc.email,
@@ -318,14 +258,13 @@ export class AppContainer {
             phone: acc.phone,
             status: UserStatus.ACTIVE,
             schoolId: (acc as any).schoolId,
-            mustChangePassword: isParentRole
+            mustChangePassword: false
           },
           acc.id
         );
         await this.userRepository.save(user);
         console.log(`[Auth] Provisioned default account (${acc.role}): ${acc.email}`);
       } else {
-        targetUserId = existing.id;
         if (acc.id === 'usr-admin-01' || acc.email === 'admin@smartshule.ac.ke') {
           const updatedAdmin = User.create(
             {
@@ -343,61 +282,14 @@ export class AppContainer {
           await this.userRepository.save(updatedAdmin);
         }
       }
-
-      // If teacher, ensure a linked teacher profile exists
-      if (acc.role === UserRole.TEACHER) {
-        const existingTeacher = await this.teacherRepository.findByUserId(targetUserId).catch(() => null);
-        if (!existingTeacher) {
-          const teacher = Teacher.create(
-            {
-              userId: targetUserId,
-              employeeNumber: 'EMP-1001',
-              tscNumber: 'TSC/778899',
-              specialization: ['Mathematics', 'Integrated Science'],
-              assignedClassStreamIds: [],
-              qualification: 'B.Ed (Science)'
-            },
-            'tch-default-01'
-          );
-          await this.teacherRepository.save(teacher);
-        }
-      }
-
-      // If parent, ensure a linked guardian profile exists and is linked to a student
-      if (acc.role === UserRole.PARENT || acc.role === UserRole.GUARDIAN) {
-        let existingGuardian = await this.guardianRepository.findByUserId(targetUserId).catch(() => null);
-        const allStudents = await this.studentRepository.findAll().catch(() => []);
-        const linkedStudent = allStudents.find(s => s.id === 'student-001') || allStudents[0];
-
-        if (!existingGuardian) {
-          const guardian = Guardian.create(
-            {
-              userId: targetUserId,
-              nationalId: '28475921',
-              relationship: GuardianRelationship.MOTHER,
-              emergencyContact: acc.phone,
-              studentIds: linkedStudent ? [linkedStudent.id] : []
-            },
-            'grd-default-01'
-          );
-          await this.guardianRepository.save(guardian);
-          if (linkedStudent && !linkedStudent.guardianIds.includes(guardian.id)) {
-            linkedStudent.addGuardian(guardian.id);
-            await this.studentRepository.update(linkedStudent).catch(() => null);
-          }
-        } else if (existingGuardian.studentIds.length === 0 && linkedStudent) {
-          existingGuardian.linkStudent(linkedStudent.id);
-          await this.guardianRepository.update(existingGuardian).catch(() => null);
-          if (!linkedStudent.guardianIds.includes(existingGuardian.id)) {
-            linkedStudent.addGuardian(existingGuardian.id);
-            await this.studentRepository.update(linkedStudent).catch(() => null);
-          }
-        }
-      }
     }
   }
 
   public async ensureSuperAdmin() {
-    await this.ensureRoleAccounts();
+    await this.ensureAdminAccounts();
+  }
+
+  public async ensureRoleAccounts() {
+    await this.ensureAdminAccounts();
   }
 }

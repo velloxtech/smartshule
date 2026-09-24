@@ -489,6 +489,38 @@ export const apiService = {
     });
   },
 
+  promoteStudent: async (
+    id: string,
+    data: {
+      targetGradeLevel?: string;
+      targetAcademicYearId?: string;
+      targetTermId?: string;
+      targetClassroomId?: string;
+      targetStreamId?: string;
+      carryForwardBalance?: boolean;
+    }
+  ): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/students/${id}/promote`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  promoteStudentsBulk: async (data: {
+    studentIds: string[];
+    targetGradeLevel?: string;
+    targetAcademicYearId?: string;
+    targetTermId?: string;
+    targetClassroomId?: string;
+    targetStreamId?: string;
+    carryForwardBalance?: boolean;
+  }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/students/promote-bulk', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
   // 4. Teachers & Staff Endpoints
   getMyTeacherProfile: async (): Promise<ApiResponse<any>> => {
     return apiFetch<ApiResponse<any>>('/teachers/me/profile');
@@ -960,7 +992,7 @@ export const apiService = {
     schoolId: string;
     invoiceId: string;
     amount: number;
-    paymentMethod: 'MPESA' | 'BANK_TRANSFER' | 'BANK_DEPOSIT' | 'CHEQUE' | 'CASH' | 'CARD' | 'PAYSTACK';
+    paymentMethod: 'MPESA' | 'BANK_TRANSFER' | 'BANK_DEPOSIT' | 'CHEQUE' | 'CASH' | 'CARD' | 'PAYSTACK' | 'KCB_BUNI';
     transactionReference: string;
     mpesaPhoneNumber?: string;
     paymentDate?: string;
@@ -973,8 +1005,40 @@ export const apiService = {
     });
   },
 
+  // KCB Buni API Platform Integration
+  getKcbBuniConfig: async (): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/finance/kcb-buni/config');
+  },
+
+  initiateKcbBuniStkPush: async (data: {
+    invoiceId: string;
+    phoneNumber: string;
+    amount?: number;
+    description?: string;
+  }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/finance/kcb-buni/stk-push', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  queryKcbBuniStatus: async (checkoutRequestId: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/finance/kcb-buni/status/${encodeURIComponent(checkoutRequestId)}`);
+  },
+
+  validateKcbBuniBill: async (data: {
+    billReferenceNumber: string;
+    amount?: number;
+    phoneNumber?: string;
+  }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/finance/kcb-buni/validate', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
   initiateMpesaStkPush: async (invoiceId: string, phoneNumber: string): Promise<ApiResponse<any>> => {
-    return apiFetch<ApiResponse<any>>('/finance/mpesa/stk-push', {
+    return apiFetch<ApiResponse<any>>('/finance/kcb-buni/stk-push', {
       method: 'POST',
       body: JSON.stringify({ invoiceId, phoneNumber }),
     });
