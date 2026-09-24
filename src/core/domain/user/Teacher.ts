@@ -55,6 +55,19 @@ export class Teacher extends Entity<TeacherProps> {
     this.touch();
   }
 
+  public updateDetails(props: {
+    tscNumber?: string;
+    employeeNumber?: string;
+    specialization?: string[];
+    qualification?: string;
+  }): void {
+    if (props.tscNumber !== undefined) this._props.tscNumber = props.tscNumber;
+    if (props.employeeNumber !== undefined) this._props.employeeNumber = props.employeeNumber;
+    if (props.specialization !== undefined) this._props.specialization = props.specialization;
+    if (props.qualification !== undefined) this._props.qualification = props.qualification;
+    this.touch();
+  }
+
   public toJSON() {
     return {
       id: this.id,

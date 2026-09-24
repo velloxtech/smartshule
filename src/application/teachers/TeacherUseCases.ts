@@ -14,9 +14,22 @@ export interface RegisterTeacherDTO {
   phone?: string;
   schoolId: string;
   tscNumber?: string;
-  employeeNumber: string;
+  employeeNumber?: string;
   specialization: string[];
   assignedClassStreamIds?: string[];
+  qualification?: string;
+  role?: UserRole;
+}
+
+export interface UpdateTeacherProfileDTO {
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  email?: string;
+  role?: UserRole;
+  tscNumber?: string;
+  employeeNumber?: string;
+  specialization?: string[];
   qualification?: string;
 }
 
@@ -38,13 +51,32 @@ export class TeacherUseCases {
       throw new ConflictError(`User with email '${dto.email}' already exists.`);
     }
 
-    const existingEmp = await this.teacherRepository.findByEmployeeNumber(dto.employeeNumber);
+    let employeeNumber = dto.employeeNumber?.trim();
+    if (!employeeNumber) {
+      const allTeachers = await this.teacherRepository.findAll();
+      let relevantTeachers = allTeachers;
+      if (dto.schoolId) {
+        const schoolUsers = await this.userRepository.findAll({ schoolId: dto.schoolId });
+        const schoolUserIds = new Set(schoolUsers.map(u => u.id));
+        relevantTeachers = allTeachers.filter(t => schoolUserIds.has(t.userId));
+      }
+      employeeNumber = IdGenerator.generateNextSequentialNumber(relevantTeachers.map(t => t.employeeNumber));
+    }
+
+    const existingEmp = await this.teacherRepository.findByEmployeeNumber(employeeNumber);
     if (existingEmp) {
-      throw new ConflictError(`Teacher with Employee Number '${dto.employeeNumber}' already exists.`);
+      if (dto.schoolId) {
+        const existingUser = await this.userRepository.findById(existingEmp.userId);
+        if (existingUser && existingUser.schoolId === dto.schoolId) {
+          throw new ConflictError(`Teacher with Employee Number '${employeeNumber}' already exists.`);
+        }
+      } else {
+        throw new ConflictError(`Teacher with Employee Number '${employeeNumber}' already exists.`);
+      }
     }
 
     // Teacher's National ID or Employee Number is used as their initial login password
-    const rawPassword = dto.password?.trim() || dto.nationalId?.trim() || dto.employeeNumber?.trim() || process.env.DEFAULT_TEACHER_PASSWORD || dto.phone?.trim() || '';
+    const rawPassword = dto.password?.trim() || dto.nationalId?.trim() || employeeNumber || process.env.DEFAULT_TEACHER_PASSWORD || dto.phone?.trim() || '';
     if (!rawPassword) {
       throw new ValidationError('A password, National ID, or Employee Number is required to initialize teacher account.');
     }
@@ -56,7 +88,7 @@ export class TeacherUseCases {
         passwordHash,
         firstName: dto.firstName,
         lastName: dto.lastName,
-        role: UserRole.TEACHER,
+        role: dto.role && Object.values(UserRole).includes(dto.role) ? dto.role : UserRole.TEACHER,
         phone: dto.phone,
         status: UserStatus.ACTIVE,
         schoolId: dto.schoolId || 'school-001'
@@ -70,8 +102,8 @@ export class TeacherUseCases {
       {
         userId: user.id,
         tscNumber: dto.tscNumber,
-        employeeNumber: dto.employeeNumber,
-        specialization: dto.specialization,
+        employeeNumber,
+        specialization: dto.specialization || [],
         assignedClassStreamIds: dto.assignedClassStreamIds || [],
         qualification: dto.qualification
       },
@@ -128,6 +160,62 @@ export class TeacherUseCases {
     teacher.assignStream(dto.streamId);
     await this.teacherRepository.update(teacher);
     return teacher.toJSON();
+  }
+
+  public async updateTeacherProfile(teacherIdOrUserId: string, dto: UpdateTeacherProfileDTO) {
+    let teacher = await this.teacherRepository.findById(teacherIdOrUserId);
+    if (!teacher) {
+      teacher = await this.teacherRepository.findByUserId(teacherIdOrUserId);
+    }
+    if (!teacher) {
+      throw new NotFoundError('Teacher', teacherIdOrUserId);
+    }
+
+    const user = await this.userRepository.findById(teacher.userId);
+    if (!user) {
+      throw new NotFoundError('User for Teacher', teacher.userId);
+    }
+
+    // Update User Profile fields
+    if (dto.firstName || dto.lastName || dto.phone !== undefined) {
+      user.updateProfile(dto.firstName, dto.lastName, dto.phone);
+    }
+
+    if (dto.email && dto.email.toLowerCase() !== user.email.toLowerCase()) {
+      const existingUser = await this.userRepository.findByEmail(dto.email.toLowerCase());
+      if (existingUser && existingUser.id !== user.id) {
+        throw new ConflictError(`User with email '${dto.email}' already exists.`);
+      }
+      user.updateEmail(dto.email);
+    }
+
+    if (dto.role && Object.values(UserRole).includes(dto.role)) {
+      user.updateRole(dto.role);
+    }
+
+    await this.userRepository.update(user);
+
+    // Update Teacher domain fields
+    if (dto.employeeNumber && dto.employeeNumber !== teacher.employeeNumber) {
+      const existingEmp = await this.teacherRepository.findByEmployeeNumber(dto.employeeNumber);
+      if (existingEmp && existingEmp.id !== teacher.id) {
+        throw new ConflictError(`Teacher with Employee Number '${dto.employeeNumber}' already exists.`);
+      }
+    }
+
+    teacher.updateDetails({
+      tscNumber: dto.tscNumber,
+      employeeNumber: dto.employeeNumber,
+      specialization: dto.specialization,
+      qualification: dto.qualification,
+    });
+
+    await this.teacherRepository.update(teacher);
+
+    return {
+      ...teacher.toJSON(),
+      user: user.toJSON(),
+    };
   }
 
   public async deleteTeacher(teacherId: string) {

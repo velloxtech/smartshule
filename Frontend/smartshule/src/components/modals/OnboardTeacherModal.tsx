@@ -11,20 +11,36 @@ import {
   isValidKenyanNationalId,
 } from '../../utils/kenyanConstitution';
 
+import { generateNextSequentialNumber } from '../../utils/sequenceGenerator';
+
+export const STAFF_ROLES = [
+  { value: 'TEACHER', label: 'Teacher / Subject Educator' },
+  { value: 'ADMISSIONS', label: 'Admissions Officer' },
+  { value: 'BURSAR', label: 'Bursar' },
+  { value: 'ACCOUNTANT', label: 'Accountant / Finance Officer' },
+  { value: 'HEAD_TEACHER', label: 'Head Teacher / Principal' },
+  { value: 'DEPUTY_HEAD_TEACHER', label: 'Deputy Head Teacher' },
+  { value: 'SCHOOL_ADMIN', label: 'School Administrator' },
+  { value: 'ADMIN', label: 'System Administrator' },
+];
+
 interface OnboardTeacherModalProps {
   isOpen: boolean;
   onClose: () => void;
   onTeacherCreated: (teacher: any) => void;
+  existingTeachers?: any[];
 }
 
 export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
   isOpen,
   onClose,
   onTeacherCreated,
+  existingTeachers,
 }) => {
   const { user } = useAuth();
   const [schoolId, setSchoolId] = useState<string>(user?.schoolId || 'school-001');
   const [currentSection, setCurrentSection] = useState<1 | 2 | 3>(1);
+  const [role, setRole] = useState<string>('TEACHER');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [nationalId, setNationalId] = useState('');
@@ -33,7 +49,7 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
   const [selectedCounty, setSelectedCounty] = useState('Kisumu');
   const [selectedSubCounty, setSelectedSubCounty] = useState('Kisumu West');
 
-  // Article 237 TSC Mandate
+  // Article 237 TSC Mandate (Optional if not yet issued)
   const [tscNumber, setTscNumber] = useState('');
   const [employeeNumber, setEmployeeNumber] = useState('');
   const [qualification, setQualification] = useState('B.Ed (Science)');
@@ -58,27 +74,53 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isOpen) return;
-    if (!schoolId || schoolId === 'school-001') {
-      apiService.getSchool().then((res) => {
-        if (res?.data?.id) setSchoolId(res.data.id);
+    if (isOpen) {
+      setCurrentSection(1);
+      setError(null);
+
+      // Auto-generate employee ID from 01
+      if (existingTeachers && existingTeachers.length > 0) {
+        const nextEmp = generateNextSequentialNumber(
+          existingTeachers.map((t) => t.employeeNumber || (t as any).empNo || t.id)
+        );
+        setEmployeeNumber(nextEmp);
+      } else {
+        setEmployeeNumber('01');
+      }
+
+      apiService
+        .getTeachers()
+        .then((res) => {
+          if (res?.data && Array.isArray(res.data) && res.data.length > 0) {
+            const nextEmp = generateNextSequentialNumber(
+              res.data.map((t: any) => t.employeeNumber)
+            );
+            setEmployeeNumber(nextEmp);
+          }
+        })
+        .catch(() => {});
+
+      if (!schoolId || schoolId === 'school-001') {
+        apiService.getSchool().then((res) => {
+          if (res?.data?.id) setSchoolId(res.data.id);
+        }).catch(() => {});
+      }
+
+      // Load database learning areas
+      apiService.getLearningAreas().then((res) => {
+        if (res?.data && Array.isArray(res.data)) {
+          setDbLearningAreas(res.data);
+        }
+      }).catch(() => {});
+
+      // Load database classes
+      apiService.getClasses().then((res) => {
+        if (res?.data && Array.isArray(res.data)) {
+          setClasses(res.data);
+        }
       }).catch(() => {});
     }
-
-    // Load database learning areas
-    apiService.getLearningAreas().then((res) => {
-      if (res?.data && Array.isArray(res.data)) {
-        setDbLearningAreas(res.data);
-      }
-    }).catch(() => {});
-
-    // Load database classes
-    apiService.getClasses().then((res) => {
-      if (res?.data && Array.isArray(res.data)) {
-        setClasses(res.data);
-      }
-    }).catch(() => {});
-  }, [isOpen, schoolId]);
+  }, [isOpen, schoolId, existingTeachers]);
 
   // Load streams when class is selected
   useEffect(() => {
@@ -146,8 +188,8 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
         return false;
       }
     } else if (section === 2) {
-      if (!tscNumber.trim() || !isValidTscNumber(tscNumber)) {
-        setError('Teachers Service Commission (TSC) number is mandatory under Article 237 (e.g. TSC/123456).');
+      if (tscNumber.trim() && !isValidTscNumber(tscNumber)) {
+        setError('Please enter a valid Teachers Service Commission (TSC) number format (e.g. TSC/123456 or 123456).');
         return false;
       }
       const specArray = Array.from(
@@ -159,13 +201,12 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
             .filter((s) => s.length > 0),
         ])
       );
-      if (specArray.length === 0) {
-        setError('Please select or specify at least one CBC learning area or subject specialization.');
-        return false;
+      if (role === 'TEACHER' && specArray.length === 0 && dbLearningAreas.length > 0) {
+        // Warning or default if teacher has no specialization
       }
     } else if (section === 3) {
       if (!chapterSixPledge) {
-        setError('Chapter Six Leadership & Integrity pledge is mandatory for all educators.');
+        setError('Chapter Six Leadership & Integrity pledge is mandatory for all educators and staff.');
         return false;
       }
       if (!childProtectionPledge) {
@@ -193,8 +234,18 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
       ])
     );
 
-    const formattedTsc = formatTscNumber(tscNumber);
+    const formattedTsc = tscNumber.trim() ? formatTscNumber(tscNumber) : undefined;
     const cleanPhone = formatKenyanPhone(phone);
+
+    // Resolve human-readable assigned class name
+    const selectedClass = classes.find((c) => c.id === selectedClassId);
+    const selectedStream = streams.find((s) => s.id === selectedStreamId);
+    let assignedClassName: string | undefined = undefined;
+    if (selectedClass && selectedStream) {
+      assignedClassName = `${selectedClass.name} ${selectedStream.name}`;
+    } else if (selectedClass) {
+      assignedClassName = selectedClass.name;
+    }
 
     try {
       const res = await apiService.registerTeacher({
@@ -205,9 +256,10 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
         lastName: lastName.trim(),
         phone: cleanPhone,
         schoolId: user?.schoolId || schoolId || 'school-001',
-        employeeNumber: employeeNumber.trim() || `EMP-${Math.floor(1000 + Math.random() * 9000)}`,
+        role,
+        employeeNumber: employeeNumber.trim() || '01',
         tscNumber: formattedTsc,
-        specialization: specArray,
+        specialization: specArray.length > 0 ? specArray : (role === 'TEACHER' ? ['CBC Core'] : []),
         assignedClassStreamIds: selectedStreamId ? [selectedStreamId] : [],
         qualification,
       });
@@ -225,6 +277,7 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
         // Attach enriched constitutional metadata
         const enriched = {
           ...res.data,
+          role,
           nationalId: nationalId.trim(),
           county: selectedCounty,
           subCounty: selectedSubCounty,
@@ -232,14 +285,15 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
           chapterSixPledged: true,
           dciClearance: dciClearanceNumber || 'VERIFIED',
           assignedStreamId: selectedStreamId,
+          assignedClassName,
         };
         onTeacherCreated(enriched);
         onClose();
       } else {
-        setError(res.message || 'Failed to onboard teacher');
+        setError(res.message || 'Failed to onboard staff member');
       }
     } catch (err: any) {
-      setError(err.message || 'Error onboarding teacher');
+      setError(err.message || 'Error onboarding staff member');
     } finally {
       setIsLoading(false);
     }
@@ -349,12 +403,37 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
           {/* SECTION 1: PERSONAL BIODATA & CITIZEN IDENTITY */}
           {currentSection === 1 && (
             <div className="space-y-3.5 animate-in fade-in">
+              {/* Staff Role Definition */}
+              <div className="p-3.5 bg-rose-50/70 border border-rose-200/90 rounded-xl space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-[#7a1228] flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[16px]">badge</span>
+                    <span>Staff Role & System Designation</span> <span className="text-rose-600">*</span>
+                  </label>
+                  <span className="text-[10px] text-slate-500 font-semibold">User Role</span>
+                </div>
+                <select
+                  value={role}
+                  onChange={(e) => setRole(e.target.value)}
+                  className="w-full bg-white border border-rose-300 rounded-xl p-2.5 text-xs text-slate-900 font-semibold focus:outline-[#7a1228]"
+                >
+                  {STAFF_ROLES.map((r) => (
+                    <option key={r.value} value={r.value}>
+                      {r.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-slate-600">
+                  Select whether this staff member is a classroom teacher, admissions officer, bursar, accountant, or school administrator.
+                </p>
+              </div>
+
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-700 flex items-start gap-2">
                 <span className="material-symbols-outlined text-[18px] text-primary shrink-0">
                   fingerprint
                 </span>
                 <span>
-                  Educator onboarding requires verified Kenyan citizenship (National ID/Passport) and residential registration under Chapter 11.
+                  Staff onboarding requires verified Kenyan citizenship (National ID/Passport) and residential registration under Chapter 11.
                 </span>
               </div>
 
@@ -472,7 +551,7 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
             </div>
           )}
 
-          {/* SECTION 2: ARTICLE 237 TSC MANDATE */}
+          {/* SECTION 2: ARTICLE 237 TSC MANDATE & CREDENTIALS */}
           {currentSection === 2 && (
             <div className="space-y-3.5 animate-in fade-in">
               <div className="p-3 bg-amber-50/90 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-start gap-2.5">
@@ -480,44 +559,54 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
                   verified
                 </span>
                 <div>
-                  <strong className="font-bold block">Teachers Service Commission Mandate (Article 237):</strong>
-                  Under Article 237(2) of the Constitution and the TSC Act, no person shall teach in any learning institution unless registered by the Commission.
+                  <strong className="font-bold block">Professional Credentials & TSC Information:</strong>
+                  For teaching staff, enter their Teachers Service Commission (TSC) number. If not yet issued by TSC, or for administrative, admissions, and finance staff, this field is optional and can be updated later.
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-                    TSC Registration Number <span className="text-rose-600">*</span>
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600">
+                      TSC Registration Number
+                    </label>
+                    <span className="text-[10px] text-emerald-700 font-semibold bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
+                      Optional
+                    </span>
+                  </div>
                   <input
                     type="text"
-                    required
                     value={tscNumber}
                     onChange={(e) => setTscNumber(e.target.value)}
-                    placeholder="TSC/123456"
+                    placeholder="e.g. TSC/123456 (Leave blank if pending)"
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white font-mono"
                   />
-                  <span className="text-[10px] text-slate-500">Statutory commission registration number</span>
+                  <span className="text-[10px] text-slate-500">Commission registration number (if already received)</span>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-                    School Employee Number
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600">
+                      School Employee Number
+                    </label>
+                    <span className="text-[10px] text-emerald-700 font-semibold bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
+                      Auto from 01
+                    </span>
+                  </div>
                   <input
                     type="text"
                     value={employeeNumber}
                     onChange={(e) => setEmployeeNumber(e.target.value)}
-                    placeholder="EMP-0103"
+                    placeholder="e.g. 01"
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white font-mono"
                   />
+                  <span className="text-[10px] text-slate-500">Auto-generated starting from 01 (editable if needed)</span>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-                    Highest Teaching Qualification
+                    Highest Academic / Professional Qualification
                   </label>
                   <select
                     value={qualification}
@@ -534,6 +623,9 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
                     <option value="Postgraduate Diploma in Education (PGDE)">Postgraduate Diploma in Education (PGDE)</option>
                     <option value="Masters in Education (M.Ed)">Masters in Education (M.Ed)</option>
                     <option value="Doctor of Philosophy in Education (Ph.D)">Doctor of Philosophy in Education (Ph.D)</option>
+                    <option value="Bachelor of Commerce / Finance / CPA">Bachelor of Commerce / Finance / CPA</option>
+                    <option value="Diploma / Degree in Business Administration">Diploma / Degree in Business Administration</option>
+                    <option value="Other Professional Qualification">Other Professional Qualification</option>
                   </select>
                 </div>
                 <div>

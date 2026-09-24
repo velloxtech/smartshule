@@ -5,7 +5,7 @@ import { StudentGender, CbcGradeLevel, StudentStatus } from '../../../core/domai
 import { GuardianRelationship } from '../../../core/domain/user/Guardian';
 
 export const RegisterStudentSchema = z.object({
-  admissionNumber: z.string().min(1),
+  admissionNumber: z.string().optional(),
   upiNumber: z.string().optional(),
   firstName: z.string().min(1),
   middleName: z.string().optional(),

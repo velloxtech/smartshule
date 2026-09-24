@@ -9,6 +9,31 @@ export class IdGenerator {
     const randomSuffix = Math.floor(100000 + Math.random() * 900000);
     return `${prefix}-${randomSuffix}`;
   }
+
+  public static generateNextSequentialNumber(existingIds: (string | undefined | null)[]): string {
+    let max = 0;
+    for (const id of existingIds) {
+      if (!id || typeof id !== 'string') continue;
+      const trimmed = id.trim();
+      if (!trimmed) continue;
+      if (/^\d+$/.test(trimmed)) {
+        const val = parseInt(trimmed, 10);
+        if (!isNaN(val) && val > max && val < 100000) {
+          max = val;
+        }
+      } else {
+        const match = trimmed.match(/(\d+)$/);
+        if (match) {
+          const val = parseInt(match[1], 10);
+          if (!isNaN(val) && val > max && val < 100000) {
+            max = val;
+          }
+        }
+      }
+    }
+    const next = max + 1;
+    return next < 10 ? `0${next}` : `${next}`;
+  }
 }
 
 export abstract class DomainError extends Error {

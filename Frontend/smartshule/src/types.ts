@@ -118,6 +118,7 @@ export interface Teacher {
   phone: string;
   email?: string;
   qualification?: string;
+  employeeNumber?: string;
   status: 'Clocked In' | 'Absent (Permit)' | 'Absent' | 'On Leave';
   clockInTime?: string;
 }

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { Student, TimetableSlot, SchemeOfWork, LessonPlan } from '../../types';
+import { EditTeacherProfileModal } from '../modals/EditTeacherProfileModal';
 
 interface TeacherDashboardViewProps {
   onNavigateTab: (tabId: any) => void;
@@ -27,6 +28,7 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
   const [myAssessmentsCount, setMyAssessmentsCount] = useState<number>(0);
   const [currentContext, setCurrentContext] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
 
   const todayDate = new Date().toISOString().split('T')[0];
 
@@ -118,8 +120,10 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
     loadTeacherData();
   }, [todayDate]);
 
-  const teacherName = user ? `${user.firstName} ${user.lastName}` : 'Teacher';
-  const tscNumber = teacherProfile?.tscNumber || 'TSC/--';
+  const currentTeacherUser = teacherProfile?.user || user;
+  const teacherName = currentTeacherUser ? `${currentTeacherUser.firstName} ${currentTeacherUser.lastName}` : 'Teacher';
+  const tscNumber = teacherProfile?.tscNumber || 'TSC Pending / Optional';
+  const qualification = teacherProfile?.qualification;
   const specialization = teacherProfile?.specialization?.length
     ? teacherProfile.specialization.join(', ')
     : 'CBC Educator';
@@ -145,7 +149,7 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
       <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-xs border border-outline-variant/30 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex items-start gap-4">
           <div className="w-14 h-14 rounded-2xl bg-[#7a1228] text-white flex items-center justify-center font-bold text-xl shadow-md shrink-0">
-            {user?.firstName?.[0] || 'T'}{user?.lastName?.[0] || 'R'}
+            {currentTeacherUser?.firstName?.[0] || 'T'}{currentTeacherUser?.lastName?.[0] || 'R'}
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
@@ -169,6 +173,15 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
                 <span className="material-symbols-outlined text-[15px]">psychology</span>
                 {specialization}
               </span>
+              {qualification && (
+                <>
+                  <span>·</span>
+                  <span className="inline-flex items-center gap-1 text-on-surface-variant font-medium">
+                    <span className="material-symbols-outlined text-[15px]">school</span>
+                    {qualification}
+                  </span>
+                </>
+              )}
               {currentContext?.currentTerm?.name && (
                 <>
                   <span>·</span>
@@ -183,6 +196,14 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
 
         {/* Quick Action Buttons Header */}
         <div className="flex items-center gap-2.5 flex-wrap shrink-0">
+          <button
+            onClick={() => setIsEditProfileOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-xs font-semibold shadow-xs border border-outline-variant/30 transition-all cursor-pointer"
+            title="Edit your teacher profile, contact information, or learning areas"
+          >
+            <span className="material-symbols-outlined text-[16px] text-[#7a1228]">edit_note</span>
+            <span>Edit Profile</span>
+          </button>
           <button
             onClick={() => onNavigateTab('attendance-register')}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-[#7a1228] text-white hover:bg-[#5e0d1e] text-xs font-semibold shadow-xs transition-all cursor-pointer"
@@ -613,6 +634,16 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
           </div>
         )}
       </div>
+
+      {/* Edit Profile Modal */}
+      <EditTeacherProfileModal
+        isOpen={isEditProfileOpen}
+        onClose={() => setIsEditProfileOpen(false)}
+        teacherProfile={teacherProfile}
+        onProfileUpdated={(updated) => {
+          setTeacherProfile(updated);
+        }}
+      />
     </div>
   );
 };

@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { TeacherUseCases } from '../../../application/teachers/TeacherUseCases';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
+import { UserRole } from '../../../core/domain/user/User';
 
 export const RegisterTeacherSchema = z.object({
   email: z.string().email(),
@@ -11,10 +12,23 @@ export const RegisterTeacherSchema = z.object({
   lastName: z.string().min(1),
   phone: z.string().optional(),
   schoolId: z.string().optional().default('school-001'),
+  role: z.nativeEnum(UserRole).optional().default(UserRole.TEACHER),
   tscNumber: z.string().optional(),
-  employeeNumber: z.string().min(1),
-  specialization: z.array(z.string()).min(1),
+  employeeNumber: z.string().optional(),
+  specialization: z.array(z.string()).optional().default([]),
   assignedClassStreamIds: z.array(z.string()).optional(),
+  qualification: z.string().optional()
+}).passthrough();
+
+export const UpdateTeacherProfileSchema = z.object({
+  firstName: z.string().min(1).optional(),
+  lastName: z.string().min(1).optional(),
+  phone: z.string().optional(),
+  email: z.string().email().optional(),
+  role: z.nativeEnum(UserRole).optional(),
+  tscNumber: z.string().optional(),
+  employeeNumber: z.string().optional(),
+  specialization: z.array(z.string()).optional(),
   qualification: z.string().optional()
 }).passthrough();
 
@@ -53,6 +67,35 @@ export class TeacherController {
       if (err.name === 'NotFoundError') {
         return res.status(404).json({ success: false, message: 'No teacher profile linked to this user' });
       }
+      next(err);
+    }
+  };
+
+  public updateMyTeacherProfile = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      if (!req.user?.userId) {
+        return res.status(401).json({ success: false, message: 'Authentication required' });
+      }
+      const updated = await this.teacherUseCases.updateTeacherProfile(req.user.userId, req.body);
+      return res.status(200).json({
+        success: true,
+        message: 'Profile updated successfully',
+        data: updated
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public updateTeacherProfile = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const updated = await this.teacherUseCases.updateTeacherProfile(req.params.id as string, req.body);
+      return res.status(200).json({
+        success: true,
+        message: 'Teacher profile updated successfully',
+        data: updated
+      });
+    } catch (err) {
       next(err);
     }
   };

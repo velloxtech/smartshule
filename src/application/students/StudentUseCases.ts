@@ -58,7 +58,7 @@ export interface UserContext {
 }
 
 export interface RegisterStudentDTO {
-  admissionNumber: string;
+  admissionNumber?: string;
   upiNumber?: string;
   firstName: string;
   middleName?: string;
@@ -115,9 +115,10 @@ export class StudentUseCases {
   ) {}
 
   public async registerStudent(dto: RegisterStudentDTO) {
-    const admissionNumber = dto.admissionNumber?.trim();
+    let admissionNumber = dto.admissionNumber?.trim();
     if (!admissionNumber) {
-      throw new ValidationError('Admission number is required.');
+      const allStudents = await this.studentRepository.findAll({ schoolId: dto.schoolId });
+      admissionNumber = IdGenerator.generateNextSequentialNumber(allStudents.map(s => s.admissionNumber));
     }
 
     const existing = await this.studentRepository.findByAdmissionNumber(admissionNumber, dto.schoolId);
@@ -140,7 +141,7 @@ export class StudentUseCases {
       let guardianUser = await this.userRepository.findByEmail(dto.guardian.email.toLowerCase());
       if (!guardianUser) {
         // Use National ID / Phone as default password for parent account, requiring password change on first login
-        const parentDefaultPassword = dto.guardian.nationalId?.trim() || dto.guardian.phone?.trim() || process.env.DEFAULT_PARENT_PASSWORD || dto.admissionNumber;
+        const parentDefaultPassword = dto.guardian.nationalId?.trim() || dto.guardian.phone?.trim() || process.env.DEFAULT_PARENT_PASSWORD || dto.admissionNumber || 'Parent@123';
         const defaultPasswordHash = await this.passwordHasher.hash(parentDefaultPassword);
         guardianUser = User.create(
           {

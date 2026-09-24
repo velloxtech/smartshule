@@ -29,6 +29,7 @@ import {
 import {
   TeacherController,
   RegisterTeacherSchema,
+  UpdateTeacherProfileSchema,
   AssignStreamSchema
 } from '../controllers/TeacherController';
 
@@ -215,8 +216,10 @@ export function createApiRouter(container: AppContainer): Router {
   const teacherRouter = Router();
   teacherRouter.post('/', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.ADMISSIONS), validateBody(RegisterTeacherSchema), teacherController.registerTeacher);
   teacherRouter.get('/me/profile', authMiddleware, teacherController.getMyTeacherProfile);
+  teacherRouter.put('/me/profile', authMiddleware, validateBody(UpdateTeacherProfileSchema), teacherController.updateMyTeacherProfile);
   teacherRouter.get('/', authMiddleware, teacherController.listTeachers);
   teacherRouter.get('/:id', authMiddleware, teacherController.getTeacherById);
+  teacherRouter.put('/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), validateBody(UpdateTeacherProfileSchema), teacherController.updateTeacherProfile);
   teacherRouter.post('/assign-stream', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN), validateBody(AssignStreamSchema), teacherController.assignStream);
   teacherRouter.delete('/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN), teacherController.deleteTeacher);
   router.use('/teachers', teacherRouter);

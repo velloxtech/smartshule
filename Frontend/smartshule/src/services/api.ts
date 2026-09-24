@@ -541,6 +541,7 @@ export const apiService = {
     lastName: string;
     phone?: string;
     schoolId: string;
+    role?: string;
     tscNumber?: string;
     employeeNumber: string;
     specialization: string[];
@@ -549,6 +550,43 @@ export const apiService = {
   }): Promise<ApiResponse<any>> => {
     return apiFetch<ApiResponse<any>>('/teachers', {
       method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateMyTeacherProfile: async (data: {
+    firstName?: string;
+    lastName?: string;
+    phone?: string;
+    email?: string;
+    role?: string;
+    tscNumber?: string;
+    employeeNumber?: string;
+    specialization?: string[];
+    qualification?: string;
+  }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/teachers/me/profile', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateTeacherProfile: async (
+    id: string,
+    data: {
+      firstName?: string;
+      lastName?: string;
+      phone?: string;
+      email?: string;
+      role?: string;
+      tscNumber?: string;
+      employeeNumber?: string;
+      specialization?: string[];
+      qualification?: string;
+    }
+  ): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/teachers/${id}`, {
+      method: 'PUT',
       body: JSON.stringify(data),
     });
   },

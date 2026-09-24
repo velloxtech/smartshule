@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Student, ClassRoom, StreamItem } from '../../types';
 import { apiService } from '../../services/api';
+import { generateNextSequentialNumber } from '../../utils/sequenceGenerator';
 import {
   KENYAN_COUNTIES,
   SNE_ACCOMMODATIONS,
@@ -15,12 +16,14 @@ interface AdmitLearnerModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAdmit: (newLearner: any, rawBackendData?: any) => void | Promise<void>;
+  existingStudents?: Student[];
 }
 
 export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
   isOpen,
   onClose,
   onAdmit,
+  existingStudents,
 }) => {
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -110,7 +113,29 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
       setCurrentStep(1);
       setValidationError(null);
       setIsSubmitting(false);
-      setAdmissionNumber('');
+
+      // Auto-generate student admission number from 01
+      if (existingStudents && existingStudents.length > 0) {
+        const nextAdm = generateNextSequentialNumber(
+          existingStudents.map((s) => s.admNo || s.admissionNumber)
+        );
+        setAdmissionNumber(nextAdm);
+      } else {
+        setAdmissionNumber('01');
+      }
+
+      apiService
+        .getStudents()
+        .then((res) => {
+          if (res?.data && Array.isArray(res.data) && res.data.length > 0) {
+            const nextAdm = generateNextSequentialNumber(
+              res.data.map((s: any) => s.admissionNumber || s.admNo)
+            );
+            setAdmissionNumber(nextAdm);
+          }
+        })
+        .catch(() => {});
+
       setNemisUpi('');
       setFirstName('');
       setMiddleName('');
@@ -535,18 +560,23 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
               {/* School Admission Number & Optional NEMIS UPI */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-                    School Admission Number <span className="text-rose-600">*</span>
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600">
+                      School Admission Number <span className="text-rose-600">*</span>
+                    </label>
+                    <span className="text-[10px] text-emerald-700 font-semibold bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
+                      Auto from 01
+                    </span>
+                  </div>
                   <input
                     type="text"
                     required
                     value={admissionNumber}
                     onChange={(e) => setAdmissionNumber(e.target.value)}
-                    placeholder="e.g. ADM-2026-001 or GSS-104"
+                    placeholder="e.g. 01"
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white font-mono"
                   />
-                  <span className="text-[10px] text-slate-500">Official institutional admission number given by the school</span>
+                  <span className="text-[10px] text-slate-500">Auto-generated starting from 01 (editable if needed)</span>
                 </div>
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">

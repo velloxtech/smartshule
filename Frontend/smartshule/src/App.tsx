@@ -246,8 +246,9 @@ export default function App() {
               const mappedTeachers: Teacher[] = teacherData.data.map((t: any) => ({
                 id: t.id,
                 name: t.user ? `${t.user.firstName} ${t.user.lastName}` : `Teacher ${t.tscNumber || ''}`,
-                role: 'Subject Teacher',
-                tscNumber: t.tscNumber || '--',
+                role: t.user?.role === 'TEACHER' ? 'Teacher / Educator' : (t.user?.role ? t.user.role.replace(/_/g, ' ') : 'Subject Teacher'),
+                tscNumber: t.tscNumber || 'Not Issued / Pending',
+                employeeNumber: t.employeeNumber || '--',
                 assignedClass: t.assignedClassStreamIds?.length ? t.assignedClassStreamIds.join(', ') : 'Unassigned',
                 phone: t.user?.phone || '--',
                 email: t.user?.email || '--',
@@ -507,19 +508,34 @@ export default function App() {
     refreshStudentsAndFees();
   };
 
-  // Onboard New Teacher Handler
+  // Onboard New Teacher / Staff Handler
   const handleTeacherCreated = (newTeacherData: any) => {
+    const assigned =
+      newTeacherData.assignedClassName ||
+      (newTeacherData.assignedClassStreamIds?.length
+        ? newTeacherData.assignedClassStreamIds.join(', ')
+        : 'Unassigned');
+
+    const roleName = newTeacherData.role
+      ? newTeacherData.role === 'TEACHER'
+        ? 'Teacher / Educator'
+        : newTeacherData.role.replace(/_/g, ' ')
+      : newTeacherData.user?.role
+      ? newTeacherData.user.role.replace(/_/g, ' ')
+      : 'Staff Member';
+
     const newT: Teacher = {
       id: newTeacherData.id || `tch-${Date.now()}`,
       name: newTeacherData.user
         ? `${newTeacherData.user.firstName} ${newTeacherData.user.lastName}`
         : `${newTeacherData.firstName || 'Teacher'} ${newTeacherData.lastName || 'Staff'}`,
-      role: 'Subject Teacher',
-      tscNumber: newTeacherData.tscNumber || 'TSC-NEW',
-      assignedClass: 'Grade 7 East',
-      phone: newTeacherData.user?.phone || '+254711000000',
-      email: newTeacherData.user?.email || 'teacher@smartshule.ac.ke',
-      learningAreas: newTeacherData.specialization || ['CBC Core'],
+      role: roleName,
+      tscNumber: newTeacherData.tscNumber || 'Not Issued / Pending',
+      employeeNumber: newTeacherData.employeeNumber || '01',
+      assignedClass: assigned,
+      phone: newTeacherData.user?.phone || newTeacherData.phone || '--',
+      email: newTeacherData.user?.email || newTeacherData.email || 'staff@smartshule.ac.ke',
+      learningAreas: newTeacherData.specialization?.length ? newTeacherData.specialization : ['General'],
       status: 'Clocked In',
       clockInTime: '08:00 AM',
     };
@@ -529,8 +545,8 @@ export default function App() {
       id: `act-${Date.now()}`,
       type: 'report',
       icon: 'person_add',
-      title: `Teacher Onboarded: ${newT.name}`,
-      description: `TSC #${newT.tscNumber} · Areas: ${newT.learningAreas.join(', ')}`,
+      title: `Staff Onboarded: ${newT.name}`,
+      description: `Role: ${newT.role} · Emp #: ${newT.employeeNumber} · TSC: ${newT.tscNumber} · Class: ${newT.assignedClass}`,
       timestamp: 'Just now',
       badgeColor: 'bg-secondary text-white',
     };
@@ -951,6 +967,7 @@ export default function App() {
         isOpen={onboardTeacherModalOpen}
         onClose={() => setOnboardTeacherModalOpen(false)}
         onTeacherCreated={handleTeacherCreated}
+        existingTeachers={teachers}
       />
 
       <KcbBuniPaymentModal
@@ -997,6 +1014,7 @@ export default function App() {
         isOpen={admitModalOpen}
         onClose={() => setAdmitModalOpen(false)}
         onAdmit={handleAdmitStudent}
+        existingStudents={students}
       />
 
       <SendSmsModal
