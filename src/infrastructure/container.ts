@@ -9,8 +9,11 @@ import { IFeeRepository } from '../core/ports/repositories/IFeeRepository';
 import { IMediaRepository } from '../core/ports/repositories/IMediaRepository';
 import { IEDiaryRepository } from '../core/ports/repositories/IEDiaryRepository';
 import { IRecordOfWorkRepository } from '../core/ports/repositories/IRecordOfWorkRepository';
+import { IComplaintRepository } from '../core/ports/repositories/IComplaintRepository';
 import { InMemoryRecordOfWorkRepository } from './database/postgres/PostgresRecordOfWorkRepository';
+import { InMemoryComplaintRepository } from './database/in-memory/InMemoryComplaintRepository';
 import { RecordOfWorkUseCases } from '../application/curriculum-plans/RecordOfWorkUseCases';
+import { ComplaintUseCases } from '../application/complaints/ComplaintUseCases';
 
 import {
   InMemoryUserRepository,
@@ -71,6 +74,7 @@ export class AppContainer {
   public mediaRepository: IMediaRepository;
   public ediaryRepository: IEDiaryRepository;
   public recordOfWorkRepository: IRecordOfWorkRepository; // <-- Added Property
+  public complaintRepository: IComplaintRepository;
 
   // Services
   public readonly tokenService = new JwtAuthTokenService();
@@ -96,6 +100,7 @@ export class AppContainer {
   public visualMediaUseCases!: VisualMediaUseCases;
   public ediaryUseCases!: EDiaryUseCases;
   public recordOfWorkUseCases!: RecordOfWorkUseCases; // <-- Added Property
+  public complaintUseCases!: ComplaintUseCases;
 
   constructor(customRepositories?: Partial<RepositoryBundle>) {
     this.userRepository = customRepositories?.userRepository || new InMemoryUserRepository();
@@ -115,6 +120,8 @@ export class AppContainer {
     // Prefer DatabaseFactory wiring; fall back to in-memory for non-postgres bundles
     this.recordOfWorkRepository =
       customRepositories?.recordOfWorkRepository || new InMemoryRecordOfWorkRepository();
+    this.complaintRepository =
+      customRepositories?.complaintRepository || new InMemoryComplaintRepository();
 
     this.initUseCases();
   }
@@ -150,12 +157,18 @@ export class AppContainer {
       this.academicRepository,
       this.attendanceRepository,
       this.guardianRepository,
-      this.userRepository
+      this.userRepository,
+      this.teacherRepository
     );
-    this.curriculumUseCases = new CurriculumPlanUseCases(this.schemeOfWorkRepository, this.lessonPlanRepository);
+    this.curriculumUseCases = new CurriculumPlanUseCases(
+      this.schemeOfWorkRepository,
+      this.lessonPlanRepository,
+      this.teacherRepository
+    );
     
     // <-- Initialize the new Records of Work Use Case here
     this.recordOfWorkUseCases = new RecordOfWorkUseCases(this.recordOfWorkRepository); 
+    this.complaintUseCases = new ComplaintUseCases(this.complaintRepository, this.userRepository);
     
     this.timetableUseCases = new TimetableUseCases(this.timetableRepository, this.academicRepository, this.teacherRepository);
     this.attendanceUseCases = new AttendanceUseCases(

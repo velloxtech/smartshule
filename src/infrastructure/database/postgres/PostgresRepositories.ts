@@ -453,6 +453,28 @@ export class PostgresDatabaseInitializer {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+
+      CREATE TABLE IF NOT EXISTS complaints (
+        id VARCHAR(100) PRIMARY KEY,
+        school_id VARCHAR(100) NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        description TEXT NOT NULL,
+        category VARCHAR(100) DEFAULT 'GENERAL',
+        priority VARCHAR(50) DEFAULT 'MEDIUM',
+        status VARCHAR(50) DEFAULT 'OPEN',
+        complainant_name VARCHAR(150),
+        complainant_role VARCHAR(50),
+        complainant_phone VARCHAR(50),
+        complainant_email VARCHAR(150),
+        complainant_student_id VARCHAR(100),
+        assigned_to_user_id VARCHAR(100),
+        resolution_notes TEXT,
+        resolved_by_user_id VARCHAR(100),
+        resolved_at TIMESTAMP,
+        created_by_user_id VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
     `;
 
     await pool.query(ddl);

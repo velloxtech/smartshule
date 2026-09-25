@@ -687,6 +687,143 @@
           }
         }
       ]
+    },
+    {
+      "name": "11. Complaints Management (Headteacher & Admin Only)",
+      "item": [
+        {
+          "name": "11.1 Create Complaint",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Damaged Science Lab Microscope\",\n  \"description\": \"Microscope in Lab 2 has a broken focus dial.\",\n  \"category\": \"FACILITY\",\n  \"priority\": \"HIGH\",\n  \"complainantName\": \"John Doe\",\n  \"complainantRole\": \"TEACHER\",\n  \"complainantPhone\": \"+254712345678\",\n  \"complainantEmail\": \"john.doe@smartshule.ac.ke\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/complaints", "host": ["{{baseUrl}}"], "path": ["complaints"] }
+          }
+        },
+        {
+          "name": "11.2 List All Complaints (with filters & search)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/complaints?status=OPEN&priority=HIGH",
+              "host": ["{{baseUrl}}"],
+              "path": ["complaints"],
+              "query": [
+                { "key": "status", "value": "OPEN" },
+                { "key": "priority", "value": "HIGH" },
+                { "key": "category", "value": "FACILITY", "disabled": true },
+                { "key": "search", "value": "microscope", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "11.3 Get Complaints Summary Statistics",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/complaints/stats/summary", "host": ["{{baseUrl}}"], "path": ["complaints", "stats", "summary"] }
+          }
+        },
+        {
+          "name": "11.4 Get Complaint by ID",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/complaints/{{complaintId}}", "host": ["{{baseUrl}}"], "path": ["complaints", "{{complaintId}}"] }
+          }
+        },
+        {
+          "name": "11.5 Update Complaint Details",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"priority\": \"URGENT\",\n  \"description\": \"Microscope in Lab 2 needs immediate repair before Friday practicals.\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/complaints/{{complaintId}}", "host": ["{{baseUrl}}"], "path": ["complaints", "{{complaintId}}"] }
+          }
+        },
+        {
+          "name": "11.6 Update Complaint Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"INVESTIGATING\",\n  \"notes\": \"Science HOD notified; replacement lens ordered.\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/complaints/{{complaintId}}/status", "host": ["{{baseUrl}}"], "path": ["complaints", "{{complaintId}}", "status"] }
+          }
+        },
+        {
+          "name": "11.7 Assign Complaint to Staff",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assignedToUserId\": \"usr-admin-01\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/complaints/{{complaintId}}/assign", "host": ["{{baseUrl}}"], "path": ["complaints", "{{complaintId}}", "assign"] }
+          }
+        },
+        {
+          "name": "11.8 Resolve Complaint",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resolutionNotes\": \"Replaced focus dial and calibrated microscope lens. Fully functional.\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/complaints/{{complaintId}}/resolve", "host": ["{{baseUrl}}"], "path": ["complaints", "{{complaintId}}", "resolve"] }
+          }
+        },
+        {
+          "name": "11.9 Dismiss Complaint",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Duplicate report; already resolved under ticket CMP-102.\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/complaints/{{complaintId}}/dismiss", "host": ["{{baseUrl}}"], "path": ["complaints", "{{complaintId}}", "dismiss"] }
+          }
+        },
+        {
+          "name": "11.10 Delete Complaint",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": { "raw": "{{baseUrl}}/complaints/{{complaintId}}", "host": ["{{baseUrl}}"], "path": ["complaints", "{{complaintId}}"] }
+          }
+        }
+      ]
     }
   ]
 }

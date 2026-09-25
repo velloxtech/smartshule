@@ -29,11 +29,15 @@ export function errorHandler(err: any, req: Request, res: Response, next: NextFu
 
   console.error('[Unhandled Server Error]', err);
 
+  const message = process.env.NODE_ENV === 'production'
+    ? 'An unexpected server error occurred. Please contact support.'
+    : (err.message || 'An unexpected error occurred');
+
   return res.status(500).json({
     success: false,
     error: {
       code: 'INTERNAL_SERVER_ERROR',
-      message: err.message || 'An unexpected error occurred'
+      message
     }
   });
 }

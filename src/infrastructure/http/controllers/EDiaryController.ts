@@ -84,7 +84,7 @@ export class EDiaryController {
 
   public deleteEntry = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await this.ediaryUseCases.deleteEntry(req.params.id as string);
+      await this.ediaryUseCases.deleteEntry(req.params.id as string, (req as any).user);
       return res.status(200).json({ success: true, message: 'eDiary entry deleted successfully' });
     } catch (err) {
       next(err);

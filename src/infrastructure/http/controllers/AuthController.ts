@@ -9,7 +9,7 @@ export const RegisterUserSchema = z.object({
   password: z.string().min(6),
   firstName: z.string().min(1),
   lastName: z.string().min(1),
-  role: z.nativeEnum(UserRole).default(UserRole.TEACHER),
+  role: z.nativeEnum(UserRole).default(UserRole.PARENT),
   phone: z.string().optional(),
   schoolId: z.string().optional()
 });
@@ -183,10 +183,13 @@ export class AuthController {
   public adminCreateUser = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const schoolId = req.body.schoolId || req.user?.schoolId || 'school-001';
-      const user = await this.authUseCases.adminCreateUser({
-        ...req.body,
-        schoolId
-      });
+      const user = await this.authUseCases.adminCreateUser(
+        {
+          ...req.body,
+          schoolId
+        },
+        req.user
+      );
       return res.status(201).json({
         success: true,
         message: 'User account created successfully',
@@ -197,9 +200,9 @@ export class AuthController {
     }
   };
 
-  public adminUpdateUser = async (req: Request, res: Response, next: NextFunction) => {
+  public adminUpdateUser = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const user = await this.authUseCases.adminUpdateUser(req.params.id as string, req.body);
+      const user = await this.authUseCases.adminUpdateUser(req.params.id as string, req.body, req.user);
       return res.status(200).json({
         success: true,
         message: 'User account updated successfully',
@@ -210,9 +213,9 @@ export class AuthController {
     }
   };
 
-  public adminSetStatus = async (req: Request, res: Response, next: NextFunction) => {
+  public adminSetStatus = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const user = await this.authUseCases.adminSetStatus(req.params.id as string, req.body.status);
+      const user = await this.authUseCases.adminSetStatus(req.params.id as string, req.body.status, req.user);
       return res.status(200).json({
         success: true,
         message: `User status changed to ${req.body.status}`,
@@ -223,9 +226,9 @@ export class AuthController {
     }
   };
 
-  public adminResetPassword = async (req: Request, res: Response, next: NextFunction) => {
+  public adminResetPassword = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const result = await this.authUseCases.adminResetPassword(req.params.id as string, req.body.newPassword);
+      const result = await this.authUseCases.adminResetPassword(req.params.id as string, req.body.newPassword, req.user);
       return res.status(200).json({
         success: true,
         message: 'User password reset successfully',
@@ -245,7 +248,7 @@ export class AuthController {
           message: 'Cannot delete your own active administrator account'
         });
       }
-      await this.authUseCases.adminDeleteUser(targetUserId);
+      await this.authUseCases.adminDeleteUser(targetUserId, req.user);
       return res.status(200).json({
         success: true,
         message: 'User account deleted successfully'

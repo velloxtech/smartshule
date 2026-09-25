@@ -2,7 +2,7 @@ import { IUserRepository } from '../../core/ports/repositories/IUserRepository';
 import { IGuardianRepository } from '../../core/ports/repositories/ITeacherRepository';
 import { IAuthTokenService, IPasswordHasher, INotificationService } from '../../core/ports/services/IExternalServices';
 import { User, UserRole, UserStatus } from '../../core/domain/user/User';
-import { IdGenerator, ConflictError, UnauthorizedError, NotFoundError } from '../../core/domain/shared/Errors';
+import { IdGenerator, ConflictError, UnauthorizedError, NotFoundError, ForbiddenError } from '../../core/domain/shared/Errors';
 
 export interface RegisterUserDTO {
   email: string;
@@ -38,6 +38,8 @@ export interface AuthResponseDTO {
 }
 
 export class AuthUseCases {
+  private readonly resetCodeAttempts: Map<string, number> = new Map();
+
   constructor(
     private readonly userRepository: IUserRepository,
     private readonly passwordHasher: IPasswordHasher,
@@ -47,6 +49,20 @@ export class AuthUseCases {
   ) {}
 
   public async register(dto: RegisterUserDTO): Promise<AuthResponseDTO> {
+    const privilegedRoles = [
+      UserRole.SUPER_ADMIN,
+      UserRole.ADMIN,
+      UserRole.SCHOOL_ADMIN,
+      UserRole.HEAD_TEACHER,
+      UserRole.DEPUTY_HEAD_TEACHER,
+      UserRole.BURSAR,
+      UserRole.ACCOUNTANT,
+      UserRole.ADMISSIONS
+    ];
+    if (dto.role && privilegedRoles.includes(dto.role)) {
+      throw new ForbiddenError('Self-registration is not allowed for privileged administrative roles.');
+    }
+
     const existing = await this.userRepository.findByEmail(dto.email.toLowerCase());
     if (existing) {
       throw new ConflictError(`User with email '${dto.email}' already exists.`);
@@ -295,6 +311,7 @@ export class AuthUseCases {
     const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
 
     user.setResetPasswordToken(resetCode, expires);
+    this.resetCodeAttempts.delete(user.id);
     await this.userRepository.update(user);
 
     if (this.notificationService) {
@@ -362,14 +379,25 @@ export class AuthUseCases {
       throw new UnauthorizedError('Invalid email or reset code.');
     }
 
+    const currentAttempts = (this.resetCodeAttempts.get(user.id) || 0) + 1;
+
     if (!user.resetPasswordToken || user.resetPasswordToken !== dto.resetCode.trim()) {
+      this.resetCodeAttempts.set(user.id, currentAttempts);
+      if (currentAttempts >= 5) {
+        user.setResetPasswordToken(undefined, undefined);
+        this.resetCodeAttempts.delete(user.id);
+        await this.userRepository.update(user);
+        throw new UnauthorizedError('Too many failed verification attempts. This reset code has been invalidated. Please request a new code.');
+      }
       throw new UnauthorizedError('Invalid verification code.');
     }
 
     if (!user.resetPasswordExpires || user.resetPasswordExpires < new Date()) {
+      this.resetCodeAttempts.delete(user.id);
       throw new UnauthorizedError('Password reset code has expired. Please request a new code.');
     }
 
+    this.resetCodeAttempts.delete(user.id);
     const newHash = await this.passwordHasher.hash(dto.newPassword);
     user.updatePassword(newHash);
     user.setMustChangePassword(false);
@@ -410,7 +438,14 @@ export class AuthUseCases {
     return result;
   }
 
-  public async adminCreateUser(dto: RegisterUserDTO & { status?: UserStatus }) {
+  public async adminCreateUser(
+    dto: RegisterUserDTO & { status?: UserStatus },
+    requestingUser?: { userId: string; role: UserRole }
+  ) {
+    if (dto.role === UserRole.SUPER_ADMIN && requestingUser?.role !== UserRole.SUPER_ADMIN) {
+      throw new ForbiddenError('Only Super Administrators can create accounts with the SUPER_ADMIN role.');
+    }
+
     const existing = await this.userRepository.findByEmail(dto.email.toLowerCase().trim());
     if (existing) {
       throw new ConflictError(`User with email '${dto.email}' already exists.`);
@@ -439,11 +474,20 @@ export class AuthUseCases {
 
   public async adminUpdateUser(
     userId: string,
-    dto: { firstName?: string; lastName?: string; phone?: string; role?: UserRole; email?: string }
+    dto: { firstName?: string; lastName?: string; phone?: string; role?: UserRole; email?: string },
+    requestingUser?: { userId: string; role: UserRole }
   ) {
     const user = await this.userRepository.findById(userId);
     if (!user) {
       throw new NotFoundError('User', userId);
+    }
+
+    if (user.role === UserRole.SUPER_ADMIN && requestingUser?.role !== UserRole.SUPER_ADMIN) {
+      throw new ForbiddenError('Only Super Administrators can modify Super Admin accounts.');
+    }
+
+    if (dto.role === UserRole.SUPER_ADMIN && requestingUser?.role !== UserRole.SUPER_ADMIN) {
+      throw new ForbiddenError('Only Super Administrators can assign the SUPER_ADMIN role.');
     }
 
     if (dto.email && dto.email.toLowerCase().trim() !== user.email.toLowerCase()) {
@@ -464,10 +508,18 @@ export class AuthUseCases {
     return user.toJSON();
   }
 
-  public async adminSetStatus(userId: string, status: UserStatus) {
+  public async adminSetStatus(
+    userId: string,
+    status: UserStatus,
+    requestingUser?: { userId: string; role: UserRole }
+  ) {
     const user = await this.userRepository.findById(userId);
     if (!user) {
       throw new NotFoundError('User', userId);
+    }
+
+    if (user.role === UserRole.SUPER_ADMIN && requestingUser?.role !== UserRole.SUPER_ADMIN) {
+      throw new ForbiddenError('Only Super Administrators can change the status of Super Admin accounts.');
     }
 
     user.setStatus(status);
@@ -475,10 +527,18 @@ export class AuthUseCases {
     return user.toJSON();
   }
 
-  public async adminResetPassword(userId: string, newPassword: string) {
+  public async adminResetPassword(
+    userId: string,
+    newPassword: string,
+    requestingUser?: { userId: string; role: UserRole }
+  ) {
     const user = await this.userRepository.findById(userId);
     if (!user) {
       throw new NotFoundError('User', userId);
+    }
+
+    if (user.role === UserRole.SUPER_ADMIN && requestingUser?.role !== UserRole.SUPER_ADMIN) {
+      throw new ForbiddenError('Only Super Administrators can reset Super Admin passwords.');
     }
 
     const newPasswordHash = await this.passwordHasher.hash(newPassword);
@@ -487,10 +547,21 @@ export class AuthUseCases {
     return { id: user.id, email: user.email, message: 'Password reset successfully' };
   }
 
-  public async adminDeleteUser(userId: string) {
+  public async adminDeleteUser(
+    userId: string,
+    requestingUser?: { userId: string; role: UserRole }
+  ) {
     const user = await this.userRepository.findById(userId);
     if (!user) {
       throw new NotFoundError('User', userId);
+    }
+
+    if (user.id === 'usr-superadmin-01' || user.email === 'superadmin@smartshule.ac.ke') {
+      throw new ForbiddenError('The default root Super Administrator account cannot be deleted.');
+    }
+
+    if (user.role === UserRole.SUPER_ADMIN && requestingUser?.role !== UserRole.SUPER_ADMIN) {
+      throw new ForbiddenError('Only Super Administrators can delete Super Admin accounts.');
     }
 
     await this.userRepository.delete(userId);

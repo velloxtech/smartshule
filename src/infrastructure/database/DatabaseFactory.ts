@@ -58,10 +58,13 @@ import { IFeeRepository } from '../../core/ports/repositories/IFeeRepository';
 import { IMediaRepository } from '../../core/ports/repositories/IMediaRepository';
 import { IEDiaryRepository } from '../../core/ports/repositories/IEDiaryRepository';
 import { IRecordOfWorkRepository } from '../../core/ports/repositories/IRecordOfWorkRepository';
+import { IComplaintRepository } from '../../core/ports/repositories/IComplaintRepository';
 import {
   PostgresRecordOfWorkRepository,
   InMemoryRecordOfWorkRepository,
 } from './postgres/PostgresRecordOfWorkRepository';
+import { InMemoryComplaintRepository } from './in-memory/InMemoryComplaintRepository';
+import { PostgresComplaintRepository } from './postgres/PostgresComplaintRepository';
 
 export interface RepositoryBundle {
   userRepository: IUserRepository;
@@ -78,6 +81,7 @@ export interface RepositoryBundle {
   mediaRepository?: IMediaRepository;
   ediaryRepository?: IEDiaryRepository;
   recordOfWorkRepository?: IRecordOfWorkRepository;
+  complaintRepository?: IComplaintRepository;
 }
 
 export class DatabaseFactory {
@@ -171,6 +175,7 @@ export class DatabaseFactory {
         attendanceRepository: new PostgresAttendanceRepository(pool),
         feeRepository: new PostgresFeeRepository(pool),
         recordOfWorkRepository: new PostgresRecordOfWorkRepository(pool),
+        complaintRepository: new PostgresComplaintRepository(pool),
       };
     }
 
@@ -191,6 +196,7 @@ export class DatabaseFactory {
       mediaRepository: new InMemoryMediaRepository(),
       ediaryRepository: new InMemoryEDiaryRepository(),
       recordOfWorkRepository: new InMemoryRecordOfWorkRepository(),
+      complaintRepository: new InMemoryComplaintRepository(),
     };
   }
 }

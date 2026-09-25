@@ -4,6 +4,7 @@ import { CurriculumPlanUseCases } from '../../../application/curriculum-plans/Cu
 import { CoreCompetency, CoreValue } from '../../../core/domain/cbc/CbcAssessment';
 import { SchemeStatus } from '../../../core/domain/curriculum-plan/SchemeOfWork';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
+import { UserRole } from '../../../core/domain/user/User';
 
 export const CreateSchemeSchema = z.object({
   teacherId: z.string().min(1),
@@ -96,7 +97,12 @@ export class CurriculumPlanController {
 
   public createScheme = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const scheme = await this.curriculumUseCases.createSchemeOfWork(req.body);
+      const user = (req as any).user;
+      const body = { ...req.body };
+      if (user?.role === UserRole.TEACHER && user?.userId) {
+        body.teacherId = user.userId;
+      }
+      const scheme = await this.curriculumUseCases.createSchemeOfWork(body);
       return res.status(201).json({ success: true, message: 'Scheme of work created', data: scheme });
     } catch (err) {
       next(err);
@@ -160,7 +166,12 @@ export class CurriculumPlanController {
 
   public createLessonPlan = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const lessonPlan = await this.curriculumUseCases.createLessonPlan(req.body);
+      const user = (req as any).user;
+      const body = { ...req.body };
+      if (user?.role === UserRole.TEACHER && user?.userId) {
+        body.teacherId = user.userId;
+      }
+      const lessonPlan = await this.curriculumUseCases.createLessonPlan(body);
       return res.status(201).json({ success: true, message: 'Lesson plan created successfully', data: lessonPlan });
     } catch (err) {
       next(err);
@@ -215,7 +226,7 @@ export class CurriculumPlanController {
 
   public deleteScheme = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await this.curriculumUseCases.deleteScheme(req.params.id as string);
+      await this.curriculumUseCases.deleteScheme(req.params.id as string, (req as any).user);
       return res.status(200).json({ success: true, message: 'Scheme of work deleted successfully' });
     } catch (err) {
       next(err);
@@ -224,7 +235,7 @@ export class CurriculumPlanController {
 
   public deleteLessonPlan = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await this.curriculumUseCases.deleteLessonPlan(req.params.id as string);
+      await this.curriculumUseCases.deleteLessonPlan(req.params.id as string, (req as any).user);
       return res.status(200).json({ success: true, message: 'Lesson plan deleted successfully' });
     } catch (err) {
       next(err);

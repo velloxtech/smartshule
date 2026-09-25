@@ -8,6 +8,7 @@ import {
   CoreValue
 } from '../../../core/domain/cbc/CbcAssessment';
 import { CbcGradeLevel } from '../../../core/domain/user/Student';
+import { UserRole } from '../../../core/domain/user/User';
 
 export const CreateStrandSchema = z.object({
   learningAreaId: z.string().min(1),
@@ -118,9 +119,12 @@ export class CbcAssessmentController {
   public recordFormative = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const user = (req as any).user;
-      const teacherId = (req.body.teacherId && req.body.teacherId.trim() !== '')
+      let teacherId = (req.body.teacherId && req.body.teacherId.trim() !== '')
         ? req.body.teacherId
         : (user?.userId || user?.id || 'tch-default-01');
+      if (user?.role === UserRole.TEACHER && user?.userId) {
+        teacherId = user.userId;
+      }
       const assessment = await this.cbcUseCases.recordFormativeAssessment({
         ...req.body,
         teacherId
@@ -155,9 +159,12 @@ export class CbcAssessmentController {
   public recordSummative = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const user = (req as any).user;
-      const teacherId = (req.body.teacherId && req.body.teacherId.trim() !== '')
+      let teacherId = (req.body.teacherId && req.body.teacherId.trim() !== '')
         ? req.body.teacherId
         : (user?.userId || user?.id || 'tch-default-01');
+      if (user?.role === UserRole.TEACHER && user?.userId) {
+        teacherId = user.userId;
+      }
       const assessment = await this.cbcUseCases.recordSummativeAssessment({
         ...req.body,
         teacherId
@@ -252,7 +259,7 @@ export class CbcAssessmentController {
 
   public deleteFormative = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await this.cbcUseCases.deleteFormative(req.params.id as string);
+      await this.cbcUseCases.deleteFormative(req.params.id as string, (req as any).user);
       return res.status(200).json({ success: true, message: 'Formative assessment deleted successfully' });
     } catch (err) {
       next(err);

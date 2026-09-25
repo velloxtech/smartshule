@@ -115,6 +115,16 @@ import {
 
 import { AnalyticsController } from '../controllers/AnalyticsController';
 
+import {
+  ComplaintController,
+  CreateComplaintSchema,
+  UpdateComplaintSchema,
+  UpdateComplaintStatusSchema,
+  AssignComplaintSchema,
+  ResolveComplaintSchema,
+  DismissComplaintSchema
+} from '../controllers/ComplaintController';
+
 export function createApiRouter(container: AppContainer): Router {
   const router = Router();
   const authMiddleware = createAuthMiddleware(container.tokenService);
@@ -133,6 +143,7 @@ export function createApiRouter(container: AppContainer): Router {
   const mediaController = new MediaController(container.visualMediaUseCases);
   const ediaryController = new EDiaryController(container.ediaryUseCases);
   const whatsAppController = new WhatsAppController(container.whatsAppService, container.whatsAppClientManager);
+  const complaintController = new ComplaintController(container.complaintUseCases);
 
   // ==========================================
   // 1. AUTH ROUTES
@@ -414,6 +425,33 @@ export function createApiRouter(container: AppContainer): Router {
     }
   });
   router.use('/system', systemRouter);
+
+  // ==========================================
+  // 15. COMPLAINT SYSTEM ROUTES
+  // Accessible exclusively by HEAD_TEACHER, SUPER_ADMIN, and ADMIN (including SCHOOL_ADMIN)
+  // ==========================================
+  const complaintRouter = Router();
+  const allowedComplaintRoles = requireRoles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.HEAD_TEACHER
+  );
+
+  complaintRouter.use(authMiddleware, allowedComplaintRoles);
+
+  complaintRouter.post('/', validateBody(CreateComplaintSchema), complaintController.create);
+  complaintRouter.get('/', complaintController.getAll);
+  complaintRouter.get('/stats/summary', complaintController.getStats);
+  complaintRouter.get('/:id', complaintController.getById);
+  complaintRouter.put('/:id', validateBody(UpdateComplaintSchema), complaintController.update);
+  complaintRouter.patch('/:id/status', validateBody(UpdateComplaintStatusSchema), complaintController.updateStatus);
+  complaintRouter.post('/:id/assign', validateBody(AssignComplaintSchema), complaintController.assign);
+  complaintRouter.post('/:id/resolve', validateBody(ResolveComplaintSchema), complaintController.resolve);
+  complaintRouter.post('/:id/dismiss', validateBody(DismissComplaintSchema), complaintController.dismiss);
+  complaintRouter.delete('/:id', complaintController.delete);
+
+  router.use('/complaints', complaintRouter);
 
   // ==========================================
   // 11. POSTMAN SPEC EXPORT ROUTES

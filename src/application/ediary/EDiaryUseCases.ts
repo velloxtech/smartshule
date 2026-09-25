@@ -183,9 +183,12 @@ export class EDiaryUseCases {
     };
   }
 
-  public async deleteEntry(id: string): Promise<void> {
+  public async deleteEntry(id: string, requestingUser?: { userId: string; role: string }): Promise<void> {
     const entry = await this.ediaryRepository.findById(id);
     if (!entry) throw new NotFoundError('eDiary entry', id);
+    if (requestingUser?.role === UserRole.TEACHER && entry.teacherId !== requestingUser.userId) {
+      throw new ForbiddenError('You can only delete your own eDiary entries.');
+    }
     await this.ediaryRepository.delete(id);
   }
 }

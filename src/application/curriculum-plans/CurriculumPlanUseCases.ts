@@ -4,10 +4,11 @@ import {
   SchemeFilterCriteria,
   LessonPlanFilterCriteria
 } from '../../core/ports/repositories/ISchemeOfWorkRepository';
+import { ITeacherRepository } from '../../core/ports/repositories/ITeacherRepository';
 import { SchemeOfWork, SchemeOfWorkEntry, SchemeStatus } from '../../core/domain/curriculum-plan/SchemeOfWork';
 import { LessonPlan, LessonDevelopmentStep } from '../../core/domain/curriculum-plan/LessonPlan';
 import { CoreCompetency, CoreValue } from '../../core/domain/cbc/CbcAssessment';
-import { IdGenerator, NotFoundError, ValidationError } from '../../core/domain/shared/Errors';
+import { IdGenerator, NotFoundError, ValidationError, ForbiddenError } from '../../core/domain/shared/Errors';
 
 export interface CreateSchemeDTO {
   teacherId: string;
@@ -45,7 +46,8 @@ export interface CreateLessonPlanDTO {
 export class CurriculumPlanUseCases {
   constructor(
     private readonly schemeRepository: ISchemeOfWorkRepository,
-    private readonly lessonPlanRepository: ILessonPlanRepository
+    private readonly lessonPlanRepository: ILessonPlanRepository,
+    private readonly teacherRepository?: ITeacherRepository
   ) {}
 
   // 1. Schemes of Work
@@ -200,11 +202,39 @@ export class CurriculumPlanUseCases {
     return plans.map(p => p.toJSON());
   }
 
-  public async deleteScheme(id: string): Promise<void> {
+  public async deleteScheme(id: string, requestingUser?: { userId: string; role: string }): Promise<void> {
+    const scheme = await this.schemeRepository.findById(id);
+    if (!scheme) throw new NotFoundError('Scheme of Work', id);
+    if (requestingUser?.role === 'TEACHER') {
+      let isOwner = scheme.teacherId === requestingUser.userId;
+      if (!isOwner && this.teacherRepository) {
+        const teacherProfile = await this.teacherRepository.findByUserId(requestingUser.userId);
+        if (teacherProfile && scheme.teacherId === teacherProfile.id) {
+          isOwner = true;
+        }
+      }
+      if (!isOwner) {
+        throw new ForbiddenError('You can only delete your own schemes of work.');
+      }
+    }
     await this.schemeRepository.delete(id);
   }
 
-  public async deleteLessonPlan(id: string): Promise<void> {
+  public async deleteLessonPlan(id: string, requestingUser?: { userId: string; role: string }): Promise<void> {
+    const plan = await this.lessonPlanRepository.findById(id);
+    if (!plan) throw new NotFoundError('Lesson Plan', id);
+    if (requestingUser?.role === 'TEACHER') {
+      let isOwner = plan.teacherId === requestingUser.userId;
+      if (!isOwner && this.teacherRepository) {
+        const teacherProfile = await this.teacherRepository.findByUserId(requestingUser.userId);
+        if (teacherProfile && plan.teacherId === teacherProfile.id) {
+          isOwner = true;
+        }
+      }
+      if (!isOwner) {
+        throw new ForbiddenError('You can only delete your own lesson plans.');
+      }
+    }
     await this.lessonPlanRepository.delete(id);
   }
 }

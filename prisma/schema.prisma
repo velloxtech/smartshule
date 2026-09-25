@@ -358,3 +358,27 @@ model RecordOfWork {
 
   @@map("records_of_work")
 }
+
+model Complaint {
+  id                   String    @id @default(uuid())
+  schoolId             String
+  title                String
+  description          String
+  category             String    @default("GENERAL")
+  priority             String    @default("MEDIUM")
+  status               String    @default("OPEN")
+  complainantName      String?
+  complainantRole      String?
+  complainantPhone     String?
+  complainantEmail     String?
+  complainantStudentId String?
+  assignedToUserId     String?
+  resolutionNotes      String?
+  resolvedByUserId     String?
+  resolvedAt           DateTime?
+  createdByUserId      String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  @@map("complaints")
+}

@@ -6,7 +6,7 @@ import {
 import { IStudentRepository } from '../../core/ports/repositories/IStudentRepository';
 import { IAcademicRepository } from '../../core/ports/repositories/IAcademicRepository';
 import { IAttendanceRepository } from '../../core/ports/repositories/ITimetableRepository';
-import { IGuardianRepository } from '../../core/ports/repositories/ITeacherRepository';
+import { IGuardianRepository, ITeacherRepository } from '../../core/ports/repositories/ITeacherRepository';
 import { IUserRepository } from '../../core/ports/repositories/IUserRepository';
 import { UserRole } from '../../core/domain/user/User';
 import {
@@ -97,7 +97,8 @@ export class CbcAssessmentUseCases {
     private readonly academicRepository: IAcademicRepository,
     private readonly attendanceRepository: IAttendanceRepository,
     private readonly guardianRepository?: IGuardianRepository,
-    private readonly userRepository?: IUserRepository
+    private readonly userRepository?: IUserRepository,
+    private readonly teacherRepository?: ITeacherRepository
   ) {}
 
   public async getLinkedStudentIdsForUser(userId: string): Promise<string[]> {
@@ -551,7 +552,21 @@ export class CbcAssessmentUseCases {
     await this.cbcRepository.deleteSubStrand(id);
   }
 
-  public async deleteFormative(id: string): Promise<void> {
+  public async deleteFormative(id: string, requestingUser?: UserContext): Promise<void> {
+    const assessment = await this.cbcRepository.findFormativeById(id);
+    if (!assessment) throw new NotFoundError('Formative assessment', id);
+    if (requestingUser?.role === UserRole.TEACHER) {
+      let isOwner = assessment.teacherId === requestingUser.userId;
+      if (!isOwner && this.teacherRepository) {
+        const teacherProfile = await this.teacherRepository.findByUserId(requestingUser.userId);
+        if (teacherProfile && assessment.teacherId === teacherProfile.id) {
+          isOwner = true;
+        }
+      }
+      if (!isOwner) {
+        throw new ForbiddenError('You can only delete your own formative assessments.');
+      }
+    }
     await this.cbcRepository.deleteFormative(id);
   }
 }
