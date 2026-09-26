@@ -283,6 +283,10 @@ export const apiService = {
     return apiFetch<ApiResponse<AcademicYear[]>>(`/academics/years${schoolId ? `?schoolId=${schoolId}` : ''}`);
   },
 
+  getAcademicYears: async (schoolId?: string): Promise<ApiResponse<AcademicYear[]>> => {
+    return apiFetch<ApiResponse<AcademicYear[]>>(`/academics/years${schoolId ? `?schoolId=${schoolId}` : ''}`);
+  },
+
   createYear: async (data: {
     name: string;
     startDate: string;
@@ -1101,9 +1105,11 @@ export const apiService = {
     if (typeof schoolIdOrParams === 'object' && schoolIdOrParams !== null) {
       if (schoolIdOrParams.schoolId) params.append('schoolId', schoolIdOrParams.schoolId);
       if (schoolIdOrParams.minBalance !== undefined) params.append('minBalance', String(schoolIdOrParams.minBalance));
-    } else {
-      if (schoolIdOrParams) params.append('schoolId', schoolIdOrParams);
+    } else if (typeof schoolIdOrParams === 'string' && schoolIdOrParams) {
+      params.append('schoolId', schoolIdOrParams);
       if (minBalance !== undefined) params.append('minBalance', String(minBalance));
+    } else if (minBalance !== undefined) {
+      params.append('minBalance', String(minBalance));
     }
     const qs = params.toString();
     return apiFetch<ApiResponse<DefaultersReport>>(
