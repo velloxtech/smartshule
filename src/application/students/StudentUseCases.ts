@@ -90,6 +90,7 @@ export interface UpdateStudentDTO {
   firstName?: string;
   middleName?: string;
   lastName?: string;
+  name?: string;
   gender?: StudentGender;
   dateOfBirth?: string;
   medicalConditions?: string;
@@ -100,6 +101,23 @@ export interface UpdateStudentDTO {
   academicYearId?: string;
   status?: StudentStatus;
   profilePhotoUrl?: string;
+  upiNumber?: string;
+  // Guardian & Contact details (editable by admin and parent, especially phone numbers)
+  phone?: string;
+  guardianPhone?: string;
+  emergencyContact?: string;
+  guardianEmail?: string;
+  guardianName?: string;
+  guardian?: {
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    phone?: string;
+    emergencyContact?: string;
+    nationalId?: string;
+    relationship?: GuardianRelationship;
+    occupation?: string;
+  };
 }
 
 export class StudentUseCases {
@@ -404,33 +422,178 @@ export class StudentUseCases {
     };
   }
 
-  public async updateStudent(studentId: string, dto: UpdateStudentDTO) {
+  public async updateStudent(studentId: string, dto: UpdateStudentDTO, requestingUser?: UserContext) {
+    const isParent = requestingUser?.role === UserRole.PARENT || requestingUser?.role === UserRole.GUARDIAN;
+    if (isParent && requestingUser) {
+      const childIds = await this.getLinkedStudentIdsForUser(requestingUser.userId);
+      if (!childIds.includes(studentId)) {
+        throw new ForbiddenError('Access denied: You are only permitted to update details for your registered child.');
+      }
+    }
+
     const student = await this.studentRepository.findById(studentId);
     if (!student) {
       throw new NotFoundError('Student', studentId);
     }
 
-    student.updateProfile(dto.firstName, dto.middleName, dto.lastName, dto.gender, dto.dateOfBirth);
-
-    if (dto.gradeLevel || dto.classroomId || dto.streamId || dto.academicYearId) {
-      student.promoteOrTransfer(
-        dto.gradeLevel || student.gradeLevel,
-        dto.classroomId || student.classroomId,
-        dto.streamId !== undefined ? dto.streamId : student.streamId,
-        dto.academicYearId || student.academicYearId
-      );
+    // 1. Resolve student name fields
+    let firstName = dto.firstName;
+    let lastName = dto.lastName;
+    let middleName = dto.middleName;
+    if (dto.name && (!firstName || !lastName)) {
+      const parts = dto.name.trim().split(/\s+/);
+      if (parts.length === 1) {
+        firstName = parts[0];
+      } else if (parts.length === 2) {
+        firstName = parts[0];
+        lastName = parts[1];
+      } else if (parts.length >= 3) {
+        firstName = parts[0];
+        middleName = parts.slice(1, -1).join(' ');
+        lastName = parts[parts.length - 1];
+      }
     }
 
-    if (dto.status) {
-      student.setStatus(dto.status);
-    }
+    // 2. Update Student demographic, medical and identifier profile
+    student.updateProfile(
+      firstName,
+      middleName,
+      lastName,
+      dto.gender,
+      dto.dateOfBirth,
+      dto.medicalConditions,
+      dto.specialNeeds,
+      dto.upiNumber
+    );
 
     if (dto.profilePhotoUrl !== undefined) {
       student.setProfilePhoto(dto.profilePhotoUrl);
     }
 
+    // 3. Administrative changes (Grade, Stream, Status - Admin roles only)
+    if (!isParent) {
+      if (dto.gradeLevel || dto.classroomId || dto.streamId || dto.academicYearId) {
+        student.promoteOrTransfer(
+          dto.gradeLevel || student.gradeLevel,
+          dto.classroomId || student.classroomId,
+          dto.streamId !== undefined ? dto.streamId : student.streamId,
+          dto.academicYearId || student.academicYearId
+        );
+      }
+
+      if (dto.status) {
+        student.setStatus(dto.status);
+      }
+    }
+
     await this.studentRepository.update(student);
-    return student.toJSON();
+
+    // 4. Update Guardian Details & Phone Numbers (Editable by both Admin and Parent)
+    const guardians = await this.guardianRepository.findByStudentId(studentId);
+    let targetGuardian = isParent && requestingUser
+      ? (guardians.find(g => g.userId === requestingUser.userId) || await this.guardianRepository.findByUserId(requestingUser.userId))
+      : guardians[0];
+
+    if (!targetGuardian && student.guardianIds && student.guardianIds.length > 0) {
+      targetGuardian = await this.guardianRepository.findById(student.guardianIds[0]);
+    }
+
+    const newPhone = dto.guardian?.phone || dto.guardianPhone || dto.phone;
+    const newEmergencyContact = dto.guardian?.emergencyContact || dto.emergencyContact || newPhone;
+    const newEmail = dto.guardian?.email || dto.guardianEmail;
+
+    // Resolve guardian name if provided
+    let guardianFirstName = dto.guardian?.firstName;
+    let guardianLastName = dto.guardian?.lastName;
+    if (dto.guardianName && (!guardianFirstName || !guardianLastName)) {
+      const gParts = dto.guardianName.trim().split(/\s+/);
+      guardianFirstName = gParts[0];
+      guardianLastName = gParts.slice(1).join(' ') || gParts[0];
+    }
+
+    if (targetGuardian) {
+      if (!targetGuardian.studentIds.includes(student.id)) {
+        targetGuardian.linkStudent(student.id);
+      }
+      if (!student.guardianIds.includes(targetGuardian.id)) {
+        student.addGuardian(targetGuardian.id);
+        await this.studentRepository.update(student);
+      }
+
+      targetGuardian.updateDetails({
+        emergencyContact: newEmergencyContact,
+        nationalId: dto.guardian?.nationalId,
+        occupation: dto.guardian?.occupation,
+        relationship: dto.guardian?.relationship
+      });
+      await this.guardianRepository.update(targetGuardian);
+
+      const guardianUser = await this.userRepository.findById(targetGuardian.userId);
+      if (guardianUser) {
+        guardianUser.updateProfile(
+          guardianFirstName || guardianUser.firstName,
+          guardianLastName || guardianUser.lastName,
+          newPhone || guardianUser.phone
+        );
+        if (newEmail && newEmail !== guardianUser.email) {
+          guardianUser.updateEmail(newEmail);
+        }
+        await this.userRepository.update(guardianUser);
+      }
+    } else if (newPhone || guardianFirstName || dto.guardian) {
+      // Provision guardian & user if none existed
+      const parentUser = User.create(
+        {
+          email: newEmail || `guardian.${Date.now()}@smartshule.ac.ke`,
+          passwordHash: await this.passwordHasher.hash('Parent@123'),
+          firstName: guardianFirstName || 'Parent',
+          lastName: guardianLastName || student.lastName,
+          role: UserRole.GUARDIAN,
+          phone: newPhone || '+254700000000',
+          status: UserStatus.ACTIVE,
+          schoolId: student.schoolId
+        },
+        IdGenerator.generate()
+      );
+      await this.userRepository.save(parentUser);
+
+      const newG = Guardian.create(
+        {
+          userId: parentUser.id,
+          nationalId: dto.guardian?.nationalId,
+          occupation: dto.guardian?.occupation,
+          relationship: dto.guardian?.relationship || GuardianRelationship.MOTHER,
+          emergencyContact: newEmergencyContact || newPhone || '+254700000000',
+          studentIds: [student.id]
+        },
+        IdGenerator.generate()
+      );
+      await this.guardianRepository.save(newG);
+      student.addGuardian(newG.id);
+      await this.studentRepository.update(student);
+      targetGuardian = newG;
+    }
+
+    // Retrieve fresh guardian data to return consistent shape
+    const freshGuardians = await this.guardianRepository.findByStudentId(studentId);
+    let primaryG = targetGuardian || freshGuardians[0] || null;
+    let primaryU = primaryG ? await this.userRepository.findById(primaryG.userId) : null;
+
+    return {
+      ...student.toJSON(),
+      guardian: primaryG ? {
+        id: primaryG.id,
+        firstName: primaryU?.firstName,
+        lastName: primaryU?.lastName,
+        phone: primaryU?.phone,
+        email: primaryU?.email,
+        emergencyContact: primaryG.emergencyContact,
+        relationship: primaryG.relationship,
+        nationalId: primaryG.nationalId
+      } : null,
+      guardianName: primaryU ? `${primaryU.firstName} ${primaryU.lastName}` : (dto.guardianName || 'Parent / Guardian'),
+      guardianPhone: newPhone || primaryU?.phone || primaryG?.emergencyContact || 'N/A'
+    };
   }
 
   public async getLinkedStudentIdsForUser(userId: string): Promise<string[]> {
@@ -451,8 +614,25 @@ export class StudentUseCases {
       }
     }
 
-    if (guardian && guardian.studentIds && guardian.studentIds.length > 0) {
-      return guardian.studentIds;
+    const linkedStudentIds = new Set<string>();
+
+    if (guardian && guardian.studentIds) {
+      for (const id of guardian.studentIds) {
+        linkedStudentIds.add(id);
+      }
+    }
+
+    if (guardian) {
+      const allStudents = await this.studentRepository.findAll();
+      for (const s of allStudents) {
+        if (s.guardianIds && s.guardianIds.includes(guardian.id)) {
+          linkedStudentIds.add(s.id);
+        }
+      }
+    }
+
+    if (linkedStudentIds.size > 0) {
+      return Array.from(linkedStudentIds);
     }
 
     // Link demo/default parent if unassigned but students exist
@@ -482,7 +662,7 @@ export class StudentUseCases {
       return [demoStudent.id];
     }
 
-    return guardian?.studentIds || [];
+    return [];
   }
 
   public async getStudentById(studentId: string, requestingUser?: UserContext) {
@@ -499,9 +679,17 @@ export class StudentUseCases {
       throw new NotFoundError('Student', studentId);
     }
 
-    const guardians = await this.guardianRepository.findByStudentId(studentId);
+    const guardiansByStudentId = await this.guardianRepository.findByStudentId(studentId);
+    const guardiansList = [...guardiansByStudentId];
+    for (const gid of student.guardianIds || []) {
+      if (!guardiansList.some(g => g.id === gid)) {
+        const g = await this.guardianRepository.findById(gid);
+        if (g) guardiansList.push(g);
+      }
+    }
+
     const guardianDetails = await Promise.all(
-      guardians.map(async g => {
+      guardiansList.map(async g => {
         const u = await this.userRepository.findById(g.userId);
         return {
           ...g.toJSON(),
@@ -510,8 +698,24 @@ export class StudentUseCases {
       })
     );
 
+    const primaryG = guardianDetails[0] || null;
+    const gPhone = primaryG?.user?.phone || primaryG?.emergencyContact || undefined;
+    const gName = primaryG?.user ? `${primaryG.user.firstName} ${primaryG.user.lastName}` : undefined;
+
     return {
       ...student.toJSON(),
+      guardian: primaryG ? {
+        id: primaryG.id,
+        firstName: primaryG.user?.firstName,
+        lastName: primaryG.user?.lastName,
+        phone: primaryG.user?.phone,
+        email: primaryG.user?.email,
+        emergencyContact: primaryG.emergencyContact,
+        relationship: primaryG.relationship,
+        nationalId: primaryG.nationalId
+      } : null,
+      guardianName: gName,
+      guardianPhone: gPhone,
       guardians: guardianDetails
     };
   }
@@ -635,7 +839,31 @@ export class StudentUseCases {
     const student = await this.studentRepository.findById(studentId);
     if (!student) throw new NotFoundError('Student', studentId);
 
-    const guardian = await this.guardianRepository.findById(guardianId);
+    let guardian = await this.guardianRepository.findById(guardianId);
+    if (!guardian) {
+      guardian = await this.guardianRepository.findByUserId(guardianId);
+    }
+    if (!guardian) {
+      const allG = await this.guardianRepository.findAll();
+      guardian = allG.find(g => g.userId === guardianId) || null;
+    }
+    if (!guardian) {
+      // If guardianId belongs to an existing User (e.g. registered parent account)
+      const user = await this.userRepository.findById(guardianId);
+      if (user) {
+        guardian = Guardian.create(
+          {
+            userId: user.id,
+            nationalId: 'N/A',
+            relationship: GuardianRelationship.MOTHER,
+            emergencyContact: user.phone || '+254700000000',
+            studentIds: [student.id]
+          },
+          IdGenerator.generate()
+        );
+        await this.guardianRepository.save(guardian);
+      }
+    }
     if (!guardian) throw new NotFoundError('Guardian', guardianId);
 
     student.addGuardian(guardian.id);

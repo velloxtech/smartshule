@@ -1,8 +1,11 @@
 import dotenv from 'dotenv';
 import path from 'path';
+import { resolveDatabaseConfig } from './databaseResolver';
 
 // Load .env from root directory
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+
+const resolvedDb = resolveDatabaseConfig();
 
 /**
  * SmartShule Application & External APIs Configuration
@@ -21,7 +24,10 @@ export const env = {
   // 2. Database
   database: {
     type: (process.env.DB_TYPE || 'postgres') as 'in-memory' | 'mongodb' | 'postgres',
-    postgresUrl: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/smartshule?schema=public',
+    target: resolvedDb.target,
+    postgresUrl: resolvedDb.databaseUrl,
+    directUrl: resolvedDb.directUrl,
+    isCloud: resolvedDb.isCloud,
     mongodbUri: process.env.MONGODB_URI || 'mongodb://localhost:27017/smartshule',
   },
 
@@ -39,7 +45,7 @@ export const env = {
     consumerSecret: process.env.KCB_BUNI_CONSUMER_SECRET || '',
     baseUrl: process.env.KCB_BUNI_BASE_URL || 'https://uat.buni.kcbgroup.com',
     shortCode: process.env.KCB_BUNI_SHORTCODE || '522123',
-    callbackUrl: process.env.KCB_BUNI_CALLBACK_URL || 'http://localhost:3000/api/v1/finance/kcb-buni/callback',
+    callbackUrl: process.env.KCB_BUNI_CALLBACK_URL || 'https://api.smartshule.ac.ke/api/v1/finance/kcb-buni/callback',
   },
 
   // 5. WhatsApp API (Multi-Device Baileys & Meta Cloud API)

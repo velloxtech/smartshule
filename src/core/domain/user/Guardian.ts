@@ -58,6 +58,19 @@ export class Guardian extends Entity<GuardianProps> {
     }
   }
 
+  public updateDetails(details: {
+    emergencyContact?: string;
+    nationalId?: string;
+    occupation?: string;
+    relationship?: GuardianRelationship;
+  }): void {
+    if (details.emergencyContact !== undefined) this._props.emergencyContact = details.emergencyContact;
+    if (details.nationalId !== undefined) this._props.nationalId = details.nationalId;
+    if (details.occupation !== undefined) this._props.occupation = details.occupation;
+    if (details.relationship !== undefined) this._props.relationship = details.relationship;
+    this.touch();
+  }
+
   public toJSON() {
     return {
       id: this.id,

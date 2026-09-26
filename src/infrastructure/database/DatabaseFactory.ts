@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { Pool } from 'pg';
+import { resolveDatabaseConfig } from '../config/databaseResolver';
 
 import {
   InMemoryUserRepository,
@@ -59,12 +60,15 @@ import { IMediaRepository } from '../../core/ports/repositories/IMediaRepository
 import { IEDiaryRepository } from '../../core/ports/repositories/IEDiaryRepository';
 import { IRecordOfWorkRepository } from '../../core/ports/repositories/IRecordOfWorkRepository';
 import { IComplaintRepository } from '../../core/ports/repositories/IComplaintRepository';
+import { ISystemLogRepository } from '../../core/ports/repositories/ISystemLogRepository';
 import {
   PostgresRecordOfWorkRepository,
   InMemoryRecordOfWorkRepository,
 } from './postgres/PostgresRecordOfWorkRepository';
 import { InMemoryComplaintRepository } from './in-memory/InMemoryComplaintRepository';
 import { PostgresComplaintRepository } from './postgres/PostgresComplaintRepository';
+import { InMemorySystemLogRepository } from './in-memory/InMemorySystemLogRepository';
+import { PostgresSystemLogRepository } from './postgres/PostgresSystemLogRepository';
 
 export interface RepositoryBundle {
   userRepository: IUserRepository;
@@ -82,6 +86,7 @@ export interface RepositoryBundle {
   ediaryRepository?: IEDiaryRepository;
   recordOfWorkRepository?: IRecordOfWorkRepository;
   complaintRepository?: IComplaintRepository;
+  systemLogRepository?: ISystemLogRepository;
 }
 
 export class DatabaseFactory {
@@ -106,36 +111,24 @@ export class DatabaseFactory {
         lessonPlanRepository: new MongoLessonPlanRepository(),
         timetableRepository: new MongoTimetableRepository(),
         attendanceRepository: new MongoAttendanceRepository(),
-        feeRepository: new MongoFeeRepository()
+        feeRepository: new MongoFeeRepository(),
+        systemLogRepository: new InMemorySystemLogRepository()
       };
     }
 
    // 2. POSTGRESQL
     if (normalizedType === 'postgres' || normalizedType === 'postgresql') {
-      let connectionString = (process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/smartshule').trim();
-
-      // Clean surrounding quotes or accidental wrappers
-      if ((connectionString.startsWith('"') && connectionString.endsWith('"')) || 
-          (connectionString.startsWith("'") && connectionString.endsWith("'"))) {
-        connectionString = connectionString.slice(1, -1).trim();
-      }
+      const dbConfig = resolveDatabaseConfig();
+      const connectionString = dbConfig.databaseUrl;
 
       if (connectionString.includes('[') || connectionString.includes(']') || connectionString.includes('YOUR-PASSWORD')) {
         console.warn('⚠️ [Database Warning] Your DATABASE_URL contains brackets "[" or "]" or "YOUR-PASSWORD". Ensure your real database password is substituted without brackets!');
       }
 
-      console.log(`[Database] Connecting to PostgreSQL: ${connectionString.replace(/:[^:@]+@/, ':****@')}`);
+      console.log(`[Database] Target: ${dbConfig.target.toUpperCase()} | Host: ${dbConfig.host}:${dbConfig.port} | Database: ${dbConfig.databaseName}`);
+      console.log(`[Database] Connecting: ${dbConfig.maskedUrl}`);
       
-      // Enable SSL for cloud connections (Supabase, Render, neon, or sslmode=require)
-      const isSupabase = connectionString.includes('supabase');
-      const isRender = connectionString.includes('render.com');
-      const hasSslMode = connectionString.includes('sslmode=require');
-      const isCloudProd = process.env.NODE_ENV === 'production' &&
-        !connectionString.includes('localhost') &&
-        !connectionString.includes('127.0.0.1') &&
-        !connectionString.includes('@postgres:');
-
-      const requiresSsl = isSupabase || isRender || hasSslMode || isCloudProd;
+      const requiresSsl = dbConfig.isCloud || connectionString.includes('sslmode=require');
       const pool = new Pool({ 
         connectionString,
         ssl: requiresSsl ? { rejectUnauthorized: false } : false,
@@ -176,6 +169,7 @@ export class DatabaseFactory {
         feeRepository: new PostgresFeeRepository(pool),
         recordOfWorkRepository: new PostgresRecordOfWorkRepository(pool),
         complaintRepository: new PostgresComplaintRepository(pool),
+        systemLogRepository: new PostgresSystemLogRepository(pool),
       };
     }
 
@@ -197,6 +191,7 @@ export class DatabaseFactory {
       ediaryRepository: new InMemoryEDiaryRepository(),
       recordOfWorkRepository: new InMemoryRecordOfWorkRepository(),
       complaintRepository: new InMemoryComplaintRepository(),
+      systemLogRepository: new InMemorySystemLogRepository(),
     };
   }
 }

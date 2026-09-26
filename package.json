@@ -16,9 +16,13 @@
     "docker:compose": "docker compose up --build",
     "test": "jest --runInBand",
     "test:coverage": "jest --coverage",
-    "prisma:generate": "prisma generate",
-    "prisma:push": "prisma db push",
-    "prisma:studio": "prisma studio"
+    "db:switch": "ts-node scripts/db-switch.ts",
+    "db:status": "ts-node scripts/db-switch.ts status",
+    "db:local": "ts-node scripts/db-switch.ts local",
+    "db:online": "ts-node scripts/db-switch.ts online",
+    "prisma:generate": "ts-node scripts/prisma-cli.ts generate",
+    "prisma:push": "ts-node scripts/prisma-cli.ts db push",
+    "prisma:studio": "ts-node scripts/prisma-cli.ts studio"
   },
   "keywords": [
     "school-management",

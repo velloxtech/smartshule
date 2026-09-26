@@ -20,10 +20,11 @@ async function bootstrap() {
     console.log(`🩺 Health: http://localhost:${PORT}/health`);
     console.log(`📚 API Root: http://localhost:${PORT}/api/v1`);
     console.log('----------------------------------------------------');
-    console.log(`🗄️  Database:      ${process.env.DB_TYPE || 'in-memory'}`);
-    console.log(`🏦 KCB Buni API:   PAYBILL ${process.env.KCB_BUNI_SHORTCODE || '522123'} (${process.env.KCB_BUNI_CONSUMER_KEY ? 'CONFIGURED' : 'SANDBOX'})`);
+    const dbType = process.env.DB_TYPE || 'in-memory';
+    const dbTarget = process.env.ACTIVE_DB_TARGET ? ` (${process.env.ACTIVE_DB_TARGET.toUpperCase()})` : '';
+    console.log(`🗄️  Database:      ${dbType}${dbTarget}`);
+    console.log(`🏦 KCB Buni API:   PAYBILL ${process.env.KCB_BUNI_SHORTCODE || '522123'} (M-Pesa Express STK Push Rails Active)`);
     console.log(`💬 WhatsApp API:   ${process.env.WHATSAPP_ACCESS_TOKEN ? 'META CLOUD API' : 'REAL WHATSAPP QR MULTI-DEVICE'}`);
-    console.log(`📱 M-Pesa Daraja:  SHORTCODE ${process.env.MPESA_SHORTCODE || '174379'} (${process.env.MPESA_ENV || 'sandbox'})`);
     console.log(`📨 SMS Gateway:    ${process.env.SMS_PROVIDER || 'africastalking'} (${process.env.AFRICASTALKING_SENDER_ID || 'SMARTSHULE'})`);
     console.log(`🤖 Gemini AI API:  ${process.env.GEMINI_API_KEY ? 'CONFIGURED' : 'OPTIONAL'}`);
     console.log('====================================================');

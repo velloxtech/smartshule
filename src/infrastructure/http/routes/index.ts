@@ -124,13 +124,14 @@ import {
   ResolveComplaintSchema,
   DismissComplaintSchema
 } from '../controllers/ComplaintController';
+import { SystemLogController } from '../controllers/SystemLogController';
 
 export function createApiRouter(container: AppContainer): Router {
   const router = Router();
   const authMiddleware = createAuthMiddleware(container.tokenService);
 
-  const authController = new AuthController(container.authUseCases);
-  const studentController = new StudentController(container.studentUseCases);
+  const authController = new AuthController(container.authUseCases, container.systemLogUseCases);
+  const studentController = new StudentController(container.studentUseCases, container.systemLogUseCases);
   const teacherController = new TeacherController(container.teacherUseCases);
   const academicController = new AcademicController(container.academicUseCases);
   const cbcController = new CbcAssessmentController(container.cbcUseCases);
@@ -138,12 +139,13 @@ export function createApiRouter(container: AppContainer): Router {
   const recordOfWorkController = new RecordOfWorkController(container.recordOfWorkUseCases);
   const timetableController = new TimetableController(container.timetableUseCases);
   const attendanceController = new AttendanceController(container.attendanceUseCases);
-  const financeController = new FinanceController(container.feeUseCases);
+  const financeController = new FinanceController(container.feeUseCases, container.systemLogUseCases);
   const analyticsController = new AnalyticsController(container.analyticsUseCases);
   const mediaController = new MediaController(container.visualMediaUseCases);
   const ediaryController = new EDiaryController(container.ediaryUseCases);
   const whatsAppController = new WhatsAppController(container.whatsAppService, container.whatsAppClientManager);
-  const complaintController = new ComplaintController(container.complaintUseCases);
+  const complaintController = new ComplaintController(container.complaintUseCases, container.systemLogUseCases);
+  const systemLogController = new SystemLogController(container.systemLogUseCases);
 
   // ==========================================
   // 1. AUTH ROUTES
@@ -215,7 +217,28 @@ export function createApiRouter(container: AppContainer): Router {
   studentRouter.get('/guardian/me', authMiddleware, studentController.getGuardianPortalData);
   studentRouter.get('/', authMiddleware, studentController.listStudents);
   studentRouter.get('/:id', authMiddleware, studentController.getStudentById);
-  studentRouter.put('/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.ADMISSIONS), validateBody(UpdateStudentSchema), studentController.updateStudent);
+  studentRouter.put(
+    '/:id',
+    authMiddleware,
+    requireRoles(
+      UserRole.SUPER_ADMIN,
+      UserRole.ADMIN,
+      UserRole.SCHOOL_ADMIN,
+      UserRole.HEAD_TEACHER,
+      UserRole.ADMISSIONS,
+      UserRole.PARENT,
+      UserRole.GUARDIAN
+    ),
+    validateBody(UpdateStudentSchema),
+    studentController.updateStudent
+  );
+  studentRouter.put(
+    '/guardian/students/:id',
+    authMiddleware,
+    requireRoles(UserRole.PARENT, UserRole.GUARDIAN, UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER),
+    validateBody(UpdateStudentSchema),
+    studentController.updateStudent
+  );
   studentRouter.delete('/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), studentController.deleteStudent);
   studentRouter.post('/link-guardian', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN), studentController.linkGuardian);
   router.use('/students', studentRouter);
@@ -452,6 +475,26 @@ export function createApiRouter(container: AppContainer): Router {
   complaintRouter.delete('/:id', complaintController.delete);
 
   router.use('/complaints', complaintRouter);
+
+  // ==========================================
+  // 16. SYSTEM AUDIT LOG ROUTES
+  // Accessible exclusively by SUPER_ADMIN, ADMIN, and SCHOOL_ADMIN
+  // ==========================================
+  const systemLogRouter = Router();
+  const allowedSystemLogRoles = requireRoles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ADMIN,
+    UserRole.SCHOOL_ADMIN
+  );
+
+  systemLogRouter.use(authMiddleware, allowedSystemLogRoles);
+
+  systemLogRouter.get('/', systemLogController.listLogs);
+  systemLogRouter.get('/stats', systemLogController.getStats);
+  systemLogRouter.get('/download', systemLogController.downloadLogsCsv);
+  systemLogRouter.get('/:id', systemLogController.getById);
+
+  router.use('/system-logs', systemLogRouter);
 
   // ==========================================
   // 11. POSTMAN SPEC EXPORT ROUTES

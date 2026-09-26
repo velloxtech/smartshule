@@ -44,16 +44,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     },
     finance: {
       title: 'Finance & Bursar Portal',
-      subtitle: 'Safaricom Daraja M-Pesa Automation & Fee Management',
+      subtitle: 'KCB Buni M-Pesa Express & Fee Management',
       description:
-        'Transform fee collection with real-time mobile money integration. Trigger instant Daraja STK Push requests straight to parent phone numbers, print official receipts, generate batch termly invoices, and follow up arrears with automated SMS alerts.',
+        'Transform fee collection with real-time mobile money integration. Trigger instant KCB Buni STK Push requests straight to parent phone numbers, print official receipts, generate batch termly invoices, and follow up arrears with automated SMS alerts.',
       features: [
-        'Direct Safaricom Daraja STK Push Billing to Parent M-Pesa Wallets',
+        'Direct KCB Buni STK Push Billing to Parent M-Pesa Wallets',
         'Itemized CBC Grade Fee Structure Management (Tuition, Meals, Transport)',
         'Automated Official School Receipts & Double-Entry Ledger Reconciliation',
         'Fee Defaulters Tracking with Automated SMS Payment Reminders',
       ],
-      badge: 'Daraja M-Pesa',
+      badge: 'KCB Buni M-Pesa',
       icon: 'payments',
     },
     parent: {
@@ -144,7 +144,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
             <p className="mt-6 text-lg sm:text-xl text-slate-600 leading-relaxed">
               Unified institutional software integrating formative competency rubrics (EE, ME, AE, BE),
-              Safaricom Daraja M-Pesa STK automated billing, pedagogical lesson planning, and continuous assessment reporting.
+              KCB Buni M-Pesa Express & Paybill 522123 billing, pedagogical lesson planning, and continuous assessment reporting.
             </p>
 
             <div className="mt-9 flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -167,7 +167,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
             <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs text-center">
               <div className="text-3xl font-extrabold text-[#006a63]">M-Pesa</div>
-              <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-1">Daraja STK Push</div>
+              <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-1">KCB Buni STK</div>
               <p className="text-[11px] text-slate-400 mt-1">Instant Parent Checkout</p>
             </div>
             <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs text-center">
@@ -215,7 +215,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <div className="w-12 h-12 rounded-xl bg-[#006a63] text-white flex items-center justify-center mb-4">
                 <span className="material-symbols-outlined text-[24px]">point_of_sale</span>
               </div>
-              <h4 className="text-lg font-bold text-slate-900 mb-2">Safaricom Daraja M-Pesa STK</h4>
+              <h4 className="text-lg font-bold text-slate-900 mb-2">KCB Buni M-Pesa Express</h4>
               <p className="text-xs text-slate-600 leading-relaxed">
                 Initiate remote STK push fee collection directly to parent mobile devices. Payments instantly update
                 learner ledgers, zero out balances, and generate verified school receipts.

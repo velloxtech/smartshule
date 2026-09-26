@@ -65,8 +65,13 @@ export const ResetPasswordSchema = z.object({
   newPassword: z.string().min(6, 'New password must be at least 6 characters long')
 });
 
+import { SystemLogUseCases } from '../../../application/system-logs/SystemLogUseCases';
+
 export class AuthController {
-  constructor(private readonly authUseCases: AuthUseCases) {}
+  constructor(
+    private readonly authUseCases: AuthUseCases,
+    private readonly systemLogUseCases?: SystemLogUseCases
+  ) {}
 
   public register = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -86,6 +91,21 @@ export class AuthController {
       console.log(`[Auth] Inbound login attempt for user: "${req.body?.email}"`);
       const result = await this.authUseCases.login(req.body);
       console.log(`[Auth] ✅ Authenticated user: "${req.body?.email}" as ${result.user.role}`);
+
+      this.systemLogUseCases?.log({
+        schoolId: result.user.schoolId,
+        level: 'INFO',
+        category: 'AUTH',
+        action: 'USER_LOGIN',
+        actorUserId: result.user.id,
+        actorEmail: result.user.email,
+        actorRole: result.user.role,
+        ipAddress: req.ip || (req.socket?.remoteAddress as string),
+        status: 'SUCCESS',
+        details: `User ${result.user.email} (${result.user.role}) logged in successfully`,
+        metadata: { userId: result.user.id, role: result.user.role }
+      }).catch(() => {});
+
       return res.status(200).json({
         success: true,
         message: 'Login successful',
@@ -93,6 +113,18 @@ export class AuthController {
       });
     } catch (err: any) {
       console.warn(`[Auth] ❌ Login failed for "${req.body?.email}": ${err.message}`);
+
+      this.systemLogUseCases?.log({
+        level: 'WARN',
+        category: 'AUTH',
+        action: 'LOGIN_FAILED',
+        actorEmail: req.body?.email,
+        ipAddress: req.ip || (req.socket?.remoteAddress as string),
+        status: 'FAILED',
+        details: `Failed login attempt for ${req.body?.email}: ${err.message}`,
+        metadata: { attemptedEmail: req.body?.email, error: err.message }
+      }).catch(() => {});
+
       next(err);
     }
   };

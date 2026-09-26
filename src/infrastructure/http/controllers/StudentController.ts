@@ -40,6 +40,7 @@ export const UpdateStudentSchema = z.object({
   firstName: z.string().optional(),
   middleName: z.string().optional(),
   lastName: z.string().optional(),
+  name: z.string().optional(),
   gender: z.nativeEnum(StudentGender).optional(),
   dateOfBirth: z.string().optional(),
   medicalConditions: z.string().optional(),
@@ -49,7 +50,24 @@ export const UpdateStudentSchema = z.object({
   streamId: z.string().optional(),
   academicYearId: z.string().optional(),
   status: z.nativeEnum(StudentStatus).optional(),
-  profilePhotoUrl: z.string().optional()
+  profilePhotoUrl: z.string().optional(),
+  upiNumber: z.string().optional(),
+  // Guardian / Parent contact details & phone numbers (editable by Admin and Parent)
+  phone: z.string().optional(),
+  guardianPhone: z.string().optional(),
+  emergencyContact: z.string().optional(),
+  guardianEmail: z.string().email().optional(),
+  guardianName: z.string().optional(),
+  guardian: z.object({
+    firstName: z.string().optional(),
+    lastName: z.string().optional(),
+    email: z.string().email().optional(),
+    phone: z.string().optional(),
+    emergencyContact: z.string().optional(),
+    nationalId: z.string().optional(),
+    relationship: z.nativeEnum(GuardianRelationship).optional(),
+    occupation: z.string().optional()
+  }).passthrough().optional()
 }).passthrough();
 
 export const PromoteStudentSchema = z.object({
@@ -71,12 +89,32 @@ export const BulkPromoteStudentsSchema = z.object({
   carryForwardBalance: z.boolean().optional().default(true)
 }).passthrough();
 
+import { SystemLogUseCases } from '../../../application/system-logs/SystemLogUseCases';
+
 export class StudentController {
-  constructor(private readonly studentUseCases: StudentUseCases) {}
+  constructor(
+    private readonly studentUseCases: StudentUseCases,
+    private readonly systemLogUseCases?: SystemLogUseCases
+  ) {}
 
   public registerStudent = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const student = await this.studentUseCases.registerStudent(req.body);
+
+      this.systemLogUseCases?.log({
+        schoolId: (student as any).schoolId || req.body.schoolId,
+        level: 'AUDIT',
+        category: 'STUDENTS',
+        action: 'STUDENT_ADMITTED',
+        actorEmail: (req as any).user?.email,
+        actorUserId: (req as any).user?.userId,
+        actorRole: (req as any).user?.role,
+        ipAddress: req.ip || (req.socket?.remoteAddress as string),
+        status: 'SUCCESS',
+        details: `Admitted student ${(student as any).name || (student as any).firstName + ' ' + (student as any).lastName} (Adm #${(student as any).admissionNumber || 'N/A'}) to ${(student as any).gradeLevel || 'class'}`,
+        metadata: { studentId: (student as any).id, admNo: (student as any).admissionNumber }
+      }).catch(() => {});
+
       return res.status(201).json({
         success: true,
         message: 'Student enrolled successfully',
@@ -89,7 +127,22 @@ export class StudentController {
 
   public updateStudent = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const student = await this.studentUseCases.updateStudent(req.params.id as string, req.body);
+      const student = await this.studentUseCases.updateStudent(req.params.id as string, req.body, (req as any).user);
+
+      this.systemLogUseCases?.log({
+        schoolId: (student as any).schoolId || (req as any).user?.schoolId,
+        level: 'AUDIT',
+        category: 'STUDENTS',
+        action: 'STUDENT_PROFILE_UPDATED',
+        actorEmail: (req as any).user?.email,
+        actorUserId: (req as any).user?.userId,
+        actorRole: (req as any).user?.role,
+        ipAddress: req.ip || (req.socket?.remoteAddress as string),
+        status: 'SUCCESS',
+        details: `Updated profile for student ${(student as any).name || (student as any).firstName || req.params.id} (Adm #${(student as any).admissionNumber || 'N/A'})`,
+        metadata: { studentId: req.params.id, updatedFields: Object.keys(req.body) }
+      }).catch(() => {});
+
       return res.status(200).json({
         success: true,
         message: 'Student updated successfully',

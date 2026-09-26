@@ -10,10 +10,13 @@ import { IMediaRepository } from '../core/ports/repositories/IMediaRepository';
 import { IEDiaryRepository } from '../core/ports/repositories/IEDiaryRepository';
 import { IRecordOfWorkRepository } from '../core/ports/repositories/IRecordOfWorkRepository';
 import { IComplaintRepository } from '../core/ports/repositories/IComplaintRepository';
+import { ISystemLogRepository } from '../core/ports/repositories/ISystemLogRepository';
 import { InMemoryRecordOfWorkRepository } from './database/postgres/PostgresRecordOfWorkRepository';
 import { InMemoryComplaintRepository } from './database/in-memory/InMemoryComplaintRepository';
+import { InMemorySystemLogRepository } from './database/in-memory/InMemorySystemLogRepository';
 import { RecordOfWorkUseCases } from '../application/curriculum-plans/RecordOfWorkUseCases';
 import { ComplaintUseCases } from '../application/complaints/ComplaintUseCases';
+import { SystemLogUseCases } from '../application/system-logs/SystemLogUseCases';
 
 import {
   InMemoryUserRepository,
@@ -34,7 +37,6 @@ import {
 import { DatabaseFactory, RepositoryBundle } from './database/DatabaseFactory';
 import { JwtAuthTokenService } from './services/JwtAuthTokenService';
 import { BcryptPasswordHasher } from './services/BcryptPasswordHasher';
-import { MpesaDarajaPaymentAdapter } from './services/MpesaDarajaPaymentAdapter';
 import { KcbBuniPaymentAdapter } from './services/KcbBuniPaymentAdapter';
 import { SmsNotificationAdapter } from './services/SmsNotificationAdapter';
 import { ImageProcessingService } from './services/ImageProcessingService';
@@ -75,6 +77,7 @@ export class AppContainer {
   public ediaryRepository: IEDiaryRepository;
   public recordOfWorkRepository: IRecordOfWorkRepository; // <-- Added Property
   public complaintRepository: IComplaintRepository;
+  public systemLogRepository: ISystemLogRepository;
 
   // Services
   public readonly tokenService = new JwtAuthTokenService();
@@ -101,6 +104,7 @@ export class AppContainer {
   public ediaryUseCases!: EDiaryUseCases;
   public recordOfWorkUseCases!: RecordOfWorkUseCases; // <-- Added Property
   public complaintUseCases!: ComplaintUseCases;
+  public systemLogUseCases!: SystemLogUseCases;
 
   constructor(customRepositories?: Partial<RepositoryBundle>) {
     this.userRepository = customRepositories?.userRepository || new InMemoryUserRepository();
@@ -122,6 +126,8 @@ export class AppContainer {
       customRepositories?.recordOfWorkRepository || new InMemoryRecordOfWorkRepository();
     this.complaintRepository =
       customRepositories?.complaintRepository || new InMemoryComplaintRepository();
+    this.systemLogRepository =
+      customRepositories?.systemLogRepository || new InMemorySystemLogRepository();
 
     this.initUseCases();
   }
@@ -169,6 +175,7 @@ export class AppContainer {
     // <-- Initialize the new Records of Work Use Case here
     this.recordOfWorkUseCases = new RecordOfWorkUseCases(this.recordOfWorkRepository); 
     this.complaintUseCases = new ComplaintUseCases(this.complaintRepository, this.userRepository);
+    this.systemLogUseCases = new SystemLogUseCases(this.systemLogRepository);
     
     this.timetableUseCases = new TimetableUseCases(this.timetableRepository, this.academicRepository, this.teacherRepository);
     this.attendanceUseCases = new AttendanceUseCases(

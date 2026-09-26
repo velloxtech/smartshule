@@ -196,8 +196,8 @@ export const FeeStructureView: React.FC = () => {
 
       <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30 text-xs text-on-surface-variant space-y-1">
         <div className="font-bold text-primary">Official Payment Gateways & Reconciliation:</div>
-        <div>1. Safaricom M-Pesa: Paybill <strong>174379</strong> / Shortcode with Daraja STK Push instant validation.</div>
-        <div>2. Bank Wire Transfers: Equity Bank & KCB verified corporate school accounts.</div>
+        <div>1. KCB Bank M-Pesa Express: Paybill <strong>522123</strong> / Account: Student Admission No (KCB Buni API).</div>
+        <div>2. Bank Wire Transfers: KCB Bank verified corporate school accounts.</div>
         <div>3. Receipts with cryptographic unique receipt codes automatically issued upon confirmation.</div>
       </div>
 

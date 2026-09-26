@@ -41,6 +41,7 @@ import { VisualCBCView } from './components/views/VisualCBCView';
 import { WhatsAppBotView } from './components/views/WhatsAppBotView';
 import { UserManagementView } from './components/views/UserManagementView';
 import RecordsOfWorkView from './components/views/RecordsOfWorkView';
+import { SystemLogsView } from './components/views/SystemLogsView';
 
 // Modals
 import { MpesaStkModal } from './components/modals/MpesaStkModal';
@@ -936,6 +937,8 @@ export default function App() {
           {currentTab === 'user-management' && (
             <UserManagementView onNavigateTab={(tab) => setCurrentTab(tab as any)} />
           )}
+
+          {currentTab === 'system-logs' && <SystemLogsView />}
         </main>
 
         {/* Global Portal Footer: Pure Maroon (#800000) & Vellox Tech Watermark */}

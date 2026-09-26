@@ -92,7 +92,7 @@ export const MpesaStkModal: React.FC<MpesaStkModalProps> = ({
     }
 
     if (currentStudent) {
-      apiService.initiateMpesaStkPush(currentStudent.id, cleanPhone).catch(() => {});
+      apiService.initiateMpesaStkPush(currentStudent.id, cleanPhone, Number(amount)).catch(() => {});
     }
 
     setTimeout(() => {
@@ -201,7 +201,8 @@ export const MpesaStkModal: React.FC<MpesaStkModalProps> = ({
                   <input
                     type="number"
                     required
-                    min="100"
+                    min="1"
+                    step="any"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg py-2.5 pl-14 pr-3 text-base font-bold font-data-mono text-on-surface focus:outline-primary"

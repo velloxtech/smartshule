@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { EditStudentModal } from '../modals/EditStudentModal';
 
 interface ParentDashboardViewProps {
   onOpenMpesaWithStudent?: (student: any) => void;
@@ -19,6 +20,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
   const [portalData, setPortalData] = useState<any>(null);
   const [selectedChildIndex, setSelectedChildIndex] = useState<number>(0);
   const [loading, setLoading] = useState(true);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const loadPortalData = async () => {
     setLoading(true);
@@ -153,6 +155,14 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => setIsEditModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-2 bg-surface-container hover:bg-surface-container-high text-on-surface rounded-lg text-xs font-bold border border-outline-variant/30 transition-all cursor-pointer shadow-2xs"
+              >
+                <span className="material-symbols-outlined text-[16px] text-primary">edit_square</span>
+                <span>Edit Profile & Phone</span>
+              </button>
+
               <button
                 onClick={() => onViewReportCard({
                   id: currentChild.id,
@@ -398,6 +408,38 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
             </div>
           </div>
         </>
+      )}
+
+      {isEditModalOpen && currentChild && (
+        <EditStudentModal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          student={{
+            id: currentChild.id,
+            admNo: currentChild.admissionNumber,
+            upi: currentChild.upiNumber || '',
+            nemis: currentChild.upiNumber || '',
+            name: currentChild.fullName || `${currentChild.firstName} ${currentChild.lastName}`,
+            gender: currentChild.gender || 'MALE',
+            grade: currentChild.gradeLevel,
+            stream: currentChild.streamId ? 'East' : '',
+            guardianName: currentChild.guardianName || `${guardianUser?.firstName || ''} ${guardianUser?.lastName || ''}`.trim() || 'Parent',
+            guardianPhone: currentChild.guardianPhone || guardianUser?.phone || '',
+            feeBalance: currentChild.fee?.balance || 0,
+            totalFee: currentChild.fee?.totalBilled || 0,
+            attendanceRate: currentChild.attendance?.attendanceRate || 100,
+            cbcRating: 'ME',
+            status: currentChild.status || 'Active',
+            dateOfBirth: currentChild.dateOfBirth,
+            medicalConditions: currentChild.medicalConditions,
+            specialNeeds: currentChild.specialNeeds,
+            profilePhotoUrl: currentChild.profilePhotoUrl
+          }}
+          onStudentUpdated={async () => {
+            await loadPortalData();
+          }}
+          isParentView={true}
+        />
       )}
     </div>
   );

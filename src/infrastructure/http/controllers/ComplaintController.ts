@@ -47,8 +47,13 @@ export const DismissComplaintSchema = z.object({
   reason: z.string().min(3)
 });
 
+import { SystemLogUseCases } from '../../../application/system-logs/SystemLogUseCases';
+
 export class ComplaintController {
-  constructor(private readonly useCases: ComplaintUseCases) {}
+  constructor(
+    private readonly useCases: ComplaintUseCases,
+    private readonly systemLogUseCases?: SystemLogUseCases
+  ) {}
 
   public create = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
@@ -61,6 +66,20 @@ export class ComplaintController {
         },
         creatorUserId
       );
+
+      this.systemLogUseCases?.log({
+        schoolId,
+        level: 'INFO',
+        category: 'COMPLAINTS',
+        action: 'COMPLAINT_CREATED',
+        actorEmail: req.user?.email,
+        actorUserId: req.user?.userId,
+        actorRole: req.user?.role,
+        ipAddress: req.ip || (req.socket?.remoteAddress as string),
+        status: 'SUCCESS',
+        details: `Complaint submitted: "${complaint.title}" (${complaint.category})`,
+        metadata: { complaintId: complaint.id, category: complaint.category, priority: complaint.priority }
+      }).catch(() => {});
 
       return res.status(201).json({
         success: true,
@@ -181,6 +200,20 @@ export class ComplaintController {
       const { resolutionNotes } = req.body;
       const resolvedByUserId = req.user!.userId;
       const complaint = await this.useCases.resolveComplaint(id, resolutionNotes, resolvedByUserId);
+
+      this.systemLogUseCases?.log({
+        schoolId: complaint.schoolId,
+        level: 'AUDIT',
+        category: 'COMPLAINTS',
+        action: 'COMPLAINT_RESOLVED',
+        actorEmail: req.user?.email,
+        actorUserId: req.user?.userId,
+        actorRole: req.user?.role,
+        ipAddress: req.ip || (req.socket?.remoteAddress as string),
+        status: 'SUCCESS',
+        details: `Complaint "${complaint.title}" resolved. Notes: ${resolutionNotes}`,
+        metadata: { complaintId: complaint.id, resolutionNotes }
+      }).catch(() => {});
 
       return res.status(200).json({
         success: true,

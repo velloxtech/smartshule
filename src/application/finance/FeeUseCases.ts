@@ -106,7 +106,8 @@ export interface RecordPaymentDTO {
 
 export interface StkPushPaymentDTO {
   invoiceId: string;
-  phoneNumber: string; // 2547XXXXXXXX
+  phoneNumber: string; // 2547XXXXXXXX or 07XXXXXXXX
+  amount?: number;
 }
 
 export interface KcbBuniStkDTO {
@@ -561,7 +562,13 @@ export class FeeUseCases {
 
   // 4. KCB Buni M-Pesa Express STK Push
   public async initiateKcbBuniStkPush(dto: KcbBuniStkDTO) {
-    const invoice = await this.feeRepository.findInvoiceById(dto.invoiceId);
+    let invoice = await this.feeRepository.findInvoiceById(dto.invoiceId);
+    if (!invoice) {
+      // In case caller passed studentId instead of invoiceId
+      const studentInvoices = await this.feeRepository.findInvoices({ studentId: dto.invoiceId });
+      const unpaid = studentInvoices.filter(i => i.balance > 0);
+      invoice = unpaid[0] || studentInvoices[0] || null;
+    }
     if (!invoice) throw new NotFoundError('Invoice', dto.invoiceId);
 
     const student = await this.studentRepository.findById(invoice.studentId);
@@ -605,66 +612,109 @@ export class FeeUseCases {
   public async initiateMpesaStk(dto: StkPushPaymentDTO) {
     return this.initiateKcbBuniStkPush({
       invoiceId: dto.invoiceId,
-      phoneNumber: dto.phoneNumber
+      phoneNumber: dto.phoneNumber,
+      amount: dto.amount
     });
   }
 
   // 5. KCB Buni Webhook Callback Handler
   public async handleKcbBuniCallback(payload: unknown) {
+    console.log('[KCB Buni Webhook] Inbound callback received:', JSON.stringify(payload));
     const callbackData: KcbBuniCallbackData = await this.kcbBuniGateway.processCallback(payload);
+    console.log('[KCB Buni Webhook] Parsed callback data:', JSON.stringify(callbackData));
 
-    if (callbackData.resultCode === 0 && callbackData.amount && callbackData.mpesaReceiptNumber) {
+    if (callbackData.resultCode === 0) {
+      const transactionCode = (
+        callbackData.mpesaReceiptNumber ||
+        callbackData.checkoutRequestId ||
+        `KCBTX_${Date.now()}`
+      ).trim();
+
       // Check idempotency
-      const existingPayment = await this.feeRepository.findPaymentByReference(callbackData.mpesaReceiptNumber);
+      const existingPayment = await this.feeRepository.findPaymentByReference(transactionCode);
       if (existingPayment) {
+        console.log(`[KCB Buni Webhook] Payment already recorded for reference: ${transactionCode}`);
         return {
           status: 'SUCCESS',
           alreadyProcessed: true,
-          receiptNumber: callbackData.mpesaReceiptNumber,
-          amount: callbackData.amount,
+          receiptNumber: existingPayment.receiptNumber,
+          transactionReference: transactionCode,
+          amount: existingPayment.amount,
           message: 'Payment already recorded previously.'
         };
       }
 
-      // Match invoice from pending transaction or unpaid invoices
+      // Match invoice:
+      // 1. From pendingKcbTransactions memory map
       const pending = this.pendingKcbTransactions.get(callbackData.checkoutRequestId);
       let invoice: StudentInvoice | null = null;
       if (pending) {
         invoice = await this.feeRepository.findInvoiceById(pending.invoiceId);
       }
-      if (!invoice) {
-        const allInvoices = await this.feeRepository.findInvoices({});
-        invoice = allInvoices.find(i => i.balance > 0) || allInvoices[0];
+
+      // 2. From pending studentId
+      if (!invoice && pending?.studentId) {
+        const studentInvoices = await this.feeRepository.findInvoices({ studentId: pending.studentId });
+        invoice = studentInvoices.find(i => i.balance > 0) || studentInvoices[0] || null;
       }
 
-      const paidAmount = callbackData.amount;
+      // 3. Fallback: match by phone number
+      if (!invoice && callbackData.phoneNumber) {
+        const guardian = await this.guardianRepository.findByPhone(callbackData.phoneNumber);
+        if (guardian && guardian.studentIds.length > 0) {
+          for (const sid of guardian.studentIds) {
+            const studentInvoices = await this.feeRepository.findInvoices({ studentId: sid });
+            const unpaid = studentInvoices.find(i => i.balance > 0);
+            if (unpaid) {
+              invoice = unpaid;
+              break;
+            }
+          }
+        }
+      }
+
+      // 4. Fallback: any invoice with balance > 0
+      if (!invoice) {
+        const allInvoices = await this.feeRepository.findInvoices({});
+        invoice = allInvoices.find(i => i.balance > 0) || allInvoices[0] || null;
+      }
+
+      const paidAmount = (callbackData.amount !== undefined && callbackData.amount > 0)
+        ? callbackData.amount
+        : (pending?.amount || (invoice ? invoice.balance : 0));
       const receiptNumber = `REC-KCB-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
 
       const payment = Payment.create(
         {
-          schoolId: invoice ? invoice.schoolId : 'default',
+          schoolId: invoice ? invoice.schoolId : 'school-001',
           invoiceId: invoice ? invoice.id : 'unknown',
           studentId: invoice ? invoice.studentId : (pending ? pending.studentId : 'unknown'),
           receiptNumber,
           amount: paidAmount,
           paymentMethod: PaymentMethod.KCB_BUNI,
-          transactionReference: callbackData.mpesaReceiptNumber,
+          transactionReference: transactionCode,
           mpesaPhoneNumber: callbackData.phoneNumber,
           paymentDate: callbackData.transactionDate
             ? callbackData.transactionDate.split('T')[0]
             : new Date().toISOString().split('T')[0],
           recordedByUserId: 'usr-kcb-buni-gateway',
           status: PaymentStatus.COMPLETED,
-          notes: `KCB Buni M-Pesa Express. CheckoutReq: ${callbackData.checkoutRequestId}`
+          notes: `KCB Buni M-Pesa Express. Ref: ${transactionCode}. CheckoutReq: ${callbackData.checkoutRequestId}`
         },
         IdGenerator.generate()
       );
 
+      // 1. UPDATE INVOICE BALANCE IN DATABASE
       if (invoice) {
         invoice.recordPayment(paidAmount);
         await this.feeRepository.updateInvoice(invoice);
+        console.log(`[KCB Buni Webhook] ✅ Updated invoice ${invoice.invoiceNumber}. New balance: KES ${invoice.balance}`);
       }
+
+      // 2. STORE TRANSACTION RECORD IN DATABASE
       await this.feeRepository.savePayment(payment);
+      console.log(`[KCB Buni Webhook] ✅ Stored transaction code '${transactionCode}' in database with Receipt #${receiptNumber}`);
+
       this.pendingKcbTransactions.delete(callbackData.checkoutRequestId);
 
       if (invoice) {
@@ -676,7 +726,7 @@ export class FeeUseCases {
             if (u && u.phone) {
               await this.notificationService.sendSms(
                 u.phone,
-                `SmartShule KCB Buni: Received KES ${paidAmount} for ${student.fullName} (Adm: ${student.admissionNumber}). Receipt #${receiptNumber} (Ref: ${callbackData.mpesaReceiptNumber}). Balance: KES ${invoice.balance}.`
+                `SmartShule KCB Buni: Received KES ${paidAmount} for ${student.fullName} (Adm: ${student.admissionNumber}). Receipt #${receiptNumber} (Ref: ${transactionCode}). Balance: KES ${invoice.balance}.`
               );
             }
           }
@@ -685,10 +735,12 @@ export class FeeUseCases {
 
       return {
         status: 'SUCCESS',
-        receiptNumber: callbackData.mpesaReceiptNumber,
+        receiptNumber: transactionCode,
+        schoolReceiptNumber: receiptNumber,
         amount: paidAmount,
         invoiceId: invoice ? invoice.id : undefined,
-        message: 'Payment processed successfully via KCB Buni Gateway'
+        newBalance: invoice ? invoice.balance : undefined,
+        message: 'Payment processed, transaction code stored, and balance updated successfully via KCB Buni Gateway'
       };
     }
 
@@ -826,6 +878,25 @@ export class FeeUseCases {
 
   // 8. Query Transaction Status via KCB Buni API
   public async queryKcbBuniStatus(checkoutRequestId: string) {
+    // 1. Check if transaction has ALREADY been recorded in the database via callback
+    const allPayments = await this.feeRepository.findPayments({});
+    const foundPayment = allPayments.find(
+      p => (p.notes && p.notes.includes(checkoutRequestId)) || p.transactionReference === checkoutRequestId
+    );
+
+    if (foundPayment) {
+      const invoice = foundPayment.invoiceId ? await this.feeRepository.findInvoiceById(foundPayment.invoiceId) : null;
+      return {
+        success: true,
+        status: 'COMPLETED',
+        receiptNumber: foundPayment.transactionReference,
+        schoolReceiptNumber: foundPayment.receiptNumber,
+        amount: foundPayment.amount,
+        balance: invoice ? invoice.balance : undefined,
+        message: `Payment confirmed via KCB Buni. Ref: ${foundPayment.transactionReference}`
+      };
+    }
+
     const statusResult = await this.kcbBuniGateway.queryTransactionStatus(checkoutRequestId);
 
     // Settle pending transaction if confirmed successful and not yet recorded
@@ -839,7 +910,7 @@ export class FeeUseCases {
 
         const payment = Payment.create(
           {
-            schoolId: invoice ? invoice.schoolId : 'default',
+            schoolId: invoice ? invoice.schoolId : 'school-001',
             invoiceId: pending.invoiceId,
             studentId: pending.studentId,
             receiptNumber,

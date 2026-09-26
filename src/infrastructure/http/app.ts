@@ -114,7 +114,7 @@ export function createExpressApp(container: AppContainer): Express {
           'Schemes of Work & Lesson Plans (/api/v1/curriculum)',
           'Timetables & Conflict Checks (/api/v1/timetables)',
           'Class Registers & Attendance (/api/v1/attendance)',
-          'Fee Payments & M-Pesa Daraja STK (/api/v1/finance)',
+          'Fee Payments & KCB Buni STK Push (/api/v1/finance)',
           'School Analytics & Dashboard (/api/v1/analytics)'
         ]
       }

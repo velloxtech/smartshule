@@ -56,7 +56,9 @@ export const RecordPaymentSchema = z.object({
 
 export const MpesaStkPushSchema = z.object({
   invoiceId: z.string().min(1),
-  phoneNumber: z.string().regex(/^2547\d{8}$|^2541\d{8}$/, 'Must be valid phone format: 2547XXXXXXXX or 2541XXXXXXXX')
+  phoneNumber: z.string().min(9, 'Must be a valid mobile phone number'),
+  amount: z.number().positive().optional(),
+  description: z.string().optional()
 });
 
 export const KcbBuniStkPushSchema = z.object({
@@ -115,8 +117,13 @@ export const RecordOtherIncomeSchema = z.object({
   notes: z.string().optional()
 }).passthrough();
 
+import { SystemLogUseCases } from '../../../application/system-logs/SystemLogUseCases';
+
 export class FinanceController {
-  constructor(private readonly feeUseCases: FeeUseCases) {}
+  constructor(
+    private readonly feeUseCases: FeeUseCases,
+    private readonly systemLogUseCases?: SystemLogUseCases
+  ) {}
 
   public createFeeStructure = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -190,6 +197,21 @@ export class FinanceController {
   public recordPayment = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const result = await this.feeUseCases.recordPayment(req.body);
+
+      this.systemLogUseCases?.log({
+        schoolId: req.body.schoolId,
+        level: 'AUDIT',
+        category: 'FINANCE',
+        action: 'PAYMENT_RECORDED',
+        actorEmail: (req as any).user?.email,
+        actorUserId: (req as any).user?.userId,
+        actorRole: (req as any).user?.role,
+        ipAddress: req.ip || (req.socket?.remoteAddress as string),
+        status: 'SUCCESS',
+        details: `Recorded fee payment of KES ${req.body.amount} via ${req.body.paymentMethod || 'CASH'}. Reference: ${result.payment?.transactionReference || result.payment?.receiptNumber || 'N/A'}`,
+        metadata: { invoiceId: req.body.invoiceId, amount: req.body.amount, receipt: result.payment?.receiptNumber }
+      }).catch(() => {});
+
       return res.status(201).json({
         success: true,
         message: 'Payment recorded and receipt generated',
@@ -259,6 +281,18 @@ export class FinanceController {
   public initiateKcbBuniStk = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const result = await this.feeUseCases.initiateKcbBuniStkPush(req.body);
+
+      this.systemLogUseCases?.log({
+        level: 'INFO',
+        category: 'FINANCE',
+        action: 'KCB_STK_PUSH_INITIATED',
+        actorEmail: (req as any).user?.email,
+        ipAddress: req.ip || (req.socket?.remoteAddress as string),
+        status: 'SUCCESS',
+        details: `Initiated KCB Buni STK push of KES ${req.body.amount} for phone ${req.body.phoneNumber}`,
+        metadata: { phone: req.body.phoneNumber, amount: req.body.amount, invoiceId: req.body.invoiceId }
+      }).catch(() => {});
+
       return res.status(200).json({
         success: true,
         message: 'KCB Buni M-Pesa Express prompt sent successfully',
@@ -272,6 +306,16 @@ export class FinanceController {
   public kcbBuniCallback = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const result = await this.feeUseCases.handleKcbBuniCallback(req.body);
+
+      this.systemLogUseCases?.log({
+        level: 'AUDIT',
+        category: 'FINANCE',
+        action: 'KCB_STK_CALLBACK_PROCESSED',
+        status: 'SUCCESS',
+        details: `Processed KCB Buni STK callback. Result: ${result?.message || 'Success'}`,
+        metadata: { callbackBody: req.body }
+      }).catch(() => {});
+
       return res.status(200).json({
         ResultCode: 0,
         ResultDesc: 'Accepted',
@@ -294,6 +338,16 @@ export class FinanceController {
   public confirmKcbBuniBill = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const result = await this.feeUseCases.confirmKcbBuniBillPayment(req.body);
+
+      this.systemLogUseCases?.log({
+        level: 'AUDIT',
+        category: 'FINANCE',
+        action: 'KCB_PAYBILL_CONFIRMED',
+        status: 'SUCCESS',
+        details: `Confirmed KCB Paybill transaction ${req.body.transID || req.body.transactionReference || ''} for KES ${req.body.transAmount || req.body.amount}`,
+        metadata: { confirmationBody: req.body }
+      }).catch(() => {});
+
       return res.status(200).json(result);
     } catch (err) {
       next(err);

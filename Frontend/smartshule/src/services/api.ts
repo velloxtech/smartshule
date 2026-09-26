@@ -46,6 +46,8 @@ import {
   ExpenseRecord,
   OtherIncomeRecord,
   CashFlowLedgerData,
+  SystemAuditLog,
+  SystemLogStats,
 } from '../types';
 function resolveApiBaseUrl(): string {
   let url = ((import.meta as any).env?.VITE_API_URL || '').trim();
@@ -1072,10 +1074,10 @@ export const apiService = {
     });
   },
 
-  initiateMpesaStkPush: async (invoiceId: string, phoneNumber: string): Promise<ApiResponse<any>> => {
+  initiateMpesaStkPush: async (invoiceId: string, phoneNumber: string, amount?: number): Promise<ApiResponse<any>> => {
     return apiFetch<ApiResponse<any>>('/finance/kcb-buni/stk-push', {
       method: 'POST',
-      body: JSON.stringify({ invoiceId, phoneNumber }),
+      body: JSON.stringify({ invoiceId, phoneNumber, amount }),
     });
   },
 
@@ -1417,6 +1419,78 @@ export const apiService = {
     return apiFetch<ApiResponse<any>>('/system/purge-all', {
       method: 'POST',
     });
+  },
+
+  // 14. System Audit Logs
+  getSystemLogs: async (params?: {
+    category?: string;
+    level?: string;
+    status?: string;
+    action?: string;
+    search?: string;
+    startDate?: string;
+    endDate?: string;
+    page?: number;
+    limit?: number;
+    schoolId?: string;
+  }): Promise<{ success: boolean; data: SystemAuditLog[]; pagination: { total: number; page: number; limit: number; totalPages: number } }> => {
+    const query = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, val]) => {
+        if (val !== undefined && val !== null && val !== '') {
+          query.append(key, String(val));
+        }
+      });
+    }
+    const qs = query.toString() ? `?${query.toString()}` : '';
+    return apiFetch(`/system-logs${qs}`);
+  },
+
+  getSystemLogStats: async (schoolId?: string): Promise<ApiResponse<SystemLogStats>> => {
+    return apiFetch<ApiResponse<SystemLogStats>>(`/system-logs/stats${schoolId ? `?schoolId=${schoolId}` : ''}`);
+  },
+
+  downloadSystemLogsCsv: async (params?: {
+    category?: string;
+    level?: string;
+    status?: string;
+    action?: string;
+    search?: string;
+    startDate?: string;
+    endDate?: string;
+    schoolId?: string;
+  }): Promise<void> => {
+    const query = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, val]) => {
+        if (val !== undefined && val !== null && val !== '') {
+          query.append(key, String(val));
+        }
+      });
+    }
+    const qs = query.toString() ? `?${query.toString()}` : '';
+    const url = `${API_BASE_URL}/system-logs/download${qs}`;
+
+    const headers: Record<string, string> = {};
+    if (authToken) {
+      headers['Authorization'] = `Bearer ${authToken}`;
+    }
+
+    const res = await fetch(url, { headers });
+    if (!res.ok) {
+      throw new Error(`Failed to download system audit logs (HTTP ${res.status})`);
+    }
+
+    const blob = await res.blob();
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    const today = new Date().toISOString().split('T')[0];
+    link.download = `smartshule_system_logs_${today}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(downloadUrl);
   },
 };
 

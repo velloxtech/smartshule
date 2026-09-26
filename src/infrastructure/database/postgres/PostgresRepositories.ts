@@ -475,6 +475,29 @@ export class PostgresDatabaseInitializer {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+
+      CREATE TABLE IF NOT EXISTS system_logs (
+        id VARCHAR(100) PRIMARY KEY,
+        school_id VARCHAR(100) NOT NULL,
+        timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        level VARCHAR(50) NOT NULL DEFAULT 'INFO',
+        category VARCHAR(100) NOT NULL DEFAULT 'SYSTEM',
+        action VARCHAR(150) NOT NULL,
+        actor_user_id VARCHAR(100),
+        actor_email VARCHAR(150),
+        actor_role VARCHAR(50),
+        ip_address VARCHAR(100),
+        status VARCHAR(50) NOT NULL DEFAULT 'SUCCESS',
+        details TEXT NOT NULL,
+        metadata JSONB DEFAULT '{}'::jsonb,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_system_logs_school ON system_logs(school_id);
+      CREATE INDEX IF NOT EXISTS idx_system_logs_timestamp ON system_logs(timestamp DESC);
+      CREATE INDEX IF NOT EXISTS idx_system_logs_category ON system_logs(category);
+      CREATE INDEX IF NOT EXISTS idx_system_logs_level ON system_logs(level);
     `;
 
     await pool.query(ddl);

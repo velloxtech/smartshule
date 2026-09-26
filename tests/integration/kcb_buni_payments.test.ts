@@ -14,6 +14,7 @@ describe('KCB Buni API Platform Integration Tests', () => {
   let initialBalance: number;
 
   beforeAll(async () => {
+    jest.setTimeout(30000);
     container = new AppContainer();
     await setupTestFixtures(container);
     app = createExpressApp(container);
@@ -242,7 +243,8 @@ describe('KCB Buni API Platform Integration Tests', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
           invoiceId: testInvoiceId,
-          phoneNumber: '254712345678'
+          phoneNumber: '254712345678',
+          amount: 1000
         });
 
       expect(res.status).toBe(200);

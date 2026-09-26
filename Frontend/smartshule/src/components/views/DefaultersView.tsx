@@ -95,7 +95,7 @@ export const DefaultersView: React.FC<DefaultersViewProps> = ({
             <div className="text-xl font-bold font-data-mono text-on-surface mt-1">
               {defaultersReport?.collectionRatePercentage ?? 0}%
             </div>
-            <span className="text-[11px] text-secondary font-medium mt-1 block">Live Daraja IPN Synchronized</span>
+            <span className="text-[11px] text-secondary font-medium mt-1 block">Live KCB Buni API Synchronized</span>
           </div>
           <div className="w-12 h-12 rounded-xl bg-surface-container-low text-primary flex items-center justify-center font-bold">
             <span className="material-symbols-outlined text-[26px]">insights</span>

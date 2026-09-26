@@ -22,7 +22,45 @@ export type TabType =
   | 'ediary'
   | 'visual-cbc'
   | 'whatsapp-bot'
-  | 'user-management';
+  | 'user-management'
+  | 'system-logs';
+
+export type SystemLogLevel = 'INFO' | 'WARN' | 'ERROR' | 'AUDIT';
+export type SystemLogCategory =
+  | 'AUTH'
+  | 'FINANCE'
+  | 'STUDENTS'
+  | 'ACADEMICS'
+  | 'SYSTEM'
+  | 'COMPLAINTS'
+  | 'COMMUNICATION';
+export type SystemLogStatus = 'SUCCESS' | 'FAILED';
+
+export interface SystemAuditLog {
+  id: string;
+  schoolId: string;
+  timestamp: string;
+  level: SystemLogLevel;
+  category: SystemLogCategory;
+  action: string;
+  actorUserId?: string;
+  actorEmail?: string;
+  actorRole?: string;
+  ipAddress?: string;
+  status: SystemLogStatus;
+  details: string;
+  metadata?: Record<string, any>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SystemLogStats {
+  total: number;
+  byLevel: Record<string, number>;
+  byCategory: Record<string, number>;
+  byStatus: Record<string, number>;
+  recentFailures: number;
+}
 
 export interface ManageableUser {
   id: string;

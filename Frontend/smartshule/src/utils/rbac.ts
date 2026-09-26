@@ -381,6 +381,16 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
           UserRole.DEPUTY_HEAD_TEACHER,
         ],
       },
+      {
+        id: 'system-logs',
+        label: 'System Audit Logs',
+        icon: 'manage_search',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
+          UserRole.SCHOOL_ADMIN,
+        ],
+      },
     ],
   },
 ];

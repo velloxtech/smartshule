@@ -135,13 +135,19 @@ export class Student extends Entity<StudentProps> {
     middleName?: string,
     lastName?: string,
     gender?: StudentGender,
-    dob?: string
+    dob?: string,
+    medicalConditions?: string,
+    specialNeeds?: string,
+    upiNumber?: string
   ): void {
     if (firstName) this._props.firstName = firstName;
     if (middleName !== undefined) this._props.middleName = middleName;
     if (lastName) this._props.lastName = lastName;
     if (gender) this._props.gender = gender;
     if (dob) this._props.dateOfBirth = dob;
+    if (medicalConditions !== undefined) this._props.medicalConditions = medicalConditions;
+    if (specialNeeds !== undefined) this._props.specialNeeds = specialNeeds;
+    if (upiNumber !== undefined) this._props.upiNumber = upiNumber;
     this.touch();
   }
 
