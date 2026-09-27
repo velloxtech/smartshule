@@ -11,6 +11,7 @@ describe('SmartShule Hexagonal API Integration Tests', () => {
   let teacherToken: string;
 
   beforeAll(async () => {
+    process.env.KCB_BUNI_CONSUMER_KEY = 'mock-key';
     container = new AppContainer();
     await setupTestFixtures(container);
     app = createExpressApp(container);

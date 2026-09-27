@@ -50,7 +50,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLandi
     setForgotSuccess(null);
 
     if (!forgotEmail.trim()) {
-      setForgotError('Please enter your registered email address.');
+      setForgotError('Please enter your registered email address or phone number.');
       return;
     }
 
@@ -60,7 +60,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLandi
       if (res.success) {
         setForgotSuccess(
           res.message ||
-            'A 6-digit verification code has been dispatched to your email. Please check your inbox and spam folder.'
+            'A 6-digit verification code has been dispatched to your email / phone SMS. Please check your inbox or phone messages.'
         );
         setAuthMode('forgot_verify');
       }
@@ -77,7 +77,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLandi
     setForgotSuccess(null);
 
     if (!resetCode.trim() || resetCode.trim().length !== 6) {
-      setForgotError('Please enter the 6-digit verification code sent to your email.');
+      setForgotError('Please enter the 6-digit verification code sent to your email or phone.');
       return;
     }
 
@@ -185,7 +185,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLandi
               {authMode === 'login' &&
                 'Secure authentication for Administrators, Teachers, Finance, and Parents'}
               {authMode === 'forgot_request' &&
-                'Enter your registered email to receive a password recovery verification code'}
+                'Enter your registered email or phone number to receive a password recovery verification code'}
               {authMode === 'forgot_verify' &&
                 'Enter the code received and choose your new secure password'}
             </p>
@@ -227,14 +227,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLandi
                     </label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 material-symbols-outlined text-[18px]">
-                        mail
+                        contact_phone
                       </span>
                       <input
                         type="text"
                         required
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        placeholder="e.g. admin@smartshule.ac.ke or parent@smartshule.ac.ke"
+                        placeholder="e.g. 0712345678 or admin@smartshule.ac.ke"
                         className="w-full pl-9 pr-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-[#7a1228] focus:bg-white transition-colors"
                       />
                     </div>
@@ -359,18 +359,18 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLandi
 
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-gray-600 mb-1.5">
-                    Registered Email Address or Phone
+                    Registered Email Address or Phone Number
                   </label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 material-symbols-outlined text-[18px]">
-                      mail
+                      contact_phone
                     </span>
                     <input
                       type="text"
                       required
                       value={forgotEmail}
                       onChange={(e) => setForgotEmail(e.target.value)}
-                      placeholder="e.g. parent@smartshule.ac.ke"
+                      placeholder="e.g. 0712345678 or parent@smartshule.ac.ke"
                       className="w-full pl-9 pr-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-[#7a1228] focus:bg-white transition-colors"
                     />
                   </div>
@@ -421,7 +421,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLandi
                     <span>Verification Code Sent</span>
                   </div>
                   <p className="text-[11px] text-amber-800">
-                    Code sent to <span className="font-bold">{forgotEmail}</span>. The code is valid for 15 minutes.
+                    Code sent to <span className="font-bold">{forgotEmail}</span> via email or SMS. The code is valid for 15 minutes.
                   </p>
                 </div>
 

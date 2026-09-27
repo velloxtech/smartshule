@@ -6,7 +6,8 @@ import { UnauthorizedError, ForbiddenError } from '../../../core/domain/shared/E
 export interface AuthenticatedRequest extends Request {
   user?: {
     userId: string;
-    email: string;
+    email?: string;
+    phone?: string;
     role: UserRole;
     schoolId?: string;
   };

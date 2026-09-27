@@ -473,18 +473,20 @@ export class MongoUserRepository implements IUserRepository {
     return User.create(doc as any, doc._id, doc.createdAt, doc.updatedAt);
   }
   public async findByEmail(email: string): Promise<User | null> {
-    const doc = await UserModel.findOne({ email: email.toLowerCase() }).lean();
+    if (!email || email.trim() === '') return null;
+    const doc = await UserModel.findOne({ email: email.toLowerCase().trim() }).lean();
     if (!doc) return null;
     return User.create(doc as any, doc._id, doc.createdAt, doc.updatedAt);
   }
   public async findByPhone(phone: string): Promise<User | null> {
+    if (!phone || phone.trim() === '') return null;
     const subscriber = PhoneUtils.getSubscriberDigits(phone);
     let doc: any = null;
     if (subscriber.length >= 7) {
       doc = await UserModel.findOne({ phone: { $regex: `${subscriber}$` } }).lean();
     }
     if (!doc) {
-      doc = await UserModel.findOne({ phone }).lean();
+      doc = await UserModel.findOne({ phone: phone.trim() }).lean();
     }
     if (!doc) return null;
     return User.create(doc as any, doc._id, doc.createdAt, doc.updatedAt);

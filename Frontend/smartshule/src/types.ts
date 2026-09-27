@@ -64,7 +64,7 @@ export interface SystemLogStats {
 
 export interface ManageableUser {
   id: string;
-  email: string;
+  email?: string;
   firstName: string;
   lastName: string;
   fullName: string;
@@ -96,7 +96,7 @@ export enum UserRole {
 
 export interface AuthUser {
   id: string;
-  email: string;
+  email?: string;
   firstName: string;
   lastName: string;
   fullName: string;

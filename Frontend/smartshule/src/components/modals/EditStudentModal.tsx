@@ -401,7 +401,7 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
 
               <div>
                 <label className="block text-xs font-semibold text-on-surface mb-1">
-                  Guardian Email
+                  Guardian Email <span className="font-normal text-on-surface-variant text-[11px]">(Optional)</span>
                 </label>
                 <input
                   type="email"

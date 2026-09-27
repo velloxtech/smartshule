@@ -67,13 +67,16 @@ export class InMemoryUserRepository implements IUserRepository {
   }
 
   public async findByEmail(email: string): Promise<User | null> {
+    if (!email || email.trim() === '') return null;
+    const clean = email.toLowerCase().trim();
     for (const u of this.users.values()) {
-      if (u.email.toLowerCase() === email.toLowerCase()) return u;
+      if (u.email && u.email.toLowerCase() === clean) return u;
     }
     return null;
   }
 
   public async findByPhone(phone: string): Promise<User | null> {
+    if (!phone || phone.trim() === '') return null;
     for (const u of this.users.values()) {
       if (PhoneUtils.areMatches(u.phone, phone)) return u;
     }

@@ -2,7 +2,8 @@ import { UserRole } from '../../domain/user/User';
 
 export interface TokenPayload {
   userId: string;
-  email: string;
+  email?: string;
+  phone?: string;
   role: UserRole;
   schoolId?: string;
 }

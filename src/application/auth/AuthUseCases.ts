@@ -2,10 +2,10 @@ import { IUserRepository } from '../../core/ports/repositories/IUserRepository';
 import { IGuardianRepository } from '../../core/ports/repositories/ITeacherRepository';
 import { IAuthTokenService, IPasswordHasher, INotificationService } from '../../core/ports/services/IExternalServices';
 import { User, UserRole, UserStatus } from '../../core/domain/user/User';
-import { IdGenerator, ConflictError, UnauthorizedError, NotFoundError, ForbiddenError } from '../../core/domain/shared/Errors';
+import { IdGenerator, ConflictError, UnauthorizedError, NotFoundError, ForbiddenError, ValidationError } from '../../core/domain/shared/Errors';
 
 export interface RegisterUserDTO {
-  email: string;
+  email?: string;
   password: string;
   firstName: string;
   lastName: string;
@@ -16,7 +16,9 @@ export interface RegisterUserDTO {
 }
 
 export interface LoginDTO {
-  email: string;
+  email?: string; // Accepts email, phone number, or role alias
+  phone?: string;
+  identifier?: string;
   password: string;
 }
 
@@ -25,7 +27,7 @@ export interface AuthResponseDTO {
   refreshToken: string;
   user: {
     id: string;
-    email: string;
+    email?: string;
     firstName: string;
     lastName: string;
     fullName: string;
@@ -63,9 +65,25 @@ export class AuthUseCases {
       throw new ForbiddenError('Self-registration is not allowed for privileged administrative roles.');
     }
 
-    const existing = await this.userRepository.findByEmail(dto.email.toLowerCase());
-    if (existing) {
-      throw new ConflictError(`User with email '${dto.email}' already exists.`);
+    if (!dto.email?.trim() && !dto.phone?.trim()) {
+      throw new ValidationError('Either an email address or a phone number is required.');
+    }
+
+    let cleanEmail: string | undefined = undefined;
+    if (dto.email && dto.email.trim() !== '') {
+      cleanEmail = dto.email.toLowerCase().trim();
+      const existing = await this.userRepository.findByEmail(cleanEmail);
+      if (existing) {
+        throw new ConflictError(`User with email '${dto.email}' already exists.`);
+      }
+    }
+
+    const cleanPhone = dto.phone?.trim();
+    if (cleanPhone) {
+      const existingPhone = await this.userRepository.findByPhone(cleanPhone);
+      if (existingPhone) {
+        throw new ConflictError(`User with phone number '${cleanPhone}' already exists.`);
+      }
     }
 
     const passwordHash = await this.passwordHasher.hash(dto.password);
@@ -73,12 +91,12 @@ export class AuthUseCases {
 
     const user = User.create(
       {
-        email: dto.email.toLowerCase(),
+        email: cleanEmail,
         passwordHash,
         firstName: dto.firstName,
         lastName: dto.lastName,
         role: dto.role,
-        phone: dto.phone,
+        phone: cleanPhone,
         status: UserStatus.ACTIVE,
         schoolId: dto.schoolId
       },
@@ -89,7 +107,8 @@ export class AuthUseCases {
 
     const tokenPayload = {
       userId: user.id,
-      email: user.email,
+      email: user.email || '',
+      phone: user.phone || '',
       role: user.role,
       schoolId: user.schoolId
     };
@@ -115,7 +134,12 @@ export class AuthUseCases {
   }
 
   public async login(dto: LoginDTO): Promise<AuthResponseDTO> {
-    let lookupEmail = dto.email.toLowerCase().trim();
+    const rawIdentifier = (dto.email || dto.identifier || dto.phone || '').trim();
+    if (!rawIdentifier) {
+      throw new UnauthorizedError('Email, phone number, or username is required.');
+    }
+
+    let lookupEmail = rawIdentifier.toLowerCase();
     const aliasMap: Record<string, string> = {
       superadmin: 'superadmin@smartshule.ac.ke',
       super_admin: 'superadmin@smartshule.ac.ke',
@@ -141,19 +165,41 @@ export class AuthUseCases {
       lookupEmail = aliasMap[lookupEmail];
     }
 
-    let user = await this.userRepository.findByEmail(lookupEmail);
+    let user: User | null = null;
+
+    // Check if input looks like a phone number
+    const isPhonePattern = /^(\+?254|0)?[17]\d{8}$/.test(rawIdentifier.replace(/[\s-]/g, '')) ||
+                           /^\+?\d{8,15}$/.test(rawIdentifier.replace(/[\s-]/g, ''));
+
+    if (isPhonePattern) {
+      user = await this.userRepository.findByPhone(rawIdentifier);
+    }
+
+    if (!user) {
+      user = await this.userRepository.findByEmail(lookupEmail);
+    }
+
+    if (!user) {
+      user = await this.userRepository.findByPhone(rawIdentifier);
+    }
+
     if (!user && (lookupEmail === 'teacher' || lookupEmail === 'teacher@smartshule.ac.ke')) {
       user = await this.userRepository.findByEmail('sarah.mwangi@smartshule.ac.ke');
     }
     if (!user && (lookupEmail === 'parent' || lookupEmail === 'parent@smartshule.ac.ke')) {
       user = await this.userRepository.findByEmail('mary.kariuki@gmail.com');
     }
-    if (!user) {
-      user = await this.userRepository.findByPhone(dto.email.trim());
+
+    // Fallback: check guardian emergencyContact if guardianRepository is present
+    if (!user && this.guardianRepository) {
+      const g = await this.guardianRepository.findByPhone(rawIdentifier);
+      if (g) {
+        user = await this.userRepository.findById(g.userId);
+      }
     }
 
     if (!user) {
-      throw new UnauthorizedError('Invalid email or password.');
+      throw new UnauthorizedError('Invalid email, phone number, or password.');
     }
 
     if (user.status !== UserStatus.ACTIVE) {
@@ -174,7 +220,7 @@ export class AuthUseCases {
     }
 
     if (!isMatch) {
-      throw new UnauthorizedError('Invalid email or password.');
+      throw new UnauthorizedError('Invalid email, phone number, or password.');
     }
 
     // Check if guardian authenticated with their National ID
@@ -194,7 +240,8 @@ export class AuthUseCases {
 
     const tokenPayload = {
       userId: user.id,
-      email: user.email,
+      email: user.email || '',
+      phone: user.phone || '',
       role: user.role,
       schoolId: user.schoolId
     };
@@ -233,7 +280,8 @@ export class AuthUseCases {
 
     const newPayload = {
       userId: user.id,
-      email: user.email,
+      email: user.email || '',
+      phone: user.phone || '',
       role: user.role,
       schoolId: user.schoolId
     };
@@ -298,12 +346,18 @@ export class AuthUseCases {
     if (!user) {
       user = await this.userRepository.findByPhone(emailOrPhone.trim());
     }
+    if (!user && this.guardianRepository) {
+      const g = await this.guardianRepository.findByPhone(emailOrPhone.trim());
+      if (g) {
+        user = await this.userRepository.findById(g.userId);
+      }
+    }
 
     if (!user) {
       // Safe response to prevent account enumeration
       return {
         success: true,
-        message: 'If an account is associated with this email, a 6-digit password reset code has been sent.'
+        message: 'If an account is associated with this identifier, a 6-digit password reset code has been sent.'
       };
     }
 
@@ -315,46 +369,57 @@ export class AuthUseCases {
     await this.userRepository.update(user);
 
     if (this.notificationService) {
-      const subject = `SmartShule Password Reset Code: ${resetCode}`;
-      const body = `Dear ${user.fullName},\n\nYour 6-digit SmartShule CBC Portal password reset verification code is:\n\n    ${resetCode}\n\nThis code expires in 15 minutes.\n\nGrace Seeds School · Kisumu County\n"The future Begins Here"\nTel: 0745436312 | schoolgraceseeds@gmail.com`;
+      if (user.email) {
+        const subject = `SmartShule Password Reset Code: ${resetCode}`;
+        const body = `Dear ${user.fullName},\n\nYour 6-digit SmartShule CBC Portal password reset verification code is:\n\n    ${resetCode}\n\nThis code expires in 15 minutes.\n\nGrace Seeds School · Kisumu County\n"The future Begins Here"\nTel: 0745436312 | schoolgraceseeds@gmail.com`;
 
-      const html = `
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 580px; margin: 0 auto; padding: 24px; border: 1px solid #e5e7eb; border-radius: 16px;">
-          <div style="background: #7a1228; padding: 20px; border-radius: 12px; text-align: center; color: white;">
-            <h2 style="margin: 0; font-size: 22px; font-weight: bold;">SmartShule CBC Portal</h2>
-            <p style="margin: 4px 0 0; font-size: 13px; color: #fecdd3;">Grace Seeds School · Kisumu County</p>
-          </div>
-          <div style="padding: 24px 8px; color: #1f2937;">
-            <p style="font-size: 14px; margin: 0 0 16px;">Dear <strong>${user.fullName}</strong>,</p>
-            <p style="font-size: 14px; line-height: 1.5; color: #4b5563;">You requested to reset your password for your account (<strong>${user.email}</strong>). Use the verification code below to set a new password:</p>
-            <div style="background-color: #fff1f2; border: 2px dashed #7a1228; border-radius: 12px; padding: 18px; text-align: center; margin: 24px 0;">
-              <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #9f1239; font-weight: bold;">Your 6-Digit Verification Code</div>
-              <div style="font-size: 34px; font-weight: 800; letter-spacing: 8px; color: #7a1228; margin-top: 6px; font-family: monospace;">${resetCode}</div>
+        const html = `
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 580px; margin: 0 auto; padding: 24px; border: 1px solid #e5e7eb; border-radius: 16px;">
+            <div style="background: #7a1228; padding: 20px; border-radius: 12px; text-align: center; color: white;">
+              <h2 style="margin: 0; font-size: 22px; font-weight: bold;">SmartShule CBC Portal</h2>
+              <p style="margin: 4px 0 0; font-size: 13px; color: #fecdd3;">Grace Seeds School · Kisumu County</p>
             </div>
-            <p style="font-size: 13px; color: #6b7280; line-height: 1.5;">This code will expire in <strong>15 minutes</strong>. If you did not request a password reset, you can safely ignore this email.</p>
+            <div style="padding: 24px 8px; color: #1f2937;">
+              <p style="font-size: 14px; margin: 0 0 16px;">Dear <strong>${user.fullName}</strong>,</p>
+              <p style="font-size: 14px; line-height: 1.5; color: #4b5563;">You requested to reset your password for your account. Use the verification code below to set a new password:</p>
+              <div style="background-color: #fff1f2; border: 2px dashed #7a1228; border-radius: 12px; padding: 18px; text-align: center; margin: 24px 0;">
+                <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #9f1239; font-weight: bold;">Your 6-Digit Verification Code</div>
+                <div style="font-size: 34px; font-weight: 800; letter-spacing: 8px; color: #7a1228; margin-top: 6px; font-family: monospace;">${resetCode}</div>
+              </div>
+              <p style="font-size: 13px; color: #6b7280; line-height: 1.5;">This code will expire in <strong>15 minutes</strong>. If you did not request a password reset, you can safely ignore this email.</p>
+            </div>
+            <div style="border-top: 1px solid #f3f4f6; padding-top: 16px; text-align: center; font-size: 12px; color: #9ca3af;">
+              <p style="margin: 0 0 4px;">Grace Seeds School · "The future Begins Here"</p>
+              <p style="margin: 0;">Tel: 0745436312 · Email: schoolgraceseeds@gmail.com</p>
+            </div>
           </div>
-          <div style="border-top: 1px solid #f3f4f6; padding-top: 16px; text-align: center; font-size: 12px; color: #9ca3af;">
-            <p style="margin: 0 0 4px;">Grace Seeds School · "The future Begins Here"</p>
-            <p style="margin: 0;">Tel: 0745436312 · Email: schoolgraceseeds@gmail.com</p>
-          </div>
-        </div>
-      `;
+        `;
 
-      await this.notificationService.sendEmail(user.email, subject, body, html).catch((err) => {
-        console.warn(`[Auth] Email dispatch error: ${err.message}`);
-      });
+        await this.notificationService.sendEmail(user.email, subject, body, html).catch((err) => {
+          console.warn(`[Auth] Email dispatch error: ${err.message}`);
+        });
+      }
 
-      if (user.phone) {
+      let phoneToSend = user.phone;
+      if (!phoneToSend && this.guardianRepository) {
+        const g = await this.guardianRepository.findByUserId(user.id);
+        phoneToSend = g?.emergencyContact;
+      }
+      if (phoneToSend) {
         await this.notificationService.sendSms(
-          user.phone,
+          phoneToSend,
           `SmartShule reset code: ${resetCode}. Valid for 15 mins. Do not share.`
         ).catch(() => null);
       }
     }
 
+    const resetMessage = user.email
+      ? 'A 6-digit password reset verification code has been sent to your email and/or phone number.'
+      : 'A 6-digit password reset verification code has been sent to your phone number via SMS.';
+
     return {
       success: true,
-      message: 'A 6-digit password reset verification code has been sent to your email.',
+      message: resetMessage,
       debugCode: process.env.NODE_ENV === 'test' ? resetCode : undefined
     };
   }
@@ -374,9 +439,18 @@ export class AuthUseCases {
     };
     if (aliasMap[lookupEmail]) lookupEmail = aliasMap[lookupEmail];
 
-    const user = await this.userRepository.findByEmail(lookupEmail);
+    let user = await this.userRepository.findByEmail(lookupEmail);
     if (!user) {
-      throw new UnauthorizedError('Invalid email or reset code.');
+      user = await this.userRepository.findByPhone(dto.email.trim());
+    }
+    if (!user && this.guardianRepository) {
+      const g = await this.guardianRepository.findByPhone(dto.email.trim());
+      if (g) {
+        user = await this.userRepository.findById(g.userId);
+      }
+    }
+    if (!user) {
+      throw new UnauthorizedError('Invalid email, phone number, or reset code.');
     }
 
     const currentAttempts = (this.resetCodeAttempts.get(user.id) || 0) + 1;
@@ -405,11 +479,19 @@ export class AuthUseCases {
     await this.userRepository.update(user);
 
     if (this.notificationService) {
-      this.notificationService.sendEmail(
-        user.email,
-        'SmartShule Password Successfully Reset',
-        `Dear ${user.fullName},\n\nYour SmartShule CBC Portal password has been successfully updated.\n\nGrace Seeds School · "The future Begins Here"`
-      ).catch(() => null);
+      if (user.email) {
+        this.notificationService.sendEmail(
+          user.email,
+          'SmartShule Password Successfully Reset',
+          `Dear ${user.fullName},\n\nYour SmartShule CBC Portal password has been successfully updated.\n\nGrace Seeds School · "The future Begins Here"`
+        ).catch(() => null);
+      }
+      if (user.phone) {
+        this.notificationService.sendSms(
+          user.phone,
+          `Dear ${user.fullName}, your SmartShule CBC Portal password has been successfully reset.`
+        ).catch(() => null);
+      }
     }
 
     return {
@@ -429,7 +511,7 @@ export class AuthUseCases {
       const q = filters.search.toLowerCase().trim();
       result = result.filter(u =>
         u.fullName.toLowerCase().includes(q) ||
-        u.email.toLowerCase().includes(q) ||
+        (u.email && u.email.toLowerCase().includes(q)) ||
         (u.phone && u.phone.includes(q)) ||
         u.role.toLowerCase().includes(q)
       );
@@ -446,9 +528,25 @@ export class AuthUseCases {
       throw new ForbiddenError('Only Super Administrators can create accounts with the SUPER_ADMIN role.');
     }
 
-    const existing = await this.userRepository.findByEmail(dto.email.toLowerCase().trim());
-    if (existing) {
-      throw new ConflictError(`User with email '${dto.email}' already exists.`);
+    if (!dto.email?.trim() && !dto.phone?.trim()) {
+      throw new ValidationError('Either an email address or a phone number is required.');
+    }
+
+    let cleanEmail: string | undefined = undefined;
+    if (dto.email && dto.email.trim() !== '') {
+      cleanEmail = dto.email.toLowerCase().trim();
+      const existing = await this.userRepository.findByEmail(cleanEmail);
+      if (existing) {
+        throw new ConflictError(`User with email '${dto.email}' already exists.`);
+      }
+    }
+
+    const cleanPhone = dto.phone?.trim();
+    if (cleanPhone) {
+      const existingPhone = await this.userRepository.findByPhone(cleanPhone);
+      if (existingPhone) {
+        throw new ConflictError(`User with phone number '${cleanPhone}' already exists.`);
+      }
     }
 
     const passwordHash = await this.passwordHasher.hash(dto.password);
@@ -456,12 +554,12 @@ export class AuthUseCases {
 
     const user = User.create(
       {
-        email: dto.email.toLowerCase().trim(),
+        email: cleanEmail,
         passwordHash,
         firstName: dto.firstName.trim(),
         lastName: dto.lastName.trim(),
         role: dto.role,
-        phone: dto.phone?.trim(),
+        phone: cleanPhone,
         status: dto.status || UserStatus.ACTIVE,
         schoolId: dto.schoolId || 'school-001'
       },
@@ -490,12 +588,27 @@ export class AuthUseCases {
       throw new ForbiddenError('Only Super Administrators can assign the SUPER_ADMIN role.');
     }
 
-    if (dto.email && dto.email.toLowerCase().trim() !== user.email.toLowerCase()) {
-      const existing = await this.userRepository.findByEmail(dto.email.toLowerCase().trim());
-      if (existing && existing.id !== userId) {
-        throw new ConflictError(`Email '${dto.email}' is already in use by another user.`);
+    if (dto.email !== undefined) {
+      const cleanEmail = dto.email.toLowerCase().trim();
+      if (cleanEmail && cleanEmail !== user.email?.toLowerCase()) {
+        const existing = await this.userRepository.findByEmail(cleanEmail);
+        if (existing && existing.id !== userId) {
+          throw new ConflictError(`Email '${dto.email}' is already in use by another user.`);
+        }
+        user.updateEmail(cleanEmail);
+      } else if (!cleanEmail) {
+        user.updateEmail(undefined);
       }
-      user.updateEmail(dto.email.trim());
+    }
+
+    if (dto.phone !== undefined) {
+      const cleanPhone = dto.phone.trim();
+      if (cleanPhone && cleanPhone !== user.phone?.trim()) {
+        const existingPhone = await this.userRepository.findByPhone(cleanPhone);
+        if (existingPhone && existingPhone.id !== userId) {
+          throw new ConflictError(`Phone '${dto.phone}' is already in use by another user.`);
+        }
+      }
     }
 
     user.updateProfile(dto.firstName?.trim(), dto.lastName?.trim(), dto.phone?.trim());

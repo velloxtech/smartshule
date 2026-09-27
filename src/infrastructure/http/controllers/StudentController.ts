@@ -25,7 +25,7 @@ export const RegisterStudentSchema = z.object({
     .object({
       firstName: z.string().min(1),
       lastName: z.string().min(1),
-      email: z.string().email(),
+      email: z.string().email().optional().or(z.literal('')),
       phone: z.string().min(8),
       nationalId: z.string().optional(),
       relationship: z.nativeEnum(GuardianRelationship),
@@ -56,12 +56,12 @@ export const UpdateStudentSchema = z.object({
   phone: z.string().optional(),
   guardianPhone: z.string().optional(),
   emergencyContact: z.string().optional(),
-  guardianEmail: z.string().email().optional(),
+  guardianEmail: z.string().email().optional().or(z.literal('')),
   guardianName: z.string().optional(),
   guardian: z.object({
     firstName: z.string().optional(),
     lastName: z.string().optional(),
-    email: z.string().email().optional(),
+    email: z.string().email().optional().or(z.literal('')),
     phone: z.string().optional(),
     emergencyContact: z.string().optional(),
     nationalId: z.string().optional(),

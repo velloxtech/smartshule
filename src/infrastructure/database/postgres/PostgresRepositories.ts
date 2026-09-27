@@ -64,7 +64,7 @@ export class PostgresDatabaseInitializer {
     const ddl = `
       CREATE TABLE IF NOT EXISTS users (
         id VARCHAR(100) PRIMARY KEY,
-        email VARCHAR(255) UNIQUE NOT NULL,
+        email VARCHAR(255) UNIQUE,
         password_hash VARCHAR(255) NOT NULL,
         first_name VARCHAR(100) NOT NULL,
         last_name VARCHAR(100) NOT NULL,
@@ -510,6 +510,8 @@ export class PostgresDatabaseInitializer {
       ALTER TABLE lesson_plans ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMP;
       ALTER TABLE lesson_plans ADD COLUMN IF NOT EXISTS review_remarks TEXT;
       ALTER TABLE students ADD COLUMN IF NOT EXISTS classroom_id VARCHAR(100);
+      ALTER TABLE users ALTER COLUMN email DROP NOT NULL;
+      CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone);
 
       DO $$ 
       BEGIN 
@@ -558,12 +560,14 @@ export class PostgresUserRepository implements IUserRepository {
     return User.create({ email: r.email, passwordHash: r.password_hash, firstName: r.first_name, lastName: r.last_name, role: r.role, phone: r.phone, status: r.status, schoolId: r.school_id }, r.id, r.created_at, r.updated_at);
   }
   public async findByEmail(email: string): Promise<User | null> {
-    const res = await this.pool.query('SELECT * FROM users WHERE LOWER(email) = LOWER($1)', [email]);
+    if (!email || email.trim() === '') return null;
+    const res = await this.pool.query('SELECT * FROM users WHERE LOWER(email) = LOWER($1)', [email.trim()]);
     if (res.rows.length === 0) return null;
     const r = res.rows[0];
     return User.create({ email: r.email, passwordHash: r.password_hash, firstName: r.first_name, lastName: r.last_name, role: r.role, phone: r.phone, status: r.status, schoolId: r.school_id }, r.id, r.created_at, r.updated_at);
   }
   public async findByPhone(phone: string): Promise<User | null> {
+    if (!phone || phone.trim() === '') return null;
     const subscriber = PhoneUtils.getSubscriberDigits(phone);
     if (subscriber.length >= 7) {
       const res = await this.pool.query(
@@ -575,7 +579,7 @@ export class PostgresUserRepository implements IUserRepository {
         return User.create({ email: r.email, passwordHash: r.password_hash, firstName: r.first_name, lastName: r.last_name, role: r.role, phone: r.phone, status: r.status, schoolId: r.school_id }, r.id, r.created_at, r.updated_at);
       }
     }
-    const res = await this.pool.query('SELECT * FROM users WHERE phone = $1 LIMIT 1', [phone]);
+    const res = await this.pool.query('SELECT * FROM users WHERE phone = $1 LIMIT 1', [phone.trim()]);
     if (res.rows.length === 0) return null;
     const r = res.rows[0];
     return User.create({ email: r.email, passwordHash: r.password_hash, firstName: r.first_name, lastName: r.last_name, role: r.role, phone: r.phone, status: r.status, schoolId: r.school_id }, r.id, r.created_at, r.updated_at);
@@ -592,9 +596,10 @@ export class PostgresUserRepository implements IUserRepository {
     const q = `INSERT INTO users (id, email, password_hash, first_name, last_name, role, phone, status, school_id, created_at, updated_at)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
                ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, password_hash = EXCLUDED.password_hash, first_name = EXCLUDED.first_name, last_name = EXCLUDED.last_name, role = EXCLUDED.role, phone = EXCLUDED.phone, status = EXCLUDED.status, school_id = EXCLUDED.school_id, updated_at = NOW()`;
+    const cleanEmail = (user.email && user.email.trim() !== '') ? user.email.trim().toLowerCase() : null;
     await this.pool.query(q, [
       user.id,
-      user.email,
+      cleanEmail,
       user.passwordHash,
       user.firstName,
       user.lastName,

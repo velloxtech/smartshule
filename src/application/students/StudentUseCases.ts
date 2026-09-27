@@ -77,7 +77,7 @@ export interface RegisterStudentDTO {
   guardian?: {
     firstName: string;
     lastName: string;
-    email: string;
+    email?: string;
     phone: string;
     nationalId?: string;
     relationship: GuardianRelationship;
@@ -155,20 +155,36 @@ export class StudentUseCases {
     const guardianIds: string[] = [];
 
     if (dto.guardian) {
-      // Check if user already exists for guardian
-      let guardianUser = await this.userRepository.findByEmail(dto.guardian.email.toLowerCase());
+      const guardianEmail = dto.guardian.email?.trim() ? dto.guardian.email.trim().toLowerCase() : undefined;
+      const guardianPhone = dto.guardian.phone?.trim();
+
+      // Check if user already exists for guardian by email or by phone
+      let guardianUser: User | null = null;
+      if (guardianEmail) {
+        guardianUser = await this.userRepository.findByEmail(guardianEmail);
+      }
+      if (!guardianUser && guardianPhone) {
+        guardianUser = await this.userRepository.findByPhone(guardianPhone);
+      }
+      if (!guardianUser && guardianPhone) {
+        const existingGuardian = await this.guardianRepository.findByPhone(guardianPhone);
+        if (existingGuardian) {
+          guardianUser = await this.userRepository.findById(existingGuardian.userId);
+        }
+      }
+
       if (!guardianUser) {
         // Use National ID / Phone as default password for parent account, requiring password change on first login
-        const parentDefaultPassword = dto.guardian.nationalId?.trim() || dto.guardian.phone?.trim() || process.env.DEFAULT_PARENT_PASSWORD || dto.admissionNumber || 'Parent@123';
+        const parentDefaultPassword = dto.guardian.nationalId?.trim() || guardianPhone || process.env.DEFAULT_PARENT_PASSWORD || dto.admissionNumber || 'Parent@123';
         const defaultPasswordHash = await this.passwordHasher.hash(parentDefaultPassword);
         guardianUser = User.create(
           {
-            email: dto.guardian.email.toLowerCase(),
+            email: guardianEmail,
             passwordHash: defaultPasswordHash,
             firstName: dto.guardian.firstName,
             lastName: dto.guardian.lastName,
             role: UserRole.GUARDIAN,
-            phone: dto.guardian.phone,
+            phone: guardianPhone,
             status: UserStatus.ACTIVE,
             schoolId: dto.schoolId,
             mustChangePassword: true
@@ -176,6 +192,19 @@ export class StudentUseCases {
           IdGenerator.generate()
         );
         await this.userRepository.save(guardianUser);
+      } else {
+        let updated = false;
+        if (guardianEmail && !guardianUser.email) {
+          guardianUser.updateEmail(guardianEmail);
+          updated = true;
+        }
+        if (guardianPhone && !guardianUser.phone) {
+          guardianUser.updateProfile(undefined, undefined, guardianPhone);
+          updated = true;
+        }
+        if (updated) {
+          await this.userRepository.update(guardianUser);
+        }
       }
 
       let guardian = await this.guardianRepository.findByUserId(guardianUser.id);
@@ -535,8 +564,9 @@ export class StudentUseCases {
           guardianLastName || guardianUser.lastName,
           newPhone || guardianUser.phone
         );
-        if (newEmail && newEmail !== guardianUser.email) {
-          guardianUser.updateEmail(newEmail);
+        if (newEmail !== undefined) {
+          const cleanEmail = newEmail.trim() ? newEmail.trim().toLowerCase() : undefined;
+          guardianUser.updateEmail(cleanEmail);
         }
         await this.userRepository.update(guardianUser);
       }
@@ -544,7 +574,7 @@ export class StudentUseCases {
       // Provision guardian & user if none existed
       const parentUser = User.create(
         {
-          email: newEmail || `guardian.${Date.now()}@smartshule.ac.ke`,
+          email: newEmail?.trim() ? newEmail.trim().toLowerCase() : undefined,
           passwordHash: await this.passwordHasher.hash('Parent@123'),
           firstName: guardianFirstName || 'Parent',
           lastName: guardianLastName || student.lastName,

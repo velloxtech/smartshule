@@ -14,6 +14,7 @@ describe('KCB Buni API Platform Integration Tests', () => {
   let initialBalance: number;
 
   beforeAll(async () => {
+    process.env.KCB_BUNI_CONSUMER_KEY = 'mock-kcb-key';
     jest.setTimeout(30000);
     container = new AppContainer();
     await setupTestFixtures(container);

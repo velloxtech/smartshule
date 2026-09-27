@@ -179,8 +179,8 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
         setError('Please enter a valid Kenyan National ID (6–9 digits) or Passport Number.');
         return false;
       }
-      if (!email.trim() || !email.includes('@')) {
-        setError('Valid email address is required.');
+      if (email.trim() && !email.includes('@')) {
+        setError('Please provide a valid email address, or leave it blank.');
         return false;
       }
       if (!phone.trim() || !isValidKenyanPhone(phone)) {
@@ -249,7 +249,7 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
 
     try {
       const res = await apiService.registerTeacher({
-        email: email.trim(),
+        email: email.trim() || undefined,
         password: nationalId.trim(),
         nationalId: nationalId.trim(),
         firstName: firstName.trim(),
@@ -501,14 +501,13 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
 
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-                  Official Email Address <span className="text-rose-600">*</span>
+                  Official Email Address (Optional)
                 </label>
                 <input
                   type="email"
-                  required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="e.g. david.kiprono@smartshule.ac.ke"
+                  placeholder="e.g. david.kiprono@smartshule.ac.ke (Optional)"
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white"
                 />
               </div>

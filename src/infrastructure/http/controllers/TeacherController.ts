@@ -5,7 +5,7 @@ import { AuthenticatedRequest } from '../middlewares/authMiddleware';
 import { UserRole } from '../../../core/domain/user/User';
 
 export const RegisterTeacherSchema = z.object({
-  email: z.string().email(),
+  email: z.string().email().optional().or(z.literal('')),
   password: z.string().optional(),
   nationalId: z.string().optional(),
   firstName: z.string().min(1),
@@ -24,7 +24,7 @@ export const UpdateTeacherProfileSchema = z.object({
   firstName: z.string().min(1).optional(),
   lastName: z.string().min(1).optional(),
   phone: z.string().optional(),
-  email: z.string().email().optional(),
+  email: z.string().email().optional().or(z.literal('')),
   role: z.nativeEnum(UserRole).optional(),
   tscNumber: z.string().optional(),
   employeeNumber: z.string().optional(),

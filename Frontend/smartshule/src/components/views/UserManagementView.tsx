@@ -103,14 +103,14 @@ export const UserManagementView: React.FC<UserManagementViewProps> = () => {
   // Handle Create User Submit
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newEmail.trim() || !newFirstName.trim() || !newLastName.trim() || !newPassword.trim()) {
-      showToast('error', 'Please fill in all required fields.');
+    if ((!newEmail.trim() && !newPhone.trim()) || !newFirstName.trim() || !newLastName.trim() || !newPassword.trim()) {
+      showToast('error', 'Please fill in name, password, and either an email address or phone number.');
       return;
     }
     setSubmittingCreate(true);
     try {
       const res = await apiService.createUser({
-        email: newEmail.trim().toLowerCase(),
+        email: newEmail.trim() ? newEmail.trim().toLowerCase() : undefined,
         password: newPassword.trim(),
         firstName: newFirstName.trim(),
         lastName: newLastName.trim(),
@@ -144,7 +144,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = () => {
       const res = await apiService.updateUser(selectedUser.id, {
         firstName: editFirstName.trim(),
         lastName: editLastName.trim(),
-        email: editEmail.trim().toLowerCase(),
+        email: editEmail.trim() ? editEmail.trim().toLowerCase() : undefined,
         phone: editPhone.trim() || undefined,
         role: editRole,
       });
@@ -170,7 +170,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = () => {
     const nextStatus = u.status === 'SUSPENDED' ? 'ACTIVE' : 'SUSPENDED';
     const actionLabel = nextStatus === 'SUSPENDED' ? 'suspend' : 'reactivate';
 
-    if (!window.confirm(`Are you sure you want to ${actionLabel} ${u.fullName} (${u.email})?`)) {
+    if (!window.confirm(`Are you sure you want to ${actionLabel} ${u.fullName} (${u.email || u.phone || 'No email'})?`)) {
       return;
     }
 
@@ -200,7 +200,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = () => {
     try {
       const res = await apiService.resetUserPassword(selectedUser.id, resetPwdValue.trim());
       if (res.success) {
-        showToast('success', `Password successfully updated for ${selectedUser.email}`);
+        showToast('success', `Password successfully updated for ${selectedUser.fullName}`);
         setIsResetPwdOpen(false);
       }
     } catch (err: any) {
@@ -219,7 +219,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = () => {
 
     if (
       !window.confirm(
-        `Are you sure you want to PERMANENTLY DELETE ${u.fullName} (${u.email})?\n\nThis will remove their system access completely.`
+        `Are you sure you want to PERMANENTLY DELETE ${u.fullName} (${u.email || u.phone || 'No email'})?\n\nThis will remove their system access completely.`
       )
     ) {
       return;
@@ -243,7 +243,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = () => {
   const filteredUsers = users.filter((u) => {
     const matchesSearch =
       u.fullName.toLowerCase().includes(search.toLowerCase()) ||
-      u.email.toLowerCase().includes(search.toLowerCase()) ||
+      (u.email ? u.email.toLowerCase().includes(search.toLowerCase()) : false) ||
       (u.phone && u.phone.includes(search)) ||
       u.role.toLowerCase().includes(search.toLowerCase());
 
@@ -714,11 +714,10 @@ export const UserManagementView: React.FC<UserManagementViewProps> = () => {
 
               <div>
                 <label className="block font-bold text-on-surface-variant mb-1 uppercase text-[10px]">
-                  Email Address <span className="text-error">*</span>
+                  Email Address <span className="text-on-surface-variant font-normal normal-case">(Optional if Phone provided)</span>
                 </label>
                 <input
                   type="email"
-                  required
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
                   placeholder="e.g. s.ochieng@smartshule.ac.ke"
@@ -861,11 +860,10 @@ export const UserManagementView: React.FC<UserManagementViewProps> = () => {
 
               <div>
                 <label className="block font-bold text-on-surface-variant mb-1 uppercase text-[10px]">
-                  Email Address <span className="text-error">*</span>
+                  Email Address <span className="text-on-surface-variant font-normal normal-case">(Optional if Phone provided)</span>
                 </label>
                 <input
                   type="email"
-                  required
                   value={editEmail}
                   onChange={(e) => setEditEmail(e.target.value)}
                   className="w-full bg-surface-container-low border border-outline-variant/50 rounded-lg p-2 text-xs focus:outline-primary"
@@ -981,7 +979,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = () => {
             <form onSubmit={handleResetPasswordSubmit} className="p-5 space-y-3.5 text-xs">
               <div className="p-3 bg-amber-50/80 rounded-xl border border-amber-200 text-amber-950 space-y-1">
                 <div className="font-bold">{selectedUser.fullName}</div>
-                <div className="text-[11px] font-data-mono">{selectedUser.email}</div>
+                <div className="text-[11px] font-data-mono">{selectedUser.email || selectedUser.phone || 'No email/phone'}</div>
                 <div className="text-[10px] text-amber-800 pt-1">
                   Setting a new password will immediately invalidate previous credentials.
                 </div>

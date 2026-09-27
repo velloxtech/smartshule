@@ -6,7 +6,7 @@ import { User, UserRole, UserStatus } from '../../core/domain/user/User';
 import { IdGenerator, NotFoundError, ConflictError, ValidationError } from '../../core/domain/shared/Errors';
 
 export interface RegisterTeacherDTO {
-  email: string;
+  email?: string;
   password?: string;
   nationalId?: string;
   firstName: string;
@@ -46,9 +46,25 @@ export class TeacherUseCases {
   ) {}
 
   public async registerTeacher(dto: RegisterTeacherDTO) {
-    const existingUser = await this.userRepository.findByEmail(dto.email.toLowerCase());
-    if (existingUser) {
-      throw new ConflictError(`User with email '${dto.email}' already exists.`);
+    if (!dto.email?.trim() && !dto.phone?.trim()) {
+      throw new ValidationError('Either an email address or a phone number is required to onboard a teacher/staff.');
+    }
+
+    const cleanEmail = dto.email?.trim() ? dto.email.trim().toLowerCase() : undefined;
+    const cleanPhone = dto.phone?.trim();
+
+    if (cleanEmail) {
+      const existingUser = await this.userRepository.findByEmail(cleanEmail);
+      if (existingUser) {
+        throw new ConflictError(`User with email '${dto.email}' already exists.`);
+      }
+    }
+
+    if (cleanPhone) {
+      const existingPhoneUser = await this.userRepository.findByPhone(cleanPhone);
+      if (existingPhoneUser) {
+        throw new ConflictError(`User with phone number '${cleanPhone}' already exists.`);
+      }
     }
 
     let employeeNumber = dto.employeeNumber?.trim();
@@ -76,20 +92,20 @@ export class TeacherUseCases {
     }
 
     // Teacher's National ID or Employee Number is used as their initial login password
-    const rawPassword = dto.password?.trim() || dto.nationalId?.trim() || employeeNumber || process.env.DEFAULT_TEACHER_PASSWORD || dto.phone?.trim() || '';
+    const rawPassword = dto.password?.trim() || dto.nationalId?.trim() || employeeNumber || process.env.DEFAULT_TEACHER_PASSWORD || cleanPhone || '';
     if (!rawPassword) {
-      throw new ValidationError('A password, National ID, or Employee Number is required to initialize teacher account.');
+      throw new ValidationError('A password, National ID, Employee Number, or phone number is required to initialize teacher account.');
     }
     const passwordHash = await this.passwordHasher.hash(rawPassword);
 
     const user = User.create(
       {
-        email: dto.email.toLowerCase(),
+        email: cleanEmail,
         passwordHash,
         firstName: dto.firstName,
         lastName: dto.lastName,
         role: dto.role && Object.values(UserRole).includes(dto.role) ? dto.role : UserRole.TEACHER,
-        phone: dto.phone,
+        phone: cleanPhone,
         status: UserStatus.ACTIVE,
         schoolId: dto.schoolId || 'school-001'
       },
@@ -181,12 +197,17 @@ export class TeacherUseCases {
       user.updateProfile(dto.firstName, dto.lastName, dto.phone);
     }
 
-    if (dto.email && dto.email.toLowerCase() !== user.email.toLowerCase()) {
-      const existingUser = await this.userRepository.findByEmail(dto.email.toLowerCase());
-      if (existingUser && existingUser.id !== user.id) {
-        throw new ConflictError(`User with email '${dto.email}' already exists.`);
+    if (dto.email !== undefined) {
+      const cleanEmail = dto.email.trim() ? dto.email.trim().toLowerCase() : undefined;
+      if (cleanEmail && cleanEmail !== user.email?.toLowerCase()) {
+        const existingUser = await this.userRepository.findByEmail(cleanEmail);
+        if (existingUser && existingUser.id !== user.id) {
+          throw new ConflictError(`User with email '${dto.email}' already exists.`);
+        }
+        user.updateEmail(cleanEmail);
+      } else if (!cleanEmail) {
+        user.updateEmail(undefined);
       }
-      user.updateEmail(dto.email);
     }
 
     if (dto.role && Object.values(UserRole).includes(dto.role)) {

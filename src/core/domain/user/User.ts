@@ -22,7 +22,7 @@ export enum UserStatus {
 }
 
 export interface UserProps {
-  email: string;
+  email?: string;
   passwordHash: string;
   firstName: string;
   lastName: string;
@@ -40,7 +40,7 @@ export class User extends Entity<UserProps> {
     return new User(props, id, createdAt, updatedAt);
   }
 
-  public get email(): string {
+  public get email(): string | undefined {
     return this._props.email;
   }
 
@@ -124,8 +124,8 @@ export class User extends Entity<UserProps> {
     this.touch();
   }
 
-  public updateEmail(email: string): void {
-    this._props.email = email.toLowerCase();
+  public updateEmail(email?: string): void {
+    this._props.email = email ? email.toLowerCase().trim() : undefined;
     this.touch();
   }
 

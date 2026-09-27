@@ -147,10 +147,10 @@ export const apiService = {
   },
 
   // 1. Auth Endpoints
-  login: async (email: string, password: string): Promise<ApiResponse<AuthResponse>> => {
+  login: async (emailOrPhone: string, password: string): Promise<ApiResponse<AuthResponse>> => {
     const res = await apiFetch<ApiResponse<AuthResponse>>('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email: emailOrPhone, password }),
     });
     if (res.data?.accessToken) {
       setAuthToken(res.data.accessToken);
@@ -159,7 +159,7 @@ export const apiService = {
   },
 
   register: async (userData: {
-    email: string;
+    email?: string;
     password: string;
     firstName: string;
     lastName: string;
@@ -191,10 +191,10 @@ export const apiService = {
     });
   },
 
-  forgotPassword: async (email: string): Promise<ApiResponse<{ message?: string; debugCode?: string }>> => {
+  forgotPassword: async (emailOrPhone: string): Promise<ApiResponse<{ message?: string; debugCode?: string }>> => {
     return apiFetch<ApiResponse<{ message?: string; debugCode?: string }>>('/auth/forgot-password', {
       method: 'POST',
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email: emailOrPhone }),
     });
   },
 
@@ -219,7 +219,7 @@ export const apiService = {
   },
 
   createUser: async (data: {
-    email: string;
+    email?: string;
     password: string;
     firstName: string;
     lastName: string;
@@ -538,7 +538,7 @@ export const apiService = {
   },
 
   registerTeacher: async (data: {
-    email: string;
+    email?: string;
     password?: string;
     firstName: string;
     lastName: string;

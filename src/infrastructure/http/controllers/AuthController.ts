@@ -5,7 +5,7 @@ import { UserRole, UserStatus } from '../../../core/domain/user/User';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
 
 export const RegisterUserSchema = z.object({
-  email: z.string().email(),
+  email: z.string().email().optional().or(z.literal('')),
   password: z.string().min(6),
   firstName: z.string().min(1),
   lastName: z.string().min(1),
@@ -15,8 +15,12 @@ export const RegisterUserSchema = z.object({
 });
 
 export const LoginUserSchema = z.object({
-  email: z.string().min(1, 'Email or username is required'),
+  email: z.string().optional(),
+  phone: z.string().optional(),
+  identifier: z.string().optional(),
   password: z.string().min(1, 'Password is required')
+}).refine(data => !!((data.email && data.email.trim()) || (data.phone && data.phone.trim()) || (data.identifier && data.identifier.trim())), {
+  message: 'Email or phone number is required'
 });
 
 export const RefreshTokenSchema = z.object({
@@ -24,7 +28,7 @@ export const RefreshTokenSchema = z.object({
 });
 
 export const AdminCreateUserSchema = z.object({
-  email: z.string().email(),
+  email: z.string().email().optional().or(z.literal('')),
   password: z.string().min(6),
   firstName: z.string().min(1),
   lastName: z.string().min(1),
@@ -35,7 +39,7 @@ export const AdminCreateUserSchema = z.object({
 });
 
 export const AdminUpdateUserSchema = z.object({
-  email: z.string().email().optional(),
+  email: z.string().email().optional().or(z.literal('')),
   firstName: z.string().min(1).optional(),
   lastName: z.string().min(1).optional(),
   phone: z.string().optional(),
@@ -56,13 +60,24 @@ export const ChangePasswordSchema = z.object({
 });
 
 export const ForgotPasswordSchema = z.object({
-  email: z.string().min(1, 'Email or identifier is required')
+  email: z.string().optional(),
+  phone: z.string().optional(),
+  identifier: z.string().optional()
+}).refine(data => !!((data.email && data.email.trim()) || (data.phone && data.phone.trim()) || (data.identifier && data.identifier.trim())), {
+  message: 'Email or phone number is required'
 });
 
 export const ResetPasswordSchema = z.object({
-  email: z.string().min(1, 'Email is required'),
-  resetCode: z.string().min(4, 'Reset verification code is required'),
+  email: z.string().optional(),
+  phone: z.string().optional(),
+  identifier: z.string().optional(),
+  resetCode: z.string().min(4, 'Reset verification code is required').optional(),
+  code: z.string().min(4).optional(),
   newPassword: z.string().min(6, 'New password must be at least 6 characters long')
+}).refine(data => !!((data.email && data.email.trim()) || (data.phone && data.phone.trim()) || (data.identifier && data.identifier.trim())), {
+  message: 'Email or phone number is required'
+}).refine(data => !!((data.resetCode && data.resetCode.trim()) || (data.code && data.code.trim())), {
+  message: 'Reset verification code is required'
 });
 
 import { SystemLogUseCases } from '../../../application/system-logs/SystemLogUseCases';
@@ -87,10 +102,11 @@ export class AuthController {
   };
 
   public login = async (req: Request, res: Response, next: NextFunction) => {
+    const attemptedId = req.body?.email || req.body?.phone || req.body?.identifier || '';
     try {
-      console.log(`[Auth] Inbound login attempt for user: "${req.body?.email}"`);
+      console.log(`[Auth] Inbound login attempt for user: "${attemptedId}"`);
       const result = await this.authUseCases.login(req.body);
-      console.log(`[Auth] ✅ Authenticated user: "${req.body?.email}" as ${result.user.role}`);
+      console.log(`[Auth] ✅ Authenticated user: "${attemptedId}" as ${result.user.role}`);
 
       this.systemLogUseCases?.log({
         schoolId: result.user.schoolId,
@@ -98,11 +114,11 @@ export class AuthController {
         category: 'AUTH',
         action: 'USER_LOGIN',
         actorUserId: result.user.id,
-        actorEmail: result.user.email,
+        actorEmail: result.user.email || result.user.phone || attemptedId,
         actorRole: result.user.role,
         ipAddress: req.ip || (req.socket?.remoteAddress as string),
         status: 'SUCCESS',
-        details: `User ${result.user.email} (${result.user.role}) logged in successfully`,
+        details: `User ${result.user.email || result.user.phone} (${result.user.role}) logged in successfully`,
         metadata: { userId: result.user.id, role: result.user.role }
       }).catch(() => {});
 
@@ -112,17 +128,17 @@ export class AuthController {
         data: result
       });
     } catch (err: any) {
-      console.warn(`[Auth] ❌ Login failed for "${req.body?.email}": ${err.message}`);
+      console.warn(`[Auth] ❌ Login failed for "${attemptedId}": ${err.message}`);
 
       this.systemLogUseCases?.log({
         level: 'WARN',
         category: 'AUTH',
         action: 'LOGIN_FAILED',
-        actorEmail: req.body?.email,
+        actorEmail: attemptedId,
         ipAddress: req.ip || (req.socket?.remoteAddress as string),
         status: 'FAILED',
-        details: `Failed login attempt for ${req.body?.email}: ${err.message}`,
-        metadata: { attemptedEmail: req.body?.email, error: err.message }
+        details: `Failed login attempt for ${attemptedId}: ${err.message}`,
+        metadata: { attemptedIdentifier: attemptedId, error: err.message }
       }).catch(() => {});
 
       next(err);
@@ -170,7 +186,8 @@ export class AuthController {
 
   public forgotPassword = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const result = await this.authUseCases.requestPasswordReset(req.body.email);
+      const identifier = req.body.email || req.body.phone || req.body.identifier;
+      const result = await this.authUseCases.requestPasswordReset(identifier);
       return res.status(200).json({
         success: true,
         message: result.message,
@@ -183,7 +200,12 @@ export class AuthController {
 
   public resetPassword = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const result = await this.authUseCases.resetPasswordWithCode(req.body);
+      const identifier = req.body.email || req.body.phone || req.body.identifier;
+      const result = await this.authUseCases.resetPasswordWithCode({
+        email: identifier,
+        resetCode: req.body.resetCode || req.body.code,
+        newPassword: req.body.newPassword
+      });
       return res.status(200).json({
         success: true,
         message: result.message

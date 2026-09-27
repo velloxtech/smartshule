@@ -323,11 +323,10 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
     const gLast = guardianParts.slice(1).join(' ') || 'Parent';
 
     const cleanPhone = formatKenyanPhone(guardianPhone);
-    const safeName = gFirst.toLowerCase().replace(/[^a-z0-9]/g, '') || 'guardian';
     const safeGuardianEmail =
       guardianEmail.trim() && guardianEmail.includes('@')
         ? guardianEmail.trim()
-        : `${safeName}.${Date.now().toString().slice(-4)}@smartshule.ac.ke`;
+        : undefined;
 
     const specialNeedsPayload =
       sneCategory !== 'NONE'
@@ -990,13 +989,13 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
 
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-                  Email Address (For CBC Progress Reports)
+                  Email Address (Optional — For CBC Progress Reports)
                 </label>
                 <input
                   type="email"
                   value={guardianEmail}
                   onChange={(e) => setGuardianEmail(e.target.value)}
-                  placeholder="parent.guardian@gmail.com"
+                  placeholder="e.g. parent.guardian@gmail.com (Optional)"
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white"
                 />
               </div>

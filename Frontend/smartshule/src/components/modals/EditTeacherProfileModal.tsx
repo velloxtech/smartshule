@@ -102,8 +102,8 @@ export const EditTeacherProfileModal: React.FC<EditTeacherProfileModalProps> = (
       return;
     }
 
-    if (!email.trim() || !email.includes('@')) {
-      setError('Please provide a valid email address.');
+    if (email.trim() && !email.includes('@')) {
+      setError('Please provide a valid email address or leave it blank.');
       return;
     }
 
@@ -126,7 +126,7 @@ export const EditTeacherProfileModal: React.FC<EditTeacherProfileModalProps> = (
       const payload = {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
-        email: email.trim(),
+        email: email.trim() || undefined,
         phone: cleanPhone,
         tscNumber: formattedTsc,
         employeeNumber: employeeNumber.trim() || undefined,
@@ -237,14 +237,13 @@ export const EditTeacherProfileModal: React.FC<EditTeacherProfileModalProps> = (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-                  Official Email Address <span className="text-rose-600">*</span>
+                  Official Email Address (Optional)
                 </label>
                 <input
                   type="email"
-                  required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="e.g. teacher@smartshule.ac.ke"
+                  placeholder="e.g. teacher@smartshule.ac.ke (Optional)"
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white"
                 />
               </div>
