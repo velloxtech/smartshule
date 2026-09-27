@@ -173,6 +173,16 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                 <span>Term Report Card</span>
               </button>
 
+              {onNavigateTab && (
+                <button
+                  onClick={() => onNavigateTab('complaints')}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#7a1228]/10 hover:bg-[#7a1228]/20 text-[#7a1228] rounded-lg text-xs font-bold border border-[#7a1228]/20 transition-all cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[16px]">rate_review</span>
+                  <span>Write Complaint</span>
+                </button>
+              )}
+
               <button
                 onClick={() => {
                   const studentObj = {

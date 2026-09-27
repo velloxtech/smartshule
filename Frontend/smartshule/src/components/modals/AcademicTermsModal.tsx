@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AcademicTerm, AcademicContext } from '../../types';
+import { AcademicTerm, AcademicYear, AcademicContext } from '../../types';
 import { apiService } from '../../services/api';
 
 interface AcademicTermsModalProps {
@@ -18,44 +18,95 @@ export const AcademicTermsModal: React.FC<AcademicTermsModalProps> = ({
   canManageTerms = true,
 }) => {
   const [terms, setTerms] = useState<AcademicTerm[]>([]);
+  const [years, setYears] = useState<AcademicYear[]>([]);
+  const [selectedYearId, setSelectedYearId] = useState<string>('ALL');
   const [loading, setLoading] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [transitioning, setTransitioning] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  // Editable dates map: termId -> { startDate, endDate }
-  const [editDates, setEditDates] = useState<Record<string, { startDate: string; endDate: string; name: string }>>({});
+  // Editable dates map: termId -> { startDate, endDate, name, termNumber }
+  const [editDates, setEditDates] = useState<
+    Record<string, { startDate: string; endDate: string; name: string; termNumber: number }>
+  >({});
+
+  // Create Term state
+  const [showCreateTermForm, setShowCreateTermForm] = useState(false);
+  const [creatingTerm, setCreatingTerm] = useState(false);
+  const [newTerm, setNewTerm] = useState({
+    academicYearId: '',
+    termNumber: 1,
+    name: 'Term 1',
+    startDate: '',
+    endDate: '',
+    isCurrent: false,
+  });
+
+  // Create Year state
+  const [showCreateYearForm, setShowCreateYearForm] = useState(false);
+  const [creatingYear, setCreatingYear] = useState(false);
+  const [newYear, setNewYear] = useState({
+    name: new Date().getFullYear().toString(),
+    startDate: `${new Date().getFullYear()}-01-05`,
+    endDate: `${new Date().getFullYear()}-11-20`,
+    isCurrent: true,
+  });
 
   useEffect(() => {
     if (isOpen) {
-      loadTerms();
+      setFeedback(null);
+      setShowCreateTermForm(false);
+      setShowCreateYearForm(false);
+      loadYearsAndTerms();
     }
-  }, [isOpen, academicContext]);
+  }, [isOpen, academicContext, selectedYearId]);
 
-  const loadTerms = async () => {
+  const loadYearsAndTerms = async () => {
     setLoading(true);
     try {
-      const res = await apiService.getTerms();
-      if (res.success && res.data) {
-        setTerms(res.data);
-        const map: Record<string, { startDate: string; endDate: string; name: string }> = {};
-        res.data.forEach((t) => {
+      // 1. Fetch Academic Years
+      const yearsRes = await apiService.getYears();
+      let fetchedYears: AcademicYear[] = [];
+      if (yearsRes.success && yearsRes.data) {
+        fetchedYears = yearsRes.data;
+        setYears(fetchedYears);
+      }
+
+      // 2. Fetch Terms (all or filtered by selected year)
+      const yearToFetch = selectedYearId !== 'ALL' ? selectedYearId : undefined;
+      const termsRes = await apiService.getTerms(yearToFetch);
+      if (termsRes.success && termsRes.data) {
+        setTerms(termsRes.data);
+        const map: Record<string, { startDate: string; endDate: string; name: string; termNumber: number }> = {};
+        termsRes.data.forEach((t) => {
           map[t.id] = {
             startDate: t.startDate ? t.startDate.split('T')[0] : '',
             endDate: t.endDate ? t.endDate.split('T')[0] : '',
             name: t.name || '',
+            termNumber: t.termNumber || 1,
           };
         });
         setEditDates(map);
       }
+
+      // Pre-fill default year in newTerm if available
+      const activeYear = fetchedYears.find((y) => y.isCurrent) || fetchedYears[0];
+      if (activeYear && !newTerm.academicYearId) {
+        setNewTerm((prev) => ({ ...prev, academicYearId: activeYear.id }));
+      }
     } catch (err: any) {
-      console.error('Failed to load terms:', err);
+      console.error('Failed to load terms or years:', err);
+      setFeedback({ type: 'error', message: 'Failed to load academic terms and years. Please try again.' });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDateChange = (termId: string, field: 'startDate' | 'endDate' | 'name', value: string) => {
+  const handleDateChange = (
+    termId: string,
+    field: 'startDate' | 'endDate' | 'name' | 'termNumber',
+    value: string | number
+  ) => {
     setEditDates((prev) => ({
       ...prev,
       [termId]: {
@@ -67,8 +118,8 @@ export const AcademicTermsModal: React.FC<AcademicTermsModalProps> = ({
 
   const handleSaveTermDates = async (termId: string) => {
     const dates = editDates[termId];
-    if (!dates || !dates.startDate || !dates.endDate) {
-      setFeedback({ type: 'error', message: 'Please provide both start and end dates.' });
+    if (!dates || !dates.startDate || !dates.endDate || !dates.name) {
+      setFeedback({ type: 'error', message: 'Please provide term name, start date, and end date.' });
       return;
     }
     if (dates.startDate >= dates.endDate) {
@@ -83,10 +134,11 @@ export const AcademicTermsModal: React.FC<AcademicTermsModalProps> = ({
         startDate: dates.startDate,
         endDate: dates.endDate,
         name: dates.name,
+        termNumber: Number(dates.termNumber),
       });
       if (res.success) {
-        setFeedback({ type: 'success', message: 'Term dates updated successfully.' });
-        await loadTerms();
+        setFeedback({ type: 'success', message: 'Term details updated successfully.' });
+        await loadYearsAndTerms();
         onTermUpdated();
       } else {
         setFeedback({ type: 'error', message: res.error?.message || 'Failed to update term.' });
@@ -105,7 +157,7 @@ export const AcademicTermsModal: React.FC<AcademicTermsModalProps> = ({
       const res = await apiService.activateTerm(termId);
       if (res.success) {
         setFeedback({ type: 'success', message: 'Active academic term set successfully.' });
-        await loadTerms();
+        await loadYearsAndTerms();
         onTermUpdated();
       } else {
         setFeedback({ type: 'error', message: res.error?.message || 'Failed to activate term.' });
@@ -118,7 +170,11 @@ export const AcademicTermsModal: React.FC<AcademicTermsModalProps> = ({
   };
 
   const handleTransitionTerm = async () => {
-    if (!confirm('Are you sure you want to conclude the current term and transition the school system to the next academic term?')) {
+    if (
+      !confirm(
+        'Are you sure you want to conclude the current term and transition the school system to the next academic term?'
+      )
+    ) {
       return;
     }
 
@@ -128,7 +184,7 @@ export const AcademicTermsModal: React.FC<AcademicTermsModalProps> = ({
       const res = await apiService.transitionTerm();
       if (res.success) {
         setFeedback({ type: 'success', message: `Successfully transitioned to ${res.data?.name || 'next term'}!` });
-        await loadTerms();
+        await loadYearsAndTerms();
         onTermUpdated();
       } else {
         setFeedback({ type: 'error', message: res.error?.message || 'Failed to transition term.' });
@@ -140,6 +196,103 @@ export const AcademicTermsModal: React.FC<AcademicTermsModalProps> = ({
     }
   };
 
+  const handleCreateTerm = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTerm.academicYearId) {
+      setFeedback({ type: 'error', message: 'Please select an academic year for the term.' });
+      return;
+    }
+    if (!newTerm.name || !newTerm.startDate || !newTerm.endDate) {
+      setFeedback({ type: 'error', message: 'Please fill in all term fields.' });
+      return;
+    }
+    if (newTerm.startDate >= newTerm.endDate) {
+      setFeedback({ type: 'error', message: 'End date must be after start date.' });
+      return;
+    }
+
+    setCreatingTerm(true);
+    setFeedback(null);
+    try {
+      const res = await apiService.createTerm({
+        academicYearId: newTerm.academicYearId,
+        termNumber: Number(newTerm.termNumber),
+        name: newTerm.name,
+        startDate: newTerm.startDate,
+        endDate: newTerm.endDate,
+        isCurrent: newTerm.isCurrent,
+      });
+
+      if (res.success) {
+        setFeedback({ type: 'success', message: `Term "${newTerm.name}" created successfully!` });
+        setShowCreateTermForm(false);
+        setNewTerm({
+          academicYearId: newTerm.academicYearId,
+          termNumber: Math.min(3, newTerm.termNumber + 1),
+          name: `Term ${Math.min(3, newTerm.termNumber + 1)}`,
+          startDate: '',
+          endDate: '',
+          isCurrent: false,
+        });
+        await loadYearsAndTerms();
+        onTermUpdated();
+      } else {
+        setFeedback({ type: 'error', message: res.error?.message || 'Failed to create academic term.' });
+      }
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: err.message || 'Error creating academic term.' });
+    } finally {
+      setCreatingTerm(false);
+    }
+  };
+
+  const handleCreateYear = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newYear.name || !newYear.startDate || !newYear.endDate) {
+      setFeedback({ type: 'error', message: 'Please fill in all year fields.' });
+      return;
+    }
+    if (newYear.startDate >= newYear.endDate) {
+      setFeedback({ type: 'error', message: 'End date must be after start date.' });
+      return;
+    }
+
+    setCreatingYear(true);
+    setFeedback(null);
+    const schoolId = academicContext?.schoolId || academicContext?.currentYear?.schoolId || 'school-001';
+    try {
+      const res = await apiService.createYear({
+        name: newYear.name,
+        startDate: newYear.startDate,
+        endDate: newYear.endDate,
+        isCurrent: newYear.isCurrent,
+        schoolId,
+      });
+
+      if (res.success) {
+        setFeedback({ type: 'success', message: `Academic Year ${newYear.name} created successfully!` });
+        setShowCreateYearForm(false);
+        const createdYear = res.data;
+        if (createdYear) {
+          setNewTerm((prev) => ({
+            ...prev,
+            academicYearId: createdYear.id,
+            name: `Term 1 - ${createdYear.name}`,
+            startDate: createdYear.startDate,
+          }));
+        }
+        await loadYearsAndTerms();
+        onTermUpdated();
+      } else {
+        setFeedback({ type: 'error', message: res.error?.message || 'Failed to create academic year.' });
+      }
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: err.message || 'Error creating academic year.' });
+    } finally {
+      setCreatingYear(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   const currentTerm = academicContext?.currentTerm || terms.find((t) => t.isCurrent);
@@ -147,7 +300,7 @@ export const AcademicTermsModal: React.FC<AcademicTermsModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in">
-      <div className="w-full max-w-3xl rounded-2xl bg-[#F8F5F5] shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+      <div className="w-full max-w-4xl rounded-2xl bg-[#F8F5F5] shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
         {/* Header: Pure Maroon */}
         <div className="bg-[#800000] text-white px-6 py-4 flex items-center justify-between shrink-0 shadow-md">
           <div className="flex items-center gap-3">
@@ -157,7 +310,7 @@ export const AcademicTermsModal: React.FC<AcademicTermsModalProps> = ({
             <div>
               <h2 className="text-lg font-bold tracking-tight">Academic Terms & Session Lifecycle</h2>
               <p className="text-xs text-rose-100">
-                Manage term start and end boundaries, monitor session progress, and automate term closures
+                Configure term dates, manage active session progression, and set up academic calendars
               </p>
             </div>
           </div>
@@ -172,23 +325,31 @@ export const AcademicTermsModal: React.FC<AcademicTermsModalProps> = ({
 
         {/* Content Body */}
         <div className="p-6 overflow-y-auto space-y-5">
-          {/* Feedback message */}
+          {/* Feedback Message */}
           {feedback && (
             <div
-              className={`p-3 rounded-xl text-xs font-semibold flex items-center gap-2 ${
+              className={`p-3.5 rounded-xl text-xs font-semibold flex items-center justify-between gap-2 shadow-xs ${
                 feedback.type === 'success'
                   ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
                   : 'bg-rose-100 text-rose-900 border border-rose-300'
               }`}
             >
-              <span className="material-symbols-outlined text-[18px]">
-                {feedback.type === 'success' ? 'check_circle' : 'error'}
-              </span>
-              <span>{feedback.message}</span>
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[20px]">
+                  {feedback.type === 'success' ? 'check_circle' : 'error'}
+                </span>
+                <span>{feedback.message}</span>
+              </div>
+              <button
+                onClick={() => setFeedback(null)}
+                className="text-slate-500 hover:text-slate-700 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[16px]">close</span>
+              </button>
             </div>
           )}
 
-          {/* Current Term Overview Card */}
+          {/* Current Active Term Overview Banner */}
           {currentTerm && (
             <div className="rounded-xl p-5 border border-slate-200 bg-white shadow-xs">
               <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
@@ -256,7 +417,7 @@ export const AcademicTermsModal: React.FC<AcademicTermsModalProps> = ({
                 </div>
               </div>
 
-              {/* Progress bar */}
+              {/* Progress Bar */}
               {currentTerm.totalWeeks && currentTerm.currentWeek && (
                 <div className="mt-3">
                   <div className="flex justify-between text-[11px] text-slate-500 mb-1">
@@ -286,7 +447,273 @@ export const AcademicTermsModal: React.FC<AcademicTermsModalProps> = ({
             </div>
           )}
 
-          {/* Term Schedules List & Editor */}
+          {/* Academic Year Filter & Action Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+            <div className="flex items-center gap-3">
+              <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[18px] text-[#800000]">calendar_today</span>
+                <span>Academic Year:</span>
+              </label>
+              <select
+                value={selectedYearId}
+                onChange={(e) => setSelectedYearId(e.target.value)}
+                className="px-3 py-1.5 text-xs bg-[#F8F5F5] border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#800000] font-semibold text-slate-800"
+              >
+                <option value="ALL">All Academic Years</option>
+                {years.map((y) => (
+                  <option key={y.id} value={y.id}>
+                    {y.name} {y.isCurrent ? '(Current Active)' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {canManageTerms && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    setShowCreateYearForm(true);
+                    setShowCreateTermForm(false);
+                  }}
+                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold rounded-lg border border-slate-300 transition-colors flex items-center gap-1 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[16px]">add_circle</span>
+                  <span>+ New Academic Year</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setShowCreateTermForm(true);
+                    setShowCreateYearForm(false);
+                    if (years.length > 0 && !newTerm.academicYearId) {
+                      const cur = years.find((y) => y.isCurrent) || years[0];
+                      setNewTerm((prev) => ({ ...prev, academicYearId: cur.id }));
+                    }
+                  }}
+                  className="px-3.5 py-1.5 bg-[#800000] hover:bg-[#660000] text-white text-xs font-bold rounded-lg shadow-xs transition-colors flex items-center gap-1 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[16px]">add</span>
+                  <span>+ New Academic Term</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Inline Form: Create Academic Year */}
+          {showCreateYearForm && (
+            <form
+              onSubmit={handleCreateYear}
+              className="p-4 rounded-xl border border-rose-300 bg-rose-50/60 shadow-xs space-y-3 animate-in fade-in"
+            >
+              <div className="flex items-center justify-between border-b border-rose-200 pb-2">
+                <h4 className="font-bold text-xs uppercase tracking-wider text-[#800000] flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[18px]">calendar_add_on</span>
+                  <span>Create New Academic Year</span>
+                </h4>
+                <button
+                  type="button"
+                  onClick={() => setShowCreateYearForm(false)}
+                  className="text-slate-500 hover:text-slate-700 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[18px]">close</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Year Name (e.g. 2026)</label>
+                  <input
+                    type="text"
+                    required
+                    value={newYear.name}
+                    onChange={(e) => setNewYear({ ...newYear, name: e.target.value })}
+                    placeholder="2026"
+                    className="w-full px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#800000]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Year Opening Date</label>
+                  <input
+                    type="date"
+                    required
+                    value={newYear.startDate}
+                    onChange={(e) => setNewYear({ ...newYear, startDate: e.target.value })}
+                    className="w-full px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#800000]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Year Closing Date</label>
+                  <input
+                    type="date"
+                    required
+                    value={newYear.endDate}
+                    onChange={(e) => setNewYear({ ...newYear, endDate: e.target.value })}
+                    className="w-full px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#800000]"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-1">
+                <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={newYear.isCurrent}
+                    onChange={(e) => setNewYear({ ...newYear, isCurrent: e.target.checked })}
+                    className="rounded text-[#800000] focus:ring-[#800000]"
+                  />
+                  <span>Set as Current Active Academic Year</span>
+                </label>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateYearForm(false)}
+                    className="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-200/60 rounded-lg transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={creatingYear}
+                    className="px-4 py-1.5 bg-[#800000] hover:bg-[#660000] text-white text-xs font-bold rounded-lg shadow-xs transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">save</span>
+                    <span>{creatingYear ? 'Saving Year...' : 'Save Academic Year'}</span>
+                  </button>
+                </div>
+              </div>
+            </form>
+          )}
+
+          {/* Inline Form: Create Academic Term */}
+          {showCreateTermForm && (
+            <form
+              onSubmit={handleCreateTerm}
+              className="p-4 rounded-xl border border-rose-300 bg-rose-50/60 shadow-xs space-y-3 animate-in fade-in"
+            >
+              <div className="flex items-center justify-between border-b border-rose-200 pb-2">
+                <h4 className="font-bold text-xs uppercase tracking-wider text-[#800000] flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[18px]">add_task</span>
+                  <span>Create New Academic Term</span>
+                </h4>
+                <button
+                  type="button"
+                  onClick={() => setShowCreateTermForm(false)}
+                  className="text-slate-500 hover:text-slate-700 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[18px]">close</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Academic Year</label>
+                  <select
+                    required
+                    value={newTerm.academicYearId}
+                    onChange={(e) => setNewTerm({ ...newTerm, academicYearId: e.target.value })}
+                    className="w-full px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#800000]"
+                  >
+                    <option value="" disabled>
+                      -- Select Academic Year --
+                    </option>
+                    {years.map((y) => (
+                      <option key={y.id} value={y.id}>
+                        {y.name} {y.isCurrent ? '(Active Year)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Term Number</label>
+                  <select
+                    value={newTerm.termNumber}
+                    onChange={(e) =>
+                      setNewTerm({
+                        ...newTerm,
+                        termNumber: Number(e.target.value),
+                        name: `Term ${e.target.value}`,
+                      })
+                    }
+                    className="w-full px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#800000]"
+                  >
+                    <option value={1}>Term 1</option>
+                    <option value={2}>Term 2</option>
+                    <option value={3}>Term 3</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Term Display Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={newTerm.name}
+                    onChange={(e) => setNewTerm({ ...newTerm, name: e.target.value })}
+                    placeholder="Term 1 - 2026"
+                    className="w-full px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#800000]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Term Opening Date</label>
+                  <input
+                    type="date"
+                    required
+                    value={newTerm.startDate}
+                    onChange={(e) => setNewTerm({ ...newTerm, startDate: e.target.value })}
+                    className="w-full px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#800000]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Term Closing Date</label>
+                  <input
+                    type="date"
+                    required
+                    value={newTerm.endDate}
+                    onChange={(e) => setNewTerm({ ...newTerm, endDate: e.target.value })}
+                    className="w-full px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#800000]"
+                  />
+                </div>
+
+                <div className="flex items-end pb-1.5">
+                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={newTerm.isCurrent}
+                      onChange={(e) => setNewTerm({ ...newTerm, isCurrent: e.target.checked })}
+                      className="rounded text-[#800000] focus:ring-[#800000]"
+                    />
+                    <span>Set as Active Term</span>
+                  </label>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-rose-200">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateTermForm(false)}
+                  className="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-200/60 rounded-lg transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={creatingTerm}
+                  className="px-4 py-1.5 bg-[#800000] hover:bg-[#660000] text-white text-xs font-bold rounded-lg shadow-xs transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                >
+                  <span className="material-symbols-outlined text-[16px]">save</span>
+                  <span>{creatingTerm ? 'Creating Term...' : 'Create Academic Term'}</span>
+                </button>
+              </div>
+            </form>
+          )}
+
+          {/* Configured Academic Terms List */}
           <div>
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-bold text-sm text-slate-800 flex items-center gap-1.5">
@@ -297,9 +724,32 @@ export const AcademicTermsModal: React.FC<AcademicTermsModalProps> = ({
             </div>
 
             {loading ? (
-              <div className="py-8 text-center text-xs text-slate-500">Loading term configurations...</div>
+              <div className="py-12 text-center text-xs text-slate-500 flex flex-col items-center gap-2">
+                <span className="material-symbols-outlined text-[28px] animate-spin text-[#800000]">progress_activity</span>
+                <span>Loading term configurations...</span>
+              </div>
             ) : terms.length === 0 ? (
-              <div className="py-8 text-center text-xs text-slate-500">No terms configured yet.</div>
+              <div className="py-12 text-center text-xs text-slate-500 bg-white rounded-xl border border-slate-200 p-6 flex flex-col items-center gap-3">
+                <span className="material-symbols-outlined text-[36px] text-slate-300">event_busy</span>
+                <div>
+                  <p className="font-semibold text-slate-700 text-sm">No terms configured yet</p>
+                  <p className="text-slate-500">Create an academic year or add terms above to get started.</p>
+                </div>
+                {canManageTerms && (
+                  <button
+                    onClick={() => {
+                      if (years.length === 0) {
+                        setShowCreateYearForm(true);
+                      } else {
+                        setShowCreateTermForm(true);
+                      }
+                    }}
+                    className="px-4 py-2 bg-[#800000] text-white font-bold rounded-xl text-xs hover:bg-[#660000] transition-colors cursor-pointer"
+                  >
+                    + Create First Term
+                  </button>
+                )}
+              </div>
             ) : (
               <div className="space-y-3">
                 {terms.map((term) => {
@@ -307,9 +757,11 @@ export const AcademicTermsModal: React.FC<AcademicTermsModalProps> = ({
                     startDate: term.startDate ? term.startDate.split('T')[0] : '',
                     endDate: term.endDate ? term.endDate.split('T')[0] : '',
                     name: term.name || '',
+                    termNumber: term.termNumber || 1,
                   };
                   const isCurrent = term.isCurrent;
                   const isSaving = savingId === term.id;
+                  const termYear = years.find((y) => y.id === term.academicYearId);
 
                   return (
                     <div
@@ -328,9 +780,15 @@ export const AcademicTermsModal: React.FC<AcademicTermsModalProps> = ({
                             onChange={(e) => handleDateChange(term.id, 'name', e.target.value)}
                             disabled={!canManageTerms}
                             className="font-bold text-sm text-slate-900 bg-transparent border-b border-dashed border-slate-300 focus:border-[#800000] focus:outline-none px-1"
+                            placeholder="Term Name"
                           />
+                          {termYear && (
+                            <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+                              Year {termYear.name}
+                            </span>
+                          )}
                           {isCurrent && (
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#800000] text-white uppercase tracking-wider">
+                            <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-[#800000] text-white uppercase tracking-wider">
                               CURRENT ACTIVE
                             </span>
                           )}
@@ -360,10 +818,26 @@ export const AcademicTermsModal: React.FC<AcademicTermsModalProps> = ({
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 items-end">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
                         <div>
                           <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                            Term Opening / Start Date
+                            Term Number
+                          </label>
+                          <select
+                            value={edit.termNumber}
+                            onChange={(e) => handleDateChange(term.id, 'termNumber', Number(e.target.value))}
+                            disabled={!canManageTerms}
+                            className="w-full px-3 py-1.5 text-xs bg-[#F8F5F5] border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#800000]"
+                          >
+                            <option value={1}>Term 1</option>
+                            <option value={2}>Term 2</option>
+                            <option value={3}>Term 3</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                            Opening / Start Date
                           </label>
                           <input
                             type="date"
@@ -376,7 +850,7 @@ export const AcademicTermsModal: React.FC<AcademicTermsModalProps> = ({
 
                         <div>
                           <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                            Term Closing / End Date
+                            Closing / End Date
                           </label>
                           <input
                             type="date"
@@ -395,7 +869,7 @@ export const AcademicTermsModal: React.FC<AcademicTermsModalProps> = ({
                               className="w-full sm:w-auto px-4 py-1.5 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-lg shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
                             >
                               <span className="material-symbols-outlined text-[15px]">save</span>
-                              <span>{isSaving ? 'Saving...' : 'Save Dates'}</span>
+                              <span>{isSaving ? 'Saving...' : 'Save Changes'}</span>
                             </button>
                           </div>
                         )}

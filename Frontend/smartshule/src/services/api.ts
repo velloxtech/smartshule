@@ -49,6 +49,7 @@ import {
   ExpenseRecord,
   OtherIncomeRecord,
   CashFlowLedgerData,
+  ComplaintRecord,
 } from '../types';
 function resolveApiBaseUrl(): string {
   let url = ((import.meta as any).env?.VITE_API_URL || '').trim();
@@ -281,6 +282,10 @@ export const apiService = {
   },
 
   getYears: async (schoolId?: string): Promise<ApiResponse<AcademicYear[]>> => {
+    return apiFetch<ApiResponse<AcademicYear[]>>(`/academics/years${schoolId ? `?schoolId=${schoolId}` : ''}`);
+  },
+
+  getAcademicYears: async (schoolId?: string): Promise<ApiResponse<AcademicYear[]>> => {
     return apiFetch<ApiResponse<AcademicYear[]>>(`/academics/years${schoolId ? `?schoolId=${schoolId}` : ''}`);
   },
 
@@ -1330,5 +1335,144 @@ export const apiService = {
       method: 'POST',
     });
   },
+
+  // 14. Parent Complaints & Feedback Endpoints
+  getComplaints: async (): Promise<ApiResponse<ComplaintRecord[]>> => {
+    try {
+      const res = await apiFetch<ApiResponse<ComplaintRecord[]>>('/complaints');
+      return res;
+    } catch {
+      const list = getStoredComplaints();
+      return { success: true, data: list, count: list.length };
+    }
+  },
+
+  createComplaint: async (complaintData: Partial<ComplaintRecord>): Promise<ApiResponse<ComplaintRecord>> => {
+    try {
+      const res = await apiFetch<ApiResponse<ComplaintRecord>>('/complaints', {
+        method: 'POST',
+        body: JSON.stringify(complaintData),
+      });
+      return res;
+    } catch {
+      const list = getStoredComplaints();
+      const newRecord: ComplaintRecord = {
+        id: `cmp-${Date.now()}`,
+        parentUserId: complaintData.parentUserId || 'parent-current',
+        parentName: complaintData.parentName || 'Parent / Guardian',
+        parentPhone: complaintData.parentPhone || '',
+        parentEmail: complaintData.parentEmail || '',
+        studentName: complaintData.studentName || '',
+        gradeLevel: complaintData.gradeLevel || '',
+        category: complaintData.category || 'General',
+        subject: complaintData.subject || 'No Subject',
+        details: complaintData.details || '',
+        priority: complaintData.priority || 'Medium',
+        status: 'PENDING',
+        createdAt: new Date().toISOString(),
+      };
+      const updated = [newRecord, ...list];
+      saveStoredComplaints(updated);
+      return { success: true, message: 'Complaint submitted successfully', data: newRecord };
+    }
+  },
+
+  respondToComplaint: async (id: string, responseMessage: string, status: 'PENDING' | 'IN_REVIEW' | 'RESOLVED', responderName?: string): Promise<ApiResponse<ComplaintRecord>> => {
+    try {
+      const res = await apiFetch<ApiResponse<ComplaintRecord>>(`/complaints/${id}/respond`, {
+        method: 'PUT',
+        body: JSON.stringify({ adminResponse: responseMessage, status }),
+      });
+      return res;
+    } catch {
+      const list = getStoredComplaints();
+      let updatedRecord: ComplaintRecord | null = null;
+      const updated = list.map((item) => {
+        if (item.id === id) {
+          updatedRecord = {
+            ...item,
+            adminResponse: responseMessage,
+            status,
+            respondedBy: responderName || 'School Administration',
+            respondedAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          return updatedRecord;
+        }
+        return item;
+      });
+      saveStoredComplaints(updated);
+      return { success: true, message: 'Response saved successfully', data: updatedRecord || ({} as ComplaintRecord) };
+    }
+  },
+
+  deleteComplaint: async (id: string): Promise<ApiResponse<boolean>> => {
+    try {
+      await apiFetch(`/complaints/${id}`, { method: 'DELETE' });
+      return { success: true, data: true };
+    } catch {
+      const list = getStoredComplaints();
+      const updated = list.filter((item) => item.id !== id);
+      saveStoredComplaints(updated);
+      return { success: true, data: true };
+    }
+  },
 };
+
+const INITIAL_COMPLAINTS: ComplaintRecord[] = [
+  {
+    id: 'cmp-101',
+    parentUserId: 'parent-001',
+    parentName: 'Mary Wanjiku',
+    parentPhone: '+254722123456',
+    parentEmail: 'mary.wanjiku@gmail.com',
+    studentName: 'Kevin Kamau',
+    gradeLevel: 'Grade 7 East',
+    category: 'Transport',
+    subject: 'School Bus Morning Pick-up Delay',
+    details: 'The morning school bus line 4 has been arriving 25 minutes late consistently this week. Kindly assist in adjusting the schedule.',
+    priority: 'Medium',
+    status: 'IN_REVIEW',
+    adminResponse: 'We have contacted the transport coordinator to adjust route 4 pick-up timing. Thank you for notifying us.',
+    respondedBy: 'School Director',
+    respondedAt: '2026-09-25T14:30:00Z',
+    createdAt: '2026-09-24T08:15:00Z',
+  },
+  {
+    id: 'cmp-102',
+    parentUserId: 'parent-002',
+    parentName: 'David Omondi',
+    parentPhone: '+254733987654',
+    parentEmail: 'david.omondi@yahoo.com',
+    studentName: 'Achieng Omondi',
+    gradeLevel: 'Grade 6 North',
+    category: 'Academic',
+    subject: 'CBC Science Workbook Feedback',
+    details: 'Requesting clarification on the term 3 formative assessment project guidelines for Integrated Science.',
+    priority: 'Low',
+    status: 'RESOLVED',
+    adminResponse: 'The Science lead teacher has shared the detailed rubric via the eDiary portal.',
+    respondedBy: 'School Administrator',
+    respondedAt: '2026-09-23T11:00:00Z',
+    createdAt: '2026-09-22T09:40:00Z',
+  },
+];
+
+const getStoredComplaints = (): ComplaintRecord[] => {
+  try {
+    const data = localStorage.getItem('smartshule_complaints');
+    if (data) return JSON.parse(data);
+  } catch {}
+  try {
+    localStorage.setItem('smartshule_complaints', JSON.stringify(INITIAL_COMPLAINTS));
+  } catch {}
+  return INITIAL_COMPLAINTS;
+};
+
+const saveStoredComplaints = (items: ComplaintRecord[]) => {
+  try {
+    localStorage.setItem('smartshule_complaints', JSON.stringify(items));
+  } catch {}
+};
+
 

@@ -364,6 +364,18 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
           UserRole.SCHOOL_ADMIN,
         ],
       },
+      {
+        id: 'complaints',
+        label: 'Parent Complaints',
+        icon: 'rate_review',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.PARENT,
+          UserRole.GUARDIAN,
+        ],
+      },
     ],
   },
   {

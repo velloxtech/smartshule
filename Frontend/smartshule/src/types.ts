@@ -22,7 +22,8 @@ export type TabType =
   | 'ediary'
   | 'visual-cbc'
   | 'whatsapp-bot'
-  | 'user-management';
+  | 'user-management'
+  | 'complaints';
 
 export interface ManageableUser {
   id: string;
@@ -782,6 +783,27 @@ export interface ParentHelpRequest {
   };
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ComplaintRecord {
+  id: string;
+  schoolId?: string;
+  parentUserId: string;
+  parentName: string;
+  parentPhone?: string;
+  parentEmail?: string;
+  studentName?: string;
+  gradeLevel?: string;
+  category: 'Academic' | 'Discipline' | 'Facilities' | 'Transport' | 'Fee & Finance' | 'General' | 'Other';
+  subject: string;
+  details: string;
+  priority: 'Low' | 'Medium' | 'High' | 'Urgent';
+  status: 'PENDING' | 'IN_REVIEW' | 'RESOLVED';
+  adminResponse?: string;
+  respondedBy?: string;
+  respondedAt?: string;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export interface StudentProgressPhoto {
