@@ -42,6 +42,7 @@ import { WhatsAppBotView } from './components/views/WhatsAppBotView';
 import { UserManagementView } from './components/views/UserManagementView';
 import RecordsOfWorkView from './components/views/RecordsOfWorkView';
 import { SystemLogsView } from './components/views/SystemLogsView';
+import { ComplaintsView } from './components/views/ComplaintsView';
 
 // Modals
 import { MpesaStkModal } from './components/modals/MpesaStkModal';
@@ -939,6 +940,7 @@ export default function App() {
           )}
 
           {currentTab === 'system-logs' && <SystemLogsView />}
+          {currentTab === 'complaints' && <ComplaintsView />}
         </main>
 
         {/* Global Portal Footer: Pure Maroon (#800000) & Vellox Tech Watermark */}

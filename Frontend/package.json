@@ -5,5 +5,9 @@
     "dev": "npm --prefix smartshule run dev",
     "build": "npm --prefix smartshule run build",
     "lint": "npm --prefix smartshule run lint"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0"
   }
 }
