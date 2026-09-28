@@ -11,6 +11,9 @@ import { IEDiaryRepository } from '../core/ports/repositories/IEDiaryRepository'
 import { IRecordOfWorkRepository } from '../core/ports/repositories/IRecordOfWorkRepository';
 import { IComplaintRepository } from '../core/ports/repositories/IComplaintRepository';
 import { ISystemLogRepository } from '../core/ports/repositories/ISystemLogRepository';
+import { ILunchFeeRepository } from '../core/ports/repositories/ILunchFeeRepository';
+import { InMemoryLunchFeeRepository } from './database/in-memory/InMemoryLunchFeeRepository';
+import { LunchFeeUseCases } from '../application/finance/LunchFeeUseCases';
 import { InMemoryRecordOfWorkRepository } from './database/postgres/PostgresRecordOfWorkRepository';
 import { InMemoryComplaintRepository } from './database/in-memory/InMemoryComplaintRepository';
 import { InMemorySystemLogRepository } from './database/in-memory/InMemorySystemLogRepository';
@@ -78,6 +81,7 @@ export class AppContainer {
   public recordOfWorkRepository: IRecordOfWorkRepository; // <-- Added Property
   public complaintRepository: IComplaintRepository;
   public systemLogRepository: ISystemLogRepository;
+  public lunchFeeRepository: ILunchFeeRepository;
 
   // Services
   public readonly tokenService = new JwtAuthTokenService();
@@ -99,6 +103,7 @@ export class AppContainer {
   public timetableUseCases!: TimetableUseCases;
   public attendanceUseCases!: AttendanceUseCases;
   public feeUseCases!: FeeUseCases;
+  public lunchFeeUseCases!: LunchFeeUseCases;
   public analyticsUseCases!: AnalyticsUseCases;
   public visualMediaUseCases!: VisualMediaUseCases;
   public ediaryUseCases!: EDiaryUseCases;
@@ -128,6 +133,8 @@ export class AppContainer {
       customRepositories?.complaintRepository || new InMemoryComplaintRepository();
     this.systemLogRepository =
       customRepositories?.systemLogRepository || new InMemorySystemLogRepository();
+    this.lunchFeeRepository =
+      customRepositories?.lunchFeeRepository || new InMemoryLunchFeeRepository();
 
     this.initUseCases();
   }
@@ -153,7 +160,8 @@ export class AppContainer {
       this.academicRepository,
       this.feeRepository,
       this.cbcAssessmentRepository,
-      this.attendanceRepository
+      this.attendanceRepository,
+      this.lunchFeeRepository
     );
     this.teacherUseCases = new TeacherUseCases(this.teacherRepository, this.userRepository, this.passwordHasher);
     this.academicUseCases = new AcademicUseCases(this.academicRepository);
@@ -194,6 +202,12 @@ export class AppContainer {
       this.notificationService,
       this.academicRepository,
       this.kcbBuniGateway
+    );
+    this.lunchFeeUseCases = new LunchFeeUseCases(
+      this.lunchFeeRepository,
+      this.studentRepository,
+      this.userRepository,
+      this.guardianRepository
     );
     this.analyticsUseCases = new AnalyticsUseCases(
       this.studentRepository,

@@ -49,6 +49,11 @@ import {
   SystemAuditLog,
   SystemLogStats,
   ComplaintRecord,
+  LunchEnrollmentItem,
+  LunchPaymentItem,
+  LunchSummaryStats,
+  LunchExpenseItem,
+  LunchFinancialSummary,
 } from '../types';
 function resolveApiBaseUrl(): string {
   let url = ((import.meta as any).env?.VITE_API_URL || '').trim();
@@ -404,6 +409,7 @@ export const apiService = {
     educationLevel: string;
     isElective?: boolean;
     schoolId: string;
+    teacherId?: string;
   }): Promise<ApiResponse<BackendLearningArea>> => {
     return apiFetch<ApiResponse<BackendLearningArea>>('/academics/learning-areas', {
       method: 'POST',
@@ -541,6 +547,7 @@ export const apiService = {
   registerTeacher: async (data: {
     email?: string;
     password?: string;
+    nationalId?: string;
     firstName: string;
     lastName: string;
     phone?: string;
@@ -1580,6 +1587,207 @@ export const apiService = {
       saveStoredComplaints(updated);
       return { success: true, data: true };
     }
+  },
+
+  // 16. Lunch Fee Management Endpoints
+  getLunchEnrollments: async (params?: {
+    schoolId?: string;
+    academicYearId?: string;
+    termId?: string;
+    gradeLevel?: string;
+    status?: string;
+    paymentStatus?: string;
+    search?: string;
+  }): Promise<ApiResponse<LunchEnrollmentItem[]>> => {
+    const query = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, val]) => {
+        if (val !== undefined && val !== null && val !== '') {
+          query.append(key, String(val));
+        }
+      });
+    }
+    const qs = query.toString() ? `?${query.toString()}` : '';
+    return apiFetch<ApiResponse<LunchEnrollmentItem[]>>(`/lunch/enrollments${qs}`);
+  },
+
+  enrollStudentInLunch: async (data: {
+    studentId: string;
+    schoolId?: string;
+    academicYearId?: string;
+    termId?: string;
+    planName?: string;
+    amount: number;
+    dietaryNotes?: string;
+    notes?: string;
+  }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/lunch/enrollments', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  bulkEnrollStudentsInLunch: async (data: {
+    studentIds: string[];
+    schoolId?: string;
+    academicYearId?: string;
+    termId?: string;
+    planName?: string;
+    amount: number;
+    dietaryNotes?: string;
+    notes?: string;
+  }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/lunch/enrollments/bulk', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateLunchEnrollment: async (
+    id: string,
+    data: {
+      planName?: string;
+      amount?: number;
+      dietaryNotes?: string;
+      status?: string;
+      notes?: string;
+    }
+  ): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/lunch/enrollments/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  deleteLunchEnrollment: async (id: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/lunch/enrollments/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  recordLunchPayment: async (
+    enrollmentId: string,
+    data: {
+      amount: number;
+      paymentMethod?: string;
+      transactionReference?: string;
+      paymentDate?: string;
+      notes?: string;
+    }
+  ): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/lunch/enrollments/${enrollmentId}/payments`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  getLunchSummary: async (params?: {
+    schoolId?: string;
+    termId?: string;
+    academicYearId?: string;
+  }): Promise<ApiResponse<LunchSummaryStats>> => {
+    const query = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, val]) => {
+        if (val !== undefined && val !== null && val !== '') {
+          query.append(key, String(val));
+        }
+      });
+    }
+    const qs = query.toString() ? `?${query.toString()}` : '';
+    return apiFetch<ApiResponse<LunchSummaryStats>>(`/lunch/summary${qs}`);
+  },
+
+  getParentChildrenLunchStatus: async (): Promise<ApiResponse<{ enrolledChildren: LunchEnrollmentItem[] }>> => {
+    return apiFetch<ApiResponse<{ enrolledChildren: LunchEnrollmentItem[] }>>('/lunch/my-children');
+  },
+
+  // Lunch Expenses & Accounting API
+  getLunchExpenses: async (params?: {
+    schoolId?: string;
+    termId?: string;
+    academicYearId?: string;
+    category?: string;
+    startDate?: string;
+    endDate?: string;
+    search?: string;
+  }): Promise<ApiResponse<LunchExpenseItem[]>> => {
+    const query = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, val]) => {
+        if (val !== undefined && val !== null && val !== '') {
+          query.append(key, String(val));
+        }
+      });
+    }
+    const qs = query.toString() ? `?${query.toString()}` : '';
+    return apiFetch<ApiResponse<LunchExpenseItem[]>>(`/lunch/expenses${qs}`);
+  },
+
+  recordLunchExpense: async (data: {
+    title: string;
+    category: string;
+    amount: number;
+    expenseDate?: string;
+    paymentMethod?: string;
+    paymentReference?: string;
+    vendorPayee: string;
+    receiptVoucherNumber?: string;
+    termId?: string;
+    academicYearId?: string;
+    notes?: string;
+    receiptUrl?: string;
+  }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/lunch/expenses', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateLunchExpense: async (
+    id: string,
+    data: {
+      title?: string;
+      category?: string;
+      amount?: number;
+      expenseDate?: string;
+      paymentMethod?: string;
+      paymentReference?: string;
+      vendorPayee?: string;
+      receiptVoucherNumber?: string;
+      termId?: string;
+      academicYearId?: string;
+      notes?: string;
+      receiptUrl?: string;
+    }
+  ): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/lunch/expenses/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  deleteLunchExpense: async (id: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/lunch/expenses/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  getLunchFinancialSummary: async (params?: {
+    schoolId?: string;
+    termId?: string;
+    academicYearId?: string;
+  }): Promise<ApiResponse<LunchFinancialSummary>> => {
+    const query = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, val]) => {
+        if (val !== undefined && val !== null && val !== '') {
+          query.append(key, String(val));
+        }
+      });
+    }
+    const qs = query.toString() ? `?${query.toString()}` : '';
+    return apiFetch<ApiResponse<LunchFinancialSummary>>(`/lunch/expenses/summary${qs}`);
   },
 };
 

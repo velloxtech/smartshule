@@ -303,7 +303,7 @@ export const LearningAreasView: React.FC = () => {
         <div className="bg-[#F8F5F5] rounded-2xl p-4 border border-slate-200 shadow-xs">
           <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Active Classes & Streams</span>
           <span className="text-2xl font-black text-slate-900 mt-1 block">
-            {classes.length} / {Object.values(streamsMap).reduce((acc, curr) => acc + curr.length, 0)}
+            {classes.length} / {Object.values(streamsMap).reduce((acc: number, curr: any) => acc + (curr?.length || 0), 0)}
           </span>
           <span className="text-[10px] text-slate-500 mt-1 block">Grace Seeds Cohorts</span>
         </div>

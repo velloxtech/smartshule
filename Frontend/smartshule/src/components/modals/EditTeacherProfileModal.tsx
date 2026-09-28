@@ -341,7 +341,7 @@ export const EditTeacherProfileModal: React.FC<EditTeacherProfileModalProps> = (
 
             <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-1 bg-white border border-slate-200 rounded-xl">
               {(dbLearningAreas.length > 0
-                ? Array.from(new Set(dbLearningAreas.map((la) => la.name)))
+                ? Array.from<string>(new Set(dbLearningAreas.map((la) => la.name)))
                 : [
                     'Mathematics',
                     'English Language',

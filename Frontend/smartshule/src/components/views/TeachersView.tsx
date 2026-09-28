@@ -122,7 +122,7 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
     const parts = assignedClass.split(',').map((p) => p.trim());
     const resolvedParts = parts.map((part) => {
       for (const [classId, sList] of Object.entries(streamsMap)) {
-        const foundStream = sList.find((s) => s.id === part);
+        const foundStream = (sList as any[])?.find((s) => s.id === part);
         if (foundStream) {
           const foundClass = classes.find((c) => c.id === classId);
           return foundClass ? `${foundClass.name} - ${foundStream.name}` : `${foundStream.name} Stream`;

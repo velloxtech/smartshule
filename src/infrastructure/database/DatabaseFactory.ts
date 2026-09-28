@@ -61,6 +61,7 @@ import { IEDiaryRepository } from '../../core/ports/repositories/IEDiaryReposito
 import { IRecordOfWorkRepository } from '../../core/ports/repositories/IRecordOfWorkRepository';
 import { IComplaintRepository } from '../../core/ports/repositories/IComplaintRepository';
 import { ISystemLogRepository } from '../../core/ports/repositories/ISystemLogRepository';
+import { ILunchFeeRepository } from '../../core/ports/repositories/ILunchFeeRepository';
 import {
   PostgresRecordOfWorkRepository,
   InMemoryRecordOfWorkRepository,
@@ -69,6 +70,8 @@ import { InMemoryComplaintRepository } from './in-memory/InMemoryComplaintReposi
 import { PostgresComplaintRepository } from './postgres/PostgresComplaintRepository';
 import { InMemorySystemLogRepository } from './in-memory/InMemorySystemLogRepository';
 import { PostgresSystemLogRepository } from './postgres/PostgresSystemLogRepository';
+import { InMemoryLunchFeeRepository } from './in-memory/InMemoryLunchFeeRepository';
+import { PostgresLunchFeeRepository } from './postgres/PostgresLunchFeeRepository';
 
 export interface RepositoryBundle {
   userRepository: IUserRepository;
@@ -87,6 +90,7 @@ export interface RepositoryBundle {
   recordOfWorkRepository?: IRecordOfWorkRepository;
   complaintRepository?: IComplaintRepository;
   systemLogRepository?: ISystemLogRepository;
+  lunchFeeRepository?: ILunchFeeRepository;
 }
 
 export class DatabaseFactory {
@@ -170,6 +174,7 @@ export class DatabaseFactory {
         recordOfWorkRepository: new PostgresRecordOfWorkRepository(pool),
         complaintRepository: new PostgresComplaintRepository(pool),
         systemLogRepository: new PostgresSystemLogRepository(pool),
+        lunchFeeRepository: new PostgresLunchFeeRepository(pool),
       };
     }
 
@@ -192,6 +197,7 @@ export class DatabaseFactory {
       recordOfWorkRepository: new InMemoryRecordOfWorkRepository(),
       complaintRepository: new InMemoryComplaintRepository(),
       systemLogRepository: new InMemorySystemLogRepository(),
+      lunchFeeRepository: new InMemoryLunchFeeRepository(),
     };
   }
 }

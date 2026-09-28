@@ -24,7 +24,8 @@ export type TabType =
   | 'whatsapp-bot'
   | 'user-management'
   | 'system-logs'
-  | 'complaints';
+  | 'complaints'
+  | 'lunch-fee-management';
 
 export type SystemLogLevel = 'INFO' | 'WARN' | 'ERROR' | 'AUDIT';
 export type SystemLogCategory =
@@ -114,11 +115,21 @@ export interface AuthResponse {
   user: AuthUser;
 }
 
-export interface ApiResponse<T> {
+export interface ApiResponse<T = any> {
   success: boolean;
   message?: string;
   count?: number;
   data: T;
+  error?: {
+    message?: string;
+    details?: any;
+    [key: string]: any;
+  };
+  resultCode?: string;
+  resultDesc?: string;
+  studentName?: string;
+  currentBalance?: number;
+  [key: string]: any;
 }
 
 export interface Student {
@@ -178,12 +189,14 @@ export interface LearningArea {
   id: string;
   code: string;
   name: string;
-  category: 'Core' | 'Optional';
-  grades: string[];
-  strandsCount: number;
-  subStrandsCount: number;
-  leadTeacher: string;
-  assessmentsCount: number;
+  category?: 'Core' | 'Optional';
+  grades?: string[];
+  gradeLevels?: string[];
+  strands?: any[];
+  strandsCount?: number;
+  subStrandsCount?: number;
+  leadTeacher?: string;
+  assessmentsCount?: number;
 }
 
 export interface AssessmentRecord {
@@ -240,6 +253,8 @@ export interface SchoolInfo {
   logoUrl?: string;
   currency: string;
 }
+
+export type School = SchoolInfo;
 
 export interface AcademicYear {
   id: string;
@@ -970,4 +985,110 @@ export interface WhatsAppAIDispatchResponse {
   sentAt: string;
   message: string;
   matchedPerson: WhatsAppAIDraftResponse['matchedPerson'];
+}
+
+export interface LunchPaymentItem {
+  id: string;
+  lunchEnrollmentId: string;
+  studentId: string;
+  schoolId: string;
+  amount: number;
+  receiptNumber: string;
+  paymentMethod: string;
+  transactionReference: string;
+  paymentDate: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface LunchEnrollmentItem {
+  id: string;
+  schoolId: string;
+  studentId: string;
+  studentName?: string;
+  admissionNumber?: string;
+  gradeLevel?: string;
+  streamId?: string;
+  studentStatus?: string;
+  academicYearId?: string;
+  termId?: string;
+  planName: string;
+  amount: number;
+  amountPaid: number;
+  balance: number;
+  paymentStatus: 'PAID' | 'PARTIAL' | 'UNPAID';
+  dietaryNotes?: string;
+  status: 'ACTIVE' | 'SUSPENDED' | 'CANCELLED';
+  notes?: string;
+  enrolledByUserId?: string;
+  enrolledAt: string;
+  payments?: LunchPaymentItem[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LunchSummaryStats {
+  totalEnrolled: number;
+  totalBilled: number;
+  totalPaid: number;
+  totalBalance: number;
+  paidCount: number;
+  partialCount: number;
+  unpaidCount: number;
+  dietaryBreakdown: Record<string, number>;
+  totalExpenses?: number;
+  netBalance?: number;
+  expenseCount?: number;
+  categoryExpenses?: Record<string, number>;
+}
+
+export type LunchExpenseCategory =
+  | 'FOOD_CEREALS'
+  | 'FRESH_PRODUCE'
+  | 'MEAT_DAIRY'
+  | 'COOKING_FUEL'
+  | 'KITCHEN_STAFF_WAGES'
+  | 'EQUIPMENT_UTENSILS'
+  | 'TRANSPORT_DELIVERY'
+  | 'WATER_SANITATION'
+  | 'OTHER_EXPENSES';
+
+export interface LunchExpenseItem {
+  id: string;
+  schoolId: string;
+  title: string;
+  category: LunchExpenseCategory;
+  amount: number;
+  expenseDate: string;
+  paymentMethod: string;
+  paymentReference?: string;
+  vendorPayee: string;
+  receiptVoucherNumber?: string;
+  termId?: string;
+  academicYearId?: string;
+  recordedByUserId?: string;
+  recordedByUserName?: string;
+  notes?: string;
+  receiptUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LunchCategoryBreakdown {
+  category: string;
+  amount: number;
+  percentage: number;
+}
+
+export interface LunchFinancialSummary {
+  totalEnrolled: number;
+  totalBilled: number;
+  totalCollected: number;
+  totalOutstanding: number;
+  totalExpenses: number;
+  netBalance: number;
+  utilizationRate: number;
+  expenseCount: number;
+  categoryBreakdown: LunchCategoryBreakdown[];
+  recentExpenses: LunchExpenseItem[];
 }

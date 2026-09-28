@@ -43,6 +43,7 @@ import { UserManagementView } from './components/views/UserManagementView';
 import RecordsOfWorkView from './components/views/RecordsOfWorkView';
 import { SystemLogsView } from './components/views/SystemLogsView';
 import { ComplaintsView } from './components/views/ComplaintsView';
+import { LunchFeeManagementView } from './components/views/LunchFeeManagementView';
 
 // Modals
 import { MpesaStkModal } from './components/modals/MpesaStkModal';
@@ -941,6 +942,7 @@ export default function App() {
 
           {currentTab === 'system-logs' && <SystemLogsView />}
           {currentTab === 'complaints' && <ComplaintsView />}
+          {currentTab === 'lunch-fee-management' && <LunchFeeManagementView />}
         </main>
 
         {/* Global Portal Footer: Pure Maroon (#800000) & Vellox Tech Watermark */}

@@ -498,6 +498,72 @@ export class PostgresDatabaseInitializer {
       CREATE INDEX IF NOT EXISTS idx_system_logs_timestamp ON system_logs(timestamp DESC);
       CREATE INDEX IF NOT EXISTS idx_system_logs_category ON system_logs(category);
       CREATE INDEX IF NOT EXISTS idx_system_logs_level ON system_logs(level);
+
+      CREATE TABLE IF NOT EXISTS lunch_enrollments (
+        id VARCHAR(100) PRIMARY KEY,
+        school_id VARCHAR(100) NOT NULL,
+        student_id VARCHAR(100) NOT NULL,
+        academic_year_id VARCHAR(100),
+        term_id VARCHAR(100),
+        plan_name VARCHAR(150) NOT NULL DEFAULT 'Standard Lunch',
+        amount NUMERIC(12,2) NOT NULL DEFAULT 0,
+        amount_paid NUMERIC(12,2) NOT NULL DEFAULT 0,
+        balance NUMERIC(12,2) NOT NULL DEFAULT 0,
+        payment_status VARCHAR(50) NOT NULL DEFAULT 'UNPAID',
+        dietary_notes TEXT,
+        status VARCHAR(50) NOT NULL DEFAULT 'ACTIVE',
+        notes TEXT,
+        enrolled_by_user_id VARCHAR(100),
+        enrolled_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS lunch_payments (
+        id VARCHAR(100) PRIMARY KEY,
+        lunch_enrollment_id VARCHAR(100) NOT NULL,
+        student_id VARCHAR(100) NOT NULL,
+        school_id VARCHAR(100) NOT NULL,
+        amount NUMERIC(12,2) NOT NULL,
+        receipt_number VARCHAR(100) UNIQUE NOT NULL,
+        payment_method VARCHAR(50) NOT NULL,
+        transaction_reference VARCHAR(100) NOT NULL,
+        payment_date VARCHAR(50) NOT NULL,
+        recorded_by_user_id VARCHAR(100),
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_lunch_enrollments_school ON lunch_enrollments(school_id);
+      CREATE INDEX IF NOT EXISTS idx_lunch_enrollments_student ON lunch_enrollments(student_id);
+      CREATE INDEX IF NOT EXISTS idx_lunch_enrollments_term ON lunch_enrollments(term_id);
+      CREATE INDEX IF NOT EXISTS idx_lunch_payments_enrollment ON lunch_payments(lunch_enrollment_id);
+
+      CREATE TABLE IF NOT EXISTS lunch_expenses (
+        id VARCHAR(100) PRIMARY KEY,
+        school_id VARCHAR(100) NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        category VARCHAR(100) NOT NULL,
+        amount NUMERIC(12,2) NOT NULL,
+        expense_date VARCHAR(50) NOT NULL,
+        payment_method VARCHAR(50) NOT NULL,
+        payment_reference VARCHAR(100),
+        vendor_payee VARCHAR(255) NOT NULL,
+        receipt_voucher_number VARCHAR(100),
+        term_id VARCHAR(100),
+        academic_year_id VARCHAR(100),
+        recorded_by_user_id VARCHAR(100),
+        recorded_by_user_name VARCHAR(255),
+        notes TEXT,
+        receipt_url TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_lunch_expenses_school ON lunch_expenses(school_id);
+      CREATE INDEX IF NOT EXISTS idx_lunch_expenses_category ON lunch_expenses(category);
+      CREATE INDEX IF NOT EXISTS idx_lunch_expenses_date ON lunch_expenses(expense_date);
+      CREATE INDEX IF NOT EXISTS idx_lunch_expenses_term ON lunch_expenses(term_id);
     `;
 
     await pool.query(ddl);

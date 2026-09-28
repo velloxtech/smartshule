@@ -125,6 +125,7 @@ import {
   DismissComplaintSchema
 } from '../controllers/ComplaintController';
 import { SystemLogController } from '../controllers/SystemLogController';
+import { LunchFeeController } from '../controllers/LunchFeeController';
 
 export function createApiRouter(container: AppContainer): Router {
   const router = Router();
@@ -140,6 +141,7 @@ export function createApiRouter(container: AppContainer): Router {
   const timetableController = new TimetableController(container.timetableUseCases);
   const attendanceController = new AttendanceController(container.attendanceUseCases);
   const financeController = new FinanceController(container.feeUseCases, container.systemLogUseCases);
+  const lunchFeeController = new LunchFeeController(container.lunchFeeUseCases, container.systemLogUseCases);
   const analyticsController = new AnalyticsController(container.analyticsUseCases);
   const mediaController = new MediaController(container.visualMediaUseCases);
   const ediaryController = new EDiaryController(container.ediaryUseCases);
@@ -497,7 +499,134 @@ export function createApiRouter(container: AppContainer): Router {
   router.use('/system-logs', systemLogRouter);
 
   // ==========================================
-  // 11. POSTMAN SPEC EXPORT ROUTES
+  // 17. LUNCH FEE MANAGEMENT ROUTES
+  // Roster made by Admins and Head Teacher only;
+  // Parents see only their enrolled children.
+  // ==========================================
+  const lunchRouter = Router();
+
+  // Enroll single learner (Admins & Head Teacher only)
+  lunchRouter.post(
+    '/enrollments',
+    authMiddleware,
+    requireRoles(UserRole.ADMIN, UserRole.HEAD_TEACHER),
+    lunchFeeController.enrollStudent
+  );
+
+  // Bulk enroll learners (Admins & Head Teacher only)
+  lunchRouter.post(
+    '/enrollments/bulk',
+    authMiddleware,
+    requireRoles(UserRole.ADMIN, UserRole.HEAD_TEACHER),
+    lunchFeeController.bulkEnroll
+  );
+
+  // Get lunch list (Admins & Head Teacher see all; Parents see only their enrolled children)
+  lunchRouter.get(
+    '/enrollments',
+    authMiddleware,
+    lunchFeeController.getLunchList
+  );
+
+  // Program summary stats (Admins & Head Teacher only)
+  lunchRouter.get(
+    '/summary',
+    authMiddleware,
+    requireRoles(UserRole.ADMIN, UserRole.HEAD_TEACHER),
+    lunchFeeController.getLunchSummary
+  );
+
+  // Parent's children lunch status shortcut
+  lunchRouter.get(
+    '/my-children',
+    authMiddleware,
+    lunchFeeController.getMyChildrenLunchStatus
+  );
+
+  // Single enrollment details
+  lunchRouter.get(
+    '/enrollments/:id',
+    authMiddleware,
+    lunchFeeController.getEnrollmentById
+  );
+
+  // Update enrollment (Admins & Head Teacher only)
+  lunchRouter.put(
+    '/enrollments/:id',
+    authMiddleware,
+    requireRoles(UserRole.ADMIN, UserRole.HEAD_TEACHER),
+    lunchFeeController.updateEnrollment
+  );
+
+  // Remove learner from lunch list (Admins & Head Teacher only)
+  lunchRouter.delete(
+    '/enrollments/:id',
+    authMiddleware,
+    requireRoles(UserRole.ADMIN, UserRole.HEAD_TEACHER),
+    lunchFeeController.deleteEnrollment
+  );
+
+  // Record payment towards lunch fee (Admins, Head Teacher, and Bursar)
+  lunchRouter.post(
+    '/enrollments/:id/payments',
+    authMiddleware,
+    requireRoles(UserRole.ADMIN, UserRole.HEAD_TEACHER, UserRole.BURSAR),
+    lunchFeeController.recordPayment
+  );
+
+  // --- Lunch Expense & Catering Fund Accountability (Admins & Head Teacher only) ---
+  // Record expense / money out from lunch funds
+  lunchRouter.post(
+    '/expenses',
+    authMiddleware,
+    requireRoles(UserRole.ADMIN, UserRole.HEAD_TEACHER),
+    lunchFeeController.recordExpense
+  );
+
+  // List all lunch expenses with filters
+  lunchRouter.get(
+    '/expenses',
+    authMiddleware,
+    requireRoles(UserRole.ADMIN, UserRole.HEAD_TEACHER),
+    lunchFeeController.listExpenses
+  );
+
+  // Financial accounting & fund utilization summary
+  lunchRouter.get(
+    '/expenses/summary',
+    authMiddleware,
+    requireRoles(UserRole.ADMIN, UserRole.HEAD_TEACHER),
+    lunchFeeController.getFinancialSummary
+  );
+
+  // Get single expense
+  lunchRouter.get(
+    '/expenses/:id',
+    authMiddleware,
+    requireRoles(UserRole.ADMIN, UserRole.HEAD_TEACHER),
+    lunchFeeController.getExpenseById
+  );
+
+  // Update lunch expense
+  lunchRouter.put(
+    '/expenses/:id',
+    authMiddleware,
+    requireRoles(UserRole.ADMIN, UserRole.HEAD_TEACHER),
+    lunchFeeController.updateExpense
+  );
+
+  // Delete lunch expense
+  lunchRouter.delete(
+    '/expenses/:id',
+    authMiddleware,
+    requireRoles(UserRole.ADMIN, UserRole.HEAD_TEACHER),
+    lunchFeeController.deleteExpense
+  );
+
+  router.use('/lunch', lunchRouter);
+
+  // ==========================================
+  // 18. POSTMAN SPEC EXPORT ROUTES
   // ==========================================
   router.get('/docs/postman/collection', (req, res) => {
     try {

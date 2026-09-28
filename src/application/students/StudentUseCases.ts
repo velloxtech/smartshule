@@ -5,6 +5,7 @@ import { IAcademicRepository } from '../../core/ports/repositories/IAcademicRepo
 import { IFeeRepository } from '../../core/ports/repositories/IFeeRepository';
 import { ICbcAssessmentRepository } from '../../core/ports/repositories/ICbcAssessmentRepository';
 import { IAttendanceRepository } from '../../core/ports/repositories/ITimetableRepository';
+import { ILunchFeeRepository } from '../../core/ports/repositories/ILunchFeeRepository';
 import { Student, StudentGender, CbcGradeLevel, StudentStatus } from '../../core/domain/user/Student';
 import { Guardian, GuardianRelationship } from '../../core/domain/user/Guardian';
 import { User, UserRole, UserStatus } from '../../core/domain/user/User';
@@ -129,7 +130,8 @@ export class StudentUseCases {
     private readonly academicRepository?: IAcademicRepository,
     private readonly feeRepository?: IFeeRepository,
     private readonly cbcRepository?: ICbcAssessmentRepository,
-    private readonly attendanceRepository?: IAttendanceRepository
+    private readonly attendanceRepository?: IAttendanceRepository,
+    private readonly lunchFeeRepository?: ILunchFeeRepository
   ) {}
 
   public async registerStudent(dto: RegisterStudentDTO) {
@@ -979,11 +981,20 @@ export class StudentUseCases {
           };
         }
 
+        let lunchInfo: any = null;
+        if (this.lunchFeeRepository) {
+          const lunchEnrollment = await this.lunchFeeRepository.findByStudentAndTerm(s.id);
+          if (lunchEnrollment && lunchEnrollment.status === 'ACTIVE') {
+            lunchInfo = lunchEnrollment.toJSON();
+          }
+        }
+
         return {
           ...s.toJSON(),
           fee: feeInfo,
           cbc: cbcSummary,
-          attendance: attendanceStats
+          attendance: attendanceStats,
+          lunch: lunchInfo
         };
       })
     );

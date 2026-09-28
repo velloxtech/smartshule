@@ -18,6 +18,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
 }) => {
   const { user } = useAuth();
   const [portalData, setPortalData] = useState<any>(null);
+  const [lunchEnrollments, setLunchEnrollments] = useState<any[]>([]);
   const [selectedChildIndex, setSelectedChildIndex] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -25,9 +26,15 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
   const loadPortalData = async () => {
     setLoading(true);
     try {
-      const res = await apiService.getGuardianPortalData();
+      const [res, lunchRes] = await Promise.all([
+        apiService.getGuardianPortalData(),
+        apiService.getLunchEnrollments().catch(() => ({ success: true, data: [] })),
+      ]);
       if (res.success && res.data) {
         setPortalData(res.data);
+      }
+      if (lunchRes.success && lunchRes.data) {
+        setLunchEnrollments(lunchRes.data);
       }
     } catch (err) {
       console.error('Failed to load parent portal data:', err);
@@ -42,6 +49,10 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
 
   const children = portalData?.children || [];
   const currentChild = children[selectedChildIndex] || null;
+  const currentChildLunch =
+    lunchEnrollments.find((l: any) => l.studentId === currentChild?.id) ||
+    currentChild?.lunch ||
+    null;
   const guardianUser = portalData?.guardian?.user || user;
 
   const getRatingBadge = (rating: string) => {
@@ -417,6 +428,105 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
               )}
             </div>
           </div>
+
+          {/* School Lunch & Catering Program Section - ONLY VISIBLE IF CHILD IS ON THE LUNCH LIST */}
+          {currentChildLunch && (
+            <div className="bg-surface-container-lowest rounded-xl p-5 shadow-xs border border-outline-variant/30 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-surface-container pb-3 gap-2">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-900 flex items-center justify-center font-bold">
+                    <span className="material-symbols-outlined text-[22px]">lunch_dining</span>
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider">
+                        School Lunch & Catering Program
+                      </h3>
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 text-[10px] font-bold">
+                        Enrolled on Official Roster
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-on-surface-variant">
+                      Plan: <strong className="text-on-surface">{currentChildLunch.planName || 'Standard Lunch'}</strong> · Term 3, 2026
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {currentChildLunch.dietaryNotes && (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-50 text-amber-900 border border-amber-200 text-xs font-semibold">
+                      <span className="material-symbols-outlined text-[14px]">health_and_safety</span>
+                      <span>Diet: {currentChildLunch.dietaryNotes}</span>
+                    </span>
+                  )}
+                  {currentChildLunch.balance > 0 && (
+                    <button
+                      onClick={() => {
+                        const studentObj = {
+                          id: currentChild.id,
+                          name: currentChild.fullName || `${currentChild.firstName} ${currentChild.lastName}`,
+                          admNo: currentChild.admissionNumber,
+                          feeBalance: currentChildLunch.balance,
+                          totalFee: currentChildLunch.amount,
+                          notes: `Lunch Fee Settlement for ${currentChildLunch.planName}`,
+                        };
+                        if (onOpenKcbBuniWithStudent) {
+                          onOpenKcbBuniWithStudent(studentObj);
+                        } else if (onOpenMpesaWithStudent) {
+                          onOpenMpesaWithStudent(studentObj);
+                        }
+                      }}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-2xs"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">credit_card</span>
+                      <span>Pay Lunch Fee (KES {currentChildLunch.balance.toLocaleString()})</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* 3 Metrics for Lunch Program */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-data-mono">
+                <div className="p-3 rounded-lg bg-surface-container-low border border-outline-variant/20">
+                  <span className="text-[10px] uppercase font-semibold text-on-surface-variant block">Term Lunch Fee</span>
+                  <span className="text-base font-bold text-on-surface">KES {currentChildLunch.amount?.toLocaleString()}</span>
+                </div>
+                <div className="p-3 rounded-lg bg-emerald-50/50 border border-emerald-200/50">
+                  <span className="text-[10px] uppercase font-semibold text-emerald-800 block">Total Cleared</span>
+                  <span className="text-base font-bold text-emerald-700">KES {currentChildLunch.amountPaid?.toLocaleString()}</span>
+                </div>
+                <div className="p-3 rounded-lg bg-rose-50/50 border border-rose-200/50">
+                  <span className="text-[10px] uppercase font-semibold text-rose-800 block">Lunch Balance</span>
+                  <span className={`text-base font-bold ${currentChildLunch.balance > 0 ? 'text-error' : 'text-emerald-700'}`}>
+                    KES {currentChildLunch.balance?.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+
+              {/* Lunch Fee Receipts History */}
+              {currentChildLunch.payments && currentChildLunch.payments.length > 0 && (
+                <div className="space-y-1.5 pt-1">
+                  <div className="text-xs font-semibold text-on-surface">Lunch Fee Payment Receipts:</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {currentChildLunch.payments.map((p: any) => (
+                      <div key={p.id} className="p-2.5 rounded-lg bg-surface-container-low border border-outline-variant/20 flex items-center justify-between text-xs">
+                        <div>
+                          <div className="font-bold text-primary font-data-mono">{p.receiptNumber}</div>
+                          <div className="text-[11px] text-on-surface-variant">
+                            Ref: {p.transactionReference} · {p.paymentMethod}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-bold font-data-mono text-emerald-700">+KES {p.amount?.toLocaleString()}</div>
+                          <span className="text-[10px] text-on-surface-variant">{p.paymentDate}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </>
       )}
 

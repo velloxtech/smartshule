@@ -318,6 +318,17 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
           UserRole.ACCOUNTANT,
         ],
       },
+      {
+        id: 'lunch-fee-management',
+        label: 'Lunch Fee Management',
+        icon: 'lunch_dining',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.HEAD_TEACHER,
+        ],
+      },
     ],
   },
   {

@@ -382,3 +382,67 @@ model Complaint {
 
   @@map("complaints")
 }
+
+model LunchEnrollment {
+  id               String         @id @default(uuid())
+  schoolId         String
+  studentId        String
+  academicYearId   String?
+  termId           String?
+  planName         String         @default("Standard Lunch")
+  amount           Float          @default(0)
+  amountPaid       Float          @default(0)
+  balance          Float          @default(0)
+  paymentStatus    String         @default("UNPAID")
+  dietaryNotes     String?
+  status           String         @default("ACTIVE")
+  notes            String?
+  enrolledByUserId String?
+  enrolledAt       DateTime       @default(now())
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  payments         LunchPayment[]
+
+  @@map("lunch_enrollments")
+}
+
+model LunchPayment {
+  id                   String          @id @default(uuid())
+  lunchEnrollmentId    String
+  lunchEnrollment      LunchEnrollment @relation(fields: [lunchEnrollmentId], references: [id], onDelete: Cascade)
+  studentId            String
+  schoolId             String
+  amount               Float
+  receiptNumber        String          @unique
+  paymentMethod        String
+  transactionReference String
+  paymentDate          String
+  recordedByUserId     String?
+  notes                String?
+  createdAt            DateTime        @default(now())
+
+  @@map("lunch_payments")
+}
+
+model LunchExpense {
+  id                   String   @id @default(uuid())
+  schoolId             String
+  title                String
+  category             String
+  amount               Float
+  expenseDate          String
+  paymentMethod        String
+  paymentReference     String?
+  vendorPayee          String
+  receiptVoucherNumber String?
+  termId               String?
+  academicYearId       String?
+  recordedByUserId     String?
+  recordedByUserName   String?
+  notes                String?
+  receiptUrl           String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@map("lunch_expenses")
+}
