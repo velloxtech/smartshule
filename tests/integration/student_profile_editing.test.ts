@@ -193,4 +193,65 @@ describe('Student Profile & Phone Number Editing (Admin & Parent sides)', () => 
       expect(res.status).toBe(404);
     });
   });
+
+  describe('4. Parent Portal Profile & Family Retrieval & Direct Editing (GET/PUT /guardian/me)', () => {
+    it('retrieves complete parent profile and linked learners via GET /api/v1/students/guardian/me', async () => {
+      const res = await request(app)
+        .get('/api/v1/students/guardian/me')
+        .set('Authorization', `Bearer ${parentToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.guardian).toBeDefined();
+      expect(res.body.data.guardian.user).toBeDefined();
+      expect(Array.isArray(res.body.data.children)).toBe(true);
+      expect(res.body.data.children.length).toBeGreaterThan(0);
+      expect(res.body.data.children[0].admissionNumber).toBeDefined();
+    });
+
+    it('allows Parent to update their own guardian profile via PUT /api/v1/students/guardian/me', async () => {
+      const updateData = {
+        firstName: 'Patricia',
+        lastName: 'Updated',
+        phone: '+254711889900',
+        emergencyContact: '+254722889900',
+        nationalId: '33445566',
+        relationship: 'MOTHER',
+        occupation: 'Software Engineer'
+      };
+
+      const res = await request(app)
+        .put('/api/v1/students/guardian/me')
+        .set('Authorization', `Bearer ${parentToken}`)
+        .send(updateData);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.message).toContain('Parent profile updated successfully');
+      expect(res.body.data.guardian.user.firstName).toBe('Patricia');
+      expect(res.body.data.guardian.user.lastName).toBe('Updated');
+      expect(res.body.data.guardian.user.phone).toBe('+254711889900');
+      expect(res.body.data.guardian.nationalId).toBe('33445566');
+      expect(res.body.data.guardian.occupation).toBe('Software Engineer');
+      expect(res.body.data.guardian.emergencyContact).toBe('+254722889900');
+
+      // Verify persistence via GET /api/v1/students/guardian/me
+      const verifyRes = await request(app)
+        .get('/api/v1/students/guardian/me')
+        .set('Authorization', `Bearer ${parentToken}`);
+
+      expect(verifyRes.status).toBe(200);
+      expect(verifyRes.body.data.guardian.user.firstName).toBe('Patricia');
+      expect(verifyRes.body.data.guardian.nationalId).toBe('33445566');
+      expect(verifyRes.body.data.guardian.occupation).toBe('Software Engineer');
+    });
+
+    it('rejects unauthenticated PUT /api/v1/students/guardian/me with 401', async () => {
+      const res = await request(app)
+        .put('/api/v1/students/guardian/me')
+        .send({ firstName: 'Intruder' });
+
+      expect(res.status).toBe(401);
+    });
+  });
 });

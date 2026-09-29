@@ -164,9 +164,11 @@ export class WhatsAppController {
         const reply = await this.whatsAppService.handleInboundMessage(fromPhone, messageText, { useAI: true });
         console.log(`[WhatsApp Inbound] From: ${fromPhone} | Body: "${messageText}" | Reply: "${reply.intent}"`);
 
-        // Send real reply back through WhatsApp
-        if (reply.replyText) {
+        // Send real reply back through WhatsApp ONLY if registered in database
+        if (reply && reply.replyText && reply.replyText.trim().length > 0 && reply.intent !== 'UNREGISTERED' && !reply.ignored) {
           await this.whatsAppClientManager.sendRealMessage(fromPhone, reply.replyText, reply.intent);
+        } else {
+          console.log(`[WhatsApp Inbound] Ignored webhook message from unregistered sender: ${fromPhone}`);
         }
 
         return res.status(200).json({ status: 'PROCESSED', data: reply });
@@ -175,8 +177,10 @@ export class WhatsAppController {
       // Generic webhook / simplified payload format: { from, message }
       if (body.from && body.message) {
         const reply = await this.whatsAppService.handleInboundMessage(body.from, body.message, { useAI: true });
-        if (reply.replyText) {
+        if (reply && reply.replyText && reply.replyText.trim().length > 0 && reply.intent !== 'UNREGISTERED' && !reply.ignored) {
           await this.whatsAppClientManager.sendRealMessage(body.from, reply.replyText, reply.intent);
+        } else {
+          console.log(`[WhatsApp Inbound] Ignored webhook message from unregistered sender: ${body.from}`);
         }
         return res.status(200).json({ status: 'PROCESSED', data: reply });
       }

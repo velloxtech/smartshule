@@ -994,7 +994,11 @@ export class MongoFeeRepository implements IFeeRepository {
     return FeeStructure.create(doc as any, doc._id, doc.createdAt, doc.updatedAt);
   }
   public async findFeeStructure(gradeLevel: CbcGradeLevel, termId: string, academicYearId: string): Promise<FeeStructure | null> {
-    const doc = await FeeStructureModel.findOne({ gradeLevel, termId, academicYearId }).lean();
+    const doc = await FeeStructureModel.findOne({
+      gradeLevel,
+      academicYearId,
+      $or: [{ termId }, { termId: 'ALL' }, { termId: 'ANNUAL' }, { termId: { $exists: false } }]
+    }).lean() || await FeeStructureModel.findOne({ gradeLevel, academicYearId }).lean() || await FeeStructureModel.findOne({ gradeLevel }).lean();
     if (!doc) return null;
     return FeeStructure.create(doc as any, doc._id, doc.createdAt, doc.updatedAt);
   }

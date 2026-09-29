@@ -15,6 +15,8 @@ interface HeaderProps {
   onOpenQuickAction?: (action: string) => void;
   onOpenAcademicTermsModal?: () => void;
   onOpenChangePasswordModal?: () => void;
+  onNavigateLanding?: () => void;
+  onNavigateTab?: (tab: string) => void;
   academicContext?: AcademicContext | null;
   backendConnected?: boolean;
 }
@@ -27,6 +29,7 @@ export const Header: React.FC<HeaderProps> = ({
   teachers,
   onSelectStudent,
   onNavigateLanding,
+  onNavigateTab,
   onOpenAcademicTermsModal,
   onOpenChangePasswordModal,
   academicContext,
@@ -438,6 +441,19 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
 
                 <div className="py-2 space-y-1">
+                  {isParent && onNavigateTab && (
+                    <button
+                      onClick={() => {
+                        setUserMenuOpen(false);
+                        onNavigateTab('parent-profile');
+                      }}
+                      className="w-full text-left px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-100 rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[16px] text-[#800000]">manage_accounts</span>
+                      <span>My Profile & Children</span>
+                    </button>
+                  )}
+
                   {canManageTerms && onOpenAcademicTermsModal && (
                     <button
                       onClick={() => {

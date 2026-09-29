@@ -25,7 +25,10 @@ export interface WhatsAppConnectionState {
   mode: 'REAL_WHATSAPP_ACCOUNT' | 'META_CLOUD_API';
 }
 
-export type InboundMessageHandler = (fromPhone: string, text: string) => Promise<{ replyText: string; intent?: string }>;
+export type InboundMessageHandler = (
+  fromPhone: string,
+  text: string
+) => Promise<{ replyText: string; intent?: string; ignored?: boolean }>;
 
 export class WhatsAppClientManager {
   private sock: WASocket | null = null;
@@ -209,10 +212,12 @@ export class WhatsAppClientManager {
           if (this.inboundHandler) {
             try {
               const reply = await this.inboundHandler(senderPhone, text.trim());
-              if (reply && reply.replyText) {
+              if (reply && reply.replyText && reply.replyText.trim().length > 0 && reply.intent !== 'UNREGISTERED' && !reply.ignored) {
                 // Send real reply back through the actual WhatsApp account!
                 // Prioritize replyJid (the exact chat where the message originated) to guarantee delivery
                 await this.sendRealMessage(senderPhone, reply.replyText, reply.intent, replyJid);
+              } else {
+                console.log(`[WhatsApp Inbound] Ignored message from unregistered sender: ${senderPhone}`);
               }
             } catch (err) {
               console.error('[WhatsApp Inbound] Error handling message:', err);

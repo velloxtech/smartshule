@@ -164,6 +164,10 @@ export const apiService = {
     return res;
   },
 
+  getSetupStatus: async (): Promise<ApiResponse<{ hasAdmin: boolean; totalUsers: number }>> => {
+    return apiFetch<ApiResponse<{ hasAdmin: boolean; totalUsers: number }>>('/auth/setup-status');
+  },
+
   register: async (userData: {
     email?: string;
     password: string;
@@ -1042,11 +1046,16 @@ export const apiService = {
     invoiceId: string;
     amount: number;
     paymentMethod: 'MPESA' | 'BANK_TRANSFER' | 'BANK_DEPOSIT' | 'CHEQUE' | 'CASH' | 'CARD' | 'KCB_BUNI';
-    transactionReference: string;
+    transactionReference?: string;
     mpesaPhoneNumber?: string;
     paymentDate?: string;
     recordedByUserId: string;
     notes?: string;
+    bankName?: string;
+    bankBranch?: string;
+    slipNumber?: string;
+    depositorName?: string;
+    receivedFrom?: string;
   }): Promise<ApiResponse<any>> => {
     return apiFetch<ApiResponse<any>>('/finance/payments', {
       method: 'POST',
@@ -1427,6 +1436,13 @@ export const apiService = {
 
   getGuardianPortalData: async (): Promise<ApiResponse<any>> => {
     return apiFetch<ApiResponse<any>>('/students/guardian/me');
+  },
+
+  updateGuardianProfile: async (data: any): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/students/guardian/me', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
   },
 
   purgeAllData: async (): Promise<ApiResponse<any>> => {

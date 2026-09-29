@@ -41,6 +41,15 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
     group: 'Academics & Learners',
     items: [
       {
+        id: 'parent-profile',
+        label: 'My Profile & Children',
+        icon: 'manage_accounts',
+        allowedRoles: [
+          UserRole.PARENT,
+          UserRole.GUARDIAN,
+        ],
+      },
+      {
         id: 'students-guardians',
         label: 'Learners & Guardians',
         icon: 'group',

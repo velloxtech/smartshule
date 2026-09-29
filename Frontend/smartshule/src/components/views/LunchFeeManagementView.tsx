@@ -1545,8 +1545,9 @@ export const LunchFeeManagementView: React.FC = () => {
                     className="w-full px-3 py-2 bg-surface-container-low rounded-lg text-on-surface border border-outline-variant/30 cursor-pointer"
                   >
                     <option value="MPESA">M-Pesa (KCB Buni)</option>
-                    <option value="CASH">Cash Deposit</option>
-                    <option value="BANK_TRANSFER">Bank Transfer</option>
+                    <option value="CASH">Cash Office</option>
+                    <option value="BANK_DEPOSIT">Bank Direct Deposit / Slip</option>
+                    <option value="BANK_TRANSFER">Bank Wire / Transfer</option>
                     <option value="CHEQUE">Cheque</option>
                   </select>
                 </div>

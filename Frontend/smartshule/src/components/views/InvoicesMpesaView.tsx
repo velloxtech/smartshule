@@ -27,6 +27,7 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
   const [financeSummary, setFinanceSummary] = useState<FinanceSummaryData | null>(null);
   const [school, setSchool] = useState<any>(null);
   const [activeSubTab, setActiveSubTab] = useState<'invoices' | 'transactions'>('invoices');
+  const [channelFilter, setChannelFilter] = useState<'ALL' | 'CASH' | 'BANK_DEPOSIT' | 'MPESA' | 'CHEQUE'>('ALL');
   const [loading, setLoading] = useState(true);
 
   // Modals
@@ -83,6 +84,16 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
   const totalPaid = financeSummary?.totalCollected || propTotalCollected || invoices.reduce((acc, inv) => acc + (inv.amountPaid || 0), 0);
   const totalBalance = financeSummary?.totalOutstanding || Math.max(0, totalInvoiced - totalPaid);
   const collectionRate = financeSummary?.collectionRatePercentage || (totalInvoiced > 0 ? Math.round((totalPaid / totalInvoiced) * 100) : 0);
+
+  const filteredTransactions = propTransactions.filter((tx) => {
+    if (channelFilter === 'ALL') return true;
+    const ch = (tx.channel || '').toUpperCase();
+    if (channelFilter === 'CASH') return ch.includes('CASH');
+    if (channelFilter === 'BANK_DEPOSIT') return ch.includes('DEPOSIT') || ch.includes('SLIP');
+    if (channelFilter === 'MPESA') return ch.includes('MPESA') || ch.includes('M-PESA') || ch.includes('KCB BUNI') || ch.includes('PAYBILL');
+    if (channelFilter === 'CHEQUE') return ch.includes('CHEQUE') || ch.includes('WIRE') || ch.includes('TRANSFER');
+    return true;
+  });
 
   return (
     <div className="space-y-6 pb-12 font-body">
@@ -312,13 +323,30 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
                         </td>
                         <td className="py-3 px-4 text-right">
                           {inv.balance > 0 ? (
-                            <button
-                              onClick={() => handlePayInvoice(inv)}
-                              className="px-2.5 py-1.5 bg-[#006a40] hover:bg-[#005a36] text-white rounded-lg text-xs font-bold hover:shadow-xs transition-all cursor-pointer inline-flex items-center gap-1"
-                            >
-                              <span className="material-symbols-outlined text-[13px]">payments</span>
-                              <span>Pay with KCB Buni</span>
-                            </button>
+                            <div className="flex items-center justify-end gap-1.5">
+                              {!isGuardian && (
+                                <button
+                                  onClick={() => {
+                                    setSelectedInvoiceForPay(inv);
+                                    const linkedStudent = students.find((s) => s.id === inv.studentId);
+                                    setSelectedStudentForPay(linkedStudent);
+                                    setIsRecordPayOpen(true);
+                                  }}
+                                  className="px-2.5 py-1.5 bg-surface-container hover:bg-surface-container-high text-on-surface rounded-lg text-xs font-bold border border-outline-variant/30 transition-all cursor-pointer inline-flex items-center gap-1"
+                                  title="Record Cash or Bank Deposit Slip"
+                                >
+                                  <span className="material-symbols-outlined text-[13px] text-emerald-700">payments</span>
+                                  <span>Cash / Slip</span>
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handlePayInvoice(inv)}
+                                className="px-2.5 py-1.5 bg-[#006a40] hover:bg-[#005a36] text-white rounded-lg text-xs font-bold hover:shadow-xs transition-all cursor-pointer inline-flex items-center gap-1"
+                              >
+                                <span className="material-symbols-outlined text-[13px]">credit_card</span>
+                                <span>Pay Online</span>
+                              </button>
+                            </div>
                           ) : (
                             <span className="text-xs font-bold text-secondary flex items-center justify-end gap-1">
                               <span className="material-symbols-outlined text-[15px]">check_circle</span>
@@ -349,6 +377,65 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
             </span>
           </div>
 
+          {/* Channel Filters */}
+          <div className="flex flex-wrap items-center gap-1.5 p-3 bg-surface-container-low/60 border-b border-surface-container">
+            <span className="text-[11px] font-semibold text-on-surface-variant uppercase mr-1">Filter Channel:</span>
+            <button
+              onClick={() => setChannelFilter('ALL')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                channelFilter === 'ALL'
+                  ? 'bg-primary text-white shadow-xs'
+                  : 'bg-surface-container text-on-surface hover:bg-surface-container-high'
+              }`}
+            >
+              All Channels ({propTransactions.length})
+            </button>
+            <button
+              onClick={() => setChannelFilter('CASH')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1 ${
+                channelFilter === 'CASH'
+                  ? 'bg-emerald-700 text-white shadow-xs'
+                  : 'bg-emerald-50 text-emerald-900 hover:bg-emerald-100 border border-emerald-200'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[14px]">payments</span>
+              <span>Cash Office</span>
+            </button>
+            <button
+              onClick={() => setChannelFilter('BANK_DEPOSIT')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1 ${
+                channelFilter === 'BANK_DEPOSIT'
+                  ? 'bg-sky-700 text-white shadow-xs'
+                  : 'bg-sky-50 text-sky-900 hover:bg-sky-100 border border-sky-200'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[14px]">account_balance</span>
+              <span>Bank Deposits</span>
+            </button>
+            <button
+              onClick={() => setChannelFilter('MPESA')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1 ${
+                channelFilter === 'MPESA'
+                  ? 'bg-purple-700 text-white shadow-xs'
+                  : 'bg-purple-50 text-purple-900 hover:bg-purple-100 border border-purple-200'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[14px]">smartphone</span>
+              <span>M-Pesa / E-Money</span>
+            </button>
+            <button
+              onClick={() => setChannelFilter('CHEQUE')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1 ${
+                channelFilter === 'CHEQUE'
+                  ? 'bg-amber-700 text-white shadow-xs'
+                  : 'bg-amber-50 text-amber-900 hover:bg-amber-100 border border-amber-200'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[14px]">receipt_long</span>
+              <span>Cheques / Wire</span>
+            </button>
+          </div>
+
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead className="bg-surface-container-low text-on-surface-variant uppercase font-semibold border-b border-outline-variant/30">
@@ -363,27 +450,48 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-container">
-                {propTransactions.length === 0 ? (
+                {filteredTransactions.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="py-12 text-center text-on-surface-variant">
                       <div className="flex flex-col items-center justify-center gap-2">
                         <span className="material-symbols-outlined text-3xl text-outline">receipt_long</span>
-                        <p className="font-semibold text-sm">No Payment Transactions Recorded</p>
+                        <p className="font-semibold text-sm">No Payment Transactions Found</p>
                         <p className="text-xs text-on-surface-variant">
-                          Payments made through KCB Buni bank transfers, paybill, or cards will appear here.
+                          {channelFilter === 'ALL'
+                            ? 'Payments made through Cash Office, Bank Deposits, or M-Pesa will appear here.'
+                            : `No transactions found under the "${channelFilter.replace('_', ' ')}" channel.`}
                         </p>
                       </div>
                     </td>
                   </tr>
                 ) : (
-                  propTransactions.map((tx) => (
+                  filteredTransactions.map((tx) => (
                     <tr key={tx.id} className="hover:bg-surface-container-low/50 transition-colors">
                       <td className="py-3 px-4 font-bold font-data-mono text-primary">{tx.ref}</td>
                       <td className="py-3 px-4 font-semibold text-on-surface">{tx.studentName}</td>
                       <td className="py-3 px-4 font-data-mono text-outline">{tx.admNo}</td>
                       <td className="py-3 px-4">
-                        <span className="px-2 py-0.5 rounded bg-surface-container text-on-surface font-semibold text-[11px]">
-                          {tx.channel || 'KCB Bank'}
+                        <span
+                          className={`px-2 py-0.5 rounded font-semibold text-[11px] inline-flex items-center gap-1 ${
+                            (tx.channel || '').toUpperCase().includes('CASH')
+                              ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                              : (tx.channel || '').toUpperCase().includes('DEPOSIT')
+                              ? 'bg-sky-100 text-sky-900 border border-sky-300'
+                              : (tx.channel || '').toUpperCase().includes('CHEQUE')
+                              ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                              : 'bg-purple-100 text-purple-900 border border-purple-300'
+                          }`}
+                        >
+                          <span className="material-symbols-outlined text-[13px]">
+                            {(tx.channel || '').toUpperCase().includes('CASH')
+                              ? 'payments'
+                              : (tx.channel || '').toUpperCase().includes('DEPOSIT')
+                              ? 'account_balance'
+                              : (tx.channel || '').toUpperCase().includes('CHEQUE')
+                              ? 'receipt_long'
+                              : 'smartphone'}
+                          </span>
+                          <span>{tx.channel || 'KCB Bank'}</span>
                         </span>
                       </td>
                       <td className="py-3 px-4 text-right font-data-mono font-bold text-secondary">
@@ -497,11 +605,19 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
 
       <RecordPaymentModal
         isOpen={isRecordPayOpen}
-        onClose={() => setIsRecordPayOpen(false)}
+        onClose={() => {
+          setIsRecordPayOpen(false);
+          setSelectedInvoiceForPay(undefined);
+          setSelectedStudentForPay(undefined);
+        }}
         students={students}
+        initialStudent={selectedStudentForPay}
+        initialInvoice={selectedInvoiceForPay}
         onPaymentRecorded={() => {
           loadData();
           setIsRecordPayOpen(false);
+          setSelectedInvoiceForPay(undefined);
+          setSelectedStudentForPay(undefined);
         }}
       />
     </div>

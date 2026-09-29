@@ -465,7 +465,7 @@ describe('New Features Integration Tests', () => {
       expect(res.body.data.intent).toBe('EDIARY');
     });
 
-    it('Simulating query from unregistered phone number gives guidance', async () => {
+    it('Ignores query from unregistered phone number and does not send reply', async () => {
       const res = await request(app)
         .post('/api/v1/whatsapp/simulate')
         .send({
@@ -474,7 +474,8 @@ describe('New Features Integration Tests', () => {
         });
 
       expect(res.status).toBe(200);
-      expect(res.body.data.replyText).toContain('could not find an enrolled student record');
+      expect(res.body.data.replyText).toBe('');
+      expect(res.body.data.ignored).toBe(true);
       expect(res.body.data.intent).toBe('UNREGISTERED');
     });
   });

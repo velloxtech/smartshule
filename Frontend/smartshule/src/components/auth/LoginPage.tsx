@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { apiService } from '../../services/api';
 
@@ -7,17 +7,32 @@ interface LoginPageProps {
   onNavigateLanding: () => void;
 }
 
-type AuthMode = 'login' | 'forgot_request' | 'forgot_verify';
+type AuthMode = 'login' | 'forgot_request' | 'forgot_verify' | 'initial_setup' | 'register';
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLanding }) => {
   const { login, isLoading, error: authError } = useAuth();
   const [authMode, setAuthMode] = useState<AuthMode>('login');
+
+  // Setup status
+  const [hasAdmin, setHasAdmin] = useState<boolean | null>(null);
 
   // Sign-in state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+
+  // Initial setup / Registration state
+  const [regFirstName, setRegFirstName] = useState('');
+  const [regLastName, setRegLastName] = useState('');
+  const [regEmail, setRegEmail] = useState('');
+  const [regPhone, setRegPhone] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+  const [regConfirmPassword, setRegConfirmPassword] = useState('');
+  const [regRole, setRegRole] = useState<'SUPER_ADMIN' | 'ADMIN' | 'PARENT' | 'TEACHER'>('SUPER_ADMIN');
+  const [regLoading, setRegLoading] = useState(false);
+  const [regSuccess, setRegSuccess] = useState<string | null>(null);
+  const [regError, setRegError] = useState<string | null>(null);
 
   // Forgot password state
   const [forgotEmail, setForgotEmail] = useState('');
@@ -29,18 +44,92 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLandi
   const [forgotSuccess, setForgotSuccess] = useState<string | null>(null);
   const [forgotError, setForgotError] = useState<string | null>(null);
 
+  useEffect(() => {
+    let isMounted = true;
+    const checkStatus = async () => {
+      try {
+        const res = await apiService.getSetupStatus();
+        if (isMounted && res.success && res.data) {
+          setHasAdmin(res.data.hasAdmin);
+          if (!res.data.hasAdmin) {
+            setAuthMode('initial_setup');
+            setRegRole('SUPER_ADMIN');
+          }
+        }
+      } catch {
+        // fallback
+      }
+    };
+    checkStatus();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLocalError(null);
 
     if (!email.trim() || !password) {
-      setLocalError('Please provide both email and password.');
+      setLocalError('Please provide both email/phone and password.');
       return;
     }
 
     const ok = await login(email.trim(), password);
     if (ok) {
       onSuccess();
+    }
+  };
+
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setRegError(null);
+    setRegSuccess(null);
+
+    if (!regFirstName.trim() || !regLastName.trim()) {
+      setRegError('Please provide both first name and last name.');
+      return;
+    }
+    if (!regEmail.trim() && !regPhone.trim()) {
+      setRegError('Please provide an email address or mobile phone number.');
+      return;
+    }
+    if (regPassword.length < 6) {
+      setRegError('Password must be at least 6 characters long.');
+      return;
+    }
+    if (regPassword !== regConfirmPassword) {
+      setRegError('Passwords do not match.');
+      return;
+    }
+
+    setRegLoading(true);
+    try {
+      const res = await apiService.register({
+        firstName: regFirstName.trim(),
+        lastName: regLastName.trim(),
+        email: regEmail.trim() || undefined,
+        phone: regPhone.trim() || undefined,
+        password: regPassword,
+        role: regRole,
+      });
+
+      if (res.success) {
+        setHasAdmin(true);
+        setRegSuccess('Account created successfully! Signing in...');
+        const cred = regEmail.trim() || regPhone.trim();
+        const ok = await login(cred, regPassword);
+        if (ok) {
+          onSuccess();
+        } else {
+          setAuthMode('login');
+          setEmail(cred);
+        }
+      }
+    } catch (err: any) {
+      setRegError(err.message || 'Failed to create account.');
+    } finally {
+      setRegLoading(false);
     }
   };
 
@@ -173,13 +262,19 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLandi
                   ? 'lock_person'
                   : authMode === 'forgot_request'
                   ? 'mark_email_read'
-                  : 'pin'}
+                  : authMode === 'forgot_verify'
+                  ? 'pin'
+                  : authMode === 'initial_setup'
+                  ? 'admin_panel_settings'
+                  : 'how_to_reg'}
               </span>
             </div>
             <h1 className="text-2xl font-bold tracking-tight">
               {authMode === 'login' && 'SmartShule CBC Portal Sign In'}
               {authMode === 'forgot_request' && 'Reset Your Password'}
               {authMode === 'forgot_verify' && 'Verify 6-Digit Code'}
+              {authMode === 'initial_setup' && 'Primary Administrator Setup'}
+              {authMode === 'register' && 'Create Your SmartShule Account'}
             </h1>
             <p className="text-xs text-rose-200 mt-1 max-w-xs mx-auto">
               {authMode === 'login' &&
@@ -188,6 +283,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLandi
                 'Enter your registered email or phone number to receive a password recovery verification code'}
               {authMode === 'forgot_verify' &&
                 'Enter the code received and choose your new secure password'}
+              {authMode === 'initial_setup' &&
+                'Initialize your institution with a Super Administrator account directly via the UI'}
+              {authMode === 'register' &&
+                'Register a new account to access the school portal'}
             </p>
           </div>
 
@@ -304,40 +403,45 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLandi
                   </div>
                 </form>
 
-                {/* Quick Role Selector */}
-                <div className="pt-2 border-t border-gray-100">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500">
-                      Quick Access Profiles
-                    </span>
-                    <span className="text-[10px] text-gray-400">Click to autofill username</span>
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-                    {[
-                      { label: 'Super Admin', email: 'superadmin@smartshule.ac.ke', color: 'bg-rose-50 text-rose-900 border-rose-200 hover:bg-rose-100' },
-                      { label: 'ADMIN (Director)', email: 'admin@smartshule.ac.ke', color: 'bg-red-50 text-red-900 border-red-200 hover:bg-red-100 ring-1 ring-red-300 font-bold' },
-                      { label: 'Head Teacher', email: 'headteacher@smartshule.ac.ke', color: 'bg-purple-50 text-purple-900 border-purple-200 hover:bg-purple-100' },
-                      { label: 'Deputy Head', email: 'deputy@smartshule.ac.ke', color: 'bg-indigo-50 text-indigo-900 border-indigo-200 hover:bg-indigo-100' },
-                      { label: 'Admissions', email: 'admissions@smartshule.ac.ke', color: 'bg-blue-50 text-blue-900 border-blue-200 hover:bg-blue-100' },
-                      { label: 'Bursar', email: 'bursar@smartshule.ac.ke', color: 'bg-amber-50 text-amber-900 border-amber-200 hover:bg-amber-100' },
-                      { label: 'Teacher', email: 'teacher@smartshule.ac.ke', color: 'bg-emerald-50 text-emerald-900 border-emerald-200 hover:bg-emerald-100' },
-                      { label: 'Parent', email: 'parent@smartshule.ac.ke', color: 'bg-sky-50 text-sky-900 border-sky-200 hover:bg-sky-100 font-bold' },
-                    ].map((persona) => (
+                {/* Mode switch / setup link */}
+                <div className="pt-3 border-t border-gray-100 flex flex-col items-center gap-2 text-center">
+                  {hasAdmin === false ? (
+                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 w-full space-y-1.5 text-left">
+                      <div className="font-bold flex items-center gap-1.5 text-amber-800">
+                        <span className="material-symbols-outlined text-[18px]">admin_panel_settings</span>
+                        <span>First-Time System Setup</span>
+                      </div>
+                      <p className="text-[11px] text-amber-800">
+                        No administrator account exists yet in the database. Set up your primary administrator account directly via the UI to activate the portal.
+                      </p>
                       <button
-                        key={persona.label}
                         type="button"
                         onClick={() => {
-                          setEmail(persona.email);
-                          setPassword('');
+                          setRegRole('SUPER_ADMIN');
+                          setAuthMode('initial_setup');
                         }}
-                        className={`px-2 py-1.5 rounded-lg border text-[11px] font-semibold text-center transition-all cursor-pointer ${persona.color}`}
+                        className="w-full py-2 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg text-xs transition-colors cursor-pointer"
                       >
-                        {persona.label}
+                        Set Up Primary Administrator
                       </button>
-                    ))}
-                  </div>
-                  <p className="text-[10px] text-gray-500 mt-2 text-center">
-                    💡 Parents: Default password is your registered National ID number.
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between w-full text-xs text-gray-500">
+                      <span>Don&apos;t have an account?</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRegRole('PARENT');
+                          setAuthMode('register');
+                        }}
+                        className="text-[#7a1228] font-bold hover:underline cursor-pointer"
+                      >
+                        Register as Parent / Staff
+                      </button>
+                    </div>
+                  )}
+                  <p className="text-[10px] text-gray-400">
+                    SmartShule CBC Portal · All institutional accounts are fed and managed via the UI
                   </p>
                 </div>
               </>
@@ -531,6 +635,176 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLandi
                       Back to Sign In
                     </button>
                   </div>
+                </div>
+              </form>
+            )}
+
+            {/* 3. INITIAL SETUP & REGISTRATION VIEW */}
+            {(authMode === 'initial_setup' || authMode === 'register') && (
+              <form onSubmit={handleRegisterSubmit} className="space-y-4 animate-in fade-in">
+                {regError && (
+                  <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[18px] shrink-0 text-red-600">error</span>
+                    <span>{regError}</span>
+                  </div>
+                )}
+                {regSuccess && (
+                  <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[18px] shrink-0 text-emerald-600">check_circle</span>
+                    <span>{regSuccess}</span>
+                  </div>
+                )}
+
+                {authMode === 'initial_setup' && (
+                  <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-[#7a1228] space-y-1">
+                    <div className="font-bold flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[18px]">verified_user</span>
+                      <span>Initial Administrator Setup</span>
+                    </div>
+                    <p className="text-[11px] text-rose-900 leading-relaxed">
+                      You are provisioning the root system administrator directly via the UI. This account has full privileges to manage the entire school.
+                    </p>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-gray-600 mb-1">
+                      First Name
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={regFirstName}
+                      onChange={(e) => setRegFirstName(e.target.value)}
+                      placeholder="e.g. John"
+                      className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-[#7a1228] focus:bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-gray-600 mb-1">
+                      Last Name
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={regLastName}
+                      onChange={(e) => setRegLastName(e.target.value)}
+                      placeholder="e.g. Doe"
+                      className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-[#7a1228] focus:bg-white"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-600 mb-1">
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    value={regEmail}
+                    onChange={(e) => setRegEmail(e.target.value)}
+                    placeholder="e.g. admin@school.ac.ke"
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-[#7a1228] focus:bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-600 mb-1">
+                    Mobile Phone Number
+                  </label>
+                  <input
+                    type="tel"
+                    value={regPhone}
+                    onChange={(e) => setRegPhone(e.target.value)}
+                    placeholder="e.g. 0712345678 or +254712345678"
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-[#7a1228] focus:bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-600 mb-1">
+                    Account Role
+                  </label>
+                  <select
+                    value={regRole}
+                    onChange={(e) => setRegRole(e.target.value as any)}
+                    disabled={authMode === 'initial_setup'}
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-[#7a1228] focus:bg-white disabled:opacity-75"
+                  >
+                    {authMode === 'initial_setup' ? (
+                      <>
+                        <option value="SUPER_ADMIN">System Super Administrator</option>
+                        <option value="ADMIN">School Administrator / Director</option>
+                      </>
+                    ) : (
+                      <>
+                        <option value="PARENT">Parent / Guardian</option>
+                        <option value="TEACHER">Teacher / Staff</option>
+                      </>
+                    )}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-gray-600 mb-1">
+                      Password
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      value={regPassword}
+                      onChange={(e) => setRegPassword(e.target.value)}
+                      placeholder="Min 6 chars"
+                      className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-[#7a1228] focus:bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-gray-600 mb-1">
+                      Confirm
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      value={regConfirmPassword}
+                      onChange={(e) => setRegConfirmPassword(e.target.value)}
+                      placeholder="Repeat password"
+                      className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-[#7a1228] focus:bg-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-2 space-y-2">
+                  <button
+                    type="submit"
+                    disabled={regLoading}
+                    className="w-full py-2.5 bg-[#7a1228] hover:bg-[#5c0a1a] text-white font-semibold rounded-xl text-sm shadow-md transition-all cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2"
+                  >
+                    {regLoading ? (
+                      <>
+                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                        <span>Creating Account...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="material-symbols-outlined text-[18px]">how_to_reg</span>
+                        <span>{authMode === 'initial_setup' ? 'Create Administrator & Enter Portal' : 'Register Account'}</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAuthMode('login');
+                      setRegError(null);
+                      setRegSuccess(null);
+                    }}
+                    className="w-full py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-xl text-xs transition-colors cursor-pointer"
+                  >
+                    Already have an account? Sign In
+                  </button>
                 </div>
               </form>
             )}

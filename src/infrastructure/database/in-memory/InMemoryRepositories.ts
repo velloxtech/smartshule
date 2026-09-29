@@ -669,12 +669,22 @@ export class InMemoryFeeRepository implements IFeeRepository {
   }
 
   public async findFeeStructure(gradeLevel: CbcGradeLevel, termId: string, academicYearId: string): Promise<FeeStructure | null> {
+    let exactMatch: FeeStructure | null = null;
+    let annualMatch: FeeStructure | null = null;
+    let yearMatch: FeeStructure | null = null;
+    let gradeMatch: FeeStructure | null = null;
+
     for (const fs of this.feeStructures.values()) {
-      if (fs.gradeLevel === gradeLevel && fs.termId === termId && fs.academicYearId === academicYearId) {
-        return fs;
+      if (fs.gradeLevel === gradeLevel) {
+        if (!gradeMatch) gradeMatch = fs;
+        if (fs.academicYearId === academicYearId) {
+          if (!yearMatch) yearMatch = fs;
+          if (fs.termId === termId) exactMatch = fs;
+          if (fs.termId === 'ALL' || fs.termId === 'ANNUAL' || !fs.termId) annualMatch = fs;
+        }
       }
     }
-    return null;
+    return exactMatch || annualMatch || yearMatch || gradeMatch || null;
   }
 
   public async findAllFeeStructures(schoolId?: string): Promise<FeeStructure[]> {

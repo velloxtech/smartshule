@@ -77,7 +77,7 @@ export interface RecordOtherIncomeDTO {
 export interface CreateFeeStructureDTO {
   schoolId: string;
   academicYearId: string;
-  termId: string;
+  termId?: string; // Optional, defaults to 'ALL' for whole year
   gradeLevel: CbcGradeLevel;
   title: string;
   items: Omit<FeeItem, 'id'>[];
@@ -97,11 +97,16 @@ export interface RecordPaymentDTO {
   invoiceId: string;
   amount: number;
   paymentMethod: PaymentMethod;
-  transactionReference: string;
+  transactionReference?: string;
   mpesaPhoneNumber?: string;
   paymentDate?: string;
   recordedByUserId: string;
   notes?: string;
+  bankName?: string;
+  bankBranch?: string;
+  slipNumber?: string;
+  depositorName?: string;
+  receivedFrom?: string;
 }
 
 export interface StkPushPaymentDTO {
@@ -147,10 +152,77 @@ export class FeeUseCases {
     this.kcbBuniGateway = kcbBuniGateway || (paymentGateway as any);
   }
 
+  public async resolveTermNumber(termId?: string): Promise<number | null> {
+    if (!termId || termId === 'ALL' || termId === 'ANNUAL') return null;
+    if (this.academicRepository) {
+      try {
+        const term = await this.academicRepository.findTermById(termId);
+        if (term && term.termNumber) return term.termNumber;
+      } catch {
+        // ignore
+      }
+    }
+    const lower = termId.toLowerCase();
+    if (lower.includes('term-3') || lower.includes('term 3') || lower.includes('t3') || lower.endsWith('3')) return 3;
+    if (lower.includes('term-2') || lower.includes('term 2') || lower.includes('t2') || lower.endsWith('2')) return 2;
+    if (lower.includes('term-1') || lower.includes('term 1') || lower.includes('t1') || lower.endsWith('1')) return 1;
+    return 1;
+  }
+
+  public extractTermInvoiceItems(feeStructure: FeeStructure, termNumber: number | null): FeeItem[] {
+    if (termNumber === null) {
+      return feeStructure.items.map(item => ({
+        id: IdGenerator.generate(),
+        name: item.name,
+        amount: Number(item.amount) || 0,
+        category: item.category,
+        isOptional: item.isOptional
+      }));
+    }
+
+    const items: FeeItem[] = [];
+    for (const item of feeStructure.items) {
+      let termAmount: number = Number(item.amount) || 0;
+      if (item.termBreakdown) {
+        if (termNumber === 1 && item.termBreakdown.term1 !== undefined) termAmount = Number(item.termBreakdown.term1);
+        else if (termNumber === 2 && item.termBreakdown.term2 !== undefined) termAmount = Number(item.termBreakdown.term2);
+        else if (termNumber === 3 && item.termBreakdown.term3 !== undefined) termAmount = Number(item.termBreakdown.term3);
+      } else if (item.termDivisions && item.termDivisions.length > 0) {
+        const div = item.termDivisions.find(d => d.termNumber === termNumber);
+        if (div) termAmount = Number(div.amount);
+      } else {
+        termAmount = Math.round(termAmount / 3);
+      }
+
+      if (termAmount > 0) {
+        items.push({
+          id: IdGenerator.generate(),
+          name: item.name,
+          amount: termAmount,
+          category: item.category,
+          isOptional: item.isOptional
+        });
+      }
+    }
+
+    if (items.length === 0 && feeStructure.items.length > 0) {
+      return feeStructure.items.map(item => ({
+        id: IdGenerator.generate(),
+        name: item.name,
+        amount: Number(item.amount) || 0,
+        category: item.category,
+        isOptional: item.isOptional
+      }));
+    }
+
+    return items;
+  }
+
   // 1. Fee Structure
   public async createFeeStructure(dto: CreateFeeStructureDTO) {
     const formattedItems: FeeItem[] = dto.items.map(item => ({
       ...item,
+      amount: Number(item.amount) || 0,
       id: IdGenerator.generate()
     }));
 
@@ -158,7 +230,7 @@ export class FeeUseCases {
       {
         schoolId: dto.schoolId,
         academicYearId: dto.academicYearId,
-        termId: dto.termId,
+        termId: dto.termId || 'ALL',
         gradeLevel: dto.gradeLevel,
         title: dto.title,
         items: formattedItems,
@@ -179,6 +251,7 @@ export class FeeUseCases {
   // 2. Invoicing
   public async generateInvoices(dto: GenerateInvoicesDTO) {
     const generatedInvoices = [];
+    const termNumber = await this.resolveTermNumber(dto.termId);
 
     // Case 1: Specific student
     if (dto.studentId) {
@@ -199,7 +272,8 @@ export class FeeUseCases {
       );
       const carriedForwardBalance = unpaidPriorInvoices.reduce((sum, inv) => sum + inv.balance, 0);
 
-      const invoiceItems = [...feeStructure.items];
+      const baseItems = this.extractTermInvoiceItems(feeStructure, termNumber);
+      const invoiceItems = [...baseItems];
       if (carriedForwardBalance > 0) {
         invoiceItems.push({
           id: IdGenerator.generate(),
@@ -210,7 +284,7 @@ export class FeeUseCases {
         });
       }
 
-      const totalAmount = feeStructure.totalAmount + carriedForwardBalance;
+      const totalAmount = baseItems.reduce((sum, it) => sum + it.amount, 0) + carriedForwardBalance;
       const invoiceNumber = `INV-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
       const invoice = StudentInvoice.create(
         {
@@ -271,7 +345,8 @@ export class FeeUseCases {
         );
         const carriedForwardBalance = unpaidPriorInvoices.reduce((sum, inv) => sum + inv.balance, 0);
 
-        const invoiceItems = [...feeStructure.items];
+        const baseItems = this.extractTermInvoiceItems(feeStructure, termNumber);
+        const invoiceItems = [...baseItems];
         if (carriedForwardBalance > 0) {
           invoiceItems.push({
             id: IdGenerator.generate(),
@@ -282,7 +357,7 @@ export class FeeUseCases {
           });
         }
 
-        const totalAmount = feeStructure.totalAmount + carriedForwardBalance;
+        const totalAmount = baseItems.reduce((sum, it) => sum + it.amount, 0) + carriedForwardBalance;
         const invoiceNumber = `INV-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
         const invoice = StudentInvoice.create(
           {
@@ -371,46 +446,66 @@ export class FeeUseCases {
         feeStructure = allStructures.find(fs => fs.gradeLevel === student.gradeLevel) || null;
       }
 
-      // If no fee structure exists for this grade in the DB, create standard CBC fee structure
+      // If no fee structure exists for this grade in the DB, create standard CBC fee structure with whole-year term divisions
       if (!feeStructure) {
         const isJSS = ['GRADE_7', 'GRADE_8', 'GRADE_9'].includes(student.gradeLevel);
         const isUpperPrimary = ['GRADE_4', 'GRADE_5', 'GRADE_6'].includes(student.gradeLevel);
         const isLowerPrimary = ['GRADE_1', 'GRADE_2', 'GRADE_3'].includes(student.gradeLevel);
 
         const gradeName = student.gradeLevel.replace('_', ' ');
-        const tuitionAmount = isJSS ? 25000 : (isUpperPrimary ? 18000 : (isLowerPrimary ? 15000 : 12000));
-        const assessmentAmount = isJSS ? 6000 : (isUpperPrimary ? 4000 : 3000);
-        const activityAmount = isJSS ? 2500 : 2000;
-        const admissionAmount = isJSS ? 5000 : 3500;
+        const tuitionAnnual = isJSS ? 60000 : (isUpperPrimary ? 45000 : (isLowerPrimary ? 36000 : 30000));
+        const assessmentAnnual = isJSS ? 15000 : (isUpperPrimary ? 10000 : (isLowerPrimary ? 8000 : 6000));
+        const activityAnnual = isJSS ? 6000 : (isUpperPrimary ? 5000 : (isLowerPrimary ? 4500 : 3500));
+        const admissionAnnual = isJSS ? 5000 : 3500;
 
         const defaultItems = [
           {
             id: IdGenerator.generate(),
             name: 'Tuition Fee',
-            amount: tuitionAmount,
+            amount: tuitionAnnual,
             category: 'TUITION' as const,
-            isOptional: false
+            isOptional: false,
+            termBreakdown: {
+              term1: Math.round(tuitionAnnual * 0.4),
+              term2: Math.round(tuitionAnnual * 0.3),
+              term3: tuitionAnnual - Math.round(tuitionAnnual * 0.4) - Math.round(tuitionAnnual * 0.3)
+            }
           },
           {
             id: IdGenerator.generate(),
             name: isJSS ? 'CBC Assessment & Practical Science Kits' : 'CBC Assessment & Learning Materials',
-            amount: assessmentAmount,
+            amount: assessmentAnnual,
             category: 'ASSESSMENT' as const,
-            isOptional: false
+            isOptional: false,
+            termBreakdown: {
+              term1: Math.round(assessmentAnnual * 0.4),
+              term2: Math.round(assessmentAnnual * 0.3),
+              term3: assessmentAnnual - Math.round(assessmentAnnual * 0.4) - Math.round(assessmentAnnual * 0.3)
+            }
           },
           {
             id: IdGenerator.generate(),
             name: 'Activity & Co-Curricular Levy',
-            amount: activityAmount,
+            amount: activityAnnual,
             category: 'ACTIVITY' as const,
-            isOptional: false
+            isOptional: false,
+            termBreakdown: {
+              term1: Math.round(activityAnnual * 0.4),
+              term2: Math.round(activityAnnual * 0.3),
+              term3: activityAnnual - Math.round(activityAnnual * 0.4) - Math.round(activityAnnual * 0.3)
+            }
           },
           {
             id: IdGenerator.generate(),
             name: 'Admission Fee',
-            amount: admissionAmount,
+            amount: admissionAnnual,
             category: 'ADMISSION' as const,
-            isOptional: false
+            isOptional: false,
+            termBreakdown: {
+              term1: admissionAnnual,
+              term2: 0,
+              term3: 0
+            }
           }
         ];
 
@@ -418,9 +513,9 @@ export class FeeUseCases {
           {
             schoolId,
             academicYearId: academicYearId || 'year-2026',
-            termId: termId || 'term-2026-t1',
+            termId: 'ALL',
             gradeLevel: student.gradeLevel,
-            title: `${gradeName} Fee Structure`,
+            title: `${gradeName} Annual Fee Schedule`,
             items: defaultItems,
             dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
           },
@@ -432,8 +527,8 @@ export class FeeUseCases {
 
       const invoiceNumber = `INV-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
       const dueDate = feeStructure.dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-      const targetYear = feeStructure.academicYearId || academicYearId;
-      const targetTerm = feeStructure.termId || termId;
+      const targetYear = academicYearId || feeStructure.academicYearId;
+      const targetTerm = termId || feeStructure.termId;
 
       // Check for previous unpaid balances to carry forward
       const priorInvoices = await this.feeRepository.findInvoices({ studentId: student.id });
@@ -444,7 +539,9 @@ export class FeeUseCases {
       );
       const carriedForwardBalance = unpaidPriorInvoices.reduce((sum, inv) => sum + inv.balance, 0);
 
-      const invoiceItems = [...feeStructure.items];
+      const termNumber = await this.resolveTermNumber(targetTerm);
+      const baseItems = this.extractTermInvoiceItems(feeStructure, termNumber);
+      const invoiceItems = [...baseItems];
       if (carriedForwardBalance > 0) {
         invoiceItems.push({
           id: IdGenerator.generate(),
@@ -455,7 +552,7 @@ export class FeeUseCases {
         });
       }
 
-      const totalAmount = feeStructure.totalAmount + carriedForwardBalance;
+      const totalAmount = baseItems.reduce((sum, it) => sum + it.amount, 0) + carriedForwardBalance;
 
       const invoice = StudentInvoice.create(
         {
@@ -517,6 +614,30 @@ export class FeeUseCases {
     const student = await this.studentRepository.findById(invoice.studentId);
     const receiptNumber = `REC-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
 
+    // Resolve or auto-generate transaction reference for Cash / Manual Bank Deposit
+    let txRef = dto.transactionReference?.trim();
+    if (!txRef) {
+      if (dto.paymentMethod === PaymentMethod.CASH) {
+        txRef = `CSH-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`;
+      } else if (dto.paymentMethod === PaymentMethod.BANK_DEPOSIT) {
+        txRef = dto.slipNumber?.trim() ? `DEP-${dto.slipNumber.trim()}` : `DEP-${Date.now().toString().slice(-6)}`;
+      } else if (dto.paymentMethod === PaymentMethod.CHEQUE) {
+        txRef = `CHQ-${Date.now().toString().slice(-6)}`;
+      } else {
+        txRef = `PAY-${Date.now().toString().slice(-6)}`;
+      }
+    }
+
+    // Build rich notes combining bank or cash details
+    const noteItems: string[] = [];
+    if (dto.bankName) noteItems.push(`Bank: ${dto.bankName}`);
+    if (dto.bankBranch) noteItems.push(`Branch: ${dto.bankBranch}`);
+    if (dto.slipNumber) noteItems.push(`Slip #: ${dto.slipNumber}`);
+    if (dto.depositorName) noteItems.push(`Depositor: ${dto.depositorName}`);
+    if (dto.receivedFrom) noteItems.push(`Received From: ${dto.receivedFrom}`);
+    if (dto.notes) noteItems.push(dto.notes);
+    const combinedNotes = noteItems.length > 0 ? noteItems.join(' | ') : dto.notes;
+
     const payment = Payment.create(
       {
         schoolId: dto.schoolId,
@@ -525,12 +646,12 @@ export class FeeUseCases {
         receiptNumber,
         amount: dto.amount,
         paymentMethod: dto.paymentMethod,
-        transactionReference: dto.transactionReference,
+        transactionReference: txRef,
         mpesaPhoneNumber: dto.mpesaPhoneNumber,
         paymentDate: dto.paymentDate || new Date().toISOString().split('T')[0],
         recordedByUserId: dto.recordedByUserId,
         status: PaymentStatus.COMPLETED,
-        notes: dto.notes
+        notes: combinedNotes
       },
       IdGenerator.generate()
     );
@@ -543,12 +664,20 @@ export class FeeUseCases {
     // Send SMS receipt confirmation to guardian
     if (student) {
       const guardians = await this.guardianRepository.findByStudentId(student.id);
+      const channelLabel = dto.paymentMethod === PaymentMethod.CASH
+        ? 'CASH'
+        : dto.paymentMethod === PaymentMethod.BANK_DEPOSIT
+        ? `Bank Deposit (${dto.bankName || 'Direct Deposit'}${dto.slipNumber ? ` - Slip #${dto.slipNumber}` : ''})`
+        : dto.paymentMethod === PaymentMethod.CHEQUE
+        ? 'Cheque'
+        : dto.paymentMethod;
+
       for (const g of guardians) {
         const u = await this.userRepository.findById(g.userId);
         if (u && u.phone) {
           await this.notificationService.sendSms(
             u.phone,
-            `SmartShule Receipt: Received KES ${dto.amount} for ${student.fullName} (Adm: ${student.admissionNumber}). Receipt #${receiptNumber}. New balance: KES ${invoice.balance}.`
+            `SmartShule Receipt: Received KES ${dto.amount} via ${channelLabel} (Ref: ${txRef}) for ${student.fullName} (Adm: ${student.admissionNumber}). Receipt #${receiptNumber}. New balance: KES ${invoice.balance}.`
           );
         }
       }

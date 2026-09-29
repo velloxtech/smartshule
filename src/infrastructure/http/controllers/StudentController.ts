@@ -70,6 +70,17 @@ export const UpdateStudentSchema = z.object({
   }).passthrough().optional()
 }).passthrough();
 
+export const UpdateGuardianProfileSchema = z.object({
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+  email: z.string().email().optional().or(z.literal('')),
+  phone: z.string().optional(),
+  emergencyContact: z.string().optional(),
+  nationalId: z.string().optional(),
+  relationship: z.nativeEnum(GuardianRelationship).optional(),
+  occupation: z.string().optional()
+}).passthrough();
+
 export const PromoteStudentSchema = z.object({
   targetGradeLevel: z.nativeEnum(CbcGradeLevel).optional(),
   targetAcademicYearId: z.string().optional(),
@@ -209,6 +220,23 @@ export class StudentController {
       const data = await this.studentUseCases.getGuardianPortalData(userId);
       return res.status(200).json({
         success: true,
+        data
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public updateGuardianProfile = async (req: any, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        return res.status(401).json({ success: false, message: 'Authentication required' });
+      }
+      const data = await this.studentUseCases.updateGuardianProfile(userId, req.body);
+      return res.status(200).json({
+        success: true,
+        message: 'Parent profile updated successfully',
         data
       });
     } catch (err) {

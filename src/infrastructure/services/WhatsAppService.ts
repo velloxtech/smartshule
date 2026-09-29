@@ -32,6 +32,7 @@ export interface WhatsAppResponse {
     | 'HELP'
     | 'UNREGISTERED'
     | 'UNKNOWN';
+  ignored?: boolean;
 }
 
 export class WhatsAppService {
@@ -152,13 +153,12 @@ export class WhatsAppService {
 
     // If caller is completely unknown in the database:
     if (!user && !guardian) {
+      console.log(`[WhatsApp Inbound] Phone number ${senderPhone} not found in database. Ignoring incoming message.`);
       return {
         to: senderPhone,
-        replyText:
-          `👋 *Jambo! Welcome to ${school.name} CBC Portal.*\n\n` +
-          `We could not find an enrolled student record linked to your phone number (${senderPhone}).\n\n` +
-          `To link your WhatsApp number to your child's CBC profile, please contact the School Admissions Desk at *${school.phone}* or email *${school.email}*.`,
+        replyText: '',
         intent: 'UNREGISTERED',
+        ignored: true,
       };
     }
 
@@ -188,7 +188,7 @@ export class WhatsAppService {
           `👋 *Hello ${firstName}!*\n\n` +
           `Your parent profile is active, but no student records are currently linked to your phone number. ` +
           `Please contact the school admissions office to link your student admission number.`,
-        intent: 'UNREGISTERED',
+        intent: 'PROFILE',
       };
     }
 

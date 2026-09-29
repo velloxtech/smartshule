@@ -44,6 +44,7 @@ import RecordsOfWorkView from './components/views/RecordsOfWorkView';
 import { SystemLogsView } from './components/views/SystemLogsView';
 import { ComplaintsView } from './components/views/ComplaintsView';
 import { LunchFeeManagementView } from './components/views/LunchFeeManagementView';
+import { ParentProfileView } from './components/views/ParentProfileView';
 
 // Modals
 import { MpesaStkModal } from './components/modals/MpesaStkModal';
@@ -310,7 +311,12 @@ export default function App() {
               admNo: p.admissionNumber || '',
               grade: p.gradeLevel ? p.gradeLevel.replace('_', ' ') : '',
               amount: p.amount,
-              channel: p.paymentMethod === 'MPESA' ? 'M-Pesa Express' : (p.paymentMethod || 'Bank Wire'),
+              channel: p.paymentMethod === 'CASH' ? 'Cash Office'
+                     : p.paymentMethod === 'BANK_DEPOSIT' ? 'Bank Deposit'
+                     : p.paymentMethod === 'MPESA' ? 'M-Pesa Express'
+                     : p.paymentMethod === 'BANK_TRANSFER' ? 'Bank Wire / EFT'
+                     : p.paymentMethod === 'CHEQUE' ? 'Banker\'s Cheque'
+                     : (p.paymentMethod || 'Bank Wire'),
               date: p.paymentDate || 'Today',
               status: p.status === 'COMPLETED' ? 'Settled' : p.status,
             }));
@@ -654,6 +660,7 @@ export default function App() {
           teachers={teachers}
           backendConnected={backendConnected}
           onNavigateLanding={() => setAppView('landing')}
+          onNavigateTab={(tab) => setCurrentTab(tab as any)}
           onOpenAcademicTermsModal={() => setAcademicTermsModalOpen(true)}
           onOpenChangePasswordModal={() => setChangePasswordModalOpen(true)}
           academicContext={currentContext}
@@ -943,6 +950,9 @@ export default function App() {
           {currentTab === 'system-logs' && <SystemLogsView />}
           {currentTab === 'complaints' && <ComplaintsView />}
           {currentTab === 'lunch-fee-management' && <LunchFeeManagementView />}
+          {currentTab === 'parent-profile' && (
+            <ParentProfileView onNavigateTab={(tab) => setCurrentTab(tab as any)} />
+          )}
         </main>
 
         {/* Global Portal Footer: Pure Maroon (#800000) & Vellox Tech Watermark */}

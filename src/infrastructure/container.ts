@@ -246,80 +246,19 @@ export class AppContainer {
 
     this.whatsAppClientManager.setInboundHandler(async (fromPhone, text) => {
       const reply = await this.whatsAppService.handleInboundMessage(fromPhone, text, { useAI: true });
-      return { replyText: reply.replyText, intent: reply.intent };
+      return { replyText: reply.replyText, intent: reply.intent, ignored: reply.ignored };
     });
   }
 
-  public async ensureAdminAccounts() {
-    const defaultAccounts = [
-      {
-        id: 'usr-superadmin-01',
-        email: process.env.DEFAULT_SUPERADMIN_EMAIL || 'superadmin@smartshule.ac.ke',
-        password: process.env.DEFAULT_SUPERADMIN_PASSWORD || 'SuperAdmin@123',
-        firstName: 'System',
-        lastName: 'SuperAdmin',
-        role: UserRole.SUPER_ADMIN,
-        phone: '+254700000001'
-      },
-      {
-        id: 'usr-admin-01',
-        email: process.env.DEFAULT_ADMIN_EMAIL || 'admin@smartshule.ac.ke',
-        password: process.env.DEFAULT_ADMIN_PASSWORD || 'Admin@123',
-        firstName: process.env.DEFAULT_ADMIN_FIRST_NAME || 'ADMIN',
-        lastName: process.env.DEFAULT_ADMIN_LAST_NAME || 'Director',
-        role: UserRole.ADMIN,
-        phone: process.env.DEFAULT_ADMIN_PHONE || '+254711000111',
-        schoolId: 'school-001'
-      }
-    ];
-
-    for (const acc of defaultAccounts) {
-      const existing = await this.userRepository.findByEmail(acc.email).catch(() => null);
-      const passwordHash = await this.passwordHasher.hash(acc.password);
-
-      if (!existing) {
-        const user = User.create(
-          {
-            email: acc.email,
-            passwordHash,
-            firstName: acc.firstName,
-            lastName: acc.lastName,
-            role: acc.role,
-            phone: acc.phone,
-            status: UserStatus.ACTIVE,
-            schoolId: (acc as any).schoolId,
-            mustChangePassword: false
-          },
-          acc.id
-        );
-        await this.userRepository.save(user);
-        console.log(`[Auth] Provisioned default account (${acc.role}): ${acc.email}`);
-      } else {
-        if (acc.id === 'usr-admin-01' || acc.email === 'admin@smartshule.ac.ke') {
-          const updatedAdmin = User.create(
-            {
-              email: acc.email,
-              passwordHash,
-              firstName: acc.firstName,
-              lastName: acc.lastName,
-              role: acc.role,
-              phone: acc.phone,
-              status: UserStatus.ACTIVE,
-              schoolId: (acc as any).schoolId || 'school-001'
-            },
-            existing.id
-          );
-          await this.userRepository.save(updatedAdmin);
-        }
-      }
-    }
+  public async ensureAdminAccounts(): Promise<void> {
+    // Data is fed via the UI, no accounts are injected via code/files
   }
 
-  public async ensureSuperAdmin() {
-    await this.ensureAdminAccounts();
+  public async ensureSuperAdmin(): Promise<void> {
+    // Data is fed via the UI, no accounts are injected via code/files
   }
 
-  public async ensureRoleAccounts() {
-    await this.ensureAdminAccounts();
+  public async ensureRoleAccounts(): Promise<void> {
+    // Data is fed via the UI, no accounts are injected via code/files
   }
 }

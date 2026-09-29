@@ -62,7 +62,12 @@ export class AuthUseCases {
       UserRole.ADMISSIONS
     ];
     if (dto.role && privilegedRoles.includes(dto.role)) {
-      throw new ForbiddenError('Self-registration is not allowed for privileged administrative roles.');
+      const existingSuperAdmins = await this.userRepository.findAll({ role: UserRole.SUPER_ADMIN });
+      const existingAdmins = await this.userRepository.findAll({ role: UserRole.ADMIN });
+      const hasExistingAdmin = existingSuperAdmins.length > 0 || existingAdmins.length > 0;
+      if (hasExistingAdmin) {
+        throw new ForbiddenError('Self-registration is not allowed for privileged administrative roles.');
+      }
     }
 
     if (!dto.email?.trim() && !dto.phone?.trim()) {
@@ -678,5 +683,15 @@ export class AuthUseCases {
     }
 
     await this.userRepository.delete(userId);
+  }
+
+  public async getSetupStatus(): Promise<{ hasAdmin: boolean; totalUsers: number }> {
+    const superAdmins = await this.userRepository.findAll({ role: UserRole.SUPER_ADMIN });
+    const admins = await this.userRepository.findAll({ role: UserRole.ADMIN });
+    const allUsers = await this.userRepository.findAll();
+    return {
+      hasAdmin: superAdmins.length > 0 || admins.length > 0,
+      totalUsers: allUsers.length
+    };
   }
 }

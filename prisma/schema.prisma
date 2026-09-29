@@ -294,7 +294,7 @@ model FeeStructure {
   id             String   @id @default(uuid())
   schoolId       String
   academicYearId String
-  termId         String
+  termId         String?  @default("ALL")
   gradeLevel     String
   title          String
   items          Json

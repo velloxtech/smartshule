@@ -343,13 +343,12 @@ describe('WhatsApp Bot & Phone Counter-Checking Unit Tests', () => {
       expect(res.replyText).toContain('What time does the educational trip depart tomorrow?');
     });
 
-    it('rejects unregistered phone number with guidance and Admissions contact info', async () => {
+    it('ignores unregistered phone number and does not return any reply text', async () => {
       const res = await whatsAppService.handleInboundMessage('+254700000000', 'BALANCE');
 
       expect(res.intent).toBe('UNREGISTERED');
-      expect(res.replyText).toContain('could not find an enrolled student record');
-      expect(res.replyText).toContain('+254700000000');
-      expect(res.replyText).toContain('schoolgraceseeds@gmail.com');
+      expect(res.ignored).toBe(true);
+      expect(res.replyText).toBe('');
     });
 
     it('calculates total family balance across multiple children for one parent', async () => {
@@ -531,11 +530,12 @@ describe('WhatsApp Bot & Phone Counter-Checking Unit Tests', () => {
         expect(resMenu.replyText).not.toContain('FEES STATEMENT');
       });
 
-      it('rejects inbound message from unregistered phone number without calling Gemini AI', async () => {
+      it('ignores inbound message from unregistered phone number without calling Gemini AI', async () => {
         const res = await whatsAppService.handleInboundMessage('+254799999999', 'Balance', { useAI: true });
 
         expect(res.intent).toBe('UNREGISTERED');
-        expect(res.replyText).toContain('We could not find an enrolled student record linked to your phone number');
+        expect(res.ignored).toBe(true);
+        expect(res.replyText).toBe('');
       });
     });
   });

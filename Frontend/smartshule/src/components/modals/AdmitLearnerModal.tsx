@@ -797,18 +797,35 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
 
                 {matchedFeeStructure?.items && matchedFeeStructure.items.length > 0 ? (
                   <div className="space-y-1.5 bg-white/90 rounded-xl p-3 border border-amber-100 divide-y divide-slate-100">
-                    {matchedFeeStructure.items.map((item: any, idx: number) => (
-                      <div key={item.id || idx} className="flex items-center justify-between text-xs pt-1.5 first:pt-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
-                          <span className="font-medium text-slate-800">{item.name}</span>
-                          <span className="text-[10px] text-slate-400 uppercase font-mono">({item.category})</span>
+                    {matchedFeeStructure.items.map((item: any, idx: number) => {
+                      const itemT1 = item.termBreakdown?.term1 ?? item.termDivisions?.find((d: any) => d.termNumber === 1)?.amount;
+                      const itemT2 = item.termBreakdown?.term2 ?? item.termDivisions?.find((d: any) => d.termNumber === 2)?.amount;
+                      const itemT3 = item.termBreakdown?.term3 ?? item.termDivisions?.find((d: any) => d.termNumber === 3)?.amount;
+
+                      return (
+                        <div key={item.id || idx} className="text-xs pt-1.5 first:pt-0 space-y-0.5">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
+                              <span className="font-medium text-slate-800">{item.name}</span>
+                              <span className="text-[10px] text-slate-400 uppercase font-mono">({item.category})</span>
+                            </div>
+                            <span className="font-mono font-semibold text-slate-900">KES {Number(item.amount).toLocaleString()}</span>
+                          </div>
+                          {(itemT1 !== undefined || itemT2 !== undefined || itemT3 !== undefined) && (
+                            <div className="flex items-center gap-2 text-[10px] text-slate-500 font-mono pl-3">
+                              <span>T1: KES {Number(itemT1 || 0).toLocaleString()}</span>
+                              <span>•</span>
+                              <span>T2: KES {Number(itemT2 || 0).toLocaleString()}</span>
+                              <span>•</span>
+                              <span>T3: KES {Number(itemT3 || 0).toLocaleString()}</span>
+                            </div>
+                          )}
                         </div>
-                        <span className="font-mono font-semibold text-slate-900">KES {Number(item.amount).toLocaleString()}</span>
-                      </div>
-                    ))}
+                      );
+                    })}
                     <div className="flex items-center justify-between text-xs pt-2.5 font-bold text-amber-950 border-t border-amber-200">
-                      <span>Total Class Fee Structure (Invoiced in Full):</span>
+                      <span>Total Annual Fee Structure (Whole Year):</span>
                       <span className="font-mono text-sm text-[#7a1228]">KES {Number(totalFee).toLocaleString()}</span>
                     </div>
                   </div>

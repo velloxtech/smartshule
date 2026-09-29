@@ -23,7 +23,8 @@ import {
   RegisterStudentSchema,
   UpdateStudentSchema,
   PromoteStudentSchema,
-  BulkPromoteStudentsSchema
+  BulkPromoteStudentsSchema,
+  UpdateGuardianProfileSchema
 } from '../controllers/StudentController';
 
 import {
@@ -153,6 +154,7 @@ export function createApiRouter(container: AppContainer): Router {
   // 1. AUTH ROUTES
   // ==========================================
   const authRouter = Router();
+  authRouter.get('/setup-status', authController.getSetupStatus);
   authRouter.post('/register', validateBody(RegisterUserSchema), authController.register);
   authRouter.post('/login', validateBody(LoginUserSchema), authController.login);
   authRouter.post('/refresh', validateBody(RefreshTokenSchema), authController.refresh);
@@ -217,6 +219,7 @@ export function createApiRouter(container: AppContainer): Router {
   studentRouter.post('/promote-bulk', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.ADMISSIONS), validateBody(BulkPromoteStudentsSchema), studentController.promoteStudentsBulk);
   studentRouter.post('/:id/promote', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.ADMISSIONS), validateBody(PromoteStudentSchema), studentController.promoteStudent);
   studentRouter.get('/guardian/me', authMiddleware, studentController.getGuardianPortalData);
+  studentRouter.put('/guardian/me', authMiddleware, validateBody(UpdateGuardianProfileSchema), studentController.updateGuardianProfile);
   studentRouter.get('/', authMiddleware, studentController.listStudents);
   studentRouter.get('/:id', authMiddleware, studentController.getStudentById);
   studentRouter.put(

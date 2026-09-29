@@ -333,46 +333,66 @@ export class StudentUseCases {
           feeStructure = allStructures.find(fs => fs.gradeLevel === student.gradeLevel) || null;
         }
 
-        // If no fee structure exists for this grade in the DB, create a standard CBC fee structure so learner is billed in full
+        // If no fee structure exists for this grade in the DB, create an annual CBC fee structure with term divisions
         if (!feeStructure) {
           const isJSS = ['GRADE_7', 'GRADE_8', 'GRADE_9'].includes(student.gradeLevel);
           const isUpperPrimary = ['GRADE_4', 'GRADE_5', 'GRADE_6'].includes(student.gradeLevel);
           const isLowerPrimary = ['GRADE_1', 'GRADE_2', 'GRADE_3'].includes(student.gradeLevel);
 
           const gradeName = student.gradeLevel.replace('_', ' ');
-          const tuitionAmount = isJSS ? 25000 : (isUpperPrimary ? 18000 : (isLowerPrimary ? 15000 : 12000));
-          const assessmentAmount = isJSS ? 6000 : (isUpperPrimary ? 4000 : 3000);
-          const activityAmount = isJSS ? 2500 : 2000;
-          const admissionAmount = isJSS ? 5000 : 3500;
+          const tuitionAnnual = isJSS ? 60000 : (isUpperPrimary ? 45000 : (isLowerPrimary ? 36000 : 30000));
+          const assessmentAnnual = isJSS ? 15000 : (isUpperPrimary ? 10000 : (isLowerPrimary ? 8000 : 6000));
+          const activityAnnual = isJSS ? 6000 : (isUpperPrimary ? 5000 : (isLowerPrimary ? 4500 : 3500));
+          const admissionAnnual = isJSS ? 5000 : 3500;
 
-          const defaultItems = [
+          const defaultItems: FeeItem[] = [
             {
               id: IdGenerator.generate(),
               name: 'Tuition Fee',
-              amount: tuitionAmount,
-              category: 'TUITION' as const,
-              isOptional: false
+              amount: tuitionAnnual,
+              category: 'TUITION',
+              isOptional: false,
+              termBreakdown: {
+                term1: Math.round(tuitionAnnual * 0.4),
+                term2: Math.round(tuitionAnnual * 0.3),
+                term3: tuitionAnnual - Math.round(tuitionAnnual * 0.4) - Math.round(tuitionAnnual * 0.3)
+              }
             },
             {
               id: IdGenerator.generate(),
               name: isJSS ? 'CBC Assessment & Practical Science Kits' : 'CBC Assessment & Learning Materials',
-              amount: assessmentAmount,
-              category: 'ASSESSMENT' as const,
-              isOptional: false
+              amount: assessmentAnnual,
+              category: 'ASSESSMENT',
+              isOptional: false,
+              termBreakdown: {
+                term1: Math.round(assessmentAnnual * 0.4),
+                term2: Math.round(assessmentAnnual * 0.3),
+                term3: assessmentAnnual - Math.round(assessmentAnnual * 0.4) - Math.round(assessmentAnnual * 0.3)
+              }
             },
             {
               id: IdGenerator.generate(),
               name: 'Activity & Co-Curricular Levy',
-              amount: activityAmount,
-              category: 'ACTIVITY' as const,
-              isOptional: false
+              amount: activityAnnual,
+              category: 'ACTIVITY',
+              isOptional: false,
+              termBreakdown: {
+                term1: Math.round(activityAnnual * 0.4),
+                term2: Math.round(activityAnnual * 0.3),
+                term3: activityAnnual - Math.round(activityAnnual * 0.4) - Math.round(activityAnnual * 0.3)
+              }
             },
             {
               id: IdGenerator.generate(),
               name: 'Admission Fee',
-              amount: admissionAmount,
-              category: 'ADMISSION' as const,
-              isOptional: false
+              amount: admissionAnnual,
+              category: 'ADMISSION',
+              isOptional: false,
+              termBreakdown: {
+                term1: admissionAnnual,
+                term2: 0,
+                term3: 0
+              }
             }
           ];
 
@@ -380,9 +400,9 @@ export class StudentUseCases {
             {
               schoolId,
               academicYearId: academicYearId || 'year-2026',
-              termId: termId || 'term-2026-t1',
+              termId: 'ALL',
               gradeLevel: student.gradeLevel,
-              title: `${gradeName} Fee Structure`,
+              title: `${gradeName} Annual Fee Schedule`,
               items: defaultItems,
               dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
             },
@@ -1008,6 +1028,60 @@ export class StudentUseCases {
     };
   }
 
+  public async updateGuardianProfile(userId: string, dto: {
+    firstName?: string;
+    lastName?: string;
+    phone?: string;
+    email?: string;
+    nationalId?: string;
+    relationship?: GuardianRelationship;
+    emergencyContact?: string;
+    occupation?: string;
+  }) {
+    let guardian = await this.guardianRepository.findByUserId(userId);
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new NotFoundError('User', userId);
+    }
+
+    if (!guardian) {
+      const childIds = await this.getLinkedStudentIdsForUser(userId);
+      guardian = Guardian.create(
+        {
+          userId,
+          nationalId: dto.nationalId || '28475921',
+          relationship: dto.relationship || GuardianRelationship.MOTHER,
+          emergencyContact: dto.emergencyContact || dto.phone || user.phone || '+254777000777',
+          studentIds: childIds,
+          occupation: dto.occupation
+        },
+        IdGenerator.generate()
+      );
+      await this.guardianRepository.save(guardian);
+    } else {
+      guardian.updateDetails({
+        emergencyContact: dto.emergencyContact !== undefined ? dto.emergencyContact : guardian.emergencyContact,
+        nationalId: dto.nationalId !== undefined ? dto.nationalId : guardian.nationalId,
+        occupation: dto.occupation !== undefined ? dto.occupation : guardian.occupation,
+        relationship: dto.relationship !== undefined ? dto.relationship : guardian.relationship
+      });
+      await this.guardianRepository.update(guardian);
+    }
+
+    user.updateProfile(
+      dto.firstName !== undefined ? dto.firstName.trim() : user.firstName,
+      dto.lastName !== undefined ? dto.lastName.trim() : user.lastName,
+      dto.phone !== undefined ? dto.phone.trim() : user.phone
+    );
+    if (dto.email !== undefined) {
+      const cleanEmail = dto.email && dto.email.trim() ? dto.email.trim().toLowerCase() : undefined;
+      user.updateEmail(cleanEmail);
+    }
+    await this.userRepository.update(user);
+
+    return this.getGuardianPortalData(userId);
+  }
+
   public async promoteStudent(studentId: string, dto: PromoteStudentDTO = {}) {
     const student = await this.studentRepository.findById(studentId);
     if (!student) {
@@ -1083,39 +1157,59 @@ export class StudentUseCases {
           const isLowerPrimary = ['GRADE_1', 'GRADE_2', 'GRADE_3'].includes(nextGrade);
 
           const gradeName = nextGrade.replace('_', ' ');
-          const tuitionAmount = isJSS ? 25000 : (isUpperPrimary ? 18000 : (isLowerPrimary ? 15000 : 12000));
-          const assessmentAmount = isJSS ? 6000 : (isUpperPrimary ? 4000 : 3000);
-          const activityAmount = isJSS ? 2500 : 2000;
-          const admissionAmount = isJSS ? 5000 : 3500;
+          const tuitionAnnual = isJSS ? 60000 : (isUpperPrimary ? 45000 : (isLowerPrimary ? 36000 : 30000));
+          const assessmentAnnual = isJSS ? 15000 : (isUpperPrimary ? 10000 : (isLowerPrimary ? 8000 : 6000));
+          const activityAnnual = isJSS ? 6000 : (isUpperPrimary ? 5000 : (isLowerPrimary ? 4500 : 3500));
+          const admissionAnnual = isJSS ? 5000 : 3500;
 
           const defaultItems: FeeItem[] = [
             {
               id: IdGenerator.generate(),
               name: 'Tuition Fee',
-              amount: tuitionAmount,
+              amount: tuitionAnnual,
               category: 'TUITION',
-              isOptional: false
+              isOptional: false,
+              termBreakdown: {
+                term1: Math.round(tuitionAnnual * 0.4),
+                term2: Math.round(tuitionAnnual * 0.3),
+                term3: tuitionAnnual - Math.round(tuitionAnnual * 0.4) - Math.round(tuitionAnnual * 0.3)
+              }
             },
             {
               id: IdGenerator.generate(),
               name: isJSS ? 'CBC Assessment & Practical Science Kits' : 'CBC Assessment & Learning Materials',
-              amount: assessmentAmount,
+              amount: assessmentAnnual,
               category: 'ASSESSMENT',
-              isOptional: false
+              isOptional: false,
+              termBreakdown: {
+                term1: Math.round(assessmentAnnual * 0.4),
+                term2: Math.round(assessmentAnnual * 0.3),
+                term3: assessmentAnnual - Math.round(assessmentAnnual * 0.4) - Math.round(assessmentAnnual * 0.3)
+              }
             },
             {
               id: IdGenerator.generate(),
               name: 'Activity & Co-Curricular Levy',
-              amount: activityAmount,
+              amount: activityAnnual,
               category: 'ACTIVITY',
-              isOptional: false
+              isOptional: false,
+              termBreakdown: {
+                term1: Math.round(activityAnnual * 0.4),
+                term2: Math.round(activityAnnual * 0.3),
+                term3: activityAnnual - Math.round(activityAnnual * 0.4) - Math.round(activityAnnual * 0.3)
+              }
             },
             {
               id: IdGenerator.generate(),
               name: 'Admission Fee',
-              amount: admissionAmount,
+              amount: admissionAnnual,
               category: 'ADMISSION',
-              isOptional: false
+              isOptional: false,
+              termBreakdown: {
+                term1: admissionAnnual,
+                term2: 0,
+                term3: 0
+              }
             }
           ];
 
@@ -1123,9 +1217,9 @@ export class StudentUseCases {
             {
               schoolId: student.schoolId,
               academicYearId: targetAcademicYearId,
-              termId: targetTermId,
+              termId: 'ALL',
               gradeLevel: nextGrade as CbcGradeLevel,
-              title: `${gradeName} Fee Structure`,
+              title: `${gradeName} Annual Fee Schedule`,
               items: defaultItems,
               dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
             },

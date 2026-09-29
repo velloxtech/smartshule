@@ -25,7 +25,8 @@ export type TabType =
   | 'user-management'
   | 'system-logs'
   | 'complaints'
-  | 'lunch-fee-management';
+  | 'lunch-fee-management'
+  | 'parent-profile';
 
 export type SystemLogLevel = 'INFO' | 'WARN' | 'ERROR' | 'AUDIT';
 export type SystemLogCategory =
@@ -544,26 +545,62 @@ export interface AttendanceRegister {
   entries: AttendanceEntry[];
 }
 
-export interface FeeItem {
-  id: string;
-  name: string;
+export interface FeeItemTermDivision {
+  termId?: string;
+  termNumber: number; // 1, 2, 3
+  termName: string;   // "Term 1", "Term 2", "Term 3"
   amount: number;
+  percentage?: number;
+}
+
+export interface FeeItemTermBreakdown {
+  term1?: number;
+  term2?: number;
+  term3?: number;
+  [key: string]: number | undefined;
+}
+
+export interface FeeItem {
+  id?: string;
+  name: string;
+  amount: number; // Total annual amount (sum of term divisions)
   category: 'TUITION' | 'ASSESSMENT' | 'ACTIVITY' | 'BOARDING' | 'MEALS' | 'TRANSPORT' | 'ADMISSION' | 'OTHER';
   isOptional: boolean;
+  termBreakdown?: FeeItemTermBreakdown;
+  termDivisions?: FeeItemTermDivision[];
+  termPercentages?: {
+    term1?: number;
+    term2?: number;
+    term3?: number;
+  };
 }
 
 export interface FeeStructure {
   id: string;
   schoolId: string;
   academicYearId: string;
-  termId: string;
+  termId?: string;
   gradeLevel: string;
   title: string;
   items: FeeItem[];
   totalAmount: number;
+  term1Total?: number;
+  term2Total?: number;
+  term3Total?: number;
+  termBreakdown?: {
+    term1: number;
+    term2: number;
+    term3: number;
+  };
+  termPercentages?: {
+    term1?: number;
+    term2?: number;
+    term3?: number;
+  };
   mandatoryAmount: number;
   dueDate: string;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface StudentInvoice {

@@ -88,6 +88,18 @@ export class AuthController {
     private readonly systemLogUseCases?: SystemLogUseCases
   ) {}
 
+  public getSetupStatus = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const status = await this.authUseCases.getSetupStatus();
+      return res.status(200).json({
+        success: true,
+        data: status
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
   public register = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const result = await this.authUseCases.register(req.body);

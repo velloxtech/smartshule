@@ -13,16 +13,40 @@ import { AuthenticatedRequest } from '../middlewares/authMiddleware';
 export const CreateFeeStructureSchema = z.object({
   schoolId: z.string().min(1),
   academicYearId: z.string().min(1),
-  termId: z.string().min(1),
+  termId: z.string().optional().default('ALL'),
   gradeLevel: z.nativeEnum(CbcGradeLevel),
   title: z.string().min(1),
   dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  termPercentages: z.object({
+    term1: z.number().nonnegative().optional(),
+    term2: z.number().nonnegative().optional(),
+    term3: z.number().nonnegative().optional(),
+  }).passthrough().optional(),
   items: z.array(
     z.object({
       name: z.string().min(1),
-      amount: z.number().positive(),
+      amount: z.number().nonnegative().optional(),
       isOptional: z.boolean().default(false),
-      category: z.enum(['TUITION', 'ASSESSMENT', 'ACTIVITY', 'BOARDING', 'MEALS', 'TRANSPORT', 'ADMISSION', 'OTHER'])
+      category: z.enum(['TUITION', 'ASSESSMENT', 'ACTIVITY', 'BOARDING', 'MEALS', 'TRANSPORT', 'ADMISSION', 'OTHER']),
+      termBreakdown: z.object({
+        term1: z.number().nonnegative().optional().default(0),
+        term2: z.number().nonnegative().optional().default(0),
+        term3: z.number().nonnegative().optional().default(0),
+      }).passthrough().optional(),
+      termPercentages: z.object({
+        term1: z.number().nonnegative().optional(),
+        term2: z.number().nonnegative().optional(),
+        term3: z.number().nonnegative().optional(),
+      }).passthrough().optional(),
+      termDivisions: z.array(
+        z.object({
+          termId: z.string().optional(),
+          termNumber: z.number(),
+          termName: z.string(),
+          amount: z.number().nonnegative().optional(),
+          percentage: z.number().nonnegative().optional()
+        })
+      ).optional()
     })
   ).min(1)
 });
@@ -47,12 +71,17 @@ export const RecordPaymentSchema = z.object({
   invoiceId: z.string().min(1),
   amount: z.number().positive(),
   paymentMethod: z.nativeEnum(PaymentMethod),
-  transactionReference: z.string().min(1),
+  transactionReference: z.string().optional(),
   mpesaPhoneNumber: z.string().optional(),
   paymentDate: z.string().optional(),
   recordedByUserId: z.string().min(1),
-  notes: z.string().optional()
-});
+  notes: z.string().optional(),
+  bankName: z.string().optional(),
+  bankBranch: z.string().optional(),
+  slipNumber: z.string().optional(),
+  depositorName: z.string().optional(),
+  receivedFrom: z.string().optional()
+}).passthrough();
 
 export const MpesaStkPushSchema = z.object({
   invoiceId: z.string().min(1),

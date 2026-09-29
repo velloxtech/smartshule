@@ -25,28 +25,141 @@ export enum InvoiceStatus {
   CARRIED_FORWARD = 'CARRIED_FORWARD'
 }
 
+export interface FeeItemTermDivision {
+  termId?: string;
+  termNumber: number; // 1, 2, 3
+  termName: string;   // e.g. "Term 1", "Term 2", "Term 3"
+  amount: number;
+  percentage?: number; // e.g. 50, 30, 20
+}
+
+export interface FeeItemTermBreakdown {
+  term1?: number;
+  term2?: number;
+  term3?: number;
+  [key: string]: number | undefined;
+}
+
+export interface FeeItemTermPercentages {
+  term1?: number; // percentage for Term 1 e.g. 50
+  term2?: number; // percentage for Term 2 e.g. 30
+  term3?: number; // percentage for Term 3 e.g. 20
+  [key: string]: number | undefined;
+}
+
 export interface FeeItem {
   id: string;
   name: string; // e.g. "Tuition", "CBC Assessment & Practical Material", "Activity & Games", "Admission Fee"
-  amount: number;
+  amount: number; // Whole year full amount (constituted by term divisions)
   isOptional: boolean;
   category: 'TUITION' | 'ASSESSMENT' | 'ACTIVITY' | 'BOARDING' | 'MEALS' | 'TRANSPORT' | 'ADMISSION' | 'OTHER';
+  termBreakdown?: FeeItemTermBreakdown;
+  termPercentages?: FeeItemTermPercentages;
+  termDivisions?: FeeItemTermDivision[];
 }
 
 // 1. Fee Structure Entity
 export interface FeeStructureProps {
   schoolId: string;
   academicYearId: string;
-  termId: string;
+  termId?: string; // 'ALL' or specific term ID
   gradeLevel: CbcGradeLevel;
   title: string;
   items: FeeItem[];
   dueDate: string;
+  termPercentages?: FeeItemTermPercentages;
 }
 
 export class FeeStructure extends Entity<FeeStructureProps> {
   public static create(props: FeeStructureProps, id: string, createdAt?: Date, updatedAt?: Date): FeeStructure {
-    return new FeeStructure(props, id, createdAt, updatedAt);
+    const normalizedItems: FeeItem[] = (props.items || []).map(item => {
+      let t1 = item.termBreakdown?.term1;
+      let t2 = item.termBreakdown?.term2;
+      let t3 = item.termBreakdown?.term3;
+
+      let p1 = item.termPercentages?.term1;
+      let p2 = item.termPercentages?.term2;
+      let p3 = item.termPercentages?.term3;
+
+      if (item.termDivisions && item.termDivisions.length > 0) {
+        const d1 = item.termDivisions.find(d => d.termNumber === 1);
+        const d2 = item.termDivisions.find(d => d.termNumber === 2);
+        const d3 = item.termDivisions.find(d => d.termNumber === 3);
+
+        if (t1 === undefined && d1?.amount !== undefined) t1 = d1.amount;
+        if (t2 === undefined && d2?.amount !== undefined) t2 = d2.amount;
+        if (t3 === undefined && d3?.amount !== undefined) t3 = d3.amount;
+
+        if (p1 === undefined && d1?.percentage !== undefined) p1 = d1.percentage;
+        if (p2 === undefined && d2?.percentage !== undefined) p2 = d2.percentage;
+        if (p3 === undefined && d3?.percentage !== undefined) p3 = d3.percentage;
+      }
+
+      // If global structure percentages were supplied on props and item has none:
+      if (p1 === undefined && p2 === undefined && p3 === undefined && props.termPercentages) {
+        p1 = props.termPercentages.term1;
+        p2 = props.termPercentages.term2;
+        p3 = props.termPercentages.term3;
+      }
+
+      const rawItemAmount = Number(item.amount) || 0;
+
+      // If percentages are defined with an item amount but term amounts were not given:
+      if (rawItemAmount > 0 && (t1 === undefined && t2 === undefined && t3 === undefined) && (p1 !== undefined || p2 !== undefined || p3 !== undefined)) {
+        const pct1 = Number(p1) || 0;
+        const pct2 = Number(p2) || 0;
+        t1 = Math.round((rawItemAmount * pct1) / 100);
+        t2 = Math.round((rawItemAmount * pct2) / 100);
+        t3 = Math.max(0, rawItemAmount - t1 - t2);
+      }
+
+      // If term amounts are defined, the annual amount is their exact sum
+      const termSum = (Number(t1) || 0) + (Number(t2) || 0) + (Number(t3) || 0);
+      const totalAmount = termSum > 0 ? termSum : rawItemAmount;
+
+      // Distribute evenly if no term breakdown was provided for legacy items
+      const termBreakdown: FeeItemTermBreakdown = {
+        term1: t1 !== undefined ? Number(t1) : Math.round(totalAmount / 3),
+        term2: t2 !== undefined ? Number(t2) : Math.round(totalAmount / 3),
+        term3: t3 !== undefined ? Number(t3) : Math.max(0, totalAmount - (Math.round(totalAmount / 3) * 2))
+      };
+
+      // Calculate term percentages
+      const calcP1 = totalAmount > 0 ? Number(((termBreakdown.term1! / totalAmount) * 100).toFixed(1)) : (p1 ?? 0);
+      const calcP2 = totalAmount > 0 ? Number(((termBreakdown.term2! / totalAmount) * 100).toFixed(1)) : (p2 ?? 0);
+      const calcP3 = totalAmount > 0 ? Number(((termBreakdown.term3! / totalAmount) * 100).toFixed(1)) : (p3 ?? 0);
+
+      const termPercentages: FeeItemTermPercentages = {
+        term1: calcP1,
+        term2: calcP2,
+        term3: calcP3
+      };
+
+      const termDivisions: FeeItemTermDivision[] = [
+        { termNumber: 1, termName: 'Term 1', amount: termBreakdown.term1 || 0, percentage: calcP1 },
+        { termNumber: 2, termName: 'Term 2', amount: termBreakdown.term2 || 0, percentage: calcP2 },
+        { termNumber: 3, termName: 'Term 3', amount: termBreakdown.term3 || 0, percentage: calcP3 }
+      ];
+
+      return {
+        ...item,
+        amount: totalAmount,
+        termBreakdown,
+        termPercentages,
+        termDivisions
+      };
+    });
+
+    return new FeeStructure(
+      {
+        ...props,
+        termId: props.termId || 'ALL',
+        items: normalizedItems
+      },
+      id,
+      createdAt,
+      updatedAt
+    );
   }
 
   public get schoolId(): string {
@@ -58,7 +171,7 @@ export class FeeStructure extends Entity<FeeStructureProps> {
   }
 
   public get termId(): string {
-    return this._props.termId;
+    return this._props.termId || 'ALL';
   }
 
   public get gradeLevel(): CbcGradeLevel {
@@ -74,15 +187,60 @@ export class FeeStructure extends Entity<FeeStructureProps> {
   }
 
   public get totalAmount(): number {
-    return this._props.items.reduce((sum, item) => sum + item.amount, 0);
+    return this._props.items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+  }
+
+  public get term1Total(): number {
+    return this._props.items.reduce((sum, item) => {
+      if (item.termBreakdown?.term1 !== undefined) return sum + (Number(item.termBreakdown.term1) || 0);
+      const div = item.termDivisions?.find(d => d.termNumber === 1);
+      return sum + (div ? Number(div.amount) || 0 : (Number(item.amount) || 0) / 3);
+    }, 0);
+  }
+
+  public get term2Total(): number {
+    return this._props.items.reduce((sum, item) => {
+      if (item.termBreakdown?.term2 !== undefined) return sum + (Number(item.termBreakdown.term2) || 0);
+      const div = item.termDivisions?.find(d => d.termNumber === 2);
+      return sum + (div ? Number(div.amount) || 0 : (Number(item.amount) || 0) / 3);
+    }, 0);
+  }
+
+  public get term3Total(): number {
+    return this._props.items.reduce((sum, item) => {
+      if (item.termBreakdown?.term3 !== undefined) return sum + (Number(item.termBreakdown.term3) || 0);
+      const div = item.termDivisions?.find(d => d.termNumber === 3);
+      return sum + (div ? Number(div.amount) || 0 : (Number(item.amount) || 0) / 3);
+    }, 0);
+  }
+
+  public get termBreakdown(): { term1: number; term2: number; term3: number } {
+    return {
+      term1: this.term1Total,
+      term2: this.term2Total,
+      term3: this.term3Total
+    };
   }
 
   public get mandatoryAmount(): number {
-    return this._props.items.filter(i => !i.isOptional).reduce((sum, item) => sum + item.amount, 0);
+    return this._props.items.filter(i => !i.isOptional).reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
   }
 
   public get dueDate(): string {
     return this._props.dueDate;
+  }
+
+  public get termPercentages(): { term1: number; term2: number; term3: number } {
+    const total = this.totalAmount;
+    if (total <= 0) return { term1: 0, term2: 0, term3: 0 };
+    const p1 = Number(((this.term1Total / total) * 100).toFixed(1));
+    const p2 = Number(((this.term2Total / total) * 100).toFixed(1));
+    const p3 = Number((100 - p1 - p2).toFixed(1));
+    return {
+      term1: p1,
+      term2: p2,
+      term3: Math.max(0, p3)
+    };
   }
 
   public toJSON() {
@@ -95,6 +253,11 @@ export class FeeStructure extends Entity<FeeStructureProps> {
       title: this.title,
       items: this.items,
       totalAmount: this.totalAmount,
+      term1Total: this.term1Total,
+      term2Total: this.term2Total,
+      term3Total: this.term3Total,
+      termBreakdown: this.termBreakdown,
+      termPercentages: this.termPercentages,
       mandatoryAmount: this.mandatoryAmount,
       dueDate: this.dueDate,
       createdAt: this.createdAt,

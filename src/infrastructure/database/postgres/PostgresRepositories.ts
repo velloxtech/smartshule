@@ -354,7 +354,7 @@ export class PostgresDatabaseInitializer {
         id VARCHAR(100) PRIMARY KEY,
         school_id VARCHAR(100) NOT NULL,
         academic_year_id VARCHAR(100) NOT NULL,
-        term_id VARCHAR(100) NOT NULL,
+        term_id VARCHAR(100) DEFAULT 'ALL',
         grade_level VARCHAR(50) NOT NULL,
         title VARCHAR(255) NOT NULL,
         items JSONB NOT NULL,
@@ -362,6 +362,11 @@ export class PostgresDatabaseInitializer {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+      DO $$ BEGIN
+        ALTER TABLE fee_structures ALTER COLUMN term_id DROP NOT NULL;
+        ALTER TABLE fee_structures DROP CONSTRAINT IF EXISTS fk_fee_structures_term;
+      EXCEPTION WHEN OTHERS THEN NULL;
+      END $$;
 
       CREATE TABLE IF NOT EXISTS student_invoices (
         id VARCHAR(100) PRIMARY KEY,
@@ -1481,23 +1486,53 @@ export class PostgresFeeRepository implements IFeeRepository {
     const res = await this.pool.query('SELECT * FROM fee_structures WHERE id = $1', [id]);
     if (!res.rows.length) return null;
     const r = res.rows[0];
-    return FeeStructure.create({ schoolId: r.school_id, academicYearId: r.academic_year_id, termId: r.term_id, gradeLevel: r.grade_level, title: r.title, items: typeof r.items === 'string' ? JSON.parse(r.items) : r.items, dueDate: r.due_date }, r.id, r.created_at, r.updated_at);
+    return FeeStructure.create({ schoolId: r.school_id, academicYearId: r.academic_year_id, termId: r.term_id || 'ALL', gradeLevel: r.grade_level, title: r.title, items: typeof r.items === 'string' ? JSON.parse(r.items) : r.items, dueDate: r.due_date }, r.id, r.created_at, r.updated_at);
   }
   public async findFeeStructure(gradeLevel: CbcGradeLevel, termId: string, academicYearId: string): Promise<FeeStructure | null> {
-    const res = await this.pool.query('SELECT * FROM fee_structures WHERE grade_level = $1 AND term_id = $2 AND academic_year_id = $3 LIMIT 1', [gradeLevel, termId, academicYearId]);
-    if (!res.rows.length) return null;
-    const r = res.rows[0];
-    return FeeStructure.create({ schoolId: r.school_id, academicYearId: r.academic_year_id, termId: r.term_id, gradeLevel: r.grade_level, title: r.title, items: typeof r.items === 'string' ? JSON.parse(r.items) : r.items, dueDate: r.due_date }, r.id, r.created_at, r.updated_at);
+    const res = await this.pool.query(
+      `SELECT * FROM fee_structures 
+       WHERE grade_level = $1 AND academic_year_id = $2 
+       AND (term_id = $3 OR term_id = 'ALL' OR term_id = 'ANNUAL' OR term_id IS NULL)
+       ORDER BY CASE WHEN term_id = $3 THEN 1 WHEN term_id = 'ALL' OR term_id = 'ANNUAL' OR term_id IS NULL THEN 2 ELSE 3 END, created_at DESC 
+       LIMIT 1`,
+      [gradeLevel, academicYearId, termId]
+    );
+    if (res.rows.length) {
+      const r = res.rows[0];
+      return FeeStructure.create({ schoolId: r.school_id, academicYearId: r.academic_year_id, termId: r.term_id || 'ALL', gradeLevel: r.grade_level, title: r.title, items: typeof r.items === 'string' ? JSON.parse(r.items) : r.items, dueDate: r.due_date }, r.id, r.created_at, r.updated_at);
+    }
+    // Fallback: check by grade_level and academic_year_id
+    const fallbackRes = await this.pool.query(
+      'SELECT * FROM fee_structures WHERE grade_level = $1 AND academic_year_id = $2 ORDER BY created_at DESC LIMIT 1',
+      [gradeLevel, academicYearId]
+    );
+    if (fallbackRes.rows.length) {
+      const r = fallbackRes.rows[0];
+      return FeeStructure.create({ schoolId: r.school_id, academicYearId: r.academic_year_id, termId: r.term_id || 'ALL', gradeLevel: r.grade_level, title: r.title, items: typeof r.items === 'string' ? JSON.parse(r.items) : r.items, dueDate: r.due_date }, r.id, r.created_at, r.updated_at);
+    }
+    // Fallback: check by grade_level alone
+    const gradeRes = await this.pool.query(
+      'SELECT * FROM fee_structures WHERE grade_level = $1 ORDER BY created_at DESC LIMIT 1',
+      [gradeLevel]
+    );
+    if (gradeRes.rows.length) {
+      const r = gradeRes.rows[0];
+      return FeeStructure.create({ schoolId: r.school_id, academicYearId: r.academic_year_id, termId: r.term_id || 'ALL', gradeLevel: r.grade_level, title: r.title, items: typeof r.items === 'string' ? JSON.parse(r.items) : r.items, dueDate: r.due_date }, r.id, r.created_at, r.updated_at);
+    }
+    return null;
   }
   public async findAllFeeStructures(schoolId?: string): Promise<FeeStructure[]> {
-    const res = await this.pool.query('SELECT * FROM fee_structures');
-    return res.rows.map(r => FeeStructure.create({ schoolId: r.school_id, academicYearId: r.academic_year_id, termId: r.term_id, gradeLevel: r.grade_level, title: r.title, items: typeof r.items === 'string' ? JSON.parse(r.items) : r.items, dueDate: r.due_date }, r.id, r.created_at, r.updated_at));
+    const res = schoolId
+      ? await this.pool.query('SELECT * FROM fee_structures WHERE school_id = $1 ORDER BY created_at DESC', [schoolId])
+      : await this.pool.query('SELECT * FROM fee_structures ORDER BY created_at DESC');
+    return res.rows.map(r => FeeStructure.create({ schoolId: r.school_id, academicYearId: r.academic_year_id, termId: r.term_id || 'ALL', gradeLevel: r.grade_level, title: r.title, items: typeof r.items === 'string' ? JSON.parse(r.items) : r.items, dueDate: r.due_date }, r.id, r.created_at, r.updated_at));
   }
   public async saveFeeStructure(fs: FeeStructure): Promise<void> {
     const q = `INSERT INTO fee_structures (id, school_id, academic_year_id, term_id, grade_level, title, items, due_date, created_at, updated_at)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-               ON CONFLICT (id) DO UPDATE SET items = EXCLUDED.items, updated_at = NOW()`;
-    await this.pool.query(q, [fs.id, fs.schoolId, fs.academicYearId, fs.termId, fs.gradeLevel, fs.title, JSON.stringify(fs.items), fs.dueDate, fs.createdAt, fs.updatedAt]);
+               ON CONFLICT (id) DO UPDATE SET items = EXCLUDED.items, title = EXCLUDED.title, due_date = EXCLUDED.due_date, updated_at = NOW()`;
+    const termVal = fs.termId && fs.termId !== 'ALL' && fs.termId !== 'ANNUAL' ? fs.termId : null;
+    await this.pool.query(q, [fs.id, fs.schoolId, fs.academicYearId, termVal, fs.gradeLevel, fs.title, JSON.stringify(fs.items), fs.dueDate, fs.createdAt, fs.updatedAt]);
   }
   public async updateFeeStructure(fs: FeeStructure): Promise<void> { await this.saveFeeStructure(fs); }
   public async deleteFeeStructure(id: string): Promise<void> {
