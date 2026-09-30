@@ -592,8 +592,8 @@ export class WhatsAppService {
       `• *Account Name:* ${school.name} - ${admissionNo}\n` +
       `• *Account No:* 1234567890\n\n` +
       `📱 *M-Pesa Paybill Option:*\n` +
-      `• *Business No / Paybill:* 522123\n` +
-      `• *Account No:* ${admissionNo}\n` +
+      `• *Business No / Paybill:* 522533\n` +
+      `• *Account No:* 8048859#${student.fullName}${student.gradeLevel ? ' ' + student.gradeLevel : ''}\n` +
       `• *Amount:* ${balance > 0 ? balance : 1000}\n\n` +
       `🔗 *Or click here for online payment (Card / M-Pesa / Bank):*\n` +
       `${payLink}\n\n` +
@@ -1104,7 +1104,7 @@ export class WhatsAppService {
       totalPaid: 0,
       balance: 0,
       paymentUrl: `https://pay.smartshule.ac.ke/pay/${student.admissionNumber}`,
-      kcbAccount: `522123 (Ref: ${student.admissionNumber})`,
+      kcbAccount: `522533 (Acc: 8048859#${student.fullName}${student.gradeLevel ? ' ' + student.gradeLevel : ''})`,
       dueDate: '2026-01-31',
     };
 

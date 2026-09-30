@@ -125,8 +125,9 @@ export class GeminiService {
     const admNo = student.admissionNumber;
     const grade = student.gradeLevel;
 
+    const childAcc = `8048859#${learnerName}${grade ? ' ' + grade : ''}`;
     const feeText = feeSummary
-      ? `Outstanding Balance: KES ${feeSummary.balance.toLocaleString()} (Total Billed: KES ${feeSummary.totalBilled.toLocaleString()}, Paid: KES ${feeSummary.totalPaid.toLocaleString()}). KCB Bank Paybill: ${feeSummary.kcbAccount || '522123 (Ref: ' + admNo + ')'}. Online Payment: ${feeSummary.paymentUrl || 'https://pay.smartshule.ac.ke/fees/' + admNo}.`
+      ? `Outstanding Balance: KES ${feeSummary.balance.toLocaleString()} (Total Billed: KES ${feeSummary.totalBilled.toLocaleString()}, Paid: KES ${feeSummary.totalPaid.toLocaleString()}). KCB Bank Paybill: ${feeSummary.kcbAccount || '522533 (Acc: ' + childAcc + ')'}. Online Payment: ${feeSummary.paymentUrl || 'https://pay.smartshule.ac.ke/fees/' + admNo}.`
       : 'Fee details not requested or not available.';
 
     const attendanceText = attendanceSummary
@@ -255,7 +256,7 @@ MANDATORY RULES:
         `💰 *Current Outstanding Balance:* KES *${bal}*\n\n` +
         `💳 *Payment Options:*\n` +
         `• *Online Payment (Card / Bank):* ${paymentLink}\n` +
-        `• *KCB / M-Pesa Paybill:* 522123 (Acc: *${adm}*)\n\n` +
+        `• *KCB / M-Pesa Paybill:* 522533 (Acc: *8048859#${learner}${student.gradeLevel ? ' ' + student.gradeLevel : ''}*)\n\n` +
         `Kindly settle the outstanding amount or reach out to our accounts desk.\n\n` +
         `Warm regards,\n` +
         `*${schoolName} Accounts Desk*\n` +

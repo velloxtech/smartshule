@@ -821,7 +821,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </h2>
               </div>
               <p className="font-label-md text-label-md text-on-surface-variant mt-0.5">
-                Automated KCB Buni M-Pesa Express & Bank Rail (Paybill 522123)
+                Automated KCB Buni M-Pesa Express & Bank Rail (Paybill 522533)
               </p>
             </div>
             <div className="flex items-center gap-xs">

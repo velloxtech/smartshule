@@ -136,7 +136,7 @@ export function createApiRouter(container: AppContainer): Router {
   const studentController = new StudentController(container.studentUseCases, container.systemLogUseCases);
   const teacherController = new TeacherController(container.teacherUseCases);
   const academicController = new AcademicController(container.academicUseCases);
-  const cbcController = new CbcAssessmentController(container.cbcUseCases);
+  const cbcController = new CbcAssessmentController(container.cbcUseCases, container.systemLogUseCases);
   const curriculumController = new CurriculumPlanController(container.curriculumUseCases);
   const recordOfWorkController = new RecordOfWorkController(container.recordOfWorkUseCases);
   const timetableController = new TimetableController(container.timetableUseCases);

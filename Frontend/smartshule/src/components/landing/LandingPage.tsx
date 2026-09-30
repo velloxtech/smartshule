@@ -144,7 +144,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
             <p className="mt-6 text-lg sm:text-xl text-slate-600 leading-relaxed">
               Unified institutional software integrating formative competency rubrics (EE, ME, AE, BE),
-              KCB Buni M-Pesa Express & Paybill 522123 billing, pedagogical lesson planning, and continuous assessment reporting.
+              KCB Buni M-Pesa Express & Paybill 522533 billing, pedagogical lesson planning, and continuous assessment reporting.
             </p>
 
             <div className="mt-9 flex flex-col sm:flex-row items-center justify-center gap-4">

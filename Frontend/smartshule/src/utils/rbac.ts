@@ -235,6 +235,22 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
     group: 'Finance & Billing',
     items: [
       {
+        id: 'student-fee-search',
+        label: 'Student Fee Checker',
+        icon: 'person_search',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.HEAD_TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
+          UserRole.BURSAR,
+          UserRole.ACCOUNTANT,
+          UserRole.ADMISSIONS,
+          UserRole.TEACHER,
+        ],
+      },
+      {
         id: 'cashflow-ledger',
         label: 'Cash Flow & Ledger (In/Out)',
         icon: 'account_balance_wallet',

@@ -166,6 +166,81 @@ describe('System Logs & Audit Trail Integration Tests', () => {
       expect(payLog.level).toBe('AUDIT');
       expect(payLog.details).toContain('2500');
     });
+
+    it('records a MARKS_UPLOADED audit event when teacher uploads summative marks', async () => {
+      const marksRes = await request(app)
+        .post('/api/v1/cbc/summative')
+        .set('Authorization', `Bearer ${teacherToken}`)
+        .send({
+          studentId: 'student-001',
+          teacherId: 'teacher-001',
+          learningAreaId: 'la-science-7',
+          termId: 'term-2026-1',
+          academicYearId: 'year-2026',
+          strandScores: [
+            {
+              strandId: 'strand-scie-01',
+              performanceLevel: 'EE',
+              rawScore: 92,
+              maxScore: 100
+            }
+          ],
+          overallPerformanceLevel: 'EE',
+          teacherRemarks: 'Excellent performance in scientific enquiry.',
+          evaluationDate: '2026-03-25'
+        });
+      expect(marksRes.status).toBe(201);
+
+      // Verify audit log in ACADEMICS category
+      const res = await request(app)
+        .get('/api/v1/system-logs?category=ACADEMICS&action=MARKS_UPLOADED')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.length).toBeGreaterThan(0);
+      const markLog = res.body.data.find((l: any) => l.action === 'MARKS_UPLOADED' && l.metadata?.studentId === 'student-001');
+      expect(markLog).toBeDefined();
+      expect(markLog.category).toBe('ACADEMICS');
+      expect(markLog.level).toBe('AUDIT');
+      expect(markLog.status).toBe('SUCCESS');
+      expect(markLog.details).toContain('student-001');
+      expect(markLog.details).toContain('EE');
+      expect(markLog.details).toContain('92/100');
+    });
+
+    it('records a MARKS_UPLOADED audit event when teacher records formative assessment marks', async () => {
+      const formativeRes = await request(app)
+        .post('/api/v1/cbc/formative')
+        .set('Authorization', `Bearer ${teacherToken}`)
+        .send({
+          studentId: 'student-001',
+          teacherId: 'teacher-001',
+          learningAreaId: 'la-science-7',
+          subStrandId: 'substrand-scie-01',
+          termId: 'term-2026-1',
+          academicYearId: 'year-2026',
+          assessmentDate: '2026-03-26',
+          assessmentMethod: 'OBSERVATION',
+          performanceLevel: 'ME',
+          specificOutcomeTested: 'Observing cellular structure under microscope',
+          teacherRemarks: 'Successfully prepared and focused slides.',
+          targetedCompetencies: ['CRITICAL_THINKING_AND_PROBLEM_SOLVING'],
+          valuesObserved: ['RESPECT']
+        });
+      expect(formativeRes.status).toBe(201);
+
+      // Verify audit log in ACADEMICS category
+      const res = await request(app)
+        .get('/api/v1/system-logs?category=ACADEMICS&search=microscope')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.length).toBeGreaterThan(0);
+      const formLog = res.body.data[0];
+      expect(formLog.category).toBe('ACADEMICS');
+      expect(formLog.status).toBe('SUCCESS');
+      expect(formLog.details).toContain('Observing cellular structure under microscope');
+    });
   });
 
   describe('3. Filtering & Search', () => {
@@ -178,6 +253,18 @@ describe('System Logs & Audit Trail Integration Tests', () => {
       expect(res.body.data.length).toBeGreaterThan(0);
       for (const log of res.body.data) {
         expect(log.category).toBe('AUTH');
+      }
+    });
+
+    it('filters logs by category=ACADEMICS', async () => {
+      const res = await request(app)
+        .get('/api/v1/system-logs?category=ACADEMICS')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.length).toBeGreaterThan(0);
+      for (const log of res.body.data) {
+        expect(log.category).toBe('ACADEMICS');
       }
     });
 

@@ -68,16 +68,17 @@ describe('KCB Buni API Platform Integration Tests', () => {
   });
 
   describe('1. KCB Buni Configuration Endpoint', () => {
-    it('returns KCB Buni gateway configuration and Paybill 522123 details', async () => {
+    it('returns KCB Buni gateway configuration and Paybill 522533 details', async () => {
       const res = await request(app).get('/api/v1/finance/kcb-buni/config');
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       expect(res.body.data.gateway).toBe('KCB_BUNI');
       expect(res.body.data.bankName).toBe('KCB Bank Kenya');
-      expect(res.body.data.paybillNumber).toBe('522123');
+      expect(res.body.data.paybillNumber).toBe('522533');
+      expect(res.body.data.accountNumberPrefix).toBe('8048859#');
       expect(res.body.data.supportedChannels).toContain('KCB_BUNI_STK');
-      expect(res.body.data.supportedChannels).toContain('MPESA_PAYBILL_522123');
+      expect(res.body.data.supportedChannels).toContain('MPESA_PAYBILL_522533');
       expect(res.body.data.supportedChannels).toContain('KCB_APP');
     });
   });
@@ -100,7 +101,7 @@ describe('KCB Buni API Platform Integration Tests', () => {
       expect(res.body.success).toBe(true);
       expect(res.body.data.checkoutRequestId).toBeDefined();
       expect(res.body.data.studentAdmission).toBe(studentAdmissionNumber);
-      expect(res.body.data.customerMessage).toContain('522123');
+      expect(res.body.data.customerMessage).toContain('522533');
       checkoutRequestId = res.body.data.checkoutRequestId;
     });
 
@@ -144,12 +145,28 @@ describe('KCB Buni API Platform Integration Tests', () => {
     });
   });
 
-  describe('3. KCB Buni C2B Bill Validation (Paybill 522123)', () => {
+  describe('3. KCB Buni C2B Bill Validation (Paybill 522533)', () => {
     it('successfully validates existing student admission number and returns balance', async () => {
       const res = await request(app)
         .post('/api/v1/finance/kcb-buni/validate')
         .send({
           billReferenceNumber: studentAdmissionNumber,
+          amount: initialBalance - 5000,
+          phoneNumber: '254712345678'
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.resultCode).toBe('0');
+      expect(res.body.resultDesc).toBe('Validation Successful');
+      expect(res.body.studentName).toContain('Baraka Otieno');
+      expect(res.body.currentBalance).toBe(initialBalance - 5000);
+    });
+
+    it('successfully validates bill reference starting with 8048859#<name of the child & grade>', async () => {
+      const res = await request(app)
+        .post('/api/v1/finance/kcb-buni/validate')
+        .send({
+          billReferenceNumber: '8048859#Baraka Otieno GRADE_8',
           amount: initialBalance - 5000,
           phoneNumber: '254712345678'
         });
@@ -175,8 +192,8 @@ describe('KCB Buni API Platform Integration Tests', () => {
     });
   });
 
-  describe('4. KCB Buni C2B Bill Confirmation (Paybill 522123 / KCB App)', () => {
-    it('confirms payment from KCB Paybill 522123 and updates invoice balance', async () => {
+  describe('4. KCB Buni C2B Bill Confirmation (Paybill 522533 / KCB App)', () => {
+    it('confirms payment from KCB Paybill 522533 using 8048859# reference and updates invoice balance', async () => {
       const confirmAmount = initialBalance - 7000;
       const transactionId = 'KCBTX_' + Date.now();
       const res = await request(app)
@@ -184,7 +201,7 @@ describe('KCB Buni API Platform Integration Tests', () => {
         .send({
           transactionId,
           transactionTime: new Date().toISOString(),
-          billReferenceNumber: studentAdmissionNumber,
+          billReferenceNumber: '8048859#Baraka Otieno GRADE_8',
           transactionAmount: confirmAmount,
           phoneNumber: '254722000000',
           senderName: 'Mama Baraka',

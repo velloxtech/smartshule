@@ -9,6 +9,7 @@ import {
 } from '../../../core/domain/cbc/CbcAssessment';
 import { CbcGradeLevel } from '../../../core/domain/user/Student';
 import { UserRole } from '../../../core/domain/user/User';
+import { SystemLogUseCases } from '../../../application/system-logs/SystemLogUseCases';
 
 export const CreateStrandSchema = z.object({
   learningAreaId: z.string().min(1),
@@ -73,7 +74,10 @@ export const GenerateReportCardSchema = z.object({
 });
 
 export class CbcAssessmentController {
-  constructor(private readonly cbcUseCases: CbcAssessmentUseCases) {}
+  constructor(
+    private readonly cbcUseCases: CbcAssessmentUseCases,
+    private readonly systemLogUseCases?: SystemLogUseCases
+  ) {}
 
   public createStrand = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -129,12 +133,47 @@ export class CbcAssessmentController {
         ...req.body,
         teacherId
       });
+
+      this.systemLogUseCases?.log({
+        schoolId: user?.schoolId || 'school-001',
+        level: 'AUDIT',
+        category: 'ACADEMICS',
+        action: 'MARKS_UPLOADED',
+        actorUserId: user?.userId || user?.id,
+        actorEmail: user?.email,
+        actorRole: user?.role,
+        ipAddress: req.ip || (req.socket?.remoteAddress as string),
+        status: 'SUCCESS',
+        details: `Recorded formative assessment marks/evaluation for learner ${req.body.studentId} (${req.body.performanceLevel}) in outcome: "${req.body.specificOutcomeTested}"`,
+        metadata: {
+          studentId: req.body.studentId,
+          learningAreaId: req.body.learningAreaId,
+          subStrandId: req.body.subStrandId,
+          performanceLevel: req.body.performanceLevel,
+          assessmentMethod: req.body.assessmentMethod,
+          assessmentId: assessment.id,
+        }
+      }).catch(() => {});
+
       return res.status(201).json({
         success: true,
         message: 'Formative assessment recorded successfully',
         data: assessment
       });
-    } catch (err) {
+    } catch (err: any) {
+      this.systemLogUseCases?.log({
+        schoolId: (req as any).user?.schoolId || 'school-001',
+        level: 'ERROR',
+        category: 'ACADEMICS',
+        action: 'MARKS_UPLOAD_FAILED',
+        actorUserId: (req as any).user?.userId || (req as any).user?.id,
+        actorEmail: (req as any).user?.email,
+        actorRole: (req as any).user?.role,
+        ipAddress: req.ip || (req.socket?.remoteAddress as string),
+        status: 'FAILED',
+        details: `Failed to record formative assessment for student ${req.body?.studentId}: ${err.message}`,
+        metadata: { error: err.message, body: req.body }
+      }).catch(() => {});
       next(err);
     }
   };
@@ -169,12 +208,53 @@ export class CbcAssessmentController {
         ...req.body,
         teacherId
       });
+
+      const rawScoreText = (req.body.strandScores && req.body.strandScores.length > 0 && req.body.strandScores[0].rawScore !== undefined)
+        ? ` (${req.body.strandScores[0].rawScore}/${req.body.strandScores[0].maxScore || 100})`
+        : '';
+      const details = `Uploaded summative assessment marks for learner ${req.body.studentId}${rawScoreText}: Overall Level ${req.body.overallPerformanceLevel} in learning area ${req.body.learningAreaId}`;
+
+      this.systemLogUseCases?.log({
+        schoolId: user?.schoolId || 'school-001',
+        level: 'AUDIT',
+        category: 'ACADEMICS',
+        action: 'MARKS_UPLOADED',
+        actorUserId: user?.userId || user?.id,
+        actorEmail: user?.email,
+        actorRole: user?.role,
+        ipAddress: req.ip || (req.socket?.remoteAddress as string),
+        status: 'SUCCESS',
+        details,
+        metadata: {
+          studentId: req.body.studentId,
+          learningAreaId: req.body.learningAreaId,
+          termId: req.body.termId,
+          academicYearId: req.body.academicYearId,
+          overallPerformanceLevel: req.body.overallPerformanceLevel,
+          strandScores: req.body.strandScores,
+          assessmentId: assessment.id,
+        }
+      }).catch(() => {});
+
       return res.status(201).json({
         success: true,
         message: 'Summative assessment recorded successfully',
         data: assessment
       });
-    } catch (err) {
+    } catch (err: any) {
+      this.systemLogUseCases?.log({
+        schoolId: (req as any).user?.schoolId || 'school-001',
+        level: 'ERROR',
+        category: 'ACADEMICS',
+        action: 'MARKS_UPLOAD_FAILED',
+        actorUserId: (req as any).user?.userId || (req as any).user?.id,
+        actorEmail: (req as any).user?.email,
+        actorRole: (req as any).user?.role,
+        ipAddress: req.ip || (req.socket?.remoteAddress as string),
+        status: 'FAILED',
+        details: `Failed to upload marks for student ${req.body?.studentId}: ${err.message}`,
+        metadata: { error: err.message, body: req.body }
+      }).catch(() => {});
       next(err);
     }
   };
@@ -198,12 +278,45 @@ export class CbcAssessmentController {
   public generateReportCard = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const reportCard = await this.cbcUseCases.generateStudentReportCard(req.body);
+
+      this.systemLogUseCases?.log({
+        schoolId: (req as any).user?.schoolId || 'school-001',
+        level: 'AUDIT',
+        category: 'ACADEMICS',
+        action: 'REPORT_CARD_GENERATED',
+        actorUserId: (req as any).user?.userId || (req as any).user?.id,
+        actorEmail: (req as any).user?.email,
+        actorRole: (req as any).user?.role,
+        ipAddress: req.ip || (req.socket?.remoteAddress as string),
+        status: 'SUCCESS',
+        details: `Generated CBC Comprehensive Report Card for learner ${req.body.studentId} (Term ${req.body.termId})`,
+        metadata: {
+          studentId: req.body.studentId,
+          termId: req.body.termId,
+          academicYearId: req.body.academicYearId,
+          reportCardId: reportCard.id
+        }
+      }).catch(() => {});
+
       return res.status(200).json({
         success: true,
         message: 'CBC Comprehensive Report Card generated successfully',
         data: reportCard
       });
-    } catch (err) {
+    } catch (err: any) {
+      this.systemLogUseCases?.log({
+        schoolId: (req as any).user?.schoolId || 'school-001',
+        level: 'ERROR',
+        category: 'ACADEMICS',
+        action: 'REPORT_CARD_GENERATION_FAILED',
+        actorUserId: (req as any).user?.userId || (req as any).user?.id,
+        actorEmail: (req as any).user?.email,
+        actorRole: (req as any).user?.role,
+        ipAddress: req.ip || (req.socket?.remoteAddress as string),
+        status: 'FAILED',
+        details: `Failed to generate report card for student ${req.body?.studentId}: ${err.message}`,
+        metadata: { error: err.message, body: req.body }
+      }).catch(() => {});
       next(err);
     }
   };
@@ -260,6 +373,21 @@ export class CbcAssessmentController {
   public deleteFormative = async (req: Request, res: Response, next: NextFunction) => {
     try {
       await this.cbcUseCases.deleteFormative(req.params.id as string, (req as any).user);
+
+      this.systemLogUseCases?.log({
+        schoolId: (req as any).user?.schoolId || 'school-001',
+        level: 'WARN',
+        category: 'ACADEMICS',
+        action: 'MARKS_DELETED',
+        actorUserId: (req as any).user?.userId || (req as any).user?.id,
+        actorEmail: (req as any).user?.email,
+        actorRole: (req as any).user?.role,
+        ipAddress: req.ip || (req.socket?.remoteAddress as string),
+        status: 'SUCCESS',
+        details: `Deleted assessment record ${req.params.id}`,
+        metadata: { assessmentId: req.params.id }
+      }).catch(() => {});
+
       return res.status(200).json({ success: true, message: 'Formative assessment deleted successfully' });
     } catch (err) {
       next(err);

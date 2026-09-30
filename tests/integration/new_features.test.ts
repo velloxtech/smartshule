@@ -448,7 +448,8 @@ describe('New Features Integration Tests', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.data.replyText).toContain('KCB Bank Gateway');
-      expect(res.body.data.replyText).toContain('522123');
+      expect(res.body.data.replyText).toContain('522533');
+      expect(res.body.data.replyText).toContain('8048859#');
       expect(res.body.data.intent).toBe('PAYMENT');
     });
 

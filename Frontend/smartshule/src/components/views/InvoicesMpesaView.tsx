@@ -12,6 +12,7 @@ interface InvoicesMpesaViewProps {
   students?: Student[];
   onOpenMpesaModal?: () => void;
   onPaymentAdded?: (payment: any) => void;
+  onNavigateTab?: (tab: any) => void;
 }
 
 export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
@@ -19,6 +20,7 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
   totalCollected: propTotalCollected,
   students = [],
   onOpenMpesaModal,
+  onNavigateTab,
 }) => {
   const { user } = useAuth();
   const isGuardian = user?.role === UserRole.GUARDIAN || user?.role === UserRole.PARENT;
@@ -114,14 +116,24 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
           </h1>
           <p className="text-xs text-on-surface-variant mt-0.5">
             {isGuardian
-              ? 'View official school invoices for your linked learners and clear balances via KCB Buni STK Push, Paybill 522123, or KCB Bank'
-              : 'Direct fee collection via KCB Bank Kenya Paybill 522123, real-time Buni STK Push APIs, and automated reconciliation'}
+              ? 'View official school invoices for your linked learners and clear balances via KCB Buni STK Push, Paybill 522533, or KCB Bank'
+              : 'Direct fee collection via KCB Bank Kenya Paybill 522533, real-time Buni STK Push APIs, and automated reconciliation'}
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           {!isGuardian && (
             <>
+              {onNavigateTab && (
+                <button
+                  onClick={() => onNavigateTab('student-fee-search')}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg text-xs font-bold border border-primary/20 transition-all cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[16px]">person_search</span>
+                  <span>Check Student Fee</span>
+                </button>
+              )}
+
               <button
                 onClick={() => setIsGenInvoicesOpen(true)}
                 className="inline-flex items-center gap-1.5 px-3 py-2 bg-surface-container hover:bg-surface-container-high text-primary rounded-lg text-xs font-bold border border-outline-variant/30 transition-all cursor-pointer"
@@ -161,7 +173,7 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
             <div className="flex items-center gap-2 mt-1">
               <span className="text-base font-bold font-data-mono text-[#006a40]">KCB Bank Kenya</span>
               <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
-                Paybill 522123
+                Paybill 522533
               </span>
             </div>
             <span className="text-[11px] text-emerald-700 font-semibold mt-1 block">

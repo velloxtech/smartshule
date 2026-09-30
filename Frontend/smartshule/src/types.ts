@@ -26,7 +26,8 @@ export type TabType =
   | 'system-logs'
   | 'complaints'
   | 'lunch-fee-management'
-  | 'parent-profile';
+  | 'parent-profile'
+  | 'student-fee-search';
 
 export type SystemLogLevel = 'INFO' | 'WARN' | 'ERROR' | 'AUDIT';
 export type SystemLogCategory =

@@ -31,7 +31,7 @@ export const WhatsAppBotView: React.FC = () => {
   const [sendErrorMsg, setSendErrorMsg] = useState<string | null>(null);
 
   // Gemini AI Draft & Dispatch state (Real WhatsApp Person Dispatch)
-  const [aiCommand, setAiCommand] = useState('Draft fee balance reminder with KCB Paybill 522123 details');
+  const [aiCommand, setAiCommand] = useState('Draft fee balance reminder with KCB Paybill 522533 details');
   const [aiSelectedStudentId, setAiSelectedStudentId] = useState<string>('');
   const [aiTone, setAiTone] = useState<'professional' | 'urgent' | 'friendly' | 'concise'>('professional');
   const [isAiDrafting, setIsAiDrafting] = useState(false);
@@ -159,9 +159,11 @@ export const WhatsAppBotView: React.FC = () => {
     const balance = s ? s.feeBalance : 12000;
 
     const schoolName = user?.schoolName || 'School';
+    const childGrade = s ? (s.grade || '') : '';
+    const childAcc = `8048859#${learnerName}${childGrade ? ' ' + childGrade : ''}`;
     if (type === 'fee') {
       setOutboundMessage(
-        `Dear Parent/Guardian, this is an official fee reminder from ${schoolName}. ${learnerName} (Adm: ${admNo}) has an outstanding balance of KES ${balance.toLocaleString()}. You can pay instantly via KCB Paybill 522123 (Account: ${admNo}) or KCB Buni STK Push. Reply '2' for payment details.`
+        `Dear Parent/Guardian, this is an official fee reminder from ${schoolName}. ${learnerName} (Adm: ${admNo}) has an outstanding balance of KES ${balance.toLocaleString()}. You can pay instantly via KCB Paybill 522533 (Account: ${childAcc}) or KCB Buni STK Push. Reply '2' for payment details.`
       );
     } else if (type === 'ediary') {
       setOutboundMessage(
@@ -848,12 +850,12 @@ export const WhatsAppBotView: React.FC = () => {
                   </label>
                   <div className="flex flex-wrap gap-1.5">
                     {[
-                      { label: '💰 Fee Arrears & KCB Paybill', cmd: 'Draft fee balance reminder with KCB Paybill 522123 and student admission number instructions' },
+                      { label: '💰 Fee Arrears & KCB Paybill', cmd: 'Draft fee balance reminder with KCB Paybill 522533 and account 8048859#<child_name> <grade> instructions' },
                       { label: '📖 Daily Homework / eDiary', cmd: 'Draft daily CBC eDiary homework notice, teacher remarks and tomorrow requirements' },
                       { label: '🌟 CBC Performance Report', cmd: 'Draft CBC academic competency report summary with grades and teacher remarks' },
                       { label: '📅 Attendance & Roll-Call', cmd: 'Draft official attendance summary and term roll-call status' },
                       { label: '📢 Academic Showcase Notice', cmd: 'Draft reminder for tomorrow CBC academic showcase meeting starting at 9:00 AM' },
-                      { label: '💳 KCB Buni M-Pesa Express', cmd: 'Send KCB Buni M-Pesa Express and Paybill 522123 instant fee payment instructions' },
+                      { label: '💳 KCB Buni M-Pesa Express', cmd: 'Send KCB Buni M-Pesa Express and Paybill 522533 instant fee payment instructions' },
                     ].map((item) => (
                       <button
                         key={item.label}

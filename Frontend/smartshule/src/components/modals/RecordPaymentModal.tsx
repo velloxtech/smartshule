@@ -64,7 +64,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
   const [bankBranch, setBankBranch] = useState('');
   const [slipNumber, setSlipNumber] = useState('');
   const [depositorName, setDepositorName] = useState('');
-  const [schoolBankAccount, setSchoolBankAccount] = useState('KCB Fees Collection A/C (522123)');
+  const [schoolBankAccount, setSchoolBankAccount] = useState('KCB Fees Collection A/C (Paybill 522533 · Acc: 8048859#)');
   const [isSlipVerified, setIsSlipVerified] = useState(false);
 
   // M-Pesa / Transfer / Cheque fields

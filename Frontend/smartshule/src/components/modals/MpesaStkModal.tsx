@@ -137,7 +137,7 @@ export const MpesaStkModal: React.FC<MpesaStkModalProps> = ({
             </div>
             <div>
               <h3 className="font-semibold text-base leading-tight">KCB Buni M-Pesa Express</h3>
-              <p className="text-xs text-rose-100">KCB Bank Kenya API Platform · Paybill 522123</p>
+              <p className="text-xs text-rose-100">KCB Bank Kenya API Platform · Paybill 522533</p>
             </div>
           </div>
           <button
@@ -213,9 +213,11 @@ export const MpesaStkModal: React.FC<MpesaStkModalProps> = ({
               <div className="p-3 bg-secondary-container/40 rounded-xl flex items-center justify-between text-xs text-on-secondary-container">
                 <span className="flex items-center gap-1.5 font-medium">
                   <span className="w-2 h-2 rounded-full bg-secondary"></span>
-                  KCB Paybill 522123 Account:
+                  KCB Paybill 522533 Account:
                 </span>
-                <span className="font-data-mono font-bold">{currentStudent?.admNo}</span>
+                <span className="font-data-mono font-bold text-[11px] truncate max-w-[200px]" title={currentStudent ? `8048859#${currentStudent.name} ${currentStudent.grade}` : ''}>
+                  {currentStudent ? `8048859#${currentStudent.name} ${currentStudent.grade}` : '--'}
+                </span>
               </div>
 
               <div className="pt-2 flex items-center justify-end gap-2">
@@ -245,7 +247,7 @@ export const MpesaStkModal: React.FC<MpesaStkModalProps> = ({
               <div>
                 <div className="text-base font-bold text-on-surface">Connecting to KCB Buni API Platform...</div>
                 <p className="text-xs text-on-surface-variant mt-1">
-                  Dispatching M-Pesa Express push prompt to {phone} via KCB Paybill 522123
+                  Dispatching M-Pesa Express push prompt to {phone} via KCB Paybill 522533
                 </p>
               </div>
             </div>
@@ -269,8 +271,10 @@ export const MpesaStkModal: React.FC<MpesaStkModalProps> = ({
                     <span className="font-bold text-secondary font-data-mono">KES {Number(amount).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-on-surface-variant">Account / Adm No:</span>
-                    <span className="font-bold text-on-surface">{currentStudent ? currentStudent.admNo : '--'}</span>
+                    <span className="text-on-surface-variant">KCB Account:</span>
+                    <span className="font-bold text-on-surface text-[11px] truncate max-w-[220px]">
+                      {currentStudent ? `8048859#${currentStudent.name} ${currentStudent.grade}` : '--'}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-on-surface-variant">Reference ID:</span>

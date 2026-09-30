@@ -10,6 +10,7 @@ import { IGuardianRepository } from '../../core/ports/repositories/ITeacherRepos
 import { IUserRepository } from '../../core/ports/repositories/IUserRepository';
 import { IAcademicRepository } from '../../core/ports/repositories/IAcademicRepository';
 import { Guardian } from '../../core/domain/user/Guardian';
+import { Student } from '../../core/domain/user/Student';
 import {
   IPaymentGateway,
   INotificationService,
@@ -885,28 +886,94 @@ export class FeeUseCases {
     return this.handleKcbBuniCallback(payload);
   }
 
-  // 6. KCB Buni Bill Validation (C2B / Paybill 522123 Account Validation)
+  // Helper to resolve student from Paybill account reference e.g. "8048859#Kevin Kamau Grade 4"
+  private async resolveStudentFromBillRef(billRefRaw: string): Promise<Student | null> {
+    if (!billRefRaw) return null;
+    let ref = billRefRaw.trim();
+
+    // Strip school collection prefix if present: 8048859# or 8048859
+    if (ref.startsWith('8048859#')) {
+      ref = ref.slice(8).trim();
+    } else if (ref.startsWith('8048859')) {
+      ref = ref.slice(7).replace(/^[#\s]+/, '').trim();
+    }
+
+    if (!ref) return null;
+
+    // 1. Direct match on admission number
+    let student = await this.studentRepository.findByAdmissionNumber(ref);
+    if (student) return student;
+
+    const allStudents = await this.studentRepository.findAll();
+
+    // 2. Case-insensitive match on admission number
+    student = allStudents.find(
+      s => s.admissionNumber.toLowerCase() === ref.toLowerCase()
+    ) || null;
+    if (student) return student;
+
+    // 3. Match by name & grade (e.g. "Kevin Kamau Grade 4" or "Kevin Kamau PP1" or "Kevin Kamau")
+    const refLower = ref.toLowerCase();
+
+    // Exact full name match
+    student = allStudents.find(s => s.fullName.toLowerCase() === refLower) || null;
+    if (student) return student;
+
+    // Full name contained in the reference
+    const nameMatches = allStudents.filter(s => refLower.includes(s.fullName.toLowerCase()));
+    if (nameMatches.length === 1) {
+      return nameMatches[0];
+    } else if (nameMatches.length > 1) {
+      // Disambiguate by grade if possible
+      const gradeMatch = nameMatches.find(s => {
+        const gradeStr = s.gradeLevel.toLowerCase().replace('_', ' ');
+        return refLower.includes(gradeStr) || refLower.includes(s.gradeLevel.toLowerCase());
+      });
+      if (gradeMatch) return gradeMatch;
+      return nameMatches[0];
+    }
+
+    // Try matching words in name
+    const words = refLower.split(/\s+/).filter(w => w.length > 1 && !['grade', 'pp1', 'pp2', 'std', 'class', 'form', 'adm', 'no', '#'].includes(w));
+    if (words.length >= 2) {
+      const partialMatches = allStudents.filter(s => {
+        const fn = s.fullName.toLowerCase();
+        return words.every(w => fn.includes(w));
+      });
+      if (partialMatches.length === 1) return partialMatches[0];
+      if (partialMatches.length > 1) {
+        const gradeMatch = partialMatches.find(s => {
+          const gradeStr = s.gradeLevel.toLowerCase().replace('_', ' ');
+          return refLower.includes(gradeStr);
+        });
+        if (gradeMatch) return gradeMatch;
+        return partialMatches[0];
+      }
+    }
+
+    // Fallback: check if reference contains student's admission number inside it
+    const admMatch = allStudents.find(s => refLower.includes(s.admissionNumber.toLowerCase()));
+    if (admMatch) return admMatch;
+
+    return null;
+  }
+
+  // 6. KCB Buni Bill Validation (C2B / Paybill 522533 Account Validation)
   public async validateKcbBuniBillPayment(dto: KcbBuniBillValidationRequest): Promise<KcbBuniBillValidationResponse> {
     const billRef = (dto.billReferenceNumber || '').trim();
     if (!billRef) {
       return {
         resultCode: 'C2B00012',
-        resultDesc: 'Invalid Account Number: Student admission number is required.'
+        resultDesc: 'Invalid Account Number: Child name & grade or admission number is required (Format: 8048859#<name of child & grade>).'
       };
     }
 
-    let student = await this.studentRepository.findByAdmissionNumber(billRef);
-    if (!student) {
-      const allStudents = await this.studentRepository.findAll();
-      student = allStudents.find(
-        s => s.admissionNumber.toLowerCase() === billRef.toLowerCase()
-      ) || null;
-    }
+    const student = await this.resolveStudentFromBillRef(billRef);
 
     if (!student) {
       return {
         resultCode: 'C2B00012',
-        resultDesc: `Validation Failed: No student found with admission number ${billRef}`
+        resultDesc: `Validation Failed: No student found matching account identifier '${billRef}'. Format: 8048859#<name of child & grade>.`
       };
     }
 
@@ -916,24 +983,18 @@ export class FeeUseCases {
     return {
       resultCode: '0',
       resultDesc: 'Validation Successful',
-      studentName: student.fullName,
+      studentName: `${student.fullName} (${student.gradeLevel.replace('_', ' ')})`,
       currentBalance: balance
     };
   }
 
-  // 7. KCB Buni Bill Confirmation (C2B / Paybill 522123 Confirmation)
+  // 7. KCB Buni Bill Confirmation (C2B / Paybill 522533 Confirmation)
   public async confirmKcbBuniBillPayment(dto: KcbBuniBillConfirmationRequest) {
     const billRef = (dto.billReferenceNumber || '').trim();
-    let student = await this.studentRepository.findByAdmissionNumber(billRef);
-    if (!student) {
-      const allStudents = await this.studentRepository.findAll();
-      student = allStudents.find(
-        s => s.admissionNumber.toLowerCase() === billRef.toLowerCase()
-      ) || null;
-    }
+    const student = await this.resolveStudentFromBillRef(billRef);
 
     if (!student) {
-      throw new NotFoundError('Student with admission number', billRef);
+      throw new NotFoundError('Student with account reference', billRef);
     }
 
     // Check for idempotency
@@ -977,7 +1038,7 @@ export class FeeUseCases {
           : new Date().toISOString().split('T')[0],
         recordedByUserId: 'usr-kcb-buni-c2b',
         status: PaymentStatus.COMPLETED,
-        notes: `KCB Buni Paybill 522123 Confirmation. Channel: ${dto.channel || 'KCB_APP'}. Sender: ${dto.senderName || 'Parent'}`
+        notes: `KCB Buni Paybill 522533 Confirmation (Acc: ${billRef}). Channel: ${dto.channel || 'KCB_APP'}. Sender: ${dto.senderName || 'Parent'}`
       },
       IdGenerator.generate()
     );
@@ -991,7 +1052,7 @@ export class FeeUseCases {
       if (u && u.phone) {
         await this.notificationService.sendSms(
           u.phone,
-          `SmartShule KCB Bank: Received KES ${dto.transactionAmount} for ${student.fullName} (Adm: ${student.admissionNumber}) via KCB Paybill 522123. Ref: ${dto.transactionId}. Receipt #${receiptNumber}.`
+          `SmartShule KCB Bank: Received KES ${dto.transactionAmount} for ${student.fullName} (Adm: ${student.admissionNumber}) via KCB Paybill 522533. Ref: ${dto.transactionId}. Receipt #${receiptNumber}.`
         );
       }
     }
@@ -1068,20 +1129,22 @@ export class FeeUseCases {
 
   // 9. KCB Buni Configuration for Client Portal
   public getKcbBuniConfig() {
+    const paybillNumber = this.kcbBuniGateway.getShortCode ? this.kcbBuniGateway.getShortCode() : '522533';
     return {
       gateway: 'KCB_BUNI',
       bankName: 'KCB Bank Kenya',
-      paybillNumber: this.kcbBuniGateway.getShortCode ? this.kcbBuniGateway.getShortCode() : '522123',
-      accountNumberFormat: 'Student Admission Number (e.g. ADM-2026-001)',
-      supportedChannels: ['KCB_BUNI_STK', 'MPESA_PAYBILL_522123', 'KCB_APP', 'VOOMA', 'BANK_TRANSFER'],
+      paybillNumber,
+      accountNumberPrefix: '8048859#',
+      accountNumberFormat: '8048859#<name of the child & grade>',
+      supportedChannels: ['KCB_BUNI_STK', 'MPESA_PAYBILL_522533', 'KCB_APP', 'VOOMA', 'BANK_TRANSFER'],
       instructions: {
         mpesaPaybill: {
-          paybill: this.kcbBuniGateway.getShortCode ? this.kcbBuniGateway.getShortCode() : '522123',
-          accountPrompt: 'Enter Student Admission Number',
-          description: 'Go to M-Pesa -> Lipa na M-Pesa -> Paybill -> Business No: 522123 -> Account: Student Admission Number'
+          paybill: paybillNumber,
+          accountPrompt: '8048859#<name of the child & grade>',
+          description: `Go to M-Pesa -> Lipa na M-Pesa -> Paybill -> Business No: ${paybillNumber} -> Account: 8048859#<name of the child & grade>`
         },
         kcbApp: {
-          description: 'Pay via KCB App / Vooma -> Paybill 522123 -> Student Admission Number'
+          description: `Pay via KCB App / Vooma -> Paybill ${paybillNumber} -> Account: 8048859#<name of the child & grade>`
         },
         stkPush: {
           description: 'Direct STK Push prompt to your phone via KCB Buni API'

@@ -8,7 +8,7 @@ import { KcbBuniPaymentAdapter } from './KcbBuniPaymentAdapter';
 
 /**
  * Legacy Adapter: All M-Pesa operations route directly to the KCB Buni API platform
- * (replacing Safaricom Daraja API with KCB Buni Paybill 522123 rails).
+ * (replacing Safaricom Daraja API with KCB Buni Paybill 522533 rails).
  */
 export class MpesaDarajaPaymentAdapter implements IPaymentGateway {
   private readonly kcbAdapter: KcbBuniPaymentAdapter;

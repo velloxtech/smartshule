@@ -285,7 +285,8 @@ describe('WhatsApp Bot & Phone Counter-Checking Unit Tests', () => {
       expect(res.intent).toBe('PAYMENT');
       expect(res.replyText).toContain('KCB Bank Gateway');
       expect(res.replyText).toContain('KCB Bank Kenya');
-      expect(res.replyText).toContain('522123');
+      expect(res.replyText).toContain('522533');
+      expect(res.replyText).toContain('8048859#');
       expect(res.replyText).toContain('ADM-1001');
     });
 

@@ -26,7 +26,7 @@ export class KcbBuniPaymentAdapter implements IKcbBuniPaymentGateway {
     consumerKey = process.env.KCB_BUNI_CONSUMER_KEY || '',
     consumerSecret = process.env.KCB_BUNI_CONSUMER_SECRET || '',
     baseUrl = process.env.KCB_BUNI_BASE_URL || 'https://uat.buni.kcbgroup.com',
-    orgShortCode = process.env.KCB_BUNI_SHORTCODE || '522123',
+    orgShortCode = process.env.KCB_BUNI_SHORTCODE || '522533',
     sharedShortCode = process.env.KCB_BUNI_SHARED_SHORTCODE !== 'false',
     callbackUrl = process.env.KCB_BUNI_CALLBACK_URL || 'https://api.smartshule.ac.ke/api/v1/finance/kcb-buni/callback'
   ) {
@@ -135,7 +135,7 @@ export class KcbBuniPaymentAdapter implements IKcbBuniPaymentGateway {
         : 'https://api.smartshule.ac.ke/api/v1/finance/kcb-buni/callback';
     }
 
-    const orgShortCode = request.orgShortCode || this.orgShortCode || '522123';
+    const orgShortCode = request.orgShortCode || this.orgShortCode || '522533';
     const invoiceNumber = request.invoiceNumber
       ? `${request.invoiceNumber}-${Date.now().toString().slice(-4)}`
       : `INV-${Date.now()}`;

@@ -553,7 +553,7 @@ export const FeeStructureView: React.FC = () => {
             1. Whole-year ratified fee schedules automatically generate per-term invoices based on approved percentage divisions.
           </div>
           <div>
-            2. Payments made through KCB Buni API Paybill <strong>522123</strong> (Account: Student Admission Number) immediately credit the student&apos;s invoice.
+            2. Payments made through KCB Buni API Paybill <strong>522533</strong> (Account: <strong>8048859#Child Name &amp; Grade</strong>) immediately credit the student&apos;s invoice.
           </div>
           <div>
             3. Instant SMS and WhatsApp confirmation receipts with unique cryptographic reference codes are dispatched to parents automatically.
@@ -725,8 +725,8 @@ export const FeeStructureView: React.FC = () => {
                 <div className="space-y-1">
                   <div className="font-bold text-gray-900">Official Payment Instructions:</div>
                   <div className="text-gray-600 space-y-0.5">
-                    <div>1. KCB Buni API Paybill: <strong>522123</strong></div>
-                    <div>2. Account Number: <strong>Student Admission Number</strong></div>
+                    <div>1. KCB Buni API Paybill: <strong>522533</strong></div>
+                    <div>2. Account Number: <strong>8048859#&lt;Child Name &amp; Grade&gt;</strong></div>
                     <div>3. Bank Transfer: KCB Bank Kenya · Account #1122334455</div>
                   </div>
                 </div>

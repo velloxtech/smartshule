@@ -88,6 +88,10 @@ export const KcbBuniPaymentModal: React.FC<KcbBuniPaymentModalProps> = ({
 
   const currentStudent = students.find((s) => s.id === selectedStudentId) || initialStudent || students[0];
   const admissionNumber = currentStudent?.admNo || 'ADM-GENERAL';
+  const studentGrade = (currentStudent as any)?.grade || (currentStudent as any)?.gradeLevel || '';
+  const kcbAccountNumber = currentStudent?.name
+    ? `8048859#${currentStudent.name}${studentGrade ? ' ' + studentGrade : ''}`.trim()
+    : `8048859#${admissionNumber}`;
 
   const handleCopy = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -181,14 +185,14 @@ export const KcbBuniPaymentModal: React.FC<KcbBuniPaymentModalProps> = ({
     }
   };
 
-  // 3. Test / Validate Learner Account on KCB Paybill 522123
+  // 3. Test / Validate Learner Account on KCB Paybill 522533
   const handleValidateAccount = async () => {
     setIsValidating(true);
     setValidationResult(null);
 
     try {
       const res = await apiService.validateKcbBuniBill({
-        billReferenceNumber: admissionNumber,
+        billReferenceNumber: kcbAccountNumber || admissionNumber,
         amount: Number(amount) || 0,
         phoneNumber: payerPhone
       });
@@ -198,7 +202,7 @@ export const KcbBuniPaymentModal: React.FC<KcbBuniPaymentModalProps> = ({
           success: true,
           studentName: res.studentName || currentStudent?.name,
           balance: res.currentBalance !== undefined ? res.currentBalance : currentStudent?.feeBalance,
-          message: 'Account Validated: Active learner registered on KCB Buni Paybill 522123'
+          message: 'Account Validated: Active learner registered on KCB Buni Paybill 522533'
         });
       } else {
         setValidationResult({
@@ -242,7 +246,7 @@ export const KcbBuniPaymentModal: React.FC<KcbBuniPaymentModalProps> = ({
                 </span>
               </div>
               <p className="text-xs text-emerald-100/90 mt-0.5">
-                Official Paybill <span className="font-bold font-data-mono text-white">522123</span> · Buni Developer API Platform
+                Official Paybill <span className="font-bold font-data-mono text-white">522533</span> · Buni Developer API Platform
               </p>
             </div>
           </div>
@@ -279,7 +283,7 @@ export const KcbBuniPaymentModal: React.FC<KcbBuniPaymentModalProps> = ({
               }`}
             >
               <span className="material-symbols-outlined text-[16px]">pin</span>
-              <span>Paybill 522123 (M-Pesa / App)</span>
+              <span>Paybill 522533 (M-Pesa / App)</span>
             </button>
             <button
               type="button"
@@ -390,11 +394,11 @@ export const KcbBuniPaymentModal: React.FC<KcbBuniPaymentModalProps> = ({
                       <span className="material-symbols-outlined text-[20px] text-emerald-700">verified_user</span>
                       <div>
                         <div className="font-bold">KCB Bank Express Integration</div>
-                        <div className="text-[11px] text-emerald-800">Shortcode: 522123 · Route: 207</div>
+                        <div className="text-[11px] text-emerald-800">Shortcode: 522533 · Route: 207</div>
                       </div>
                     </div>
                     <span className="font-data-mono font-bold text-xs bg-white px-2.5 py-1 rounded-md border border-emerald-300">
-                      {admissionNumber}
+                      {kcbAccountNumber}
                     </span>
                   </div>
 
@@ -417,17 +421,17 @@ export const KcbBuniPaymentModal: React.FC<KcbBuniPaymentModalProps> = ({
                 </form>
               )}
 
-              {/* TAB 2: MANUAL KCB PAYBILL 522123 */}
+              {/* TAB 2: MANUAL KCB PAYBILL 522533 */}
               {activeTab === 'paybill_instructions' && (
                 <div className="space-y-4 pt-1">
                   <div className="bg-surface-container-low border border-outline-variant/30 rounded-xl p-4 space-y-3">
                     <div className="flex items-center justify-between pb-2 border-b border-outline-variant/20">
                       <span className="text-xs text-on-surface-variant font-medium">Business / Paybill No:</span>
                       <div className="flex items-center gap-2">
-                        <span className="font-data-mono font-extrabold text-base text-[#006a40]">522123</span>
+                        <span className="font-data-mono font-extrabold text-base text-[#006a40]">522533</span>
                         <button
                           type="button"
-                          onClick={() => handleCopy('522123', 'paybill')}
+                          onClick={() => handleCopy('522533', 'paybill')}
                           className="px-2 py-0.5 text-[11px] bg-emerald-100 text-emerald-800 rounded font-semibold hover:bg-emerald-200 cursor-pointer"
                         >
                           {copiedField === 'paybill' ? 'Copied!' : 'Copy'}
@@ -438,11 +442,11 @@ export const KcbBuniPaymentModal: React.FC<KcbBuniPaymentModalProps> = ({
                     <div className="flex items-center justify-between pb-2 border-b border-outline-variant/20">
                       <span className="text-xs text-on-surface-variant font-medium">Account Number:</span>
                       <div className="flex items-center gap-2">
-                        <span className="font-data-mono font-extrabold text-base text-on-surface">{admissionNumber}</span>
+                        <span className="font-data-mono font-extrabold text-sm sm:text-base text-on-surface break-all">{kcbAccountNumber}</span>
                         <button
                           type="button"
-                          onClick={() => handleCopy(admissionNumber, 'account')}
-                          className="px-2 py-0.5 text-[11px] bg-emerald-100 text-emerald-800 rounded font-semibold hover:bg-emerald-200 cursor-pointer"
+                          onClick={() => handleCopy(kcbAccountNumber, 'account')}
+                          className="px-2 py-0.5 text-[11px] bg-emerald-100 text-emerald-800 rounded font-semibold hover:bg-emerald-200 cursor-pointer shrink-0"
                         >
                           {copiedField === 'account' ? 'Copied!' : 'Copy'}
                         </button>
@@ -510,8 +514,8 @@ export const KcbBuniPaymentModal: React.FC<KcbBuniPaymentModalProps> = ({
                     </div>
                     <ol className="list-decimal list-inside space-y-1 pl-1">
                       <li>Go to <strong>M-Pesa</strong> &gt; <strong>Lipa na M-Pesa</strong> &gt; <strong>Paybill</strong> (or open <strong>KCB App / Vooma</strong>).</li>
-                      <li>Enter Business Number: <strong className="font-data-mono">522123</strong>.</li>
-                      <li>Enter Account Number: <strong className="font-data-mono">{admissionNumber}</strong>.</li>
+                      <li>Enter Business Number: <strong className="font-data-mono">522533</strong>.</li>
+                      <li>Enter Account Number: <strong className="font-data-mono break-all">{kcbAccountNumber}</strong>.</li>
                       <li>Enter Amount: <strong>KES {Number(amount || 0).toLocaleString()}</strong>.</li>
                       <li>Enter your M-Pesa / KCB App PIN and confirm.</li>
                     </ol>
@@ -539,11 +543,11 @@ export const KcbBuniPaymentModal: React.FC<KcbBuniPaymentModalProps> = ({
                     </div>
                     <div className="flex justify-between items-center pb-2 border-b border-outline-variant/20">
                       <span className="text-xs text-on-surface-variant">Collection Paybill:</span>
-                      <span className="font-data-mono font-bold text-xs text-[#006a40]">522123</span>
+                      <span className="font-data-mono font-bold text-xs text-[#006a40]">522533</span>
                     </div>
                     <div className="flex justify-between items-center pb-2 border-b border-outline-variant/20">
                       <span className="text-xs text-on-surface-variant">Account / Student Reference:</span>
-                      <span className="font-data-mono font-bold text-xs text-on-surface">{admissionNumber}</span>
+                      <span className="font-data-mono font-bold text-xs text-on-surface break-all">{kcbAccountNumber}</span>
                     </div>
                     <div className="flex justify-between items-center pb-2 border-b border-outline-variant/20">
                       <span className="text-xs text-on-surface-variant">Beneficiary:</span>
@@ -604,7 +608,7 @@ export const KcbBuniPaymentModal: React.FC<KcbBuniPaymentModalProps> = ({
               <div>
                 <h4 className="font-bold text-base text-on-surface">Prompt Dispatched to Mobile!</h4>
                 <p className="text-xs text-on-surface-variant mt-1 max-w-sm mx-auto">
-                  {stkResponse.customerMessage || `Please check ${payerPhone} and enter your M-Pesa PIN to complete payment of KES ${Number(amount).toLocaleString()} to KCB Paybill 522123.`}
+                  {stkResponse.customerMessage || `Please check ${payerPhone} and enter your M-Pesa PIN to complete payment of KES ${Number(amount).toLocaleString()} to KCB Paybill 522533.`}
                 </p>
               </div>
 

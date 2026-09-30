@@ -20,7 +20,7 @@ async function bootstrap() {
     const dbType = process.env.DB_TYPE || 'in-memory';
     const dbTarget = process.env.ACTIVE_DB_TARGET ? ` (${process.env.ACTIVE_DB_TARGET.toUpperCase()})` : '';
     console.log(`🗄️  Database:      ${dbType}${dbTarget}`);
-    console.log(`🏦 KCB Buni API:   PAYBILL ${process.env.KCB_BUNI_SHORTCODE || '522123'} (M-Pesa Express STK Push Rails Active)`);
+    console.log(`🏦 KCB Buni API:   PAYBILL ${process.env.KCB_BUNI_SHORTCODE || '522533'} (M-Pesa Express STK Push Rails Active)`);
     console.log(`💬 WhatsApp API:   ${process.env.WHATSAPP_ACCESS_TOKEN ? 'META CLOUD API' : 'REAL WHATSAPP QR MULTI-DEVICE'}`);
     console.log(`📨 SMS Gateway:    ${process.env.SMS_PROVIDER || 'africastalking'} (${process.env.AFRICASTALKING_SENDER_ID || 'SMARTSHULE'})`);
     console.log(`🤖 Gemini AI API:  ${process.env.GEMINI_API_KEY ? 'CONFIGURED' : 'OPTIONAL'}`);

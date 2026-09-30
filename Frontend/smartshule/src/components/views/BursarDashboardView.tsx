@@ -90,15 +90,22 @@ export const BursarDashboardView: React.FC<BursarDashboardViewProps> = ({
 
           <div className="flex flex-wrap gap-2.5">
             <button
-              onClick={onOpenMpesa}
+              onClick={() => onNavigateTab('student-fee-search')}
               className="px-4 py-2.5 rounded-xl bg-white text-amber-950 font-bold text-xs hover:bg-white/95 shadow-md flex items-center gap-2 transition-all cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[18px] text-amber-900">person_search</span>
+              <span>Check Student Fee</span>
+            </button>
+            <button
+              onClick={onOpenMpesa}
+              className="px-4 py-2.5 rounded-xl bg-amber-800/90 hover:bg-amber-800 text-white font-semibold text-xs border border-amber-400/30 flex items-center gap-2 transition-all cursor-pointer"
             >
               <span className="material-symbols-outlined text-[18px]">payments</span>
               <span>Receive M-Pesa / Bank</span>
             </button>
             <button
               onClick={() => onNavigateTab('defaulters-receipts')}
-              className="px-4 py-2.5 rounded-xl bg-amber-800/80 hover:bg-amber-800 text-white font-semibold text-xs border border-amber-400/30 flex items-center gap-2 transition-all cursor-pointer"
+              className="px-4 py-2.5 rounded-xl bg-amber-800/60 hover:bg-amber-800 text-white font-semibold text-xs border border-amber-400/30 flex items-center gap-2 transition-all cursor-pointer"
             >
               <span className="material-symbols-outlined text-[18px]">receipt_long</span>
               <span>Defaulters Roster ({safeDefaulters.length})</span>

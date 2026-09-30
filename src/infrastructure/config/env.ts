@@ -44,7 +44,7 @@ export const env = {
     consumerKey: process.env.KCB_BUNI_CONSUMER_KEY || '',
     consumerSecret: process.env.KCB_BUNI_CONSUMER_SECRET || '',
     baseUrl: process.env.KCB_BUNI_BASE_URL || 'https://uat.buni.kcbgroup.com',
-    shortCode: process.env.KCB_BUNI_SHORTCODE || '522123',
+    shortCode: process.env.KCB_BUNI_SHORTCODE || '522533',
     callbackUrl: process.env.KCB_BUNI_CALLBACK_URL || 'https://api.smartshule.ac.ke/api/v1/finance/kcb-buni/callback',
   },
 

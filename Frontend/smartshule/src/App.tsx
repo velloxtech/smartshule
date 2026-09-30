@@ -45,6 +45,7 @@ import { SystemLogsView } from './components/views/SystemLogsView';
 import { ComplaintsView } from './components/views/ComplaintsView';
 import { LunchFeeManagementView } from './components/views/LunchFeeManagementView';
 import { ParentProfileView } from './components/views/ParentProfileView';
+import { StudentFeeCheckerView } from './components/views/StudentFeeCheckerView';
 
 // Modals
 import { MpesaStkModal } from './components/modals/MpesaStkModal';
@@ -903,6 +904,7 @@ export default function App() {
               totalCollected={totalCollectedFee}
               students={students}
               onOpenMpesaModal={() => handleOpenMpesa()}
+              onNavigateTab={(tab) => setCurrentTab(tab as any)}
             />
           )}
 
@@ -911,6 +913,13 @@ export default function App() {
               students={students}
               onOpenMpesaWithStudent={handleOpenMpesa}
               onOpenSmsModal={handleOpenSms}
+            />
+          )}
+
+          {currentTab === 'student-fee-search' && (
+            <StudentFeeCheckerView
+              students={students}
+              onRefreshStudents={refreshStudentsAndFees}
             />
           )}
 
@@ -999,7 +1008,7 @@ export default function App() {
             admNo: tx.admNo,
             grade: 'Grade Level',
             amount: tx.amount,
-            channel: tx.channel || 'KCB Buni Paybill 522123',
+            channel: tx.channel || 'KCB Buni Paybill 522533',
             phone: '+254700000000',
             timestamp: 'Just now',
             status: 'Completed',
