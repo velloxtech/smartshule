@@ -11,6 +11,7 @@ import {
   AcademicTerm,
 } from '../../types';
 import { useAuth } from '../../context/AuthContext';
+import { resolveStreamName, resolveGradeName, resolveAcademicYearName } from '../../utils/formatters';
 
 interface UploadMarksModalProps {
   isOpen: boolean;
@@ -270,8 +271,8 @@ const normalizeStudent = (s: any): Student => {
     [s.firstName, s.lastName].filter(Boolean).join(' ') ||
     'Learner';
   const admNo = s.admNo || s.admissionNumber || 'N/A';
-  const grade = s.grade || (s.gradeLevel ? s.gradeLevel.replace(/_/g, ' ') : 'CBC Grade');
-  const stream = s.stream?.name || s.streamName || (s.streamId ? `Stream ${s.streamId.slice(0, 6)}` : '');
+  const grade = resolveGradeName(s.grade || s.gradeLevel);
+  const stream = resolveStreamName(s.streamId, s.stream?.name || s.streamName || s.stream);
 
   return {
     id: s.id,
@@ -824,7 +825,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                 >
                   {academicYears.map((yr) => (
                     <option key={yr.id} value={yr.id}>
-                      Year {yr.name} {yr.isCurrent ? '(Current)' : ''}
+                      Year {resolveAcademicYearName(yr.name || yr.id)} {yr.isCurrent ? '(Current)' : ''}
                     </option>
                   ))}
                 </select>

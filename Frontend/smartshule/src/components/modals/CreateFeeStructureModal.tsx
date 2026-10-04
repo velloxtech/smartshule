@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
 import { AcademicYear, AcademicTerm } from '../../types';
+import { resolveAcademicYearName, resolveGradeName } from '../../utils/formatters';
 
 interface CreateFeeStructureModalProps {
   isOpen: boolean;
@@ -24,38 +25,48 @@ export interface FeeLineItemState {
 }
 
 const TEMPLATES: Record<string, { label: string; desc: string; icon: string; items: FeeLineItemState[] }> = {
-  junior_secondary: {
-    label: 'Junior Secondary (Grade 7 - 9)',
-    desc: 'CBC MOE Standard 50/30/20',
-    icon: 'science',
+  graceseed_pp: {
+    label: 'Grace Seeds Pre-Primary (PG, PP1, PP2)',
+    desc: 'Tuition, Activity (T1 & T2 only), Assessment & Admission',
+    icon: 'child_care',
     items: [
-      { id: 't-1', name: 'Tuition Fee', category: 'TUITION', isOptional: false, annualAmount: '60000', term1Pct: '50', term2Pct: '30', term3Pct: '20', term1: '30000', term2: '18000', term3: '12000' },
-      { id: 't-2', name: 'CBC Assessment & Practical Science Kits', category: 'ASSESSMENT', isOptional: false, annualAmount: '15000', term1Pct: '50', term2Pct: '30', term3Pct: '20', term1: '7500', term2: '4500', term3: '3000' },
-      { id: 't-3', name: 'Activity & Co-Curricular Levy', category: 'ACTIVITY', isOptional: false, annualAmount: '6000', term1Pct: '50', term2Pct: '30', term3Pct: '20', term1: '3000', term2: '1800', term3: '1200' },
-      { id: 't-4', name: 'ICT & Digital Coding Lab', category: 'OTHER', isOptional: false, annualAmount: '9000', term1Pct: '50', term2Pct: '30', term3Pct: '20', term1: '4500', term2: '2700', term3: '1800' },
-      { id: 't-5', name: 'Admission & Registration (New Students)', category: 'ADMISSION', isOptional: false, annualAmount: '5000', term1Pct: '100', term2Pct: '0', term3Pct: '0', term1: '5000', term2: '0', term3: '0' },
+      { id: 'gs-1', name: 'Tuition Fee', category: 'TUITION', isOptional: false, annualAmount: '', term1Pct: '33.3', term2Pct: '33.3', term3Pct: '33.4', term1: '', term2: '', term3: '' },
+      { id: 'gs-2', name: 'Activity Fee', category: 'ACTIVITY', isOptional: false, annualAmount: '', term1Pct: '50', term2Pct: '50', term3Pct: '0', term1: '', term2: '', term3: '' },
+      { id: 'gs-3', name: 'Assessment Fee', category: 'ASSESSMENT', isOptional: false, annualAmount: '', term1Pct: '33.3', term2Pct: '33.3', term3Pct: '33.4', term1: '', term2: '', term3: '' },
+      { id: 'gs-4', name: 'Admission Fee', category: 'ADMISSION', isOptional: true, annualAmount: '', term1Pct: '100', term2Pct: '0', term3Pct: '0', term1: '', term2: '', term3: '' },
+    ]
+  },
+  graceseed_lower: {
+    label: 'Grace Seeds Lower Primary (Grade 1 - 3)',
+    desc: 'Tuition, Activity (T1 & T2 only), Assessment & Admission',
+    icon: 'school',
+    items: [
+      { id: 'gs-1', name: 'Tuition Fee', category: 'TUITION', isOptional: false, annualAmount: '', term1Pct: '33.3', term2Pct: '33.3', term3Pct: '33.4', term1: '', term2: '', term3: '' },
+      { id: 'gs-2', name: 'Activity Fee', category: 'ACTIVITY', isOptional: false, annualAmount: '', term1Pct: '50', term2Pct: '50', term3Pct: '0', term1: '', term2: '', term3: '' },
+      { id: 'gs-3', name: 'Assessment Fee', category: 'ASSESSMENT', isOptional: false, annualAmount: '', term1Pct: '33.3', term2Pct: '33.3', term3Pct: '33.4', term1: '', term2: '', term3: '' },
+      { id: 'gs-4', name: 'Admission Fee', category: 'ADMISSION', isOptional: true, annualAmount: '', term1Pct: '100', term2Pct: '0', term3Pct: '0', term1: '', term2: '', term3: '' },
+    ]
+  },
+  graceseed_upper: {
+    label: 'Grace Seeds Upper Primary (Grade 4 - 6)',
+    desc: 'Tuition, Activity (T1 & T2 only), Assessment & Admission',
+    icon: 'menu_book',
+    items: [
+      { id: 'gs-1', name: 'Tuition Fee', category: 'TUITION', isOptional: false, annualAmount: '', term1Pct: '33.3', term2Pct: '33.3', term3Pct: '33.4', term1: '', term2: '', term3: '' },
+      { id: 'gs-2', name: 'Activity Fee', category: 'ACTIVITY', isOptional: false, annualAmount: '', term1Pct: '50', term2Pct: '50', term3Pct: '0', term1: '', term2: '', term3: '' },
+      { id: 'gs-3', name: 'Assessment Fee', category: 'ASSESSMENT', isOptional: false, annualAmount: '', term1Pct: '33.3', term2Pct: '33.3', term3Pct: '33.4', term1: '', term2: '', term3: '' },
+      { id: 'gs-4', name: 'Admission Fee', category: 'ADMISSION', isOptional: true, annualAmount: '', term1Pct: '100', term2Pct: '0', term3Pct: '0', term1: '', term2: '', term3: '' },
     ]
   },
   primary: {
-    label: 'Primary CBC (Grade 1 - 6)',
-    desc: 'Day Scholar Standard',
-    icon: 'school',
+    label: 'Standard Primary Day Scholar',
+    desc: 'Tuition, CBC Materials, Co-Curricular & Lunch',
+    icon: 'domain',
     items: [
-      { id: 't-1', name: 'Tuition Fee', category: 'TUITION', isOptional: false, annualAmount: '45000', term1Pct: '50', term2Pct: '30', term3Pct: '20', term1: '22500', term2: '13500', term3: '9000' },
-      { id: 't-2', name: 'CBC Assessment & Materials', category: 'ASSESSMENT', isOptional: false, annualAmount: '8000', term1Pct: '50', term2Pct: '30', term3Pct: '20', term1: '4000', term2: '2400', term3: '1600' },
-      { id: 't-3', name: 'Co-Curricular & Physical Education', category: 'ACTIVITY', isOptional: false, annualAmount: '4000', term1Pct: '50', term2Pct: '30', term3Pct: '20', term1: '2000', term2: '1200', term3: '800' },
-      { id: 't-4', name: 'School Lunch Scheme', category: 'MEALS', isOptional: false, annualAmount: '18000', term1Pct: '50', term2Pct: '30', term3Pct: '20', term1: '9000', term2: '5400', term3: '3600' }
-    ]
-  },
-  ecde: {
-    label: 'Pre-Primary / ECDE (Playgroup, PP1, PP2)',
-    desc: 'Early Childhood Care & Learning',
-    icon: 'child_care',
-    items: [
-      { id: 't-1', name: 'Tuition & Daycare', category: 'TUITION', isOptional: false, annualAmount: '24000', term1Pct: '50', term2Pct: '30', term3Pct: '20', term1: '12000', term2: '7200', term3: '4800' },
-      { id: 't-2', name: 'Mid-Morning Snack & Balanced Lunch', category: 'MEALS', isOptional: false, annualAmount: '12000', term1Pct: '50', term2Pct: '30', term3Pct: '20', term1: '6000', term2: '3600', term3: '2400' },
-      { id: 't-3', name: 'Play & Learning Materials', category: 'ASSESSMENT', isOptional: false, annualAmount: '4000', term1Pct: '50', term2Pct: '30', term3Pct: '20', term1: '2000', term2: '1200', term3: '800' },
-      { id: 't-4', name: 'Admission & Learner File Registration', category: 'ADMISSION', isOptional: false, annualAmount: '3000', term1Pct: '100', term2Pct: '0', term3Pct: '0', term1: '3000', term2: '0', term3: '0' }
+      { id: 't-1', name: 'Tuition Fee', category: 'TUITION', isOptional: false, annualAmount: '', term1Pct: '50', term2Pct: '30', term3Pct: '20', term1: '', term2: '', term3: '' },
+      { id: 't-2', name: 'CBC Assessment & Materials', category: 'ASSESSMENT', isOptional: false, annualAmount: '', term1Pct: '50', term2Pct: '30', term3Pct: '20', term1: '', term2: '', term3: '' },
+      { id: 't-3', name: 'Co-Curricular & Physical Education', category: 'ACTIVITY', isOptional: false, annualAmount: '', term1Pct: '50', term2Pct: '30', term3Pct: '20', term1: '', term2: '', term3: '' },
+      { id: 't-4', name: 'School Lunch Scheme', category: 'MEALS', isOptional: false, annualAmount: '', term1Pct: '50', term2Pct: '30', term3Pct: '20', term1: '', term2: '', term3: '' }
     ]
   },
   boarding: {
@@ -63,15 +74,15 @@ const TEMPLATES: Record<string, { label: string; desc: string; icon: string; ite
     desc: 'Tuition, Accommodation & Catering',
     icon: 'hotel',
     items: [
-      { id: 't-1', name: 'Tuition Fee', category: 'TUITION', isOptional: false, annualAmount: '55000', term1Pct: '50', term2Pct: '30', term3Pct: '20', term1: '27500', term2: '16500', term3: '11000' },
-      { id: 't-2', name: 'Boarding & Dormitory Amenities', category: 'BOARDING', isOptional: false, annualAmount: '40000', term1Pct: '50', term2Pct: '30', term3Pct: '20', term1: '20000', term2: '12000', term3: '8000' },
-      { id: 't-3', name: 'Full Board Catering & Nutrition', category: 'MEALS', isOptional: false, annualAmount: '25000', term1Pct: '50', term2Pct: '30', term3Pct: '20', term1: '12500', term2: '7500', term3: '5000' },
-      { id: 't-4', name: 'Infirmary, Laundry & Healthcare', category: 'OTHER', isOptional: false, annualAmount: '6000', term1Pct: '50', term2Pct: '30', term3Pct: '20', term1: '3000', term2: '1800', term3: '1200' }
+      { id: 't-1', name: 'Tuition Fee', category: 'TUITION', isOptional: false, annualAmount: '', term1Pct: '50', term2Pct: '30', term3Pct: '20', term1: '', term2: '', term3: '' },
+      { id: 't-2', name: 'Boarding & Dormitory Amenities', category: 'BOARDING', isOptional: false, annualAmount: '', term1Pct: '50', term2Pct: '30', term3Pct: '20', term1: '', term2: '', term3: '' },
+      { id: 't-3', name: 'Full Board Catering & Nutrition', category: 'MEALS', isOptional: false, annualAmount: '', term1Pct: '50', term2Pct: '30', term3Pct: '20', term1: '', term2: '', term3: '' },
+      { id: 't-4', name: 'Infirmary, Laundry & Healthcare', category: 'OTHER', isOptional: false, annualAmount: '', term1Pct: '50', term2Pct: '30', term3Pct: '20', term1: '', term2: '', term3: '' }
     ]
   }
 };
 
-const DEFAULT_FEE_ITEMS: FeeLineItemState[] = TEMPLATES.junior_secondary.items;
+const DEFAULT_FEE_ITEMS: FeeLineItemState[] = TEMPLATES.graceseed_pp.items;
 
 export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = ({
   isOpen,
@@ -79,19 +90,32 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
   onCreated,
   initialData,
 }) => {
-  const [gradeLevel, setGradeLevel] = useState('GRADE_7');
+  const [gradeLevel, setGradeLevel] = useState('PLAYGROUP');
   const [title, setTitle] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [items, setItems] = useState<FeeLineItemState[]>(DEFAULT_FEE_ITEMS);
 
   // Global Term Percentage Strategy (defines whole-year split by default)
-  const [globalPct1, setGlobalPct1] = useState('50');
-  const [globalPct2, setGlobalPct2] = useState('30');
-  const [globalPct3, setGlobalPct3] = useState('20');
+  const [globalPct1, setGlobalPct1] = useState('33.3');
+  const [globalPct2, setGlobalPct2] = useState('33.3');
+  const [globalPct3, setGlobalPct3] = useState('33.4');
 
-  const [activeTab, setActiveTab] = useState<'basics' | 'items' | 'preview'>('basics');
+  const [activeTab, setActiveTab] = useState<'simplified' | 'basics' | 'items' | 'preview'>('simplified');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Simplified Entry State (Grace Seeds School Ratified Schedule)
+  const [simplifiedTier, setSimplifiedTier] = useState<'PRE_PRIMARY' | 'LOWER_PRIMARY' | 'UPPER_PRIMARY'>('PRE_PRIMARY');
+  const [simplifiedGrade, setSimplifiedGrade] = useState('PLAYGROUP');
+  const [simplifiedTuition, setSimplifiedTuition] = useState('');
+  const [simplifiedActivity, setSimplifiedActivity] = useState('');
+  const [simplifiedAssessment, setSimplifiedAssessment] = useState('');
+  const [simplifiedIncludeAdmission, setSimplifiedIncludeAdmission] = useState(true);
+  const [simplifiedAdmissionAmount, setSimplifiedAdmissionAmount] = useState('');
+  const [simplifiedIncludeLunch, setSimplifiedIncludeLunch] = useState(false);
+  const [simplifiedLunchMonthly, setSimplifiedLunchMonthly] = useState('');
+  const [simplifiedIncludeUniform, setSimplifiedIncludeUniform] = useState(false);
+  const [simplifiedUniformAmount, setSimplifiedUniformAmount] = useState('');
 
   const [schoolId, setSchoolId] = useState('');
   const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
@@ -381,21 +405,171 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
   const term3Subtotal = items.reduce((sum, item) => sum + (Number(item.term3) || 0), 0);
   const fullAnnualTotal = term1Subtotal + term2Subtotal + term3Subtotal;
 
-  const handleSubmit = async (e?: React.FormEvent) => {
+  // Handlers for Simplified Mode
+  const handleSelectTier = (tier: 'PRE_PRIMARY' | 'LOWER_PRIMARY' | 'UPPER_PRIMARY') => {
+    setSimplifiedTier(tier);
+    let newGrade = 'PLAYGROUP';
+
+    if (tier === 'PRE_PRIMARY') {
+      newGrade = 'PLAYGROUP';
+    } else if (tier === 'LOWER_PRIMARY') {
+      newGrade = 'GRADE_1';
+    } else {
+      newGrade = 'GRADE_4';
+    }
+
+    setSimplifiedGrade(newGrade);
+    setGradeLevel(newGrade);
+
+    const yearObj = academicYears.find((y) => y.id === selectedYearId);
+    const yearName = yearObj ? resolveAcademicYearName(yearObj.name || yearObj.id) : '2026';
+    setTitle(`${resolveGradeName(newGrade)} CBC Annual Fee Schedule — ${yearName}`);
+  };
+
+  const handleSelectGrade = (gr: string) => {
+    setSimplifiedGrade(gr);
+    setGradeLevel(gr);
+    const yearObj = academicYears.find((y) => y.id === selectedYearId);
+    const yearName = yearObj ? resolveAcademicYearName(yearObj.name || yearObj.id) : '2026';
+    setTitle(`${resolveGradeName(gr)} CBC Annual Fee Schedule — ${yearName}`);
+  };
+
+  const buildItemsFromSimplified = (): FeeLineItemState[] => {
+    const tAmt = Number(simplifiedTuition) || 0;
+    const actAmt = Number(simplifiedActivity) || 0;
+    const assAmt = Number(simplifiedAssessment) || 0;
+    const admAmt = simplifiedIncludeAdmission ? (Number(simplifiedAdmissionAmount) || 0) : 0;
+    const lunchMonthlyAmt = simplifiedIncludeLunch ? (Number(simplifiedLunchMonthly) || 0) : 0;
+    const uniformAmt = simplifiedIncludeUniform ? (Number(simplifiedUniformAmount) || 0) : 0;
+
+    const newItems: FeeLineItemState[] = [
+      {
+        id: `gs-tuition-${Date.now()}`,
+        name: 'Tuition Fee',
+        category: 'TUITION',
+        isOptional: false,
+        annualAmount: String(tAmt * 3),
+        term1Pct: '33.3',
+        term2Pct: '33.3',
+        term3Pct: '33.4',
+        term1: String(tAmt),
+        term2: String(tAmt),
+        term3: String(tAmt),
+      },
+      {
+        id: `gs-activity-${Date.now()}`,
+        name: 'Activity Fee',
+        category: 'ACTIVITY',
+        isOptional: false,
+        annualAmount: String(actAmt * 2),
+        term1Pct: '50',
+        term2Pct: '50',
+        term3Pct: '0',
+        term1: String(actAmt),
+        term2: String(actAmt),
+        term3: '0', // 1st & 2nd term ONLY!
+      },
+      {
+        id: `gs-assessment-${Date.now()}`,
+        name: 'Assessment Fee',
+        category: 'ASSESSMENT',
+        isOptional: false,
+        annualAmount: String(assAmt * 3),
+        term1Pct: '33.3',
+        term2Pct: '33.3',
+        term3Pct: '33.4',
+        term1: String(assAmt),
+        term2: String(assAmt),
+        term3: String(assAmt),
+      },
+    ];
+
+    if (simplifiedIncludeAdmission && admAmt > 0) {
+      newItems.push({
+        id: `gs-admission-${Date.now()}`,
+        name: 'Admission Fee',
+        category: 'ADMISSION',
+        isOptional: true,
+        annualAmount: String(admAmt),
+        term1Pct: '100',
+        term2Pct: '0',
+        term3Pct: '0',
+        term1: String(admAmt),
+        term2: '0',
+        term3: '0',
+      });
+    }
+
+    if (simplifiedIncludeLunch && lunchMonthlyAmt > 0) {
+      const termLunch = lunchMonthlyAmt * 3;
+      newItems.push({
+        id: `gs-lunch-${Date.now()}`,
+        name: 'School Lunch Scheme',
+        category: 'MEALS',
+        isOptional: true,
+        annualAmount: String(termLunch * 3),
+        term1Pct: '33.3',
+        term2Pct: '33.3',
+        term3Pct: '33.4',
+        term1: String(termLunch),
+        term2: String(termLunch),
+        term3: String(termLunch),
+      });
+    }
+
+    if (simplifiedIncludeUniform && uniformAmt > 0) {
+      newItems.push({
+        id: `gs-uniform-${Date.now()}`,
+        name: 'Track Suit / Uniform T-Shirt',
+        category: 'OTHER',
+        isOptional: true,
+        annualAmount: String(uniformAmt),
+        term1Pct: '100',
+        term2Pct: '0',
+        term3Pct: '0',
+        term1: String(uniformAmt),
+        term2: '0',
+        term3: '0',
+      });
+    }
+
+    return newItems;
+  };
+
+  const handleApplySimplifiedToItems = () => {
+    const built = buildItemsFromSimplified();
+    setItems(built);
+    setActiveTab('items');
+  };
+
+  const handleSaveSimplifiedDirectly = async () => {
+    const built = buildItemsFromSimplified();
+    setItems(built);
+    await handleSubmit(undefined, built, simplifiedGrade);
+  };
+
+  const handleSubmit = async (e?: React.FormEvent, overrideItems?: FeeLineItemState[], overrideGrade?: string) => {
     if (e) e.preventDefault();
     if (!selectedYearId) {
       setError('Please select an active academic year.');
-      setActiveTab('basics');
       return;
     }
 
-    if (fullAnnualTotal <= 0) {
+    const sourceItems = overrideItems || items;
+    const targetGrade = overrideGrade || gradeLevel;
+
+    const term1Sum = sourceItems.reduce((sum, item) => sum + (Number(item.term1) || 0), 0);
+    const term2Sum = sourceItems.reduce((sum, item) => sum + (Number(item.term2) || 0), 0);
+    const term3Sum = sourceItems.reduce((sum, item) => sum + (Number(item.term3) || 0), 0);
+    const fullAnn = term1Sum + term2Sum + term3Sum;
+
+    if (fullAnn <= 0) {
       setError('Total annual fee structure amount must be greater than zero.');
       setActiveTab('items');
       return;
     }
 
-    const unNamedItems = items.filter((it) => !it.name.trim());
+    const unNamedItems = sourceItems.filter((it) => !it.name.trim());
     if (unNamedItems.length > 0) {
       setError('Please provide a name for all line items.');
       setActiveTab('items');
@@ -403,7 +577,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
     }
 
     // Format line items with both amounts and percentages
-    const formattedItems = items
+    const formattedItems = sourceItems
       .filter((it) => it.name.trim() !== '')
       .map((it) => {
         const t1 = Number(it.term1) || 0;
@@ -438,17 +612,18 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
         };
       });
 
+    const defaultTitle = `${targetGrade.replace('_', ' ')} CBC Annual Fee Schedule`;
     const payload = {
       schoolId: schoolId || 'school-001',
       academicYearId: selectedYearId,
       termId: 'ALL',
-      gradeLevel,
-      title: title.trim(),
+      gradeLevel: targetGrade,
+      title: title.trim() || defaultTitle,
       dueDate: dueDate || `${new Date().getFullYear()}-12-31`,
       termPercentages: {
-        term1: Number(globalPct1) || 50,
-        term2: Number(globalPct2) || 30,
-        term3: Number(globalPct3) || 20,
+        term1: Number(globalPct1) || 33.3,
+        term2: Number(globalPct2) || 33.3,
+        term3: Number(globalPct3) || 33.4,
       },
       items: formattedItems,
     };
@@ -485,7 +660,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
                 {initialData ? 'Clone / Edit Annual Fee Schedule' : 'Create Annual Fee Schedule'}
               </h3>
               <p className="text-xs text-rose-200 mt-0.5">
-                Whole-year CBC fee schedule defined in Term 1, 2, & 3 percentage splits
+                Grace Seeds School ratified fee schedules · Term 1, 2, & 3 allocations
               </p>
             </div>
           </div>
@@ -501,6 +676,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
         <div className="bg-gray-50 border-b border-gray-200 px-4 py-2.5 flex items-center justify-between text-xs shrink-0 overflow-x-auto gap-2">
           <div className="flex items-center gap-1.5 sm:gap-2">
             {[
+              { id: 'simplified', label: '⚡ Simplified Entry (Grace Seeds)', icon: 'bolt' },
               { id: 'basics', label: '1. Class & Strategy', icon: 'tune' },
               { id: 'items', label: `2. Itemized Lines (${items.length})`, icon: 'receipt_long' },
               { id: 'preview', label: '3. Invoice Preview & Save', icon: 'preview' },
@@ -535,6 +711,408 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
             <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium flex items-center gap-2 animate-in fade-in">
               <span className="material-symbols-outlined text-[18px] text-red-600 shrink-0">error</span>
               <span className="flex-1">{error}</span>
+            </div>
+          )}
+
+          {/* TAB 0: SIMPLIFIED SYSTEM ENTRY (GRACE SEEDS RATIFIED SCHEDULE) */}
+          {activeTab === 'simplified' && (
+            <div className="space-y-5 animate-in fade-in duration-150">
+              {/* Header Banner */}
+              <div className="p-4 bg-gradient-to-r from-rose-50 to-amber-50 rounded-2xl border border-rose-200/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="bg-[#7a1228] text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                      Grace Seeds School Ratified Schedule
+                    </span>
+                    <span className="text-[11px] font-semibold text-gray-600">Kisumu, Kenya</span>
+                  </div>
+                  <h4 className="font-bold text-sm text-gray-900">
+                    Simplified System Entry
+                  </h4>
+                  <p className="text-xs text-gray-600">
+                    Quickly configure Fee, Activity fee (Term 1 & 2 only), Assessment fee (termly), and Admission fee (once off).
+                  </p>
+                </div>
+                <div className="bg-white px-3 py-2 rounded-xl border border-rose-200 text-xs text-right shadow-2xs shrink-0">
+                  <div className="text-[10px] text-gray-500 font-semibold uppercase">M-Pesa Paybill</div>
+                  <div className="font-mono font-bold text-gray-900">522533</div>
+                  <div className="text-[10px] text-gray-400">Acc: 8048859# Name</div>
+                </div>
+              </div>
+
+              {/* 1. Academic Year & Class Selection */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
+                    Target Academic Year
+                  </label>
+                  <select
+                    value={selectedYearId}
+                    onChange={(e) => handleYearChange(e.target.value)}
+                    required
+                    className="w-full bg-gray-50 border border-gray-300 rounded-xl p-2.5 text-xs text-gray-900 focus:outline-[#7a1228] focus:bg-white"
+                  >
+                    {academicYears.length > 0 ? (
+                      academicYears.map((y) => (
+                        <option key={y.id} value={y.id}>
+                          {y.name} {y.isCurrent ? '(Active Year)' : ''}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="">No years created</option>
+                    )}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5">
+                    Specific Grade / Class
+                  </label>
+                  <select
+                    value={simplifiedGrade}
+                    onChange={(e) => handleSelectGrade(e.target.value)}
+                    className="w-full bg-gray-50 border border-gray-300 rounded-xl p-2.5 text-xs text-gray-900 focus:outline-[#7a1228] focus:bg-white font-semibold"
+                  >
+                    <optgroup label="Pre-Primary (Pre-School)">
+                      <option value="PLAYGROUP">Playgroup</option>
+                      <option value="PP1">PP1 (Pre-Primary 1)</option>
+                      <option value="PP2">PP2 (Pre-Primary 2)</option>
+                    </optgroup>
+                    <optgroup label="Lower Primary (Grade 1 - 3)">
+                      <option value="GRADE_1">Grade 1</option>
+                      <option value="GRADE_2">Grade 2</option>
+                      <option value="GRADE_3">Grade 3</option>
+                    </optgroup>
+                    <optgroup label="Upper Primary (Grade 4 - 6)">
+                      <option value="GRADE_4">Grade 4</option>
+                      <option value="GRADE_5">Grade 5</option>
+                      <option value="GRADE_6">Grade 6</option>
+                    </optgroup>
+                  </select>
+                </div>
+              </div>
+
+              {/* Tier Quick Buttons */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-gray-700">
+                  Select Grace Seeds School Tier (Auto-fills official rates)
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => handleSelectTier('PRE_PRIMARY')}
+                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                      simplifiedTier === 'PRE_PRIMARY'
+                        ? 'bg-rose-50/80 border-[#7a1228] ring-2 ring-[#7a1228]/20'
+                        : 'bg-white border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="material-symbols-outlined text-[20px] text-[#7a1228]">child_care</span>
+                      <span className="font-bold text-xs text-gray-900">Pre-Primary (PG, PP1, PP2)</span>
+                    </div>
+                    <div className="text-[11px] text-gray-500">Tuition · Activity (T1 &amp; T2) · Assessment</div>
+                    <div className="text-[10px] text-gray-400 font-mono mt-1">Rates configured in schedule</div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSelectTier('LOWER_PRIMARY')}
+                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                      simplifiedTier === 'LOWER_PRIMARY'
+                        ? 'bg-rose-50/80 border-[#7a1228] ring-2 ring-[#7a1228]/20'
+                        : 'bg-white border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="material-symbols-outlined text-[20px] text-[#7a1228]">school</span>
+                      <span className="font-bold text-xs text-gray-900">Lower Primary (Grade 1 - 3)</span>
+                    </div>
+                    <div className="text-[11px] text-gray-500">Tuition · Activity (T1 &amp; T2) · Assessment</div>
+                    <div className="text-[10px] text-gray-400 font-mono mt-1">Rates configured in schedule</div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSelectTier('UPPER_PRIMARY')}
+                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                      simplifiedTier === 'UPPER_PRIMARY'
+                        ? 'bg-rose-50/80 border-[#7a1228] ring-2 ring-[#7a1228]/20'
+                        : 'bg-white border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="material-symbols-outlined text-[20px] text-[#7a1228]">menu_book</span>
+                      <span className="font-bold text-xs text-gray-900">Upper Primary (Grade 4 - 6)</span>
+                    </div>
+                    <div className="text-[11px] text-gray-500">Tuition · Activity (T1 &amp; T2) · Assessment</div>
+                    <div className="text-[10px] text-gray-400 font-mono mt-1">Rates configured in schedule</div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Core Fee Inputs Grid */}
+              <div className="p-4 bg-gray-50 rounded-2xl border border-gray-200 space-y-4">
+                <h5 className="font-bold text-xs uppercase tracking-wider text-gray-700 flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[16px] text-[#7a1228]">account_balance_wallet</span>
+                  <span>Core Termly Fee Components</span>
+                </h5>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                  <div className="bg-white p-3 rounded-xl border border-gray-200">
+                    <label className="block text-xs font-bold text-gray-800 mb-0.5">
+                      Base Fee / Tuition (Termly)
+                    </label>
+                    <p className="text-[10px] text-gray-500 mb-2">Applied equally: Term 1, 2, 3</p>
+                    <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-300 rounded-lg px-2.5 py-1.5 focus-within:border-[#7a1228]">
+                      <span className="text-xs font-bold text-gray-500">KES</span>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="0.00"
+                        value={simplifiedTuition}
+                        onChange={(e) => setSimplifiedTuition(e.target.value)}
+                        className="w-full text-xs font-mono font-bold text-gray-900 outline-none bg-transparent"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-3 rounded-xl border border-gray-200">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <label className="block text-xs font-bold text-gray-800">
+                        Activity Fee
+                      </label>
+                      <span className="text-[9px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.5 rounded">
+                        T1 & T2 ONLY
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-gray-500 mb-2">Term 3 is waived (no fee charged)</p>
+                    <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-300 rounded-lg px-2.5 py-1.5 focus-within:border-[#7a1228]">
+                      <span className="text-xs font-bold text-gray-500">KES</span>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="0.00"
+                        value={simplifiedActivity}
+                        onChange={(e) => setSimplifiedActivity(e.target.value)}
+                        className="w-full text-xs font-mono font-bold text-gray-900 outline-none bg-transparent"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="bg-white p-3 rounded-xl border border-gray-200">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <label className="block text-xs font-bold text-gray-800">
+                        Assessment Fee
+                      </label>
+                      <span className="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded">
+                        Termly
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-gray-500 mb-2">Billed: Term 1, 2, 3</p>
+                    <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-300 rounded-lg px-2.5 py-1.5 focus-within:border-[#7a1228]">
+                      <span className="text-xs font-bold text-gray-500">KES</span>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="0.00"
+                        value={simplifiedAssessment}
+                        onChange={(e) => setSimplifiedAssessment(e.target.value)}
+                        className="w-full text-xs font-mono font-bold text-gray-900 outline-none bg-transparent"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Additional / Optional Levies */}
+                <div className="pt-2 border-t border-gray-200 space-y-2">
+                  <div className="text-[11px] font-bold text-gray-700 uppercase tracking-wider">
+                    Additional Charges & Optional Schemes
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {/* Admission Fee */}
+                    <div className="bg-white p-3 rounded-xl border border-gray-200 space-y-2">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={simplifiedIncludeAdmission}
+                          onChange={(e) => setSimplifiedIncludeAdmission(e.target.checked)}
+                          className="rounded text-[#7a1228] focus:ring-[#7a1228]"
+                        />
+                        <span className="text-xs font-bold text-gray-900">Admission Fee (Once Off)</span>
+                      </label>
+                      <p className="text-[10px] text-gray-500">Charged on 1st Term / New Admission only</p>
+                      {simplifiedIncludeAdmission && (
+                        <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-300 rounded-lg px-2 py-1">
+                          <span className="text-[10px] font-bold text-gray-500">KES</span>
+                          <input
+                            type="number"
+                            min="0"
+                            placeholder="0.00"
+                            value={simplifiedAdmissionAmount}
+                            onChange={(e) => setSimplifiedAdmissionAmount(e.target.value)}
+                            className="w-full text-xs font-mono font-bold text-gray-900 outline-none bg-transparent"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Lunch Scheme */}
+                    <div className="bg-white p-3 rounded-xl border border-gray-200 space-y-2">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={simplifiedIncludeLunch}
+                          onChange={(e) => setSimplifiedIncludeLunch(e.target.checked)}
+                          className="rounded text-[#7a1228] focus:ring-[#7a1228]"
+                        />
+                        <span className="text-xs font-bold text-gray-900">Lunch Scheme</span>
+                      </label>
+                      <p className="text-[10px] text-gray-500">Monthly lunch rate billed per term</p>
+                      {simplifiedIncludeLunch && (
+                        <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-300 rounded-lg px-2 py-1">
+                          <span className="text-[10px] font-bold text-gray-500">KES/mo</span>
+                          <input
+                            type="number"
+                            min="0"
+                            placeholder="0.00"
+                            value={simplifiedLunchMonthly}
+                            onChange={(e) => setSimplifiedLunchMonthly(e.target.value)}
+                            className="w-full text-xs font-mono font-bold text-gray-900 outline-none bg-transparent"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Track Suit / Uniform */}
+                    <div className="bg-white p-3 rounded-xl border border-gray-200 space-y-2">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={simplifiedIncludeUniform}
+                          onChange={(e) => setSimplifiedIncludeUniform(e.target.checked)}
+                          className="rounded text-[#7a1228] focus:ring-[#7a1228]"
+                        />
+                        <span className="text-xs font-bold text-gray-900">Track Suit / T-Shirt</span>
+                      </label>
+                      <p className="text-[10px] text-gray-500">Official uniform levy (once-off)</p>
+                      {simplifiedIncludeUniform && (
+                        <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-300 rounded-lg px-2 py-1">
+                          <span className="text-[10px] font-bold text-gray-500">KES</span>
+                          <input
+                            type="number"
+                            min="0"
+                            placeholder="0.00"
+                            value={simplifiedUniformAmount}
+                            onChange={(e) => setSimplifiedUniformAmount(e.target.value)}
+                            className="w-full text-xs font-mono font-bold text-gray-900 outline-none bg-transparent"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Term Breakdown Preview Card */}
+              {(() => {
+                const tAmt = Number(simplifiedTuition) || 0;
+                const actAmt = Number(simplifiedActivity) || 0;
+                const assAmt = Number(simplifiedAssessment) || 0;
+                const admAmt = simplifiedIncludeAdmission ? (Number(simplifiedAdmissionAmount) || 0) : 0;
+                const lunchTermAmt = simplifiedIncludeLunch ? ((Number(simplifiedLunchMonthly) || 0) * 3) : 0;
+                const uniAmt = simplifiedIncludeUniform ? (Number(simplifiedUniformAmount) || 0) : 0;
+
+                const t1 = tAmt + actAmt + assAmt + admAmt + lunchTermAmt + uniAmt;
+                const t2 = tAmt + actAmt + assAmt + lunchTermAmt;
+                const t3 = tAmt + assAmt + lunchTermAmt; // No activity, no admission, no uniform!
+                const ann = t1 + t2 + t3;
+
+                return (
+                  <div className="p-4 bg-white rounded-2xl border border-gray-200 shadow-2xs space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-gray-700 flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-[16px] text-emerald-600">monitoring</span>
+                        <span>Computed Term Billing Schedule ({resolveGradeName(simplifiedGrade)})</span>
+                      </span>
+                      <span className="text-xs font-bold text-gray-900 font-mono">
+                        Annual Total: {ann > 0 ? `KES ${ann.toLocaleString()}` : <span className="text-gray-400">KES --</span>}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="p-3 bg-rose-50/60 rounded-xl border border-rose-200">
+                        <div className="text-[10px] font-bold uppercase text-gray-500">Term 1 Invoice</div>
+                        <div className="text-lg font-mono font-bold text-gray-900 mt-0.5">
+                          {t1 > 0 ? `KES ${t1.toLocaleString()}` : <span className="text-gray-400">KES --</span>}
+                        </div>
+                        <div className="text-[10px] text-gray-600 mt-1 space-y-0.5">
+                          <div>Tuition: {tAmt > 0 ? tAmt.toLocaleString() : <span className="text-gray-400">--</span>}</div>
+                          <div>Activity: {actAmt > 0 ? actAmt.toLocaleString() : <span className="text-gray-400">--</span>}</div>
+                          <div>Assessment: {assAmt > 0 ? assAmt.toLocaleString() : <span className="text-gray-400">--</span>}</div>
+                          {admAmt > 0 && <div>Admission: {admAmt.toLocaleString()}</div>}
+                        </div>
+                      </div>
+
+                      <div className="p-3 bg-amber-50/60 rounded-xl border border-amber-200">
+                        <div className="text-[10px] font-bold uppercase text-gray-500">Term 2 Invoice</div>
+                        <div className="text-lg font-mono font-bold text-gray-900 mt-0.5">
+                          {t2 > 0 ? `KES ${t2.toLocaleString()}` : <span className="text-gray-400">KES --</span>}
+                        </div>
+                        <div className="text-[10px] text-gray-600 mt-1 space-y-0.5">
+                          <div>Tuition: {tAmt > 0 ? tAmt.toLocaleString() : <span className="text-gray-400">--</span>}</div>
+                          <div>Activity: {actAmt > 0 ? actAmt.toLocaleString() : <span className="text-gray-400">--</span>}</div>
+                          <div>Assessment: {assAmt > 0 ? assAmt.toLocaleString() : <span className="text-gray-400">--</span>}</div>
+                        </div>
+                      </div>
+
+                      <div className="p-3 bg-emerald-50/60 rounded-xl border border-emerald-200">
+                        <div className="text-[10px] font-bold uppercase text-gray-500">Term 3 Invoice</div>
+                        <div className="text-lg font-mono font-bold text-gray-900 mt-0.5">
+                          {t3 > 0 ? `KES ${t3.toLocaleString()}` : <span className="text-gray-400">KES --</span>}
+                        </div>
+                        <div className="text-[10px] text-gray-600 mt-1 space-y-0.5">
+                          <div>Tuition: {tAmt > 0 ? tAmt.toLocaleString() : <span className="text-gray-400">--</span>}</div>
+                          <div className="text-gray-400 line-through">Activity: -- (Waived)</div>
+                          <div>Assessment: {assAmt > 0 ? assAmt.toLocaleString() : <span className="text-gray-400">--</span>}</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-between pt-3 border-t border-gray-200 gap-3">
+                <button
+                  type="button"
+                  onClick={handleApplySimplifiedToItems}
+                  className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold rounded-xl text-xs flex items-center gap-1.5 cursor-pointer transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[16px]">tune</span>
+                  <span>Inspect & Customize Line Items &rarr;</span>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={isLoading}
+                  onClick={handleSaveSimplifiedDirectly}
+                  className="px-5 py-2.5 bg-[#7a1228] hover:bg-[#5c0a1a] text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-md cursor-pointer disabled:opacity-60 transition-all"
+                >
+                  {isLoading ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Saving Schedule...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                      <span>Ratify & Save {simplifiedGrade.replace('_', ' ')} Schedule</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           )}
 
@@ -587,7 +1165,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
                     {academicYears.length > 0 ? (
                       academicYears.map((y) => (
                         <option key={y.id} value={y.id}>
-                          {y.name} {y.isCurrent ? '(Active Year)' : ''}
+                          {resolveAcademicYearName(y.name || y.id)} {y.isCurrent ? '(Active Year)' : ''}
                         </option>
                       ))
                     ) : (
@@ -931,7 +1509,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
                             <input
                               type="number"
                               min="0"
-                              placeholder="0"
+                              placeholder="0.00"
                               value={item.annualAmount}
                               onChange={(e) => handleUpdateAnnualAmount(item.id, e.target.value)}
                               className="w-24 font-mono font-bold text-xs text-[#7a1228] text-right focus:outline-none"
@@ -965,7 +1543,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
                           <div className="flex items-center justify-between text-[11px]">
                             <span className="font-bold text-[#7a1228]">Term 1</span>
                             <span className="text-[10px] text-gray-400 font-mono">
-                              KES {Number(item.term1).toLocaleString()}
+                              {Number(item.term1) > 0 ? `KES ${Number(item.term1).toLocaleString()}` : '--'}
                             </span>
                           </div>
                           <div className="grid grid-cols-2 gap-1.5">
@@ -984,7 +1562,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
                             <div className="relative">
                               <input
                                 type="number"
-                                placeholder="0"
+                                placeholder="0.00"
                                 value={item.term1}
                                 onChange={(e) => handleUpdateTermAmount(item.id, 'term1', e.target.value)}
                                 className="w-full bg-gray-50 border border-gray-300 rounded-lg p-1.5 text-xs font-mono font-bold pr-2 text-right"
@@ -999,7 +1577,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
                           <div className="flex items-center justify-between text-[11px]">
                             <span className="font-bold text-amber-700">Term 2</span>
                             <span className="text-[10px] text-gray-400 font-mono">
-                              KES {Number(item.term2).toLocaleString()}
+                              {Number(item.term2) > 0 ? `KES ${Number(item.term2).toLocaleString()}` : '--'}
                             </span>
                           </div>
                           <div className="grid grid-cols-2 gap-1.5">
@@ -1018,7 +1596,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
                             <div className="relative">
                               <input
                                 type="number"
-                                placeholder="0"
+                                placeholder="0.00"
                                 value={item.term2}
                                 onChange={(e) => handleUpdateTermAmount(item.id, 'term2', e.target.value)}
                                 className="w-full bg-gray-50 border border-gray-300 rounded-lg p-1.5 text-xs font-mono font-bold pr-2 text-right"
@@ -1033,7 +1611,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
                           <div className="flex items-center justify-between text-[11px]">
                             <span className="font-bold text-blue-700">Term 3</span>
                             <span className="text-[10px] text-gray-400 font-mono">
-                              KES {Number(item.term3).toLocaleString()}
+                              {Number(item.term3) > 0 ? `KES ${Number(item.term3).toLocaleString()}` : '--'}
                             </span>
                           </div>
                           <div className="grid grid-cols-2 gap-1.5">
@@ -1052,7 +1630,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
                             <div className="relative">
                               <input
                                 type="number"
-                                placeholder="0"
+                                placeholder="0.00"
                                 value={item.term3}
                                 onChange={(e) => handleUpdateTermAmount(item.id, 'term3', e.target.value)}
                                 className="w-full bg-gray-50 border border-gray-300 rounded-lg p-1.5 text-xs font-mono font-bold pr-2 text-right"
@@ -1066,7 +1644,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
                       {/* Item Bottom Badges */}
                       <div className="flex items-center justify-between text-[10px] text-gray-500 pt-0.5">
                         <span className="font-medium">
-                          Line Sum: <strong className="text-gray-900 font-mono">KES {itemTotal.toLocaleString()}</strong>
+                          Line Sum: <strong className="text-gray-900 font-mono">{itemTotal > 0 ? `KES ${itemTotal.toLocaleString()}` : '--'}</strong>
                         </span>
                         <span
                           className={`font-mono font-bold px-1.5 py-0.5 rounded ${
@@ -1112,14 +1690,14 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
                   <div>
                     <h4 className="font-bold text-sm text-gray-900">{title}</h4>
                     <p className="text-xs text-gray-500">
-                      Grade: <span className="font-bold text-gray-800">{gradeLevel.replace('_', ' ')}</span> · Due Date:{' '}
+                      Grade: <span className="font-bold text-gray-800">{resolveGradeName(gradeLevel)}</span> · Due Date:{' '}
                       <span className="font-bold text-gray-800">{dueDate || 'Not set'}</span>
                     </p>
                   </div>
                   <div className="text-right">
                     <span className="text-[10px] text-gray-500 uppercase font-semibold block">Full Annual Billed</span>
                     <span className="font-mono font-bold text-lg text-[#7a1228]">
-                      KES {fullAnnualTotal.toLocaleString()}
+                      {fullAnnualTotal > 0 ? `KES ${fullAnnualTotal.toLocaleString()}` : <span className="text-gray-400">KES --</span>}
                     </span>
                   </div>
                 </div>
@@ -1129,7 +1707,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
                   <div className="bg-white p-3 rounded-xl border border-rose-200 text-center shadow-2xs">
                     <span className="text-[11px] font-bold text-[#7a1228] uppercase block">Term 1 Invoice</span>
                     <span className="text-base font-mono font-bold text-gray-900 block mt-0.5">
-                      KES {term1Subtotal.toLocaleString()}
+                      {term1Subtotal > 0 ? `KES ${term1Subtotal.toLocaleString()}` : <span className="text-gray-400">KES --</span>}
                     </span>
                     <span className="text-[10px] text-gray-500 font-mono">
                       {fullAnnualTotal > 0 ? Math.round((term1Subtotal / fullAnnualTotal) * 100) : 0}% of Annual
@@ -1139,7 +1717,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
                   <div className="bg-white p-3 rounded-xl border border-amber-200 text-center shadow-2xs">
                     <span className="text-[11px] font-bold text-amber-700 uppercase block">Term 2 Invoice</span>
                     <span className="text-base font-mono font-bold text-gray-900 block mt-0.5">
-                      KES {term2Subtotal.toLocaleString()}
+                      {term2Subtotal > 0 ? `KES ${term2Subtotal.toLocaleString()}` : <span className="text-gray-400">KES --</span>}
                     </span>
                     <span className="text-[10px] text-gray-500 font-mono">
                       {fullAnnualTotal > 0 ? Math.round((term2Subtotal / fullAnnualTotal) * 100) : 0}% of Annual
@@ -1149,7 +1727,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
                   <div className="bg-white p-3 rounded-xl border border-blue-200 text-center shadow-2xs">
                     <span className="text-[11px] font-bold text-blue-700 uppercase block">Term 3 Invoice</span>
                     <span className="text-base font-mono font-bold text-gray-900 block mt-0.5">
-                      KES {term3Subtotal.toLocaleString()}
+                      {term3Subtotal > 0 ? `KES ${term3Subtotal.toLocaleString()}` : <span className="text-gray-400">KES --</span>}
                     </span>
                     <span className="text-[10px] text-gray-500 font-mono">
                       {fullAnnualTotal > 0 ? Math.round((term3Subtotal / fullAnnualTotal) * 100) : 0}% of Annual
@@ -1188,11 +1766,11 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
                             )}
                           </td>
                           <td className="py-2 px-3 text-[11px] text-gray-500">{it.category}</td>
-                          <td className="py-2 px-3 text-center font-mono text-gray-700">KES {t1.toLocaleString()}</td>
-                          <td className="py-2 px-3 text-center font-mono text-gray-700">KES {t2.toLocaleString()}</td>
-                          <td className="py-2 px-3 text-center font-mono text-gray-700">KES {t3.toLocaleString()}</td>
+                          <td className="py-2 px-3 text-center font-mono text-gray-700">{t1 > 0 ? `KES ${t1.toLocaleString()}` : '--'}</td>
+                          <td className="py-2 px-3 text-center font-mono text-gray-700">{t2 > 0 ? `KES ${t2.toLocaleString()}` : '--'}</td>
+                          <td className="py-2 px-3 text-center font-mono text-gray-700">{t3 > 0 ? `KES ${t3.toLocaleString()}` : '--'}</td>
                           <td className="py-2 px-3 text-right font-mono font-bold text-gray-900">
-                            KES {tot.toLocaleString()}
+                            {tot > 0 ? `KES ${tot.toLocaleString()}` : '--'}
                           </td>
                         </tr>
                       );
@@ -1204,16 +1782,16 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
                         Total Annual Billed:
                       </td>
                       <td className="py-2.5 px-3 text-center font-mono text-[#7a1228]">
-                        KES {term1Subtotal.toLocaleString()}
+                        {term1Subtotal > 0 ? `KES ${term1Subtotal.toLocaleString()}` : '--'}
                       </td>
                       <td className="py-2.5 px-3 text-center font-mono text-amber-700">
-                        KES {term2Subtotal.toLocaleString()}
+                        {term2Subtotal > 0 ? `KES ${term2Subtotal.toLocaleString()}` : '--'}
                       </td>
                       <td className="py-2.5 px-3 text-center font-mono text-blue-700">
-                        KES {term3Subtotal.toLocaleString()}
+                        {term3Subtotal > 0 ? `KES ${term3Subtotal.toLocaleString()}` : '--'}
                       </td>
                       <td className="py-2.5 px-3 text-right font-mono text-[#7a1228]">
-                        KES {fullAnnualTotal.toLocaleString()}
+                        {fullAnnualTotal > 0 ? `KES ${fullAnnualTotal.toLocaleString()}` : '--'}
                       </td>
                     </tr>
                   </tfoot>

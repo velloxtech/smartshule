@@ -64,6 +64,17 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
         ],
       },
       {
+        id: 'archived-records',
+        label: 'Archived Accounts & Data',
+        icon: 'inventory_2',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.HEAD_TEACHER,
+        ],
+      },
+      {
         id: 'teachers-staff',
         label: 'Teachers & Staff',
         icon: 'badge',
@@ -210,6 +221,20 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
           UserRole.TEACHER,
           UserRole.PARENT,
           UserRole.GUARDIAN,
+          UserRole.STUDENT,
+        ],
+      },
+      {
+        id: 'library',
+        label: 'Library & Textbooks',
+        icon: 'local_library',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.HEAD_TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
+          UserRole.TEACHER,
           UserRole.STUDENT,
         ],
       },
@@ -401,8 +426,8 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
         ],
       },
       {
-        id: 'complaints',
-        label: 'Parent Complaints',
+        id: 'concerns',
+        label: 'Parent Concerns',
         icon: 'rate_review',
         allowedRoles: [
           UserRole.SUPER_ADMIN,
@@ -427,6 +452,17 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
           UserRole.SCHOOL_ADMIN,
           UserRole.HEAD_TEACHER,
           UserRole.DEPUTY_HEAD_TEACHER,
+        ],
+      },
+      {
+        id: 'archived-records',
+        label: 'Archived Accounts & Data',
+        icon: 'inventory_2',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.HEAD_TEACHER,
         ],
       },
       {

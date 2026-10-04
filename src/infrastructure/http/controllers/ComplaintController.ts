@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { ComplaintUseCases } from '../../../application/complaints/ComplaintUseCases';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
+import { UserRole } from '../../../core/domain/user/User';
 
 export const CreateComplaintSchema = z.object({
   title: z.string().min(3).max(255),
@@ -108,7 +109,7 @@ export class ComplaintController {
         schoolId
       } = req.query;
 
-      const complaints = await this.useCases.listComplaints({
+      let complaints = await this.useCases.listComplaints({
         schoolId: (schoolId as string) || req.user?.schoolId,
         status: status as string,
         category: category as string,
@@ -122,6 +123,15 @@ export class ComplaintController {
         limit: limit ? Number(limit) : undefined,
         offset: offset ? Number(offset) : undefined
       });
+
+      const isParent = req.user?.role === UserRole.PARENT || req.user?.role === UserRole.GUARDIAN;
+      if (isParent && req.user) {
+        complaints = complaints.filter(
+          (c) =>
+            (c.createdByUserId && c.createdByUserId === req.user?.userId) ||
+            (c.complainantEmail && req.user?.email && c.complainantEmail.toLowerCase() === req.user.email.toLowerCase())
+        );
+      }
 
       return res.status(200).json({
         success: true,
@@ -137,6 +147,18 @@ export class ComplaintController {
     try {
       const id = req.params.id as string;
       const complaint = await this.useCases.getComplaintById(id);
+
+      const isParent = req.user?.role === UserRole.PARENT || req.user?.role === UserRole.GUARDIAN;
+      if (isParent && req.user) {
+        const matchesUser = complaint.createdByUserId === req.user.userId;
+        const matchesEmail = complaint.complainantEmail && req.user.email && complaint.complainantEmail.toLowerCase() === req.user.email.toLowerCase();
+        if (!matchesUser && !matchesEmail) {
+          return res.status(403).json({
+            success: false,
+            message: 'Access denied: You are only permitted to view concerns submitted by your account.'
+          });
+        }
+      }
 
       return res.status(200).json({
         success: true,

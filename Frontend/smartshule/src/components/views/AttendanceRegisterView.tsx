@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
 import { AttendanceEntry, UserRole } from '../../types';
 import { useAuth } from '../../context/AuthContext';
+import { resolveStreamName, resolveClassName, resolveAcademicYearName } from '../../utils/formatters';
 
 interface AttendanceRegisterViewProps {
   onOpenSmsModal: (target?: 'absentee' | 'fee' | 'all') => void;
@@ -267,7 +268,7 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
     if (foundStream) return `${foundStream.className} - ${foundStream.name}`;
     const foundClass = availableClasses.find((c) => c.id === streamId);
     if (foundClass) return foundClass.name;
-    return streamId || 'Unassigned';
+    return resolveStreamName(streamId) || resolveClassName(streamId) || 'Unassigned';
   };
 
   if (isParent) {
@@ -336,7 +337,7 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
                   <span>•</span>
                   <span>{activeChild.gradeLevel ? activeChild.gradeLevel.replace('_', ' ') : 'Primary'}</span>
                   <span>•</span>
-                  <span>{activeChild.streamId || 'Stream A'}</span>
+                  <span>{resolveStreamName(activeChild.streamId, activeChild.streamName || activeChild.stream?.name) || 'Stream A'}</span>
                 </div>
               </div>
             </div>

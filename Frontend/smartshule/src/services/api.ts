@@ -21,6 +21,7 @@ import {
   SchemeOfWork,
   SchemeEntry,
   LessonPlan,
+  RecordOfWork,
   TimetableData,
   AttendanceRegister,
   FeeStructure,
@@ -43,17 +44,24 @@ import {
   WhatsAppAIDraftResponse,
   WhatsAppAIDispatchRequest,
   WhatsAppAIDispatchResponse,
+  WhatsAppTemplateSendRequest,
+  MetaFreeTierUsage,
   ExpenseRecord,
   OtherIncomeRecord,
   CashFlowLedgerData,
   SystemAuditLog,
   SystemLogStats,
+  ConcernRecord,
   ComplaintRecord,
   LunchEnrollmentItem,
   LunchPaymentItem,
   LunchSummaryStats,
   LunchExpenseItem,
   LunchFinancialSummary,
+  DeletedStudentRecord,
+  Book,
+  BookLoan,
+  LibraryStats,
 } from '../types';
 function resolveApiBaseUrl(): string {
   let url = ((import.meta as any).env?.VITE_API_URL || '').trim();
@@ -497,9 +505,32 @@ export const apiService = {
     });
   },
 
-  deleteStudent: async (id: string): Promise<ApiResponse<any>> => {
+  deleteStudent: async (id: string, reason?: string): Promise<ApiResponse<any>> => {
     return apiFetch<ApiResponse<any>>(`/students/${id}`, {
       method: 'DELETE',
+      body: reason ? JSON.stringify({ reason }) : undefined,
+    });
+  },
+
+  getDeletedStudents: async (filters?: {
+    schoolId?: string;
+    gradeLevel?: string;
+    search?: string;
+  }): Promise<ApiResponse<DeletedStudentRecord[]>> => {
+    const q = new URLSearchParams();
+    if (filters?.schoolId) q.append('schoolId', filters.schoolId);
+    if (filters?.gradeLevel) q.append('gradeLevel', filters.gradeLevel);
+    if (filters?.search) q.append('search', filters.search);
+    return apiFetch<ApiResponse<DeletedStudentRecord[]>>(`/students/deleted?${q.toString()}`);
+  },
+
+  getDeletedStudentById: async (id: string): Promise<ApiResponse<DeletedStudentRecord>> => {
+    return apiFetch<ApiResponse<DeletedStudentRecord>>(`/students/deleted/${id}`);
+  },
+
+  restoreStudent: async (id: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/students/deleted/${id}/restore`, {
+      method: 'POST',
     });
   },
 
@@ -886,6 +917,31 @@ export const apiService = {
     });
   },
 
+  // Records of Work
+  getRecordsOfWork: async (): Promise<ApiResponse<RecordOfWork[]>> => {
+    return apiFetch<ApiResponse<RecordOfWork[]>>('/curriculum/records-of-work');
+  },
+
+  createRecordOfWork: async (data: Partial<RecordOfWork>): Promise<ApiResponse<RecordOfWork>> => {
+    return apiFetch<ApiResponse<RecordOfWork>>('/curriculum/records-of-work', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateRecordOfWork: async (id: string, data: Partial<RecordOfWork>): Promise<ApiResponse<RecordOfWork>> => {
+    return apiFetch<ApiResponse<RecordOfWork>>(`/curriculum/records-of-work/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  deleteRecordOfWork: async (id: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/curriculum/records-of-work/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
   // 7. Timetable Endpoints
   createTimetable: async (data: {
     schoolId?: string;
@@ -999,6 +1055,13 @@ export const apiService = {
     return apiFetch<ApiResponse<FeeStructure>>('/finance/structures', {
       method: 'POST',
       body: JSON.stringify(data),
+    });
+  },
+
+  initGraceSeedsFeeStructures: async (data?: { schoolId?: string; academicYearId?: string }): Promise<ApiResponse<FeeStructure[]>> => {
+    return apiFetch<ApiResponse<FeeStructure[]>>('/finance/structures/init-graceseed', {
+      method: 'POST',
+      body: JSON.stringify(data || {}),
     });
   },
 
@@ -1422,8 +1485,35 @@ export const apiService = {
     return apiFetch<ApiResponse<any>>('/whatsapp/config');
   },
 
-  updateWhatsAppConfig: async (data: { accessToken?: string; phoneNumberId?: string; verifyToken?: string }): Promise<ApiResponse<any>> => {
+  updateWhatsAppConfig: async (data: {
+    accessToken?: string;
+    phoneNumberId?: string;
+    businessAccountId?: string;
+    verifyToken?: string;
+    appSecret?: string;
+  }): Promise<ApiResponse<any>> => {
     return apiFetch<ApiResponse<any>>('/whatsapp/config', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  testWhatsAppMetaConnection: async (data?: {
+    accessToken?: string;
+    phoneNumberId?: string;
+  }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/whatsapp/test-connection', {
+      method: 'POST',
+      body: JSON.stringify(data || {}),
+    });
+  },
+
+  getWhatsAppFreeTierUsage: async (): Promise<ApiResponse<MetaFreeTierUsage>> => {
+    return apiFetch<ApiResponse<MetaFreeTierUsage>>('/whatsapp/free-tier-usage');
+  },
+
+  sendWhatsAppTemplate: async (data: WhatsAppTemplateSendRequest): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/whatsapp/send-template', {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -1523,86 +1613,124 @@ export const apiService = {
     window.URL.revokeObjectURL(downloadUrl);
   },
 
-  // 15. Parent Complaints & Feedback Endpoints
-  getComplaints: async (): Promise<ApiResponse<ComplaintRecord[]>> => {
+  // 15. Parent Concerns & Feedback Endpoints
+  getConcerns: async (): Promise<ApiResponse<ConcernRecord[]>> => {
     try {
-      const res = await apiFetch<ApiResponse<ComplaintRecord[]>>('/complaints');
+      const res = await apiFetch<ApiResponse<ConcernRecord[]>>('/concerns');
       return res;
     } catch {
-      const list = getStoredComplaints();
-      return { success: true, data: list, count: list.length };
+      try {
+        const res = await apiFetch<ApiResponse<ConcernRecord[]>>('/complaints');
+        return res;
+      } catch {
+        const list = getStoredConcerns();
+        return { success: true, data: list, count: list.length };
+      }
     }
   },
+  getComplaints: async (): Promise<ApiResponse<ComplaintRecord[]>> => {
+    return apiService.getConcerns();
+  },
 
-  createComplaint: async (complaintData: Partial<ComplaintRecord>): Promise<ApiResponse<ComplaintRecord>> => {
+  createConcern: async (concernData: Partial<ConcernRecord>): Promise<ApiResponse<ConcernRecord>> => {
     try {
-      const res = await apiFetch<ApiResponse<ComplaintRecord>>('/complaints', {
+      const res = await apiFetch<ApiResponse<ConcernRecord>>('/concerns', {
         method: 'POST',
-        body: JSON.stringify(complaintData),
+        body: JSON.stringify(concernData),
       });
       return res;
     } catch {
-      const list = getStoredComplaints();
-      const newRecord: ComplaintRecord = {
-        id: `cmp-${Date.now()}`,
-        parentUserId: complaintData.parentUserId || 'parent-current',
-        parentName: complaintData.parentName || 'Parent / Guardian',
-        parentPhone: complaintData.parentPhone || '',
-        parentEmail: complaintData.parentEmail || '',
-        studentName: complaintData.studentName || '',
-        gradeLevel: complaintData.gradeLevel || '',
-        category: complaintData.category || 'General',
-        subject: complaintData.subject || 'No Subject',
-        details: complaintData.details || '',
-        priority: complaintData.priority || 'Medium',
-        status: 'PENDING',
-        createdAt: new Date().toISOString(),
-      };
-      const updated = [newRecord, ...list];
-      saveStoredComplaints(updated);
-      return { success: true, message: 'Complaint submitted successfully', data: newRecord };
+      try {
+        const res = await apiFetch<ApiResponse<ConcernRecord>>('/complaints', {
+          method: 'POST',
+          body: JSON.stringify(concernData),
+        });
+        return res;
+      } catch {
+        const list = getStoredConcerns();
+        const newRecord: ConcernRecord = {
+          id: `crn-${Date.now()}`,
+          parentUserId: concernData.parentUserId || 'parent-current',
+          parentName: concernData.parentName || 'Parent / Guardian',
+          parentPhone: concernData.parentPhone || '',
+          parentEmail: concernData.parentEmail || '',
+          studentName: concernData.studentName || '',
+          gradeLevel: concernData.gradeLevel || '',
+          category: concernData.category || 'General',
+          subject: concernData.subject || 'No Subject',
+          details: concernData.details || '',
+          priority: concernData.priority || 'Medium',
+          status: 'PENDING',
+          createdAt: new Date().toISOString(),
+        };
+        const updated = [newRecord, ...list];
+        saveStoredConcerns(updated);
+        return { success: true, message: 'Concern submitted successfully', data: newRecord };
+      }
     }
   },
+  createComplaint: async (complaintData: Partial<ComplaintRecord>): Promise<ApiResponse<ComplaintRecord>> => {
+    return apiService.createConcern(complaintData);
+  },
 
-  respondToComplaint: async (id: string, responseMessage: string, status: 'PENDING' | 'IN_REVIEW' | 'RESOLVED', responderName?: string): Promise<ApiResponse<ComplaintRecord>> => {
+  respondToConcern: async (id: string, responseMessage: string, status: 'PENDING' | 'IN_REVIEW' | 'RESOLVED', responderName?: string): Promise<ApiResponse<ConcernRecord>> => {
     try {
-      const res = await apiFetch<ApiResponse<ComplaintRecord>>(`/complaints/${id}/respond`, {
+      const res = await apiFetch<ApiResponse<ConcernRecord>>(`/concerns/${id}/respond`, {
         method: 'PUT',
         body: JSON.stringify({ adminResponse: responseMessage, status }),
       });
       return res;
     } catch {
-      const list = getStoredComplaints();
-      let updatedRecord: ComplaintRecord | null = null;
-      const updated = list.map((item) => {
-        if (item.id === id) {
-          updatedRecord = {
-            ...item,
-            adminResponse: responseMessage,
-            status,
-            respondedBy: responderName || 'School Administration',
-            respondedAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          };
-          return updatedRecord;
-        }
-        return item;
-      });
-      saveStoredComplaints(updated);
-      return { success: true, message: 'Response saved successfully', data: updatedRecord || ({} as ComplaintRecord) };
+      try {
+        const res = await apiFetch<ApiResponse<ConcernRecord>>(`/complaints/${id}/respond`, {
+          method: 'PUT',
+          body: JSON.stringify({ adminResponse: responseMessage, status }),
+        });
+        return res;
+      } catch {
+        const list = getStoredConcerns();
+        let updatedRecord: ConcernRecord | null = null;
+        const updated = list.map((item) => {
+          if (item.id === id) {
+            updatedRecord = {
+              ...item,
+              adminResponse: responseMessage,
+              status,
+              respondedBy: responderName || 'School Administration',
+              respondedAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            };
+            return updatedRecord;
+          }
+          return item;
+        });
+        saveStoredConcerns(updated);
+        return { success: true, message: 'Response saved successfully', data: updatedRecord || ({} as ConcernRecord) };
+      }
     }
   },
+  respondToComplaint: async (id: string, responseMessage: string, status: 'PENDING' | 'IN_REVIEW' | 'RESOLVED', responderName?: string): Promise<ApiResponse<ComplaintRecord>> => {
+    return apiService.respondToConcern(id, responseMessage, status, responderName);
+  },
 
-  deleteComplaint: async (id: string): Promise<ApiResponse<boolean>> => {
+  deleteConcern: async (id: string): Promise<ApiResponse<boolean>> => {
     try {
-      await apiFetch(`/complaints/${id}`, { method: 'DELETE' });
+      await apiFetch(`/concerns/${id}`, { method: 'DELETE' });
       return { success: true, data: true };
     } catch {
-      const list = getStoredComplaints();
-      const updated = list.filter((item) => item.id !== id);
-      saveStoredComplaints(updated);
-      return { success: true, data: true };
+      try {
+        await apiFetch(`/complaints/${id}`, { method: 'DELETE' });
+        return { success: true, data: true };
+      } catch {
+        const list = getStoredConcerns();
+        const updated = list.filter((item) => item.id !== id);
+        saveStoredConcerns(updated);
+        return { success: true, data: true };
+      }
     }
+  },
+  deleteComplaint: async (id: string): Promise<ApiResponse<boolean>> => {
+    return apiService.deleteConcern(id);
   },
 
   // 16. Lunch Fee Management Endpoints
@@ -1807,60 +1935,162 @@ export const apiService = {
   },
 };
 
-const INITIAL_COMPLAINTS: ComplaintRecord[] = [
-  {
-    id: 'cmp-101',
-    parentUserId: 'parent-001',
-    parentName: 'Mary Wanjiku',
-    parentPhone: '+254722123456',
-    parentEmail: 'mary.wanjiku@gmail.com',
-    studentName: 'Kevin Kamau',
-    gradeLevel: 'Grade 7 East',
-    category: 'Transport',
-    subject: 'School Bus Morning Pick-up Delay',
-    details: 'The morning school bus line 4 has been arriving 25 minutes late consistently this week. Kindly assist in adjusting the schedule.',
-    priority: 'Medium',
-    status: 'IN_REVIEW',
-    adminResponse: 'We have contacted the transport coordinator to adjust route 4 pick-up timing. Thank you for notifying us.',
-    respondedBy: 'School Director',
-    respondedAt: '2026-09-25T14:30:00Z',
-    createdAt: '2026-09-24T08:15:00Z',
-  },
-  {
-    id: 'cmp-102',
-    parentUserId: 'parent-002',
-    parentName: 'David Omondi',
-    parentPhone: '+254733987654',
-    parentEmail: 'david.omondi@yahoo.com',
-    studentName: 'Achieng Omondi',
-    gradeLevel: 'Grade 6 North',
-    category: 'Academic',
-    subject: 'CBC Science Workbook Feedback',
-    details: 'Requesting clarification on the term 3 formative assessment project guidelines for Integrated Science.',
-    priority: 'Low',
-    status: 'RESOLVED',
-    adminResponse: 'The Science lead teacher has shared the detailed rubric via the eDiary portal.',
-    respondedBy: 'School Administrator',
-    respondedAt: '2026-09-23T11:00:00Z',
-    createdAt: '2026-09-22T09:40:00Z',
-  },
-];
-
-const getStoredComplaints = (): ComplaintRecord[] => {
+const getStoredConcerns = (): ConcernRecord[] => {
   try {
-    const data = localStorage.getItem('smartshule_complaints');
+    const data = localStorage.getItem('smartshule_concerns') || localStorage.getItem('smartshule_complaints');
     if (data) return JSON.parse(data);
   } catch {}
-  try {
-    localStorage.setItem('smartshule_complaints', JSON.stringify(INITIAL_COMPLAINTS));
-  } catch {}
-  return INITIAL_COMPLAINTS;
+  return [];
 };
+const getStoredComplaints = getStoredConcerns;
 
-const saveStoredComplaints = (items: ComplaintRecord[]) => {
+const saveStoredConcerns = (items: ConcernRecord[]) => {
   try {
+    localStorage.setItem('smartshule_concerns', JSON.stringify(items));
     localStorage.setItem('smartshule_complaints', JSON.stringify(items));
   } catch {}
 };
+const saveStoredComplaints = saveStoredConcerns;
+
+// ==========================================
+// LIBRARY MANAGEMENT API CLIENT
+// ==========================================
+
+export const libraryApi = {
+  getBooks: async (params?: {
+    schoolId?: string;
+    category?: string;
+    gradeLevel?: string;
+    condition?: string;
+    availableOnly?: boolean;
+    search?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<ApiResponse<Book[]>> => {
+    const q = new URLSearchParams();
+    if (params?.schoolId) q.append('schoolId', params.schoolId);
+    if (params?.category) q.append('category', params.category);
+    if (params?.gradeLevel) q.append('gradeLevel', params.gradeLevel);
+    if (params?.condition) q.append('condition', params.condition);
+    if (params?.availableOnly) q.append('availableOnly', 'true');
+    if (params?.search) q.append('search', params.search);
+    if (params?.limit) q.append('limit', String(params.limit));
+    if (params?.offset) q.append('offset', String(params.offset));
+    const qs = q.toString();
+    return apiFetch<ApiResponse<Book[]>>(`/library/books${qs ? `?${qs}` : ''}`);
+  },
+
+  getBook: async (id: string): Promise<ApiResponse<Book>> => {
+    return apiFetch<ApiResponse<Book>>(`/library/books/${id}`);
+  },
+
+  createBook: async (data: Partial<Book>): Promise<ApiResponse<Book>> => {
+    return apiFetch<ApiResponse<Book>>('/library/books', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateBook: async (id: string, data: Partial<Book>): Promise<ApiResponse<Book>> => {
+    return apiFetch<ApiResponse<Book>>(`/library/books/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  deleteBook: async (id: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/library/books/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  getLoans: async (params?: {
+    schoolId?: string;
+    bookId?: string;
+    borrowerId?: string;
+    borrowerType?: string;
+    status?: string;
+    search?: string;
+    isOverdue?: boolean;
+    limit?: number;
+    offset?: number;
+  }): Promise<ApiResponse<BookLoan[]>> => {
+    const q = new URLSearchParams();
+    if (params?.schoolId) q.append('schoolId', params.schoolId);
+    if (params?.bookId) q.append('bookId', params.bookId);
+    if (params?.borrowerId) q.append('borrowerId', params.borrowerId);
+    if (params?.borrowerType) q.append('borrowerType', params.borrowerType);
+    if (params?.status) q.append('status', params.status);
+    if (params?.search) q.append('search', params.search);
+    if (params?.isOverdue) q.append('isOverdue', 'true');
+    if (params?.limit) q.append('limit', String(params.limit));
+    if (params?.offset) q.append('offset', String(params.offset));
+    const qs = q.toString();
+    return apiFetch<ApiResponse<BookLoan[]>>(`/library/loans${qs ? `?${qs}` : ''}`);
+  },
+
+  getLoan: async (id: string): Promise<ApiResponse<BookLoan>> => {
+    return apiFetch<ApiResponse<BookLoan>>(`/library/loans/${id}`);
+  },
+
+  issueBook: async (data: {
+    bookId: string;
+    borrowerType: 'STUDENT' | 'TEACHER' | 'STAFF';
+    borrowerId: string;
+    borrowerName: string;
+    borrowerAdmissionOrNumber?: string;
+    borrowerGradeOrClass?: string;
+    dueDate: string;
+    issueDate?: string;
+    remarks?: string;
+    schoolId?: string;
+  }): Promise<ApiResponse<BookLoan>> => {
+    return apiFetch<ApiResponse<BookLoan>>('/library/loans/issue', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  returnBook: async (
+    loanId: string,
+    data: {
+      returnDate?: string;
+      fineAmount?: number;
+      finePaid?: boolean;
+      remarks?: string;
+    }
+  ): Promise<ApiResponse<BookLoan>> => {
+    return apiFetch<ApiResponse<BookLoan>>(`/library/loans/${loanId}/return`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateLoanStatus: async (
+    loanId: string,
+    data: {
+      status: string;
+      fineAmount?: number;
+      finePaid?: boolean;
+      remarks?: string;
+    }
+  ): Promise<ApiResponse<BookLoan>> => {
+    return apiFetch<ApiResponse<BookLoan>>(`/library/loans/${loanId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  },
+
+  deleteLoan: async (id: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/library/loans/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  getStats: async (schoolId?: string): Promise<ApiResponse<LibraryStats>> => {
+    return apiFetch<ApiResponse<LibraryStats>>(`/library/stats${schoolId ? `?schoolId=${schoolId}` : ''}`);
+  },
+};
+
 
 

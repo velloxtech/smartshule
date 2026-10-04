@@ -176,6 +176,22 @@ export class FinanceController {
     }
   };
 
+  public initGraceSeedsStructures = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const schoolId = req.user?.schoolId || (req.body?.schoolId as string);
+      const academicYearId = req.body?.academicYearId as string;
+      const structures = await this.feeUseCases.initializeGraceSeedsFeeStructures(schoolId, academicYearId);
+      return res.status(200).json({
+        success: true,
+        message: 'Grace Seeds School fee structures initialized successfully',
+        count: structures.length,
+        data: structures,
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
   public deleteFeeStructure = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const result = await this.feeUseCases.deleteFeeStructure(req.params.id as string, req.user);

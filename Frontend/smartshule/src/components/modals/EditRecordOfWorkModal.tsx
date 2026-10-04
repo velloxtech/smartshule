@@ -88,7 +88,7 @@ const EditRecordOfWorkModal: React.FC<EditRecordOfWorkModalProps> = ({ record, o
 
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">Strand & Work Covered</label>
-              <textarea required name="strandAndWorkCovered" rows={4} value={formData.strandAndWorkCovered} onChange={handleChange} 
+              <textarea required name="strandAndWorkCovered" rows={3} value={formData.strandAndWorkCovered} onChange={handleChange} 
                 className="block w-full px-4 py-2.5 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors resize-none"></textarea>
             </div>
 
@@ -98,9 +98,31 @@ const EditRecordOfWorkModal: React.FC<EditRecordOfWorkModalProps> = ({ record, o
                 className="block w-full px-4 py-2.5 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors" />
             </div>
 
+            {/* Reflection Section */}
+            <div className="bg-amber-50/50 p-4 rounded-xl border border-amber-200/70 space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-bold text-amber-900 flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-amber-600 text-[18px]">psychology</span>
+                  Lesson Reflection & Evaluation
+                </label>
+                <span className="text-xs text-amber-700 font-medium">Outcome Mastery & Remedial Action</span>
+              </div>
+              <p className="text-xs text-amber-800/80">
+                Self-evaluate lesson success: proportion of learners meeting the objective, challenges encountered, or remedial action taken.
+              </p>
+              <textarea
+                name="reflection"
+                rows={3}
+                placeholder="e.g., Most learners (approx 85%) achieved the expected outcomes through role play. 3 learners had difficulty and will be guided during morning prep..."
+                value={formData.reflection || ''}
+                onChange={handleChange}
+                className="block w-full px-4 py-2.5 text-sm bg-white border border-amber-300/80 rounded-xl focus:ring-2 focus:ring-amber-500/20 focus:border-amber-600 transition-colors resize-none placeholder-gray-400"
+              />
+            </div>
+
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Comments / Remarks</label>
-              <input type="text" name="comments" value={formData.comments || ''} onChange={handleChange} 
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Comments / Remarks <span className="text-gray-400 font-normal">(Optional)</span></label>
+              <input type="text" name="comments" value={formData.comments || ''} onChange={handleChange} placeholder="Any teacher remarks..."
                 className="block w-full px-4 py-2.5 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors" />
             </div>
           </form>

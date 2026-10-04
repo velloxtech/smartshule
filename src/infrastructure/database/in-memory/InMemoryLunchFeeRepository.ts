@@ -78,6 +78,23 @@ export class InMemoryLunchFeeRepository implements ILunchFeeRepository {
     }
   }
 
+  async deleteEnrollmentsByStudentId(studentId: string): Promise<void> {
+    for (const [id, enr] of this.enrollments.entries()) {
+      if (enr.studentId === studentId) {
+        this.enrollments.delete(id);
+      }
+    }
+    await this.deletePaymentsByStudentId(studentId);
+  }
+
+  async deletePaymentsByStudentId(studentId: string): Promise<void> {
+    for (const [id, pay] of this.payments.entries()) {
+      if (pay.studentId === studentId) {
+        this.payments.delete(id);
+      }
+    }
+  }
+
   async savePayment(payment: LunchPayment): Promise<LunchPayment> {
     this.payments.set(payment.id, payment);
     return payment;

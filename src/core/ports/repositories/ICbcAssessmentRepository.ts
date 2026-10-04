@@ -41,17 +41,21 @@ export interface ICbcAssessmentRepository {
   saveFormative(assessment: FormativeAssessment): Promise<void>;
   updateFormative(assessment: FormativeAssessment): Promise<void>;
   deleteFormative(id: string): Promise<void>;
+  deleteFormativesByStudent(studentId: string): Promise<void>;
 
   // Summative Assessments
   findSummativeById(id: string): Promise<SummativeAssessment | null>;
   findSummatives(filters: SummativeFilterCriteria): Promise<SummativeAssessment[]>;
   saveSummative(assessment: SummativeAssessment): Promise<void>;
   updateSummative(assessment: SummativeAssessment): Promise<void>;
+  deleteSummativesByStudent(studentId: string): Promise<void>;
 
   // Report Cards
   findReportCardById(id: string): Promise<CbcReportCard | null>;
   findReportCard(studentId: string, termId: string, academicYearId: string): Promise<CbcReportCard | null>;
+  findReportCardsByStudent(studentId: string): Promise<CbcReportCard[]>;
   findReportCardsByTerm(termId: string, streamId?: string): Promise<CbcReportCard[]>;
   saveReportCard(reportCard: CbcReportCard): Promise<void>;
   updateReportCard(reportCard: CbcReportCard): Promise<void>;
+  deleteReportCardsByStudent(studentId: string): Promise<void>;
 }

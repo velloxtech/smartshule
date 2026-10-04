@@ -446,3 +446,83 @@ model LunchExpense {
 
   @@map("lunch_expenses")
 }
+
+model DeletedStudent {
+  id                 String   @id @default(uuid())
+  studentId          String   @map("student_id")
+  admissionNumber    String   @map("admission_number")
+  firstName          String   @map("first_name")
+  middleName         String?  @map("middle_name")
+  lastName           String   @map("last_name")
+  upiNumber          String?  @map("upi_number")
+  schoolId           String   @map("school_id")
+  gradeLevel         String   @map("grade_level")
+  classroomId        String?  @map("classroom_id")
+  streamId           String?  @map("stream_id")
+  academicYearId     String?  @map("academic_year_id")
+  studentData        Json     @map("student_data")
+  linkedData         Json     @map("linked_data")
+  pendingWorkCleared Json     @map("pending_work_cleared")
+  deletedAt          DateTime @default(now()) @map("deleted_at")
+  deletedByUserId    String?  @map("deleted_by_user_id")
+  reason             String?
+
+  @@index([schoolId], map: "idx_deleted_students_school")
+  @@index([studentId], map: "idx_deleted_students_student_id")
+  @@index([admissionNumber], map: "idx_deleted_students_admission")
+  @@map("deleted_students")
+}
+
+model Book {
+  id              String   @id @default(uuid())
+  schoolId        String   @map("school_id")
+  title           String
+  author          String
+  isbn            String?
+  category        String   @default("CBC Textbooks")
+  publisher       String?
+  publicationYear Int?     @map("publication_year")
+  copiesTotal     Int      @default(1) @map("copies_total")
+  copiesAvailable Int      @default(1) @map("copies_available")
+  shelfLocation   String?  @map("shelf_location")
+  condition       String   @default("GOOD")
+  gradeLevel      String?  @map("grade_level")
+  coverImageUrl   String?  @map("cover_image_url")
+  description     String?
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([schoolId], map: "idx_books_school")
+  @@index([category], map: "idx_books_category")
+  @@index([gradeLevel], map: "idx_books_grade")
+  @@map("books")
+}
+
+model BookLoan {
+  id                        String   @id @default(uuid())
+  schoolId                  String   @map("school_id")
+  bookId                    String   @map("book_id")
+  bookTitle                 String   @map("book_title")
+  borrowerType              String   @default("STUDENT") @map("borrower_type")
+  borrowerId                String   @map("borrower_id")
+  borrowerName              String   @map("borrower_name")
+  borrowerAdmissionOrNumber String?  @map("borrower_admission_or_number")
+  borrowerGradeOrClass      String?  @map("borrower_grade_or_class")
+  issueDate                 String   @map("issue_date")
+  dueDate                   String   @map("due_date")
+  returnDate                String?  @map("return_date")
+  status                    String   @default("ISSUED")
+  fineAmount                Float    @default(0) @map("fine_amount")
+  finePaid                  Boolean  @default(false) @map("fine_paid")
+  remarks                   String?
+  issuedByUserId            String?  @map("issued_by_user_id")
+  receivedByUserId          String?  @map("received_by_user_id")
+  createdAt                 DateTime @default(now()) @map("created_at")
+  updatedAt                 DateTime @updatedAt @map("updated_at")
+
+  @@index([schoolId], map: "idx_book_loans_school")
+  @@index([bookId], map: "idx_book_loans_book")
+  @@index([borrowerId], map: "idx_book_loans_borrower")
+  @@index([status], map: "idx_book_loans_status")
+  @@map("book_loans")
+}

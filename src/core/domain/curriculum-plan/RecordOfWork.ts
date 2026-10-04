@@ -11,6 +11,7 @@ export class RecordOfWork {
       public termId?: string,
       public period?: string,
       public comments?: string,
+      public reflection?: string,
       public createdAt?: Date,
       public updatedAt?: Date
     ) {}

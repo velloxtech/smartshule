@@ -4,12 +4,14 @@ interface LandingPageProps {
   onNavigateLogin: () => void;
   isAuthenticated?: boolean;
   onNavigatePortal?: () => void;
+  onOpenLegalModal?: (tab: 'terms' | 'privacy' | 'cookies' | 'child_protection') => void;
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({
   onNavigateLogin,
   isAuthenticated = false,
   onNavigatePortal,
+  onOpenLegalModal,
 }) => {
   const [activePortalTab, setActivePortalTab] = useState<'admin' | 'teacher' | 'finance' | 'parent'>('admin');
 
@@ -567,7 +569,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </section>
 
       {/* Footer & Vellox Tech Watermark: Pure Maroon (#800000) */}
-      <footer className="bg-[#800000] text-rose-100 text-xs py-10 border-t border-[#660000]">
+      <footer className="bg-[#800000] text-rose-100 text-xs py-10 border-t border-[#660000] space-y-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center text-white border border-white/20">
@@ -586,6 +588,48 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <span className="text-white font-semibold flex items-center gap-1">
               Powered by <strong className="text-emerald-300 font-bold tracking-wide">Vellox Tech</strong>
             </span>
+          </div>
+        </div>
+
+        {/* Legal & Regulatory Compliance Row */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 border-t border-rose-900/60 flex flex-col md:flex-row items-center justify-between gap-3 text-[11px] text-rose-200/80">
+          <div className="flex items-center flex-wrap justify-center gap-x-5 gap-y-2">
+            <button
+              onClick={() => onOpenLegalModal?.('terms')}
+              className="hover:text-white transition-colors cursor-pointer flex items-center gap-1 underline underline-offset-2"
+            >
+              <span className="material-symbols-outlined text-[13px]">description</span>
+              <span>Terms & Conditions</span>
+            </button>
+
+            <button
+              onClick={() => onOpenLegalModal?.('privacy')}
+              className="hover:text-white transition-colors cursor-pointer flex items-center gap-1 underline underline-offset-2"
+            >
+              <span className="material-symbols-outlined text-[13px]">shield</span>
+              <span>Privacy Policy (KDPA 2019)</span>
+            </button>
+
+            <button
+              onClick={() => onOpenLegalModal?.('cookies')}
+              className="hover:text-white transition-colors cursor-pointer flex items-center gap-1 underline underline-offset-2"
+            >
+              <span className="material-symbols-outlined text-[13px]">cookie</span>
+              <span>Cookie Settings & Policy</span>
+            </button>
+
+            <button
+              onClick={() => onOpenLegalModal?.('child_protection')}
+              className="hover:text-white transition-colors cursor-pointer flex items-center gap-1 underline underline-offset-2"
+            >
+              <span className="material-symbols-outlined text-[13px]">child_care</span>
+              <span>Minor Data Protection</span>
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2 text-[10px] text-rose-200/60">
+            <span className="material-symbols-outlined text-[14px] text-emerald-400">verified_user</span>
+            <span>ODPC Registered · Article 31 Compliant · 256-Bit SSL</span>
           </div>
         </div>
       </footer>

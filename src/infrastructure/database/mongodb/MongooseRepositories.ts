@@ -27,9 +27,14 @@ import {
   ExpenseFilterCriteria,
   OtherIncomeFilterCriteria
 } from '../../../core/ports/repositories/IFeeRepository';
+import {
+  IDeletedStudentRepository,
+  DeletedStudentFilterCriteria
+} from '../../../core/ports/repositories/IDeletedStudentRepository';
 
 import { User, UserRole, UserStatus } from '../../../core/domain/user/User';
 import { Student, StudentGender, CbcGradeLevel, StudentStatus } from '../../../core/domain/user/Student';
+import { DeletedStudent } from '../../../core/domain/user/DeletedStudent';
 import { Teacher } from '../../../core/domain/user/Teacher';
 import { Guardian, GuardianRelationship } from '../../../core/domain/user/Guardian';
 import { School } from '../../../core/domain/academic/School';
@@ -329,6 +334,8 @@ const TimetableSchema = new Schema({
   classRoomId: { type: String, required: true },
   streamId: { type: String, required: true },
   slots: Schema.Types.Mixed,
+  periods: Schema.Types.Mixed,
+  days: Schema.Types.Mixed,
   isActive: { type: Boolean, default: true },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
@@ -463,6 +470,27 @@ const InvoiceModel = mongoose.models.StudentInvoice || mongoose.model('StudentIn
 const PaymentModel = mongoose.models.Payment || mongoose.model('Payment', PaymentSchema);
 const ExpenseModel = mongoose.models.Expense || mongoose.model('Expense', ExpenseSchema);
 const OtherIncomeModel = mongoose.models.OtherIncome || mongoose.model('OtherIncome', OtherIncomeSchema);
+const DeletedStudentSchema = new Schema({
+  _id: { type: String, required: true },
+  studentId: { type: String, required: true },
+  admissionNumber: { type: String, required: true },
+  firstName: { type: String, required: true },
+  middleName: String,
+  lastName: { type: String, required: true },
+  upiNumber: String,
+  schoolId: { type: String, required: true },
+  gradeLevel: { type: String, required: true },
+  classroomId: String,
+  streamId: String,
+  academicYearId: String,
+  studentData: { type: Schema.Types.Mixed, required: true },
+  linkedData: { type: Schema.Types.Mixed, default: {} },
+  pendingWorkCleared: { type: Schema.Types.Mixed, default: {} },
+  deletedAt: { type: Date, default: Date.now },
+  deletedByUserId: String,
+  reason: String
+}, { timestamps: true });
+const DeletedStudentModel = mongoose.models.DeletedStudent || mongoose.model('DeletedStudent', DeletedStudentSchema);
 
 // --- Complete MongoDB Repository Implementations ---
 
@@ -807,6 +835,9 @@ export class MongoCbcAssessmentRepository implements ICbcAssessmentRepository {
   public async deleteFormative(id: string): Promise<void> {
     await FormativeModel.findByIdAndDelete(id);
   }
+  public async deleteFormativesByStudent(studentId: string): Promise<void> {
+    await FormativeModel.deleteMany({ studentId });
+  }
   public async findSummativeById(id: string): Promise<SummativeAssessment | null> {
     const doc = await SummativeModel.findById(id).lean();
     if (!doc) return null;
@@ -827,6 +858,9 @@ export class MongoCbcAssessmentRepository implements ICbcAssessmentRepository {
   public async updateSummative(assessment: SummativeAssessment): Promise<void> {
     await SummativeModel.findByIdAndUpdate(assessment.id, assessment.toJSON());
   }
+  public async deleteSummativesByStudent(studentId: string): Promise<void> {
+    await SummativeModel.deleteMany({ studentId });
+  }
   public async findReportCardById(id: string): Promise<CbcReportCard | null> {
     const doc = await ReportCardModel.findById(id).lean();
     if (!doc) return null;
@@ -836,6 +870,10 @@ export class MongoCbcAssessmentRepository implements ICbcAssessmentRepository {
     const doc = await ReportCardModel.findOne({ studentId, termId, academicYearId }).lean();
     if (!doc) return null;
     return CbcReportCard.create(doc as any, doc._id, doc.createdAt, doc.updatedAt);
+  }
+  public async findReportCardsByStudent(studentId: string): Promise<CbcReportCard[]> {
+    const docs = await ReportCardModel.find({ studentId }).lean();
+    return docs.map((d: any) => CbcReportCard.create(d, d._id, d.createdAt, d.updatedAt));
   }
   public async findReportCardsByTerm(termId: string, streamId?: string): Promise<CbcReportCard[]> {
     const query: any = { termId };
@@ -848,6 +886,9 @@ export class MongoCbcAssessmentRepository implements ICbcAssessmentRepository {
   }
   public async updateReportCard(reportCard: CbcReportCard): Promise<void> {
     await ReportCardModel.findByIdAndUpdate(reportCard.id, reportCard.toJSON());
+  }
+  public async deleteReportCardsByStudent(studentId: string): Promise<void> {
+    await ReportCardModel.deleteMany({ studentId });
   }
 }
 
@@ -915,30 +956,43 @@ export class MongoTimetableRepository implements ITimetableRepository {
     if (!doc) return null;
     return Timetable.create(doc as any, doc._id, doc.createdAt, doc.updatedAt);
   }
-  public async findByStream(streamId: string, termId: string): Promise<Timetable | null> {
-    const doc = await TimetableModel.findOne({ streamId, termId }).lean();
+  public async findByStream(streamId: string, termId?: string): Promise<Timetable | null> {
+    const filter: any = { streamId };
+    if (termId && termId.trim() !== '') filter.termId = termId;
+    const doc = await TimetableModel.findOne(filter).sort({ updatedAt: -1 }).lean();
     if (!doc) return null;
     return Timetable.create(doc as any, doc._id, doc.createdAt, doc.updatedAt);
   }
-  public async findByClass(classRoomId: string, termId: string): Promise<Timetable[]> {
-    const docs = await TimetableModel.find({ classRoomId, termId }).lean();
+  public async findByClass(classRoomId: string, termId?: string): Promise<Timetable[]> {
+    const filter: any = { classRoomId };
+    if (termId && termId.trim() !== '') filter.termId = termId;
+    const docs = await TimetableModel.find(filter).sort({ updatedAt: -1 }).lean();
     return docs.map((d: any) => Timetable.create(d, d._id, d.createdAt, d.updatedAt));
   }
-  public async findByTeacher(teacherId: string, termId: string): Promise<any[]> {
-    const docs = await TimetableModel.find({ termId }).lean();
+  public async findByTeacher(teacherId: string, termId?: string): Promise<any[]> {
+    const filter: any = {};
+    if (termId && termId.trim() !== '') filter.termId = termId;
+    const docs = await TimetableModel.find(filter).lean();
     const slots: any[] = [];
     for (const t of docs) {
       if (Array.isArray(t.slots)) {
         for (const s of t.slots) {
           if (s.teacherId === teacherId) {
             slots.push({
+              id: s.id,
               dayOfWeek: s.dayOfWeek,
               periodNumber: s.periodNumber,
               streamId: t.streamId,
+              classRoomId: t.classRoomId,
               learningAreaName: s.learningAreaName,
+              learningAreaId: s.learningAreaId,
+              teacherName: s.teacherName,
               roomName: s.roomName,
               startTime: s.startTime,
-              endTime: s.endTime
+              endTime: s.endTime,
+              isBreak: s.isBreak ?? false,
+              isLunch: s.isLunch ?? false,
+              label: s.label
             });
           }
         }
@@ -984,6 +1038,17 @@ export class MongoAttendanceRepository implements IAttendanceRepository {
   }
   public async updateRegister(register: AttendanceRegister): Promise<void> {
     await AttendanceModel.findByIdAndUpdate(register.id, register.toJSON());
+  }
+  public async findRegistersByStudent(studentId: string): Promise<AttendanceRegister[]> {
+    const docs = await AttendanceModel.find({ 'entries.studentId': studentId }).lean();
+    return docs.map((d: any) => AttendanceRegister.create(d, d._id, d.createdAt, d.updatedAt));
+  }
+  public async removeStudentFromRegisters(studentId: string): Promise<void> {
+    const registers = await this.findRegistersByStudent(studentId);
+    for (const reg of registers) {
+      reg.removeEntry(studentId);
+      await this.saveRegister(reg);
+    }
   }
 }
 
@@ -1043,6 +1108,9 @@ export class MongoFeeRepository implements IFeeRepository {
   public async updateInvoice(invoice: StudentInvoice): Promise<void> {
     await InvoiceModel.findByIdAndUpdate(invoice.id, invoice.toJSON());
   }
+  public async deleteInvoicesByStudentId(studentId: string): Promise<void> {
+    await InvoiceModel.deleteMany({ studentId });
+  }
   public async findPaymentById(id: string): Promise<Payment | null> {
     const doc = await PaymentModel.findById(id).lean();
     if (!doc) return null;
@@ -1071,6 +1139,9 @@ export class MongoFeeRepository implements IFeeRepository {
   }
   public async updatePayment(payment: Payment): Promise<void> {
     await PaymentModel.findByIdAndUpdate(payment.id, payment.toJSON());
+  }
+  public async deletePaymentsByStudentId(studentId: string): Promise<void> {
+    await PaymentModel.deleteMany({ studentId });
   }
 
   // Expenses
@@ -1149,6 +1220,55 @@ export class MongoFeeRepository implements IFeeRepository {
 
   public async deleteOtherIncome(id: string): Promise<void> {
     await OtherIncomeModel.findByIdAndDelete(id);
+  }
+}
+
+export class MongoDeletedStudentRepository implements IDeletedStudentRepository {
+  public async save(deletedStudent: DeletedStudent): Promise<void> {
+    await DeletedStudentModel.findOneAndUpdate(
+      { _id: deletedStudent.id },
+      { ...deletedStudent.toJSON(), _id: deletedStudent.id },
+      { upsert: true }
+    );
+  }
+
+  public async findById(id: string): Promise<DeletedStudent | null> {
+    const doc = await DeletedStudentModel.findById(id).lean();
+    if (!doc) return null;
+    return DeletedStudent.create(doc as any, doc._id, doc.createdAt, doc.updatedAt);
+  }
+
+  public async findByStudentId(studentId: string): Promise<DeletedStudent | null> {
+    const doc = await DeletedStudentModel.findOne({ studentId }).sort({ deletedAt: -1 }).lean();
+    if (!doc) return null;
+    return DeletedStudent.create(doc as any, doc._id, doc.createdAt, doc.updatedAt);
+  }
+
+  public async findByAdmissionNumber(admissionNumber: string, schoolId?: string): Promise<DeletedStudent | null> {
+    const query: any = { admissionNumber };
+    if (schoolId) query.schoolId = schoolId;
+    const doc = await DeletedStudentModel.findOne(query).sort({ deletedAt: -1 }).lean();
+    if (!doc) return null;
+    return DeletedStudent.create(doc as any, doc._id, doc.createdAt, doc.updatedAt);
+  }
+
+  public async findAll(filters?: DeletedStudentFilterCriteria): Promise<DeletedStudent[]> {
+    const query: any = {};
+    if (filters?.schoolId) query.schoolId = filters.schoolId;
+    if (filters?.gradeLevel) query.gradeLevel = filters.gradeLevel;
+    if (filters?.search) {
+      query.$or = [
+        { firstName: { $regex: filters.search, $options: 'i' } },
+        { lastName: { $regex: filters.search, $options: 'i' } },
+        { admissionNumber: { $regex: filters.search, $options: 'i' } }
+      ];
+    }
+    const docs = await DeletedStudentModel.find(query).sort({ deletedAt: -1 }).lean();
+    return docs.map((d: any) => DeletedStudent.create(d, d._id, d.createdAt, d.updatedAt));
+  }
+
+  public async delete(id: string): Promise<void> {
+    await DeletedStudentModel.findByIdAndDelete(id);
   }
 }
 

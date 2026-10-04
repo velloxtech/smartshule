@@ -3,6 +3,7 @@ import { apiService } from '../../services/api';
 import { TimetableData, TimetableSlot, PeriodDefinition, DayDefinition, UserRole } from '../../types';
 import { AddTimetableSlotModal } from '../modals/AddTimetableSlotModal';
 import { useAuth } from '../../context/AuthContext';
+import { sortAndGroupClasses, sortClassesInCbcSequence } from '../../utils/classCategorization';
 
 const DEFAULT_PERIODS: PeriodDefinition[] = [
   { periodNumber: 1, name: 'Period 1', startTime: '08:00', endTime: '08:45', isBreak: false, isLunch: false },
@@ -22,6 +23,50 @@ const DEFAULT_DAYS: DayDefinition[] = [
   { dayOfWeek: 'THURSDAY', label: 'Thursday', isEnabled: true },
   { dayOfWeek: 'FRIDAY', label: 'Friday', isEnabled: true },
 ];
+
+// Robust subject abbreviation formatter ensuring INSCIE/Integrated Science maps to SCIE
+export const formatSubjectAbbreviation = (rawName?: string, rawCode?: string): string => {
+  if (!rawName && !rawCode) return 'SUBJ';
+  const name = (rawName || '').trim();
+  const code = (rawCode || '').trim();
+  const upper = (name || code).toUpperCase();
+
+  // Explicit user requirement: Integrated Science / INSCIE / INTSCI -> SCIE
+  if (
+    upper.includes('INSCIE') ||
+    upper.includes('INTSCI') ||
+    upper.includes('INTEGRATED SCIENCE') ||
+    upper === 'SCIENCE' ||
+    upper === 'SCI'
+  ) {
+    return 'SCIE';
+  }
+
+  // Standard CBC learning areas
+  if (upper.includes('MATH')) return 'MATH';
+  if (upper.includes('ENGLISH') || upper === 'ENG') return 'ENG';
+  if (upper.includes('KISWAHILI') || upper.includes('KISW') || upper.includes('SWAHILI')) return 'KISW';
+  if (upper.includes('SOCIAL') || upper === 'SST') return 'SST';
+  if (upper.includes('CHRISTIAN') || upper === 'CRE') return 'CRE';
+  if (upper.includes('ISLAMIC') || upper === 'IRE') return 'IRE';
+  if (upper.includes('HINDU') || upper === 'HRE') return 'HRE';
+  if (upper.includes('HEALTH') || upper.includes('HLTH')) return 'HLTH';
+  if (upper.includes('AGRICULT') || upper.includes('AGRI')) return 'AGRI';
+  if (upper.includes('PRE-TECH') || upper.includes('PRETECH') || upper.includes('TECHNICAL')) return 'PRE-TECH';
+  if (upper.includes('CREATIVE') || upper.includes('ARTS') || upper.includes('ART')) return 'ARTS';
+  if (upper.includes('BUSINESS') || upper === 'BUS') return 'BUS';
+  if (upper.includes('COMPUTER') || upper === 'COMP') return 'COMP';
+  if (upper.includes('FRENCH') || upper === 'FRE') return 'FREN';
+  if (upper.includes('GERMAN') || upper === 'GER') return 'GERM';
+  if (upper.includes('ARABIC') || upper === 'ARA') return 'ARAB';
+  if (upper.includes('MUSIC') || upper === 'MUS') return 'MUS';
+  if (upper.includes('PHYSICAL') || upper === 'PE') return 'PE';
+
+  if (code && code.length <= 6) return code.toUpperCase();
+  const firstWord = name.split(/\s+/)[0];
+  if (firstWord && firstWord.length <= 6) return firstWord.toUpperCase();
+  return firstWord ? firstWord.substring(0, 5).toUpperCase() : 'SUBJ';
+};
 
 export const TimetableView: React.FC = () => {
   const { user } = useAuth();
@@ -90,9 +135,10 @@ export const TimetableView: React.FC = () => {
         if (scRes?.data) setSchoolInfo(scRes.data);
         if (ctxRes?.data) setCurrentContext(ctxRes.data);
         if (cRes?.data && Array.isArray(cRes.data)) {
-          setClassesList(cRes.data);
-          if (cRes.data.length > 0 && !selectedClassId) {
-            setSelectedClassId(cRes.data[0].id);
+          const sorted = sortClassesInCbcSequence(cRes.data);
+          setClassesList(sorted);
+          if (sorted.length > 0 && !selectedClassId) {
+            setSelectedClassId(sorted[0].id);
           }
         }
       } catch (err) {
@@ -250,46 +296,63 @@ export const TimetableView: React.FC = () => {
   const activeTeacherObj = teachersList.find((t) => t.id === teacherId);
   const activeTeacherName = activeTeacherObj ? (activeTeacherObj.name || activeTeacherObj.user?.fullName || `Teacher ${activeTeacherObj.tscNumber || ''}`) : 'Educator Schedule';
 
-  // Save full grid with dynamic periods and days
-  const handleSaveGrid = async () => {
+  // Active grid persistence to database
+  const persistGridActive = async (
+    pList: PeriodDefinition[] = periods,
+    dList: DayDefinition[] = days,
+    sList: TimetableSlot[] = timetable?.slots || [],
+    notifyMsg = 'Timetable saved successfully to database!'
+  ) => {
     setIsSavingGrid(true);
     setSaveSuccessMsg(null);
 
     const activeSchoolId = user?.schoolId || schoolInfo?.id || 'school-001';
+    const activeAcademicYearId = currentContext?.currentYear?.id || 'year-2026';
+    const activeTermId = currentContext?.currentTerm?.id || 'term-2026-t1';
 
     try {
       const res = await apiService.saveTimetableGrid({
         timetableId: timetable?.id,
         schoolId: activeSchoolId,
-        academicYearId: currentContext?.currentYear?.id || '',
-        termId: currentContext?.currentTerm?.id || '',
+        academicYearId: activeAcademicYearId,
+        termId: activeTermId,
         classRoomId: selectedClassId,
         streamId: selectedStreamId || undefined,
-        periods: periods,
-        days: days,
-        slots: timetable?.slots || [],
+        periods: pList,
+        days: dList,
+        slots: sList,
       });
 
       if (res.success && res.data) {
         setTimetable(res.data);
-        if (res.data.periods) setPeriods(res.data.periods);
-        if (res.data.days) setDays(res.data.days);
+        if (res.data.periods && res.data.periods.length > 0) setPeriods(res.data.periods);
+        if (res.data.days && res.data.days.length > 0) setDays(res.data.days);
         setIsGridDirty(false);
-        setSaveSuccessMsg('Timetable grid dimensions & schedule saved successfully!');
-        setTimeout(() => setSaveSuccessMsg(null), 3500);
+        const timestamp = new Date().toLocaleTimeString();
+        setSaveSuccessMsg(`${notifyMsg} (Database active at ${timestamp})`);
+        setTimeout(() => setSaveSuccessMsg(null), 4500);
+        return res.data;
+      } else {
+        throw new Error(res.message || 'Server did not confirm successful save');
       }
     } catch (err: any) {
-      alert('Failed to save grid: ' + (err.message || 'Unknown error'));
+      console.error('Active save failed:', err);
+      alert('Failed to save timetable to database: ' + (err.message || 'Unknown error'));
+      throw err;
     } finally {
       setIsSavingGrid(false);
     }
   };
 
-  // Row (Period) Actions
-  const handleAddPeriod = () => {
+  // Primary active save action
+  const handleSaveGrid = () => {
+    persistGridActive(periods, days, timetable?.slots || [], '✅ Timetable successfully saved to database! All periods, days, and lesson slots are permanently persisted.');
+  };
+
+  // Row (Period) Actions with instant active database persist
+  const handleAddPeriod = async () => {
     const updated = [...periods, { ...newPeriodData, periodNumber: periods.length + 1 }];
     setPeriods(updated);
-    setIsGridDirty(true);
     setIsAddPeriodOpen(false);
     setNewPeriodData({
       periodNumber: updated.length + 1,
@@ -299,26 +362,31 @@ export const TimetableView: React.FC = () => {
       isBreak: false,
       isLunch: false,
     });
+    await persistGridActive(updated, days, timetable?.slots || [], '✅ New period added and actively saved to database!');
   };
 
-  const handleUpdatePeriod = (updatedPeriod: PeriodDefinition) => {
+  const handleUpdatePeriod = async (updatedPeriod: PeriodDefinition) => {
     const updated = periods.map((p) => (p.periodNumber === updatedPeriod.periodNumber ? updatedPeriod : p));
     setPeriods(updated);
     setEditingPeriod(null);
-    setIsGridDirty(true);
+    await persistGridActive(updated, days, timetable?.slots || [], '✅ Period times updated and actively saved to database!');
   };
 
-  const handleDeletePeriod = (periodNum: number) => {
+  const handleDeletePeriod = async (periodNum: number) => {
     if (!window.confirm(`Delete row Period ${periodNum}? Slots in this period will also be affected.`)) return;
     const updated = periods
       .filter((p) => p.periodNumber !== periodNum)
       .map((p, idx) => ({ ...p, periodNumber: idx + 1 }));
     setPeriods(updated);
-    setIsGridDirty(true);
+    const updatedSlots = (timetable?.slots || []).filter((s) => s.periodNumber !== periodNum);
+    if (timetable) {
+      setTimetable({ ...timetable, slots: updatedSlots });
+    }
+    await persistGridActive(updated, days, updatedSlots, `✅ Period ${periodNum} removed and actively saved to database!`);
   };
 
-  // Column (Day) Actions
-  const handleAddDay = () => {
+  // Column (Day) Actions with instant active database persist
+  const handleAddDay = async () => {
     const dayKey = newDayLabel.trim().toUpperCase().replace(/\s+/g, '_');
     if (days.some((d) => d.dayOfWeek === dayKey)) {
       alert('A day column with this identifier already exists!');
@@ -326,22 +394,23 @@ export const TimetableView: React.FC = () => {
     }
     const updated = [...days, { dayOfWeek: dayKey, label: newDayLabel.trim(), isEnabled: true }];
     setDays(updated);
-    setIsGridDirty(true);
     setIsAddDayOpen(false);
     setNewDayLabel('Saturday');
+    await persistGridActive(periods, updated, timetable?.slots || [], `✅ Day "${newDayLabel.trim()}" added and actively saved to database!`);
   };
 
-  const handleDeleteDay = (dayKey: string) => {
+  const handleDeleteDay = async (dayKey: string) => {
     if (!window.confirm(`Delete the column "${dayKey}" and all scheduled lessons for this day?`)) return;
     const updated = days.filter((d) => d.dayOfWeek !== dayKey);
     setDays(updated);
+    const updatedSlots = (timetable?.slots || []).filter((s) => s.dayOfWeek !== dayKey);
     if (timetable) {
       setTimetable({
         ...timetable,
-        slots: timetable.slots.filter((s) => s.dayOfWeek !== dayKey),
+        slots: updatedSlots,
       });
     }
-    setIsGridDirty(true);
+    await persistGridActive(periods, updated, updatedSlots, `✅ Day column "${dayKey}" removed and actively saved to database!`);
   };
 
   const handleSlotAdded = (updatedTimetable: TimetableData) => {
@@ -353,6 +422,9 @@ export const TimetableView: React.FC = () => {
       setDays(updatedTimetable.days);
     }
     setIsGridDirty(false);
+    const timestamp = new Date().toLocaleTimeString();
+    setSaveSuccessMsg(`✅ Timetable slot assigned and saved to database! (Active at ${timestamp})`);
+    setTimeout(() => setSaveSuccessMsg(null), 4000);
   };
 
   const handleDeleteSlot = async (slotId: string) => {
@@ -361,18 +433,23 @@ export const TimetableView: React.FC = () => {
         const res = await apiService.deleteTimetableSlot(timetable.id, slotId);
         if (res.success && res.data) {
           setTimetable(res.data);
+          const timestamp = new Date().toLocaleTimeString();
+          setSaveSuccessMsg(`✅ Timetable slot deleted and saved to database! (Active at ${timestamp})`);
+          setTimeout(() => setSaveSuccessMsg(null), 3500);
           return;
         }
       } catch {
-        // fallback to local removal
+        // fallback to updating grid
       }
     }
+    const updatedSlots = (timetable?.slots || []).filter((s) => s.id !== slotId);
     if (timetable) {
       setTimetable({
         ...timetable,
-        slots: timetable.slots.filter((s) => s.id !== slotId),
+        slots: updatedSlots,
       });
     }
+    await persistGridActive(periods, days, updatedSlots, '✅ Slot deleted and timetable updated in database!');
   };
 
   const handleCellClick = (dayKey: string, pDef: PeriodDefinition, existingSlot?: TimetableSlot) => {
@@ -398,20 +475,15 @@ export const TimetableView: React.FC = () => {
     setIsAddSlotOpen(true);
   };
 
-  // Download / Print handler
-  const handleDownloadTimetable = () => {
-    window.print();
-  };
+  // Generates complete, full-page A4 Landscape calibrated HTML for Print & PDF download
+  const buildTimetablePrintHTML = (titleContext: string, yearName: string) => {
+    const schoolTitle = schoolInfo?.name || 'GRACE SEEDS SCHOOL';
+    const schoolAddress = schoolInfo?.address || 'KEMRI Street, Kisian, Kisumu';
+    const schoolPhone = schoolInfo?.phone || '0745436312';
+    const schoolEmail = schoolInfo?.email || 'schoolgraceseeds@gmail.com';
+    const numDays = days.length || 5;
 
-  // Standalone offline HTML export
-  const handleExportHTML = () => {
-    const termName = currentContext?.currentTerm?.name || 'Term 3';
-    const yearName = currentContext?.currentYear?.name || '2026';
-    const titleContext = viewMode === 'class'
-      ? `${activeClassName}${selectedStreamName ? ` - ${selectedStreamName}` : ''}`
-      : activeTeacherName;
-
-    const htmlContent = `<!DOCTYPE html>
+    return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -419,48 +491,55 @@ export const TimetableView: React.FC = () => {
   <style>
     @page {
       size: A4 landscape;
-      margin: 4mm 6mm;
+      margin: 5mm 7mm;
     }
     * {
       box-sizing: border-box;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
     }
     html, body {
       margin: 0;
       padding: 0;
-      background: #fff;
-      color: #111;
+      width: 100%;
+      height: 100%;
+      background: #ffffff;
+      color: #111111;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
       font-size: 8.5px;
       line-height: 1.15;
     }
     .timetable-wrapper {
-      max-height: 200mm;
       width: 100%;
+      height: 200mm;
+      max-height: 200mm;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
+      box-sizing: border-box;
+      overflow: hidden;
       page-break-inside: avoid;
-      page-break-after: avoid;
+      break-inside: avoid;
     }
-    /* Compact Horizontal Header Bar */
     .header-bar {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      border-bottom: 1.5px solid #800000;
+      border-bottom: 2px solid #800000;
       padding-bottom: 3px;
-      margin-bottom: 4px;
+      margin-bottom: 2mm;
+      flex-shrink: 0;
+      height: 22mm;
+      box-sizing: border-box;
     }
     .brand-left {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
     }
     .logo {
-      height: 40px;
-      width: 40px;
+      height: 44px;
+      width: 44px;
       object-fit: contain;
       border-radius: 6px;
       border: 1.5px solid #800000;
@@ -468,7 +547,7 @@ export const TimetableView: React.FC = () => {
       background: #fff;
     }
     .school-title {
-      font-size: 15px;
+      font-size: 16px;
       font-weight: 900;
       color: #800000;
       text-transform: uppercase;
@@ -477,7 +556,7 @@ export const TimetableView: React.FC = () => {
       line-height: 1.1;
     }
     .sub-title {
-      font-size: 8px;
+      font-size: 8.5px;
       font-weight: 700;
       color: #333;
       text-transform: uppercase;
@@ -496,59 +575,65 @@ export const TimetableView: React.FC = () => {
       display: inline-block;
       background: #800000;
       color: #fff;
-      padding: 2.5px 8px;
-      font-size: 9px;
-      font-weight: 800;
-      border-radius: 4px;
+      padding: 3.5px 12px;
+      font-size: 10.5px;
+      font-weight: 900;
+      border-radius: 6px;
       text-transform: uppercase;
-      letter-spacing: 0.4px;
+      letter-spacing: 0.5px;
     }
-    .meta-pill-row {
+    .meta-sub-row {
       display: flex;
       justify-content: flex-end;
-      gap: 8px;
+      gap: 10px;
       margin-top: 3px;
-      font-size: 8px;
-      color: #333;
+      font-size: 7.5px;
+      color: #444;
     }
-    .meta-pill-row strong {
-      color: #800000;
+    .meta-sub-row strong {
+      color: #111;
     }
-    /* Table Styling */
+    .table-container {
+      width: 100%;
+      height: 154mm;
+      flex: 1 1 auto;
+      display: flex;
+      flex-direction: column;
+      box-sizing: border-box;
+      margin: 1mm 0;
+      overflow: hidden;
+    }
     table {
       width: 100%;
+      height: 100%;
       border-collapse: collapse;
       table-layout: fixed;
+      box-sizing: border-box;
     }
     th, td {
-      border: 1px solid #777;
-      padding: 2px 3px;
+      border: 1px solid #555;
+      padding: 2.5px 3.5px;
       vertical-align: top;
       word-wrap: break-word;
       overflow: hidden;
+      box-sizing: border-box;
+    }
+    thead {
+      height: 10mm;
     }
     th {
-      background: #fdf2f2;
-      color: #800000;
+      background: #800000 !important;
+      color: #ffffff !important;
       font-size: 8.5px;
       font-weight: 800;
       text-transform: uppercase;
       text-align: center;
       padding: 3px 2px;
+      height: 10mm;
     }
-    .col-period {
-      width: 85px;
-      background: #fbfbfb;
-    }
-    .period-title {
-      font-weight: 800;
-      color: #800000;
-      font-size: 8px;
-      line-height: 1.1;
-    }
-    .period-time {
-      font-size: 7.5px;
-      color: #555;
+    th .period-time-sub {
+      color: #ffe0e0;
+      font-size: 7px;
       font-family: monospace;
       display: block;
       margin-top: 1px;
@@ -556,57 +641,118 @@ export const TimetableView: React.FC = () => {
     .break-tag {
       display: inline-block;
       margin-top: 1px;
-      color: #b45309;
+      background: rgba(255, 255, 255, 0.25);
+      color: #fff;
       font-weight: 700;
-      font-size: 7px;
+      font-size: 6.5px;
       text-transform: uppercase;
+      padding: 0.5px 3px;
+      border-radius: 3px;
     }
-    .slot-card {
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
+    tbody {
+      height: 144mm;
     }
-    .subject {
-      font-weight: 800;
+    tbody tr {
+      height: calc(144mm / ${numDays});
+    }
+    .col-day {
+      width: 90px;
+      background: #fbfbfb !important;
+      vertical-align: middle;
+      text-align: center;
+    }
+    th.col-day {
+      background: #800000 !important;
+      color: #ffffff !important;
+    }
+    .day-title {
+      font-weight: 900;
+      color: #800000;
       font-size: 8.5px;
-      color: #111;
-      line-height: 1.15;
-    }
-    .teacher {
-      font-size: 7.5px;
-      color: #444;
-      margin-top: 1px;
       line-height: 1.1;
-    }
-    .room {
-      font-size: 7px;
-      color: #666;
-      font-family: monospace;
-      margin-top: 1px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
     }
     .break-cell {
-      background: #fef8ee;
+      background: #fef8ee !important;
       text-align: center;
       vertical-align: middle;
       color: #886200;
       font-weight: 800;
-      font-size: 8px;
+      font-size: 8.5px;
       padding: 3px;
+      height: 100%;
     }
     .empty-cell {
       text-align: center;
       vertical-align: middle;
-      color: #ccc;
-      font-size: 8px;
+      color: #aaa;
+      font-size: 9px;
+      height: 100%;
     }
-    /* Footer Signatures */
+    .slot-card {
+      height: 100%;
+      min-height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      text-align: center;
+      padding: 1.5px 2px;
+      box-sizing: border-box;
+    }
+    .subject-abbr-wrapper {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+    }
+    .subject-abbr {
+      font-size: 14px;
+      font-weight: 900;
+      color: #800000;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      line-height: 1;
+      text-align: center;
+    }
+    .slot-teacher {
+      font-size: 7px;
+      font-weight: 600;
+      color: #4b5563;
+      line-height: 1.1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+      text-align: center;
+    }
+    .slot-meta {
+      font-size: 6.5px;
+      color: #6b7280;
+      font-family: monospace;
+      line-height: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+      text-align: center;
+      border-top: 1px dotted #d1d5db;
+      padding-top: 1px;
+      width: 100%;
+    }
     .footer {
       display: flex;
       justify-content: space-between;
-      margin-top: 4px;
-      border-top: 1px solid #aaa;
-      padding-top: 3px;
+      align-items: flex-end;
+      height: 18mm;
+      border-top: 1.5px solid #800000;
+      padding-top: 2px;
+      margin-top: 1.5mm;
+      flex-shrink: 0;
+      box-sizing: border-box;
     }
     .sig-box {
       width: 31%;
@@ -615,10 +761,11 @@ export const TimetableView: React.FC = () => {
       font-weight: 700;
       font-size: 8px;
       color: #222;
+      text-transform: uppercase;
     }
     .sig-line {
       border-bottom: 1px solid #666;
-      height: 14px;
+      height: 10px;
       margin-bottom: 2px;
     }
     .sig-caption {
@@ -630,58 +777,62 @@ export const TimetableView: React.FC = () => {
 </head>
 <body>
   <div class="timetable-wrapper">
-    <div>
-      <div class="header-bar">
-        <div class="brand-left">
-          <img src="/logo.png" alt="Grace Seeds School Logo" class="logo" />
-          <div>
-            <h1 class="school-title">GRACE SEEDS SCHOOL</h1>
-            <div class="sub-title">MINISTRY OF EDUCATION · CBC MASTER TIMETABLE</div>
-            <div class="meta-info">KEMRI Street, Kisian, Kisumu · Tel: 0745436312 · schoolgraceseeds@gmail.com</div>
-          </div>
-        </div>
-        <div class="header-right">
-          <div class="badge">Master Timetable · ${titleContext}</div>
-          <div class="meta-pill-row">
-            <span><strong>Cohort:</strong> ${selectedStreamName || 'Main Cohort'}</span>
-            <span><strong>Session:</strong> ${yearName} - ${termName}</span>
-            <span><strong>Date:</strong> ${new Date().toLocaleDateString('en-GB')}</span>
-          </div>
+    <div class="header-bar">
+      <div class="brand-left">
+        <img src="/logo.png" onerror="if(!this.src.endsWith('/logo.jpg')){this.src='/logo.jpg';}" alt="${schoolTitle} Logo" class="logo" />
+        <div>
+          <h1 class="school-title">${schoolTitle}</h1>
+          <div class="sub-title">MINISTRY OF EDUCATION · CBC MASTER TIMETABLE</div>
+          <div class="meta-info">${schoolAddress} · Tel: ${schoolPhone} · ${schoolEmail}</div>
         </div>
       </div>
+      <div class="header-right">
+        <div class="badge">${viewMode === 'class' ? `CLASS TIMETABLE · ${titleContext}` : `TEACHER TIMETABLE · ${titleContext}`}</div>
+        <div class="meta-sub-row">
+          ${viewMode === 'class' && selectedStreamName ? `<span><strong>Cohort:</strong> ${selectedStreamName}</span>` : ''}
+          <span><strong>Academic Year:</strong> ${yearName}</span>
+          <span><strong>Date:</strong> ${new Date().toLocaleDateString('en-GB')}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-container">
       <table>
         <thead>
           <tr>
-            <th class="col-period">Period / Time</th>
-            ${days.map(d => `<th>${d.label}</th>`).join('')}
+            <th class="col-day">Day / Period</th>
+            ${periods.map(p => `<th>
+              <div>${p.name}</div>
+              <span class="period-time-sub">${p.startTime} - ${p.endTime}</span>
+              ${p.isBreak ? `<span class="break-tag">${p.isLunch ? 'Lunch' : 'Break'}</span>` : ''}
+            </th>`).join('')}
           </tr>
         </thead>
         <tbody>
-          ${periods.map(p => `
+          ${days.map(d => `
             <tr>
-              <td class="col-period">
-                <div class="period-title">${p.name}</div>
-                <span class="period-time">${p.startTime} - ${p.endTime}</span>
-                ${p.isBreak ? `<span class="break-tag">${p.isLunch ? 'Lunch' : 'Break'}</span>` : ''}
+              <td class="col-day">
+                <div class="day-title">${d.label}</div>
               </td>
-              ${days.map(d => {
+              ${periods.map(p => {
                 const s = activeSlots.find(sl => sl.dayOfWeek === d.dayOfWeek && sl.periodNumber === p.periodNumber);
                 if (s) {
                   if (s.isBreak) {
-                    return `<td class="break-cell">${s.label || (s.isLunch ? 'Lunch & Rest' : 'Break')}</td>`;
+                    return `<td class="break-cell">${s.label || (s.isLunch ? 'Lunch & Rest' : 'Morning Break')}</td>`;
                   }
+                  const abbr = formatSubjectAbbreviation(s.learningAreaName);
                   return `<td>
                     <div class="slot-card">
-                      <div>
-                        <div class="subject">${s.learningAreaName || 'Subject'}</div>
-                        <div class="teacher">${s.teacherName || ''}</div>
+                      <div class="slot-teacher">${s.teacherName || ""}</div>
+                      <div class="subject-abbr-wrapper">
+                        <span class="subject-abbr">${abbr}</span>
                       </div>
-                      <div class="room">${s.roomName ? s.roomName + ' · ' : ''}${s.startTime}-${s.endTime}</div>
+                      <div class="slot-meta">${s.roomName ? s.roomName + " · " : ""}${s.startTime}-${s.endTime}</div>
                     </div>
                   </td>`;
                 }
                 if (p.isBreak) {
-                  return `<td class="break-cell">${p.name}</td>`;
+                  return `<td class="break-cell">${p.name || (p.isLunch ? 'Lunch & Rest' : 'Morning Break')}</td>`;
                 }
                 return `<td class="empty-cell">—</td>`;
               }).join('')}
@@ -690,32 +841,86 @@ export const TimetableView: React.FC = () => {
         </tbody>
       </table>
     </div>
+
     <div class="footer">
       <div class="sig-box">
         <div class="sig-title">Class Teacher:</div>
         <div class="sig-line"></div>
-        <div class="sig-caption">Signature & Date</div>
+        <div class="sig-caption">Signature &amp; Date</div>
       </div>
       <div class="sig-box">
         <div class="sig-title">Deputy Headteacher (Academics):</div>
         <div class="sig-line"></div>
-        <div class="sig-caption">Signature & Date</div>
+        <div class="sig-caption">Signature &amp; Date</div>
       </div>
       <div class="sig-box">
         <div class="sig-title">Principal / Headteacher:</div>
         <div class="sig-line"></div>
-        <div class="sig-caption">Official Stamp & Signature</div>
+        <div class="sig-caption">Official Stamp &amp; Signature</div>
       </div>
     </div>
   </div>
 </body>
 </html>`;
+  };
+
+  // Dedicated Isolated Print Iframe Engine (Strict 1-Page A4 Landscape, 100% Page Coverage, No Ribbon)
+  const handleDownloadTimetable = () => {
+    const titleContext = viewMode === 'class'
+      ? `${activeClassName}${selectedStreamName ? ` (${selectedStreamName})` : ''}`
+      : activeTeacherName;
+    const yearName = currentContext?.currentYear?.name || new Date().getFullYear().toString();
+    const htmlContent = buildTimetablePrintHTML(titleContext, yearName);
+
+    const oldFrame = document.getElementById('smartshule-timetable-print-frame');
+    if (oldFrame && oldFrame.parentNode) {
+      oldFrame.parentNode.removeChild(oldFrame);
+    }
+
+    const iframe = document.createElement('iframe');
+    iframe.id = 'smartshule-timetable-print-frame';
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (doc) {
+      doc.open();
+      doc.write(htmlContent);
+      doc.close();
+
+      setTimeout(() => {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+        setTimeout(() => {
+          const toRemove = document.getElementById('smartshule-timetable-print-frame');
+          if (toRemove && toRemove.parentNode) {
+            toRemove.parentNode.removeChild(toRemove);
+          }
+        }, 3000);
+      }, 400);
+    } else {
+      window.print();
+    }
+  };
+
+  // Standalone offline HTML export in Landscape Orientation (Whole Page, No Term Ribbon)
+  const handleExportHTML = () => {
+    const titleContext = viewMode === 'class'
+      ? `${activeClassName}${selectedStreamName ? ` (${selectedStreamName})` : ''}`
+      : activeTeacherName;
+    const yearName = currentContext?.currentYear?.name || new Date().getFullYear().toString();
+    const htmlContent = buildTimetablePrintHTML(titleContext, yearName);
 
     const blob = new Blob([htmlContent], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `Grace_Seeds_School_Timetable_${titleContext.replace(/\s+/g, '_')}_${termName.replace(/\s+/g, '_')}.html`;
+    link.download = `Grace_Seeds_School_Timetable_${titleContext.replace(/[\s()]/g, '_')}_Landscape.html`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -723,13 +928,13 @@ export const TimetableView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 pb-12 font-body">
-      {/* Print CSS Injected Styles Calibrated for Strict 1-Page A4 Landscape Output */}
+    <div className="space-y-6 pb-12 font-body print:space-y-0 print:p-0 print:m-0 print:w-full">
+      {/* Print CSS Injected Styles Calibrated for Strict 1-Page A4 Landscape Output Covering the Whole Page */}
       <style>{`
         @media print {
           @page {
             size: A4 landscape;
-            margin: 4mm 6mm !important;
+            margin: 5mm 7mm !important;
           }
           html, body {
             background: #ffffff !important;
@@ -740,8 +945,10 @@ export const TimetableView: React.FC = () => {
             print-color-adjust: exact !important;
             margin: 0 !important;
             padding: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
           }
-          header, aside, #main-sidebar, nav, footer, .no-print {
+          header, aside, #main-sidebar, nav, footer, .no-print, .term-lifecycle-banner, [class*="term-lifecycle"], [class*="termNotice"] {
             display: none !important;
           }
           main {
@@ -749,6 +956,7 @@ export const TimetableView: React.FC = () => {
             padding: 0 !important;
             margin: 0 !important;
             width: 100% !important;
+            height: 100% !important;
           }
           .printable-card {
             box-shadow: none !important;
@@ -756,10 +964,17 @@ export const TimetableView: React.FC = () => {
             margin: 0 !important;
             padding: 0 !important;
             width: 100% !important;
-            background: #ffffff !important;
+            max-width: 100% !important;
+            height: 200mm !important;
             max-height: 200mm !important;
+            background: #ffffff !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: space-between !important;
+            box-sizing: border-box !important;
+            overflow: hidden !important;
             page-break-inside: avoid !important;
-            page-break-after: avoid !important;
+            break-inside: avoid !important;
           }
           .printable-header {
             display: flex !important;
@@ -767,16 +982,19 @@ export const TimetableView: React.FC = () => {
             align-items: center !important;
             justify-content: space-between !important;
             text-align: left !important;
-            border-bottom: 1.5px solid #800000 !important;
+            border-bottom: 2px solid #800000 !important;
             border-radius: 0 !important;
             box-shadow: none !important;
             padding-bottom: 3px !important;
-            margin-bottom: 4px !important;
+            margin-bottom: 2mm !important;
             background: transparent !important;
+            flex-shrink: 0 !important;
+            height: 22mm !important;
+            box-sizing: border-box !important;
           }
           .printable-header .school-logo-wrapper {
-            width: 40px !important;
-            height: 40px !important;
+            width: 44px !important;
+            height: 44px !important;
             margin: 0 !important;
             padding: 2px !important;
             border: 1.5px solid #800000 !important;
@@ -788,29 +1006,125 @@ export const TimetableView: React.FC = () => {
             height: 100% !important;
             object-fit: contain !important;
           }
+          .timetable-table-wrapper {
+            flex: 1 1 auto !important;
+            display: flex !important;
+            flex-direction: column !important;
+            width: 100% !important;
+            height: 154mm !important;
+            margin: 1mm 0 !important;
+            overflow: hidden !important;
+            box-sizing: border-box !important;
+          }
           .timetable-grid-table {
             width: 100% !important;
+            height: 100% !important;
             table-layout: fixed !important;
             border-collapse: collapse !important;
+            box-sizing: border-box !important;
             page-break-inside: avoid !important;
           }
-          .timetable-grid-table th, .timetable-grid-table td {
-            border: 1px solid #777 !important;
-            padding: 1.5px 3px !important;
-            page-break-inside: avoid !important;
-            vertical-align: top !important;
-            overflow: hidden !important;
+          .timetable-grid-table thead {
+            height: 10mm !important;
           }
           .timetable-grid-table th {
-            background-color: #fce8ec !important;
-            color: #800000 !important;
+            background-color: #800000 !important;
+            color: #ffffff !important;
             font-size: 8.5px !important;
+            font-weight: 800 !important;
+            text-align: center !important;
+            height: 10mm !important;
+            padding: 2px 2px !important;
+            border: 1px solid #555 !important;
+          }
+          .timetable-grid-table th span {
+            color: #ffffff !important;
+          }
+          .timetable-grid-table tbody {
+            height: 144mm !important;
+          }
+          .timetable-grid-table tbody tr {
+            height: calc(144mm / ${days.length || 5}) !important;
+          }
+          .timetable-grid-table td {
+            border: 1px solid #555 !important;
+            padding: 2.5px 3.5px !important;
+            vertical-align: top !important;
+            overflow: hidden !important;
+            height: 100% !important;
+            box-sizing: border-box !important;
+          }
+          .timetable-grid-table td.col-day-cell {
+            vertical-align: middle !important;
+            text-align: center !important;
+            background-color: #fbfbfb !important;
             font-weight: bold !important;
+            width: 90px !important;
+            white-space: nowrap !important;
+          }
+          .timetable-grid-table .slot-card {
+            height: 100% !important;
+            min-height: 100% !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            text-align: center !important;
+            padding: 1.5px 2px !important;
+            box-sizing: border-box !important;
+          }
+          .timetable-grid-table .subject-abbr-wrapper {
+            flex: 1 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            width: 100% !important;
+          }
+          .timetable-grid-table .subject-abbr {
+            font-size: 14px !important;
+            font-weight: 900 !important;
+            color: #800000 !important;
+            letter-spacing: 0.8px !important;
+            text-transform: uppercase !important;
+            line-height: 1 !important;
             text-align: center !important;
           }
+          .timetable-grid-table .slot-teacher {
+            font-size: 7px !important;
+            font-weight: 600 !important;
+            color: #4b5563 !important;
+            text-align: center !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            max-width: 100% !important;
+          }
+          .timetable-grid-table .slot-meta {
+            font-size: 6.5px !important;
+            color: #6b7280 !important;
+            font-family: monospace !important;
+            text-align: center !important;
+            border-top: 1px dotted #d1d5db !important;
+            padding-top: 1px !important;
+            width: 100% !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+          }
           .print-only-signatures {
-            display: grid !important;
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: flex-end !important;
+            flex-shrink: 0 !important;
+            height: 18mm !important;
+            margin-top: 1.5mm !important;
+            padding-top: 2px !important;
+            border-top: 1.5px solid #800000 !important;
             page-break-inside: avoid !important;
+            box-sizing: border-box !important;
+          }
+          .print-only-signatures > div {
+            width: 31% !important;
           }
         }
       `}</style>
@@ -838,19 +1152,19 @@ export const TimetableView: React.FC = () => {
           <button
             onClick={handleDownloadTimetable}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#600000] text-xs font-bold shadow-xs transition-all cursor-pointer"
-            title="Download or print official timetable with school logo"
+            title="Download or print official timetable in landscape orientation covering the full page"
           >
             <span className="material-symbols-outlined text-[16px]">print</span>
-            <span>Download / Print PDF</span>
+            <span>Download / Print (Landscape)</span>
           </button>
 
           <button
             onClick={handleExportHTML}
             className="inline-flex items-center gap-1.5 px-3 py-2 bg-surface-container hover:bg-surface-container-high text-on-surface rounded-lg text-xs font-bold border border-outline-variant/30 transition-all cursor-pointer"
-            title="Download offline standalone HTML timetable"
+            title="Download offline standalone landscape HTML timetable"
           >
             <span className="material-symbols-outlined text-[16px]">download</span>
-            <span>Export HTML</span>
+            <span>Export Landscape HTML</span>
           </button>
 
           {canEditGrid && (
@@ -858,19 +1172,19 @@ export const TimetableView: React.FC = () => {
               <button
                 onClick={() => setIsAddPeriodOpen(true)}
                 className="inline-flex items-center gap-1.5 px-3 py-2 bg-surface-container hover:bg-surface-container-high text-on-surface rounded-lg text-xs font-bold border border-outline-variant/30 transition-all cursor-pointer"
-                title="Add a new Period / Row"
+                title="Add a new Period (Time Column)"
               >
-                <span className="material-symbols-outlined text-[16px]">table_rows</span>
-                <span>+ Row</span>
+                <span className="material-symbols-outlined text-[16px]">view_column</span>
+                <span>+ Period</span>
               </button>
 
               <button
                 onClick={() => setIsAddDayOpen(true)}
                 className="inline-flex items-center gap-1.5 px-3 py-2 bg-surface-container hover:bg-surface-container-high text-on-surface rounded-lg text-xs font-bold border border-outline-variant/30 transition-all cursor-pointer"
-                title="Add a new Day / Column"
+                title="Add a new Day (Row)"
               >
-                <span className="material-symbols-outlined text-[16px]">view_column</span>
-                <span>+ Column</span>
+                <span className="material-symbols-outlined text-[16px]">table_rows</span>
+                <span>+ Day</span>
               </button>
 
               <button
@@ -888,15 +1202,18 @@ export const TimetableView: React.FC = () => {
                 onClick={handleSaveGrid}
                 disabled={isSavingGrid}
                 className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold shadow-md transition-all cursor-pointer ${
-                  isGridDirty
-                    ? 'bg-secondary text-white hover:bg-secondary/90 animate-pulse'
+                  isSavingGrid
+                    ? 'bg-amber-600 text-white cursor-wait'
+                    : isGridDirty
+                    ? 'bg-[#800000] text-white hover:bg-[#600000] ring-2 ring-[#800000]/30 animate-pulse'
                     : 'bg-emerald-600 text-white hover:bg-emerald-700'
                 }`}
+                title="Actively commit all timetable slots, periods, and day columns to database"
               >
-                <span className="material-symbols-outlined text-[16px]">
-                  {isSavingGrid ? 'sync' : 'cloud_done'}
+                <span className={`material-symbols-outlined text-[16px] ${isSavingGrid ? 'animate-spin' : ''}`}>
+                  {isSavingGrid ? 'sync' : isGridDirty ? 'save' : 'cloud_done'}
                 </span>
-                <span>{isSavingGrid ? 'Saving...' : isGridDirty ? 'Save Grid (Unsaved)' : 'Save Timetable'}</span>
+                <span>{isSavingGrid ? 'Actively Saving to Database...' : isGridDirty ? 'Save Timetable (Unsaved Changes)' : 'Save Timetable (Active & Synced)'}</span>
               </button>
             </>
           )}
@@ -904,9 +1221,14 @@ export const TimetableView: React.FC = () => {
       </div>
 
       {saveSuccessMsg && (
-        <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-bold flex items-center gap-2 animate-fade-in no-print">
-          <span className="material-symbols-outlined text-base text-emerald-700">check_circle</span>
-          <span>{saveSuccessMsg}</span>
+        <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-950 text-xs font-bold flex items-center justify-between shadow-xs animate-fade-in no-print">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-lg text-emerald-700">check_circle</span>
+            <span>{saveSuccessMsg}</span>
+          </div>
+          <button onClick={() => setSaveSuccessMsg(null)} className="text-emerald-800 hover:text-emerald-950 p-1 cursor-pointer">
+            <span className="material-symbols-outlined text-sm">close</span>
+          </button>
         </div>
       )}
 
@@ -997,10 +1319,14 @@ export const TimetableView: React.FC = () => {
                 {classesList.length === 0 ? (
                   <option value="">No classes configured</option>
                 ) : (
-                  classesList.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
+                  sortAndGroupClasses(classesList).map((group) => (
+                    <optgroup key={group.category} label={group.category}>
+                      {group.classes.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </optgroup>
                   ))
                 )}
               </select>
@@ -1024,7 +1350,7 @@ export const TimetableView: React.FC = () => {
             </div>
 
             <span className="text-[11px] text-on-surface-variant font-data-mono hidden md:inline">
-              Grid: {periods.length} Rows × {days.length} Cols
+              Grid: {days.length} Days (Rows) × {periods.length} Periods (Cols)
             </span>
           </div>
         ) : (
@@ -1049,14 +1375,14 @@ export const TimetableView: React.FC = () => {
         )}
       </div>
 
-      {/* Main Printable Card (Contains Centered School Logo, Letterhead, and Grid) */}
-      <div className="printable-card bg-surface-container-lowest rounded-2xl shadow-xs border border-outline-variant/30 p-4 sm:p-6 print:p-0 space-y-4 print:space-y-1">
+      {/* Main Printable Card (Contains Centered School Logo, Letterhead, and Full-Page Grid) */}
+      <div className="printable-card bg-surface-container-lowest rounded-2xl shadow-xs border border-outline-variant/30 p-4 sm:p-6 print:p-0 space-y-4 print:space-y-0 print:border-none print:shadow-none print:w-full print:max-w-none print:m-0 print:rounded-none">
         
-        {/* Centered School Letterhead Header (Horizontal Flex in Print for Single-Page Fit) */}
+        {/* School Letterhead Header - Logo and Class or Teacher prominently displayed WITHOUT term ribbon */}
         <div className="printable-header flex flex-col items-center justify-center text-center pb-4 print:pb-1 border-b-2 border-[#800000] print:flex-row print:justify-between print:items-center print:text-left">
-          {/* Brand Left (Logo + Titles) */}
-          <div className="flex flex-col items-center print:flex-row print:items-center print:gap-2.5">
-            <div className="school-logo-wrapper w-28 h-28 sm:w-32 sm:h-32 print:w-10 print:h-10 rounded-2xl print:rounded-md border-2 print:border border-[#800000] p-1.5 print:p-0.5 bg-white flex items-center justify-center shadow-md print:shadow-none mx-auto mb-2 print:mb-0 shrink-0">
+          {/* Brand Left (Logo + School Info) */}
+          <div className="flex flex-col items-center sm:flex-row print:flex-row print:items-center gap-3">
+            <div className="school-logo-wrapper w-20 h-20 sm:w-24 sm:h-24 print:w-11 print:h-11 rounded-2xl print:rounded-md border-2 print:border border-[#800000] p-1 print:p-0.5 bg-white flex items-center justify-center shadow-md print:shadow-none mx-auto mb-1 sm:mb-0 print:mb-0 shrink-0">
               <img
                 src="/logo.png"
                 alt="Grace Seeds School Logo"
@@ -1070,8 +1396,8 @@ export const TimetableView: React.FC = () => {
               />
             </div>
 
-            <div className="text-center print:text-left">
-              <h2 className="text-xl sm:text-2xl print:text-[14px] font-black uppercase text-[#800000] tracking-wider leading-tight">
+            <div className="text-center sm:text-left print:text-left">
+              <h2 className="text-xl sm:text-2xl print:text-[15px] font-black uppercase text-[#800000] tracking-wider leading-tight">
                 GRACE SEEDS SCHOOL
               </h2>
               <p className="text-xs print:text-[8px] font-bold text-gray-700 uppercase tracking-wide mt-0.5 print:mt-0">
@@ -1083,60 +1409,64 @@ export const TimetableView: React.FC = () => {
             </div>
           </div>
 
-          {/* Context & Metadata Right */}
-          <div className="mt-2.5 print:mt-0 flex flex-col items-center print:items-end">
-            <div className="inline-flex flex-wrap items-center justify-center gap-1.5 px-3.5 py-1.5 print:py-0.5 print:px-2 bg-[#800000] text-white rounded-lg print:rounded text-xs print:text-[8.5px] font-bold uppercase tracking-wider shadow-xs">
-              <span>{viewMode === 'class' ? 'Class Schedule' : 'Teacher Schedule'}</span>
-              <span>·</span>
-              <span>{viewMode === 'class' ? activeClassName : activeTeacherName}</span>
-              {viewMode === 'class' && selectedStreamName && <span>({selectedStreamName})</span>}
-              <span className="no-print">·</span>
-              <span className="no-print">{currentContext?.currentTerm?.name || 'Term 3'} ({currentContext?.currentYear?.name || '2026'})</span>
+          {/* Context & Class or Teacher Title (NO TERM RIBBON) */}
+          <div className="mt-3 sm:mt-0 print:mt-0 flex flex-col items-center sm:items-end print:items-end">
+            <div className="inline-flex items-center gap-2 px-4 py-2 print:py-1 print:px-2.5 bg-[#800000] text-white rounded-xl print:rounded-md text-xs sm:text-sm print:text-[10px] font-black uppercase tracking-wider shadow-sm">
+              <span className="material-symbols-outlined text-[18px] print:hidden">
+                {viewMode === 'class' ? 'school' : 'person'}
+              </span>
+              <span>
+                {viewMode === 'class'
+                  ? `CLASS: ${activeClassName}${selectedStreamName ? ` (${selectedStreamName})` : ''}`
+                  : `TEACHER: ${activeTeacherName}`}
+              </span>
             </div>
 
-            {/* Print metadata inline bar */}
+            {/* Print metadata inline bar - WITHOUT ANY TERM RIBBON */}
             <div className="hidden print:flex items-center gap-2 mt-1 text-[7.5px] text-gray-600">
-              <span><strong className="text-gray-800 uppercase text-[7px]">Cohort:</strong> {selectedStreamName || 'Main Cohort'}</span>
-              <span>·</span>
-              <span><strong className="text-gray-800 uppercase text-[7px]">Session:</strong> {currentContext?.currentYear?.name || '2026'} - {currentContext?.currentTerm?.name || 'Term 3'}</span>
+              {viewMode === 'class' && (
+                <>
+                  <span><strong className="text-gray-800 uppercase text-[7px]">Cohort:</strong> {selectedStreamName || 'Main Cohort'}</span>
+                  <span>·</span>
+                </>
+              )}
+              <span><strong className="text-gray-800 uppercase text-[7px]">Academic Year:</strong> {currentContext?.currentYear?.name || '2026'}</span>
               <span>·</span>
               <span><strong className="text-gray-800 uppercase text-[7px]">Date:</strong> {new Date().toLocaleDateString('en-GB')}</span>
             </div>
           </div>
 
-          {/* Screen-only Metadata Bar */}
-          <div className="w-full grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 mt-3 border-t border-gray-200 text-left text-xs no-print">
+          {/* Screen-only Metadata Bar - WITHOUT ANY TERM RIBBON */}
+          <div className="w-full grid grid-cols-2 sm:grid-cols-3 gap-3 pt-3 mt-3 border-t border-gray-200 text-left text-xs no-print">
             <div>
-              <span className="text-gray-500 font-semibold block text-[10px] uppercase">Entity:</span>
+              <span className="text-gray-500 font-semibold block text-[10px] uppercase">
+                {viewMode === 'class' ? 'Class Entity:' : 'Instructional Educator:'}
+              </span>
               <span className="font-bold text-gray-900">{viewMode === 'class' ? activeClassName : activeTeacherName}</span>
             </div>
             <div>
-              <span className="text-gray-500 font-semibold block text-[10px] uppercase">Cohort:</span>
+              <span className="text-gray-500 font-semibold block text-[10px] uppercase">Cohort / Stream:</span>
               <span className="font-bold text-gray-900">{selectedStreamName || 'Main Cohort (No Stream)'}</span>
             </div>
             <div>
-              <span className="text-gray-500 font-semibold block text-[10px] uppercase">Term / Session:</span>
-              <span className="font-bold text-gray-900">{currentContext?.currentYear?.name || '2026'} - {currentContext?.currentTerm?.name || 'Term 3'}</span>
-            </div>
-            <div>
-              <span className="text-gray-500 font-semibold block text-[10px] uppercase">Generated:</span>
-              <span className="font-bold text-gray-900">{new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+              <span className="text-gray-500 font-semibold block text-[10px] uppercase">Academic Year:</span>
+              <span className="font-bold text-gray-900">{currentContext?.currentYear?.name || '2026'}</span>
             </div>
           </div>
         </div>
 
-        {/* Timetable Grid Table */}
-        <div className="overflow-x-auto">
+        {/* Timetable Grid Table Container */}
+        <div className="timetable-table-wrapper overflow-x-auto flex-1">
           <table className="timetable-grid-table w-full text-left text-xs border-collapse">
             <thead className="bg-surface-container-low text-on-surface-variant uppercase font-semibold border-b border-outline-variant/30 print:bg-rose-50">
               <tr>
-                <th className="py-2.5 px-3 print:py-1 print:px-1.5 w-36 print:w-[85px] border-r border-surface-container print:border-gray-400 text-xs print:text-[8.5px]">
+                <th className="py-2.5 px-3 print:py-1 print:px-1.5 w-28 print:w-[75px] border-r border-surface-container print:border-gray-400 text-xs print:text-[8.5px]">
                   <div className="flex items-center justify-between">
-                    <span>Period / Time</span>
+                    <span className="font-bold text-on-surface print:text-[#800000]">Day / Period</span>
                     {canEditGrid && (
                       <button
-                        onClick={() => setIsAddPeriodOpen(true)}
-                        title="Add period row"
+                        onClick={() => setIsAddDayOpen(true)}
+                        title="Add day row"
                         className="text-[#800000] hover:opacity-80 cursor-pointer no-print"
                       >
                         <span className="material-symbols-outlined text-[16px]">add_box</span>
@@ -1144,19 +1474,49 @@ export const TimetableView: React.FC = () => {
                     )}
                   </div>
                 </th>
-                {days.map((d) => (
-                  <th key={d.dayOfWeek} className="py-2.5 px-3 print:py-1 print:px-1 min-w-[160px] print:min-w-0 border-r border-surface-container last:border-r-0 print:border-gray-400 text-xs print:text-[8.5px]">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-on-surface print:text-[#800000]">{d.label}</span>
-                      {canEditGrid && days.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteDay(d.dayOfWeek)}
-                          title={`Delete ${d.label} column`}
-                          className="text-outline hover:text-error transition-colors cursor-pointer no-print"
-                        >
-                          <span className="material-symbols-outlined text-[14px]">close</span>
-                        </button>
+                {periods.map((pDef) => (
+                  <th
+                    key={pDef.periodNumber}
+                    className={`py-2 px-2.5 print:py-1 print:px-1 min-w-[140px] print:min-w-0 border-r border-surface-container last:border-r-0 print:border-gray-400 text-xs print:text-[8.5px] ${
+                      pDef.isBreak ? 'bg-amber-500/10 print:bg-amber-100/60' : ''
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="text-left">
+                        <span className="font-bold text-[#800000] block text-xs print:text-[8px] leading-tight">
+                          P{pDef.periodNumber} · {pDef.name}
+                        </span>
+                        <span className="text-[11px] print:text-[7px] text-outline font-normal block mt-0.5 print:mt-0 font-data-mono">
+                          {pDef.startTime} - {pDef.endTime}
+                        </span>
+                        {pDef.isBreak && (
+                          <span className="inline-block mt-1 print:mt-0 px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-900 text-[10px] print:text-[6.5px] font-bold">
+                            {pDef.isLunch ? 'Lunch' : 'Break'}
+                          </span>
+                        )}
+                      </div>
+
+                      {canEditGrid && (
+                        <div className="flex items-center gap-0.5 ml-1 shrink-0 no-print">
+                          <button
+                            type="button"
+                            onClick={() => setEditingPeriod(pDef)}
+                            title="Edit Period Times & Label"
+                            className="text-on-surface-variant hover:text-[#800000] cursor-pointer p-0.5 rounded hover:bg-surface-container"
+                          >
+                            <span className="material-symbols-outlined text-[14px]">edit</span>
+                          </button>
+                          {periods.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeletePeriod(pDef.periodNumber)}
+                              title="Delete this period column"
+                              className="text-on-surface-variant hover:text-error cursor-pointer p-0.5 rounded hover:bg-surface-container"
+                            >
+                              <span className="material-symbols-outlined text-[14px]">delete</span>
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
                   </th>
@@ -1164,55 +1524,32 @@ export const TimetableView: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-surface-container">
-              {periods.map((pDef) => (
+              {days.map((d) => (
                 <tr
-                  key={pDef.periodNumber}
-                  className={pDef.isBreak ? 'bg-amber-500/5' : 'hover:bg-surface-container-low/20 transition-colors'}
+                  key={d.dayOfWeek}
+                  className="hover:bg-surface-container-low/20 transition-colors"
                 >
-                  {/* Period Time Header with Edit Controls */}
-                  <td className="py-2.5 px-3 print:py-0.5 print:px-1.5 border-r border-surface-container print:border-gray-400 font-data-mono align-top print:bg-[#fbfbfb]">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <span className="font-bold text-[#800000] block text-xs print:text-[8px] leading-tight">
-                          P{pDef.periodNumber} · {pDef.name}
-                        </span>
-                        <span className="text-[11px] print:text-[7px] text-outline font-normal block mt-0.5 print:mt-0">
-                          {pDef.startTime} - {pDef.endTime}
-                        </span>
-                        {pDef.isBreak && (
-                          <span className="inline-block mt-1 print:mt-0 px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-800 text-[10px] print:text-[6.5px] font-bold">
-                            {pDef.isLunch ? 'Lunch' : 'Break'}
-                          </span>
-                        )}
-                      </div>
-
-                      {canEditGrid && (
-                        <div className="flex items-center gap-1 ml-1 shrink-0 no-print">
-                          <button
-                            type="button"
-                            onClick={() => setEditingPeriod(pDef)}
-                            title="Edit Period Times & Label"
-                            className="text-on-surface-variant hover:text-[#800000] cursor-pointer p-0.5 rounded hover:bg-surface-container"
-                          >
-                            <span className="material-symbols-outlined text-[15px]">edit</span>
-                          </button>
-                          {periods.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => handleDeletePeriod(pDef.periodNumber)}
-                              title="Delete this row"
-                              className="text-on-surface-variant hover:text-error cursor-pointer p-0.5 rounded hover:bg-surface-container"
-                            >
-                              <span className="material-symbols-outlined text-[15px]">delete</span>
-                            </button>
-                          )}
-                        </div>
+                  {/* Day Header Row Label */}
+                  <td className="col-day-cell py-2.5 px-3 print:py-1 print:px-1.5 border-r border-surface-container print:border-gray-400 align-middle print:bg-[#fbfbfb]">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-[#800000] block text-xs print:text-[8.5px] uppercase tracking-wider">
+                        {d.label}
+                      </span>
+                      {canEditGrid && days.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteDay(d.dayOfWeek)}
+                          title={`Delete ${d.label} row`}
+                          className="text-outline hover:text-error transition-colors cursor-pointer no-print ml-1"
+                        >
+                          <span className="material-symbols-outlined text-[14px]">close</span>
+                        </button>
                       )}
                     </div>
                   </td>
 
-                  {/* Day Columns */}
-                  {days.map((d) => {
+                  {/* Period Columns for this Day */}
+                  {periods.map((pDef) => {
                     const slot = activeSlots.find(
                       (s) => s.dayOfWeek === d.dayOfWeek && s.periodNumber === pDef.periodNumber
                     );
@@ -1222,8 +1559,8 @@ export const TimetableView: React.FC = () => {
                         key={`${d.dayOfWeek}-${pDef.periodNumber}`}
                         onClick={() => handleCellClick(d.dayOfWeek, pDef, slot)}
                         className={`py-2 px-2 print:py-0.5 print:px-1 border-r border-surface-container last:border-r-0 print:border-gray-400 align-top transition-colors ${
-                          canEditGrid ? 'cursor-pointer hover:bg-rose-50/30' : ''
-                        }`}
+                          pDef.isBreak ? 'bg-amber-500/5 print:bg-[#fef8ee]' : ''
+                        } ${canEditGrid ? 'cursor-pointer hover:bg-rose-50/30' : ''}`}
                       >
                         {slot ? (
                           slot.isBreak ? (
@@ -1234,21 +1571,21 @@ export const TimetableView: React.FC = () => {
                               </span>
                             </div>
                           ) : (
-                            <div className="h-full min-h-[52px] print:min-h-0 print:h-auto rounded-lg print:rounded-none bg-surface-container-lowest border border-outline-variant/30 print:border-none p-2 print:p-0.5 shadow-xs print:shadow-none hover:border-[#800000]/50 transition-all flex flex-col justify-between">
-                              <div>
-                                <div className="font-bold text-on-surface text-xs print:text-[8.5px] leading-tight print:leading-snug">
-                                  {slot.learningAreaName || 'Learning Area'}
-                                </div>
-                                <div className="text-[11px] print:text-[7.5px] text-on-surface-variant mt-1 print:mt-0 flex items-center gap-1">
-                                  <span className="material-symbols-outlined text-[13px] text-secondary no-print">person</span>
-                                  <span className="truncate font-medium">{slot.teacherName || 'Assigned Teacher'}</span>
-                                </div>
-                              </div>
-                              <div className="mt-2 print:mt-0.5 pt-1 print:pt-0 border-t print:border-none border-surface-container-high flex items-center justify-between text-[10px] print:text-[7px] text-outline font-data-mono">
-                                <span>{slot.roomName || 'Room'}</span>
-                                <span className="text-[#800000] font-semibold">
-                                  {slot.startTime}-{slot.endTime}
+                            <div className="slot-card h-full min-h-[52px] print:min-h-0 print:h-auto rounded-lg print:rounded-none bg-surface-container-lowest border border-outline-variant/30 print:border-none p-1.5 print:p-0.5 shadow-xs print:shadow-none hover:border-[#800000]/50 transition-all flex flex-col justify-between items-center text-center">
+                              <div className="slot-teacher w-full text-center">
+                                <span className="text-[10px] print:text-[7px] text-on-surface-variant print:text-gray-600 font-semibold block truncate">
+                                  {slot.teacherName || 'Assigned Teacher'}
                                 </span>
+                              </div>
+
+                              <div className="subject-abbr-wrapper my-1 print:my-0.5 flex-1 flex items-center justify-center w-full">
+                                <span className="subject-abbr font-black text-[#800000] text-sm sm:text-base print:text-[14px] uppercase tracking-wider block">
+                                  {formatSubjectAbbreviation(slot.learningAreaName)}
+                                </span>
+                              </div>
+
+                              <div className="slot-meta w-full text-center pt-1 print:pt-0 border-t print:border-none border-surface-container-high text-[9px] print:text-[6.5px] text-outline print:text-gray-500 font-data-mono truncate">
+                                <span>{slot.roomName ? slot.roomName + ' · ' : ''}{slot.startTime}-{slot.endTime}</span>
                               </div>
                             </div>
                           )
@@ -1354,7 +1691,7 @@ export const TimetableView: React.FC = () => {
                   className="w-4 h-4 text-[#800000] rounded"
                 />
                 <label htmlFor="periodIsBreak" className="text-xs font-semibold text-on-surface">
-                  This row is a Break or Interval
+                  This period is a Break or Interval
                 </label>
               </div>
             </div>
@@ -1384,7 +1721,7 @@ export const TimetableView: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs no-print">
           <div className="bg-surface-container-lowest max-w-sm w-full rounded-2xl shadow-xl border border-outline-variant/30 p-5 space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-outline-variant/20">
-              <h3 className="font-bold text-sm text-on-surface">Add New Timetable Row (Period)</h3>
+              <h3 className="font-bold text-sm text-on-surface">Add New Period (Time Column)</h3>
               <button
                 onClick={() => setIsAddPeriodOpen(false)}
                 className="text-on-surface-variant hover:text-on-surface cursor-pointer"
@@ -1435,7 +1772,7 @@ export const TimetableView: React.FC = () => {
                   className="w-4 h-4 text-[#800000] rounded"
                 />
                 <label htmlFor="newIsBreak" className="text-xs font-semibold text-on-surface">
-                  This row is a Break / Tea / Rest
+                  This period is a Break / Tea / Rest
                 </label>
               </div>
             </div>
@@ -1453,7 +1790,7 @@ export const TimetableView: React.FC = () => {
                 onClick={handleAddPeriod}
                 className="flex-1 py-2 bg-[#800000] text-white rounded-lg text-xs font-bold shadow-xs cursor-pointer"
               >
-                Add Row
+                Add Period
               </button>
             </div>
           </div>
@@ -1465,7 +1802,7 @@ export const TimetableView: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs no-print">
           <div className="bg-surface-container-lowest max-w-sm w-full rounded-2xl shadow-xl border border-outline-variant/30 p-5 space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-outline-variant/20">
-              <h3 className="font-bold text-sm text-on-surface">Add Timetable Column (Day)</h3>
+              <h3 className="font-bold text-sm text-on-surface">Add Timetable Day (Row)</h3>
               <button
                 onClick={() => setIsAddDayOpen(false)}
                 className="text-on-surface-variant hover:text-on-surface cursor-pointer"
@@ -1500,7 +1837,7 @@ export const TimetableView: React.FC = () => {
                 onClick={handleAddDay}
                 className="flex-1 py-2 bg-[#800000] text-white rounded-lg text-xs font-bold shadow-xs cursor-pointer"
               >
-                Add Column
+                Add Day
               </button>
             </div>
           </div>
@@ -1519,6 +1856,8 @@ export const TimetableView: React.FC = () => {
         classRoomId={selectedClassId}
         streamId={selectedStreamId}
         termId={currentContext?.currentTerm?.id || ''}
+        classes={classesList}
+        streams={classStreams}
         initialSlot={selectedSlotForEdit}
         availableDays={days.map((d) => ({ key: d.dayOfWeek, label: d.label }))}
         onDeleteSlot={handleDeleteSlot}

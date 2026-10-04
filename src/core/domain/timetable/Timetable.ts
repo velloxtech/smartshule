@@ -11,7 +11,7 @@ export enum DayOfWeek {
 
 export interface TimetableSlot {
   id: string;
-  dayOfWeek: DayOfWeek;
+  dayOfWeek: DayOfWeek | string;
   periodNumber: number; // 1, 2, 3...
   startTime: string; // "08:00"
   endTime: string; // "08:45"
@@ -26,17 +26,24 @@ export interface TimetableSlot {
 }
 
 export interface PeriodDefinition {
-  period: number;
-  time: string; // "08:00 - 08:45"
-  start: string; // "08:00"
-  end: string; // "08:45"
+  periodNumber?: number;
+  period?: number;
+  name?: string;
+  time?: string; // "08:00 - 08:45"
+  startTime?: string;
+  start?: string; // "08:00"
+  endTime?: string;
+  end?: string; // "08:45"
   isBreak?: boolean;
+  isLunch?: boolean;
   defaultLabel?: string;
 }
 
 export interface DayDefinition {
-  key: string;
+  dayOfWeek?: string;
+  key?: string;
   label: string;
+  isEnabled?: boolean;
 }
 
 export interface TimetableProps {

@@ -3,6 +3,7 @@ import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { Student, TimetableSlot, SchemeOfWork, LessonPlan } from '../../types';
 import { EditTeacherProfileModal } from '../modals/EditTeacherProfileModal';
+import { resolveGradeName, resolveStreamName } from '../../utils/formatters';
 
 interface TeacherDashboardViewProps {
   onNavigateTab: (tabId: any) => void;
@@ -69,8 +70,8 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
             nemis: s.upiNumber || '--',
             name: `${s.firstName} ${s.lastName}`,
             gender: s.gender === 'FEMALE' ? 'Girl' : 'Boy',
-            grade: s.gradeLevel ? s.gradeLevel.replace('_', ' ') : 'Grade --',
-            stream: s.stream?.name || s.streamName || (s.streamId ? `Stream ${s.streamId.slice(0, 6)}` : '--'),
+            grade: resolveGradeName(s.gradeLevel),
+            stream: resolveStreamName(s.streamId, s.stream?.name || s.streamName) || '--',
             guardianName: s.guardian ? `${s.guardian.firstName} ${s.guardian.lastName}` : '--',
             guardianPhone: s.guardian?.phone || '--',
             feeBalance: s.feeBalance || 0,

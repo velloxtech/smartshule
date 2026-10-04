@@ -25,9 +25,12 @@ export type TabType =
   | 'user-management'
   | 'system-logs'
   | 'complaints'
+  | 'concerns'
   | 'lunch-fee-management'
   | 'parent-profile'
-  | 'student-fee-search';
+  | 'student-fee-search'
+  | 'archived-records'
+  | 'library';
 
 export type SystemLogLevel = 'INFO' | 'WARN' | 'ERROR' | 'AUDIT';
 export type SystemLogCategory =
@@ -37,6 +40,7 @@ export type SystemLogCategory =
   | 'ACADEMICS'
   | 'SYSTEM'
   | 'COMPLAINTS'
+  | 'CONCERNS'
   | 'COMMUNICATION';
 export type SystemLogStatus = 'SUCCESS' | 'FAILED';
 
@@ -157,6 +161,95 @@ export interface Student {
   classroomId?: string;
   streamId?: string;
   gradeLevel?: string;
+}
+
+export interface ArchivedGuardianInfo {
+  id: string;
+  userId: string;
+  nationalId?: string;
+  occupation?: string;
+  relationship: string;
+  emergencyContact: string;
+  studentIds: string[];
+  hasOtherActiveStudents?: boolean;
+  willArchiveParentAccount?: boolean;
+  parentUser?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    fullName: string;
+    email?: string;
+    phone?: string;
+    role: string;
+    status: string;
+    schoolId?: string;
+  } | null;
+}
+
+export interface DeletedStudentLinkedData {
+  invoicesCount?: number;
+  invoices: any[];
+  paymentsCount?: number;
+  payments: any[];
+  lunchEnrollmentsCount?: number;
+  lunchEnrollments: any[];
+  lunchPaymentsCount?: number;
+  lunchPayments: any[];
+  formativeAssessmentsCount?: number;
+  formativeAssessments?: any[];
+  summativeAssessmentsCount?: number;
+  summativeAssessments?: any[];
+  reportCardsCount?: number;
+  reportCards: any[];
+  attendanceRecordsCount?: number;
+  attendanceRecords: any[];
+  complaintsCount?: number;
+  complaints: any[];
+  ediaryEntriesCount?: number;
+  ediaryEntries: any[];
+  progressPhotosCount?: number;
+  progressPhotos: any[];
+  helpRequestsCount?: number;
+  helpRequests: any[];
+  guardiansUnlinkedCount?: number;
+  guardians: ArchivedGuardianInfo[];
+}
+
+export interface ClearedPendingWork {
+  clearedInvoicesCount: number;
+  clearedInvoiceBalances: number;
+  clearedInvoices: Array<{ id: string; invoiceNumber: string; balance: number; status: string }>;
+  clearedLunchBalances: number;
+  clearedLunchEnrollments: Array<{ id: string; planName: string; balance: number; paymentStatus: string }>;
+  resolvedComplaintsCount: number;
+  resolvedComplaints: Array<{ id: string; title: string }>;
+  clearedEdiaryItemsCount: number;
+  unlinkedGuardiansCount: number;
+  clearedParentAccountsCount?: number;
+  archivedParentsCount?: number;
+  summaryText: string;
+}
+
+export interface DeletedStudentRecord {
+  id: string;
+  studentId: string;
+  admissionNumber: string;
+  firstName: string;
+  middleName?: string;
+  lastName: string;
+  fullName: string;
+  upiNumber?: string;
+  schoolId: string;
+  gradeLevel: string;
+  classroomId?: string;
+  streamId?: string;
+  academicYearId?: string;
+  studentData: any;
+  linkedData: DeletedStudentLinkedData;
+  pendingWorkCleared: ClearedPendingWork;
+  deletedAt: string;
+  deletedByUserId?: string;
+  reason?: string;
 }
 
 export interface Teacher {
@@ -391,11 +484,24 @@ export interface CbcReportCardData {
     learningAreaName: string;
     performanceLevel: string;
     score?: number;
+    rubricScore?: number;
+    term1Score?: number;
+    term2Score?: number;
+    term3Score?: number;
     teacherRemarks?: string;
   }>;
-  coreCompetenciesAssessment: Record<string, string>;
-  coreValuesAssessment: Record<string, string>;
-  attendanceStats: {
+  overallAverageScore?: number;
+  overallPerformanceLevel?: string;
+  termTrends?: Array<{
+    term: string;
+    termNumber: number;
+    averageScore: number;
+    performanceLevel: string;
+    status: string;
+  }>;
+  coreCompetenciesAssessment?: Record<string, string>;
+  coreValuesAssessment?: Record<string, string>;
+  attendanceStats?: {
     daysPresent: number;
     daysAbsent: number;
     totalDays: number;
@@ -478,6 +584,24 @@ export interface LessonPlan {
   reviewedAt?: string;
   reviewRemarks?: string;
   createdAt?: string;
+}
+
+export interface RecordOfWork {
+  id: string;
+  teacherId?: string;
+  term?: string;
+  termId?: string;
+  academicYearId?: string;
+  week: number;
+  day: string;
+  period?: string;
+  subjectAndGrade: string;
+  strandAndWorkCovered: string;
+  reference: string;
+  reflection?: string;
+  comments?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface PeriodDefinition {
@@ -876,7 +1000,7 @@ export interface ParentHelpRequest {
   updatedAt: string;
 }
 
-export interface ComplaintRecord {
+export interface ConcernRecord {
   id: string;
   schoolId?: string;
   parentUserId: string;
@@ -896,6 +1020,8 @@ export interface ComplaintRecord {
   createdAt: string;
   updatedAt?: string;
 }
+
+export type ComplaintRecord = ConcernRecord;
 
 export interface StudentProgressPhoto {
   id: string;
@@ -956,6 +1082,24 @@ export interface WhatsAppSimulateResponse {
   intent: string;
 }
 
+export interface ActiveServiceWindow {
+  phone: string;
+  contactName?: string;
+  startedAt: string;
+  expiresAt: string;
+  remainingMinutes: number;
+}
+
+export interface MetaFreeTierUsage {
+  monthlyLimit: number;
+  usedConversations: number;
+  remainingFree: number;
+  billingMonth: string;
+  resetDate: string;
+  active24hWindowsCount: number;
+  activeWindows?: ActiveServiceWindow[];
+}
+
 export interface WhatsAppConnectionState {
   status: 'DISCONNECTED' | 'SCAN_QR' | 'CONNECTING' | 'CONNECTED';
   qrCodeDataUrl: string | null;
@@ -965,6 +1109,22 @@ export interface WhatsAppConnectionState {
   totalSent: number;
   totalReceived: number;
   mode: 'REAL_WHATSAPP_ACCOUNT' | 'META_CLOUD_API';
+  isOfficialMeta?: boolean;
+  banProtection?: {
+    isSafe: boolean;
+    level: 'BAN_IMMUNE' | 'HIGH_RISK';
+    message: string;
+    warning?: string;
+  };
+  freeTier?: MetaFreeTierUsage;
+  metaProfile?: {
+    verifiedName?: string;
+    displayPhoneNumber?: string;
+    qualityRating?: string;
+    codeVerificationStatus?: string;
+    phoneNumberId?: string;
+    businessAccountId?: string;
+  };
 }
 
 export interface WhatsAppMessageLog {
@@ -973,9 +1133,19 @@ export interface WhatsAppMessageLog {
   from: string;
   to: string;
   text: string;
-  status: 'SENT' | 'DELIVERED' | 'FAILED' | 'RECEIVED';
+  status: 'SENT' | 'DELIVERED' | 'READ' | 'FAILED' | 'RECEIVED';
   timestamp: string;
   intent?: string;
+  conversationId?: string;
+  type?: 'TEXT' | 'TEMPLATE';
+  templateName?: string;
+}
+
+export interface WhatsAppTemplateSendRequest {
+  to: string;
+  templateName: string;
+  languageCode?: string;
+  components?: any[];
 }
 
 export interface WhatsAppSendActualRequest {
@@ -1130,3 +1300,65 @@ export interface LunchFinancialSummary {
   categoryBreakdown: LunchCategoryBreakdown[];
   recentExpenses: LunchExpenseItem[];
 }
+
+// ==========================================
+// LIBRARY MANAGEMENT TYPES
+// ==========================================
+
+export type BookCondition = 'NEW' | 'GOOD' | 'FAIR' | 'POOR' | 'DAMAGED';
+export type BookLoanStatus = 'ISSUED' | 'RETURNED' | 'OVERDUE' | 'LOST' | 'DAMAGED';
+export type BorrowerType = 'STUDENT' | 'TEACHER' | 'STAFF';
+
+export interface Book {
+  id: string;
+  schoolId: string;
+  title: string;
+  author: string;
+  isbn?: string;
+  category: string;
+  publisher?: string;
+  publicationYear?: number;
+  copiesTotal: number;
+  copiesAvailable: number;
+  shelfLocation?: string;
+  condition: BookCondition;
+  gradeLevel?: string;
+  coverImageUrl?: string;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BookLoan {
+  id: string;
+  schoolId: string;
+  bookId: string;
+  bookTitle: string;
+  borrowerType: BorrowerType;
+  borrowerId: string;
+  borrowerName: string;
+  borrowerAdmissionOrNumber?: string;
+  borrowerGradeOrClass?: string;
+  issueDate: string;
+  dueDate: string;
+  returnDate?: string;
+  status: BookLoanStatus;
+  fineAmount: number;
+  finePaid: boolean;
+  remarks?: string;
+  issuedByUserId?: string;
+  receivedByUserId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LibraryStats {
+  totalTitles: number;
+  totalCopies: number;
+  availableCopies: number;
+  issuedCopies: number;
+  overdueCount: number;
+  lostDamagedCount: number;
+  categoriesCount: Record<string, number>;
+}
+

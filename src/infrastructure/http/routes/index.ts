@@ -109,6 +109,7 @@ import {
   WhatsAppController,
   WhatsAppSimulateSchema,
   WhatsAppSendSchema,
+  WhatsAppSendTemplateSchema,
   WhatsAppConfigSchema,
   WhatsAppAIDraftSchema,
   WhatsAppAIDispatchSchema,
@@ -127,6 +128,14 @@ import {
 } from '../controllers/ComplaintController';
 import { SystemLogController } from '../controllers/SystemLogController';
 import { LunchFeeController } from '../controllers/LunchFeeController';
+import {
+  LibraryController,
+  CreateBookSchema,
+  UpdateBookSchema,
+  IssueBookSchema,
+  ReturnBookSchema,
+  UpdateLoanStatusSchema
+} from '../controllers/LibraryController';
 
 export function createApiRouter(container: AppContainer): Router {
   const router = Router();
@@ -149,6 +158,7 @@ export function createApiRouter(container: AppContainer): Router {
   const whatsAppController = new WhatsAppController(container.whatsAppService, container.whatsAppClientManager);
   const complaintController = new ComplaintController(container.complaintUseCases, container.systemLogUseCases);
   const systemLogController = new SystemLogController(container.systemLogUseCases);
+  const libraryController = new LibraryController(container.libraryUseCases, container.systemLogUseCases);
 
   // ==========================================
   // 1. AUTH ROUTES
@@ -220,6 +230,9 @@ export function createApiRouter(container: AppContainer): Router {
   studentRouter.post('/:id/promote', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.ADMISSIONS), validateBody(PromoteStudentSchema), studentController.promoteStudent);
   studentRouter.get('/guardian/me', authMiddleware, studentController.getGuardianPortalData);
   studentRouter.put('/guardian/me', authMiddleware, validateBody(UpdateGuardianProfileSchema), studentController.updateGuardianProfile);
+  studentRouter.get('/deleted', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), studentController.getDeletedStudents);
+  studentRouter.get('/deleted/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), studentController.getDeletedStudentById);
+  studentRouter.post('/deleted/:id/restore', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN), studentController.restoreStudent);
   studentRouter.get('/', authMiddleware, studentController.listStudents);
   studentRouter.get('/:id', authMiddleware, studentController.getStudentById);
   studentRouter.put(
@@ -302,10 +315,10 @@ export function createApiRouter(container: AppContainer): Router {
   curriculumRouter.delete('/lesson-plans/:id', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), curriculumController.deleteLessonPlan);
   
   // RECORDS OF WORK ROUTES
-  curriculumRouter.post('/records-of-work', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), recordOfWorkController.create);
+  curriculumRouter.post('/records-of-work', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.SUPER_ADMIN), recordOfWorkController.create);
   curriculumRouter.get('/records-of-work', authMiddleware, recordOfWorkController.getAll);
-  curriculumRouter.put('/records-of-work/:id', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), recordOfWorkController.update);
-  curriculumRouter.delete('/records-of-work/:id', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), recordOfWorkController.delete);
+  curriculumRouter.put('/records-of-work/:id', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.SUPER_ADMIN), recordOfWorkController.update);
+  curriculumRouter.delete('/records-of-work/:id', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.SUPER_ADMIN), recordOfWorkController.delete);
 
   router.use('/curriculum', curriculumRouter);
 
@@ -337,6 +350,7 @@ export function createApiRouter(container: AppContainer): Router {
   // ==========================================
   const financeRouter = Router();
   financeRouter.post('/structures', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT), validateBody(CreateFeeStructureSchema), financeController.createFeeStructure);
+  financeRouter.post('/structures/init-graceseed', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT, UserRole.ADMIN, UserRole.HEAD_TEACHER), financeController.initGraceSeedsStructures);
   financeRouter.get('/structures', authMiddleware, financeController.listFeeStructures);
   financeRouter.delete('/structures/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT), financeController.deleteFeeStructure);
   financeRouter.post('/invoices/generate', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT), validateBody(GenerateInvoicesSchema), financeController.generateInvoices);
@@ -405,9 +419,12 @@ export function createApiRouter(container: AppContainer): Router {
   const adminOnly = [authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN)];
 
   whatsappRouter.get('/status', ...adminOnly, whatsAppController.getStatus);
+  whatsappRouter.post('/test-connection', ...adminOnly, whatsAppController.testConnection);
+  whatsappRouter.get('/free-tier-usage', ...adminOnly, whatsAppController.getFreeTierUsage);
   whatsappRouter.post('/connect', ...adminOnly, whatsAppController.connect);
   whatsappRouter.post('/disconnect', ...adminOnly, whatsAppController.disconnect);
   whatsappRouter.post('/send', ...adminOnly, validateBody(WhatsAppSendSchema), whatsAppController.sendMessage);
+  whatsappRouter.post('/send-template', ...adminOnly, validateBody(WhatsAppSendTemplateSchema), whatsAppController.sendTemplate);
   whatsappRouter.post('/ai-draft', ...adminOnly, validateBody(WhatsAppAIDraftSchema), whatsAppController.draftWithGemini);
   whatsappRouter.post('/ai-dispatch', ...adminOnly, validateBody(WhatsAppAIDispatchSchema), whatsAppController.dispatchWithGemini);
   whatsappRouter.get('/messages', ...adminOnly, whatsAppController.getRecentMessages);
@@ -459,27 +476,35 @@ export function createApiRouter(container: AppContainer): Router {
   // Accessible exclusively by HEAD_TEACHER, SUPER_ADMIN, and ADMIN (including SCHOOL_ADMIN)
   // ==========================================
   const complaintRouter = Router();
-  const allowedComplaintRoles = requireRoles(
+  const allowedComplaintAdminRoles = requireRoles(
     UserRole.SUPER_ADMIN,
     UserRole.ADMIN,
     UserRole.SCHOOL_ADMIN,
     UserRole.HEAD_TEACHER
   );
 
-  complaintRouter.use(authMiddleware, allowedComplaintRoles);
+  const allowedComplaintViewAndCreateRoles = requireRoles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.HEAD_TEACHER,
+    UserRole.PARENT,
+    UserRole.GUARDIAN
+  );
 
-  complaintRouter.post('/', validateBody(CreateComplaintSchema), complaintController.create);
-  complaintRouter.get('/', complaintController.getAll);
-  complaintRouter.get('/stats/summary', complaintController.getStats);
-  complaintRouter.get('/:id', complaintController.getById);
-  complaintRouter.put('/:id', validateBody(UpdateComplaintSchema), complaintController.update);
-  complaintRouter.patch('/:id/status', validateBody(UpdateComplaintStatusSchema), complaintController.updateStatus);
-  complaintRouter.post('/:id/assign', validateBody(AssignComplaintSchema), complaintController.assign);
-  complaintRouter.post('/:id/resolve', validateBody(ResolveComplaintSchema), complaintController.resolve);
-  complaintRouter.post('/:id/dismiss', validateBody(DismissComplaintSchema), complaintController.dismiss);
-  complaintRouter.delete('/:id', complaintController.delete);
+  complaintRouter.post('/', authMiddleware, allowedComplaintViewAndCreateRoles, validateBody(CreateComplaintSchema), complaintController.create);
+  complaintRouter.get('/', authMiddleware, allowedComplaintViewAndCreateRoles, complaintController.getAll);
+  complaintRouter.get('/stats/summary', authMiddleware, allowedComplaintAdminRoles, complaintController.getStats);
+  complaintRouter.get('/:id', authMiddleware, allowedComplaintViewAndCreateRoles, complaintController.getById);
+  complaintRouter.put('/:id', authMiddleware, allowedComplaintAdminRoles, validateBody(UpdateComplaintSchema), complaintController.update);
+  complaintRouter.patch('/:id/status', authMiddleware, allowedComplaintAdminRoles, validateBody(UpdateComplaintStatusSchema), complaintController.updateStatus);
+  complaintRouter.post('/:id/assign', authMiddleware, allowedComplaintAdminRoles, validateBody(AssignComplaintSchema), complaintController.assign);
+  complaintRouter.post('/:id/resolve', authMiddleware, allowedComplaintAdminRoles, validateBody(ResolveComplaintSchema), complaintController.resolve);
+  complaintRouter.post('/:id/dismiss', authMiddleware, allowedComplaintAdminRoles, validateBody(DismissComplaintSchema), complaintController.dismiss);
+  complaintRouter.delete('/:id', authMiddleware, allowedComplaintAdminRoles, complaintController.delete);
 
   router.use('/complaints', complaintRouter);
+  router.use('/concerns', complaintRouter);
 
   // ==========================================
   // 16. SYSTEM AUDIT LOG ROUTES
@@ -627,6 +652,39 @@ export function createApiRouter(container: AppContainer): Router {
   );
 
   router.use('/lunch', lunchRouter);
+
+  // ==========================================
+  // 17b. LIBRARY MANAGEMENT ROUTES
+  // ==========================================
+  const libraryRouter = Router();
+  const allowedLibraryManageRoles = requireRoles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.HEAD_TEACHER,
+    UserRole.DEPUTY_HEAD_TEACHER,
+    UserRole.TEACHER
+  );
+
+  // Books Catalog
+  libraryRouter.get('/books', authMiddleware, libraryController.listBooks);
+  libraryRouter.get('/books/:id', authMiddleware, libraryController.getBook);
+  libraryRouter.post('/books', authMiddleware, allowedLibraryManageRoles, validateBody(CreateBookSchema), libraryController.createBook);
+  libraryRouter.put('/books/:id', authMiddleware, allowedLibraryManageRoles, validateBody(UpdateBookSchema), libraryController.updateBook);
+  libraryRouter.delete('/books/:id', authMiddleware, allowedLibraryManageRoles, libraryController.deleteBook);
+
+  // Circulation / Loans
+  libraryRouter.get('/loans', authMiddleware, libraryController.listLoans);
+  libraryRouter.get('/loans/:id', authMiddleware, libraryController.getLoan);
+  libraryRouter.post('/loans/issue', authMiddleware, allowedLibraryManageRoles, validateBody(IssueBookSchema), libraryController.issueBook);
+  libraryRouter.post('/loans/:id/return', authMiddleware, allowedLibraryManageRoles, validateBody(ReturnBookSchema), libraryController.returnBook);
+  libraryRouter.patch('/loans/:id/status', authMiddleware, allowedLibraryManageRoles, validateBody(UpdateLoanStatusSchema), libraryController.updateLoanStatus);
+  libraryRouter.delete('/loans/:id', authMiddleware, allowedLibraryManageRoles, libraryController.deleteLoan);
+
+  // Statistics
+  libraryRouter.get('/stats', authMiddleware, libraryController.getStats);
+
+  router.use('/library', libraryRouter);
 
   // ==========================================
   // 18. POSTMAN SPEC EXPORT ROUTES

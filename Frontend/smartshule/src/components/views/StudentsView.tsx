@@ -3,6 +3,7 @@ import { Student, CBCRubric, UserRole } from '../../types';
 import { EditStudentModal } from '../modals/EditStudentModal';
 import { LearnerProfileModal } from '../modals/LearnerProfileModal';
 import { PromoteStudentModal } from '../modals/PromoteStudentModal';
+import { ArchivedStudentsModal } from '../modals/ArchivedStudentsModal';
 import { useAuth } from '../../context/AuthContext';
 import { apiService } from '../../services/api';
 
@@ -15,6 +16,7 @@ interface StudentsViewProps {
   onUpdateStudent?: (student: Student) => void;
   onDeleteStudent?: (studentId: string) => void;
   onRefreshStudents?: () => void | Promise<void>;
+  onNavigateStandaloneArchive?: () => void;
 }
 
 export const StudentsView: React.FC<StudentsViewProps> = ({
@@ -26,6 +28,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
   onUpdateStudent,
   onDeleteStudent,
   onRefreshStudents,
+  onNavigateStandaloneArchive,
 }) => {
   const { user } = useAuth();
   const isTeacher = user?.role === UserRole.TEACHER;
@@ -38,9 +41,20 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
   const [promotingStudent, setPromotingStudent] = useState<Student | null>(null);
   const [isBulkPromoteOpen, setIsBulkPromoteOpen] = useState(false);
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isSyncingFees, setIsSyncingFees] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Deleted Students Archive & Modal States
+  const [isArchivedModalOpen, setIsArchivedModalOpen] = useState(false);
+  const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
+  const [deleteReason, setDeleteReason] = useState('Transferred to another institution');
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deletionFeedback, setDeletionFeedback] = useState<{
+    studentName: string;
+    admNo: string;
+    summaryText: string;
+    clearedDebt: number;
+  } | null>(null);
 
   const handleSyncFeeBalances = async () => {
     try {
@@ -69,19 +83,35 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
     }
   };
 
-  const handleDeleteStudent = async (s: Student) => {
-    if (window.confirm(`Are you sure you want to delete ${s.name} (Adm: ${s.admNo})? This action cannot be undone.`)) {
-      setDeletingId(s.id);
-      try {
-        const res = await apiService.deleteStudent(s.id);
-        if (res.success) {
-          onDeleteStudent?.(s.id);
-        }
-      } catch (err: any) {
-        alert(err.message || 'Failed to delete student');
-      } finally {
-        setDeletingId(null);
+  const handleOpenDeleteModal = (s: Student) => {
+    setStudentToDelete(s);
+    setDeleteReason('Transferred to another institution');
+  };
+
+  const confirmDeleteStudent = async () => {
+    if (!studentToDelete) return;
+    setIsDeleting(true);
+    try {
+      const res = await apiService.deleteStudent(studentToDelete.id, deleteReason);
+      if (res.success) {
+        const cleared = res.data?.pendingWorkCleared;
+        const totalDebt = (cleared?.clearedInvoiceBalances || 0) + (cleared?.clearedLunchBalances || 0);
+        setDeletionFeedback({
+          studentName: studentToDelete.name,
+          admNo: studentToDelete.admNo,
+          summaryText: cleared?.summaryText || 'Profile and all linked records moved to archive table.',
+          clearedDebt: totalDebt,
+        });
+        onDeleteStudent?.(studentToDelete.id);
+        await onRefreshStudents?.();
+        setStudentToDelete(null);
+      } else {
+        alert(res.message || 'Failed to delete student');
       }
+    } catch (err: any) {
+      alert(err.message || 'Error occurred while deleting student');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -172,6 +202,22 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
 
             <button
               type="button"
+              onClick={() => {
+                if (onNavigateStandaloneArchive) {
+                  onNavigateStandaloneArchive();
+                } else {
+                  setIsArchivedModalOpen(true);
+                }
+              }}
+              title="Open standalone deleted students archive table, historical records, and cleared debts"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-surface-container-high text-on-surface hover:bg-surface-container border border-outline-variant/30 rounded-lg text-sm font-semibold shadow-xs transition-all cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[18px] text-rose-800">inventory_2</span>
+              <span>Archived Learners</span>
+            </button>
+
+            <button
+              type="button"
               onClick={onOpenAdmitModal}
               className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-lg hover:bg-primary-container text-sm font-semibold shadow-md transition-all cursor-pointer"
             >
@@ -181,6 +227,53 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
           </div>
         )}
       </div>
+
+      {/* Deletion & Archiving Feedback Banner */}
+      {deletionFeedback && (
+        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 shadow-xs flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <span className="material-symbols-outlined text-[24px] text-emerald-600 shrink-0 mt-0.5">
+              archive
+            </span>
+            <div>
+              <h4 className="font-bold text-sm">
+                Learner {deletionFeedback.studentName} (Adm #{deletionFeedback.admNo}) Moved to Archive Table
+              </h4>
+              <p className="text-xs text-emerald-800 mt-0.5">
+                {deletionFeedback.summaryText}
+              </p>
+              {deletionFeedback.clearedDebt > 0 && (
+                <span className="inline-block mt-1 text-xs font-semibold bg-emerald-100/90 text-emerald-900 px-2 py-0.5 rounded-md border border-emerald-200">
+                  KES {deletionFeedback.clearedDebt.toLocaleString()} Pending Debt Cleared
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                if (onNavigateStandaloneArchive) {
+                  onNavigateStandaloneArchive();
+                } else {
+                  setIsArchivedModalOpen(true);
+                }
+                setDeletionFeedback(null);
+              }}
+              className="text-xs font-semibold px-2.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg cursor-pointer transition-colors"
+            >
+              Open Archive Table
+            </button>
+            <button
+              type="button"
+              onClick={() => setDeletionFeedback(null)}
+              className="text-emerald-700 hover:text-emerald-900 p-1 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[18px]">close</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Sync Fee Balances Feedback Banner */}
       {syncFeedback && (
@@ -371,17 +464,21 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                     </td>
                   ) : (
                     <td className="py-3 px-4 text-right">
-                      {s.feeBalance === 0 ? (
-                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-secondary">
-                          <span className="material-symbols-outlined text-[14px]">check_circle</span> Cleared
-                        </span>
-                      ) : (
+                      {s.feeBalance > 0 ? (
                         <div>
                           <div className="font-bold text-error font-data-mono">
                             KES {s.feeBalance.toLocaleString()}
                           </div>
                           <span className="text-[11px] text-outline">due this term</span>
                         </div>
+                      ) : (s.totalFee || 0) > 0 ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-secondary">
+                          <span className="material-symbols-outlined text-[14px]">check_circle</span> Cleared
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
+                          <span className="material-symbols-outlined text-[13px]">receipt_long</span> Pending Invoice
+                        </span>
                       )}
                     </td>
                   )}
@@ -439,13 +536,13 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                             <span className="material-symbols-outlined text-[18px]">manage_accounts</span>
                           </button>
                           <button
-                            onClick={() => handleDeleteStudent(s)}
-                            disabled={deletingId === s.id}
-                            title="Delete Learner Record"
+                            onClick={() => handleOpenDeleteModal(s)}
+                            disabled={isDeleting && studentToDelete?.id === s.id}
+                            title="Delete Learner Record & Archive Linked Data"
                             className="p-1.5 rounded-lg text-on-surface-variant hover:text-error hover:bg-error/10 transition-colors cursor-pointer disabled:opacity-50"
                           >
                             <span className="material-symbols-outlined text-[18px]">
-                              {deletingId === s.id ? 'sync' : 'delete'}
+                              delete
                             </span>
                           </button>
                         </>
@@ -508,6 +605,92 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
           await onRefreshStudents?.();
         }}
       />
+
+      {/* Archived / Deleted Students Table Modal */}
+      <ArchivedStudentsModal
+        isOpen={isArchivedModalOpen}
+        onClose={() => setIsArchivedModalOpen(false)}
+        onStudentRestored={async () => {
+          await onRefreshStudents?.();
+        }}
+      />
+
+      {/* Delete Student & Move to Archive Table Confirmation Modal */}
+      {studentToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-outline-variant/30 animate-in fade-in zoom-in-95 duration-150">
+            <div className="bg-[#7a1228] text-white p-4 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <span className="material-symbols-outlined text-[24px]">archive</span>
+                <h3 className="font-bold text-base">Archive & Delete Learner</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setStudentToDelete(null)}
+                className="p-1 rounded-lg text-white/80 hover:text-white hover:bg-white/10 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[18px]">close</span>
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4 text-xs sm:text-sm">
+              <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-950">
+                <p className="font-semibold text-sm">
+                  {studentToDelete.name} (Adm #{studentToDelete.admNo})
+                </p>
+                <p className="text-xs text-rose-800 mt-1">
+                  Grade: {studentToDelete.grade} {studentToDelete.stream}
+                </p>
+              </div>
+
+              <div className="text-on-surface-variant space-y-2 text-xs">
+                <p className="font-medium text-on-surface">When this learner is deleted:</p>
+                <ul className="space-y-1 list-disc list-inside">
+                  <li>Record will be placed in the dedicated <strong className="text-on-surface">deleted_students</strong> table.</li>
+                  <li>Everything linked (invoices, payments, CBC assessments, attendance, e-diary, photos) will be preserved in the archive.</li>
+                  <li>All pending work (unpaid fee balances, lunch arrears, open concerns) will be cleared.</li>
+                  <li>Guardians will be safely unlinked from this student.</li>
+                </ul>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-on-surface mb-1">
+                  Reason for Deletion (Recorded in Archive Table):
+                </label>
+                <input
+                  type="text"
+                  value={deleteReason}
+                  onChange={(e) => setDeleteReason(e.target.value)}
+                  placeholder="e.g. Transferred to another school, Relocated, Graduated..."
+                  className="w-full px-3 py-2 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs sm:text-sm text-on-surface focus:outline-hidden focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setStudentToDelete(null)}
+                  disabled={isDeleting}
+                  className="px-4 py-2 bg-surface-container-high hover:bg-surface-container border border-outline-variant/30 text-on-surface rounded-xl text-xs font-semibold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmDeleteStudent}
+                  disabled={isDeleting}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#7a1228] hover:bg-[#600e1f] text-white rounded-xl text-xs font-semibold shadow-xs cursor-pointer disabled:opacity-50"
+                >
+                  <span className={`material-symbols-outlined text-[16px] ${isDeleting ? 'animate-spin' : ''}`}>
+                    {isDeleting ? 'progress_activity' : 'archive'}
+                  </span>
+                  <span>{isDeleting ? 'Archiving & Deleting...' : 'Archive & Delete'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

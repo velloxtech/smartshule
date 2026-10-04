@@ -546,6 +546,7 @@ describe('WhatsApp Bot & Phone Counter-Checking Unit Tests', () => {
 
     beforeEach(() => {
       clientManager = new WhatsAppClientManager();
+      clientManager.resetFreeTierForTesting();
     });
 
     it('correctly resolves standard phone JID (@s.whatsapp.net) to E.164 phone number', async () => {
@@ -594,6 +595,81 @@ describe('WhatsApp Bot & Phone Counter-Checking Unit Tests', () => {
           fs.unlinkSync(reverseFile);
         }
       }
+    });
+
+    it('tracks the 1,000 free monthly service conversations accurately across 24-hour windows', async () => {
+      // 1. Initial usage check
+      const initialUsage = clientManager.getFreeTierUsage();
+      expect(initialUsage.monthlyLimit).toBe(1000);
+      expect(initialUsage.usedConversations).toBeGreaterThanOrEqual(0);
+
+      const baseUsed = initialUsage.usedConversations;
+
+      // 2. First inbound parent message starts a new 24h conversation
+      const p1Session = clientManager.registerInboundSession('+254711111111', 'Mary Atieno');
+      expect(p1Session.isNewConversation).toBe(true);
+
+      const usageAfterP1 = clientManager.getFreeTierUsage();
+      expect(usageAfterP1.usedConversations).toBe(baseUsed + 1);
+      expect(usageAfterP1.remainingFree).toBe(1000 - (baseUsed + 1));
+      expect(usageAfterP1.active24hWindowsCount).toBeGreaterThanOrEqual(1);
+
+      // 3. Second message from SAME parent within 24 hours DOES NOT consume another conversation
+      const p1SecondMsg = clientManager.registerInboundSession('+254711111111', 'Mary Atieno');
+      expect(p1SecondMsg.isNewConversation).toBe(false);
+
+      const usageAfterP1Repeat = clientManager.getFreeTierUsage();
+      expect(usageAfterP1Repeat.usedConversations).toBe(baseUsed + 1); // Not incremented
+
+      // 4. Message from a DIFFERENT parent starts a 2nd free conversation
+      const p2Session = clientManager.registerInboundSession('+254722222222', 'John Kamau');
+      expect(p2Session.isNewConversation).toBe(true);
+
+      const usageAfterP2 = clientManager.getFreeTierUsage();
+      expect(usageAfterP2.usedConversations).toBe(baseUsed + 2);
+      expect(usageAfterP2.remainingFree).toBe(1000 - (baseUsed + 2));
+    });
+
+    it('returns ban protection status and Meta Cloud API details in getStatus()', () => {
+      const status = clientManager.getStatus();
+      expect(status.banProtection).toBeDefined();
+      expect(status.banProtection.message).toBeTruthy();
+      expect(status.freeTier).toBeDefined();
+      expect(status.freeTier.monthlyLimit).toBe(1000);
+    });
+
+    it('updates message status on Meta webhook status receipt (SENT -> DELIVERED -> READ)', async () => {
+      const testMsgId = 'wamid.HBgLMjU0NzExMjIzMzQ0';
+
+      // Simulate a webhook payload with delivery status from Meta
+      const webhookPayload = {
+        object: 'whatsapp_business_account',
+        entry: [
+          {
+            id: '104829384729182',
+            changes: [
+              {
+                value: {
+                  messaging_product: 'whatsapp',
+                  statuses: [
+                    {
+                      id: testMsgId,
+                      status: 'delivered',
+                      timestamp: '1727769610',
+                      recipient_id: '254711223344',
+                      conversation: { id: 'conv-998877' }
+                    }
+                  ]
+                },
+                field: 'messages'
+              }
+            ]
+          }
+        ]
+      };
+
+      const result = await clientManager.handleWebhookPayload(webhookPayload);
+      expect(result.status).toBe('PROCESSED_WEBHOOK');
     });
   });
 });

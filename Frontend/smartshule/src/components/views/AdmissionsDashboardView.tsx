@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Student, Teacher } from '../../types';
+import { StationeryRequirementsModal } from '../modals/StationeryRequirementsModal';
 
 interface AdmissionsDashboardViewProps {
   students: Student[];
@@ -19,6 +20,7 @@ export const AdmissionsDashboardView: React.FC<AdmissionsDashboardViewProps> = (
 }) => {
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
+  const [isRequirementsOpen, setIsRequirementsOpen] = useState(false);
 
   const totalLearners = students.length;
   const boysCount = students.filter((s) => s.gender === 'MALE').length;
@@ -59,6 +61,13 @@ export const AdmissionsDashboardView: React.FC<AdmissionsDashboardViewProps> = (
           </div>
 
           <div className="flex flex-wrap gap-2.5">
+            <button
+              onClick={() => setIsRequirementsOpen(true)}
+              className="px-4 py-2.5 rounded-xl bg-white/20 hover:bg-white/30 text-white font-bold text-xs shadow-md flex items-center gap-2 transition-all cursor-pointer border border-white/30"
+            >
+              <span className="material-symbols-outlined text-[18px]">menu_book</span>
+              <span>2027 Requirements List</span>
+            </button>
             <button
               onClick={onOpenAdmitModal}
               className="px-4 py-2.5 rounded-xl bg-white text-blue-950 font-bold text-xs hover:bg-white/95 shadow-md flex items-center gap-2 transition-all cursor-pointer"
@@ -259,6 +268,12 @@ export const AdmissionsDashboardView: React.FC<AdmissionsDashboardViewProps> = (
           </div>
         </div>
       </div>
+
+      {/* Grace Seeds Stationery & Booklist Requirements Modal */}
+      <StationeryRequirementsModal
+        isOpen={isRequirementsOpen}
+        onClose={() => setIsRequirementsOpen(false)}
+      />
     </div>
   );
 };

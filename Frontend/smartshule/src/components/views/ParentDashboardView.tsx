@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { EditStudentModal } from '../modals/EditStudentModal';
+import { resolveStreamName, resolveGradeName } from '../../utils/formatters';
 
 interface ParentDashboardViewProps {
   onOpenMpesaWithStudent?: (student: any) => void;
@@ -54,6 +55,42 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
     currentChild?.lunch ||
     null;
   const guardianUser = portalData?.guardian?.user || user;
+
+  const currentChildFee = currentChild?.fee;
+  const feeBalance = currentChildFee?.balance || 0;
+  const rawDueDate = currentChildFee?.dueDate || currentChildFee?.invoices?.[0]?.dueDate || null;
+
+  const formatDueDate = (dateStr: string | null) => {
+    if (!dateStr) return '30th October 2026';
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      return d.toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const getDaysRemaining = (dateStr: string | null) => {
+    if (!dateStr) return null;
+    try {
+      const due = new Date(dateStr);
+      if (isNaN(due.getTime())) return null;
+      const now = new Date();
+      due.setHours(23, 59, 59, 999);
+      const diffTime = due.getTime() - now.getTime();
+      return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    } catch {
+      return null;
+    }
+  };
+
+  const formattedDueDate = formatDueDate(rawDueDate);
+  const daysRemaining = getDaysRemaining(rawDueDate);
 
   const getRatingBadge = (rating: string) => {
     switch (rating) {
@@ -147,11 +184,11 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                     {currentChild.fullName || `${currentChild.firstName} ${currentChild.lastName}`}
                   </h2>
                   <span className="px-2 py-0.5 rounded bg-secondary-container text-on-secondary-container text-xs font-bold">
-                    {currentChild.gradeLevel}
+                    {resolveGradeName(currentChild.gradeLevel)}
                   </span>
-                  {currentChild.streamId && (
+                  {(currentChild.streamName || currentChild.streamId) && (
                     <span className="px-2 py-0.5 rounded bg-surface-container text-on-surface-variant text-xs font-semibold">
-                      Stream: {currentChild.streamId.replace('stream-', '').replace('-east', ' East').replace('-west', ' West')}
+                      Stream: {resolveStreamName(currentChild.streamId, currentChild.streamName || currentChild.stream?.name)}
                     </span>
                   )}
                 </div>
@@ -180,8 +217,8 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                   name: currentChild.fullName || `${currentChild.firstName} ${currentChild.lastName}`,
                   admNo: currentChild.admissionNumber,
                   upi: currentChild.upiNumber || 'NEMIS-K9281A',
-                  grade: currentChild.gradeLevel,
-                  stream: currentChild.streamId ? 'East' : 'General',
+                  grade: resolveGradeName(currentChild.gradeLevel),
+                  stream: resolveStreamName(currentChild.streamId, currentChild.streamName || currentChild.stream?.name) || 'General',
                   feeBalance: currentChild.fee?.balance || 0,
                   totalFee: currentChild.fee?.totalBilled || 0,
                   attendanceRate: currentChild.attendance?.attendanceRate || 100,
@@ -196,11 +233,11 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
 
               {onNavigateTab && (
                 <button
-                  onClick={() => onNavigateTab('complaints')}
+                  onClick={() => onNavigateTab('concerns')}
                   className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#7a1228]/10 hover:bg-[#7a1228]/20 text-[#7a1228] rounded-lg text-xs font-bold border border-[#7a1228]/20 transition-all cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[16px]">rate_review</span>
-                  <span>Write Complaint</span>
+                  <span>Submit Concern</span>
                 </button>
               )}
 
@@ -211,8 +248,8 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                     name: currentChild.fullName || `${currentChild.firstName} ${currentChild.lastName}`,
                     admNo: currentChild.admissionNumber,
                     upi: currentChild.upiNumber || 'NEMIS-K9281A',
-                    grade: currentChild.gradeLevel,
-                    stream: currentChild.streamId ? 'East' : 'General',
+                    grade: resolveGradeName(currentChild.gradeLevel),
+                    stream: resolveStreamName(currentChild.streamId, currentChild.streamName || currentChild.stream?.name) || 'General',
                     guardianName: `${guardianUser?.firstName} ${guardianUser?.lastName}`,
                     guardianPhone: guardianUser?.phone || '',
                     feeBalance: currentChild.fee?.balance || 0,
@@ -234,6 +271,103 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
               </button>
             </div>
           </div>
+
+          {/* Prominent Fee Payment Due Date Banner */}
+          {feeBalance > 0 ? (
+            <div className="bg-gradient-to-r from-amber-500/15 via-rose-500/10 to-amber-500/15 border-2 border-amber-500/50 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 animate-fade-in">
+              <div className="flex items-start sm:items-center gap-3.5">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-900 border border-amber-500/30 flex items-center justify-center font-bold shrink-0 shadow-2xs">
+                  <span className="material-symbols-outlined text-[28px] text-amber-900">calendar_clock</span>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-sm sm:text-base font-extrabold text-amber-950 tracking-tight">
+                      School Fee Payment Due Date Notice
+                    </h3>
+                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-[#7a1228] text-white shadow-2xs">
+                      Due: {formattedDueDate}
+                    </span>
+                    {daysRemaining !== null && (
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        daysRemaining <= 0
+                          ? 'bg-rose-600 text-white animate-pulse'
+                          : daysRemaining <= 7
+                          ? 'bg-rose-100 text-rose-800 border border-rose-300'
+                          : 'bg-amber-100 text-amber-900 border border-amber-300'
+                      }`}>
+                        {daysRemaining < 0
+                          ? `Overdue by ${Math.abs(daysRemaining)} day${Math.abs(daysRemaining) === 1 ? '' : 's'}`
+                          : daysRemaining === 0
+                          ? 'Due Today!'
+                          : `${daysRemaining} day${daysRemaining === 1 ? '' : 's'} remaining`}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-amber-900/90 mt-1 leading-relaxed">
+                    The outstanding school fee balance of <strong className="font-bold text-[#7a1228] font-data-mono">KES {feeBalance.toLocaleString()}</strong> for{' '}
+                    <strong>{currentChild.firstName} {currentChild.lastName}</strong> is due on or before{' '}
+                    <strong className="text-slate-900">{formattedDueDate}</strong>. Prompt settlement ensures uninterrupted academic learning and timely report card release.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0 self-end md:self-center">
+                <button
+                  onClick={() => {
+                    const studentObj = {
+                      id: currentChild.id,
+                      name: currentChild.fullName || `${currentChild.firstName} ${currentChild.lastName}`,
+                      admNo: currentChild.admissionNumber,
+                      upi: currentChild.upiNumber || 'NEMIS-K9281A',
+                      grade: resolveGradeName(currentChild.gradeLevel),
+                      stream: resolveStreamName(currentChild.streamId, currentChild.streamName || currentChild.stream?.name) || 'General',
+                      guardianName: `${guardianUser?.firstName} ${guardianUser?.lastName}`,
+                      guardianPhone: guardianUser?.phone || '',
+                      feeBalance: currentChild.fee?.balance || 0,
+                      totalFee: currentChild.fee?.totalBilled || 0,
+                      attendanceRate: currentChild.attendance?.attendanceRate || 100,
+                      cbcRating: 'ME',
+                      status: currentChild.status || 'Active'
+                    };
+                    if (onOpenKcbBuniWithStudent) {
+                      onOpenKcbBuniWithStudent(studentObj);
+                    } else if (onOpenMpesaWithStudent) {
+                      onOpenMpesaWithStudent(studentObj);
+                    }
+                  }}
+                  className="px-4 py-2.5 bg-gradient-to-r from-[#005a36] to-[#006a40] hover:from-[#00472b] hover:to-[#005a36] text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+                >
+                  <span className="material-symbols-outlined text-[18px]">payments</span>
+                  <span>Pay Now (KCB / M-Pesa)</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-emerald-500/10 border-2 border-emerald-500/30 rounded-2xl p-4 sm:p-5 shadow-xs flex items-center justify-between gap-4 animate-fade-in">
+              <div className="flex items-center gap-3.5">
+                <div className="w-11 h-11 rounded-2xl bg-emerald-500/20 text-emerald-900 border border-emerald-500/30 flex items-center justify-center font-bold shrink-0">
+                  <span className="material-symbols-outlined text-[26px]">task_alt</span>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-extrabold text-emerald-950">
+                      Fees Cleared · Zero Balance
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-700 text-white">
+                      Status: Fully Settled
+                    </span>
+                  </div>
+                  <p className="text-xs text-emerald-900/80 mt-0.5">
+                    All statutory tuition and term levies for <strong>{currentChild.firstName}</strong> have been settled in full. Next term billing schedule will take effect in January 2027.
+                  </p>
+                </div>
+              </div>
+              <div className="text-right hidden sm:block">
+                <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider block">Current Ledger Balance</span>
+                <span className="text-base font-black font-data-mono text-emerald-800">KES 0</span>
+              </div>
+            </div>
+          )}
 
           {/* Quick Shortcuts for Parent Portal */}
           {onNavigateTab && (
@@ -265,15 +399,15 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
               </div>
 
               <div
-                onClick={() => onNavigateTab('whatsapp-bot')}
+                onClick={() => onNavigateTab('concerns')}
                 className="p-3.5 rounded-xl bg-surface-container-lowest border border-outline-variant/30 hover:border-primary/50 shadow-xs cursor-pointer flex items-center gap-3 transition-all group"
               >
-                <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold group-hover:scale-105 transition-transform">
-                  <span className="material-symbols-outlined text-xl">chat</span>
+                <div className="w-10 h-10 rounded-xl bg-[#7a1228]/10 text-[#7a1228] flex items-center justify-center font-bold group-hover:scale-105 transition-transform">
+                  <span className="material-symbols-outlined text-xl">rate_review</span>
                 </div>
                 <div>
-                  <div className="font-bold text-xs text-on-surface">WhatsApp School Desk</div>
-                  <div className="text-[11px] text-on-surface-variant">Instant bot inquiries</div>
+                  <div className="font-bold text-xs text-on-surface">School Concerns & Help</div>
+                  <div className="text-[11px] text-on-surface-variant">Submit inquiry or feedback</div>
                 </div>
               </div>
             </div>
@@ -541,8 +675,8 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
             nemis: currentChild.upiNumber || '',
             name: currentChild.fullName || `${currentChild.firstName} ${currentChild.lastName}`,
             gender: currentChild.gender || 'MALE',
-            grade: currentChild.gradeLevel,
-            stream: currentChild.streamId ? 'East' : '',
+            grade: resolveGradeName(currentChild.gradeLevel),
+            stream: resolveStreamName(currentChild.streamId, currentChild.streamName || currentChild.stream?.name),
             guardianName: currentChild.guardianName || `${guardianUser?.firstName || ''} ${guardianUser?.lastName || ''}`.trim() || 'Parent',
             guardianPhone: currentChild.guardianPhone || guardianUser?.phone || '',
             feeBalance: currentChild.fee?.balance || 0,

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
+import { sortAndGroupClasses, sortClassesInCbcSequence } from '../../utils/classCategorization';
 
 interface AddTimetableSlotModalProps {
   isOpen: boolean;
@@ -9,6 +10,8 @@ interface AddTimetableSlotModalProps {
   classRoomId?: string;
   streamId?: string;
   termId?: string;
+  classes?: any[];
+  streams?: any[];
   learningAreas?: any[];
   teachers?: any[];
   initialSlot?: any;
@@ -24,6 +27,8 @@ export const AddTimetableSlotModal: React.FC<AddTimetableSlotModalProps> = ({
   classRoomId,
   streamId,
   termId,
+  classes: propClasses = [],
+  streams: propStreams = [],
   learningAreas: propLearningAreas = [],
   teachers: propTeachers = [],
   initialSlot,
@@ -36,6 +41,11 @@ export const AddTimetableSlotModal: React.FC<AddTimetableSlotModalProps> = ({
   ],
   onDeleteSlot,
 }) => {
+  const [classesList, setClassesList] = useState<any[]>(propClasses);
+  const [selectedClassRoomId, setSelectedClassRoomId] = useState<string>(classRoomId || '');
+  const [streamsList, setStreamsList] = useState<any[]>(propStreams);
+  const [selectedStreamId, setSelectedStreamId] = useState<string>(streamId || '');
+
   const [learningAreas, setLearningAreas] = useState<any[]>(propLearningAreas);
   const [teachers, setTeachers] = useState<any[]>(propTeachers);
 
@@ -54,6 +64,11 @@ export const AddTimetableSlotModal: React.FC<AddTimetableSlotModalProps> = ({
   const [breakLabel, setBreakLabel] = useState<string>(initialSlot?.label || '');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Real-time Teacher Clash Detection State
+  const [clashWarning, setClashWarning] = useState<string | null>(null);
+  const [isCheckingClash, setIsCheckingClash] = useState<boolean>(false);
+  const [isClashBlocked, setIsClashBlocked] = useState<boolean>(false);
 
   const PERIOD_TIME_PRESETS: Record<string, { start: string; end: string; isBreak?: boolean; label?: string }> = {
     '1': { start: '08:00', end: '08:45', isBreak: false },
@@ -90,8 +105,10 @@ export const AddTimetableSlotModal: React.FC<AddTimetableSlotModalProps> = ({
     }
   };
 
-  // Sync initialSlot when opened
+  // Sync initialSlot and props when opened
   useEffect(() => {
+    if (classRoomId) setSelectedClassRoomId(classRoomId);
+    if (streamId !== undefined) setSelectedStreamId(streamId);
     if (initialSlot) {
       if (initialSlot.dayOfWeek) setDayOfWeek(initialSlot.dayOfWeek);
       if (initialSlot.periodNumber) setPeriodNumber(String(initialSlot.periodNumber));
@@ -103,7 +120,10 @@ export const AddTimetableSlotModal: React.FC<AddTimetableSlotModalProps> = ({
       if (initialSlot.isBreak !== undefined) setIsBreak(initialSlot.isBreak);
       if (initialSlot.label) setBreakLabel(initialSlot.label);
     }
-  }, [initialSlot, isOpen]);
+    setError(null);
+    setClashWarning(null);
+    setIsClashBlocked(false);
+  }, [initialSlot, classRoomId, streamId, isOpen]);
 
   // Load real options from database if not supplied
   useEffect(() => {
@@ -111,20 +131,40 @@ export const AddTimetableSlotModal: React.FC<AddTimetableSlotModalProps> = ({
 
     async function loadOptions() {
       try {
-        const [laRes, tRes] = await Promise.all([
+        const promises: Promise<any>[] = [
           apiService.getLearningAreas().catch(() => null),
           apiService.getTeachers().catch(() => null),
-        ]);
+        ];
+
+        if (!propClasses || propClasses.length === 0) {
+          promises.push(apiService.getClasses().catch(() => null));
+        }
+
+        const [laRes, tRes, cRes] = await Promise.all(promises);
+
         if (laRes?.data && Array.isArray(laRes.data) && laRes.data.length > 0) {
           setLearningAreas(laRes.data);
-          if (!initialSlot?.learningAreaId) {
+          if (!initialSlot?.learningAreaId && !learningAreaId) {
             setLearningAreaId(laRes.data[0].id);
           }
         }
         if (tRes?.data && Array.isArray(tRes.data) && tRes.data.length > 0) {
           setTeachers(tRes.data);
-          if (!initialSlot?.teacherId) {
+          if (!initialSlot?.teacherId && !teacherId) {
             setTeacherId(tRes.data[0].id);
+          }
+        }
+        if (cRes?.data && Array.isArray(cRes.data) && cRes.data.length > 0) {
+          const sorted = sortClassesInCbcSequence(cRes.data);
+          setClassesList(sorted);
+          if (!selectedClassRoomId && !classRoomId) {
+            setSelectedClassRoomId(sorted[0].id);
+          }
+        } else if (propClasses && propClasses.length > 0) {
+          const sorted = sortClassesInCbcSequence(propClasses);
+          setClassesList(sorted);
+          if (!selectedClassRoomId && !classRoomId) {
+            setSelectedClassRoomId(sorted[0].id);
           }
         }
       } catch (err) {
@@ -135,25 +175,110 @@ export const AddTimetableSlotModal: React.FC<AddTimetableSlotModalProps> = ({
     loadOptions();
   }, [isOpen]);
 
+  // Load streams when selectedClassRoomId changes
+  useEffect(() => {
+    if (!selectedClassRoomId) return;
+    apiService.getStreamsByClass(selectedClassRoomId)
+      .then((res) => {
+        if (res?.data && Array.isArray(res.data)) {
+          setStreamsList(res.data);
+        } else {
+          setStreamsList([]);
+        }
+      })
+      .catch(() => setStreamsList([]));
+  }, [selectedClassRoomId]);
+
+  // Real-time Teacher Clash Detection
+  // Checks if the selected teacher already has another class scheduled on the same day and period
+  useEffect(() => {
+    if (!isOpen) return;
+
+    if (!teacherId || isBreak) {
+      setClashWarning(null);
+      setIsClashBlocked(false);
+      return;
+    }
+
+    let isMounted = true;
+    setIsCheckingClash(true);
+
+    apiService.getTeacherTimetable(teacherId, termId || '')
+      .then((res) => {
+        if (!isMounted) return;
+        setIsCheckingClash(false);
+        const slots = res?.data || [];
+
+        const conflict = slots.find((s: any) => {
+          const isSameDay = String(s.dayOfWeek).trim().toUpperCase() === String(dayOfWeek).trim().toUpperCase();
+          const isSamePeriod = Number(s.periodNumber) === Number(periodNumber);
+          if (!isSameDay || !isSamePeriod) return false;
+
+          // Slot in the exact same class & stream (or same timetable)?
+          const isSameTimetable = (timetableId && s.timetableId && s.timetableId === timetableId) ||
+            (s.classRoomId === selectedClassRoomId && (s.streamId || '') === (selectedStreamId || ''));
+
+          return !isSameTimetable;
+        });
+
+        if (conflict) {
+          const teacherObj = teachers.find((t) => t.id === teacherId);
+          const teacherName = teacherObj?.name || teacherObj?.user?.fullName || 'This teacher';
+          const confClassName = classesList.find((c) => c.id === conflict.classRoomId)?.name || 'another class';
+          const confStream = conflict.streamId ? ` (Stream: ${conflict.streamId})` : '';
+
+          setClashWarning(
+            `⚠️ CLASH DETECTED: ${teacherName} is already scheduled in ${confClassName}${confStream} on ${dayOfWeek}, Period ${periodNumber}. A teacher cannot have two classes simultaneously!`
+          );
+          setIsClashBlocked(true);
+        } else {
+          setClashWarning(null);
+          setIsClashBlocked(false);
+        }
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setIsCheckingClash(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen, teacherId, dayOfWeek, periodNumber, selectedClassRoomId, selectedStreamId, isBreak, timetableId, termId, classesList, teachers]);
+
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (isClashBlocked) {
+      setError(clashWarning || 'Scheduling clash: teacher is already booked in another class at this time.');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
+
+    const selectedArea = learningAreas.find((la) => la.id === learningAreaId);
+    const selectedTeacher = teachers.find((t) => t.id === teacherId);
+    const resolvedTeacherName = selectedTeacher
+      ? (selectedTeacher.name || selectedTeacher.user?.fullName || `Teacher ${selectedTeacher.tscNumber || ''}`)
+      : undefined;
 
     try {
       const res = await apiService.addTimetableSlot({
         timetableId: timetableId || undefined,
-        classRoomId: classRoomId || undefined,
-        streamId: streamId || undefined,
+        classRoomId: selectedClassRoomId || undefined,
+        streamId: selectedStreamId || undefined,
         termId: termId || undefined,
         dayOfWeek,
         periodNumber: Number(periodNumber),
         startTime,
         endTime,
         learningAreaId: isBreak ? undefined : learningAreaId,
+        learningAreaName: isBreak ? undefined : (selectedArea?.name || selectedArea?.code),
         teacherId: isBreak ? undefined : teacherId,
+        teacherName: isBreak ? undefined : resolvedTeacherName,
         roomName: isBreak ? undefined : roomName,
         isBreak,
         isLunch: isBreak && breakLabel.toLowerCase().includes('lunch'),
@@ -185,7 +310,7 @@ export const AddTimetableSlotModal: React.FC<AddTimetableSlotModalProps> = ({
               <h3 className="font-semibold text-base leading-tight">
                 {initialSlot?.id ? 'Edit Timetable Slot' : 'Assign Timetable Slot'}
               </h3>
-              <p className="text-xs text-rose-100">With automated teacher & room clash detection</p>
+              <p className="text-xs text-rose-100">With automated teacher clash revocation</p>
             </div>
           </div>
           <button
@@ -198,10 +323,59 @@ export const AddTimetableSlotModal: React.FC<AddTimetableSlotModalProps> = ({
 
         <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-3.5 overflow-y-auto flex-1 overscroll-contain">
           {error && (
-            <div className="p-3 rounded-lg bg-error/10 border border-error/20 text-error text-xs font-medium">
+            <div className="p-3 rounded-lg bg-error/10 border border-error/20 text-error text-xs font-semibold">
               {error}
             </div>
           )}
+
+          {/* Target Class & Stream Selectors */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-2 border-b border-outline-variant/20">
+            <div>
+              <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">
+                Class / Grade
+              </label>
+              <select
+                value={selectedClassRoomId}
+                onChange={(e) => {
+                  setSelectedClassRoomId(e.target.value);
+                  setSelectedStreamId('');
+                }}
+                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2 text-xs font-semibold text-on-surface focus:ring-1 focus:ring-[#7a1228]"
+              >
+                {classesList.length === 0 ? (
+                  <option value="">No classes configured</option>
+                ) : (
+                  sortAndGroupClasses(classesList).map((group) => (
+                    <optgroup key={group.category} label={group.category}>
+                      {group.classes.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))
+                )}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">
+                Stream (Optional)
+              </label>
+              <select
+                value={selectedStreamId}
+                onChange={(e) => setSelectedStreamId(e.target.value)}
+                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2 text-xs font-semibold text-on-surface focus:ring-1 focus:ring-[#7a1228]"
+              >
+                <option value="">Main Cohort (No Stream)</option>
+                {streamsList.map((st) => (
+                  <option key={st.id} value={st.id}>
+                    {st.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -321,13 +495,22 @@ export const AddTimetableSlotModal: React.FC<AddTimetableSlotModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">
-                  Instructional Teacher
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold uppercase text-on-surface-variant">
+                    Instructional Teacher
+                  </label>
+                  {isCheckingClash && (
+                    <span className="text-[10px] text-primary animate-pulse font-semibold">
+                      Checking availability...
+                    </span>
+                  )}
+                </div>
                 <select
                   value={teacherId}
                   onChange={(e) => setTeacherId(e.target.value)}
-                  className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2 text-xs font-semibold text-on-surface"
+                  className={`w-full bg-surface-container-low border rounded-lg p-2 text-xs font-semibold text-on-surface ${
+                    isClashBlocked ? 'border-error ring-1 ring-error' : 'border-outline-variant/40'
+                  }`}
                 >
                   {teachers.length === 0 ? (
                     <option value="">No teachers found</option>
@@ -340,6 +523,19 @@ export const AddTimetableSlotModal: React.FC<AddTimetableSlotModalProps> = ({
                   )}
                 </select>
               </div>
+
+              {/* Real-time Clash Warning Banner */}
+              {clashWarning && (
+                <div className="p-3 rounded-xl bg-error/15 border border-error/40 text-error flex items-start gap-2.5">
+                  <span className="material-symbols-outlined text-[18px] text-error shrink-0 mt-0.5">block</span>
+                  <div className="flex-1">
+                    <p className="text-xs font-bold leading-tight">{clashWarning}</p>
+                    <p className="text-[11px] text-error/80 mt-1">
+                      Double-booking is forbidden. Please reassign to an available teacher or pick an open period.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">
@@ -375,11 +571,23 @@ export const AddTimetableSlotModal: React.FC<AddTimetableSlotModalProps> = ({
             )}
             <button
               type="submit"
-              disabled={isLoading}
-              className="flex-1 py-2.5 bg-[#7a1228] text-white font-bold rounded-lg hover:bg-[#5e0d1e] shadow-md transition-all flex items-center justify-center gap-1.5 text-xs cursor-pointer disabled:opacity-50"
+              disabled={isLoading || isClashBlocked}
+              className={`flex-1 py-2.5 text-white font-bold rounded-lg shadow-md transition-all flex items-center justify-center gap-1.5 text-xs ${
+                isClashBlocked
+                  ? 'bg-gray-400 cursor-not-allowed opacity-75'
+                  : 'bg-[#7a1228] hover:bg-[#5e0d1e] cursor-pointer'
+              } disabled:opacity-50`}
             >
-              <span className="material-symbols-outlined text-[16px]">save</span>
-              <span>{isLoading ? 'Checking Conflicts & Saving...' : 'Save Timetable Slot'}</span>
+              <span className="material-symbols-outlined text-[16px]">
+                {isClashBlocked ? 'block' : 'save'}
+              </span>
+              <span>
+                {isLoading
+                  ? 'Validating & Saving...'
+                  : isClashBlocked
+                  ? 'Blocked: Teacher Double-Booked'
+                  : 'Save Timetable Slot'}
+              </span>
             </button>
           </div>
         </form>

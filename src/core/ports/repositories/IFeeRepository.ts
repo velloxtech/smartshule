@@ -60,6 +60,8 @@ export interface IFeeRepository {
   findInvoices(filters: InvoiceFilterCriteria): Promise<StudentInvoice[]>;
   saveInvoice(invoice: StudentInvoice): Promise<void>;
   updateInvoice(invoice: StudentInvoice): Promise<void>;
+  deleteInvoice?(id: string): Promise<void>;
+  deleteInvoicesByStudentId(studentId: string): Promise<void>;
 
   // Payments (Fee Inflows)
   findPaymentById(id: string): Promise<Payment | null>;
@@ -68,6 +70,8 @@ export interface IFeeRepository {
   findPayments(filters: PaymentFilterCriteria): Promise<Payment[]>;
   savePayment(payment: Payment): Promise<void>;
   updatePayment(payment: Payment): Promise<void>;
+  deletePayment?(id: string): Promise<void>;
+  deletePaymentsByStudentId(studentId: string): Promise<void>;
 
   // Expenses (Money Out / Outflows)
   findExpenseById(id: string): Promise<Expense | null>;

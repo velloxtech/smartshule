@@ -65,6 +65,8 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
   const [guardianEmail, setGuardianEmail] = useState('');
   const [alternateContactName, setAlternateContactName] = useState('');
   const [alternateContactPhone, setAlternateContactPhone] = useState('');
+  const [createParentAccount, setCreateParentAccount] = useState(true);
+  const [sendWelcomeSms, setSendWelcomeSms] = useState(true);
 
   // Step 4: Constitutional Declarations & Data Privacy (Article 31 & DPA 2019)
   const [consentDataProtection, setConsentDataProtection] = useState(false);
@@ -152,6 +154,8 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
       setGuardianRelationship('MOTHER');
       setAlternateContactName('');
       setAlternateContactPhone('');
+      setCreateParentAccount(true);
+      setSendWelcomeSms(true);
       setSneCategory('NONE');
       setSneNotes('');
       setMedicalConditions('');
@@ -362,6 +366,8 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
       subCounty: selectedSubCounty,
       profilePhotoUrl: profilePhotoUrl || undefined,
       dataProtectionConsent: true,
+      createParentAccount,
+      sendWelcomeSms,
       guardian: {
         firstName: gFirst,
         lastName: gLast,
@@ -1049,6 +1055,43 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                     />
                   </div>
                 </div>
+              </div>
+
+              {/* Automated Parent Account Provisioning Card */}
+              <div className="p-3.5 bg-rose-50/60 border border-rose-200/80 rounded-xl space-y-2">
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={createParentAccount}
+                    onChange={(e) => setCreateParentAccount(e.target.checked)}
+                    className="mt-0.5 rounded text-[#7a1228] focus:ring-[#7a1228] w-4 h-4 cursor-pointer"
+                  />
+                  <div className="text-xs text-slate-800">
+                    <span className="font-bold block text-slate-900">
+                      Automatically provision Parent Portal account &amp; link siblings
+                    </span>
+                    <span className="text-[11px] text-slate-500 leading-relaxed block mt-0.5">
+                      Creates a secure login account for the parent using their Phone number or National ID. If this parent already has an enrolled child, this pupil will be linked as a sibling automatically.
+                    </span>
+                  </div>
+                </label>
+
+                {createParentAccount && (
+                  <div className="pl-6.5 pt-1.5 border-t border-rose-200/50 flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-[11px] text-slate-600">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={sendWelcomeSms}
+                        onChange={(e) => setSendWelcomeSms(e.target.checked)}
+                        className="rounded text-[#7a1228] focus:ring-[#7a1228] w-3.5 h-3.5 cursor-pointer"
+                      />
+                      <span>Dispatch instant welcome SMS with login details upon admission</span>
+                    </label>
+                    <span className="text-[10px] font-mono text-[#7a1228] font-semibold bg-white px-2 py-0.5 rounded border border-rose-200 shrink-0 self-start sm:self-auto">
+                      Default: Enabled
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           )}

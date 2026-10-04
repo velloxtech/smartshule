@@ -18,6 +18,7 @@ function mapRow(r: any): RecordOfWork {
     r.term_id || undefined,
     r.period || undefined,
     r.comments || undefined,
+    r.reflection || undefined,
     r.created_at,
     r.updated_at
   );
@@ -33,9 +34,9 @@ export class PostgresRecordOfWorkRepository implements IRecordOfWorkRepository {
     await this.pool.query(
       `INSERT INTO records_of_work (
          id, teacher_id, academic_year_id, term_id, week, day, period,
-         subject_and_grade, strand_and_work_covered, reference, comments,
+         subject_and_grade, strand_and_work_covered, reference, comments, reflection,
          created_at, updated_at
-       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
       [
         id,
         record.teacherId!,
@@ -48,6 +49,7 @@ export class PostgresRecordOfWorkRepository implements IRecordOfWorkRepository {
         record.strandAndWorkCovered!,
         record.reference!,
         record.comments || null,
+        record.reflection || null,
         now,
         now,
       ]
@@ -64,6 +66,7 @@ export class PostgresRecordOfWorkRepository implements IRecordOfWorkRepository {
       term_id: termId,
       period: record.period,
       comments: record.comments,
+      reflection: record.reflection,
       created_at: now,
       updated_at: now,
     });
@@ -81,13 +84,14 @@ export class PostgresRecordOfWorkRepository implements IRecordOfWorkRepository {
     const academicYearId = record.academicYearId ?? existing.academicYearId ?? null;
     const period = record.period ?? existing.period ?? null;
     const comments = record.comments ?? existing.comments ?? null;
+    const reflection = record.reflection ?? existing.reflection ?? null;
     await this.pool.query(
       `UPDATE records_of_work SET
          academic_year_id = $2, term_id = $3, week = $4, day = $5, period = $6,
          subject_and_grade = $7, strand_and_work_covered = $8, reference = $9,
-         comments = $10, updated_at = NOW()
+         comments = $10, reflection = $11, updated_at = NOW()
        WHERE id = $1`,
-      [id, academicYearId, termId, week, day, period, subjectAndGrade, strandAndWorkCovered, reference, comments]
+      [id, academicYearId, termId, week, day, period, subjectAndGrade, strandAndWorkCovered, reference, comments, reflection]
     );
     return this.findById(id);
   }
@@ -137,6 +141,7 @@ export class InMemoryRecordOfWorkRepository implements IRecordOfWorkRepository {
       record.termId || record.term,
       record.period,
       record.comments,
+      record.reflection,
       now,
       now
     );
@@ -160,6 +165,7 @@ export class InMemoryRecordOfWorkRepository implements IRecordOfWorkRepository {
       record.termId ?? record.term ?? prev.termId,
       record.period ?? prev.period,
       record.comments ?? prev.comments,
+      record.reflection ?? prev.reflection,
       prev.createdAt,
       new Date()
     );

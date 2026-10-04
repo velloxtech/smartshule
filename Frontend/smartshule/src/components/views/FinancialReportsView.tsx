@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { apiService } from '../../services/api';
 import { CashFlowLedgerData, ExpenseRecord, OtherIncomeRecord, ExpenseCategoryType } from '../../types';
+import { resolveAcademicYearName } from '../../utils/formatters';
 
 // Ministry of Education standard Vote Head configurations & baseline budgetary allocations
 interface VoteHeadBudgetRow {
@@ -115,7 +116,8 @@ export const FinancialReportsView: React.FC = () => {
           setAcademicYears(yrRes.data);
         }
         if (ctxRes.success && ctxRes.data?.currentTerm?.name) {
-          setSelectedPeriod(`${ctxRes.data.currentTerm.name} ${ctxRes.data.currentYear?.year || ''}`.trim());
+          const yName = resolveAcademicYearName(ctxRes.data.currentYear?.name || ctxRes.data.currentYear?.year || ctxRes.data.currentYear?.id);
+          setSelectedPeriod(`${ctxRes.data.currentTerm.name} ${yName}`.trim());
         }
       } catch {
         // ignore
@@ -358,16 +360,19 @@ export const FinancialReportsView: React.FC = () => {
             className="input text-xs py-2 px-3 rounded-lg border border-outline-variant bg-surface text-on-surface font-medium"
           >
             <option value="CURRENT_PERIOD">Current Active Term</option>
-            {academicYears.map((ay) => (
-              <React.Fragment key={ay.id}>
-                <option value={`YEAR_${ay.year}`}>Academic Year {ay.year}</option>
-                {ay.terms?.map((t: any) => (
-                  <option key={t.id} value={`${t.name}_${ay.year}`}>
-                    {t.name} - {ay.year}
-                  </option>
-                ))}
-              </React.Fragment>
-            ))}
+            {academicYears.map((ay) => {
+              const yName = resolveAcademicYearName(ay.name || ay.year || ay.id);
+              return (
+                <React.Fragment key={ay.id}>
+                  <option value={`YEAR_${yName}`}>Academic Year {yName}</option>
+                  {ay.terms?.map((t: any) => (
+                    <option key={t.id} value={`${t.name}_${yName}`}>
+                      {t.name} - {yName}
+                    </option>
+                  ))}
+                </React.Fragment>
+              );
+            })}
             <option value="CUSTOM">Custom Date Range</option>
           </select>
 
@@ -943,9 +948,9 @@ export const FinancialReportsView: React.FC = () => {
                       <span className="text-xs font-semibold text-rose-700 dark:text-rose-300 uppercase">
                         Fee Arrears (Accounts Receivable)
                       </span>
-                      <div className="text-xl font-bold text-rose-600 mt-1">KES 1,240,000</div>
+                      <div className="text-xl font-bold text-gray-400 mt-1">KES --</div>
                       <p className="text-xs text-on-surface-variant mt-0.5">
-                        Collectible from 42 fee defaulter accounts across Grades 1-9
+                        Cumulative fee balances across active learner accounts
                       </p>
                     </div>
                     <span className="material-symbols-outlined text-3xl text-rose-400">person_alert</span>
@@ -958,9 +963,9 @@ export const FinancialReportsView: React.FC = () => {
                       <span className="text-xs font-semibold text-amber-700 dark:text-amber-300 uppercase">
                         Pending Payment Vouchers (Accounts Payable)
                       </span>
-                      <div className="text-xl font-bold text-amber-600 mt-1">KES 320,000</div>
+                      <div className="text-xl font-bold text-gray-400 mt-1">KES --</div>
                       <p className="text-xs text-on-surface-variant mt-0.5">
-                        3 approved vouchers awaiting bursar cheque / EFT clearance
+                        Approved vouchers awaiting bursar cheque / EFT clearance
                       </p>
                     </div>
                     <span className="material-symbols-outlined text-3xl text-amber-400">receipt</span>
@@ -970,14 +975,14 @@ export const FinancialReportsView: React.FC = () => {
                 <div className="p-4 rounded-xl bg-emerald-50/30 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-semibold text-emerald-800 dark:text-emerald-300">
-                      Net Working Capital Position:
+                      Total Liquid Operating Position:
                     </span>
                     <span className="font-black text-sm text-emerald-700 dark:text-emerald-300">
-                      {formatKes(totalLiquid + 1240000 - 320000)}
+                      {formatKes(totalLiquid)}
                     </span>
                   </div>
                   <p className="text-[11px] text-emerald-700 dark:text-emerald-400 mt-1">
-                    Institution maintains strong short-term liquidity ratio of 6.2x against current commitments.
+                    Institution liquid cash balances across all active bank and petty cash accounts.
                   </p>
                 </div>
               </div>

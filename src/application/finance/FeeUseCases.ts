@@ -244,6 +244,187 @@ export class FeeUseCases {
     return feeStructure.toJSON();
   }
 
+  public getGraceSeedsDefaultItemsForGrade(gradeLevel: CbcGradeLevel): FeeItem[] {
+    const isUpperPrimary = [CbcGradeLevel.GRADE_4, CbcGradeLevel.GRADE_5, CbcGradeLevel.GRADE_6].includes(gradeLevel);
+    const isLowerPrimary = [CbcGradeLevel.GRADE_1, CbcGradeLevel.GRADE_2, CbcGradeLevel.GRADE_3].includes(gradeLevel);
+    const isPrePrimary = [CbcGradeLevel.PLAYGROUP, CbcGradeLevel.PP1, CbcGradeLevel.PP2].includes(gradeLevel);
+
+    // Official Grace Seeds School Fee Structure:
+    // Pre-Primary (Playgroup, PP1, PP2):
+    //   - Fee (Tuition): 4,500 (T1: 4500, T2: 4500, T3: 4500)
+    //   - Activity fee: 300 (T1: 300, T2: 300, T3: 0)
+    //   - Assessment: 300 (T1: 300, T2: 300, T3: 300)
+    //   - Term Totals: T1: 5100, T2: 5100, T3: 4800 (Annual: 15,000)
+    // Grade 1-3:
+    //   - Fee (Tuition): 5,000 (T1: 5000, T2: 5000, T3: 5000)
+    //   - Activity fee: 500 (T1: 500, T2: 500, T3: 0)
+    //   - Assessment: 300 (T1: 300, T2: 300, T3: 300)
+    //   - Term Totals: T1: 5800, T2: 5800, T3: 5300 (Annual: 16,900)
+    // Grade 4-6:
+    //   - Fee (Tuition): 5,700 (T1: 5700, T2: 5700, T3: 5700)
+    //   - Activity fee: 500 (T1: 500, T2: 500, T3: 0)
+    //   - Assessment: 300 (T1: 300, T2: 300, T3: 300)
+    //   - Term Totals: T1: 6500, T2: 6500, T3: 6000 (Annual: 19,000)
+    // Other Charges: Admission: 1500 (once off), Lunch: 1000/mo (3000/term)
+
+    const tuitionTerm = isUpperPrimary ? 5700 : (isLowerPrimary ? 5000 : (isPrePrimary ? 4500 : 5000));
+    const activityTerm = (isUpperPrimary || isLowerPrimary) ? 500 : (isPrePrimary ? 300 : 500);
+    const assessmentTerm = 300;
+    const admissionFee = 1500;
+
+    return [
+      {
+        id: IdGenerator.generate(),
+        name: 'Tuition Fee',
+        amount: tuitionTerm * 3,
+        category: 'TUITION',
+        isOptional: false,
+        termBreakdown: {
+          term1: tuitionTerm,
+          term2: tuitionTerm,
+          term3: tuitionTerm,
+        },
+        termPercentages: {
+          term1: 33.3,
+          term2: 33.3,
+          term3: 33.4,
+        },
+        termDivisions: [
+          { termNumber: 1, termName: 'Term 1', amount: tuitionTerm, percentage: 33.3 },
+          { termNumber: 2, termName: 'Term 2', amount: tuitionTerm, percentage: 33.3 },
+          { termNumber: 3, termName: 'Term 3', amount: tuitionTerm, percentage: 33.4 },
+        ],
+      },
+      {
+        id: IdGenerator.generate(),
+        name: 'Activity Fee',
+        amount: activityTerm * 2, // 1st & 2nd term ONLY
+        category: 'ACTIVITY',
+        isOptional: false,
+        termBreakdown: {
+          term1: activityTerm,
+          term2: activityTerm,
+          term3: 0, // No activity fee in Term 3
+        },
+        termPercentages: {
+          term1: 50,
+          term2: 50,
+          term3: 0,
+        },
+        termDivisions: [
+          { termNumber: 1, termName: 'Term 1', amount: activityTerm, percentage: 50 },
+          { termNumber: 2, termName: 'Term 2', amount: activityTerm, percentage: 50 },
+          { termNumber: 3, termName: 'Term 3', amount: 0, percentage: 0 },
+        ],
+      },
+      {
+        id: IdGenerator.generate(),
+        name: 'Assessment Fee',
+        amount: assessmentTerm * 3, // Termly
+        category: 'ASSESSMENT',
+        isOptional: false,
+        termBreakdown: {
+          term1: assessmentTerm,
+          term2: assessmentTerm,
+          term3: assessmentTerm,
+        },
+        termPercentages: {
+          term1: 33.3,
+          term2: 33.3,
+          term3: 33.4,
+        },
+        termDivisions: [
+          { termNumber: 1, termName: 'Term 1', amount: assessmentTerm, percentage: 33.3 },
+          { termNumber: 2, termName: 'Term 2', amount: assessmentTerm, percentage: 33.3 },
+          { termNumber: 3, termName: 'Term 3', amount: assessmentTerm, percentage: 33.4 },
+        ],
+      },
+      {
+        id: IdGenerator.generate(),
+        name: 'Admission Fee',
+        amount: admissionFee, // Once off on admission
+        category: 'ADMISSION',
+        isOptional: true, // Only applied for new admissions
+        termBreakdown: {
+          term1: admissionFee,
+          term2: 0,
+          term3: 0,
+        },
+        termPercentages: {
+          term1: 100,
+          term2: 0,
+          term3: 0,
+        },
+        termDivisions: [
+          { termNumber: 1, termName: 'Term 1', amount: admissionFee, percentage: 100 },
+          { termNumber: 2, termName: 'Term 2', amount: 0, percentage: 0 },
+          { termNumber: 3, termName: 'Term 3', amount: 0, percentage: 0 },
+        ],
+      },
+    ];
+  }
+
+  public async initializeGraceSeedsFeeStructures(schoolId?: string, academicYearId?: string) {
+    const targetSchoolId = schoolId || 'school-001';
+    const targetYearId = academicYearId || 'year-2026';
+    const dueDate = `${new Date().getFullYear()}-12-31`;
+
+    const grades: { grade: CbcGradeLevel; title: string }[] = [
+      { grade: CbcGradeLevel.PLAYGROUP, title: 'Playgroup CBC Annual Fee Schedule' },
+      { grade: CbcGradeLevel.PP1, title: 'PP1 CBC Annual Fee Schedule' },
+      { grade: CbcGradeLevel.PP2, title: 'PP2 CBC Annual Fee Schedule' },
+      { grade: CbcGradeLevel.GRADE_1, title: 'Grade 1 CBC Annual Fee Schedule' },
+      { grade: CbcGradeLevel.GRADE_2, title: 'Grade 2 CBC Annual Fee Schedule' },
+      { grade: CbcGradeLevel.GRADE_3, title: 'Grade 3 CBC Annual Fee Schedule' },
+      { grade: CbcGradeLevel.GRADE_4, title: 'Grade 4 CBC Annual Fee Schedule' },
+      { grade: CbcGradeLevel.GRADE_5, title: 'Grade 5 CBC Annual Fee Schedule' },
+      { grade: CbcGradeLevel.GRADE_6, title: 'Grade 6 CBC Annual Fee Schedule' },
+    ];
+
+    const results: any[] = [];
+
+    for (const g of grades) {
+      const items = this.getGraceSeedsDefaultItemsForGrade(g.grade);
+
+      const existing = await this.feeRepository.findFeeStructure(g.grade, 'ALL', targetYearId);
+      if (existing) {
+        const updated = FeeStructure.create(
+          {
+            schoolId: targetSchoolId,
+            academicYearId: targetYearId,
+            termId: 'ALL',
+            gradeLevel: g.grade,
+            title: g.title,
+            items,
+            dueDate,
+          },
+          existing.id,
+          existing.createdAt,
+          new Date()
+        );
+        await this.feeRepository.updateFeeStructure(updated);
+        results.push(updated.toJSON());
+      } else {
+        const created = FeeStructure.create(
+          {
+            schoolId: targetSchoolId,
+            academicYearId: targetYearId,
+            termId: 'ALL',
+            gradeLevel: g.grade,
+            title: g.title,
+            items,
+            dueDate,
+          },
+          IdGenerator.generate()
+        );
+        await this.feeRepository.saveFeeStructure(created);
+        results.push(created.toJSON());
+      }
+    }
+
+    return results;
+  }
+
   public async listFeeStructures(schoolId?: string) {
     const structures = await this.feeRepository.findAllFeeStructures(schoolId);
     return structures.map(s => s.toJSON());
@@ -447,68 +628,10 @@ export class FeeUseCases {
         feeStructure = allStructures.find(fs => fs.gradeLevel === student.gradeLevel) || null;
       }
 
-      // If no fee structure exists for this grade in the DB, create standard CBC fee structure with whole-year term divisions
+      // If no fee structure exists for this grade in the DB, create ratified Grace Seeds School fee structure
       if (!feeStructure) {
-        const isJSS = ['GRADE_7', 'GRADE_8', 'GRADE_9'].includes(student.gradeLevel);
-        const isUpperPrimary = ['GRADE_4', 'GRADE_5', 'GRADE_6'].includes(student.gradeLevel);
-        const isLowerPrimary = ['GRADE_1', 'GRADE_2', 'GRADE_3'].includes(student.gradeLevel);
-
         const gradeName = student.gradeLevel.replace('_', ' ');
-        const tuitionAnnual = isJSS ? 60000 : (isUpperPrimary ? 45000 : (isLowerPrimary ? 36000 : 30000));
-        const assessmentAnnual = isJSS ? 15000 : (isUpperPrimary ? 10000 : (isLowerPrimary ? 8000 : 6000));
-        const activityAnnual = isJSS ? 6000 : (isUpperPrimary ? 5000 : (isLowerPrimary ? 4500 : 3500));
-        const admissionAnnual = isJSS ? 5000 : 3500;
-
-        const defaultItems = [
-          {
-            id: IdGenerator.generate(),
-            name: 'Tuition Fee',
-            amount: tuitionAnnual,
-            category: 'TUITION' as const,
-            isOptional: false,
-            termBreakdown: {
-              term1: Math.round(tuitionAnnual * 0.4),
-              term2: Math.round(tuitionAnnual * 0.3),
-              term3: tuitionAnnual - Math.round(tuitionAnnual * 0.4) - Math.round(tuitionAnnual * 0.3)
-            }
-          },
-          {
-            id: IdGenerator.generate(),
-            name: isJSS ? 'CBC Assessment & Practical Science Kits' : 'CBC Assessment & Learning Materials',
-            amount: assessmentAnnual,
-            category: 'ASSESSMENT' as const,
-            isOptional: false,
-            termBreakdown: {
-              term1: Math.round(assessmentAnnual * 0.4),
-              term2: Math.round(assessmentAnnual * 0.3),
-              term3: assessmentAnnual - Math.round(assessmentAnnual * 0.4) - Math.round(assessmentAnnual * 0.3)
-            }
-          },
-          {
-            id: IdGenerator.generate(),
-            name: 'Activity & Co-Curricular Levy',
-            amount: activityAnnual,
-            category: 'ACTIVITY' as const,
-            isOptional: false,
-            termBreakdown: {
-              term1: Math.round(activityAnnual * 0.4),
-              term2: Math.round(activityAnnual * 0.3),
-              term3: activityAnnual - Math.round(activityAnnual * 0.4) - Math.round(activityAnnual * 0.3)
-            }
-          },
-          {
-            id: IdGenerator.generate(),
-            name: 'Admission Fee',
-            amount: admissionAnnual,
-            category: 'ADMISSION' as const,
-            isOptional: false,
-            termBreakdown: {
-              term1: admissionAnnual,
-              term2: 0,
-              term3: 0
-            }
-          }
-        ];
+        const defaultItems = this.getGraceSeedsDefaultItemsForGrade(student.gradeLevel);
 
         feeStructure = FeeStructure.create(
           {
@@ -1154,6 +1277,28 @@ export class FeeUseCases {
   }
 
   // 6. Fee Statement & Reports
+  public async getLinkedStudentIdsForUser(userId: string): Promise<string[]> {
+    const guardian = await this.getGuardianForUser(userId);
+    if (!guardian) return [];
+
+    const linkedStudentIds = new Set<string>(guardian.studentIds || []);
+    const allStudents = await this.studentRepository.findAll();
+    let updated = false;
+    for (const s of allStudents) {
+      if (s.guardianIds && s.guardianIds.includes(guardian.id)) {
+        linkedStudentIds.add(s.id);
+        if (!guardian.studentIds.includes(s.id)) {
+          guardian.linkStudent(s.id);
+          updated = true;
+        }
+      }
+    }
+    if (updated) {
+      await this.guardianRepository.update(guardian);
+    }
+    return Array.from(linkedStudentIds);
+  }
+
   private async getGuardianForUser(userId: string): Promise<Guardian | null> {
     let guardian = await this.guardianRepository.findByUserId(userId);
     if (!guardian) {
@@ -1198,18 +1343,18 @@ export class FeeUseCases {
 
     // Strict Parent Data Isolation: A parent can only see invoices of their own children
     if (filters.requestingUser?.role === UserRole.GUARDIAN || filters.requestingUser?.role === UserRole.PARENT) {
-      const guardian = await this.getGuardianForUser(filters.requestingUser.userId);
-      if (!guardian || !guardian.studentIds.length) {
+      const childIds = await this.getLinkedStudentIdsForUser(filters.requestingUser.userId);
+      if (childIds.length === 0) {
         return [];
       }
 
       if (filters.studentId) {
-        if (!guardian.studentIds.includes(filters.studentId)) {
+        if (!childIds.includes(filters.studentId)) {
           throw new ForbiddenError('Access denied: You are only permitted to view invoices for your registered children.');
         }
         studentIdsToQuery = [filters.studentId];
       } else {
-        studentIdsToQuery = guardian.studentIds;
+        studentIdsToQuery = childIds;
       }
     } else if (filters.studentId) {
       studentIdsToQuery = [filters.studentId];
@@ -1224,13 +1369,71 @@ export class FeeUseCases {
     });
 
     const result = [];
+    const yearCache = new Map<string, any>();
+    const termCache = new Map<string, any>();
+
     for (const inv of invoices) {
       const student = await this.studentRepository.findById(inv.studentId);
+      const invJson = inv.toJSON();
+
+      let academicYearName: string | undefined = undefined;
+      let termName: string | undefined = undefined;
+
+      if (this.academicRepository) {
+        if (inv.academicYearId) {
+          try {
+            if (yearCache.has(inv.academicYearId)) {
+              academicYearName = yearCache.get(inv.academicYearId)?.name;
+            } else {
+              const yr = await this.academicRepository.findYearById(inv.academicYearId);
+              if (yr) {
+                academicYearName = yr.name;
+                yearCache.set(inv.academicYearId, yr);
+              }
+            }
+          } catch {}
+        }
+        if (inv.termId && inv.termId !== 'ALL' && inv.termId !== 'ANNUAL') {
+          try {
+            if (termCache.has(inv.termId)) {
+              termName = termCache.get(inv.termId)?.name;
+            } else {
+              const tm = await this.academicRepository.findTermById(inv.termId);
+              if (tm) {
+                termName = tm.name;
+                termCache.set(inv.termId, tm);
+              }
+            }
+          } catch {}
+        }
+      }
+
+      if (!academicYearName && inv.academicYearId) {
+        const m = String(inv.academicYearId).match(/(20\d{2})/);
+        academicYearName = m ? m[1] : '2026';
+      }
+
+      if (!termName && inv.termId) {
+        const tid = String(inv.termId).toLowerCase();
+        if (tid.includes('t1') || tid.includes('term1') || tid.includes('term-1') || tid.includes('one')) {
+          termName = 'Term 1';
+        } else if (tid.includes('t2') || tid.includes('term2') || tid.includes('term-2') || tid.includes('two')) {
+          termName = 'Term 2';
+        } else if (tid.includes('t3') || tid.includes('term3') || tid.includes('term-3') || tid.includes('three')) {
+          termName = 'Term 3';
+        } else if (tid === 'all' || tid === 'annual') {
+          termName = 'Whole Year';
+        }
+      }
+
       result.push({
-        ...inv.toJSON(),
+        ...invJson,
         studentName: student ? student.fullName : 'Unknown Learner',
         admissionNumber: student ? student.admissionNumber : 'N/A',
-        gradeLevel: student ? student.gradeLevel : 'N/A'
+        gradeLevel: student ? student.gradeLevel : 'N/A',
+        academicYearName: academicYearName || '2026',
+        academicYear: academicYearName || '2026',
+        termName: termName || (inv.termId === 'ALL' ? 'Annual' : undefined)
       });
     }
 
@@ -1240,8 +1443,8 @@ export class FeeUseCases {
   // 7. Fee Statement with Parent Isolation
   public async getStudentFeeStatement(studentId: string, requestingUser?: UserContext) {
     if (requestingUser?.role === UserRole.GUARDIAN || requestingUser?.role === UserRole.PARENT) {
-      const guardian = await this.getGuardianForUser(requestingUser.userId);
-      if (!guardian || !guardian.studentIds.includes(studentId)) {
+      const childIds = await this.getLinkedStudentIdsForUser(requestingUser.userId);
+      if (!childIds.includes(studentId)) {
         throw new ForbiddenError('Access denied: You are only authorized to view fee statements for your linked children.');
       }
     }
@@ -1265,6 +1468,71 @@ export class FeeUseCases {
       .reduce((sum, p) => sum + p.amount, 0);
     const currentBalance = totalBilled - totalPaid;
 
+    const yearCache = new Map<string, any>();
+    const termCache = new Map<string, any>();
+
+    const enrichedInvoices = await Promise.all(
+      invoices.map(async i => {
+        const json = i.toJSON();
+        let academicYearName: string | undefined = undefined;
+        let termName: string | undefined = undefined;
+
+        if (this.academicRepository) {
+          if (i.academicYearId) {
+            try {
+              if (yearCache.has(i.academicYearId)) {
+                academicYearName = yearCache.get(i.academicYearId)?.name;
+              } else {
+                const yr = await this.academicRepository.findYearById(i.academicYearId);
+                if (yr) {
+                  academicYearName = yr.name;
+                  yearCache.set(i.academicYearId, yr);
+                }
+              }
+            } catch {}
+          }
+          if (i.termId && i.termId !== 'ALL' && i.termId !== 'ANNUAL') {
+            try {
+              if (termCache.has(i.termId)) {
+                termName = termCache.get(i.termId)?.name;
+              } else {
+                const tm = await this.academicRepository.findTermById(i.termId);
+                if (tm) {
+                  termName = tm.name;
+                  termCache.set(i.termId, tm);
+                }
+              }
+            } catch {}
+          }
+        }
+
+        if (!academicYearName && i.academicYearId) {
+          const m = String(i.academicYearId).match(/(20\d{2})/);
+          academicYearName = m ? m[1] : '2026';
+        }
+
+        if (!termName && i.termId) {
+          const tid = String(i.termId).toLowerCase();
+          if (tid.includes('t1') || tid.includes('term1') || tid.includes('term-1') || tid.includes('one')) {
+            termName = 'Term 1';
+          } else if (tid.includes('t2') || tid.includes('term2') || tid.includes('term-2') || tid.includes('two')) {
+            termName = 'Term 2';
+          } else if (tid.includes('t3') || tid.includes('term3') || tid.includes('term-3') || tid.includes('three')) {
+            termName = 'Term 3';
+          } else if (tid === 'all' || tid === 'annual') {
+            termName = 'Whole Year';
+          }
+        }
+
+        return {
+          ...json,
+          academicYearName: academicYearName || '2026',
+          academicYear: academicYearName || '2026',
+          termName: termName || (i.termId === 'ALL' ? 'Annual' : undefined)
+        };
+      })
+    );
+
     return {
       student: student.toJSON(),
       summary: {
@@ -1273,7 +1541,7 @@ export class FeeUseCases {
         currentBalance,
         status: currentBalance <= 0 ? 'CLEARED' : 'PENDING_BALANCE'
       },
-      invoices: invoices.map(i => i.toJSON()),
+      invoices: enrichedInvoices,
       payments: payments.map(p => p.toJSON())
     };
   }
@@ -1327,18 +1595,18 @@ export class FeeUseCases {
     let studentIdsToQuery: string[] | undefined = undefined;
 
     if (filters.requestingUser?.role === UserRole.GUARDIAN || filters.requestingUser?.role === UserRole.PARENT) {
-      const guardian = await this.getGuardianForUser(filters.requestingUser.userId);
-      if (!guardian || !guardian.studentIds.length) {
+      const childIds = await this.getLinkedStudentIdsForUser(filters.requestingUser.userId);
+      if (childIds.length === 0) {
         return [];
       }
 
       if (filters.studentId) {
-        if (!guardian.studentIds.includes(filters.studentId)) {
+        if (!childIds.includes(filters.studentId)) {
           throw new ForbiddenError('Access denied: You are only permitted to view payments for your registered children.');
         }
         studentIdsToQuery = [filters.studentId];
       } else {
-        studentIdsToQuery = guardian.studentIds;
+        studentIdsToQuery = childIds;
       }
     } else if (filters.studentId) {
       studentIdsToQuery = [filters.studentId];
@@ -1367,8 +1635,8 @@ export class FeeUseCases {
   public async getFinanceSummary(schoolId?: string, requestingUser?: UserContext) {
     // Case 1: Parent View - strictly only their children
     if (requestingUser?.role === UserRole.GUARDIAN || requestingUser?.role === UserRole.PARENT) {
-      const guardian = await this.getGuardianForUser(requestingUser.userId);
-      if (!guardian || !guardian.studentIds.length) {
+      const childIds = await this.getLinkedStudentIdsForUser(requestingUser.userId);
+      if (childIds.length === 0) {
         return {
           isParentView: true,
           totalInvoiced: 0,
@@ -1380,8 +1648,8 @@ export class FeeUseCases {
         };
       }
 
-      const invoices = await this.feeRepository.findInvoices({ studentIds: guardian.studentIds });
-      const payments = await this.feeRepository.findPayments({ studentIds: guardian.studentIds });
+      const invoices = await this.feeRepository.findInvoices({ studentIds: childIds });
+      const payments = await this.feeRepository.findPayments({ studentIds: childIds });
 
       const totalInvoiced = invoices.reduce((acc, i) => acc + i.amountPayable, 0);
       const totalCollected = payments.filter(p => p.status === PaymentStatus.COMPLETED).reduce((acc, p) => acc + p.amount, 0);
@@ -1393,7 +1661,7 @@ export class FeeUseCases {
         totalCollected,
         totalBalance,
         collectionRate: totalInvoiced > 0 ? Math.round((totalCollected / totalInvoiced) * 100) : 100,
-        childrenCount: guardian.studentIds.length,
+        childrenCount: childIds.length,
         invoicesCount: invoices.length,
         paymentsCount: payments.length
       };

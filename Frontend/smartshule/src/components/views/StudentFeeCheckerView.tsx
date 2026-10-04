@@ -129,7 +129,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
         if (selectedStatus === 'Has_Balance' && (s.feeBalance || 0) <= 0) {
           return false;
         }
-        if (selectedStatus === 'Cleared' && (s.feeBalance || 0) > 0) {
+        if (selectedStatus === 'Cleared' && ((s.feeBalance || 0) > 0 || (s.totalFee || 0) <= 0)) {
           return false;
         }
 
@@ -189,7 +189,8 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
   const currentBilled = statementData?.summary?.totalBilled ?? selectedStudent?.totalFee ?? 0;
   const currentPaid = statementData?.summary?.totalPaid ?? Math.max(0, (selectedStudent?.totalFee || 0) - (selectedStudent?.feeBalance || 0));
   const currentBalance = statementData?.summary?.currentBalance ?? selectedStudent?.feeBalance ?? 0;
-  const isCleared = currentBalance <= 0;
+  const isCleared = currentBilled > 0 && currentBalance <= 0;
+  const isPendingInvoice = currentBilled <= 0 && currentBalance <= 0;
 
   const invoicesList: StudentInvoice[] = statementData?.invoices || [];
   const paymentsList: any[] = statementData?.payments || [];
@@ -474,10 +475,12 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                         className={`inline-block px-1.5 py-0.2 rounded text-[9.5px] font-bold uppercase tracking-wider mt-0.5 ${
                           hasBal
                             ? 'bg-error-container/40 text-error'
-                            : 'bg-emerald-100 text-emerald-800'
+                            : (st.totalFee || 0) > 0
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : 'bg-slate-100 text-slate-600 border border-slate-200'
                         }`}
                       >
-                        {hasBal ? 'Balance' : 'Cleared'}
+                        {hasBal ? 'Balance' : (st.totalFee || 0) > 0 ? 'Cleared' : 'Pending'}
                       </span>
                     </div>
                   </div>
@@ -605,17 +608,17 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                     <div className="flex items-center gap-1.5 mt-1">
                       <span
                         className={`material-symbols-outlined text-[18px] ${
-                          isCleared ? 'text-emerald-600' : 'text-amber-600'
+                          isCleared ? 'text-emerald-600' : isPendingInvoice ? 'text-slate-500' : 'text-amber-600'
                         }`}
                       >
-                        {isCleared ? 'verified' : 'pending_actions'}
+                        {isCleared ? 'verified' : isPendingInvoice ? 'receipt_long' : 'pending_actions'}
                       </span>
                       <span className="font-bold text-xs text-on-surface">
-                        {isCleared ? 'Cleared' : 'Pending Payment'}
+                        {isCleared ? 'Cleared' : isPendingInvoice ? 'Pending Invoicing' : 'Pending Payment'}
                       </span>
                     </div>
                     <span className="text-[10px] text-on-surface-variant mt-0.5 block">
-                      {isCleared ? 'Eligible for Term Exams' : 'Requires Clearance'}
+                      {isCleared ? 'Eligible for Term Exams' : isPendingInvoice ? 'No Invoice Issued' : 'Requires Clearance'}
                     </span>
                   </div>
                 </div>

@@ -1,12 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { WhatsAppConnectionState, WhatsAppMessageLog, WhatsAppAIDraftResponse, Student, UserRole } from '../../types';
+import {
+  WhatsAppConnectionState,
+  WhatsAppMessageLog,
+  WhatsAppAIDraftResponse,
+  Student,
+  MetaFreeTierUsage,
+  ActiveServiceWindow,
+} from '../../types';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
 export const WhatsAppBotView: React.FC = () => {
   const { user } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<'link_account' | 'ai_dispatch' | 'send_message' | 'message_log' | 'meta_cloud'>('link_account');
+  const [activeTab, setActiveTab] = useState<'meta_cloud' | 'ai_dispatch' | 'send_message' | 'message_log' | 'anti_ban_guide' | 'qr_legacy'>('meta_cloud');
   const [connectionState, setConnectionState] = useState<WhatsAppConnectionState>({
     status: 'DISCONNECTED',
     qrCodeDataUrl: null,
@@ -15,8 +22,24 @@ export const WhatsAppBotView: React.FC = () => {
     lastConnectedAt: null,
     totalSent: 0,
     totalReceived: 0,
-    mode: 'REAL_WHATSAPP_ACCOUNT',
+    mode: 'META_CLOUD_API',
+    isOfficialMeta: true,
+    banProtection: {
+      isSafe: true,
+      level: 'BAN_IMMUNE',
+      message: 'Official Meta WhatsApp Cloud API channel configured for ban immunity.',
+    },
+    freeTier: {
+      monthlyLimit: 1000,
+      usedConversations: 0,
+      remainingFree: 1000,
+      billingMonth: new Date().toISOString().substring(0, 7),
+      resetDate: new Date(Date.UTC(new Date().getFullYear(), new Date().getMonth() + 1, 1)).toISOString(),
+      active24hWindowsCount: 0,
+      activeWindows: [],
+    },
   });
+
   const [messages, setMessages] = useState<WhatsAppMessageLog[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [loadingStatus, setLoadingStatus] = useState(false);
@@ -26,11 +49,13 @@ export const WhatsAppBotView: React.FC = () => {
   const [recipientPhone, setRecipientPhone] = useState('');
   const [selectedStudentId, setSelectedStudentId] = useState<string>('');
   const [outboundMessage, setOutboundMessage] = useState('');
+  const [messageType, setMessageType] = useState<'text' | 'template'>('text');
+  const [selectedTemplate, setSelectedTemplate] = useState<string>('fee_balance_reminder');
   const [isSendingMessage, setIsSendingMessage] = useState(false);
-  const [sendSuccessMsg, setSendSuccessMsg] = useState<{ id: string; to: string } | null>(null);
+  const [sendSuccessMsg, setSendSuccessMsg] = useState<{ id: string; to: string; isOfficialMeta?: boolean } | null>(null);
   const [sendErrorMsg, setSendErrorMsg] = useState<string | null>(null);
 
-  // Gemini AI Draft & Dispatch state (Real WhatsApp Person Dispatch)
+  // Gemini AI Draft & Dispatch state
   const [aiCommand, setAiCommand] = useState('Draft fee balance reminder with KCB Paybill 522533 details');
   const [aiSelectedStudentId, setAiSelectedStudentId] = useState<string>('');
   const [aiTone, setAiTone] = useState<'professional' | 'urgent' | 'friendly' | 'concise'>('professional');
@@ -43,23 +68,47 @@ export const WhatsAppBotView: React.FC = () => {
     id: string;
     to: string;
     recipientName: string;
+    isOfficialMeta?: boolean;
   } | null>(null);
 
   // Meta Cloud API config form
   const [metaPhoneId, setMetaPhoneId] = useState('');
+  const [metaBusinessAccountId, setMetaBusinessAccountId] = useState('');
   const [metaAccessToken, setMetaAccessToken] = useState('');
   const [metaVerifyToken, setMetaVerifyToken] = useState('smartshule_wa_verify_token_2026');
   const [savingConfig, setSavingConfig] = useState(false);
+  const [testingConnection, setTestingConnection] = useState(false);
   const [configSuccess, setConfigSuccess] = useState<string | null>(null);
+  const [configError, setConfigError] = useState<string | null>(null);
+  const [testResult, setTestResult] = useState<{
+    success: boolean;
+    name?: string;
+    phone?: string;
+    quality?: string;
+    message?: string;
+  } | null>(null);
+
+  // Copy status feedback
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  // Search & filter for audit log
+  const [logFilter, setLogFilter] = useState<'ALL' | 'INBOUND' | 'OUTBOUND'>('ALL');
+  const [searchPhoneQuery, setSearchPhoneQuery] = useState('');
 
   const pollTimerRef = useRef<any>(null);
 
-  // Fetch status and messages
+  // Fetch status, free tier usage, and recent messages
   const fetchStatus = async () => {
     try {
       const res = await apiService.getWhatsAppStatus();
       if (res.success && res.data) {
         setConnectionState(res.data);
+        if (res.data.metaProfile?.phoneNumberId && !metaPhoneId) {
+          setMetaPhoneId(res.data.metaProfile.phoneNumberId);
+        }
+        if (res.data.metaProfile?.businessAccountId && !metaBusinessAccountId) {
+          setMetaBusinessAccountId(res.data.metaProfile.businessAccountId);
+        }
       }
     } catch (err) {
       console.error('Failed to get WhatsApp status:', err);
@@ -103,19 +152,88 @@ export const WhatsAppBotView: React.FC = () => {
   useEffect(() => {
     loadInitialData();
 
-    // Start polling status every 3 seconds to catch QR scan immediately
     pollTimerRef.current = setInterval(() => {
       fetchStatus();
       fetchMessages();
-    }, 3500);
+    }, 4000);
 
     return () => {
       if (pollTimerRef.current) clearInterval(pollTimerRef.current);
     };
   }, []);
 
-  // Initiate QR code connection
-  const handleConnect = async () => {
+  const copyToClipboard = (text: string, fieldName: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(fieldName);
+    setTimeout(() => setCopiedField(null), 2500);
+  };
+
+  // Test Meta Cloud Connection live with Meta Graph API
+  const handleTestMetaConnection = async () => {
+    setTestingConnection(true);
+    setTestResult(null);
+    setConfigError(null);
+    try {
+      const res = await apiService.testWhatsAppMetaConnection({
+        accessToken: metaAccessToken.trim() || undefined,
+        phoneNumberId: metaPhoneId.trim() || undefined,
+      });
+
+      if (res.success) {
+        const p = res.data?.profile;
+        setTestResult({
+          success: true,
+          name: p?.verified_name || 'Verified School Profile',
+          phone: p?.display_phone_number || metaPhoneId,
+          quality: p?.quality_rating || 'GREEN',
+          message: 'Connection verified with Meta Graph API! School account is active and ban-immune.',
+        });
+        fetchStatus();
+      } else {
+        throw new Error(res.error?.message || res.message || 'Meta Graph API verification failed.');
+      }
+    } catch (err: any) {
+      setTestResult({
+        success: false,
+        message: err.message || 'Failed to connect to Meta WhatsApp Cloud API.',
+      });
+    } finally {
+      setTestingConnection(false);
+    }
+  };
+
+  // Save Meta Cloud API configuration
+  const handleSaveConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingConfig(true);
+    setConfigSuccess(null);
+    setConfigError(null);
+    try {
+      const res = await apiService.updateWhatsAppConfig({
+        accessToken: metaAccessToken.trim() || undefined,
+        phoneNumberId: metaPhoneId.trim() || undefined,
+        businessAccountId: metaBusinessAccountId.trim() || undefined,
+        verifyToken: metaVerifyToken.trim() || undefined,
+      });
+
+      if (res.success) {
+        setConfigSuccess('Official Meta WhatsApp Cloud API credentials saved and applied.');
+        fetchStatus();
+      } else {
+        throw new Error(res.message || 'Failed to update Meta configuration');
+      }
+    } catch (err: any) {
+      setConfigError(err.message || 'Error saving Meta credentials');
+    } finally {
+      setSavingConfig(false);
+    }
+  };
+
+  // Initiate legacy QR code connection (with ban warning)
+  const handleConnectLegacyQR = async () => {
+    if (!window.confirm('⚠️ WARNING: Using unofficial WhatsApp Web QR code connection can get your phone number permanently banned by Meta. Are you sure you want to proceed instead of using the official Meta Cloud API?')) {
+      return;
+    }
     setIsConnecting(true);
     try {
       const res = await apiService.connectWhatsApp();
@@ -123,7 +241,7 @@ export const WhatsAppBotView: React.FC = () => {
         setConnectionState(res.data);
       }
     } catch (err: any) {
-      alert('Error initiating WhatsApp connection: ' + (err.message || 'Unknown error'));
+      alert('Error initiating WhatsApp QR connection: ' + (err.message || 'Unknown error'));
     } finally {
       setIsConnecting(false);
     }
@@ -131,7 +249,7 @@ export const WhatsAppBotView: React.FC = () => {
 
   // Disconnect session
   const handleDisconnect = async () => {
-    if (!window.confirm('Are you sure you want to unlink this WhatsApp account?')) return;
+    if (!window.confirm('Are you sure you want to disconnect?')) return;
     try {
       const res = await apiService.disconnectWhatsApp();
       if (res.success && res.data) {
@@ -151,32 +269,40 @@ export const WhatsAppBotView: React.FC = () => {
     }
   };
 
-  // Template insertions
-  const applyTemplate = (type: 'fee' | 'ediary' | 'general') => {
+  // Pre-fill official template text
+  const applyTemplate = (type: 'fee' | 'ediary' | 'attendance' | 'announcement') => {
     const s = students.find((st) => st.id === selectedStudentId) || students[0];
     const learnerName = s ? s.name : 'your child';
     const admNo = s ? s.admNo : 'ADM-001';
     const balance = s ? s.feeBalance : 12000;
-
-    const schoolName = user?.schoolName || 'School';
+    const schoolName = user?.schoolName || 'SmartShule Academy';
     const childGrade = s ? (s.grade || '') : '';
     const childAcc = `8048859#${learnerName}${childGrade ? ' ' + childGrade : ''}`;
+
     if (type === 'fee') {
+      setSelectedTemplate('fee_balance_reminder');
       setOutboundMessage(
-        `Dear Parent/Guardian, this is an official fee reminder from ${schoolName}. ${learnerName} (Adm: ${admNo}) has an outstanding balance of KES ${balance.toLocaleString()}. You can pay instantly via KCB Paybill 522533 (Account: ${childAcc}) or KCB Buni STK Push. Reply '2' for payment details.`
+        `Dear Parent/Guardian, this is an official fee statement from ${schoolName}. ${learnerName} (Adm: ${admNo}) has an outstanding balance of KES ${balance.toLocaleString()}. Pay directly via KCB Paybill 522533 (Account: ${childAcc}). Reply '2' for instant payment link.`
       );
     } else if (type === 'ediary') {
+      setSelectedTemplate('daily_ediary_notice');
       setOutboundMessage(
-        `Dear Parent, ${learnerName}'s homework has been posted to the CBC Digital eDiary for today. Please inspect assignments, sign off, and ensure requirements for tomorrow are packed. Reply '3' to view details.`
+        `Dear Parent, ${learnerName}'s homework and teacher remarks for today have been posted to the CBC Digital eDiary. Please review tasks and sign off in the portal. Reply '3' to view details directly here.`
+      );
+    } else if (type === 'attendance') {
+      setSelectedTemplate('attendance_alert');
+      setOutboundMessage(
+        `Official Attendance Notice: ${learnerName} was marked present today during morning roll call at ${schoolName}. Overall term attendance is currently at 96%. Reply '4' for full attendance audit.`
       );
     } else {
+      setSelectedTemplate('general_school_announcement');
       setOutboundMessage(
-        `Dear Parent/Guardian of ${learnerName}, ${schoolName} kindly reminds you of tomorrow's CBC academic showcase meeting starting at 9:00 AM in the school auditorium.`
+        `Dear Parents & Guardians of ${schoolName}, kindly take note of the upcoming Mid-Term CBC Academic Showcase scheduled for this Friday starting at 9:00 AM. Your attendance is highly appreciated.`
       );
     }
   };
 
-  // Send real outbound WhatsApp message
+  // Send real outbound message (Text or Template)
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     setSendSuccessMsg(null);
@@ -186,33 +312,56 @@ export const WhatsAppBotView: React.FC = () => {
       setSendErrorMsg('Please enter a recipient phone number.');
       return;
     }
-    if (!outboundMessage.trim()) {
-      setSendErrorMsg('Message cannot be empty.');
-      return;
-    }
 
     setIsSendingMessage(true);
     try {
-      const res = await apiService.sendActualWhatsAppMessage(recipientPhone, outboundMessage);
-      if (res.success && res.data) {
-        setSendSuccessMsg({
-          id: res.data.messageId,
-          to: res.data.to,
+      if (messageType === 'template') {
+        const res = await apiService.sendWhatsAppTemplate({
+          to: recipientPhone.trim(),
+          templateName: selectedTemplate,
+          languageCode: 'en',
         });
-        setOutboundMessage('');
-        fetchMessages();
-        fetchStatus();
+        if (res.success && res.data) {
+          setSendSuccessMsg({
+            id: res.data.messageId,
+            to: res.data.to,
+            isOfficialMeta: true,
+          });
+          setOutboundMessage('');
+          fetchMessages();
+          fetchStatus();
+        } else {
+          throw new Error(res.message || 'Failed to dispatch Meta WhatsApp template');
+        }
       } else {
-        throw new Error(res.message || 'Failed to dispatch WhatsApp message');
+        if (!outboundMessage.trim()) {
+          setSendErrorMsg('Message text cannot be empty.');
+          setIsSendingMessage(false);
+          return;
+        }
+
+        const res = await apiService.sendActualWhatsAppMessage(recipientPhone, outboundMessage);
+        if (res.success && res.data) {
+          setSendSuccessMsg({
+            id: res.data.messageId,
+            to: res.data.to,
+            isOfficialMeta: (res.data as any).isOfficialMeta,
+          });
+          setOutboundMessage('');
+          fetchMessages();
+          fetchStatus();
+        } else {
+          throw new Error(res.message || 'Failed to dispatch WhatsApp message');
+        }
       }
     } catch (err: any) {
-      setSendErrorMsg(err.message || 'Could not send WhatsApp message. Make sure an account is connected.');
+      setSendErrorMsg(err.message || 'Could not send WhatsApp message. Please check your Meta Cloud API configuration.');
     } finally {
       setIsSendingMessage(false);
     }
   };
 
-  // Gemini AI Draft message from command & verified DB records
+  // Gemini AI Draft message
   const handleAiDraft = async (customCmd?: string) => {
     const cmd = customCmd !== undefined ? customCmd : aiCommand;
     if (!cmd.trim()) return;
@@ -238,7 +387,7 @@ export const WhatsAppBotView: React.FC = () => {
     }
   };
 
-  // Dispatch real WhatsApp message to the verified recipient from database
+  // Dispatch real WhatsApp message via Meta Official Cloud API
   const handleAiDispatch = async () => {
     const messageToSend = aiCustomMessage.trim() || (aiDraftResult ? aiDraftResult.draftedMessage : '');
     if (!messageToSend) {
@@ -260,6 +409,7 @@ export const WhatsAppBotView: React.FC = () => {
           id: res.data.messageId,
           to: res.data.to,
           recipientName: res.data.recipientName,
+          isOfficialMeta: (res.data as any).isOfficialMeta,
         });
         fetchMessages();
         fetchStatus();
@@ -267,35 +417,46 @@ export const WhatsAppBotView: React.FC = () => {
         throw new Error(res.message || 'Failed to dispatch real WhatsApp message.');
       }
     } catch (err: any) {
-      setAiError(err.message || 'Could not send WhatsApp message. Make sure an account is connected.');
+      setAiError(err.message || 'Could not send WhatsApp message. Ensure Meta Cloud API is configured.');
     } finally {
       setIsAiDispatching(false);
     }
   };
 
-  // Save Meta Cloud API config
-  const handleSaveConfig = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSavingConfig(true);
-    setConfigSuccess(null);
-    try {
-      const res = await apiService.updateWhatsAppConfig({
-        accessToken: metaAccessToken.trim() || undefined,
-        phoneNumberId: metaPhoneId.trim() || undefined,
-        verifyToken: metaVerifyToken.trim() || undefined,
-      });
-      if (res.success) {
-        setConfigSuccess('Meta WhatsApp Cloud API credentials updated successfully.');
-        fetchStatus();
-      }
-    } catch (err: any) {
-      alert('Failed to save config: ' + err.message);
-    } finally {
-      setSavingConfig(false);
-    }
+  const isConnected = connectionState.status === 'CONNECTED';
+  const isMetaMode = connectionState.mode === 'META_CLOUD_API';
+  const freeTier = connectionState.freeTier || {
+    monthlyLimit: 1000,
+    usedConversations: 0,
+    remainingFree: 1000,
+    billingMonth: 'Current Month',
+    resetDate: '',
+    active24hWindowsCount: 0,
+    activeWindows: [],
   };
 
-  const isConnected = connectionState.status === 'CONNECTED';
+  const freeTierPercentage = Math.min(100, Math.round((freeTier.usedConversations / freeTier.monthlyLimit) * 100));
+
+  // Filter messages for audit log
+  const filteredMessages = messages.filter((m) => {
+    if (logFilter === 'INBOUND' && m.direction !== 'INBOUND') return false;
+    if (logFilter === 'OUTBOUND' && m.direction !== 'OUTBOUND') return false;
+    if (searchPhoneQuery.trim()) {
+      const q = searchPhoneQuery.toLowerCase();
+      return (
+        m.from.toLowerCase().includes(q) ||
+        m.to.toLowerCase().includes(q) ||
+        m.text.toLowerCase().includes(q)
+      );
+    }
+    return true;
+  });
+
+  // Check if selected recipient has an active 24-hr service window
+  const recipientClean = recipientPhone.replace(/[^0-9]/g, '');
+  const activeWindowForRecipient = freeTier.activeWindows?.find(
+    (w) => w.phone.replace(/[^0-9]/g, '') === recipientClean || recipientClean.endsWith(w.phone.replace(/[^0-9]/g, ''))
+  );
 
   return (
     <div className="space-y-6 pb-12 font-body">
@@ -307,13 +468,17 @@ export const WhatsAppBotView: React.FC = () => {
             <span>/</span>
             <span>Parent Communication</span>
             <span>/</span>
-            <span className="text-primary font-semibold">Live WhatsApp Integration</span>
+            <span className="text-primary font-semibold">Meta Official WhatsApp Cloud API</span>
           </div>
-          <h1 className="font-headline-lg text-headline-lg text-on-surface mt-1">
-            Real WhatsApp Account & Messaging Hub
+          <h1 className="font-headline-lg text-headline-lg text-on-surface mt-1 flex items-center gap-2.5">
+            <span>Official WhatsApp Business Cloud Desk</span>
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300 text-[11px] font-bold">
+              <span className="material-symbols-outlined text-xs text-emerald-700">verified_user</span>
+              <span>100% Ban-Safe Channel</span>
+            </span>
           </h1>
           <p className="text-xs text-on-surface-variant mt-0.5">
-            Link an actual WhatsApp phone number to send real messages to parents, receive incoming queries, and automate CBC assistance
+            Meta's official WhatsApp Business Platform with <strong>1,000 free monthly service conversations</strong>, zero risk of SIM bans, and instant CBC parent query automation
           </p>
         </div>
 
@@ -322,84 +487,125 @@ export const WhatsAppBotView: React.FC = () => {
           {isConnected ? (
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300 text-xs font-bold shadow-xs">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-pulse"></span>
-              <span>Connected: {connectionState.connectedPhone}</span>
-            </div>
-          ) : connectionState.status === 'SCAN_QR' ? (
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 text-xs font-bold animate-pulse">
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-600"></span>
-              <span>Action Required: Scan QR Code</span>
-            </div>
-          ) : connectionState.status === 'CONNECTING' ? (
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-sky-100 text-sky-900 border border-sky-300 text-xs font-bold">
-              <div className="w-3 h-3 border-2 border-sky-600 border-t-transparent rounded-full animate-spin"></div>
-              <span>Connecting WhatsApp...</span>
+              <span>Meta Active: {connectionState.connectedName || connectionState.connectedPhone}</span>
             </div>
           ) : (
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-surface-container text-on-surface-variant border border-outline-variant/30 text-xs font-bold">
-              <span className="w-2.5 h-2.5 rounded-full bg-neutral-400"></span>
-              <span>Not Connected</span>
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 text-xs font-bold">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+              <span>Meta Credentials Needed</span>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* BAN-IMMUNITY & 1,000 FREE CONVERSATIONS HERO BANNER */}
+      <div className="p-5 rounded-2xl bg-gradient-to-r from-emerald-950 via-[#075E54] to-teal-900 text-white shadow-md border border-emerald-800/40">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="space-y-2 max-w-2xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-200 text-xs font-bold">
+              <span className="material-symbols-outlined text-sm text-emerald-300">shield</span>
+              <span>Meta WhatsApp Cloud API Protection Guarantee</span>
+            </div>
+            <h2 className="text-lg font-bold leading-snug">
+              Official Meta Channel · 1,000 Free Monthly Service Conversations
+            </h2>
+            <p className="text-xs text-emerald-100/90 leading-relaxed">
+              Unlike unofficial libraries (Baileys/web scraping) which trigger permanent phone number bans by Meta, SmartShule connects directly to Meta's authorized Graph API servers. Every month, your school receives <strong>1,000 free user-initiated service conversations</strong>, allowing parents to query fee statements, homework, attendance, and timetables at zero cost.
+            </p>
+          </div>
+
+          {/* 1,000 Free Conversations Meter */}
+          <div className="p-4 rounded-xl bg-black/25 backdrop-blur-xs border border-white/10 min-w-[280px] space-y-2.5">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-semibold text-emerald-200 uppercase tracking-wider text-[11px]">Free Tier Meter</span>
+              <span className="font-bold font-data-mono text-white">
+                {freeTier.usedConversations} / {freeTier.monthlyLimit} Used
+              </span>
+            </div>
+
+            {/* Progress Bar */}
+            <div className="w-full bg-white/15 h-2.5 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${
+                  freeTierPercentage > 85 ? 'bg-amber-400' : 'bg-emerald-400'
+                }`}
+                style={{ width: `${Math.max(2, freeTierPercentage)}%` }}
+              ></div>
+            </div>
+
+            <div className="flex items-center justify-between text-[11px] text-emerald-100/80">
+              <span>{freeTier.remainingFree} Free Remaining</span>
+              <span>Resets on 1st of next month</span>
+            </div>
+
+            <div className="pt-1.5 border-t border-white/10 flex items-center justify-between text-[11px]">
+              <span className="text-emerald-200 flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>Active 24h Free Windows:</span>
+              </span>
+              <span className="font-bold text-white font-data-mono">{freeTier.active24hWindowsCount}</span>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <div className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs">
-          <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Account State</span>
+          <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Channel Status</span>
           <div className="text-lg font-bold mt-1">
             {isConnected ? (
               <span className="text-emerald-700 flex items-center gap-1">
                 <span className="material-symbols-outlined text-base">verified</span>
-                <span>Active & Online</span>
+                <span>Meta Official (Online)</span>
               </span>
             ) : (
-              <span className="text-amber-700">{connectionState.status}</span>
+              <span className="text-amber-700">Setup Required</span>
             )}
           </div>
           <span className="text-[11px] text-on-surface-variant mt-1 block">
-            {isConnected ? connectionState.connectedName || 'SmartShule Account' : 'Scan QR code to pair'}
+            {isConnected ? connectionState.connectedName || 'SmartShule Official' : 'Add credentials in Tab 1'}
           </span>
         </div>
 
         <div className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs">
-          <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Messages Sent</span>
+          <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Outbound Sent</span>
           <div className="text-2xl font-bold font-data-mono text-primary mt-1">
             {connectionState.totalSent}
           </div>
-          <span className="text-[11px] text-secondary font-semibold mt-1 block">Actual outbound messages</span>
+          <span className="text-[11px] text-secondary font-semibold mt-1 block">Official WhatsApp notifications</span>
         </div>
 
         <div className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs">
-          <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Inbound Received</span>
+          <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Inbound Queries</span>
           <div className="text-2xl font-bold font-data-mono text-secondary mt-1">
             {connectionState.totalReceived}
           </div>
-          <span className="text-[11px] text-on-surface-variant mt-1 block">Parent queries handled</span>
+          <span className="text-[11px] text-on-surface-variant mt-1 block">Parent queries resolved</span>
         </div>
 
         <div className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs">
-          <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Bot Automation</span>
+          <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Ban Protection</span>
           <div className="text-lg font-bold text-emerald-700 mt-1 flex items-center gap-1">
-            <span className="material-symbols-outlined text-base">smart_toy</span>
-            <span>24/7 AI Parser</span>
+            <span className="material-symbols-outlined text-base">gpp_good</span>
+            <span>Zero Ban Risk</span>
           </div>
-          <span className="text-[11px] text-outline mt-1 block">Fees, KCB Buni, Attendance, eDiary</span>
+          <span className="text-[11px] text-outline mt-1 block">Meta Graph API Verified</span>
         </div>
       </div>
 
-      {/* Main Tabs */}
+      {/* Main Navigation Tabs */}
       <div className="flex flex-wrap items-center gap-2 border-b border-outline-variant/30 pb-2">
         <button
-          onClick={() => setActiveTab('link_account')}
+          onClick={() => setActiveTab('meta_cloud')}
           className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-            activeTab === 'link_account'
+            activeTab === 'meta_cloud'
               ? 'bg-[#075E54] text-white shadow-xs'
               : 'bg-surface-container-low text-on-surface-variant hover:text-on-surface'
           }`}
         >
-          <span className="material-symbols-outlined text-[16px]">qr_code_scanner</span>
-          <span>1. Link WhatsApp Account</span>
+          <span className="material-symbols-outlined text-[16px]">cloud</span>
+          <span>1. Meta Cloud Setup & Free Tier</span>
         </button>
 
         <button
@@ -423,7 +629,7 @@ export const WhatsAppBotView: React.FC = () => {
           }`}
         >
           <span className="material-symbols-outlined text-[16px]">send</span>
-          <span>3. Direct Outbound Message</span>
+          <span>3. Direct & Official Templates</span>
         </button>
 
         <button
@@ -439,773 +645,719 @@ export const WhatsAppBotView: React.FC = () => {
         </button>
 
         <button
-          onClick={() => setActiveTab('meta_cloud')}
+          onClick={() => setActiveTab('anti_ban_guide')}
           className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-            activeTab === 'meta_cloud'
+            activeTab === 'anti_ban_guide'
               ? 'bg-[#075E54] text-white shadow-xs'
               : 'bg-surface-container-low text-on-surface-variant hover:text-on-surface'
           }`}
         >
-          <span className="material-symbols-outlined text-[16px]">cloud</span>
-          <span>5. Meta Cloud API (Optional)</span>
+          <span className="material-symbols-outlined text-[16px]">info</span>
+          <span>5. Anti-Ban & Free Tier Guide</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('qr_legacy')}
+          className={`px-3 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1 ml-auto text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200`}
+        >
+          <span className="material-symbols-outlined text-[15px] text-amber-700">warning</span>
+          <span>Legacy QR Pairing (High Risk)</span>
         </button>
       </div>
 
-      {/* TAB 1: LINK REAL WHATSAPP ACCOUNT VIA QR CODE */}
-      {activeTab === 'link_account' && (
+      {/* TAB 1: META OFFICIAL CLOUD API & FREE TIER MANAGER */}
+      {activeTab === 'meta_cloud' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left Column: QR Code Box / Connected State */}
-          <div className="lg:col-span-6 bg-surface-container-lowest rounded-2xl p-6 border border-outline-variant/30 shadow-xs flex flex-col items-center text-center">
-            {isConnected ? (
-              <div className="py-8 space-y-4 w-full">
-                <div className="w-20 h-20 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto shadow-inner">
-                  <span className="material-symbols-outlined text-5xl">check_circle</span>
-                </div>
-
-                <div>
-                  <h3 className="text-xl font-black text-on-surface">Actual WhatsApp Account Linked!</h3>
-                  <p className="text-xs text-on-surface-variant mt-1">
-                    Your real WhatsApp account is connected. Outbound messages will be sent from this phone number, and incoming parent messages will receive automated replies in real time.
-                  </p>
-                </div>
-
-                <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30 text-left text-xs space-y-2 max-w-sm mx-auto">
-                  <div className="flex justify-between">
-                    <span className="text-on-surface-variant">Phone Number:</span>
-                    <span className="font-bold font-data-mono text-primary text-sm">{connectionState.connectedPhone}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-on-surface-variant">Account Name:</span>
-                    <span className="font-semibold text-on-surface">{connectionState.connectedName || 'SmartShule'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-on-surface-variant">Connected At:</span>
-                    <span className="font-data-mono text-outline">{new Date(connectionState.lastConnectedAt || '').toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-on-surface-variant">Protocol:</span>
-                    <span className="font-bold text-emerald-700">Multi-Device Socket (Baileys)</span>
-                  </div>
-                </div>
-
-                <div className="pt-4 flex justify-center gap-3">
-                  <button
-                    onClick={() => setActiveTab('send_message')}
-                    className="px-4 py-2.5 bg-[#075E54] hover:bg-[#064942] text-white rounded-xl text-xs font-bold shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <span className="material-symbols-outlined text-base">chat</span>
-                    <span>Send a Real WhatsApp Message</span>
-                  </button>
-
-                  <button
-                    onClick={handleDisconnect}
-                    className="px-4 py-2.5 bg-error/10 hover:bg-error/20 text-error rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <span className="material-symbols-outlined text-base">link_off</span>
-                    <span>Unlink Account</span>
-                  </button>
-                </div>
-              </div>
-            ) : connectionState.status === 'SCAN_QR' && connectionState.qrCodeDataUrl ? (
-              <div className="py-2 space-y-4 w-full flex flex-col items-center">
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-900 text-xs font-bold">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                  <span>Point Phone Camera at QR Code</span>
-                </div>
-
-                {/* QR Code Container */}
-                <div className="p-4 bg-white rounded-2xl shadow-md border-2 border-[#075E54] flex items-center justify-center">
-                  <img
-                    src={connectionState.qrCodeDataUrl}
-                    alt="Scan WhatsApp QR Code"
-                    className="w-64 h-64 object-contain"
-                  />
-                </div>
-
-                <p className="text-xs text-on-surface-variant max-w-xs leading-relaxed">
-                  Open WhatsApp on your mobile phone, go to <strong>Linked Devices</strong>, tap <strong>Link a Device</strong>, and scan the QR code above.
+          {/* Left Column: Meta Configuration Form & Connection Test */}
+          <div className="lg:col-span-7 bg-surface-container-lowest rounded-2xl p-6 border border-outline-variant/30 shadow-xs space-y-5">
+            <div className="pb-3 border-b border-outline-variant/20 flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-base text-on-surface flex items-center gap-2">
+                  <span className="material-symbols-outlined text-xl text-primary">verified</span>
+                  <span>Meta WhatsApp Cloud API Configuration</span>
+                </h3>
+                <p className="text-xs text-on-surface-variant mt-0.5">
+                  Connect your official WhatsApp Business Account credentials to transmit ban-safe messages
                 </p>
-
-                <div className="flex items-center gap-2 pt-1">
-                  <button
-                    onClick={handleConnect}
-                    disabled={isConnecting}
-                    className="px-3.5 py-2 bg-surface-container hover:bg-surface-container-high rounded-xl text-xs font-bold text-on-surface flex items-center gap-1.5 transition-colors cursor-pointer"
-                  >
-                    <span className="material-symbols-outlined text-base">refresh</span>
-                    <span>Refresh QR Code</span>
-                  </button>
-                </div>
               </div>
-            ) : (
-              <div className="py-12 space-y-4 max-w-sm mx-auto">
-                <div className="w-16 h-16 rounded-full bg-[#075E54]/10 text-[#075E54] flex items-center justify-center mx-auto">
-                  <span className="material-symbols-outlined text-4xl">qr_code_2</span>
-                </div>
+              <span className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-900 border border-emerald-200 text-[10px] font-bold">
+                Free 1,000 Tier Active
+              </span>
+            </div>
 
-                <div>
-                  <h3 className="text-base font-bold text-on-surface">No WhatsApp Account Linked</h3>
-                  <p className="text-xs text-on-surface-variant mt-1 leading-relaxed">
-                    Click the button below to generate a QR Code. You can link any personal or school WhatsApp account in seconds.
-                  </p>
-                </div>
-
-                <div className="pt-2">
-                  <button
-                    onClick={handleConnect}
-                    disabled={isConnecting}
-                    className="w-full py-3 bg-[#075E54] hover:bg-[#064942] text-white font-bold rounded-xl text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-                  >
-                    <span className="material-symbols-outlined text-base">qr_code_scanner</span>
-                    <span>{isConnecting ? 'Generating QR Code...' : 'Generate WhatsApp QR Code'}</span>
-                  </button>
-                </div>
+            {configSuccess && (
+              <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-950 text-xs font-bold flex items-center gap-2">
+                <span className="material-symbols-outlined text-base text-emerald-700">check_circle</span>
+                <span>{configSuccess}</span>
               </div>
             )}
+
+            {configError && (
+              <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-950 text-xs font-bold flex items-center gap-2">
+                <span className="material-symbols-outlined text-base text-red-700">error</span>
+                <span>{configError}</span>
+              </div>
+            )}
+
+            {testResult && (
+              <div
+                className={`p-4 rounded-xl border text-xs space-y-1.5 ${
+                  testResult.success
+                    ? 'bg-emerald-50/80 border-emerald-300 text-emerald-950'
+                    : 'bg-red-50 border-red-300 text-red-950'
+                }`}
+              >
+                <div className="flex items-center gap-2 font-bold text-sm">
+                  <span className="material-symbols-outlined">
+                    {testResult.success ? 'verified' : 'cancel'}
+                  </span>
+                  <span>{testResult.success ? 'Meta API Connection Verified!' : 'Verification Failed'}</span>
+                </div>
+                <p>{testResult.message}</p>
+                {testResult.success && (
+                  <div className="grid grid-cols-2 gap-2 pt-2 text-[11px] font-data-mono">
+                    <div className="p-2 rounded bg-white/70">
+                      <strong>Display Name:</strong> {testResult.name}
+                    </div>
+                    <div className="p-2 rounded bg-white/70">
+                      <strong>Phone Number:</strong> {testResult.phone}
+                    </div>
+                    <div className="p-2 rounded bg-white/70">
+                      <strong>Quality Rating:</strong>{' '}
+                      <span className="text-emerald-700 font-bold">{testResult.quality}</span>
+                    </div>
+                    <div className="p-2 rounded bg-white/70">
+                      <strong>Ban Immunity:</strong> <span className="text-emerald-700 font-bold">Active</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveConfig} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-on-surface mb-1">
+                  Meta Phone Number ID: <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. 104829384729182 (Found in Meta App > WhatsApp > API Setup)"
+                  value={metaPhoneId}
+                  onChange={(e) => setMetaPhoneId(e.target.value)}
+                  className="w-full p-2.5 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs font-data-mono text-on-surface focus:outline-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-on-surface mb-1">
+                  WhatsApp Business Account ID (WABA ID):
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. 192837465019283"
+                  value={metaBusinessAccountId}
+                  onChange={(e) => setMetaBusinessAccountId(e.target.value)}
+                  className="w-full p-2.5 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs font-data-mono text-on-surface focus:outline-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-on-surface mb-1">
+                  System User Permanent Access Token: <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="password"
+                  placeholder="EAAB... (Generate in Meta Business Settings > System Users)"
+                  value={metaAccessToken}
+                  onChange={(e) => setMetaAccessToken(e.target.value)}
+                  className="w-full p-2.5 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs font-data-mono text-on-surface focus:outline-primary"
+                />
+                <span className="text-[10px] text-on-surface-variant mt-1 block">
+                  Tip: A permanent System User token never expires, ensuring uninterrupted 24/7 school operations.
+                </span>
+              </div>
+
+              <div>
+                <label className="block font-bold text-on-surface mb-1">
+                  Webhook Verification Token:
+                </label>
+                <input
+                  type="text"
+                  value={metaVerifyToken}
+                  onChange={(e) => setMetaVerifyToken(e.target.value)}
+                  className="w-full p-2.5 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs font-data-mono text-on-surface focus:outline-primary"
+                />
+              </div>
+
+              <div className="pt-2 flex flex-col sm:flex-row gap-3">
+                <button
+                  type="submit"
+                  disabled={savingConfig}
+                  className="flex-1 py-2.5 bg-[#075E54] text-white font-bold rounded-xl text-xs shadow-xs hover:bg-[#075E54]/90 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <span className="material-symbols-outlined text-sm">save</span>
+                  <span>{savingConfig ? 'Saving...' : 'Save Meta Credentials'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleTestMetaConnection}
+                  disabled={testingConnection}
+                  className="px-5 py-2.5 bg-surface-container-high text-primary font-bold rounded-xl text-xs border border-primary/30 hover:bg-surface-container-highest transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <span className="material-symbols-outlined text-sm">network_check</span>
+                  <span>{testingConnection ? 'Testing API...' : 'Test Connection & Profile'}</span>
+                </button>
+              </div>
+            </form>
           </div>
 
-          {/* Right Column: Instructions & Setup Guide */}
-          <div className="lg:col-span-6 space-y-4">
+          {/* Right Column: Webhook Setup & Active 24-hr Free Service Windows */}
+          <div className="lg:col-span-5 space-y-6">
+            {/* Webhook Configuration Card */}
             <div className="bg-surface-container-lowest rounded-2xl p-6 border border-outline-variant/30 shadow-xs space-y-4">
               <h3 className="font-bold text-sm text-on-surface flex items-center gap-2">
-                <span className="material-symbols-outlined text-base text-[#075E54]">info</span>
-                <span>How to Connect Your Real WhatsApp Phone Number</span>
+                <span className="material-symbols-outlined text-base text-primary">webhook</span>
+                <span>Meta Webhook Configuration</span>
               </h3>
+              <p className="text-xs text-on-surface-variant">
+                Configure your Meta Developer App to route incoming parent queries to this URL:
+              </p>
 
-              <div className="space-y-3 text-xs text-on-surface leading-relaxed">
-                <div className="flex items-start gap-3 p-3 rounded-xl bg-surface-container-low border border-outline-variant/20">
-                  <span className="w-6 h-6 rounded-full bg-[#075E54] text-white font-bold text-xs flex items-center justify-center shrink-0">1</span>
-                  <div>
-                    <strong className="block text-on-surface font-semibold">Open WhatsApp on your phone</strong>
-                    <span className="text-on-surface-variant">Launch the official WhatsApp or WhatsApp Business application on your mobile device.</span>
+              <div className="space-y-3">
+                <div>
+                  <span className="block text-[11px] font-semibold text-on-surface mb-1">Callback URL:</span>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      readOnly
+                      value={`${window.location.origin}/api/v1/whatsapp/webhook`}
+                      className="w-full p-2 bg-surface-container-low border border-outline-variant/30 rounded-lg text-xs font-data-mono text-primary font-bold"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(`${window.location.origin}/api/v1/whatsapp/webhook`, 'callbackUrl')}
+                      className="p-2 bg-surface-container text-on-surface rounded-lg hover:bg-surface-container-high transition-all cursor-pointer"
+                      title="Copy URL"
+                    >
+                      <span className="material-symbols-outlined text-sm">
+                        {copiedField === 'callbackUrl' ? 'done' : 'content_copy'}
+                      </span>
+                    </button>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3 p-3 rounded-xl bg-surface-container-low border border-outline-variant/20">
-                  <span className="w-6 h-6 rounded-full bg-[#075E54] text-white font-bold text-xs flex items-center justify-center shrink-0">2</span>
-                  <div>
-                    <strong className="block text-on-surface font-semibold">Navigate to Linked Devices</strong>
-                    <span className="text-on-surface-variant">
-                      On <strong>Android</strong>: Tap the three dots (<strong>⋮</strong>) in the top right corner &gt; <strong>Linked Devices</strong>.<br />
-                      On <strong>iPhone</strong>: Go to <strong>Settings</strong> at the bottom &gt; <strong>Linked Devices</strong>.
+                <div>
+                  <span className="block text-[11px] font-semibold text-on-surface mb-1">Verify Token:</span>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      readOnly
+                      value={metaVerifyToken}
+                      className="w-full p-2 bg-surface-container-low border border-outline-variant/30 rounded-lg text-xs font-data-mono text-on-surface font-semibold"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(metaVerifyToken, 'verifyToken')}
+                      className="p-2 bg-surface-container text-on-surface rounded-lg hover:bg-surface-container-high transition-all cursor-pointer"
+                      title="Copy Token"
+                    >
+                      <span className="material-symbols-outlined text-sm">
+                        {copiedField === 'verifyToken' ? 'done' : 'content_copy'}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-xl bg-surface-container-low border border-outline-variant/20 text-[11px] space-y-1">
+                  <strong className="block text-on-surface">Webhook Fields to Subscribe:</strong>
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 font-bold font-data-mono">
+                      messages
+                    </span>
+                    <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 font-bold font-data-mono">
+                      message_deliveries
+                    </span>
+                    <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 font-bold font-data-mono">
+                      message_reads
                     </span>
                   </div>
                 </div>
+              </div>
+            </div>
 
-                <div className="flex items-start gap-3 p-3 rounded-xl bg-surface-container-low border border-outline-variant/20">
-                  <span className="w-6 h-6 rounded-full bg-[#075E54] text-white font-bold text-xs flex items-center justify-center shrink-0">3</span>
-                  <div>
-                    <strong className="block text-on-surface font-semibold">Tap "Link a Device"</strong>
-                    <span className="text-on-surface-variant">Unlock using fingerprint/FaceID if prompted. Point your phone camera at the QR code displayed on this screen.</span>
-                  </div>
-                </div>
+            {/* Active 24-Hour Free Service Windows */}
+            <div className="bg-surface-container-lowest rounded-2xl p-6 border border-outline-variant/30 shadow-xs space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-sm text-on-surface flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-base text-emerald-700">timer</span>
+                  <span>Active 24h Free Reply Windows</span>
+                </h3>
+                <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 text-[10px] font-bold">
+                  {freeTier.active24hWindowsCount} Open
+                </span>
+              </div>
+              <p className="text-[11px] text-on-surface-variant">
+                When a parent sends an inbound query, a 24-hour service window opens. Free-form responses sent during this period are 100% free of charge under your 1,000 monthly allowance.
+              </p>
 
-                <div className="flex items-start gap-3 p-3 rounded-xl bg-surface-container-low border border-outline-variant/20">
-                  <span className="w-6 h-6 rounded-full bg-emerald-600 text-white font-bold text-xs flex items-center justify-center shrink-0">✓</span>
-                  <div>
-                    <strong className="block text-emerald-900 font-semibold">Connected Instantly</strong>
-                    <span className="text-emerald-800">Your school system is now connected to WhatsApp. Messages sent from SmartShule will be delivered to parents' real WhatsApp accounts.</span>
+              <div className="space-y-2 max-h-48 overflow-y-auto pt-1">
+                {freeTier.activeWindows && freeTier.activeWindows.length > 0 ? (
+                  freeTier.activeWindows.map((win, idx) => (
+                    <div
+                      key={idx}
+                      className="p-2.5 rounded-xl bg-surface-container-low border border-outline-variant/30 flex items-center justify-between text-xs"
+                    >
+                      <div>
+                        <div className="font-bold text-on-surface">{win.contactName || win.phone}</div>
+                        <div className="text-[10px] text-on-surface-variant font-data-mono">{win.phone}</div>
+                      </div>
+                      <div className="text-right">
+                        <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[10px]">
+                          {Math.floor(win.remainingMinutes / 60)}h {win.remainingMinutes % 60}m left
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-4 text-center text-outline text-xs rounded-xl bg-surface-container-low/50">
+                    No active 24-hr service windows right now. When a parent messages the school bot, their session will appear here.
                   </div>
-                </div>
+                )}
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* TAB 2: SEND ACTUAL REAL WHATSAPP MESSAGE */}
-      {activeTab === 'send_message' && (
-        <div className="max-w-2xl mx-auto bg-surface-container-lowest rounded-2xl p-6 border border-outline-variant/30 shadow-xs space-y-5">
-          <div className="flex items-center justify-between pb-3 border-b border-outline-variant/20">
-            <div>
+      {/* TAB 2: GEMINI AI SMART DISPATCH VIA META OFFICIAL */}
+      {activeTab === 'ai_dispatch' && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Left Column: Command & Selection */}
+          <div className="lg:col-span-5 bg-surface-container-lowest rounded-2xl p-6 border border-outline-variant/30 shadow-xs space-y-4">
+            <div className="pb-3 border-b border-outline-variant/20">
               <h3 className="font-bold text-base text-on-surface flex items-center gap-2">
-                <span className="material-symbols-outlined text-xl text-[#075E54]">send</span>
-                <span>Send Actual WhatsApp Message</span>
+                <span className="material-symbols-outlined text-amber-500">smart_toy</span>
+                <span>Command-to-WhatsApp Assistant</span>
               </h3>
               <p className="text-xs text-on-surface-variant mt-0.5">
-                Dispatch real WhatsApp notifications directly to a parent's mobile phone
+                Type an instruction or select a learner. Gemini reads verified records from the school database, drafts an official message, and transmits it via Meta's ban-safe Cloud API.
               </p>
             </div>
 
-            {isConnected ? (
-              <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-bold">
-                From: {connectionState.connectedPhone}
+            <div>
+              <label className="block text-xs font-bold text-on-surface mb-1">
+                Select Enrolled Learner:
+              </label>
+              <select
+                value={aiSelectedStudentId}
+                onChange={(e) => {
+                  setAiSelectedStudentId(e.target.value);
+                  const s = students.find((st) => st.id === e.target.value);
+                  if (s) {
+                    setAiCommand(`Draft CBC assessment summary and fee statement for ${s.name}`);
+                  }
+                }}
+                className="w-full p-2.5 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs text-on-surface focus:outline-primary cursor-pointer"
+              >
+                {students.map((st) => (
+                  <option key={st.id} value={st.id}>
+                    {st.name} ({st.admNo}) · {st.grade} · Balance: KES {st.feeBalance.toLocaleString()}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-on-surface mb-1">
+                Instruction / Command for Gemini AI:
+              </label>
+              <textarea
+                rows={3}
+                value={aiCommand}
+                onChange={(e) => setAiCommand(e.target.value)}
+                placeholder="e.g. Draft fee reminder with KCB Paybill, or send CBC term progress note..."
+                className="w-full p-2.5 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs text-on-surface focus:outline-primary"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-on-surface mb-1">
+                Message Tone:
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {(['professional', 'urgent', 'friendly', 'concise'] as const).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setAiTone(t)}
+                    className={`py-2 px-3 rounded-lg text-xs font-bold capitalize transition-all cursor-pointer ${
+                      aiTone === t
+                        ? 'bg-[#075E54] text-white'
+                        : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container'
+                    }`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => handleAiDraft()}
+              disabled={isAiDrafting}
+              className="w-full py-2.5 bg-[#075E54] text-white font-bold rounded-xl text-xs shadow-xs hover:bg-[#075E54]/90 transition-all cursor-pointer flex items-center justify-center gap-2"
+            >
+              <span className="material-symbols-outlined text-sm">auto_awesome</span>
+              <span>{isAiDrafting ? 'Extracting Records & Drafting...' : 'Draft Message with Gemini AI'}</span>
+            </button>
+          </div>
+
+          {/* Right Column: Live Draft Preview & Dispatch */}
+          <div className="lg:col-span-7 bg-surface-container-lowest rounded-2xl p-6 border border-outline-variant/30 shadow-xs space-y-4">
+            <div className="pb-3 border-b border-outline-variant/20 flex items-center justify-between">
+              <h3 className="font-bold text-base text-on-surface flex items-center gap-2">
+                <span className="material-symbols-outlined text-emerald-700">chat</span>
+                <span>Verified WhatsApp Message Preview</span>
+              </h3>
+              {aiDraftResult && (
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-900 text-[10px] font-bold flex items-center gap-1">
+                  <span className="material-symbols-outlined text-xs">verified</span>
+                  <span>Database Verified</span>
+                </span>
+              )}
+            </div>
+
+            {aiDispatchSuccess && (
+              <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-950 text-xs space-y-1">
+                <div className="flex items-center gap-2 font-bold text-sm text-emerald-800">
+                  <span className="material-symbols-outlined">check_circle</span>
+                  <span>Delivered via Meta Official Cloud API!</span>
+                </div>
+                <p>
+                  Message dispatched to <strong>{aiDispatchSuccess.recipientName}</strong> ({aiDispatchSuccess.to}).
+                </p>
+                <div className="text-[11px] font-data-mono text-emerald-800">
+                  Meta WAMID: {aiDispatchSuccess.id}
+                </div>
+              </div>
+            )}
+
+            {aiError && (
+              <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-950 text-xs font-bold flex items-center gap-2">
+                <span className="material-symbols-outlined text-base text-red-700">error</span>
+                <span>{aiError}</span>
+              </div>
+            )}
+
+            {aiDraftResult ? (
+              <div className="space-y-4">
+                {/* Verified Recipient Details */}
+                <div className="p-3 rounded-xl bg-surface-container-low border border-outline-variant/30 grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-[10px] text-on-surface-variant block uppercase font-semibold">Learner</span>
+                    <strong className="text-on-surface">{aiDraftResult.matchedPerson.studentName}</strong>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-on-surface-variant block uppercase font-semibold">Recipient (Parent)</span>
+                    <strong className="text-on-surface">
+                      {aiDraftResult.matchedPerson.recipientName} ({aiDraftResult.matchedPerson.recipientPhone})
+                    </strong>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-on-surface-variant block uppercase font-semibold">Fee Balance</span>
+                    <span className="font-bold text-primary font-data-mono">
+                      KES {aiDraftResult.matchedPerson.feeBalance.toLocaleString()}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-on-surface-variant block uppercase font-semibold">Attendance</span>
+                    <span className="font-bold text-emerald-700 font-data-mono">
+                      {aiDraftResult.matchedPerson.attendancePercentage}%
+                    </span>
+                  </div>
+                </div>
+
+                {/* Editable WhatsApp Bubble */}
+                <div>
+                  <label className="block text-xs font-bold text-on-surface mb-1">
+                    Editable WhatsApp Message (Review & Tweak Before Dispatch):
+                  </label>
+                  <textarea
+                    rows={6}
+                    value={aiCustomMessage}
+                    onChange={(e) => setAiCustomMessage(e.target.value)}
+                    className="w-full p-3 bg-emerald-50/50 border border-emerald-200 rounded-xl text-xs text-on-surface font-body leading-relaxed focus:outline-primary"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleAiDispatch}
+                  disabled={isAiDispatching}
+                  className="w-full py-3 bg-[#075E54] text-white font-bold rounded-xl text-xs shadow-md hover:bg-[#075E54]/90 transition-all cursor-pointer flex items-center justify-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-sm">send</span>
+                  <span>
+                    {isAiDispatching
+                      ? 'Transmitting via Meta Cloud API...'
+                      : `Send via Meta WhatsApp Cloud API to ${aiDraftResult.matchedPerson.recipientName}`}
+                  </span>
+                </button>
+              </div>
+            ) : (
+              <div className="p-8 text-center text-outline text-xs space-y-2">
+                <span className="material-symbols-outlined text-4xl text-outline-variant">chat</span>
+                <p className="font-bold text-on-surface">No Message Drafted Yet</p>
+                <p className="max-w-md mx-auto">
+                  Select an enrolled student on the left and click "Draft Message with Gemini AI". Verified database facts will be populated here.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: DIRECT MESSAGING & OFFICIAL PRE-APPROVED TEMPLATES */}
+      {activeTab === 'send_message' && (
+        <div className="max-w-3xl mx-auto bg-surface-container-lowest rounded-2xl p-6 border border-outline-variant/30 shadow-xs space-y-5">
+          <div className="pb-3 border-b border-outline-variant/20 flex items-center justify-between">
+            <div>
+              <h3 className="font-bold text-base text-on-surface flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary">send</span>
+                <span>Send Official WhatsApp Message</span>
+              </h3>
+              <p className="text-xs text-on-surface-variant mt-0.5">
+                Transmit notifications directly to parents via Meta's Official WhatsApp Cloud channel
+              </p>
+            </div>
+            {activeWindowForRecipient ? (
+              <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-900 text-[10px] font-bold flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span>
+                <span>Free 24h Window Active</span>
               </span>
             ) : (
-              <span className="px-2.5 py-1 rounded-full bg-rose-100 text-rose-800 text-[11px] font-bold">
-                Account Not Linked
+              <span className="px-2.5 py-1 rounded-full bg-sky-100 text-sky-900 text-[10px] font-bold">
+                Template / Outbound Notice
               </span>
             )}
           </div>
 
-          {/* Success Banner */}
           {sendSuccessMsg && (
-            <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-950 text-xs space-y-1 animate-fade-in">
-              <div className="flex items-center gap-1.5 font-bold text-emerald-800 text-sm">
+            <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-950 text-xs space-y-1">
+              <div className="flex items-center gap-2 font-bold text-emerald-800">
                 <span className="material-symbols-outlined text-base">check_circle</span>
-                <span>Real WhatsApp Message Delivered!</span>
+                <span>WhatsApp Message Delivered!</span>
               </div>
-              <p className="text-emerald-900">
-                Successfully transmitted to <strong>{sendSuccessMsg.to}</strong>.
-              </p>
-              <div className="text-[10px] font-data-mono text-emerald-700">
-                WhatsApp Message ID: {sendSuccessMsg.id}
+              <p>Delivered to <strong>{sendSuccessMsg.to}</strong></p>
+              <div className="text-[11px] font-data-mono text-emerald-800">
+                Meta Message ID: {sendSuccessMsg.id}
               </div>
             </div>
           )}
 
-          {/* Error Banner */}
           {sendErrorMsg && (
-            <div className="p-4 rounded-xl bg-error/10 border border-error/20 text-error text-xs flex items-start gap-2 animate-fade-in">
-              <span className="material-symbols-outlined text-base shrink-0 mt-0.5">error</span>
-              <div>
-                <strong className="block font-bold">Failed to send message:</strong>
-                <span>{sendErrorMsg}</span>
-              </div>
+            <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-950 text-xs font-bold flex items-center gap-2">
+              <span className="material-symbols-outlined text-base text-red-700">error</span>
+              <span>{sendErrorMsg}</span>
             </div>
           )}
 
           <form onSubmit={handleSendMessage} className="space-y-4 text-xs">
-            {/* Quick Template Buttons */}
-            <div>
-              <label className="block font-bold text-on-surface mb-1.5">
-                Quick Message Templates:
-              </label>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => applyTemplate('fee')}
-                  className="px-2.5 py-1 rounded-lg bg-surface-container hover:bg-surface-container-high text-xs font-semibold text-primary transition-colors cursor-pointer"
-                >
-                  💰 Fee Arrears Reminder
-                </button>
-                <button
-                  type="button"
-                  onClick={() => applyTemplate('ediary')}
-                  className="px-2.5 py-1 rounded-lg bg-surface-container hover:bg-surface-container-high text-xs font-semibold text-secondary transition-colors cursor-pointer"
-                >
-                  📖 Daily Homework / eDiary
-                </button>
-                <button
-                  type="button"
-                  onClick={() => applyTemplate('general')}
-                  className="px-2.5 py-1 rounded-lg bg-surface-container hover:bg-surface-container-high text-xs font-semibold text-on-surface transition-colors cursor-pointer"
-                >
-                  📢 School Event Notice
-                </button>
-              </div>
-            </div>
-
-            {/* Recipient Learner Selector */}
-            {students.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block font-bold text-on-surface mb-1">
-                  Select Enrolled Learner (Parent):
+                  Recipient Learner:
                 </label>
                 <select
                   value={selectedStudentId}
                   onChange={(e) => handleStudentSelect(e.target.value)}
-                  className="w-full p-2.5 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs font-semibold text-on-surface"
+                  className="w-full p-2.5 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs text-on-surface focus:outline-primary cursor-pointer"
                 >
                   {students.map((st) => (
                     <option key={st.id} value={st.id}>
-                      {st.name} ({st.admNo}) - Parent: {st.guardianName} ({st.guardianPhone})
+                      {st.name} ({st.admNo}) · {st.grade}
                     </option>
                   ))}
                 </select>
               </div>
-            )}
 
-            {/* Recipient Phone Number */}
-            <div>
-              <label className="block font-bold text-on-surface mb-1">
-                Recipient WhatsApp Phone Number (with Country Code):
-              </label>
-              <div className="relative">
-                <span className="absolute left-3 top-2.5 material-symbols-outlined text-base text-outline">call</span>
+              <div>
+                <label className="block font-bold text-on-surface mb-1">
+                  Recipient Phone (Country Code e.g. +254...):
+                </label>
                 <input
                   type="text"
-                  required
                   placeholder="+254712345678"
                   value={recipientPhone}
                   onChange={(e) => setRecipientPhone(e.target.value)}
-                  className="w-full pl-10 pr-3 py-2.5 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs font-data-mono font-bold text-on-surface focus:outline-hidden focus:border-[#075E54]"
+                  className="w-full p-2.5 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs font-data-mono text-on-surface focus:outline-primary"
                 />
               </div>
+            </div>
+
+            {/* Template Quick Selection */}
+            <div>
+              <label className="block font-bold text-on-surface mb-1.5">
+                Quick Template Presets:
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <button
+                  type="button"
+                  onClick={() => applyTemplate('fee')}
+                  className="p-2 rounded-lg bg-surface-container-low hover:bg-surface-container text-left border border-outline-variant/20 transition-all cursor-pointer"
+                >
+                  <span className="font-bold block text-primary text-xs">💰 Fee Balance</span>
+                  <span className="text-[10px] text-on-surface-variant">KCB Paybill details</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => applyTemplate('ediary')}
+                  className="p-2 rounded-lg bg-surface-container-low hover:bg-surface-container text-left border border-outline-variant/20 transition-all cursor-pointer"
+                >
+                  <span className="font-bold block text-teal-800 text-xs">📖 eDiary / Tasks</span>
+                  <span className="text-[10px] text-on-surface-variant">Homework alert</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => applyTemplate('attendance')}
+                  className="p-2 rounded-lg bg-surface-container-low hover:bg-surface-container text-left border border-outline-variant/20 transition-all cursor-pointer"
+                >
+                  <span className="font-bold block text-emerald-800 text-xs">📅 Attendance</span>
+                  <span className="text-[10px] text-on-surface-variant">Daily roll-call alert</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => applyTemplate('announcement')}
+                  className="p-2 rounded-lg bg-surface-container-low hover:bg-surface-container text-left border border-outline-variant/20 transition-all cursor-pointer"
+                >
+                  <span className="font-bold block text-purple-800 text-xs">📢 Announcement</span>
+                  <span className="text-[10px] text-on-surface-variant">Academic circular</span>
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block font-bold text-on-surface mb-1">
+                Official WhatsApp Message Content:
+              </label>
+              <textarea
+                rows={5}
+                value={outboundMessage}
+                onChange={(e) => setOutboundMessage(e.target.value)}
+                placeholder="Type your official WhatsApp message to the parent here..."
+                className="w-full p-3 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs text-on-surface font-body leading-relaxed focus:outline-primary"
+              />
               <span className="text-[10px] text-on-surface-variant mt-1 block">
-                Supports Kenyan (+254...) and international numbers.
+                Markdown formatting (*bold*, _italic_) supported on WhatsApp.
               </span>
             </div>
 
-            {/* Message Body */}
-            <div>
-              <label className="block font-bold text-on-surface mb-1">
-                WhatsApp Message Content:
-              </label>
-              <textarea
-                required
-                rows={5}
-                placeholder="Type your official WhatsApp message to the parent here..."
-                value={outboundMessage}
-                onChange={(e) => setOutboundMessage(e.target.value)}
-                className="w-full p-3 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs text-on-surface focus:outline-hidden focus:border-[#075E54] leading-relaxed"
-              ></textarea>
-            </div>
-
-            {/* Send Button */}
-            <div className="pt-2">
-              <button
-                type="submit"
-                disabled={isSendingMessage || !isConnected}
-                className={`w-full py-3 text-white font-bold rounded-xl text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                  isConnected
-                    ? 'bg-[#075E54] hover:bg-[#064942] hover:shadow-lg'
-                    : 'bg-neutral-400 cursor-not-allowed opacity-60'
-                }`}
-              >
-                <span className="material-symbols-outlined text-base">send</span>
-                <span>
-                  {isSendingMessage
-                    ? 'Transmitting via WhatsApp...'
-                    : isConnected
-                    ? 'Send Real WhatsApp Message Now'
-                    : 'Please Link WhatsApp Account First'}
-                </span>
-              </button>
-            </div>
+            <button
+              type="submit"
+              disabled={isSendingMessage}
+              className="w-full py-3 bg-[#075E54] text-white font-bold rounded-xl text-xs shadow-md hover:bg-[#075E54]/90 transition-all cursor-pointer flex items-center justify-center gap-2"
+            >
+              <span className="material-symbols-outlined text-sm">send</span>
+              <span>
+                {isSendingMessage ? 'Transmitting via Meta Official API...' : 'Send Official WhatsApp Message'}
+              </span>
+            </button>
           </form>
         </div>
       )}
 
-      {/* TAB 2: GEMINI AI COMMAND & REAL WHATSAPP DISPATCH */}
-      {activeTab === 'ai_dispatch' && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left Column: Command & Database Verification */}
-          <div className="lg:col-span-6 space-y-4">
-            <div className="bg-surface-container-lowest rounded-2xl p-6 border border-outline-variant/30 shadow-xs space-y-4">
-              <div className="pb-3 border-b border-outline-variant/20">
-                <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold mb-1.5">
-                  <span className="material-symbols-outlined text-[12px] text-amber-500">auto_awesome</span>
-                  <span>Google Gemini 2.5 AI Powered</span>
-                </div>
-                <h3 className="font-bold text-sm text-on-surface flex items-center gap-2">
-                  <span className="material-symbols-outlined text-base text-[#075E54]">smart_toy</span>
-                  <span>Command-to-WhatsApp Assistant</span>
-                </h3>
-                <p className="text-xs text-on-surface-variant mt-0.5 leading-relaxed">
-                  Enter an instruction or pick an enrolled learner. Gemini extracts verified records from the database, crafts a personalized message, and transmits it directly to the real recipient over WhatsApp.
-                </p>
-              </div>
-
-              {/* Database Verification Error Alert */}
-              {aiError && (
-                <div className="p-3.5 rounded-xl bg-error/10 border border-error/20 text-error text-xs flex items-start gap-2 animate-fade-in">
-                  <span className="material-symbols-outlined text-base shrink-0 mt-0.5">error</span>
-                  <div>
-                    <strong className="block font-bold">Database Verification Failed:</strong>
-                    <span>{aiError}</span>
-                  </div>
-                </div>
-              )}
-
-              <div className="space-y-4 text-xs">
-                {/* 1. Database Learner Picker */}
-                {students.length > 0 && (
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="block font-bold text-on-surface">
-                        1. Target Enrolled Learner in Database:
-                      </label>
-                      <span className="text-[10px] text-emerald-700 font-semibold flex items-center gap-1">
-                        <span className="material-symbols-outlined text-[12px]">verified</span>
-                        <span>{students.length} Learners in DB</span>
-                      </span>
-                    </div>
-                    <select
-                      value={aiSelectedStudentId}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setAiSelectedStudentId(val);
-                        const s = students.find((st) => st.id === val);
-                        if (s) {
-                          setAiCommand(`Draft fee balance reminder for ${s.name}`);
-                        }
-                      }}
-                      className="w-full p-2.5 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs font-semibold text-on-surface focus:outline-hidden focus:border-[#075E54]"
-                    >
-                      <option value="">-- Auto-detect learner from command text --</option>
-                      {students.map((st) => (
-                        <option key={st.id} value={st.id}>
-                          {st.name} ({st.admNo}) · Grade: {st.gradeLevel} · Parent: {st.guardianName} ({st.guardianPhone})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {/* 2. Command Presets */}
-                <div>
-                  <label className="block font-bold text-on-surface mb-1.5">
-                    Quick Command Presets:
-                  </label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {[
-                      { label: '💰 Fee Arrears & KCB Paybill', cmd: 'Draft fee balance reminder with KCB Paybill 522533 and account 8048859#<child_name> <grade> instructions' },
-                      { label: '📖 Daily Homework / eDiary', cmd: 'Draft daily CBC eDiary homework notice, teacher remarks and tomorrow requirements' },
-                      { label: '🌟 CBC Performance Report', cmd: 'Draft CBC academic competency report summary with grades and teacher remarks' },
-                      { label: '📅 Attendance & Roll-Call', cmd: 'Draft official attendance summary and term roll-call status' },
-                      { label: '📢 Academic Showcase Notice', cmd: 'Draft reminder for tomorrow CBC academic showcase meeting starting at 9:00 AM' },
-                      { label: '💳 KCB Buni M-Pesa Express', cmd: 'Send KCB Buni M-Pesa Express and Paybill 522533 instant fee payment instructions' },
-                    ].map((item) => (
-                      <button
-                        key={item.label}
-                        type="button"
-                        onClick={() => {
-                          setAiCommand(item.cmd);
-                          handleAiDraft(item.cmd);
-                        }}
-                        className={`px-2.5 py-1.5 rounded-lg font-bold text-[11px] transition-all cursor-pointer border flex items-center gap-1 ${
-                          aiCommand === item.cmd
-                            ? 'bg-[#075E54] text-white border-[#075E54] shadow-xs'
-                            : 'bg-surface-container-low text-on-surface hover:bg-surface-container border-outline-variant/30'
-                        }`}
-                      >
-                        <span>{item.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 3. Command Instruction Box */}
-                <div>
-                  <label className="block font-bold text-on-surface mb-1">
-                    2. Your Command / Instruction:
-                  </label>
-                  <div className="relative">
-                    <textarea
-                      rows={3}
-                      value={aiCommand}
-                      onChange={(e) => setAiCommand(e.target.value)}
-                      placeholder="e.g. Draft fee balance reminder for Kevin Kamau... or Congratulate parent on top CBC science score..."
-                      className="w-full p-3 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs font-semibold text-on-surface focus:outline-hidden focus:border-[#075E54] leading-relaxed"
-                    />
-                  </div>
-                  <span className="text-[10px] text-on-surface-variant mt-0.5 block">
-                    You can specify a student name directly in the prompt (e.g. "Draft fee notice for Kevin") or select from the database list above.
-                  </span>
-                </div>
-
-                {/* 4. Tone Selector & Action */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-on-surface-variant text-[11px]">Tone:</span>
-                    {(['professional', 'friendly', 'urgent', 'concise'] as const).map((t) => (
-                      <button
-                        key={t}
-                        type="button"
-                        onClick={() => setAiTone(t)}
-                        className={`px-2 py-1 rounded-md text-[10px] font-bold capitalize transition-all cursor-pointer ${
-                          aiTone === t
-                            ? 'bg-[#075E54] text-white shadow-xs'
-                            : 'bg-surface-container text-on-surface-variant hover:text-on-surface'
-                        }`}
-                      >
-                        {t}
-                      </button>
-                    ))}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => handleAiDraft()}
-                    disabled={isAiDrafting || !aiCommand.trim()}
-                    className="px-4 py-2.5 bg-[#075E54] hover:bg-[#064942] text-white font-bold rounded-xl text-xs shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-                  >
-                    <span className="material-symbols-outlined text-base">auto_awesome</span>
-                    <span>{isAiDrafting ? 'Gemini Drafting...' : 'Draft with Gemini AI'}</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Verified Database Profile Card */}
-            {aiDraftResult && (
-              <div className="bg-surface-container-lowest rounded-2xl p-5 border border-emerald-300 dark:border-emerald-800 shadow-xs space-y-3 animate-fade-in">
-                <div className="flex items-center justify-between pb-2 border-b border-outline-variant/20">
-                  <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 dark:text-emerald-300">
-                    <span className="material-symbols-outlined text-base text-emerald-600">verified</span>
-                    <span>Verified Contact in Database</span>
-                  </div>
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 text-[10px] font-bold font-data-mono">
-                    Intent: {aiDraftResult.intent}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div className="p-2.5 rounded-xl bg-surface-container-low border border-outline-variant/20">
-                    <span className="text-[10px] text-on-surface-variant font-semibold uppercase block">Student Profile</span>
-                    <strong className="text-on-surface text-xs block font-bold mt-0.5">
-                      {aiDraftResult.matchedPerson.studentName}
-                    </strong>
-                    <span className="text-[11px] font-data-mono text-outline">
-                      Adm: {aiDraftResult.matchedPerson.admissionNumber} · {aiDraftResult.matchedPerson.gradeLevel}
-                    </span>
-                  </div>
-
-                  <div className="p-2.5 rounded-xl bg-surface-container-low border border-outline-variant/20">
-                    <span className="text-[10px] text-on-surface-variant font-semibold uppercase block">Recipient Phone</span>
-                    <strong className="text-primary text-xs block font-bold font-data-mono mt-0.5">
-                      {aiDraftResult.matchedPerson.recipientPhone}
-                    </strong>
-                    <span className="text-[11px] text-on-surface-variant">
-                      {aiDraftResult.matchedPerson.recipientName} ({aiDraftResult.matchedPerson.relationship || 'Guardian'})
-                    </span>
-                  </div>
-
-                  <div className="p-2.5 rounded-xl bg-surface-container-low border border-outline-variant/20">
-                    <span className="text-[10px] text-on-surface-variant font-semibold uppercase block">Live Fee Balance</span>
-                    <strong className="text-amber-700 text-sm block font-bold font-data-mono mt-0.5">
-                      KES {aiDraftResult.matchedPerson.feeBalance.toLocaleString()}
-                    </strong>
-                  </div>
-
-                  <div className="p-2.5 rounded-xl bg-surface-container-low border border-outline-variant/20">
-                    <span className="text-[10px] text-on-surface-variant font-semibold uppercase block">Attendance Rate</span>
-                    <strong className="text-emerald-700 text-sm block font-bold font-data-mono mt-0.5">
-                      {aiDraftResult.matchedPerson.attendancePercentage}% Present
-                    </strong>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Right Column: Live WhatsApp Draft Preview & Dispatch */}
-          <div className="lg:col-span-6 flex flex-col space-y-4">
-            {/* Success Banner */}
-            {aiDispatchSuccess && (
-              <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-950 text-xs space-y-1 animate-fade-in shadow-xs">
-                <div className="flex items-center gap-1.5 font-bold text-emerald-800 text-sm">
-                  <span className="material-symbols-outlined text-base">check_circle</span>
-                  <span>Real WhatsApp Message Delivered!</span>
-                </div>
-                <p className="text-emerald-900">
-                  Transmitted to <strong>{aiDispatchSuccess.recipientName}</strong> at <strong>{aiDispatchSuccess.to}</strong>.
-                </p>
-                <div className="text-[10px] font-data-mono text-emerald-700">
-                  Message ID: {aiDispatchSuccess.id} · Dispatched via Baileys Multi-Device Socket
-                </div>
-              </div>
-            )}
-
-            <div className="bg-[#E5DDD5] dark:bg-[#0b141a] rounded-2xl p-5 border border-outline-variant/40 shadow-md flex-1 flex flex-col justify-between">
-              {/* WhatsApp Header bar */}
-              <div className="bg-[#075E54] text-white p-3 rounded-xl flex items-center justify-between mb-4 shadow-sm">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-full bg-emerald-100 text-[#075E54] flex items-center justify-center font-bold text-xs">
-                    GS
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-xs leading-none">{user?.schoolName || 'School'} CBC Desk</h4>
-                    <span className="text-[10px] text-emerald-200">
-                      {isConnected ? `Online (From: ${connectionState.connectedPhone})` : 'Account Not Linked (Tab 1)'}
-                    </span>
-                  </div>
-                </div>
-
-                {aiDraftResult && (
-                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-800/80 text-[10px] font-data-mono font-bold">
-                    To: {aiDraftResult.matchedPerson.recipientPhone}
-                  </span>
-                )}
-              </div>
-
-              {/* Message Draft Canvas */}
-              <div className="flex-1 space-y-3 overflow-y-auto max-h-[460px] p-2">
-                {isAiDrafting ? (
-                  <div className="flex justify-start">
-                    <div className="bg-white dark:bg-[#202c33] text-gray-900 dark:text-gray-100 p-4 rounded-2xl rounded-tl-xs shadow-xs text-xs flex items-center gap-3">
-                      <div className="w-4 h-4 border-2 border-[#075E54] border-t-transparent rounded-full animate-spin"></div>
-                      <div>
-                        <strong className="block text-on-surface font-semibold">Gemini AI is drafting...</strong>
-                        <span className="text-[11px] text-on-surface-variant">Gathering database records and crafting official WhatsApp communication...</span>
-                      </div>
-                    </div>
-                  </div>
-                ) : aiDraftResult || aiCustomMessage ? (
-                  <div className="space-y-3">
-                    {/* Editable Message Box */}
-                    <div className="bg-white dark:bg-[#202c33] text-gray-900 dark:text-gray-100 p-4 rounded-2xl rounded-tl-xs shadow-sm text-xs space-y-2 leading-relaxed">
-                      <div className="flex items-center justify-between text-[10px] text-gray-500 dark:text-gray-400 border-b border-gray-100 dark:border-gray-800 pb-1.5">
-                        <span className="font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
-                          <span className="material-symbols-outlined text-xs">edit_note</span>
-                          <span>Editable WhatsApp Draft (Review & tweak if needed):</span>
-                        </span>
-                        <span className="font-data-mono">{aiCustomMessage.length} chars</span>
-                      </div>
-
-                      <textarea
-                        rows={11}
-                        value={aiCustomMessage}
-                        onChange={(e) => setAiCustomMessage(e.target.value)}
-                        className="w-full p-2 bg-transparent text-gray-900 dark:text-gray-100 font-sans text-xs focus:outline-hidden border-none resize-y leading-relaxed"
-                        placeholder="Drafted WhatsApp message..."
-                      />
-
-                      <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-800 text-[10px] text-gray-400">
-                        <span>Markdown (*bold*, _italic_) supported on WhatsApp</span>
-                        <span className="font-data-mono">{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} ✓✓</span>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="p-10 text-center text-xs text-gray-500 dark:text-gray-400 space-y-2">
-                    <span className="material-symbols-outlined text-4xl text-gray-400 mb-1 block">auto_awesome</span>
-                    <strong className="block text-sm text-on-surface font-semibold">Ready to Draft Official WhatsApp Message</strong>
-                    <p className="text-xs text-on-surface-variant max-w-sm mx-auto">
-                      Select a command pill on the left (e.g. <em>Fee Arrears</em> or <em>Homework Notice</em>) or type a command instruction and click <strong>Draft with Gemini AI</strong>.
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Bottom Dispatch Controls */}
-              <div className="pt-3 border-t border-outline-variant/30 flex flex-col sm:flex-row items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleAiDispatch}
-                  disabled={isAiDispatching || (!aiCustomMessage.trim() && !aiDraftResult) || !isConnected}
-                  className={`flex-1 py-3 px-4 rounded-xl text-xs font-bold text-white shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                    isConnected && (aiCustomMessage.trim() || aiDraftResult)
-                      ? 'bg-[#075E54] hover:bg-[#064942] hover:shadow-lg'
-                      : 'bg-neutral-400 cursor-not-allowed opacity-60'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-base">send</span>
-                  <span>
-                    {isAiDispatching
-                      ? 'Transmitting via WhatsApp...'
-                      : !isConnected
-                      ? 'Link WhatsApp Account in Tab 1 First'
-                      : aiDraftResult
-                      ? `Send Real WhatsApp Message to ${aiDraftResult.matchedPerson.recipientName} (${aiDraftResult.matchedPerson.recipientPhone})`
-                      : 'Send Real WhatsApp Message'}
-                  </span>
-                </button>
-
-                {(aiDraftResult || aiCustomMessage) && (
-                  <div className="flex gap-1.5 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => handleAiDraft()}
-                      disabled={isAiDrafting}
-                      className="p-2.5 bg-surface-container hover:bg-surface-container-high rounded-xl text-on-surface text-xs font-bold transition-colors cursor-pointer"
-                      title="Re-Draft with Gemini"
-                    >
-                      <span className="material-symbols-outlined text-base">refresh</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (aiCustomMessage) {
-                          navigator.clipboard.writeText(aiCustomMessage);
-                          alert('Draft copied to clipboard!');
-                        }
-                      }}
-                      className="p-2.5 bg-surface-container hover:bg-surface-container-high rounded-xl text-on-surface text-xs font-bold transition-colors cursor-pointer"
-                      title="Copy Message Text"
-                    >
-                      <span className="material-symbols-outlined text-base">content_copy</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* TAB 4: LIVE MESSAGE AUDIT LOG */}
+      {/* TAB 4: REAL-TIME AUDIT LOG */}
       {activeTab === 'message_log' && (
         <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 shadow-xs overflow-hidden">
-          <div className="p-4 border-b border-surface-container flex items-center justify-between">
-            <h3 className="font-bold text-sm text-on-surface flex items-center gap-2">
-              <span className="material-symbols-outlined text-base text-[#075E54]">history</span>
-              <span>Real Inbound & Outbound WhatsApp History</span>
-            </h3>
+          <div className="p-4 border-b border-outline-variant/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 className="font-bold text-base text-on-surface flex items-center gap-2">
+                <span className="material-symbols-outlined text-primary">history</span>
+                <span>Real-Time WhatsApp Audit Log</span>
+              </h3>
+              <p className="text-xs text-on-surface-variant">
+                Live delivery status updates (SENT, DELIVERED, READ) received from Meta Graph Webhooks
+              </p>
+            </div>
 
-            <button
-              onClick={fetchMessages}
-              className="px-3 py-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-xs font-bold text-on-surface flex items-center gap-1 cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-sm">refresh</span>
-              <span>Refresh Log</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                placeholder="Filter by phone or text..."
+                value={searchPhoneQuery}
+                onChange={(e) => setSearchPhoneQuery(e.target.value)}
+                className="p-1.5 px-3 bg-surface-container-low border border-outline-variant/30 rounded-lg text-xs"
+              />
+              <select
+                value={logFilter}
+                onChange={(e: any) => setLogFilter(e.target.value)}
+                className="p-1.5 bg-surface-container-low border border-outline-variant/30 rounded-lg text-xs font-semibold cursor-pointer"
+              >
+                <option value="ALL">All ({messages.length})</option>
+                <option value="INBOUND">Inbound Only</option>
+                <option value="OUTBOUND">Outbound Only</option>
+              </select>
+            </div>
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-surface-container-low text-on-surface-variant uppercase font-semibold border-b border-outline-variant/30">
+            <table className="w-full text-xs text-left">
+              <thead className="bg-surface-container-low text-on-surface-variant font-bold border-b border-outline-variant/20">
                 <tr>
                   <th className="py-3 px-4">Direction</th>
-                  <th className="py-3 px-4">Phone Number</th>
-                  <th className="py-3 px-4">Message Body</th>
-                  <th className="py-3 px-4">Intent / Action</th>
+                  <th className="py-3 px-4">From</th>
+                  <th className="py-3 px-4">To</th>
+                  <th className="py-3 px-4">Message Content</th>
                   <th className="py-3 px-4">Timestamp</th>
-                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4">Meta Delivery Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-surface-container">
-                {messages.length === 0 ? (
+              <tbody className="divide-y divide-outline-variant/10">
+                {filteredMessages.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-12 text-center text-on-surface-variant">
-                      <div className="flex flex-col items-center justify-center gap-2">
-                        <span className="material-symbols-outlined text-3xl text-outline">forum</span>
-                        <p className="font-semibold text-sm">No Live WhatsApp Messages Yet</p>
-                        <p className="text-xs text-on-surface-variant">
-                          Inbound messages received from parents on WhatsApp and outbound responses will be audited here in real time.
-                        </p>
-                      </div>
+                    <td colSpan={6} className="py-8 text-center text-outline text-xs">
+                      No WhatsApp messages logged yet. Messages exchanged with parents will appear here with live delivery receipts.
                     </td>
                   </tr>
                 ) : (
-                  messages.map((m) => (
-                    <tr key={m.id} className="hover:bg-surface-container-low/50 transition-colors">
+                  filteredMessages.map((m) => (
+                    <tr key={m.id} className="hover:bg-surface-container-low/40">
                       <td className="py-3 px-4">
                         {m.direction === 'INBOUND' ? (
-                          <span className="px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 font-bold text-[10px] inline-flex items-center gap-1">
-                            <span className="material-symbols-outlined text-[12px]">call_received</span>
-                            <span>INBOUND</span>
+                          <span className="px-2 py-0.5 rounded bg-sky-100 text-sky-900 font-bold text-[10px]">
+                            INBOUND (Parent)
                           </span>
                         ) : (
-                          <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px] inline-flex items-center gap-1">
-                            <span className="material-symbols-outlined text-[12px]">call_made</span>
-                            <span>OUTBOUND</span>
+                          <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 font-bold text-[10px]">
+                            OUTBOUND (School)
                           </span>
                         )}
                       </td>
-                      <td className="py-3 px-4 font-data-mono font-bold text-primary">
-                        {m.direction === 'INBOUND' ? m.from : m.to}
-                      </td>
-                      <td className="py-3 px-4 max-w-md">
-                        <p className="line-clamp-2 text-on-surface font-medium leading-relaxed">
-                          {m.text}
-                        </p>
-                      </td>
-                      <td className="py-3 px-4">
-                        {m.intent ? (
-                          <span className="px-2 py-0.5 rounded bg-surface-container font-semibold text-[10px] text-on-surface-variant">
-                            {m.intent}
-                          </span>
-                        ) : (
-                          <span className="text-outline text-[11px]">—</span>
-                        )}
+                      <td className="py-3 px-4 font-data-mono font-semibold">{m.from}</td>
+                      <td className="py-3 px-4 font-data-mono">{m.to}</td>
+                      <td className="py-3 px-4 max-w-md truncate" title={m.text}>
+                        {m.text}
                       </td>
                       <td className="py-3 px-4 font-data-mono text-[11px] text-outline whitespace-nowrap">
                         {new Date(m.timestamp).toLocaleTimeString()} · {new Date(m.timestamp).toLocaleDateString()}
                       </td>
                       <td className="py-3 px-4">
-                        <span className="font-bold text-[10px] text-emerald-700 uppercase">
+                        <span
+                          className={`font-bold text-[10px] px-2 py-0.5 rounded uppercase ${
+                            m.status === 'READ'
+                              ? 'bg-blue-100 text-blue-900'
+                              : m.status === 'DELIVERED'
+                              ? 'bg-teal-100 text-teal-900'
+                              : m.status === 'FAILED'
+                              ? 'bg-red-100 text-red-900'
+                              : 'bg-emerald-100 text-emerald-900'
+                          }`}
+                        >
                           {m.status}
                         </span>
                       </td>
@@ -1218,87 +1370,140 @@ export const WhatsAppBotView: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 4: META CLOUD API (OPTIONAL) */}
-      {activeTab === 'meta_cloud' && (
-        <div className="max-w-2xl mx-auto bg-surface-container-lowest rounded-2xl p-6 border border-outline-variant/30 shadow-xs space-y-4">
-          <div className="pb-3 border-b border-outline-variant/20">
-            <h3 className="font-bold text-base text-on-surface flex items-center gap-2">
-              <span className="material-symbols-outlined text-xl text-primary">cloud</span>
-              <span>Official Meta WhatsApp Cloud API Setup</span>
+      {/* TAB 5: ANTI-BAN & 1,000 FREE MESSAGES GUIDE */}
+      {activeTab === 'anti_ban_guide' && (
+        <div className="max-w-4xl mx-auto space-y-6">
+          <div className="p-6 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs space-y-4">
+            <h2 className="text-lg font-bold text-on-surface flex items-center gap-2">
+              <span className="material-symbols-outlined text-emerald-700">security</span>
+              <span>Why Meta Official Cloud API Prevents Phone Number Bans</span>
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs pt-2">
+              <div className="p-4 rounded-xl bg-red-50/70 border border-red-200 text-red-950 space-y-2">
+                <div className="flex items-center gap-1.5 font-bold text-red-800 text-sm">
+                  <span className="material-symbols-outlined">dangerous</span>
+                  <span>The Risk of Unofficial Libraries (Baileys)</span>
+                </div>
+                <p className="leading-relaxed">
+                  Unofficial tools (Baileys, whatsapp-web.js, puppeteer scrapers) mimic WhatsApp Web browser clients via reverse-engineered WebSocket connections. Meta’s automated anti-abuse algorithms detect abnormal traffic and permanently ban the phone number from WhatsApp with zero recourse.
+                </p>
+                <ul className="list-disc pl-4 space-y-1 text-red-900">
+                  <li>Triggers sudden permanent SIM bans.</li>
+                  <li>Frequent disconnects and QR re-scans required.</li>
+                  <li>Violates WhatsApp Business Terms of Service.</li>
+                </ul>
+              </div>
+
+              <div className="p-4 rounded-xl bg-emerald-50/80 border border-emerald-200 text-emerald-950 space-y-2">
+                <div className="flex items-center gap-1.5 font-bold text-emerald-900 text-sm">
+                  <span className="material-symbols-outlined">verified_user</span>
+                  <span>Meta WhatsApp Cloud API (100% Ban-Safe)</span>
+                </div>
+                <p className="leading-relaxed">
+                  Meta's WhatsApp Cloud API is Meta’s own official business infrastructure. Because messages are transmitted directly through Meta’s authorized Graph API, your school’s account is officially registered and immune to bans.
+                </p>
+                <ul className="list-disc pl-4 space-y-1 text-emerald-900">
+                  <li>Official Meta partnership channel.</li>
+                  <li>99.99% uptime with direct Meta cloud hosting.</li>
+                  <li>Permanent System User token never logs out.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-6 rounded-2xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs space-y-4">
+            <h3 className="text-base font-bold text-on-surface flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary">price_check</span>
+              <span>How the 1,000 Free Monthly Service Conversations Work</span>
             </h3>
-            <p className="text-xs text-on-surface-variant mt-0.5">
-              If your school owns an official Meta WhatsApp Business App, enter credentials here as an alternative to phone QR code pairing.
+
+            <div className="text-xs text-on-surface-variant space-y-3 leading-relaxed">
+              <p>
+                Meta grants every WhatsApp Business Account (WABA) <strong>1,000 free Service Conversations per calendar month</strong>:
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div className="p-3 rounded-xl bg-surface-container-low border border-outline-variant/20">
+                  <strong className="block text-on-surface font-bold mb-1">1. User-Initiated</strong>
+                  <span>When a parent sends an inbound message (e.g. "Balance" or "Homework"), a conversation session begins.</span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-surface-container-low border border-outline-variant/20">
+                  <strong className="block text-on-surface font-bold mb-1">2. 24-Hour Free Window</strong>
+                  <span>Within 24 hours of the parent's message, your school can exchange unlimited messages for that conversation session.</span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-surface-container-low border border-outline-variant/20">
+                  <strong className="block text-on-surface font-bold mb-1">3. Zero Cost Under 1,000</strong>
+                  <span>The first 1,000 conversations every month are 100% free of charge. No payment card is billed.</span>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30 space-y-2 mt-2">
+                <strong className="block text-on-surface font-bold">5-Minute Setup Guide on Meta Developer Portal:</strong>
+                <ol className="list-decimal pl-4 space-y-1 text-on-surface">
+                  <li>Go to <strong>developers.facebook.com</strong> and create a free Meta Developer Account.</li>
+                  <li>Create an App with type <strong>"Business"</strong> and add the <strong>WhatsApp</strong> product.</li>
+                  <li>Navigate to <strong>WhatsApp &gt; API Setup</strong> to find your free <strong>Phone Number ID</strong> and sandbox test number.</li>
+                  <li>Under <strong>Meta Business Settings &gt; System Users</strong>, generate a permanent access token with <code>whatsapp_business_messaging</code> permissions.</li>
+                  <li>Paste the <strong>Phone Number ID</strong> and <strong>Access Token</strong> into Tab 1 of SmartShule.</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 6: LEGACY QR PAIRING (QUARANTINED WITH EXPLICIT WARNING) */}
+      {activeTab === 'qr_legacy' && (
+        <div className="max-w-2xl mx-auto bg-surface-container-lowest rounded-2xl p-6 border border-amber-300 shadow-sm space-y-5">
+          <div className="p-4 rounded-xl bg-amber-50 border border-amber-300 text-amber-950 text-xs space-y-2">
+            <div className="flex items-center gap-2 font-bold text-sm text-amber-900">
+              <span className="material-symbols-outlined">warning</span>
+              <span>High Ban Risk Notice</span>
+            </div>
+            <p className="leading-relaxed">
+              Scanning a QR code uses the unofficial <strong>Baileys</strong> library. WhatsApp routinely detects and bans numbers connected via unofficial clients. We strongly recommend configuring <strong>Tab 1 (Meta Cloud API)</strong> which is 100% ban-safe and free for 1,000 monthly messages.
             </p>
           </div>
 
-          {configSuccess && (
-            <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-950 text-xs font-bold flex items-center gap-2">
-              <span className="material-symbols-outlined text-base text-emerald-700">check_circle</span>
-              <span>{configSuccess}</span>
-            </div>
-          )}
-
-          <form onSubmit={handleSaveConfig} className="space-y-4 text-xs">
-            <div>
-              <label className="block font-bold text-on-surface mb-1">
-                Webhook Callback URL (Add to Meta Developer Console):
-              </label>
-              <input
-                type="text"
-                readOnly
-                value={`${window.location.origin}/api/v1/whatsapp/webhook`}
-                className="w-full p-2.5 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs font-data-mono text-primary font-bold"
-              />
-            </div>
-
-            <div>
-              <label className="block font-bold text-on-surface mb-1">
-                Meta Phone Number ID:
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. 104829384729182"
-                value={metaPhoneId}
-                onChange={(e) => setMetaPhoneId(e.target.value)}
-                className="w-full p-2.5 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs font-data-mono text-on-surface"
-              />
-            </div>
-
-            <div>
-              <label className="block font-bold text-on-surface mb-1">
-                System User Permanent Access Token:
-              </label>
-              <input
-                type="password"
-                placeholder="EAAB..."
-                value={metaAccessToken}
-                onChange={(e) => setMetaAccessToken(e.target.value)}
-                className="w-full p-2.5 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs font-data-mono text-on-surface"
-              />
-            </div>
-
-            <div>
-              <label className="block font-bold text-on-surface mb-1">
-                Webhook Verification Token:
-              </label>
-              <input
-                type="text"
-                value={metaVerifyToken}
-                onChange={(e) => setMetaVerifyToken(e.target.value)}
-                className="w-full p-2.5 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs font-data-mono text-on-surface"
-              />
-            </div>
-
-            <div className="pt-2">
+          <div className="text-center space-y-4 py-4">
+            {connectionState.status === 'SCAN_QR' && connectionState.qrCodeDataUrl ? (
+              <div className="space-y-3">
+                <img
+                  src={connectionState.qrCodeDataUrl}
+                  alt="WhatsApp QR Code"
+                  className="mx-auto w-64 h-64 border-4 border-amber-400 rounded-xl"
+                />
+                <p className="text-xs text-on-surface-variant font-semibold">
+                  Scan using WhatsApp &gt; Linked Devices
+                </p>
+              </div>
+            ) : isConnected && !isMetaMode ? (
+              <div className="space-y-2">
+                <span className="material-symbols-outlined text-4xl text-amber-600">smartphone</span>
+                <p className="font-bold text-on-surface">Connected via Unofficial Baileys Socket</p>
+                <p className="text-xs text-on-surface-variant">{connectionState.connectedPhone}</p>
+                <button
+                  type="button"
+                  onClick={handleDisconnect}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg text-xs font-bold hover:bg-red-700 cursor-pointer"
+                >
+                  Unlink & Disconnect
+                </button>
+              </div>
+            ) : (
               <button
-                type="submit"
-                disabled={savingConfig}
-                className="w-full py-2.5 bg-primary text-white font-bold rounded-xl text-xs shadow-md hover:bg-primary/90 transition-all cursor-pointer"
+                type="button"
+                onClick={handleConnectLegacyQR}
+                disabled={isConnecting}
+                className="px-6 py-2.5 bg-amber-600 text-white font-bold rounded-xl text-xs hover:bg-amber-700 transition-all cursor-pointer"
               >
-                {savingConfig ? 'Saving...' : 'Save Meta Cloud API Credentials'}
+                {isConnecting ? 'Generating QR Code...' : 'Proceed with QR Pairing (Not Recommended)'}
               </button>
-            </div>
-          </form>
+            )}
+          </div>
         </div>
       )}
     </div>

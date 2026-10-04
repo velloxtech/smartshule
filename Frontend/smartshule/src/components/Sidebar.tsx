@@ -1,5 +1,5 @@
 import React from 'react';
-import { TabType } from '../types';
+import { TabType, UserRole } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { getFilteredNavSections, getRoleDisplayName, getRoleBadgeStyle } from '../utils/rbac';
 
@@ -9,6 +9,7 @@ interface SidebarProps {
   mobileOpen: boolean;
   onCloseMobile: () => void;
   onNavigateLanding?: () => void;
+  onOpenLegalModal?: (tab?: 'terms' | 'privacy' | 'cookies' | 'child_protection') => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -17,10 +18,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
   mobileOpen,
   onCloseMobile,
   onNavigateLanding,
+  onOpenLegalModal,
 }) => {
   const { user, logout } = useAuth();
   const navSections = getFilteredNavSections(user?.role);
   const badgeStyle = getRoleBadgeStyle(user?.role);
+
+  const isAdmin = user?.role && [
+    UserRole.SUPER_ADMIN,
+    UserRole.ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.HEAD_TEACHER,
+  ].includes(user.role);
 
   return (
     <>
@@ -96,6 +105,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </span>
                 <span className="w-2 h-2 rounded-full bg-secondary" title="Active Session"></span>
               </div>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onSelectTab('archived-records');
+                    onCloseMobile();
+                  }}
+                  className="w-full mt-1 py-1.5 px-2.5 rounded-lg bg-[#7a1228]/10 hover:bg-[#7a1228]/20 border border-[#7a1228]/20 text-[#7a1228] text-xs font-bold flex items-center justify-between transition-all cursor-pointer shadow-2xs"
+                  title="Open Standalone Enterprise Archive Vault"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[16px] text-[#7a1228]">inventory_2</span>
+                    <span>Archived Data Vault</span>
+                  </div>
+                  <span className="text-[9px] font-mono uppercase bg-[#7a1228] text-white px-1.5 py-0.2 rounded-full font-bold">
+                    Vault
+                  </span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -114,22 +142,31 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   const isActive = currentTab === item.id;
                   return (
                     <button
-                      key={item.id}
+                      key={`${sIdx}-${item.id}`}
                       onClick={() => {
                         onSelectTab(item.id as TabType);
                         onCloseMobile();
                       }}
-                      className={`flex items-center gap-sm px-sm py-2 text-left w-full transition-all rounded-lg cursor-pointer ${
+                      className={`flex items-center justify-between px-sm py-2 text-left w-full transition-all rounded-lg cursor-pointer ${
                         isActive
                           ? 'bg-primary text-white font-semibold shadow-sm'
                           : 'text-[#40000e] hover:bg-[#F8F5F5]/60 hover:text-primary'
                       }`}
                       data-path={item.id}
                     >
-                      <span className={`material-symbols-outlined text-[18px] ${isActive ? 'text-white' : 'text-[#7a1228]/80'}`}>
-                        {item.icon}
-                      </span>
-                      <span className="font-body-md text-sm truncate">{item.label}</span>
+                      <div className="flex items-center gap-sm min-w-0">
+                        <span className={`material-symbols-outlined text-[18px] ${isActive ? 'text-white' : 'text-[#7a1228]/80'}`}>
+                          {item.icon}
+                        </span>
+                        <span className="font-body-md text-sm truncate">{item.label}</span>
+                      </div>
+                      {item.id === 'archived-records' && (
+                        <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full uppercase shrink-0 ${
+                          isActive ? 'bg-white/20 text-white' : 'bg-[#7a1228]/15 text-[#7a1228]'
+                        }`}>
+                          Vault
+                        </span>
+                      )}
                     </button>
                   );
                 })}
@@ -149,6 +186,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <span>Landing Page</span>
             </button>
           )}
+
+          <button
+            onClick={() => onOpenLegalModal?.('privacy')}
+            className="w-full py-1.5 px-2 mb-1.5 text-[11px] font-semibold text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[15px] text-emerald-600">verified_user</span>
+            <span>Legal & Privacy (KDPA)</span>
+          </button>
 
           <button
             onClick={logout}

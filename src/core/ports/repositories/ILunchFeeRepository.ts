@@ -37,10 +37,12 @@ export interface ILunchFeeRepository {
   findEnrollments(criteria: LunchEnrollmentFilterCriteria): Promise<LunchEnrollment[]>;
   update(enrollment: LunchEnrollment): Promise<LunchEnrollment>;
   delete(id: string): Promise<void>;
+  deleteEnrollmentsByStudentId(studentId: string): Promise<void>;
 
   // Payments
   savePayment(payment: LunchPayment): Promise<LunchPayment>;
   findPayments(enrollmentId?: string, studentId?: string): Promise<LunchPayment[]>;
+  deletePaymentsByStudentId(studentId: string): Promise<void>;
 
   // Expenses (Money Out / Outflows)
   saveExpense(expense: LunchExpense): Promise<LunchExpense>;

@@ -9,6 +9,7 @@ import {
   LunchFinancialSummary,
   Student
 } from '../../types';
+import { resolveStreamName, resolveGradeName } from '../../utils/formatters';
 
 export const EXPENSE_CATEGORIES: {
   value: LunchExpenseCategory;
@@ -443,8 +444,8 @@ export const LunchFeeManagementView: React.FC = () => {
     const rows = filteredEnrollments.map((enr) => [
       `"${enr.studentName || ''}"`,
       `"${enr.admissionNumber || ''}"`,
-      `"${enr.gradeLevel || ''}"`,
-      `"${enr.streamId || ''}"`,
+      `"${resolveGradeName(enr.gradeLevel)}"`,
+      `"${resolveStreamName(enr.streamId, enr.streamName)}"`,
       `"${enr.planName}"`,
       `"${enr.dietaryNotes || 'Standard'}"`,
       enr.amount,
@@ -876,11 +877,11 @@ export const LunchFeeManagementView: React.FC = () => {
                           </td>
                           <td className="py-3 px-4 text-on-surface">
                             <span className="px-2 py-0.5 rounded-md bg-surface-container text-on-surface font-semibold text-[11px]">
-                              {enr.gradeLevel || 'N/A'}
+                              {resolveGradeName(enr.gradeLevel)}
                             </span>
-                            {enr.streamId && (
+                            {(enr.streamName || enr.streamId) && (
                               <span className="text-[11px] text-on-surface-variant block mt-0.5">
-                                Stream: {enr.streamId}
+                                Stream: {resolveStreamName(enr.streamId, enr.streamName)}
                               </span>
                             )}
                           </td>

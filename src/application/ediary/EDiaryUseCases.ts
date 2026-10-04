@@ -98,6 +98,28 @@ export class EDiaryUseCases {
     return guardian;
   }
 
+  public async getLinkedStudentIdsForUser(userId: string): Promise<string[]> {
+    const guardian = await this.getGuardianForUser(userId);
+    if (!guardian) return [];
+
+    const linkedStudentIds = new Set<string>(guardian.studentIds || []);
+    const allStudents = await this.studentRepository.findAll();
+    let updated = false;
+    for (const s of allStudents) {
+      if (s.guardianIds && s.guardianIds.includes(guardian.id)) {
+        linkedStudentIds.add(s.id);
+        if (!guardian.studentIds.includes(s.id)) {
+          guardian.linkStudent(s.id);
+          updated = true;
+        }
+      }
+    }
+    if (updated) {
+      await this.guardianRepository.update(guardian);
+    }
+    return Array.from(linkedStudentIds);
+  }
+
   public async listEntriesForStudent(
     studentId: string,
     requestingUser?: UserContext,
@@ -105,8 +127,8 @@ export class EDiaryUseCases {
   ) {
     // Parent data isolation check
     if (requestingUser?.role === UserRole.GUARDIAN || requestingUser?.role === UserRole.PARENT) {
-      const guardian = await this.getGuardianForUser(requestingUser.userId);
-      if (!guardian || !guardian.studentIds.includes(studentId)) {
+      const childIds = await this.getLinkedStudentIdsForUser(requestingUser.userId);
+      if (!childIds.includes(studentId)) {
         throw new ForbiddenError('Access denied: You are only permitted to view eDiary entries for your linked children.');
       }
     }
@@ -132,9 +154,9 @@ export class EDiaryUseCases {
 
   public async listEntriesForStream(streamId: string, date?: string, requestingUser?: UserContext) {
     if (requestingUser?.role === UserRole.GUARDIAN || requestingUser?.role === UserRole.PARENT) {
-      const guardian = await this.getGuardianForUser(requestingUser.userId);
-      if (guardian?.studentIds?.length) {
-        const children = await this.studentRepository.findByIds(guardian.studentIds);
+      const childIds = await this.getLinkedStudentIdsForUser(requestingUser.userId);
+      if (childIds.length) {
+        const children = await this.studentRepository.findByIds(childIds);
         const hasChildInStream = children.some(c => c.streamId === streamId);
         if (!hasChildInStream) {
           throw new ForbiddenError('Access denied: You cannot view stream diary entries for classes your child is not enrolled in.');
@@ -154,7 +176,8 @@ export class EDiaryUseCases {
       throw new NotFoundError('Guardian profile for User', dto.guardianUserId);
     }
 
-    if (!guardian.studentIds.includes(dto.studentId)) {
+    const childIds = await this.getLinkedStudentIdsForUser(dto.guardianUserId);
+    if (!childIds.includes(dto.studentId)) {
       throw new ForbiddenError('Access denied: You can only acknowledge diary entries for your linked children.');
     }
 

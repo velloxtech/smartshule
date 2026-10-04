@@ -139,12 +139,13 @@ describe('Complaint System Backend Integration Tests', () => {
       expect(res.status).toBe(403);
     });
 
-    it('denies Parent with 403 Forbidden', async () => {
+    it('allows Parent to view their isolated concerns list with 200', async () => {
       const res = await request(app)
         .get('/api/v1/complaints')
         .set('Authorization', `Bearer ${parentToken}`);
 
-      expect(res.status).toBe(403);
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.body.data)).toBe(true);
     });
 
     it('denies Bursar with 403 Forbidden', async () => {

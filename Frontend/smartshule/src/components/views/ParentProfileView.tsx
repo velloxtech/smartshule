@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { resolveAcademicYearName, resolveStreamName, resolveClassName } from '../../utils/formatters';
 
 interface ParentProfileViewProps {
   onNavigateTab?: (tab: string) => void;
@@ -313,7 +314,7 @@ export const ParentProfileView: React.FC<ParentProfileViewProps> = ({ onNavigate
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Phone Number (WhatsApp & SMS) *</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Phone Number (SMS & Official Contact) *</label>
                 <input
                   type="tel"
                   required
@@ -724,9 +725,9 @@ export const ParentProfileView: React.FC<ParentProfileViewProps> = ({ onNavigate
                     <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 text-xs font-bold">
                       {currentChild.gradeLevel}
                     </span>
-                    {currentChild.streamId && (
+                    {(currentChild.streamName || currentChild.streamId) && (
                       <span className="px-2 py-0.5 rounded bg-slate-200 text-slate-800 text-xs font-medium">
-                        Stream: {currentChild.streamId.replace('stream-', '').replace('-east', ' East').replace('-west', ' West')}
+                        Stream: {resolveStreamName(currentChild.streamId, currentChild.streamName || currentChild.stream?.name)}
                       </span>
                     )}
                   </div>
@@ -780,16 +781,16 @@ export const ParentProfileView: React.FC<ParentProfileViewProps> = ({ onNavigate
                   Academic Year
                 </span>
                 <span className="text-sm font-semibold text-slate-900">
-                  {currentChild.academicYearId || '2026 Academic Year'}
+                  {resolveAcademicYearName(currentChild.academicYearName || currentChild.academicYear || currentChild.academicYearId)} Academic Year
                 </span>
               </div>
 
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/60">
                 <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                  Classroom ID
+                  Classroom / Grade
                 </span>
-                <span className="text-sm font-mono text-slate-900">
-                  {currentChild.classroomId || 'Main Wing'}
+                <span className="text-sm font-semibold text-slate-900">
+                  {resolveClassName(currentChild.classroomId, currentChild.className, currentChild.gradeLevel)}
                 </span>
               </div>
             </div>

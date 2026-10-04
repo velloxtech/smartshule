@@ -6,12 +6,17 @@ import { IFeeRepository } from '../../core/ports/repositories/IFeeRepository';
 import { ICbcAssessmentRepository } from '../../core/ports/repositories/ICbcAssessmentRepository';
 import { IAttendanceRepository } from '../../core/ports/repositories/ITimetableRepository';
 import { ILunchFeeRepository } from '../../core/ports/repositories/ILunchFeeRepository';
+import { IDeletedStudentRepository, DeletedStudentFilterCriteria } from '../../core/ports/repositories/IDeletedStudentRepository';
+import { IComplaintRepository } from '../../core/ports/repositories/IComplaintRepository';
+import { IEDiaryRepository } from '../../core/ports/repositories/IEDiaryRepository';
+import { IMediaRepository } from '../../core/ports/repositories/IMediaRepository';
 import { Student, StudentGender, CbcGradeLevel, StudentStatus } from '../../core/domain/user/Student';
+import { DeletedStudent, DeletedStudentLinkedData, ClearedPendingWork } from '../../core/domain/user/DeletedStudent';
 import { Guardian, GuardianRelationship } from '../../core/domain/user/Guardian';
 import { User, UserRole, UserStatus } from '../../core/domain/user/User';
 import { IdGenerator, NotFoundError, ConflictError, ValidationError, ForbiddenError } from '../../core/domain/shared/Errors';
 import { IPasswordHasher } from '../../core/ports/services/IExternalServices';
-import { StudentInvoice, InvoiceStatus, FeeStructure, FeeItem } from '../../core/domain/finance/Fee';
+import { StudentInvoice, InvoiceStatus, FeeStructure, FeeItem, Payment } from '../../core/domain/finance/Fee';
 import { ClassRoom, EducationLevel } from '../../core/domain/academic/ClassRoom';
 
 export const CBC_GRADE_PROGRESSION: Record<CbcGradeLevel, CbcGradeLevel | 'GRADUATED'> = {
@@ -75,6 +80,8 @@ export interface RegisterStudentDTO {
   medicalConditions?: string;
   specialNeeds?: string;
   profilePhotoUrl?: string;
+  createParentAccount?: boolean;
+  sendWelcomeSms?: boolean;
   guardian?: {
     firstName: string;
     lastName: string;
@@ -131,7 +138,11 @@ export class StudentUseCases {
     private readonly feeRepository?: IFeeRepository,
     private readonly cbcRepository?: ICbcAssessmentRepository,
     private readonly attendanceRepository?: IAttendanceRepository,
-    private readonly lunchFeeRepository?: ILunchFeeRepository
+    private readonly lunchFeeRepository?: ILunchFeeRepository,
+    private readonly deletedStudentRepository?: IDeletedStudentRepository,
+    private readonly complaintRepository?: IComplaintRepository,
+    private readonly ediaryRepository?: IEDiaryRepository,
+    private readonly mediaRepository?: IMediaRepository
   ) {}
 
   public async registerStudent(dto: RegisterStudentDTO) {
@@ -155,13 +166,15 @@ export class StudentUseCases {
     }
 
     const guardianIds: string[] = [];
+    let guardianUser: User | null = null;
+    let isExistingParent = false;
+    const shouldCreateAccount = dto.createParentAccount !== false;
 
     if (dto.guardian) {
       const guardianEmail = dto.guardian.email?.trim() ? dto.guardian.email.trim().toLowerCase() : undefined;
       const guardianPhone = dto.guardian.phone?.trim();
 
       // Check if user already exists for guardian by email or by phone
-      let guardianUser: User | null = null;
       if (guardianEmail) {
         guardianUser = await this.userRepository.findByEmail(guardianEmail);
       }
@@ -175,7 +188,9 @@ export class StudentUseCases {
         }
       }
 
-      if (!guardianUser) {
+      isExistingParent = !!guardianUser;
+
+      if (!guardianUser && shouldCreateAccount) {
         // Use National ID / Phone as default password for parent account, requiring password change on first login
         const parentDefaultPassword = dto.guardian.nationalId?.trim() || guardianPhone || process.env.DEFAULT_PARENT_PASSWORD || dto.admissionNumber || 'Parent@123';
         const defaultPasswordHash = await this.passwordHasher.hash(parentDefaultPassword);
@@ -194,7 +209,7 @@ export class StudentUseCases {
           IdGenerator.generate()
         );
         await this.userRepository.save(guardianUser);
-      } else {
+      } else if (guardianUser) {
         let updated = false;
         if (guardianEmail && !guardianUser.email) {
           guardianUser.updateEmail(guardianEmail);
@@ -209,11 +224,18 @@ export class StudentUseCases {
         }
       }
 
-      let guardian = await this.guardianRepository.findByUserId(guardianUser.id);
+      let guardian: Guardian | null = null;
+      if (guardianUser) {
+        guardian = await this.guardianRepository.findByUserId(guardianUser.id);
+      }
+      if (!guardian && guardianPhone) {
+        guardian = await this.guardianRepository.findByPhone(guardianPhone);
+      }
+
       if (!guardian) {
         guardian = Guardian.create(
           {
-            userId: guardianUser.id,
+            userId: guardianUser ? guardianUser.id : IdGenerator.generate(),
             nationalId: dto.guardian.nationalId,
             occupation: dto.guardian.occupation,
             relationship: dto.guardian.relationship,
@@ -333,67 +355,67 @@ export class StudentUseCases {
           feeStructure = allStructures.find(fs => fs.gradeLevel === student.gradeLevel) || null;
         }
 
-        // If no fee structure exists for this grade in the DB, create an annual CBC fee structure with term divisions
+        // If no fee structure exists for this grade in the DB, create ratified Grace Seeds School fee structure
         if (!feeStructure) {
-          const isJSS = ['GRADE_7', 'GRADE_8', 'GRADE_9'].includes(student.gradeLevel);
           const isUpperPrimary = ['GRADE_4', 'GRADE_5', 'GRADE_6'].includes(student.gradeLevel);
           const isLowerPrimary = ['GRADE_1', 'GRADE_2', 'GRADE_3'].includes(student.gradeLevel);
+          const isPrePrimary = ['PLAYGROUP', 'PP1', 'PP2'].includes(student.gradeLevel);
 
           const gradeName = student.gradeLevel.replace('_', ' ');
-          const tuitionAnnual = isJSS ? 60000 : (isUpperPrimary ? 45000 : (isLowerPrimary ? 36000 : 30000));
-          const assessmentAnnual = isJSS ? 15000 : (isUpperPrimary ? 10000 : (isLowerPrimary ? 8000 : 6000));
-          const activityAnnual = isJSS ? 6000 : (isUpperPrimary ? 5000 : (isLowerPrimary ? 4500 : 3500));
-          const admissionAnnual = isJSS ? 5000 : 3500;
+          const tuitionTerm = isUpperPrimary ? 5700 : (isLowerPrimary ? 5000 : (isPrePrimary ? 4500 : 5000));
+          const activityTerm = (isUpperPrimary || isLowerPrimary) ? 500 : (isPrePrimary ? 300 : 500);
+          const assessmentTerm = 300;
+          const admissionFee = 1500;
 
           const defaultItems: FeeItem[] = [
             {
               id: IdGenerator.generate(),
               name: 'Tuition Fee',
-              amount: tuitionAnnual,
+              amount: tuitionTerm * 3,
               category: 'TUITION',
               isOptional: false,
               termBreakdown: {
-                term1: Math.round(tuitionAnnual * 0.4),
-                term2: Math.round(tuitionAnnual * 0.3),
-                term3: tuitionAnnual - Math.round(tuitionAnnual * 0.4) - Math.round(tuitionAnnual * 0.3)
-              }
+                term1: tuitionTerm,
+                term2: tuitionTerm,
+                term3: tuitionTerm,
+              },
             },
             {
               id: IdGenerator.generate(),
-              name: isJSS ? 'CBC Assessment & Practical Science Kits' : 'CBC Assessment & Learning Materials',
-              amount: assessmentAnnual,
-              category: 'ASSESSMENT',
-              isOptional: false,
-              termBreakdown: {
-                term1: Math.round(assessmentAnnual * 0.4),
-                term2: Math.round(assessmentAnnual * 0.3),
-                term3: assessmentAnnual - Math.round(assessmentAnnual * 0.4) - Math.round(assessmentAnnual * 0.3)
-              }
-            },
-            {
-              id: IdGenerator.generate(),
-              name: 'Activity & Co-Curricular Levy',
-              amount: activityAnnual,
+              name: 'Activity Fee',
+              amount: activityTerm * 2, // 1st & 2nd term ONLY
               category: 'ACTIVITY',
               isOptional: false,
               termBreakdown: {
-                term1: Math.round(activityAnnual * 0.4),
-                term2: Math.round(activityAnnual * 0.3),
-                term3: activityAnnual - Math.round(activityAnnual * 0.4) - Math.round(activityAnnual * 0.3)
-              }
+                term1: activityTerm,
+                term2: activityTerm,
+                term3: 0,
+              },
+            },
+            {
+              id: IdGenerator.generate(),
+              name: 'Assessment Fee',
+              amount: assessmentTerm * 3,
+              category: 'ASSESSMENT',
+              isOptional: false,
+              termBreakdown: {
+                term1: assessmentTerm,
+                term2: assessmentTerm,
+                term3: assessmentTerm,
+              },
             },
             {
               id: IdGenerator.generate(),
               name: 'Admission Fee',
-              amount: admissionAnnual,
+              amount: admissionFee,
               category: 'ADMISSION',
               isOptional: false,
               termBreakdown: {
-                term1: admissionAnnual,
+                term1: admissionFee,
                 term2: 0,
-                term3: 0
-              }
-            }
+                term3: 0,
+              },
+            },
           ];
 
           feeStructure = FeeStructure.create(
@@ -404,7 +426,7 @@ export class StudentUseCases {
               gradeLevel: student.gradeLevel,
               title: `${gradeName} Annual Fee Schedule`,
               items: defaultItems,
-              dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+              dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
             },
             IdGenerator.generate()
           );
@@ -413,19 +435,73 @@ export class StudentUseCases {
         }
 
         if (feeStructure) {
-          const invoiceYear = feeStructure.academicYearId || academicYearId || 'year-2026';
-          const invoiceTerm = feeStructure.termId || termId || 'term-2026-t1';
+          const isWholeYearStructure = !feeStructure.termId || feeStructure.termId === 'ALL' || feeStructure.termId === 'ANNUAL';
+          // A student invoice MUST always be attached to a concrete academic term in academic_terms (never 'ALL' or 'ANNUAL')
+          let targetTermId = (termId && termId !== 'ALL' && termId !== 'ANNUAL')
+            ? termId
+            : (!isWholeYearStructure && feeStructure.termId ? feeStructure.termId : 'term-2026-t1');
+
+          // Ensure academicYearId matches the term's academic year for foreign key integrity
+          let invoiceYear = academicYearId || 'year-2026';
+          if (this.academicRepository) {
+            try {
+              const termObj = await this.academicRepository.findTermById(targetTermId);
+              if (termObj?.academicYearId) {
+                invoiceYear = termObj.academicYearId;
+              }
+            } catch {}
+          }
 
           // Check if invoice already exists
           const existingInvoices = await this.feeRepository.findInvoices({
             studentId: student.id,
-            termId: invoiceTerm,
-            academicYearId: invoiceYear
+            termId: targetTermId,
+            academicYearId: invoiceYear,
           });
 
           if (existingInvoices.length === 0) {
             const invoiceNumber = `INV-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
             const dueDate = feeStructure.dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+            const termNum = targetTermId.toLowerCase().includes('t2') || targetTermId.toLowerCase().includes('term-2') ? 2 : (targetTermId.toLowerCase().includes('t3') || targetTermId.toLowerCase().includes('term-3') ? 3 : 1);
+            const invoiceItems: FeeItem[] = [];
+
+            if (isWholeYearStructure) {
+              for (const it of feeStructure.items) {
+                let amt = Number(it.amount) || 0;
+                if (it.termBreakdown) {
+                  if (termNum === 1 && it.termBreakdown.term1 !== undefined) amt = Number(it.termBreakdown.term1);
+                  else if (termNum === 2 && it.termBreakdown.term2 !== undefined) amt = Number(it.termBreakdown.term2);
+                  else if (termNum === 3 && it.termBreakdown.term3 !== undefined) amt = Number(it.termBreakdown.term3);
+                }
+                // Include Admission Fee once upon new student admission
+                if (it.category === 'ADMISSION') {
+                  amt = it.termBreakdown?.term1 ?? (Number(it.amount) || 1500);
+                }
+
+                if (amt > 0) {
+                  invoiceItems.push({
+                    id: IdGenerator.generate(),
+                    name: it.name,
+                    amount: amt,
+                    category: it.category,
+                    isOptional: it.isOptional,
+                  });
+                }
+              }
+            } else {
+              for (const it of feeStructure.items) {
+                invoiceItems.push({
+                  id: IdGenerator.generate(),
+                  name: it.name,
+                  amount: Number(it.amount) || 0,
+                  category: it.category,
+                  isOptional: it.isOptional,
+                });
+              }
+            }
+
+            const totalPayable = invoiceItems.reduce((sum, i) => sum + i.amount, 0);
 
             const invoice = StudentInvoice.create(
               {
@@ -433,16 +509,16 @@ export class StudentUseCases {
                 studentId: student.id,
                 feeStructureId: feeStructure.id,
                 academicYearId: invoiceYear,
-                termId: invoiceTerm,
+                termId: targetTermId,
                 invoiceNumber,
-                items: feeStructure.items,
-                amountBilled: feeStructure.totalAmount,
+                items: invoiceItems.length > 0 ? invoiceItems : feeStructure.items,
+                amountBilled: totalPayable > 0 ? totalPayable : feeStructure.totalAmount,
                 discountAmount: 0,
-                amountPayable: feeStructure.totalAmount,
+                amountPayable: totalPayable > 0 ? totalPayable : feeStructure.totalAmount,
                 amountPaid: 0,
-                balance: feeStructure.totalAmount,
+                balance: totalPayable > 0 ? totalPayable : feeStructure.totalAmount,
                 status: InvoiceStatus.UNPAID,
-                dueDate
+                dueDate,
               },
               IdGenerator.generate()
             );
@@ -458,6 +534,8 @@ export class StudentUseCases {
 
     return {
       ...student.toJSON(),
+      feeBalance: createdInvoice ? createdInvoice.balance : 0,
+      totalFee: createdInvoice ? createdInvoice.amountPayable : 0,
       guardian: dto.guardian ? {
         id: guardianIds[0],
         firstName: dto.guardian.firstName,
@@ -465,7 +543,9 @@ export class StudentUseCases {
         phone: dto.guardian.phone,
         email: dto.guardian.email,
         relationship: dto.guardian.relationship,
-        nationalId: dto.guardian.nationalId
+        nationalId: dto.guardian.nationalId,
+        parentAccountCreated: shouldCreateAccount && !!guardianUser,
+        isExistingParent: isExistingParent
       } : null,
       guardianName: dto.guardian ? `${dto.guardian.firstName} ${dto.guardian.lastName}` : undefined,
       guardianPhone: dto.guardian ? dto.guardian.phone : undefined,
@@ -717,6 +797,91 @@ export class StudentUseCases {
     return [];
   }
 
+  private async hydrateStudentAcademicMetadata(
+    studentJson: any,
+    classCache?: Map<string, any>,
+    streamCache?: Map<string, any>,
+    yearCache?: Map<string, any>
+  ): Promise<any> {
+    let className = studentJson.className;
+    let streamName = studentJson.streamName;
+    let academicYearName = studentJson.academicYearName || studentJson.academicYear;
+
+    if (this.academicRepository) {
+      if (!className && studentJson.classroomId) {
+        try {
+          if (classCache && classCache.has(studentJson.classroomId)) {
+            className = classCache.get(studentJson.classroomId)?.name;
+          } else {
+            const cls = await this.academicRepository.findClassById(studentJson.classroomId);
+            if (cls) {
+              className = cls.name;
+              if (classCache) classCache.set(studentJson.classroomId, cls);
+            }
+          }
+        } catch {}
+      }
+
+      if (!streamName && studentJson.streamId) {
+        try {
+          if (streamCache && streamCache.has(studentJson.streamId)) {
+            streamName = streamCache.get(studentJson.streamId)?.name;
+          } else {
+            const str = await this.academicRepository.findStreamById(studentJson.streamId);
+            if (str) {
+              streamName = str.name;
+              if (streamCache) streamCache.set(studentJson.streamId, str);
+            }
+          }
+        } catch {}
+      }
+
+      if (!academicYearName && studentJson.academicYearId) {
+        try {
+          if (yearCache && yearCache.has(studentJson.academicYearId)) {
+            academicYearName = yearCache.get(studentJson.academicYearId)?.name;
+          } else {
+            const yr = await this.academicRepository.findYearById(studentJson.academicYearId);
+            if (yr) {
+              academicYearName = yr.name;
+              if (yearCache) yearCache.set(studentJson.academicYearId, yr);
+            }
+          }
+        } catch {}
+      }
+    }
+
+    // Fallbacks if not found in repository
+    if (!className && studentJson.gradeLevel) {
+      const g = String(studentJson.gradeLevel).toUpperCase().replace(/_/g, ' ');
+      className = g.charAt(0) + g.slice(1).toLowerCase().replace(/pp([12])/i, 'PP$1').replace(/grade\s*(\d+)/i, 'Grade $1');
+    }
+
+    if (!streamName && studentJson.streamId) {
+      const sid = String(studentJson.streamId);
+      const match = sid.match(/stream-[^-]+-([a-zA-Z0-9]+)/i);
+      if (match && match[1]) {
+        streamName = match[1].charAt(0).toUpperCase() + match[1].slice(1).toLowerCase() + ' Stream';
+      } else if (!sid.startsWith('cls-') && !sid.startsWith('stream-') && sid.length <= 15) {
+        streamName = sid;
+      }
+    }
+
+    if (!academicYearName && studentJson.academicYearId) {
+      const yid = String(studentJson.academicYearId);
+      const match = yid.match(/(20\d{2})/);
+      academicYearName = match ? match[1] : '2026';
+    }
+
+    return {
+      ...studentJson,
+      className: className || undefined,
+      streamName: streamName || undefined,
+      academicYearName: academicYearName || '2026',
+      academicYear: academicYearName || '2026',
+    };
+  }
+
   public async getStudentById(studentId: string, requestingUser?: UserContext) {
     const isParent = requestingUser?.role === UserRole.PARENT || requestingUser?.role === UserRole.GUARDIAN;
     if (isParent && requestingUser) {
@@ -754,8 +919,10 @@ export class StudentUseCases {
     const gPhone = primaryG?.user?.phone || primaryG?.emergencyContact || undefined;
     const gName = primaryG?.user ? `${primaryG.user.firstName} ${primaryG.user.lastName}` : undefined;
 
+    const studentWithAcademics = await this.hydrateStudentAcademicMetadata(student.toJSON());
+
     return {
-      ...student.toJSON(),
+      ...studentWithAcademics,
       guardian: primaryG ? {
         id: primaryG.id,
         firstName: primaryG.user?.firstName,
@@ -812,9 +979,35 @@ export class StudentUseCases {
       return json;
     };
 
+    const classCache = new Map<string, any>();
+    const streamCache = new Map<string, any>();
+    const yearCache = new Map<string, any>();
+
+    // Load fee balances for students if fee repository is available
+    const studentFeeMap = new Map<string, { balance: number; billed: number }>();
+    if (this.feeRepository) {
+      try {
+        const studentIds = students.map(s => s.id);
+        const invoices = await this.feeRepository.findInvoices({
+          studentIds: studentIds.length > 1 ? studentIds : undefined,
+          studentId: studentIds.length === 1 ? studentIds[0] : undefined
+        });
+        for (const inv of invoices) {
+          const cur = studentFeeMap.get(inv.studentId) || { balance: 0, billed: 0 };
+          const invBal = inv.status === InvoiceStatus.CARRIED_FORWARD ? 0 : (Number(inv.balance) || 0);
+          const invBilled = inv.status === InvoiceStatus.CARRIED_FORWARD ? 0 : (Number(inv.amountPayable) || Number(inv.amountBilled) || 0);
+          studentFeeMap.set(inv.studentId, {
+            balance: cur.balance + invBal,
+            billed: cur.billed + invBilled
+          });
+        }
+      } catch {}
+    }
+
     const hydrated = await Promise.all(
       students.map(async s => {
-        const studentJson = s.toJSON();
+        const studentJson = await this.hydrateStudentAcademicMetadata(s.toJSON(), classCache, streamCache, yearCache);
+        const feeInfo = studentFeeMap.get(s.id) || { balance: 0, billed: 0 };
         const linkedGuardians: any[] = [];
 
         // 1. Check student.guardianIds
@@ -874,6 +1067,8 @@ export class StudentUseCases {
 
         return {
           ...studentJson,
+          feeBalance: feeInfo.balance,
+          totalFee: feeInfo.billed,
           guardian: guardianSummary,
           guardians: guardianDetails,
           guardianName: gName,
@@ -950,7 +1145,7 @@ export class StudentUseCases {
 
     const childrenDetails = await Promise.all(
       students.map(async s => {
-        let feeInfo = { totalBilled: 0, totalPaid: 0, balance: 0, invoices: [] as any[], payments: [] as any[] };
+        let feeInfo = { totalBilled: 0, totalPaid: 0, balance: 0, dueDate: null as string | null, invoices: [] as any[], payments: [] as any[] };
         if (this.feeRepository) {
           const invoices = await this.feeRepository.findInvoices({ studentId: s.id });
           const payments = await this.feeRepository.findPayments({ studentId: s.id });
@@ -963,10 +1158,13 @@ export class StudentUseCases {
             return acc + (inv.amountPayable - arrears);
           }, 0);
           const totalPaid = payments.filter(p => p.status === 'COMPLETED').reduce((acc, p) => acc + p.amount, 0);
+          const activeInvoice = invoices.find(inv => inv.balance > 0 && inv.status !== 'CARRIED_FORWARD') || invoices[0];
+          const dueDate = activeInvoice ? activeInvoice.dueDate : null;
           feeInfo = {
             totalBilled,
             totalPaid,
             balance: totalBilled - totalPaid,
+            dueDate: dueDate,
             invoices: invoices.map(i => i.toJSON()),
             payments: payments.map(p => p.toJSON())
           };
@@ -1009,8 +1207,10 @@ export class StudentUseCases {
           }
         }
 
+        const studentWithAcademics = await this.hydrateStudentAcademicMetadata(s.toJSON());
+
         return {
-          ...s.toJSON(),
+          ...studentWithAcademics,
           fee: feeInfo,
           cbc: cbcSummary,
           attendance: attendanceStats,
@@ -1130,11 +1330,23 @@ export class StudentUseCases {
     student.setStatus(StudentStatus.ACTIVE);
     await this.studentRepository.update(student);
 
+    // Verify targetTermId and targetAcademicYearId foreign key integrity
+    if (this.academicRepository) {
+      try {
+        const termObj = await this.academicRepository.findTermById(targetTermId);
+        if (termObj?.academicYearId) {
+          targetAcademicYearId = termObj.academicYearId;
+        }
+      } catch {}
+    }
+
     let carriedForwardBalance = 0;
     let newInvoice: any = null;
 
-    if (this.feeRepository && dto.carryForwardBalance !== false) {
+    if (this.feeRepository) {
       try {
+        const shouldCarryForward = dto.carryForwardBalance !== false;
+
         // 1. Calculate prior unpaid balance across all invoices
         const priorInvoices = await this.feeRepository.findInvoices({ studentId: student.id });
         const unpaidInvoices = priorInvoices.filter(
@@ -1142,9 +1354,11 @@ export class StudentUseCases {
                  inv.balance > 0 &&
                  !(inv.termId === targetTermId && inv.academicYearId === targetAcademicYearId)
         );
-        carriedForwardBalance = unpaidInvoices.reduce((sum, inv) => sum + inv.balance, 0);
+        carriedForwardBalance = shouldCarryForward
+          ? unpaidInvoices.reduce((sum, inv) => sum + inv.balance, 0)
+          : 0;
 
-        // 2. Find or create fee structure for nextGrade
+        // 2. Find fee structure for nextGrade
         let feeStructure = await this.feeRepository.findFeeStructure(nextGrade as CbcGradeLevel, targetTermId, targetAcademicYearId);
         if (!feeStructure) {
           const allStructures = await this.feeRepository.findAllFeeStructures(student.schoolId);
@@ -1152,65 +1366,65 @@ export class StudentUseCases {
         }
 
         if (!feeStructure) {
-          const isJSS = ['GRADE_7', 'GRADE_8', 'GRADE_9'].includes(nextGrade);
           const isUpperPrimary = ['GRADE_4', 'GRADE_5', 'GRADE_6'].includes(nextGrade);
           const isLowerPrimary = ['GRADE_1', 'GRADE_2', 'GRADE_3'].includes(nextGrade);
+          const isPrePrimary = ['PLAYGROUP', 'PP1', 'PP2'].includes(nextGrade);
 
           const gradeName = nextGrade.replace('_', ' ');
-          const tuitionAnnual = isJSS ? 60000 : (isUpperPrimary ? 45000 : (isLowerPrimary ? 36000 : 30000));
-          const assessmentAnnual = isJSS ? 15000 : (isUpperPrimary ? 10000 : (isLowerPrimary ? 8000 : 6000));
-          const activityAnnual = isJSS ? 6000 : (isUpperPrimary ? 5000 : (isLowerPrimary ? 4500 : 3500));
-          const admissionAnnual = isJSS ? 5000 : 3500;
+          const tuitionTerm = isUpperPrimary ? 5700 : (isLowerPrimary ? 5000 : (isPrePrimary ? 4500 : 5000));
+          const activityTerm = (isUpperPrimary || isLowerPrimary) ? 500 : (isPrePrimary ? 300 : 500);
+          const assessmentTerm = 300;
+          const admissionFee = 1500;
 
           const defaultItems: FeeItem[] = [
             {
               id: IdGenerator.generate(),
               name: 'Tuition Fee',
-              amount: tuitionAnnual,
+              amount: tuitionTerm * 3,
               category: 'TUITION',
               isOptional: false,
               termBreakdown: {
-                term1: Math.round(tuitionAnnual * 0.4),
-                term2: Math.round(tuitionAnnual * 0.3),
-                term3: tuitionAnnual - Math.round(tuitionAnnual * 0.4) - Math.round(tuitionAnnual * 0.3)
-              }
+                term1: tuitionTerm,
+                term2: tuitionTerm,
+                term3: tuitionTerm,
+              },
             },
             {
               id: IdGenerator.generate(),
-              name: isJSS ? 'CBC Assessment & Practical Science Kits' : 'CBC Assessment & Learning Materials',
-              amount: assessmentAnnual,
-              category: 'ASSESSMENT',
-              isOptional: false,
-              termBreakdown: {
-                term1: Math.round(assessmentAnnual * 0.4),
-                term2: Math.round(assessmentAnnual * 0.3),
-                term3: assessmentAnnual - Math.round(assessmentAnnual * 0.4) - Math.round(assessmentAnnual * 0.3)
-              }
-            },
-            {
-              id: IdGenerator.generate(),
-              name: 'Activity & Co-Curricular Levy',
-              amount: activityAnnual,
+              name: 'Activity Fee',
+              amount: activityTerm * 2, // 1st & 2nd term ONLY
               category: 'ACTIVITY',
               isOptional: false,
               termBreakdown: {
-                term1: Math.round(activityAnnual * 0.4),
-                term2: Math.round(activityAnnual * 0.3),
-                term3: activityAnnual - Math.round(activityAnnual * 0.4) - Math.round(activityAnnual * 0.3)
-              }
+                term1: activityTerm,
+                term2: activityTerm,
+                term3: 0,
+              },
+            },
+            {
+              id: IdGenerator.generate(),
+              name: 'Assessment Fee',
+              amount: assessmentTerm * 3,
+              category: 'ASSESSMENT',
+              isOptional: false,
+              termBreakdown: {
+                term1: assessmentTerm,
+                term2: assessmentTerm,
+                term3: assessmentTerm,
+              },
             },
             {
               id: IdGenerator.generate(),
               name: 'Admission Fee',
-              amount: admissionAnnual,
+              amount: admissionFee,
               category: 'ADMISSION',
-              isOptional: false,
+              isOptional: true,
               termBreakdown: {
-                term1: admissionAnnual,
+                term1: admissionFee,
                 term2: 0,
-                term3: 0
-              }
-            }
+                term3: 0,
+              },
+            },
           ];
 
           feeStructure = FeeStructure.create(
@@ -1221,7 +1435,7 @@ export class StudentUseCases {
               gradeLevel: nextGrade as CbcGradeLevel,
               title: `${gradeName} Annual Fee Schedule`,
               items: defaultItems,
-              dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+              dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
             },
             IdGenerator.generate()
           );
@@ -1229,48 +1443,101 @@ export class StudentUseCases {
           await this.feeRepository.saveFeeStructure(feeStructure);
         }
 
-        // 3. Create or update target invoice
+        // 3. Extract term items for promoted student (exclude one-time admission fee for continuing learner)
+        const isWholeYearStructure = !feeStructure.termId || feeStructure.termId === 'ALL' || feeStructure.termId === 'ANNUAL';
+        const termNum = targetTermId.toLowerCase().includes('t2') || targetTermId.toLowerCase().includes('term-2') ? 2 : (targetTermId.toLowerCase().includes('t3') || targetTermId.toLowerCase().includes('term-3') ? 3 : 1);
+        const invoiceItems: FeeItem[] = [];
+
+        if (isWholeYearStructure) {
+          for (const it of feeStructure.items) {
+            // Continuing students promoted to a higher class are not billed new admission fees
+            if (it.category === 'ADMISSION' || it.name.toLowerCase().includes('admission')) {
+              continue;
+            }
+
+            let amt = Number(it.amount) || 0;
+            if (it.termBreakdown) {
+              if (termNum === 1 && it.termBreakdown.term1 !== undefined) amt = Number(it.termBreakdown.term1);
+              else if (termNum === 2 && it.termBreakdown.term2 !== undefined) amt = Number(it.termBreakdown.term2);
+              else if (termNum === 3 && it.termBreakdown.term3 !== undefined) amt = Number(it.termBreakdown.term3);
+            }
+
+            if (amt > 0) {
+              invoiceItems.push({
+                id: IdGenerator.generate(),
+                name: it.name,
+                amount: amt,
+                category: it.category,
+                isOptional: it.isOptional,
+              });
+            }
+          }
+        } else {
+          for (const it of feeStructure.items) {
+            if (it.category === 'ADMISSION' || it.name.toLowerCase().includes('admission')) {
+              continue;
+            }
+            invoiceItems.push({
+              id: IdGenerator.generate(),
+              name: it.name,
+              amount: Number(it.amount) || 0,
+              category: it.category,
+              isOptional: it.isOptional,
+            });
+          }
+        }
+
+        const newClassPayable = invoiceItems.reduce((sum, it) => sum + it.amount, 0);
+
+        // 4. Create or update target invoice with new class fees
         const existingTargetInvoices = await this.feeRepository.findInvoices({
           studentId: student.id,
           termId: targetTermId,
           academicYearId: targetAcademicYearId
         });
 
+        const allItems = [...invoiceItems];
+        if (carriedForwardBalance > 0) {
+          allItems.push({
+            id: IdGenerator.generate(),
+            name: 'Arrears / Previous Balance Carried Forward',
+            amount: carriedForwardBalance,
+            category: 'OTHER',
+            isOptional: false
+          });
+        }
+
+        const totalPayable = newClassPayable + carriedForwardBalance;
+        const dueDate = feeStructure.dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
         if (existingTargetInvoices.length > 0) {
           const inv = existingTargetInvoices[0];
-          if (carriedForwardBalance > 0) {
-            const hasArrears = inv.items.some(
-              it => it.name.toLowerCase().includes('carried forward') || it.name.toLowerCase().includes('arrears')
-            );
-            if (!hasArrears) {
-              const arrearsItem: FeeItem = {
-                id: IdGenerator.generate(),
-                name: 'Arrears / Previous Balance Carried Forward',
-                amount: carriedForwardBalance,
-                category: 'OTHER',
-                isOptional: false
-              };
-              inv.appendFeeItem(arrearsItem);
-              await this.feeRepository.updateInvoice(inv);
-            }
-          }
-          newInvoice = inv.toJSON();
+          const updatedInvoice = StudentInvoice.create(
+            {
+              schoolId: student.schoolId,
+              studentId: student.id,
+              feeStructureId: feeStructure.id,
+              academicYearId: targetAcademicYearId,
+              termId: targetTermId,
+              invoiceNumber: inv.invoiceNumber,
+              items: allItems.length > 0 ? allItems : feeStructure.items,
+              amountBilled: totalPayable > 0 ? totalPayable : feeStructure.totalAmount,
+              discountAmount: inv.discountAmount || 0,
+              amountPayable: Math.max(0, totalPayable - (inv.discountAmount || 0)),
+              amountPaid: inv.amountPaid || 0,
+              balance: Math.max(0, totalPayable - (inv.discountAmount || 0) - (inv.amountPaid || 0)),
+              status: Math.max(0, totalPayable - (inv.discountAmount || 0) - (inv.amountPaid || 0)) === 0
+                ? InvoiceStatus.PAID
+                : (inv.amountPaid > 0 ? InvoiceStatus.PARTIALLY_PAID : InvoiceStatus.UNPAID),
+              dueDate: feeStructure.dueDate || inv.dueDate
+            },
+            inv.id,
+            inv.createdAt
+          );
+          await this.feeRepository.updateInvoice(updatedInvoice);
+          newInvoice = updatedInvoice.toJSON();
         } else {
-          const invoiceItems: FeeItem[] = [...feeStructure.items];
-          if (carriedForwardBalance > 0) {
-            invoiceItems.push({
-              id: IdGenerator.generate(),
-              name: 'Arrears / Previous Balance Carried Forward',
-              amount: carriedForwardBalance,
-              category: 'OTHER',
-              isOptional: false
-            });
-          }
-
-          const totalAmount = feeStructure.totalAmount + carriedForwardBalance;
           const invoiceNumber = `INV-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
-          const dueDate = feeStructure.dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-
           const invoice = StudentInvoice.create(
             {
               schoolId: student.schoolId,
@@ -1279,12 +1546,12 @@ export class StudentUseCases {
               academicYearId: targetAcademicYearId,
               termId: targetTermId,
               invoiceNumber,
-              items: invoiceItems,
-              amountBilled: totalAmount,
+              items: allItems.length > 0 ? allItems : feeStructure.items,
+              amountBilled: totalPayable > 0 ? totalPayable : feeStructure.totalAmount,
               discountAmount: 0,
-              amountPayable: totalAmount,
+              amountPayable: totalPayable > 0 ? totalPayable : feeStructure.totalAmount,
               amountPaid: 0,
-              balance: totalAmount,
+              balance: totalPayable > 0 ? totalPayable : feeStructure.totalAmount,
               status: InvoiceStatus.UNPAID,
               dueDate
             },
@@ -1295,7 +1562,7 @@ export class StudentUseCases {
           newInvoice = invoice.toJSON();
         }
 
-        // 4. Mark prior unpaid invoices as CARRIED_FORWARD
+        // 5. Mark prior unpaid invoices as CARRIED_FORWARD
         if (carriedForwardBalance > 0) {
           for (const prevInv of unpaidInvoices) {
             prevInv.markCarriedForward();
@@ -1303,19 +1570,23 @@ export class StudentUseCases {
           }
         }
       } catch (err) {
-        console.error('[StudentUseCases] Error during fee carry-forward on promotion:', err);
+        console.error('[StudentUseCases] Error during fee structure charging on promotion:', err);
       }
     }
 
     return {
-      student: student.toJSON(),
+      student: {
+        ...student.toJSON(),
+        feeBalance: newInvoice ? newInvoice.balance : carriedForwardBalance,
+        totalFee: newInvoice ? newInvoice.amountPayable : 0,
+      },
       previousGrade,
       newGrade: nextGrade,
       carriedForwardBalance,
       invoice: newInvoice,
       message: carriedForwardBalance > 0
-        ? `Successfully promoted ${student.fullName} from ${previousGrade} to ${nextGrade}. Previous balance of KES ${carriedForwardBalance.toLocaleString()} carried forward.`
-        : `Successfully promoted ${student.fullName} from ${previousGrade} to ${nextGrade}.`
+        ? `Successfully promoted ${student.fullName} from ${previousGrade.replace('_', ' ')} to ${nextGrade.replace('_', ' ')}. Invoiced for new grade (KES ${(newInvoice ? newInvoice.amountPayable - carriedForwardBalance : 0).toLocaleString()}) and previous balance of KES ${carriedForwardBalance.toLocaleString()} carried forward.`
+        : `Successfully promoted ${student.fullName} from ${previousGrade.replace('_', ' ')} to ${nextGrade.replace('_', ' ')}. Invoiced for ${nextGrade.replace('_', ' ')} (KES ${(newInvoice ? newInvoice.amountPayable : 0).toLocaleString()}).`
     };
   }
 
@@ -1348,9 +1619,458 @@ export class StudentUseCases {
     };
   }
 
-  public async deleteStudent(id: string): Promise<void> {
+  public async deleteStudent(
+    id: string,
+    options?: { deletedByUserId?: string; reason?: string }
+  ): Promise<{ deletedStudent: DeletedStudent; pendingWorkCleared: ClearedPendingWork }> {
     const student = await this.studentRepository.findById(id);
     if (!student) throw new NotFoundError('Student', id);
+
+    // 1. Gather all linked data across all domains
+    // Invoices and Payments
+    const invoices = this.feeRepository ? await this.feeRepository.findInvoices({ studentId: id }) : [];
+    const payments = this.feeRepository ? await this.feeRepository.findPayments({ studentId: id }) : [];
+
+    // Lunch Enrollments and Payments
+    const lunchEnrollments = this.lunchFeeRepository ? await this.lunchFeeRepository.findEnrollments({ studentId: id }) : [];
+    const lunchPayments = this.lunchFeeRepository ? await this.lunchFeeRepository.findPayments(undefined, id) : [];
+
+    // Assessments and Report Cards
+    const formativeAssessments = this.cbcRepository ? await this.cbcRepository.findFormatives({ studentId: id }) : [];
+    const summativeAssessments = this.cbcRepository ? await this.cbcRepository.findSummatives({ studentId: id }) : [];
+    const reportCards = this.cbcRepository && this.cbcRepository.findReportCardsByStudent
+      ? await this.cbcRepository.findReportCardsByStudent(id)
+      : [];
+
+    // Attendance Records
+    const attendanceRegisters = this.attendanceRepository && this.attendanceRepository.findRegistersByStudent
+      ? await this.attendanceRepository.findRegistersByStudent(id)
+      : [];
+    const attendanceEntries = attendanceRegisters.map(reg => ({
+      registerId: reg.id,
+      date: reg.date,
+      type: reg.type,
+      streamId: reg.streamId,
+      entry: reg.entries.find(e => e.studentId === id)
+    })).filter(item => item.entry !== undefined);
+
+    // Complaints
+    const complaints = this.complaintRepository ? await this.complaintRepository.find({ complainantStudentId: id }) : [];
+
+    // EDiary Entries
+    const ediaryEntries = this.ediaryRepository ? await this.ediaryRepository.findByStudent(id) : [];
+
+    // Visual Media & Help Requests
+    const progressPhotos = this.mediaRepository ? await this.mediaRepository.findProgressPhotos({ studentId: id }) : [];
+    const helpRequests = this.mediaRepository ? await this.mediaRepository.findHelpRequests({ studentId: id }) : [];
+
+    // Guardians & Parents
+    const guardians = await this.guardianRepository.findByStudentId(id);
+    const enrichedGuardians: any[] = [];
+    for (const g of guardians) {
+      const parentUser = g.userId ? await this.userRepository.findById(g.userId) : null;
+      // Check if this guardian has any OTHER active students in the school
+      const otherStudentIds = (g.studentIds || []).filter(sId => sId !== id);
+      let hasOtherActiveStudents = false;
+      for (const otherId of otherStudentIds) {
+        const otherStud = await this.studentRepository.findById(otherId);
+        if (otherStud && otherStud.id !== id) {
+          hasOtherActiveStudents = true;
+          break;
+        }
+      }
+
+      enrichedGuardians.push({
+        id: g.id,
+        userId: g.userId,
+        nationalId: g.nationalId,
+        occupation: g.occupation,
+        relationship: g.relationship,
+        emergencyContact: g.emergencyContact,
+        studentIds: g.studentIds,
+        hasOtherActiveStudents,
+        willArchiveParentAccount: !hasOtherActiveStudents,
+        parentUser: parentUser ? {
+          id: parentUser.id,
+          firstName: parentUser.firstName,
+          lastName: parentUser.lastName,
+          fullName: parentUser.fullName,
+          email: parentUser.email,
+          phone: parentUser.phone,
+          role: parentUser.role,
+          status: parentUser.status,
+          schoolId: parentUser.schoolId,
+          passwordHash: parentUser.passwordHash,
+          mustChangePassword: (parentUser as any).mustChangePassword
+        } : null
+      });
+    }
+
+    const archivedParentsCount = enrichedGuardians.filter(eg => eg.willArchiveParentAccount).length;
+
+    // 2. Identify and record pending work to be cleared
+    const pendingInvoices = invoices.filter(
+      inv => inv.balance > 0 ||
+             inv.status === InvoiceStatus.UNPAID ||
+             inv.status === InvoiceStatus.PARTIALLY_PAID ||
+             inv.status === InvoiceStatus.OVERDUE
+    );
+    const clearedInvoiceBalances = pendingInvoices.reduce((sum, inv) => sum + (inv.balance || 0), 0);
+    const clearedInvoicesSummary = pendingInvoices.map(inv => ({
+      id: inv.id,
+      invoiceNumber: inv.invoiceNumber,
+      balance: inv.balance,
+      status: inv.status
+    }));
+
+    const pendingLunchEnrollments = lunchEnrollments.filter(
+      enr => enr.balance > 0 || enr.paymentStatus !== 'PAID'
+    );
+    const clearedLunchBalances = pendingLunchEnrollments.reduce((sum, enr) => sum + (enr.balance || 0), 0);
+    const clearedLunchSummary = pendingLunchEnrollments.map(enr => ({
+      id: enr.id,
+      planName: enr.planName,
+      balance: enr.balance,
+      paymentStatus: enr.paymentStatus
+    }));
+
+    const openComplaints = complaints.filter(
+      c => c.status === 'OPEN' || c.status === 'INVESTIGATING' || c.status === 'IN_PROGRESS' || c.status === 'IN_REVIEW'
+    );
+    const resolvedComplaintsSummary = openComplaints.map(c => ({
+      id: c.id,
+      title: c.title
+    }));
+
+    // Build human-readable summary
+    const summaryParts: string[] = [];
+    if (pendingInvoices.length > 0) {
+      summaryParts.push(`${pendingInvoices.length} pending fee invoice(s) totalling KES ${clearedInvoiceBalances.toLocaleString()} cleared`);
+    }
+    if (pendingLunchEnrollments.length > 0) {
+      summaryParts.push(`${pendingLunchEnrollments.length} pending lunch fee balance(s) totalling KES ${clearedLunchBalances.toLocaleString()} cleared`);
+    }
+    if (openComplaints.length > 0) {
+      summaryParts.push(`${openComplaints.length} pending complaint(s) resolved/closed`);
+    }
+    if (archivedParentsCount > 0) {
+      summaryParts.push(`${archivedParentsCount} parent profile & user account(s) archived & removed from active directory`);
+    } else if (guardians.length > 0) {
+      summaryParts.push(`unlinked from ${guardians.length} guardian(s)`);
+    }
+    if (summaryParts.length === 0) {
+      summaryParts.push('All student records cleared with zero pending balances or open tasks');
+    }
+    const summaryText = summaryParts.join('; ');
+
+    const pendingWorkCleared: ClearedPendingWork = {
+      clearedInvoicesCount: pendingInvoices.length,
+      clearedInvoiceBalances,
+      clearedInvoices: clearedInvoicesSummary,
+      clearedLunchBalances,
+      clearedLunchEnrollments: clearedLunchSummary,
+      resolvedComplaintsCount: openComplaints.length,
+      resolvedComplaints: resolvedComplaintsSummary,
+      clearedEdiaryItemsCount: ediaryEntries.length,
+      unlinkedGuardiansCount: guardians.length,
+      clearedParentAccountsCount: archivedParentsCount,
+      archivedParentsCount,
+      summaryText
+    };
+
+    // 3. Assemble complete linked data snapshot
+    const linkedData: DeletedStudentLinkedData = {
+      invoices: invoices.map((i: any) => (typeof i.toJSON === 'function' ? i.toJSON() : i)),
+      payments: payments.map((p: any) => (typeof p.toJSON === 'function' ? p.toJSON() : p)),
+      lunchEnrollments: lunchEnrollments.map((l: any) => (typeof l.toJSON === 'function' ? l.toJSON() : l)),
+      lunchPayments: lunchPayments.map((lp: any) => (typeof lp.toJSON === 'function' ? lp.toJSON() : lp)),
+      formativeAssessments: formativeAssessments.map((f: any) => (typeof f.toJSON === 'function' ? f.toJSON() : f)),
+      summativeAssessments: summativeAssessments.map((s: any) => (typeof s.toJSON === 'function' ? s.toJSON() : s)),
+      reportCards: reportCards.map((r: any) => (typeof r.toJSON === 'function' ? r.toJSON() : r)),
+      attendanceRecords: attendanceEntries,
+      complaints: complaints.map((c: any) => (typeof c.toJSON === 'function' ? c.toJSON() : c)),
+      ediaryEntries: ediaryEntries.map((e: any) => (typeof e.toJSON === 'function' ? e.toJSON() : e)),
+      progressPhotos: progressPhotos.map((p: any) => (typeof p.toJSON === 'function' ? p.toJSON() : p)),
+      helpRequests: helpRequests.map((h: any) => (typeof h.toJSON === 'function' ? h.toJSON() : h)),
+      guardians: enrichedGuardians
+    };
+
+    // 4. Create and persist DeletedStudent archive entry in deleted_students table
+    const deletedStudent = DeletedStudent.create(
+      {
+        studentId: student.id,
+        admissionNumber: student.admissionNumber,
+        firstName: student.firstName,
+        middleName: student.middleName,
+        lastName: student.lastName,
+        upiNumber: student.upiNumber,
+        schoolId: student.schoolId,
+        gradeLevel: student.gradeLevel,
+        classroomId: student.classroomId,
+        streamId: student.streamId,
+        academicYearId: student.academicYearId,
+        studentData: student.toJSON(),
+        linkedData,
+        pendingWorkCleared,
+        deletedAt: new Date(),
+        deletedByUserId: options?.deletedByUserId,
+        reason: options?.reason || 'Deleted by administrator'
+      },
+      IdGenerator.generate()
+    );
+
+    if (this.deletedStudentRepository) {
+      await this.deletedStudentRepository.save(deletedStudent);
+    }
+
+    // 5. Clear active linked data and pending work from operational tables
+    if (this.feeRepository) {
+      if (this.feeRepository.deletePaymentsByStudentId) {
+        await this.feeRepository.deletePaymentsByStudentId(id);
+      }
+      if (this.feeRepository.deleteInvoicesByStudentId) {
+        await this.feeRepository.deleteInvoicesByStudentId(id);
+      }
+    }
+
+    if (this.lunchFeeRepository) {
+      if (this.lunchFeeRepository.deletePaymentsByStudentId) {
+        await this.lunchFeeRepository.deletePaymentsByStudentId(id);
+      }
+      if (this.lunchFeeRepository.deleteEnrollmentsByStudentId) {
+        await this.lunchFeeRepository.deleteEnrollmentsByStudentId(id);
+      }
+    }
+
+    if (this.cbcRepository) {
+      if (this.cbcRepository.deleteFormativesByStudent) {
+        await this.cbcRepository.deleteFormativesByStudent(id);
+      }
+      if (this.cbcRepository.deleteSummativesByStudent) {
+        await this.cbcRepository.deleteSummativesByStudent(id);
+      }
+      if (this.cbcRepository.deleteReportCardsByStudent) {
+        await this.cbcRepository.deleteReportCardsByStudent(id);
+      }
+    }
+
+    if (this.attendanceRepository && this.attendanceRepository.removeStudentFromRegisters) {
+      await this.attendanceRepository.removeStudentFromRegisters(id);
+    }
+
+    if (this.complaintRepository) {
+      for (const c of openComplaints) {
+        c.resolve(
+          options?.deletedByUserId || 'system',
+          'Student archived and deleted from active system - pending issue cleared'
+        );
+        await this.complaintRepository.update(c);
+      }
+    }
+
+    // Parents / Guardians: If parent account was exclusive to this student, remove from active tables
+    for (const eg of enrichedGuardians) {
+      const g = guardians.find(orig => orig.id === eg.id);
+      if (!g) continue;
+
+      if (eg.willArchiveParentAccount) {
+        await this.guardianRepository.delete(g.id);
+        if (eg.userId) {
+          await this.userRepository.delete(eg.userId);
+        }
+      } else {
+        g.unlinkStudent(id);
+        await this.guardianRepository.update(g);
+      }
+    }
+
+    // Visual Media & Help Requests: resolve pending parent requests and delete photos
+    if (this.mediaRepository) {
+      for (const hr of helpRequests) {
+        if (typeof (hr as any).resolve === 'function') {
+          (hr as any).resolve('Student archived and deleted from active system - pending parent request closed');
+          await this.mediaRepository.updateHelpRequest(hr);
+        }
+      }
+      for (const p of progressPhotos) {
+        if (this.mediaRepository.deleteProgressPhoto) {
+          await this.mediaRepository.deleteProgressPhoto(p.id);
+        }
+      }
+    }
+
+    if (this.ediaryRepository) {
+      for (const entry of ediaryEntries) {
+        if (entry.studentId === id) {
+          await this.ediaryRepository.delete(entry.id);
+        }
+      }
+    }
+
+    // 6. Delete student from active students table
     await this.studentRepository.delete(id);
+
+    return {
+      deletedStudent,
+      pendingWorkCleared
+    };
+  }
+
+  public async getDeletedStudents(filters?: DeletedStudentFilterCriteria): Promise<DeletedStudent[]> {
+    if (!this.deletedStudentRepository) return [];
+    return this.deletedStudentRepository.findAll(filters);
+  }
+
+  public async getDeletedStudentById(id: string): Promise<DeletedStudent | null> {
+    if (!this.deletedStudentRepository) return null;
+    return this.deletedStudentRepository.findById(id);
+  }
+
+  public async restoreStudent(deletedStudentId: string): Promise<Student> {
+    if (!this.deletedStudentRepository) {
+      throw new ValidationError('Deleted students repository is not available');
+    }
+    const archived = await this.deletedStudentRepository.findById(deletedStudentId);
+    if (!archived) throw new NotFoundError('DeletedStudent', deletedStudentId);
+
+    // Verify admission number is not taken by another active student
+    const existing = await this.studentRepository.findByAdmissionNumber(archived.admissionNumber, archived.schoolId);
+    if (existing) {
+      throw new ConflictError(
+        `Cannot restore student: Admission number '${archived.admissionNumber}' is already in use by active student '${existing.fullName}'`
+      );
+    }
+
+    // Restore student entity
+    const sData = archived.studentData;
+    const student = Student.create(
+      {
+        admissionNumber: archived.admissionNumber,
+        upiNumber: archived.upiNumber,
+        firstName: archived.firstName,
+        middleName: archived.middleName,
+        lastName: archived.lastName,
+        dateOfBirth: sData.dateOfBirth,
+        gender: sData.gender,
+        gradeLevel: archived.gradeLevel as CbcGradeLevel,
+        classroomId: archived.classroomId,
+        streamId: archived.streamId,
+        schoolId: archived.schoolId,
+        academicYearId: archived.academicYearId || sData.academicYearId,
+        guardianIds: sData.guardianIds || [],
+        medicalConditions: sData.medicalConditions,
+        specialNeeds: sData.specialNeeds,
+        status: StudentStatus.ACTIVE,
+        profilePhotoUrl: sData.profilePhotoUrl
+      },
+      archived.studentId,
+      new Date(sData.createdAt || Date.now()),
+      new Date()
+    );
+    await this.studentRepository.save(student);
+
+    // Restore invoices if available
+    if (this.feeRepository && archived.linkedData.invoices) {
+      for (const invData of archived.linkedData.invoices) {
+        const inv = StudentInvoice.create(
+          {
+            schoolId: invData.schoolId,
+            studentId: invData.studentId,
+            feeStructureId: invData.feeStructureId,
+            academicYearId: invData.academicYearId,
+            termId: invData.termId,
+            invoiceNumber: invData.invoiceNumber,
+            items: invData.items,
+            amountBilled: invData.amountBilled,
+            discountAmount: invData.discountAmount || 0,
+            amountPayable: invData.amountPayable,
+            amountPaid: invData.amountPaid || 0,
+            balance: invData.balance,
+            status: invData.status,
+            dueDate: invData.dueDate
+          },
+          invData.id,
+          new Date(invData.createdAt || Date.now())
+        );
+        await this.feeRepository.saveInvoice(inv);
+      }
+    }
+
+    // Restore payments if available
+    if (this.feeRepository && archived.linkedData.payments) {
+      for (const payData of archived.linkedData.payments) {
+        const pay = Payment.create(
+          {
+            schoolId: payData.schoolId,
+            invoiceId: payData.invoiceId,
+            studentId: payData.studentId,
+            receiptNumber: payData.receiptNumber,
+            amount: payData.amount,
+            paymentMethod: payData.paymentMethod,
+            transactionReference: payData.transactionReference,
+            mpesaPhoneNumber: payData.mpesaPhoneNumber,
+            paymentDate: payData.paymentDate,
+            recordedByUserId: payData.recordedByUserId,
+            status: payData.status,
+            notes: payData.notes
+          },
+          payData.id,
+          new Date(payData.createdAt || Date.now())
+        );
+        await this.feeRepository.savePayment(pay);
+      }
+    }
+
+    // Restore or re-link guardians & parents
+    if (this.guardianRepository && archived.linkedData.guardians) {
+      for (const gData of archived.linkedData.guardians) {
+        // 1. Restore parent User account if missing from users table
+        if (gData.parentUser && this.userRepository) {
+          const existingUser = await this.userRepository.findById(gData.parentUser.id);
+          if (!existingUser) {
+            const restoredUser = User.create(
+              {
+                email: gData.parentUser.email,
+                phone: gData.parentUser.phone,
+                passwordHash: gData.parentUser.passwordHash,
+                firstName: gData.parentUser.firstName,
+                lastName: gData.parentUser.lastName,
+                role: gData.parentUser.role,
+                status: gData.parentUser.status,
+                schoolId: gData.parentUser.schoolId,
+                mustChangePassword: gData.parentUser.mustChangePassword
+              },
+              gData.parentUser.id
+            );
+            await this.userRepository.save(restoredUser);
+          }
+        }
+
+        // 2. Restore Guardian entity if missing, or re-link student if existing
+        const existingGuardian = await this.guardianRepository.findById(gData.id);
+        if (!existingGuardian) {
+          const restoredGuardian = Guardian.create(
+            {
+              userId: gData.userId,
+              nationalId: gData.nationalId,
+              occupation: gData.occupation,
+              relationship: gData.relationship,
+              emergencyContact: gData.emergencyContact,
+              studentIds: [archived.studentId]
+            },
+            gData.id
+          );
+          await this.guardianRepository.save(restoredGuardian);
+        } else {
+          existingGuardian.linkStudent(archived.studentId);
+          await this.guardianRepository.update(existingGuardian);
+        }
+      }
+    }
+
+    // Remove from archive table
+    await this.deletedStudentRepository.delete(deletedStudentId);
+
+    return student;
   }
 }

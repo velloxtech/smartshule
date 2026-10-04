@@ -238,6 +238,58 @@ describe('Student Promotion, Admission Fee & Balance Carry-Forward Integration T
         .get(`/api/v1/students/${studentIdB}`)
         .set('Authorization', `Bearer ${adminToken}`);
       expect(getB.body.data.gradeLevel).toBe('GRADE_4');
+
+      // Verify that Grade 4 fee structure was automatically charged to the promoted learners
+      const invResA = await request(app)
+        .get(`/api/v1/finance/invoices?studentId=${studentIdA}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+      expect(invResA.status).toBe(200);
+      expect(invResA.body.data.length).toBeGreaterThan(0);
+      const newInvoiceA = invResA.body.data[0];
+      expect(newInvoiceA.amountPayable).toBeGreaterThan(0);
+      // Continuing pupils must NOT be charged admission fee upon promotion
+      const admItem = newInvoiceA.items.find((it: any) => it.category === 'ADMISSION');
+      expect(admItem).toBeUndefined();
+    });
+
+    it('promotes learner with carryForwardBalance=false and still bills the new class fee structure', async () => {
+      const reg = await request(app)
+        .post('/api/v1/students')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          admissionNumber: 'ADM-CLEAN-01',
+          firstName: 'Mercy',
+          lastName: 'Wanjiku',
+          dateOfBirth: '2016-03-12',
+          gender: 'FEMALE',
+          gradeLevel: 'PP2',
+          schoolId: 'school-001',
+          academicYearId: 'year-2026'
+        });
+      const mercyId = reg.body.data.id;
+
+      const promoRes = await request(app)
+        .post(`/api/v1/students/${mercyId}/promote`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          targetGradeLevel: 'GRADE_1',
+          targetAcademicYearId: 'year-2026',
+          targetTermId: 'term-2026-t1',
+          carryForwardBalance: false
+        });
+
+      expect(promoRes.status).toBe(200);
+      expect(promoRes.body.success).toBe(true);
+      expect(promoRes.body.data.newGrade).toBe('GRADE_1');
+      // The student must be charged for Grade 1
+      const inv = promoRes.body.data.invoice;
+      expect(inv).toBeDefined();
+      expect(inv.amountPayable).toBeGreaterThan(0);
+      expect(inv.balance).toBe(inv.amountPayable);
+      // No admission fee charged
+      expect(inv.items.some((it: any) => it.category === 'ADMISSION')).toBe(false);
+      // No arrears item charged
+      expect(inv.items.some((it: any) => it.name.includes('Arrears'))).toBe(false);
     });
   });
 });

@@ -596,9 +596,9 @@ describe('SmartShule Security Hardening & Vulnerability Remediation Integration 
       expect(res.status).toBe(403);
     });
 
-    it('rejects PARENT access to complaints (403 Forbidden)', async () => {
+    it('rejects PARENT access to complaints stats summary (403 Forbidden)', async () => {
       const res = await request(app)
-        .get('/api/v1/complaints')
+        .get('/api/v1/complaints/stats/summary')
         .set('Authorization', `Bearer ${parentToken}`);
       expect(res.status).toBe(403);
     });

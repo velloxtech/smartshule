@@ -272,10 +272,65 @@ export class StudentController {
 
   public deleteStudent = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await this.studentUseCases.deleteStudent(req.params.id as string);
+      const user = (req as any).user;
+      const result = await this.studentUseCases.deleteStudent(req.params.id as string, {
+        deletedByUserId: user?.id || user?.userId,
+        reason: req.body?.reason
+      });
       return res.status(200).json({
         success: true,
-        message: 'Student deleted successfully'
+        message: 'Student deleted successfully and archived with all linked records. All pending work was cleared.',
+        data: {
+          deletedStudent: result.deletedStudent.toJSON(),
+          pendingWorkCleared: result.pendingWorkCleared
+        }
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public getDeletedStudents = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { schoolId, gradeLevel, search } = req.query;
+      const user = (req as any).user;
+      const effectiveSchoolId = (schoolId as string) || user?.schoolId;
+      const deletedStudents = await this.studentUseCases.getDeletedStudents({
+        schoolId: effectiveSchoolId,
+        gradeLevel: gradeLevel as string,
+        search: search as string
+      });
+      return res.status(200).json({
+        success: true,
+        data: deletedStudents.map(d => d.toJSON())
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public getDeletedStudentById = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const deleted = await this.studentUseCases.getDeletedStudentById(req.params.id as string);
+      if (!deleted) {
+        return res.status(404).json({ success: false, message: 'Deleted student record not found' });
+      }
+      return res.status(200).json({
+        success: true,
+        data: deleted.toJSON()
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public restoreStudent = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const restored = await this.studentUseCases.restoreStudent(req.params.id as string);
+      return res.status(200).json({
+        success: true,
+        message: `Student '${restored.fullName}' restored successfully.`,
+        data: restored.toJSON()
       });
     } catch (err) {
       next(err);

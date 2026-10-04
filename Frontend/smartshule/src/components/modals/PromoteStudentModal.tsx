@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Student, AcademicYear, AcademicTerm } from '../../types';
+import { Student, AcademicYear, AcademicTerm, FeeStructure } from '../../types';
 import { apiService } from '../../services/api';
 
 interface PromoteStudentModalProps {
@@ -75,6 +75,7 @@ export const PromoteStudentModal: React.FC<PromoteStudentModalProps> = ({
   const [availableStreams, setAvailableStreams] = useState<{ id: string; name: string }[]>([]);
   const [targetStreamId, setTargetStreamId] = useState('');
   const [carryForwardBalance, setCarryForwardBalance] = useState(true);
+  const [feeStructures, setFeeStructures] = useState<FeeStructure[]>([]);
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -94,11 +95,16 @@ export const PromoteStudentModal: React.FC<PromoteStudentModalProps> = ({
 
     async function loadAcademicData() {
       try {
-        const [contextRes, yearsRes, classesRes] = await Promise.all([
+        const [contextRes, yearsRes, classesRes, feesRes] = await Promise.all([
           apiService.getCurrentContext().catch(() => null),
           apiService.getYears().catch(() => null),
           apiService.getClasses().catch(() => null),
+          apiService.getFeeStructures().catch(() => null),
         ]);
+
+        if (feesRes?.success && Array.isArray(feesRes.data)) {
+          setFeeStructures(feesRes.data);
+        }
 
         if (yearsRes?.success && yearsRes.data && yearsRes.data.length > 0) {
           setAcademicYears(yearsRes.data);
@@ -164,6 +170,55 @@ export const PromoteStudentModal: React.FC<PromoteStudentModalProps> = ({
       setAvailableStreams([]);
     }
   };
+
+  // Target class fee calculation
+  const targetTermObj = terms.find((t) => t.id === selectedTermId);
+  const termNum = targetTermObj?.name?.toLowerCase().includes('2') || targetTermObj?.id?.toLowerCase().includes('t2') || targetTermObj?.id?.toLowerCase().includes('term-2')
+    ? 2
+    : (targetTermObj?.name?.toLowerCase().includes('3') || targetTermObj?.id?.toLowerCase().includes('t3') || targetTermObj?.id?.toLowerCase().includes('term-3')
+      ? 3
+      : 1);
+
+  const matchedFeeStructure = feeStructures.find((fs) => fs.gradeLevel === targetGradeLevel);
+
+  const calculateNewGradeFee = (): number => {
+    if (targetGradeLevel === 'GRADUATED') return 0;
+
+    if (matchedFeeStructure && Array.isArray(matchedFeeStructure.items) && matchedFeeStructure.items.length > 0) {
+      const isWholeYear = !matchedFeeStructure.termId || matchedFeeStructure.termId === 'ALL' || matchedFeeStructure.termId === 'ANNUAL';
+      let total = 0;
+      for (const it of matchedFeeStructure.items) {
+        if (it.category === 'ADMISSION' || it.name.toLowerCase().includes('admission')) {
+          continue;
+        }
+        if (isWholeYear && it.termBreakdown) {
+          if (termNum === 1 && it.termBreakdown.term1 !== undefined) total += Number(it.termBreakdown.term1) || 0;
+          else if (termNum === 2 && it.termBreakdown.term2 !== undefined) total += Number(it.termBreakdown.term2) || 0;
+          else if (termNum === 3 && it.termBreakdown.term3 !== undefined) total += Number(it.termBreakdown.term3) || 0;
+          else total += Number(it.amount) || 0;
+        } else {
+          total += Number(it.amount) || 0;
+        }
+      }
+      return total;
+    }
+
+    const isUpperPrimary = ['GRADE_4', 'GRADE_5', 'GRADE_6'].includes(targetGradeLevel);
+    const isLowerPrimary = ['GRADE_1', 'GRADE_2', 'GRADE_3'].includes(targetGradeLevel);
+    const isPrePrimary = ['PLAYGROUP', 'PP1', 'PP2'].includes(targetGradeLevel);
+
+    const tuitionTerm = isUpperPrimary ? 5700 : (isLowerPrimary ? 5000 : (isPrePrimary ? 4500 : 5000));
+    const activityTerm = (termNum === 3) ? 0 : ((isUpperPrimary || isLowerPrimary) ? 500 : (isPrePrimary ? 300 : 500));
+    const assessmentTerm = 300;
+
+    return tuitionTerm + activityTerm + assessmentTerm;
+  };
+
+  const newGradeFee = calculateNewGradeFee();
+  const arrearsToCarry = carryForwardBalance ? totalOutstandingBalance : 0;
+  const totalProjectedPayable = isBulk
+    ? (newGradeFee * selectedStudents.length + arrearsToCarry)
+    : (newGradeFee + arrearsToCarry);
 
   if (!isOpen) return null;
 
@@ -380,9 +435,60 @@ export const PromoteStudentModal: React.FC<PromoteStudentModalProps> = ({
             </div>
           )}
 
-          {/* Fee Balance Carry-Forward Section */}
-          <div className="border border-outline-variant/30 rounded-xl p-3.5 bg-surface-container-lowest space-y-2.5">
-            <div className="flex items-start gap-3">
+          {/* Fee Structure Charging & Arrears Rollover Section */}
+          <div className="border border-outline-variant/30 rounded-xl p-3.5 bg-surface-container-lowest space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-on-surface flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[18px] text-primary">payments</span>
+                New Class Fee & Invoicing Preview
+              </span>
+              {matchedFeeStructure && (
+                <span className="text-[10px] bg-secondary/10 text-secondary font-bold px-2 py-0.5 rounded-full">
+                  Fee Schedule Linked
+                </span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div className="bg-surface-container-low p-2.5 rounded-lg border border-outline-variant/20">
+                <div className="text-[10px] font-semibold text-on-surface-variant uppercase">
+                  {targetGradeLevel === 'GRADUATED' ? 'Alumni / Exit' : `${targetGradeLevel.replace('_', ' ')} Term Fee`}
+                </div>
+                <div className="text-sm font-bold text-on-surface font-data-mono mt-0.5">
+                  KES {newGradeFee.toLocaleString()}
+                </div>
+                <div className="text-[10px] text-outline mt-0.5">
+                  {targetGradeLevel === 'GRADUATED' ? 'No new tuition' : 'Tuition & levies (excl. adm)'}
+                </div>
+              </div>
+
+              <div className="bg-surface-container-low p-2.5 rounded-lg border border-outline-variant/20">
+                <div className="text-[10px] font-semibold text-on-surface-variant uppercase">
+                  Arrears to Rollover
+                </div>
+                <div className={`text-sm font-bold font-data-mono mt-0.5 ${arrearsToCarry > 0 ? 'text-error' : 'text-on-surface'}`}>
+                  KES {arrearsToCarry.toLocaleString()}
+                </div>
+                <div className="text-[10px] text-outline mt-0.5">
+                  {carryForwardBalance ? (totalOutstandingBalance > 0 ? 'Will be appended' : 'No prior balance') : 'Excluded from new invoice'}
+                </div>
+              </div>
+
+              <div className="bg-primary/5 p-2.5 rounded-lg border border-primary/20">
+                <div className="text-[10px] font-semibold text-primary uppercase">
+                  {isBulk ? 'Cohort Total Billed' : 'Total Target Invoice'}
+                </div>
+                <div className="text-sm font-bold text-primary font-data-mono mt-0.5">
+                  KES {totalProjectedPayable.toLocaleString()}
+                </div>
+                <div className="text-[10px] text-primary/70 mt-0.5">
+                  {isBulk ? `For ${selectedStudents.length} learners` : 'New class fee + arrears'}
+                </div>
+              </div>
+            </div>
+
+            {/* Checkbox for carry-forward */}
+            <div className="flex items-start gap-2.5 pt-1.5 border-t border-outline-variant/20">
               <input
                 id="carryForwardCheckbox"
                 type="checkbox"
@@ -395,18 +501,9 @@ export const PromoteStudentModal: React.FC<PromoteStudentModalProps> = ({
                   Carry Forward Outstanding Balance into Next Grade Invoice
                 </label>
                 <p className="text-[11px] text-on-surface-variant mt-0.5">
-                  When enabled, any unpaid balance will be rolled over as an arrears line item on the target grade invoice, and prior invoices will be ratified as carried forward.
+                  When enabled, any unpaid balance (KES {totalOutstandingBalance.toLocaleString()}) will be rolled over as an arrears line item on the {targetGradeLevel.replace('_', ' ')} invoice, and prior invoices will be ratified as carried forward.
                 </p>
               </div>
-            </div>
-
-            <div className="bg-surface-container-low p-2.5 rounded-lg flex items-center justify-between text-xs font-medium">
-              <span className="text-on-surface-variant">Outstanding Arrears:</span>
-              <span className={`font-data-mono font-bold ${totalOutstandingBalance > 0 ? 'text-error' : 'text-secondary'}`}>
-                {totalOutstandingBalance > 0
-                  ? `KES ${totalOutstandingBalance.toLocaleString()}`
-                  : 'KES 0 (Fully Cleared)'}
-              </span>
             </div>
           </div>
 

@@ -405,16 +405,53 @@ export class AcademicUseCases {
   public async listLearningAreas(filters?: { gradeLevel?: CbcGradeLevel; schoolId?: string }) {
     let areas = await this.academicRepository.findAllLearningAreas(filters);
     if (areas.length === 0) {
-      const defaultSubjects = [
+      const schoolId = filters?.schoolId || 'school-001';
+      const defaultSubjects: { name: string; code: string; gradeLevel: CbcGradeLevel; educationLevel: EducationLevel; isElective: boolean }[] = [
+        // 1. Grace Seeds Pre-Primary (Playgroup, PP1, PP2)
+        ...[CbcGradeLevel.PLAYGROUP, CbcGradeLevel.PP1, CbcGradeLevel.PP2].flatMap(g => [
+          { name: 'Language Activities', code: 'LANG_ACT', gradeLevel: g, educationLevel: EducationLevel.PRE_PRIMARY, isElective: false },
+          { name: 'Mathematical Activities', code: 'MATH_ACT', gradeLevel: g, educationLevel: EducationLevel.PRE_PRIMARY, isElective: false },
+          { name: 'Creative Activities', code: 'CREAT_ACT', gradeLevel: g, educationLevel: EducationLevel.PRE_PRIMARY, isElective: false },
+          { name: 'Religious Activities', code: 'REL_ACT', gradeLevel: g, educationLevel: EducationLevel.PRE_PRIMARY, isElective: false },
+          { name: 'Environmental Activities', code: 'ENV_ACT', gradeLevel: g, educationLevel: EducationLevel.PRE_PRIMARY, isElective: false },
+        ]),
+
+        // 2. Grace Seeds Lower Primary (Grade 1 - 3)
+        ...[CbcGradeLevel.GRADE_1, CbcGradeLevel.GRADE_2, CbcGradeLevel.GRADE_3].flatMap(g => [
+          { name: 'English', code: 'ENG', gradeLevel: g, educationLevel: EducationLevel.LOWER_PRIMARY, isElective: false },
+          { name: 'Mathematics', code: 'MATH', gradeLevel: g, educationLevel: EducationLevel.LOWER_PRIMARY, isElective: false },
+          { name: 'Kiswahili', code: 'KISW', gradeLevel: g, educationLevel: EducationLevel.LOWER_PRIMARY, isElective: false },
+          { name: 'Creative Activities', code: 'CREAT', gradeLevel: g, educationLevel: EducationLevel.LOWER_PRIMARY, isElective: false },
+          { name: 'Environmental Activities', code: 'ENV', gradeLevel: g, educationLevel: EducationLevel.LOWER_PRIMARY, isElective: false },
+          { name: 'Religious Education', code: 'CRE', gradeLevel: g, educationLevel: EducationLevel.LOWER_PRIMARY, isElective: false },
+          { name: 'Indigenous Language', code: 'INDIG', gradeLevel: g, educationLevel: EducationLevel.LOWER_PRIMARY, isElective: false },
+        ]),
+
+        // 3. Grace Seeds Upper Primary (Grade 4 - 6)
+        ...[CbcGradeLevel.GRADE_4, CbcGradeLevel.GRADE_5, CbcGradeLevel.GRADE_6].flatMap(g => [
+          { name: 'Mathematics', code: 'MATH', gradeLevel: g, educationLevel: EducationLevel.UPPER_PRIMARY, isElective: false },
+          { name: 'English', code: 'ENG', gradeLevel: g, educationLevel: EducationLevel.UPPER_PRIMARY, isElective: false },
+          { name: 'Kiswahili', code: 'KISW', gradeLevel: g, educationLevel: EducationLevel.UPPER_PRIMARY, isElective: false },
+          { name: 'Science and Technology', code: 'SCI_TECH', gradeLevel: g, educationLevel: EducationLevel.UPPER_PRIMARY, isElective: false },
+          { name: 'Agriculture', code: 'AGRI', gradeLevel: g, educationLevel: EducationLevel.UPPER_PRIMARY, isElective: false },
+          { name: 'Creative Arts', code: 'ARTS', gradeLevel: g, educationLevel: EducationLevel.UPPER_PRIMARY, isElective: false },
+          { name: 'Social Studies', code: 'SST', gradeLevel: g, educationLevel: EducationLevel.UPPER_PRIMARY, isElective: false },
+          { name: 'Christian Religious Education', code: 'CRE', gradeLevel: g, educationLevel: EducationLevel.UPPER_PRIMARY, isElective: false },
+        ]),
+
+        // 4. Junior School (Grade 7 - 12 Standard CBC Learning Areas)
         { name: 'Mathematics', code: 'MATH', gradeLevel: CbcGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
         { name: 'English Language', code: 'ENG', gradeLevel: CbcGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
         { name: 'Kiswahili Language', code: 'KISW', gradeLevel: CbcGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
         { name: 'Integrated Science', code: 'INTSCI', gradeLevel: CbcGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
+        { name: 'Health Education', code: 'HLTH', gradeLevel: CbcGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
         { name: 'Social Studies', code: 'SST', gradeLevel: CbcGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
         { name: 'Christian Religious Education', code: 'CRE', gradeLevel: CbcGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
         { name: 'Agriculture & Nutrition', code: 'AGRI', gradeLevel: CbcGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
+        { name: 'Pre-Technical Studies', code: 'PRETECH', gradeLevel: CbcGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
         { name: 'Creative Arts & Sports', code: 'ARTS', gradeLevel: CbcGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
-        { name: 'Pre-Technical Studies', code: 'PRETECH', gradeLevel: CbcGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false }
+        { name: 'Business Studies', code: 'BUS', gradeLevel: CbcGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
+        { name: 'Computer Science', code: 'COMP', gradeLevel: CbcGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
       ];
 
       for (const subj of defaultSubjects) {
@@ -425,7 +462,7 @@ export class AcademicUseCases {
             gradeLevel: subj.gradeLevel,
             educationLevel: subj.educationLevel,
             isElective: subj.isElective,
-            schoolId: filters?.schoolId || 'school-001'
+            schoolId,
           },
           IdGenerator.generate()
         );

@@ -245,6 +245,15 @@ export class PostgresLunchFeeRepository implements ILunchFeeRepository {
     await this.pool.query('DELETE FROM lunch_enrollments WHERE id = $1', [id]);
   }
 
+  async deleteEnrollmentsByStudentId(studentId: string): Promise<void> {
+    await this.pool.query('DELETE FROM lunch_payments WHERE student_id = $1', [studentId]);
+    await this.pool.query('DELETE FROM lunch_enrollments WHERE student_id = $1', [studentId]);
+  }
+
+  async deletePaymentsByStudentId(studentId: string): Promise<void> {
+    await this.pool.query('DELETE FROM lunch_payments WHERE student_id = $1', [studentId]);
+  }
+
   async savePayment(payment: LunchPayment): Promise<LunchPayment> {
     const query = `
       INSERT INTO lunch_payments (

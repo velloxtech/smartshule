@@ -332,8 +332,21 @@ export interface LearningAreaReportEntry {
   learningAreaId: string;
   learningAreaName: string;
   performanceLevel: PerformanceLevel;
-  score: number; // 1-4
+  score: number; // 1-4 or percentage score out of 100
+  rawScore?: number;
+  rubricScore?: number;
+  term1Score?: number;
+  term2Score?: number;
+  term3Score?: number;
   teacherRemarks: string;
+}
+
+export interface TermTrendEntry {
+  term: string;
+  termNumber: number;
+  averageScore: number;
+  performanceLevel: PerformanceLevel | string;
+  status: string;
 }
 
 export interface CoreCompetencyAssessmentEntry {
@@ -363,6 +376,7 @@ export interface CbcReportCardProps {
   headTeacherRemarks: string;
   overallAverageScore: number;
   overallPerformanceLevel: PerformanceLevel;
+  termTrends?: TermTrendEntry[];
   closingDate?: string;
   nextTermOpeningDate?: string;
 }
@@ -428,6 +442,10 @@ export class CbcReportCard extends Entity<CbcReportCardProps> {
     return this._props.attendanceDaysTotal;
   }
 
+  public get termTrends(): TermTrendEntry[] | undefined {
+    return this._props.termTrends;
+  }
+
   public toJSON() {
     return {
       id: this.id,
@@ -451,6 +469,7 @@ export class CbcReportCard extends Entity<CbcReportCardProps> {
       overallAverageScore: this.overallAverageScore,
       overallPerformanceLevel: this.overallPerformanceLevel,
       overallPerformanceLabel: PerformanceLevelScores[this.overallPerformanceLevel]?.label,
+      termTrends: this._props.termTrends || [],
       closingDate: this._props.closingDate,
       nextTermOpeningDate: this._props.nextTermOpeningDate,
       createdAt: this.createdAt,

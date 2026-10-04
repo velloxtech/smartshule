@@ -15,7 +15,8 @@ import {
   InMemoryAttendanceRepository,
   InMemoryFeeRepository,
   InMemoryMediaRepository,
-  InMemoryEDiaryRepository
+  InMemoryEDiaryRepository,
+  InMemoryDeletedStudentRepository
 } from './in-memory/InMemoryRepositories';
 
 import {
@@ -29,7 +30,8 @@ import {
   MongoLessonPlanRepository,
   MongoTimetableRepository,
   MongoAttendanceRepository,
-  MongoFeeRepository
+  MongoFeeRepository,
+  MongoDeletedStudentRepository
 } from './mongodb/MongooseRepositories';
 
 import {
@@ -44,11 +46,13 @@ import {
   PostgresLessonPlanRepository,
   PostgresTimetableRepository,
   PostgresAttendanceRepository,
-  PostgresFeeRepository
+  PostgresFeeRepository,
+  PostgresDeletedStudentRepository
 } from './postgres/PostgresRepositories';
 
 import { IUserRepository } from '../../core/ports/repositories/IUserRepository';
 import { IStudentRepository } from '../../core/ports/repositories/IStudentRepository';
+import { IDeletedStudentRepository } from '../../core/ports/repositories/IDeletedStudentRepository';
 import { ITeacherRepository, IGuardianRepository } from '../../core/ports/repositories/ITeacherRepository';
 import { IAcademicRepository } from '../../core/ports/repositories/IAcademicRepository';
 import { ICbcAssessmentRepository } from '../../core/ports/repositories/ICbcAssessmentRepository';
@@ -62,6 +66,7 @@ import { IRecordOfWorkRepository } from '../../core/ports/repositories/IRecordOf
 import { IComplaintRepository } from '../../core/ports/repositories/IComplaintRepository';
 import { ISystemLogRepository } from '../../core/ports/repositories/ISystemLogRepository';
 import { ILunchFeeRepository } from '../../core/ports/repositories/ILunchFeeRepository';
+import { ILibraryRepository } from '../../core/ports/repositories/ILibraryRepository';
 import {
   PostgresRecordOfWorkRepository,
   InMemoryRecordOfWorkRepository,
@@ -72,10 +77,13 @@ import { InMemorySystemLogRepository } from './in-memory/InMemorySystemLogReposi
 import { PostgresSystemLogRepository } from './postgres/PostgresSystemLogRepository';
 import { InMemoryLunchFeeRepository } from './in-memory/InMemoryLunchFeeRepository';
 import { PostgresLunchFeeRepository } from './postgres/PostgresLunchFeeRepository';
+import { PostgresLibraryRepository } from './postgres/PostgresLibraryRepository';
+import { InMemoryLibraryRepository } from './in-memory/InMemoryLibraryRepository';
 
 export interface RepositoryBundle {
   userRepository: IUserRepository;
   studentRepository: IStudentRepository;
+  deletedStudentRepository?: IDeletedStudentRepository;
   teacherRepository: ITeacherRepository;
   guardianRepository: IGuardianRepository;
   academicRepository: IAcademicRepository;
@@ -91,6 +99,7 @@ export interface RepositoryBundle {
   complaintRepository?: IComplaintRepository;
   systemLogRepository?: ISystemLogRepository;
   lunchFeeRepository?: ILunchFeeRepository;
+  libraryRepository?: ILibraryRepository;
 }
 
 export class DatabaseFactory {
@@ -107,6 +116,7 @@ export class DatabaseFactory {
       return {
         userRepository: new MongoUserRepository(),
         studentRepository: new MongoStudentRepository(),
+        deletedStudentRepository: new MongoDeletedStudentRepository(),
         teacherRepository: new MongoTeacherRepository(),
         guardianRepository: new MongoGuardianRepository(),
         academicRepository: new MongoAcademicRepository(),
@@ -162,6 +172,7 @@ export class DatabaseFactory {
       return {
         userRepository: new PostgresUserRepository(pool),
         studentRepository: new PostgresStudentRepository(pool),
+        deletedStudentRepository: new PostgresDeletedStudentRepository(pool),
         teacherRepository: new PostgresTeacherRepository(pool),
         guardianRepository: new PostgresGuardianRepository(pool),
         academicRepository: new PostgresAcademicRepository(pool),
@@ -175,6 +186,7 @@ export class DatabaseFactory {
         complaintRepository: new PostgresComplaintRepository(pool),
         systemLogRepository: new PostgresSystemLogRepository(pool),
         lunchFeeRepository: new PostgresLunchFeeRepository(pool),
+        libraryRepository: new PostgresLibraryRepository(pool),
       };
     }
 
@@ -183,6 +195,7 @@ export class DatabaseFactory {
     return {
       userRepository: new InMemoryUserRepository(),
       studentRepository: new InMemoryStudentRepository(),
+      deletedStudentRepository: new InMemoryDeletedStudentRepository(),
       teacherRepository: new InMemoryTeacherRepository(),
       guardianRepository: new InMemoryGuardianRepository(),
       academicRepository: new InMemoryAcademicRepository(),
@@ -198,6 +211,7 @@ export class DatabaseFactory {
       complaintRepository: new InMemoryComplaintRepository(),
       systemLogRepository: new InMemorySystemLogRepository(),
       lunchFeeRepository: new InMemoryLunchFeeRepository(),
+      libraryRepository: new InMemoryLibraryRepository(),
     };
   }
 }

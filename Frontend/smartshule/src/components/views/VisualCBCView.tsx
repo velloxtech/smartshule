@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ParentHelpRequest, StudentProgressPhoto, Student, UserRole, CBCRubric } from '../../types';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { resolveStreamName, resolveGradeName } from '../../utils/formatters';
 
 const DEFAULT_CBC_LEARNING_AREAS = [
   { id: 'la-math-g7', code: 'MATH', name: 'Mathematics' },
@@ -25,8 +26,8 @@ const normalizeStudent = (st: any): Student => {
     'Learner';
 
   const admNo = st.admNo || st.admissionNumber || 'N/A';
-  const grade = st.grade || (st.gradeLevel ? st.gradeLevel.replace(/_/g, ' ') : 'CBC');
-  const stream = st.stream || st.streamName || (st.streamId ? `Stream ${st.streamId.slice(0, 6)}` : '');
+  const grade = resolveGradeName(st.grade || st.gradeLevel);
+  const stream = resolveStreamName(st.streamId, st.stream || st.streamName);
 
   return {
     id: st.id,
@@ -138,8 +139,8 @@ export const VisualCBCView: React.FC = () => {
         }
       }
 
-      // If not guardian or guardian portal returned no children, load from database students endpoint
-      if (rawStudentList.length === 0) {
+      // If not guardian, load from database students endpoint
+      if (!isGuardian && rawStudentList.length === 0) {
         const stRes = await apiService.getStudents().catch(() => null);
         if (stRes?.data && Array.isArray(stRes.data)) {
           rawStudentList = stRes.data;

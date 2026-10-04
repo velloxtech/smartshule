@@ -106,6 +106,11 @@ export class AttendanceRegister extends Entity<AttendanceRegisterProps> {
     this.touch();
   }
 
+  public removeEntry(studentId: string): void {
+    this._props.entries = this._props.entries.filter(e => e.studentId !== studentId);
+    this.touch();
+  }
+
   public toJSON() {
     return {
       id: this.id,

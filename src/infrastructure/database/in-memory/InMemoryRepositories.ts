@@ -34,9 +34,14 @@ import {
   IEDiaryRepository,
   EDiaryFilterCriteria
 } from '../../../core/ports/repositories/IEDiaryRepository';
+import {
+  IDeletedStudentRepository,
+  DeletedStudentFilterCriteria
+} from '../../../core/ports/repositories/IDeletedStudentRepository';
 
 import { User } from '../../../core/domain/user/User';
 import { Student, CbcGradeLevel } from '../../../core/domain/user/Student';
+import { DeletedStudent } from '../../../core/domain/user/DeletedStudent';
 import { Teacher } from '../../../core/domain/user/Teacher';
 import { Guardian } from '../../../core/domain/user/Guardian';
 import { School } from '../../../core/domain/academic/School';
@@ -452,6 +457,14 @@ export class InMemoryCbcAssessmentRepository implements ICbcAssessmentRepository
     this.formatives.delete(id);
   }
 
+  public async deleteFormativesByStudent(studentId: string): Promise<void> {
+    for (const [id, f] of this.formatives.entries()) {
+      if (f.studentId === studentId) {
+        this.formatives.delete(id);
+      }
+    }
+  }
+
   // Summatives
   public async findSummativeById(id: string): Promise<SummativeAssessment | null> {
     return this.summatives.get(id) || null;
@@ -474,6 +487,14 @@ export class InMemoryCbcAssessmentRepository implements ICbcAssessmentRepository
     this.summatives.set(assessment.id, assessment);
   }
 
+  public async deleteSummativesByStudent(studentId: string): Promise<void> {
+    for (const [id, s] of this.summatives.entries()) {
+      if (s.studentId === studentId) {
+        this.summatives.delete(id);
+      }
+    }
+  }
+
   // Report Cards
   public async findReportCardById(id: string): Promise<CbcReportCard | null> {
     return this.reportCards.get(id) || null;
@@ -488,6 +509,10 @@ export class InMemoryCbcAssessmentRepository implements ICbcAssessmentRepository
     return null;
   }
 
+  public async findReportCardsByStudent(studentId: string): Promise<CbcReportCard[]> {
+    return Array.from(this.reportCards.values()).filter(rc => rc.studentId === studentId);
+  }
+
   public async findReportCardsByTerm(termId: string, streamId?: string): Promise<CbcReportCard[]> {
     let result = Array.from(this.reportCards.values()).filter(rc => rc.termId === termId);
     if (streamId) result = result.filter(rc => rc.streamId === streamId);
@@ -500,6 +525,14 @@ export class InMemoryCbcAssessmentRepository implements ICbcAssessmentRepository
 
   public async updateReportCard(reportCard: CbcReportCard): Promise<void> {
     this.reportCards.set(reportCard.id, reportCard);
+  }
+
+  public async deleteReportCardsByStudent(studentId: string): Promise<void> {
+    for (const [id, rc] of this.reportCards.entries()) {
+      if (rc.studentId === studentId) {
+        this.reportCards.delete(id);
+      }
+    }
   }
 }
 
@@ -581,24 +614,32 @@ export class InMemoryTimetableRepository implements ITimetableRepository {
     return null;
   }
 
-  public async findByClass(classRoomId: string, termId: string): Promise<Timetable[]> {
-    return Array.from(this.timetables.values()).filter(t => t.classRoomId === classRoomId && t.termId === termId);
+  public async findByClass(classRoomId: string, termId?: string): Promise<Timetable[]> {
+    return Array.from(this.timetables.values()).filter(t => t.classRoomId === classRoomId && (!termId || termId.trim() === '' || t.termId === termId));
   }
 
-  public async findByTeacher(teacherId: string, termId: string): Promise<{ dayOfWeek: DayOfWeek; periodNumber: number; streamId: string; learningAreaName?: string; roomName?: string; startTime: string; endTime: string }[]> {
+  public async findByTeacher(teacherId: string, termId?: string): Promise<any[]> {
     const slots = [];
     for (const t of this.timetables.values()) {
-      if (t.termId === termId) {
+      if (!termId || termId.trim() === '' || t.termId === termId) {
         for (const s of t.slots) {
           if (s.teacherId === teacherId) {
             slots.push({
+              id: s.id,
+              timetableId: t.id,
               dayOfWeek: s.dayOfWeek,
               periodNumber: s.periodNumber,
               streamId: t.streamId,
+              classRoomId: t.classRoomId,
               learningAreaName: s.learningAreaName,
+              learningAreaId: s.learningAreaId,
+              teacherName: s.teacherName,
               roomName: s.roomName,
               startTime: s.startTime,
-              endTime: s.endTime
+              endTime: s.endTime,
+              isBreak: s.isBreak ?? false,
+              isLunch: s.isLunch ?? false,
+              label: s.label
             });
           }
         }
@@ -653,6 +694,20 @@ export class InMemoryAttendanceRepository implements IAttendanceRepository {
 
   public async updateRegister(register: AttendanceRegister): Promise<void> {
     this.registers.set(register.id, register);
+  }
+
+  public async findRegistersByStudent(studentId: string): Promise<AttendanceRegister[]> {
+    return Array.from(this.registers.values()).filter(r => r.entries.some(e => e.studentId === studentId));
+  }
+
+  public async removeStudentFromRegisters(studentId: string): Promise<void> {
+    for (const [id, reg] of this.registers.entries()) {
+      const hasStudent = reg.entries.some(e => e.studentId === studentId);
+      if (hasStudent) {
+        reg.removeEntry(studentId);
+        this.registers.set(id, reg);
+      }
+    }
   }
 }
 
@@ -738,6 +793,14 @@ export class InMemoryFeeRepository implements IFeeRepository {
     this.invoices.set(invoice.id, invoice);
   }
 
+  public async deleteInvoicesByStudentId(studentId: string): Promise<void> {
+    for (const [id, inv] of this.invoices.entries()) {
+      if (inv.studentId === studentId) {
+        this.invoices.delete(id);
+      }
+    }
+  }
+
   // Payments
   public async findPaymentById(id: string): Promise<Payment | null> {
     return this.payments.get(id) || null;
@@ -776,6 +839,14 @@ export class InMemoryFeeRepository implements IFeeRepository {
 
   public async updatePayment(payment: Payment): Promise<void> {
     this.payments.set(payment.id, payment);
+  }
+
+  public async deletePaymentsByStudentId(studentId: string): Promise<void> {
+    for (const [id, pay] of this.payments.entries()) {
+      if (pay.studentId === studentId) {
+        this.payments.delete(id);
+      }
+    }
   }
 
   // Expenses (Money Out / Outflows)
@@ -950,5 +1021,56 @@ export class InMemoryEDiaryRepository implements IEDiaryRepository {
 
   public async delete(id: string): Promise<void> {
     this.entries.delete(id);
+  }
+}
+
+export class InMemoryDeletedStudentRepository implements IDeletedStudentRepository {
+  private deletedStudents: Map<string, DeletedStudent> = new Map();
+
+  public async save(deletedStudent: DeletedStudent): Promise<void> {
+    this.deletedStudents.set(deletedStudent.id, deletedStudent);
+  }
+
+  public async findById(id: string): Promise<DeletedStudent | null> {
+    return this.deletedStudents.get(id) || null;
+  }
+
+  public async findByStudentId(studentId: string): Promise<DeletedStudent | null> {
+    for (const d of this.deletedStudents.values()) {
+      if (d.studentId === studentId) return d;
+    }
+    return null;
+  }
+
+  public async findByAdmissionNumber(admissionNumber: string, schoolId?: string): Promise<DeletedStudent | null> {
+    for (const d of this.deletedStudents.values()) {
+      if (d.admissionNumber === admissionNumber && (!schoolId || d.schoolId === schoolId)) {
+        return d;
+      }
+    }
+    return null;
+  }
+
+  public async findAll(filters?: DeletedStudentFilterCriteria): Promise<DeletedStudent[]> {
+    let result = Array.from(this.deletedStudents.values());
+    if (filters?.schoolId) {
+      result = result.filter(d => d.schoolId === filters.schoolId);
+    }
+    if (filters?.gradeLevel) {
+      result = result.filter(d => d.gradeLevel === filters.gradeLevel);
+    }
+    if (filters?.search) {
+      const s = filters.search.toLowerCase();
+      result = result.filter(d =>
+        d.firstName.toLowerCase().includes(s) ||
+        d.lastName.toLowerCase().includes(s) ||
+        d.admissionNumber.toLowerCase().includes(s)
+      );
+    }
+    return result.sort((a, b) => b.deletedAt.getTime() - a.deletedAt.getTime());
+  }
+
+  public async delete(id: string): Promise<void> {
+    this.deletedStudents.delete(id);
   }
 }

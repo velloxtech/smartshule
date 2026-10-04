@@ -9,9 +9,39 @@ export interface WhatsAppMessageLog {
   from: string;
   to: string;
   text: string;
-  status: 'SENT' | 'DELIVERED' | 'FAILED' | 'RECEIVED';
+  status: 'SENT' | 'DELIVERED' | 'READ' | 'FAILED' | 'RECEIVED';
   timestamp: string;
   intent?: string;
+  conversationId?: string;
+  type?: 'TEXT' | 'TEMPLATE';
+  templateName?: string;
+}
+
+export interface ActiveServiceWindow {
+  phone: string;
+  contactName?: string;
+  startedAt: string;
+  expiresAt: string;
+  remainingMinutes: number;
+}
+
+export interface MetaFreeTierUsage {
+  monthlyLimit: number;
+  usedConversations: number;
+  remainingFree: number;
+  billingMonth: string;
+  resetDate: string;
+  active24hWindowsCount: number;
+  activeWindows: ActiveServiceWindow[];
+}
+
+export interface MetaCloudConfig {
+  accessToken?: string;
+  phoneNumberId?: string;
+  businessAccountId?: string;
+  verifyToken?: string;
+  appSecret?: string;
+  apiBaseUrl?: string;
 }
 
 export interface WhatsAppConnectionState {
@@ -22,7 +52,23 @@ export interface WhatsAppConnectionState {
   lastConnectedAt: string | null;
   totalSent: number;
   totalReceived: number;
-  mode: 'REAL_WHATSAPP_ACCOUNT' | 'META_CLOUD_API';
+  mode: 'META_CLOUD_API' | 'REAL_WHATSAPP_ACCOUNT';
+  isOfficialMeta: boolean;
+  banProtection: {
+    isSafe: boolean;
+    level: 'BAN_IMMUNE' | 'HIGH_RISK';
+    message: string;
+    warning?: string;
+  };
+  freeTier: MetaFreeTierUsage;
+  metaProfile?: {
+    verifiedName?: string;
+    displayPhoneNumber?: string;
+    qualityRating?: string;
+    codeVerificationStatus?: string;
+    phoneNumberId?: string;
+    businessAccountId?: string;
+  };
 }
 
 export type InboundMessageHandler = (
@@ -41,35 +87,260 @@ export class WhatsAppClientManager {
   private totalReceived = 0;
   private recentMessages: WhatsAppMessageLog[] = [];
   private sessionDir: string;
+  private configFilePath: string;
   private inboundHandler: InboundMessageHandler | null = null;
   private isReconnecting = false;
   private lidToPhoneMap = new Map<string, string>();
   private phoneToLidMap = new Map<string, string>();
 
-  constructor(sessionPath?: string) {
+  // Meta Cloud API configuration & Free Tier State
+  private metaConfig: MetaCloudConfig = {
+    accessToken: process.env.WHATSAPP_ACCESS_TOKEN || '',
+    phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID || '',
+    businessAccountId: process.env.WHATSAPP_BUSINESS_ACCOUNT_ID || '',
+    verifyToken: process.env.WHATSAPP_VERIFY_TOKEN || 'smartshule_wa_verify_token_2026',
+    appSecret: process.env.WHATSAPP_APP_SECRET || '',
+    apiBaseUrl: process.env.WHATSAPP_API_BASE_URL || 'https://graph.facebook.com/v21.0',
+  };
+
+  private freeTierUsage = {
+    monthlyLimit: 1000,
+    usedConversations: 0,
+    billingMonth: new Date().toISOString().substring(0, 7), // e.g. "2026-10"
+    windows: {} as Record<string, { startedAt: string; expiresAt: string; contactName?: string }>,
+  };
+
+  private metaProfile: {
+    verifiedName?: string;
+    displayPhoneNumber?: string;
+    qualityRating?: string;
+    codeVerificationStatus?: string;
+  } = {};
+
+  constructor(sessionPath?: string, configPath?: string) {
     this.sessionDir = sessionPath || process.env.WHATSAPP_SESSION_PATH || path.join(process.cwd(), 'data', 'whatsapp_session');
+    this.configFilePath = configPath || path.join(process.cwd(), 'data', 'whatsapp_meta_config.json');
+
     // Ensure session directory exists
     if (!fs.existsSync(this.sessionDir)) {
       fs.mkdirSync(this.sessionDir, { recursive: true });
     }
+
+    // Load persisted Meta configuration and free tier tracking
+    this.loadPersistedConfig();
+
+    // Check if Meta Cloud API credentials are provided
+    if (this.metaConfig.accessToken && this.metaConfig.phoneNumberId) {
+      this.status = 'CONNECTED';
+      this.connectedPhone = this.metaProfile.displayPhoneNumber || `ID: ${this.metaConfig.phoneNumberId}`;
+      this.connectedName = this.metaProfile.verifiedName || 'SmartShule Official (Meta Cloud)';
+      this.lastConnectedAt = new Date().toISOString();
+    }
+  }
+
+  public resetFreeTierForTesting() {
+    this.freeTierUsage = {
+      monthlyLimit: 1000,
+      usedConversations: 0,
+      billingMonth: new Date().toISOString().substring(0, 7),
+      windows: {},
+    };
+    this.savePersistedConfig();
   }
 
   public setInboundHandler(handler: InboundMessageHandler) {
     this.inboundHandler = handler;
   }
 
-  public getStatus(): WhatsAppConnectionState {
+  /**
+   * Persists Meta configuration and free tier conversation windows to disk
+   */
+  private loadPersistedConfig() {
+    try {
+      if (fs.existsSync(this.configFilePath)) {
+        const raw = fs.readFileSync(this.configFilePath, 'utf8');
+        const parsed = JSON.parse(raw);
+        if (parsed.metaConfig) {
+          this.metaConfig = {
+            ...this.metaConfig,
+            ...parsed.metaConfig,
+            // Keep environment variables as priority if set
+            accessToken: process.env.WHATSAPP_ACCESS_TOKEN || parsed.metaConfig.accessToken || '',
+            phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID || parsed.metaConfig.phoneNumberId || '',
+            businessAccountId: process.env.WHATSAPP_BUSINESS_ACCOUNT_ID || parsed.metaConfig.businessAccountId || '',
+            verifyToken: process.env.WHATSAPP_VERIFY_TOKEN || parsed.metaConfig.verifyToken || 'smartshule_wa_verify_token_2026',
+            appSecret: process.env.WHATSAPP_APP_SECRET || parsed.metaConfig.appSecret || '',
+            apiBaseUrl: process.env.WHATSAPP_API_BASE_URL || parsed.metaConfig.apiBaseUrl || 'https://graph.facebook.com/v21.0',
+          };
+        }
+        if (parsed.freeTierUsage) {
+          const currentMonth = new Date().toISOString().substring(0, 7);
+          if (parsed.freeTierUsage.billingMonth === currentMonth) {
+            this.freeTierUsage = parsed.freeTierUsage;
+          } else {
+            // New calendar month: reset 1,000 free monthly conversations quota!
+            this.freeTierUsage = {
+              monthlyLimit: 1000,
+              usedConversations: 0,
+              billingMonth: currentMonth,
+              windows: {},
+            };
+          }
+        }
+        if (parsed.metaProfile) {
+          this.metaProfile = parsed.metaProfile;
+        }
+      }
+    } catch (err) {
+      console.warn('[WhatsApp Cloud] Could not load persisted config:', err);
+    }
+  }
+
+  private savePersistedConfig() {
+    try {
+      const dataDir = path.dirname(this.configFilePath);
+      if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
+      }
+      fs.writeFileSync(
+        this.configFilePath,
+        JSON.stringify(
+          {
+            metaConfig: this.metaConfig,
+            freeTierUsage: this.freeTierUsage,
+            metaProfile: this.metaProfile,
+            savedAt: new Date().toISOString(),
+          },
+          null,
+          2
+        ),
+        'utf8'
+      );
+    } catch (err) {
+      console.warn('[WhatsApp Cloud] Could not save persisted config:', err);
+    }
+  }
+
+  /**
+   * Evaluates the 1,000 free monthly conversations quota and active 24-hr service windows
+   */
+  public getFreeTierUsage(): MetaFreeTierUsage {
+    const currentMonth = new Date().toISOString().substring(0, 7);
+    if (this.freeTierUsage.billingMonth !== currentMonth) {
+      this.freeTierUsage.billingMonth = currentMonth;
+      this.freeTierUsage.usedConversations = 0;
+      this.freeTierUsage.windows = {};
+      this.savePersistedConfig();
+    }
+
+    const now = Date.now();
+    const activeWindowsList: ActiveServiceWindow[] = [];
+
+    for (const [phone, win] of Object.entries(this.freeTierUsage.windows)) {
+      const expTime = new Date(win.expiresAt).getTime();
+      if (expTime > now) {
+        const remainingMinutes = Math.max(0, Math.round((expTime - now) / 60000));
+        activeWindowsList.push({
+          phone,
+          contactName: win.contactName,
+          startedAt: win.startedAt,
+          expiresAt: win.expiresAt,
+          remainingMinutes,
+        });
+      }
+    }
+
+    // Calculate reset date: 1st of next month at 00:00 UTC
+    const nowD = new Date();
+    const nextMonth = new Date(Date.UTC(nowD.getFullYear(), nowD.getMonth() + 1, 1, 0, 0, 0));
+
     return {
-      status: this.status,
+      monthlyLimit: this.freeTierUsage.monthlyLimit || 1000,
+      usedConversations: this.freeTierUsage.usedConversations,
+      remainingFree: Math.max(0, (this.freeTierUsage.monthlyLimit || 1000) - this.freeTierUsage.usedConversations),
+      billingMonth: this.freeTierUsage.billingMonth,
+      resetDate: nextMonth.toISOString(),
+      active24hWindowsCount: activeWindowsList.length,
+      activeWindows: activeWindowsList,
+    };
+  }
+
+  /**
+   * Registers an inbound parent interaction:
+   * Starts or maintains a 24-hour service window and increments the monthly conversation counter
+   * if this interaction opens a new 24-hr conversation session.
+   */
+  public registerInboundSession(fromPhone: string, contactName?: string): { isNewConversation: boolean; expiresAt: string } {
+    const cleanDigits = fromPhone.replace(/[^0-9]/g, '');
+    const currentMonth = new Date().toISOString().substring(0, 7);
+    if (this.freeTierUsage.billingMonth !== currentMonth) {
+      this.freeTierUsage.billingMonth = currentMonth;
+      this.freeTierUsage.usedConversations = 0;
+      this.freeTierUsage.windows = {};
+    }
+
+    const now = Date.now();
+    const existingWindow = this.freeTierUsage.windows[cleanDigits];
+    const isStillActive = existingWindow && new Date(existingWindow.expiresAt).getTime() > now;
+
+    const expiresAt = new Date(now + 24 * 60 * 60 * 1000).toISOString();
+
+    if (!isStillActive) {
+      // New 24-hour service conversation session opened!
+      this.freeTierUsage.usedConversations++;
+      this.freeTierUsage.windows[cleanDigits] = {
+        startedAt: new Date(now).toISOString(),
+        expiresAt,
+        contactName,
+      };
+      this.savePersistedConfig();
+      console.log(`[WhatsApp Free Tier] 🟢 New 24-hr service conversation started for ${cleanDigits}. Used: ${this.freeTierUsage.usedConversations}/1000 free this month.`);
+      return { isNewConversation: true, expiresAt };
+    } else {
+      // Refresh 24-hour customer service window for reply freedom
+      this.freeTierUsage.windows[cleanDigits].expiresAt = expiresAt;
+      if (contactName) this.freeTierUsage.windows[cleanDigits].contactName = contactName;
+      this.savePersistedConfig();
+      return { isNewConversation: false, expiresAt };
+    }
+  }
+
+  public getStatus(): WhatsAppConnectionState {
+    const isMetaConfigured = Boolean(this.metaConfig.accessToken && this.metaConfig.phoneNumberId);
+    const freeTier = this.getFreeTierUsage();
+
+    return {
+      status: isMetaConfigured ? 'CONNECTED' : this.status,
       qrCodeDataUrl: this.qrCodeDataUrl,
-      connectedPhone: this.connectedPhone,
-      connectedName: this.connectedName,
+      connectedPhone: isMetaConfigured
+        ? this.metaProfile.displayPhoneNumber || this.connectedPhone || `Phone ID: ${this.metaConfig.phoneNumberId}`
+        : this.connectedPhone,
+      connectedName: isMetaConfigured
+        ? this.metaProfile.verifiedName || this.connectedName || 'SmartShule Official (Meta Cloud API)'
+        : this.connectedName,
       lastConnectedAt: this.lastConnectedAt,
       totalSent: this.totalSent,
       totalReceived: this.totalReceived,
-      mode: process.env.WHATSAPP_ACCESS_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID
-        ? 'META_CLOUD_API'
-        : 'REAL_WHATSAPP_ACCOUNT'
+      mode: isMetaConfigured ? 'META_CLOUD_API' : 'REAL_WHATSAPP_ACCOUNT',
+      isOfficialMeta: isMetaConfigured,
+      banProtection: isMetaConfigured
+        ? {
+            isSafe: true,
+            level: 'BAN_IMMUNE',
+            message: 'Official Meta WhatsApp Cloud API active. Your school phone number is 100% immune from WhatsApp bans and receives 1,000 free monthly conversations.',
+          }
+        : {
+            isSafe: false,
+            level: 'HIGH_RISK',
+            message: 'Unofficial WhatsApp Web library (Baileys) detected. Unofficial clients violate WhatsApp Terms and result in permanent account bans. Please configure Meta WhatsApp Cloud API credentials to ensure 100% ban immunity and free 1,000 monthly messages.',
+            warning: 'Meta actively bans numbers connecting through unofficial WhatsApp Web QR sockets. Switch to Meta Cloud API to protect your SIM.',
+          },
+      freeTier,
+      metaProfile: {
+        ...this.metaProfile,
+        phoneNumberId: this.metaConfig.phoneNumberId || undefined,
+        businessAccountId: this.metaConfig.businessAccountId || undefined,
+      },
     };
   }
 
@@ -78,9 +349,391 @@ export class WhatsAppClientManager {
   }
 
   /**
-   * Initializes or re-initializes Baileys WhatsApp Multi-Device connection
+   * Tests and verifies Meta WhatsApp Cloud API credentials against Meta Graph API
+   */
+  public async testMetaConnection(overrideConfig?: Partial<MetaCloudConfig>): Promise<{
+    success: boolean;
+    profile?: any;
+    error?: string;
+  }> {
+    const token = overrideConfig?.accessToken || this.metaConfig.accessToken || process.env.WHATSAPP_ACCESS_TOKEN;
+    const phoneId = overrideConfig?.phoneNumberId || this.metaConfig.phoneNumberId || process.env.WHATSAPP_PHONE_NUMBER_ID;
+    const apiBase = overrideConfig?.apiBaseUrl || this.metaConfig.apiBaseUrl || process.env.WHATSAPP_API_BASE_URL || 'https://graph.facebook.com/v21.0';
+
+    if (!token || !phoneId) {
+      return {
+        success: false,
+        error: 'Meta WhatsApp Cloud API credentials missing: Access Token and Phone Number ID are required.',
+      };
+    }
+
+    try {
+      const url = `${apiBase}/${phoneId}?fields=id,verified_name,display_phone_number,quality_rating,code_verification_status`;
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = (await res.json()) as any;
+
+      if (res.ok && data.id) {
+        this.metaProfile = {
+          verifiedName: data.verified_name || 'SmartShule Official',
+          displayPhoneNumber: data.display_phone_number || '',
+          qualityRating: data.quality_rating || 'GREEN',
+          codeVerificationStatus: data.code_verification_status || 'VERIFIED',
+        };
+        this.status = 'CONNECTED';
+        this.connectedPhone = data.display_phone_number || `Phone ID: ${phoneId}`;
+        this.connectedName = data.verified_name || 'SmartShule Official (Meta Cloud)';
+        this.lastConnectedAt = new Date().toISOString();
+        this.savePersistedConfig();
+
+        console.log(`[Meta Cloud API] ✅ Verified Official WhatsApp Account: ${this.connectedName} (${this.connectedPhone}) | Quality: ${this.metaProfile.qualityRating}`);
+        return { success: true, profile: data };
+      } else {
+        const errorMsg = data.error?.message || `Meta Graph API returned status ${res.status}`;
+        console.error('[Meta Cloud API] Verification failed:', errorMsg);
+        return { success: false, error: errorMsg };
+      }
+    } catch (err: any) {
+      console.error('[Meta Cloud API] Verification error:', err);
+      return { success: false, error: err.message || 'Network error connecting to Meta Graph API' };
+    }
+  }
+
+  /**
+   * Updates Meta Cloud API configuration
+   */
+  public updateMetaConfig(config: MetaCloudConfig): { success: boolean; config: MetaCloudConfig } {
+    if (config.accessToken !== undefined) {
+      this.metaConfig.accessToken = config.accessToken;
+      process.env.WHATSAPP_ACCESS_TOKEN = config.accessToken;
+    }
+    if (config.phoneNumberId !== undefined) {
+      this.metaConfig.phoneNumberId = config.phoneNumberId;
+      process.env.WHATSAPP_PHONE_NUMBER_ID = config.phoneNumberId;
+    }
+    if (config.businessAccountId !== undefined) {
+      this.metaConfig.businessAccountId = config.businessAccountId;
+      process.env.WHATSAPP_BUSINESS_ACCOUNT_ID = config.businessAccountId;
+    }
+    if (config.verifyToken !== undefined) {
+      this.metaConfig.verifyToken = config.verifyToken;
+      process.env.WHATSAPP_VERIFY_TOKEN = config.verifyToken;
+    }
+    if (config.appSecret !== undefined) {
+      this.metaConfig.appSecret = config.appSecret;
+      process.env.WHATSAPP_APP_SECRET = config.appSecret;
+    }
+    if (config.apiBaseUrl !== undefined) {
+      this.metaConfig.apiBaseUrl = config.apiBaseUrl;
+      process.env.WHATSAPP_API_BASE_URL = config.apiBaseUrl;
+    }
+
+    this.savePersistedConfig();
+    return { success: true, config: { ...this.metaConfig, accessToken: this.metaConfig.accessToken ? '***' : '' } };
+  }
+
+  /**
+   * Sends an actual WhatsApp message to a real phone number.
+   * Prioritizes Meta WhatsApp Cloud API (100% ban-safe, official channel with 1,000 free monthly conversations).
+   */
+  public async sendRealMessage(
+    toPhoneOrJid: string,
+    messageText: string,
+    intent?: string,
+    preferredJid?: string
+  ): Promise<{ success: boolean; messageId?: string; error?: string; isOfficialMeta?: boolean }> {
+    const text = (messageText || '').trim();
+    if (!text) {
+      return { success: false, error: 'Message text cannot be empty' };
+    }
+
+    const rawDigits = toPhoneOrJid.replace(/@.+/, '').replace(/[^0-9]/g, '');
+    const cleanDigits = rawDigits.startsWith('254') ? rawDigits : `254${rawDigits.replace(/^0/, '')}`;
+    const displayPhone = `+${cleanDigits}`;
+
+    // 1. PRIORITY 1: Meta WhatsApp Cloud API (Official, Ban-Immune Channel)
+    const metaToken = this.metaConfig.accessToken || process.env.WHATSAPP_ACCESS_TOKEN;
+    const phoneId = this.metaConfig.phoneNumberId || process.env.WHATSAPP_PHONE_NUMBER_ID;
+
+    if (metaToken && phoneId) {
+      try {
+        const apiBase = this.metaConfig.apiBaseUrl || process.env.WHATSAPP_API_BASE_URL || 'https://graph.facebook.com/v21.0';
+        const url = `${apiBase}/${phoneId}/messages`;
+
+        console.log(`[WhatsApp Outbound (Meta Official Cloud)] Transmitting to ${displayPhone}...`);
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${metaToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            messaging_product: 'whatsapp',
+            recipient_type: 'individual',
+            to: cleanDigits,
+            type: 'text',
+            text: { preview_url: false, body: text },
+          }),
+        });
+
+        const data = (await response.json()) as any;
+        if (response.ok && data.messages?.[0]?.id) {
+          const msgId = data.messages[0].id;
+          this.totalSent++;
+          const outLog: WhatsAppMessageLog = {
+            id: msgId,
+            direction: 'OUTBOUND',
+            from: this.metaProfile.displayPhoneNumber || phoneId,
+            to: displayPhone,
+            text,
+            status: 'SENT',
+            timestamp: new Date().toISOString(),
+            intent,
+            type: 'TEXT',
+          };
+          this.recordMessage(outLog);
+
+          console.log(`[WhatsApp Outbound (Meta Official Cloud)] ✅ Delivered to ${displayPhone} | WAMID: ${msgId}`);
+          return { success: true, messageId: msgId, isOfficialMeta: true };
+        } else {
+          const errMsg = data.error?.message || 'Meta Cloud API rejected the message';
+          console.error(`[WhatsApp Outbound (Meta Cloud)] Error sending to ${displayPhone}:`, errMsg);
+          return {
+            success: false,
+            error: `Meta Cloud API: ${errMsg}. Note: Out-of-session notifications require approved templates or active 24-hr service window.`,
+            isOfficialMeta: true,
+          };
+        }
+      } catch (err: any) {
+        console.error(`[WhatsApp Outbound (Meta Cloud)] Exception sending to ${displayPhone}:`, err);
+        return { success: false, error: err.message, isOfficialMeta: true };
+      }
+    }
+
+    // 2. FALLBACK 2: Baileys connected socket (with Ban Warning)
+    if (this.sock && this.status === 'CONNECTED') {
+      console.warn('[WhatsApp Outbound] ⚠️ Warning: Transmitting via unofficial Baileys socket. We strongly recommend configuring Meta Cloud API to avoid number bans.');
+      try {
+        let targetJid = preferredJid || `${cleanDigits}@s.whatsapp.net`;
+        const result = await this.sock.sendMessage(targetJid, { text });
+
+        this.totalSent++;
+        const outLog: WhatsAppMessageLog = {
+          id: result?.key?.id || `out-${Date.now()}`,
+          direction: 'OUTBOUND',
+          from: this.connectedPhone || 'SmartShule Account',
+          to: displayPhone,
+          text,
+          status: 'SENT',
+          timestamp: new Date().toISOString(),
+          intent,
+          type: 'TEXT',
+        };
+        this.recordMessage(outLog);
+
+        return { success: true, messageId: outLog.id, isOfficialMeta: false };
+      } catch (err: any) {
+        return { success: false, error: err.message || 'Failed to send WhatsApp message', isOfficialMeta: false };
+      }
+    }
+
+    return {
+      success: false,
+      error: 'WhatsApp is not configured. Please enter your Meta WhatsApp Cloud API credentials (Phone Number ID & Access Token) to send ban-safe messages with 1,000 free monthly conversations.',
+      isOfficialMeta: false,
+    };
+  }
+
+  /**
+   * Sends an official Meta WhatsApp Template message (for business-initiated messages outside 24h window)
+   */
+  public async sendTemplateMessage(
+    toPhone: string,
+    templateName: string,
+    languageCode = 'en',
+    components: any[] = []
+  ): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    const metaToken = this.metaConfig.accessToken || process.env.WHATSAPP_ACCESS_TOKEN;
+    const phoneId = this.metaConfig.phoneNumberId || process.env.WHATSAPP_PHONE_NUMBER_ID;
+
+    if (!metaToken || !phoneId) {
+      return { success: false, error: 'Meta WhatsApp Cloud API credentials are required to send template messages.' };
+    }
+
+    const rawDigits = toPhone.replace(/@.+/, '').replace(/[^0-9]/g, '');
+    const cleanDigits = rawDigits.startsWith('254') ? rawDigits : `254${rawDigits.replace(/^0/, '')}`;
+    const displayPhone = `+${cleanDigits}`;
+
+    try {
+      const apiBase = this.metaConfig.apiBaseUrl || process.env.WHATSAPP_API_BASE_URL || 'https://graph.facebook.com/v21.0';
+      const url = `${apiBase}/${phoneId}/messages`;
+
+      const bodyPayload: any = {
+        messaging_product: 'whatsapp',
+        recipient_type: 'individual',
+        to: cleanDigits,
+        type: 'template',
+        template: {
+          name: templateName,
+          language: { code: languageCode },
+        },
+      };
+
+      if (components && components.length > 0) {
+        bodyPayload.template.components = components;
+      }
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${metaToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(bodyPayload),
+      });
+
+      const data = (await response.json()) as any;
+      if (response.ok && data.messages?.[0]?.id) {
+        const msgId = data.messages[0].id;
+        this.totalSent++;
+        const outLog: WhatsAppMessageLog = {
+          id: msgId,
+          direction: 'OUTBOUND',
+          from: this.metaProfile.displayPhoneNumber || phoneId,
+          to: displayPhone,
+          text: `[Official Meta Template: ${templateName}]`,
+          status: 'SENT',
+          timestamp: new Date().toISOString(),
+          intent: `TEMPLATE_${templateName.toUpperCase()}`,
+          type: 'TEMPLATE',
+          templateName,
+        };
+        this.recordMessage(outLog);
+        return { success: true, messageId: msgId };
+      } else {
+        const errMsg = data.error?.message || 'Meta Cloud API rejected template';
+        return { success: false, error: errMsg };
+      }
+    } catch (err: any) {
+      return { success: false, error: err.message };
+    }
+  }
+
+  /**
+   * Updates delivery status of a message when Meta posts a status webhook event
+   */
+  public updateMessageStatus(messageId: string, status: 'SENT' | 'DELIVERED' | 'READ' | 'FAILED', conversationId?: string) {
+    const existing = this.recentMessages.find((m) => m.id === messageId);
+    if (existing) {
+      existing.status = status;
+      if (conversationId) existing.conversationId = conversationId;
+    }
+  }
+
+  /**
+   * Processes Meta Cloud API Webhook payload (messages and statuses)
+   */
+  public async handleWebhookPayload(body: any): Promise<{ status: string; data?: any }> {
+    if (body.object === 'whatsapp_business_account' && Array.isArray(body.entry)) {
+      for (const entry of body.entry) {
+        const changes = entry.changes || [];
+        for (const change of changes) {
+          const value = change.value || {};
+
+          // 1. Process Status Receipts (DELIVERED, READ, FAILED)
+          if (Array.isArray(value.statuses)) {
+            for (const st of value.statuses) {
+              const statusName = (st.status || '').toUpperCase();
+              if (['SENT', 'DELIVERED', 'READ', 'FAILED'].includes(statusName)) {
+                this.updateMessageStatus(st.id, statusName as any, st.conversation?.id);
+                console.log(`[WhatsApp Webhook Status] Message ${st.id} -> ${statusName}`);
+              }
+            }
+          }
+
+          // 2. Process Inbound Messages from Parents
+          if (Array.isArray(value.messages)) {
+            for (const msg of value.messages) {
+              const fromPhone = msg.from; // e.g. 254711223344
+              const contactName = value.contacts?.[0]?.profile?.name || undefined;
+              const text = msg.text?.body || msg.button?.text || '';
+
+              if (!text.trim()) continue;
+
+              this.totalReceived++;
+
+              // Register session: updates 24-hr window & free tier 1,000 monthly counter
+              this.registerInboundSession(fromPhone, contactName);
+
+              const inLog: WhatsAppMessageLog = {
+                id: msg.id || `in-${Date.now()}`,
+                direction: 'INBOUND',
+                from: fromPhone.startsWith('+') ? fromPhone : `+${fromPhone}`,
+                to: this.connectedPhone || 'SmartShule Official',
+                text: text.trim(),
+                status: 'RECEIVED',
+                timestamp: new Date().toISOString(),
+                type: 'TEXT',
+              };
+              this.recordMessage(inLog);
+
+              console.log(`[WhatsApp Official Inbound] From: ${fromPhone} (${contactName || 'Parent'}): "${text.trim()}"`);
+
+              // Handle via registered inbound handler
+              if (this.inboundHandler) {
+                try {
+                  const reply = await this.inboundHandler(fromPhone, text.trim());
+                  if (reply && reply.replyText && reply.replyText.trim().length > 0 && reply.intent !== 'UNREGISTERED' && !reply.ignored) {
+                    await this.sendRealMessage(fromPhone, reply.replyText, reply.intent);
+                  } else {
+                    console.log(`[WhatsApp Official Inbound] Ignored sender ${fromPhone} (not registered in database)`);
+                  }
+                  return { status: 'PROCESSED', data: reply };
+                } catch (err) {
+                  console.error('[WhatsApp Official Inbound] Error handling message:', err);
+                }
+              }
+            }
+          }
+        }
+      }
+      return { status: 'PROCESSED_WEBHOOK' };
+    }
+
+    // Generic simplified payload
+    if (body.from && body.message) {
+      this.totalReceived++;
+      this.registerInboundSession(body.from);
+      if (this.inboundHandler) {
+        const reply = await this.inboundHandler(body.from, body.message);
+        if (reply && reply.replyText && reply.intent !== 'UNREGISTERED' && !reply.ignored) {
+          await this.sendRealMessage(body.from, reply.replyText, reply.intent);
+        }
+        return { status: 'PROCESSED', data: reply };
+      }
+    }
+
+    return { status: 'IGNORED_NON_MESSAGE_EVENT' };
+  }
+
+  /**
+   * Initializes Baileys WhatsApp Multi-Device connection (Safe Mode with High Ban Risk Warning)
    */
   public async connect(): Promise<WhatsAppConnectionState> {
+    // If Meta Cloud API is already configured, notify user that they are safe and protected
+    if (this.metaConfig.accessToken && this.metaConfig.phoneNumberId) {
+      console.log('[WhatsApp Account] Meta Official Cloud API is active. QR Multi-Device connection bypassed to protect account from bans.');
+      return this.getStatus();
+    }
+
+    console.warn('[WhatsApp Account] ⚠️ Initiating Baileys QR code pairing. Note: Unofficial WhatsApp Web libraries carry a high risk of permanent account bans. Switch to Meta Cloud API for ban immunity.');
+
     if (this.sock && this.status === 'CONNECTED') {
       return this.getStatus();
     }
@@ -108,10 +761,8 @@ export class WhatsAppClientManager {
 
       this.sock = socket;
 
-      // Save credentials whenever updated
       socket.ev.on('creds.update', saveCreds);
 
-      // Listen for connection state changes (QR code, connect, disconnect)
       socket.ev.on('connection.update', async (update: any) => {
         const { connection, lastDisconnect, qr } = update;
 
@@ -120,15 +771,12 @@ export class WhatsAppClientManager {
             this.qrCodeDataUrl = await QRCode.toDataURL(qr, {
               margin: 2,
               width: 300,
-              color: {
-                dark: '#000000',
-                light: '#ffffff',
-              },
+              color: { dark: '#000000', light: '#ffffff' },
             });
             this.status = 'SCAN_QR';
-            console.log('[WhatsApp Account] New QR Code generated. Scan with WhatsApp > Linked Devices to connect.');
+            console.log('[WhatsApp Account] QR Code generated. Scan with WhatsApp > Linked Devices.');
           } catch (err) {
-            console.error('[WhatsApp Account] Error generating QR code data URL:', err);
+            console.error('[WhatsApp Account] QR Code generation error:', err);
           }
         }
 
@@ -139,19 +787,16 @@ export class WhatsAppClientManager {
           this.isReconnecting = false;
 
           const userJid = socket.user?.id || '';
-          // Extract real phone number: e.g. 254712345678:1@s.whatsapp.net -> +254712345678
           const phoneClean = userJid.split(':')[0].split('@')[0];
           this.connectedPhone = phoneClean ? (phoneClean.startsWith('+') ? phoneClean : `+${phoneClean}`) : null;
-          this.connectedName = socket.user?.name || 'SmartShule Official';
+          this.connectedName = socket.user?.name || 'SmartShule Account';
 
-          console.log(`[WhatsApp Account] ✅ Connected to real WhatsApp account: ${this.connectedPhone} (${this.connectedName})`);
+          console.log(`[WhatsApp Account] Connected: ${this.connectedPhone}`);
         }
 
         if (connection === 'close') {
           const statusCode = (lastDisconnect?.error as any)?.output?.statusCode;
           const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
-
-          console.warn(`[WhatsApp Account] Connection closed with code: ${statusCode}. Reconnecting: ${shouldReconnect}`);
 
           if (statusCode === DisconnectReason.loggedOut) {
             this.status = 'DISCONNECTED';
@@ -172,17 +817,14 @@ export class WhatsAppClientManager {
         }
       });
 
-      // Listen for actual inbound messages from parents/users
       socket.ev.on('messages.upsert', async ({ messages: incomingList, type }: any) => {
         if (type !== 'notify') return;
 
         for (const msg of incomingList) {
-          // Ignore own messages or status broadcasts or group chats
           if (!msg.message || msg.key.fromMe) continue;
           const remoteJid = msg.key.remoteJid || '';
           if (remoteJid.includes('@broadcast') || remoteJid.includes('@g.us')) continue;
 
-          // Extract text
           const text =
             msg.message.conversation ||
             msg.message.extendedTextMessage?.text ||
@@ -194,6 +836,7 @@ export class WhatsAppClientManager {
           const { senderPhone, replyJid } = await this.resolveSenderPhone(msg, remoteJid);
 
           this.totalReceived++;
+          this.registerInboundSession(senderPhone);
 
           const inLog: WhatsAppMessageLog = {
             id: msg.key.id || `in-${Date.now()}`,
@@ -206,21 +849,14 @@ export class WhatsAppClientManager {
           };
           this.recordMessage(inLog);
 
-          console.log(`[WhatsApp Inbound] Real message from ${senderPhone} (Chat JID: ${remoteJid}): "${text.trim()}"`);
-
-          // Process via registered inbound handler
           if (this.inboundHandler) {
             try {
               const reply = await this.inboundHandler(senderPhone, text.trim());
-              if (reply && reply.replyText && reply.replyText.trim().length > 0 && reply.intent !== 'UNREGISTERED' && !reply.ignored) {
-                // Send real reply back through the actual WhatsApp account!
-                // Prioritize replyJid (the exact chat where the message originated) to guarantee delivery
+              if (reply && reply.replyText && reply.intent !== 'UNREGISTERED' && !reply.ignored) {
                 await this.sendRealMessage(senderPhone, reply.replyText, reply.intent, replyJid);
-              } else {
-                console.log(`[WhatsApp Inbound] Ignored message from unregistered sender: ${senderPhone}`);
               }
             } catch (err) {
-              console.error('[WhatsApp Inbound] Error handling message:', err);
+              console.error('[WhatsApp Inbound] Error:', err);
             }
           }
         }
@@ -235,30 +871,24 @@ export class WhatsAppClientManager {
   }
 
   /**
-   * Resolves the actual phone number and reply JID from incoming Baileys message
-   * Handles both standard phone JIDs (@s.whatsapp.net) and multi-device LIDs (@lid)
+   * Resolves sender phone number and reply JID from incoming Baileys message
    */
   public async resolveSenderPhone(msg: any, remoteJid: string): Promise<{ senderPhone: string; replyJid: string }> {
     const replyJid = remoteJid;
 
-    // Case 1: Standard WhatsApp user JID: e.g. "254759496975@s.whatsapp.net" or "254759496975:1@s.whatsapp.net"
     if (remoteJid.endsWith('@s.whatsapp.net')) {
       const rawUser = remoteJid.replace('@s.whatsapp.net', '').split(':')[0].replace(/[^0-9]/g, '');
       const senderPhone = rawUser.startsWith('+') ? rawUser : `+${rawUser}`;
       return { senderPhone, replyJid };
     }
 
-    // Case 2: Multi-device / privacy LID: e.g. "148438935179455@lid"
     if (remoteJid.endsWith('@lid')) {
       const lidUser = remoteJid.replace('@lid', '').split(':')[0].replace(/[^0-9]/g, '');
 
-      // 2a. Check in-memory cache
       if (this.lidToPhoneMap.has(lidUser)) {
-        const phone = this.lidToPhoneMap.get(lidUser)!;
-        return { senderPhone: phone, replyJid };
+        return { senderPhone: this.lidToPhoneMap.get(lidUser)!, replyJid };
       }
 
-      // 2b. Check msg.key.remoteJidAlt or participantAlt in Baileys message key
       const altJid = msg?.key?.remoteJidAlt || msg?.key?.participantAlt || msg?.participant;
       if (altJid && typeof altJid === 'string' && altJid.endsWith('@s.whatsapp.net')) {
         const rawPn = altJid.replace('@s.whatsapp.net', '').split(':')[0].replace(/[^0-9]/g, '');
@@ -270,7 +900,6 @@ export class WhatsAppClientManager {
         }
       }
 
-      // 2c. Check Baileys internal signalRepository.lidMapping
       if (this.sock && (this.sock as any).signalRepository?.lidMapping?.getPNForLID) {
         try {
           const pnResult = await (this.sock as any).signalRepository.lidMapping.getPNForLID(remoteJid);
@@ -284,12 +913,11 @@ export class WhatsAppClientManager {
               return { senderPhone: phone, replyJid };
             }
           }
-        } catch (e) {
+        } catch {
           // ignore
         }
       }
 
-      // 2d. Check saved session files for lid-mapping-<lidUser>_reverse.json
       try {
         const reverseFile = path.join(this.sessionDir, `lid-mapping-${lidUser}_reverse.json`);
         if (fs.existsSync(reverseFile)) {
@@ -303,11 +931,10 @@ export class WhatsAppClientManager {
             return { senderPhone: phone, replyJid };
           }
         }
-      } catch (e) {
+      } catch {
         // ignore
       }
 
-      // 2e. Check if any file in sessionDir is lid-mapping-* matching this LID
       try {
         const files = fs.readdirSync(this.sessionDir);
         for (const file of files) {
@@ -324,148 +951,17 @@ export class WhatsAppClientManager {
             }
           }
         }
-      } catch (e) {
+      } catch {
         // ignore
       }
 
-      // Fallback if completely unresolved
-      console.warn(`[WhatsApp Inbound] Could not resolve real phone number for LID: ${remoteJid}`);
       return { senderPhone: `+${lidUser}`, replyJid };
     }
 
-    // Default fallback
     const raw = remoteJid.replace(/@.+/, '').split(':')[0].replace(/[^0-9]/g, '');
     return { senderPhone: raw ? `+${raw}` : remoteJid, replyJid };
   }
 
-  /**
-   * Sends an actual WhatsApp message to a real phone number or JID
-   */
-  public async sendRealMessage(
-    toPhoneOrJid: string,
-    messageText: string,
-    intent?: string,
-    preferredJid?: string
-  ): Promise<{ success: boolean; messageId?: string; error?: string }> {
-    const text = (messageText || '').trim();
-    if (!text) {
-      return { success: false, error: 'Message text cannot be empty' };
-    }
-
-    // Determine target JID for Baileys socket
-    let targetJid = (preferredJid || '').trim();
-    if (!targetJid) {
-      if (toPhoneOrJid.includes('@s.whatsapp.net') || toPhoneOrJid.includes('@lid')) {
-        targetJid = toPhoneOrJid.trim();
-      } else {
-        const cleanDigits = toPhoneOrJid.replace(/[^0-9]/g, '');
-        if (cleanDigits.length < 9) {
-          return { success: false, error: `Invalid recipient phone number: ${toPhoneOrJid}` };
-        }
-        // Check if we already have a mapped LID for this phone number
-        const mappedLid = this.phoneToLidMap.get(cleanDigits);
-        if (mappedLid) {
-          targetJid = mappedLid;
-        } else {
-          targetJid = `${cleanDigits}@s.whatsapp.net`;
-        }
-      }
-    }
-
-    // Clean human-readable phone number for logging and Meta API fallback
-    const rawDigits = toPhoneOrJid.replace(/@.+/, '').replace(/[^0-9]/g, '');
-    const displayPhone = rawDigits.length >= 9
-      ? (rawDigits.startsWith('254') ? `+${rawDigits}` : `+254${rawDigits.replace(/^0/, '')}`)
-      : (toPhoneOrJid.startsWith('+') ? toPhoneOrJid : `+${toPhoneOrJid}`);
-
-    // 1. Try Baileys connected socket (Actual WhatsApp account)
-    if (this.sock && this.status === 'CONNECTED') {
-      try {
-        console.log(`[WhatsApp Outbound] Sending via Baileys to JID: ${targetJid} (Recipient: ${displayPhone})`);
-        const result = await this.sock.sendMessage(targetJid, { text });
-
-        this.totalSent++;
-        const outLog: WhatsAppMessageLog = {
-          id: result?.key?.id || `out-${Date.now()}`,
-          direction: 'OUTBOUND',
-          from: this.connectedPhone || 'SmartShule Account',
-          to: displayPhone,
-          text,
-          status: 'SENT',
-          timestamp: new Date().toISOString(),
-          intent,
-        };
-        this.recordMessage(outLog);
-
-        console.log(`[WhatsApp Outbound] ✅ Real message sent to ${displayPhone} | ID: ${outLog.id}`);
-        return { success: true, messageId: outLog.id };
-      } catch (err: any) {
-        console.error(`[WhatsApp Outbound] Error sending to ${displayPhone} (JID: ${targetJid}):`, err);
-        return { success: false, error: err.message || 'Failed to send WhatsApp message' };
-      }
-    }
-
-    // 2. Try Meta WhatsApp Cloud API if credentials are provided in environment
-    const metaToken = process.env.WHATSAPP_ACCESS_TOKEN;
-    const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-    if (metaToken && phoneId) {
-      try {
-        const cleanPhone = rawDigits;
-        const apiBase = process.env.WHATSAPP_API_BASE_URL || 'https://graph.facebook.com/v21.0';
-        const url = `${apiBase}/${phoneId}/messages`;
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${metaToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            messaging_product: 'whatsapp',
-            recipient_type: 'individual',
-            to: cleanPhone,
-            type: 'text',
-            text: { preview_url: false, body: text },
-          }),
-        });
-
-        const data = (await response.json()) as any;
-        if (response.ok && data.messages?.[0]?.id) {
-          const msgId = data.messages[0].id;
-          this.totalSent++;
-          const outLog: WhatsAppMessageLog = {
-            id: msgId,
-            direction: 'OUTBOUND',
-            from: phoneId,
-            to: displayPhone,
-            text,
-            status: 'SENT',
-            timestamp: new Date().toISOString(),
-            intent,
-          };
-          this.recordMessage(outLog);
-
-          console.log(`[WhatsApp Outbound (Meta Cloud)] ✅ Sent to ${displayPhone} | ID: ${msgId}`);
-          return { success: true, messageId: msgId };
-        } else {
-          const errMsg = data.error?.message || 'Meta Cloud API rejected the message';
-          console.error(`[WhatsApp Outbound (Meta Cloud)] Error sending to ${displayPhone}:`, errMsg);
-          return { success: false, error: errMsg };
-        }
-      } catch (err: any) {
-        console.error(`[WhatsApp Outbound (Meta Cloud)] Exception sending to ${displayPhone}:`, err);
-        return { success: false, error: err.message };
-      }
-    }
-
-    return {
-      success: false,
-      error: 'No active WhatsApp connection or Meta Cloud credentials available',
-    };
-  }
-
-  /**
-   * Disconnects and resets session credentials
-   */
   public async disconnect(): Promise<void> {
     try {
       if (this.sock) {
@@ -481,7 +977,6 @@ export class WhatsAppClientManager {
     this.connectedName = null;
     this.qrCodeDataUrl = null;
     this.clearSessionFiles();
-    console.log('[WhatsApp Account] Disconnected and cleared session credentials.');
   }
 
   private recordMessage(msg: WhatsAppMessageLog) {

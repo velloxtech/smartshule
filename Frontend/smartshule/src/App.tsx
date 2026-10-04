@@ -3,6 +3,7 @@ import { TabType, Student, Teacher, SystemActivity, AssessmentRecord, FeeTransac
 import { apiService } from './services/api';
 import { useAuth } from './context/AuthContext';
 import { isTabPermitted } from './utils/rbac';
+import { resolveStreamName, resolveGradeName, resolveTeacherAssignedClasses } from './utils/formatters';
 
 // Public & Auth Views
 import { LandingPage } from './components/landing/LandingPage';
@@ -42,10 +43,13 @@ import { WhatsAppBotView } from './components/views/WhatsAppBotView';
 import { UserManagementView } from './components/views/UserManagementView';
 import RecordsOfWorkView from './components/views/RecordsOfWorkView';
 import { SystemLogsView } from './components/views/SystemLogsView';
-import { ComplaintsView } from './components/views/ComplaintsView';
+import { ConcernsView } from './components/views/ConcernsView';
 import { LunchFeeManagementView } from './components/views/LunchFeeManagementView';
 import { ParentProfileView } from './components/views/ParentProfileView';
 import { StudentFeeCheckerView } from './components/views/StudentFeeCheckerView';
+import { ArchivedRecordsView } from './components/views/ArchivedRecordsView';
+import { StandaloneArchivedRecordsPage } from './components/views/StandaloneArchivedRecordsPage';
+import { LibraryView } from './components/views/LibraryView';
 
 // Modals
 import { MpesaStkModal } from './components/modals/MpesaStkModal';
@@ -61,15 +65,24 @@ import { CreateLessonPlanModal } from './components/modals/CreateLessonPlanModal
 import { CreateSchemeModal } from './components/modals/CreateSchemeModal';
 import { AcademicTermsModal } from './components/modals/AcademicTermsModal';
 import { ChangePasswordModal } from './components/modals/ChangePasswordModal';
+import { LegalModal, LegalTabType } from './components/legal/LegalModal';
+import { CookieBanner } from './components/legal/CookieBanner';
 
 export default function App() {
   const { user, isAuthenticated, isLoading } = useAuth();
-  const [appView, setAppView] = useState<'landing' | 'login' | 'portal'>('landing');
+  const [appView, setAppView] = useState<'landing' | 'login' | 'portal' | 'archive'>('landing');
   const [currentTab, setCurrentTab] = useState<TabType>('dashboard');
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [currentTerm, setCurrentTerm] = useState('Term 3 - 2026');
   const [academicTermsModalOpen, setAcademicTermsModalOpen] = useState(false);
   const [changePasswordModalOpen, setChangePasswordModalOpen] = useState(false);
+  const [legalModalOpen, setLegalModalOpen] = useState(false);
+  const [legalModalTab, setLegalModalTab] = useState<LegalTabType>('terms');
+
+  const handleOpenLegalModal = (tab: LegalTabType = 'terms') => {
+    setLegalModalTab(tab);
+    setLegalModalOpen(true);
+  };
 
 
   // Core Dynamic Data (Live from backend or user actions - initialized empty)
@@ -122,31 +135,84 @@ export default function App() {
   // Refresh students and attached fee balances
   const refreshStudentsAndFees = useCallback(async () => {
     try {
+      const isParentOnly = user?.role === UserRole.PARENT || user?.role === UserRole.GUARDIAN;
+      if (isParentOnly) {
+        const portalRes = await apiService.getGuardianPortalData().catch(() => null);
+        if (portalRes?.data?.children && Array.isArray(portalRes.data.children)) {
+          const mappedChildren: Student[] = portalRes.data.children.map((c: any) => ({
+            id: c.id,
+            name: `${c.firstName} ${c.lastName}`,
+            admNo: c.admissionNumber || 'N/A',
+            upi: c.upiNumber || '--',
+            nemis: c.upiNumber || '--',
+            grade: resolveGradeName(c.gradeLevel || c.grade),
+            stream: resolveStreamName(c.streamId, c.stream?.name || c.streamName || c.stream),
+            gender: c.gender === 'FEMALE' || c.gender === 'Girl' ? 'Girl' : 'Boy',
+            feeBalance: c.fee?.balance ?? 0,
+            totalFee: c.fee?.totalBilled ?? 0,
+            attendanceRate: c.attendance?.attendanceRate ?? 100,
+            guardianName: portalRes.data.guardian?.user
+              ? `${portalRes.data.guardian.user.firstName} ${portalRes.data.guardian.user.lastName}`
+              : (user?.name || 'Parent'),
+            guardianPhone: user?.phone || '+254777000777',
+            medicalConditions: c.medicalConditions || 'None',
+            emergencyContact: portalRes.data.guardian?.emergencyContact || user?.phone || '+254777000777',
+            streamId: c.streamId,
+            classroomId: c.classroomId,
+            academicYearId: c.academicYearId,
+            status: c.status || 'Active',
+            profilePhotoUrl: c.profilePhotoUrl,
+            dateOfBirth: c.dateOfBirth,
+            specialNeeds: c.specialNeeds,
+          }));
+          setStudents(mappedChildren);
+        } else {
+          setStudents([]);
+        }
+        return;
+      }
+
       const [studentData, defaultersRes, invoicesRes] = await Promise.all([
         apiService.getStudents().catch(() => null),
         apiService.getDefaulters().catch(() => null),
         apiService.getInvoices().catch(() => null),
       ]);
 
-      const feeMap = new Map<string, { balance: number; billed: number }>();
+      const feeMap = new Map<string, { balance: number; billed: number; hasInvoices: boolean }>();
 
       if (invoicesRes?.data && Array.isArray(invoicesRes.data)) {
         invoicesRes.data.forEach((inv: any) => {
-          feeMap.set(inv.studentId, { balance: inv.balance ?? 0, billed: inv.amountPayable ?? 0 });
+          const current = feeMap.get(inv.studentId) || { balance: 0, billed: 0, hasInvoices: true };
+          // CARRIED_FORWARD or CANCELLED invoices should not overwrite active balance
+          const invBalance = inv.status === 'CARRIED_FORWARD' || inv.status === 'CANCELLED' ? 0 : (Number(inv.balance) || 0);
+          const invBilled = inv.status === 'CARRIED_FORWARD' ? 0 : (Number(inv.amountPayable) || Number(inv.amountBilled) || 0);
+
+          feeMap.set(inv.studentId, {
+            balance: current.balance + invBalance,
+            billed: current.billed + invBilled,
+            hasInvoices: true,
+          });
         });
       }
 
       if (defaultersRes?.data?.defaulters && Array.isArray(defaultersRes.data.defaulters)) {
         defaultersRes.data.defaulters.forEach((d: any) => {
-          if (!feeMap.has(d.studentId) || (feeMap.get(d.studentId)?.balance === 0 && d.balance > 0)) {
-            feeMap.set(d.studentId, { balance: d.balance || 0, billed: d.amountPayable || 0 });
+          const current = feeMap.get(d.studentId);
+          if (!current || (current.balance === 0 && Number(d.balance) > 0)) {
+            feeMap.set(d.studentId, {
+              balance: Number(d.balance) || 0,
+              billed: Math.max(current?.billed || 0, Number(d.amountPayable) || Number(d.balance) || 0),
+              hasInvoices: true,
+            });
           }
         });
       }
 
       if (studentData?.data && Array.isArray(studentData.data)) {
         const mappedStudents: Student[] = studentData.data.map((st: any) => {
-          const fee = feeMap.get(st.id) || { balance: 0, billed: 0 };
+          const fee = feeMap.get(st.id);
+          const feeBalance = fee !== undefined ? fee.balance : (Number(st.feeBalance) || 0);
+          const totalFee = fee !== undefined ? fee.billed : (Number(st.totalFee) || 0);
           const fullName =
             st.name ||
             st.fullName ||
@@ -159,15 +225,15 @@ export default function App() {
             nemis: st.upiNumber || st.nemis || '--',
             name: fullName,
             gender: st.gender === 'FEMALE' || st.gender === 'Girl' ? 'Girl' : 'Boy',
-            grade: st.grade || (st.gradeLevel ? st.gradeLevel.replace(/_/g, ' ') : 'Grade --'),
-            stream: st.stream?.name || st.streamName || (st.streamId ? `Stream ${st.streamId.slice(0, 6)}` : ''),
+            grade: resolveGradeName(st.grade || st.gradeLevel),
+            stream: resolveStreamName(st.streamId, st.stream?.name || st.streamName || st.stream),
             guardianName:
               st.guardian && (st.guardian.firstName || st.guardian.lastName)
                 ? `${st.guardian.firstName || ''} ${st.guardian.lastName || ''}`.trim()
                 : (st.guardianName || st.emergencyContactName || '--'),
             guardianPhone: st.guardian?.phone || st.guardianPhone || st.emergencyContactPhone || '--',
-            feeBalance: fee.balance,
-            totalFee: fee.billed,
+            feeBalance,
+            totalFee,
             attendanceRate: st.attendanceRate ?? 0,
             cbcRating: st.cbcRating || '--',
             status: st.status === 'ACTIVE' || st.status === 'Active' ? 'Active' : (st.status || 'Active'),
@@ -184,7 +250,7 @@ export default function App() {
     } catch {
       setStudents([]);
     }
-  }, []);
+  }, [user]);
 
   // Sync with Backend API on Mount & Auth State Changes
   useEffect(() => {
@@ -254,7 +320,7 @@ export default function App() {
                 role: t.user?.role === 'TEACHER' ? 'Teacher / Educator' : (t.user?.role ? t.user.role.replace(/_/g, ' ') : 'Subject Teacher'),
                 tscNumber: t.tscNumber || 'Not Issued / Pending',
                 employeeNumber: t.employeeNumber || '--',
-                assignedClass: t.assignedClassStreamIds?.length ? t.assignedClassStreamIds.join(', ') : 'Unassigned',
+                assignedClass: resolveTeacherAssignedClasses(t.assignedClassStreamIds),
                 phone: t.user?.phone || '--',
                 email: t.user?.email || '--',
                 learningAreas: t.specialization || ['CBC Core'],
@@ -296,35 +362,64 @@ export default function App() {
             setAssessments([]);
           }
         }
-        try {
-          const [analyticsData, paymentsRes] = await Promise.all([
-            apiService.getDashboardAnalytics().catch(() => null),
-            apiService.getPayments().catch(() => null),
-          ]);
-          if (analyticsData?.data?.finance?.totalCollected) {
-            setTotalCollectedFee(analyticsData.data.finance.totalCollected);
+        if (isParentOnly) {
+          try {
+            const paymentsRes = await apiService.getPayments().catch(() => null);
+            if (paymentsRes?.data && Array.isArray(paymentsRes.data) && paymentsRes.data.length > 0) {
+              const mappedTxs: FeeTransaction[] = paymentsRes.data.map((p: any) => ({
+                id: p.id,
+                ref: p.receiptNumber || p.transactionReference || p.id,
+                studentName: p.studentName || 'Learner',
+                admNo: p.admissionNumber || '',
+                grade: p.gradeLevel ? p.gradeLevel.replace('_', ' ') : '',
+                amount: p.amount,
+                channel: p.paymentMethod === 'CASH' ? 'Cash Office'
+                       : p.paymentMethod === 'BANK_DEPOSIT' ? 'Bank Deposit'
+                       : p.paymentMethod === 'MPESA' ? 'M-Pesa Express'
+                       : p.paymentMethod === 'BANK_TRANSFER' ? 'Bank Wire / EFT'
+                       : p.paymentMethod === 'CHEQUE' ? 'Banker\'s Cheque'
+                       : (p.paymentMethod || 'Bank Wire'),
+                date: p.paymentDate || 'Today',
+                status: p.status === 'COMPLETED' ? 'Settled' : p.status,
+              }));
+              setTransactions(mappedTxs);
+              const parentPaid = mappedTxs.reduce((sum, tx) => sum + (tx.amount || 0), 0);
+              setTotalCollectedFee(parentPaid);
+            }
+          } catch {
+            // Keep defaults
           }
-          if (paymentsRes?.data && Array.isArray(paymentsRes.data) && paymentsRes.data.length > 0) {
-            const mappedTxs: FeeTransaction[] = paymentsRes.data.map((p: any) => ({
-              id: p.id,
-              ref: p.receiptNumber || p.transactionReference || p.id,
-              studentName: p.studentName || 'Learner',
-              admNo: p.admissionNumber || '',
-              grade: p.gradeLevel ? p.gradeLevel.replace('_', ' ') : '',
-              amount: p.amount,
-              channel: p.paymentMethod === 'CASH' ? 'Cash Office'
-                     : p.paymentMethod === 'BANK_DEPOSIT' ? 'Bank Deposit'
-                     : p.paymentMethod === 'MPESA' ? 'M-Pesa Express'
-                     : p.paymentMethod === 'BANK_TRANSFER' ? 'Bank Wire / EFT'
-                     : p.paymentMethod === 'CHEQUE' ? 'Banker\'s Cheque'
-                     : (p.paymentMethod || 'Bank Wire'),
-              date: p.paymentDate || 'Today',
-              status: p.status === 'COMPLETED' ? 'Settled' : p.status,
-            }));
-            setTransactions(mappedTxs);
+        } else {
+          try {
+            const [analyticsData, paymentsRes] = await Promise.all([
+              apiService.getDashboardAnalytics().catch(() => null),
+              apiService.getPayments().catch(() => null),
+            ]);
+            if (analyticsData?.data?.finance?.totalCollected) {
+              setTotalCollectedFee(analyticsData.data.finance.totalCollected);
+            }
+            if (paymentsRes?.data && Array.isArray(paymentsRes.data) && paymentsRes.data.length > 0) {
+              const mappedTxs: FeeTransaction[] = paymentsRes.data.map((p: any) => ({
+                id: p.id,
+                ref: p.receiptNumber || p.transactionReference || p.id,
+                studentName: p.studentName || 'Learner',
+                admNo: p.admissionNumber || '',
+                grade: p.gradeLevel ? p.gradeLevel.replace('_', ' ') : '',
+                amount: p.amount,
+                channel: p.paymentMethod === 'CASH' ? 'Cash Office'
+                       : p.paymentMethod === 'BANK_DEPOSIT' ? 'Bank Deposit'
+                       : p.paymentMethod === 'MPESA' ? 'M-Pesa Express'
+                       : p.paymentMethod === 'BANK_TRANSFER' ? 'Bank Wire / EFT'
+                       : p.paymentMethod === 'CHEQUE' ? 'Banker\'s Cheque'
+                       : (p.paymentMethod || 'Bank Wire'),
+                date: p.paymentDate || 'Today',
+                status: p.status === 'COMPLETED' ? 'Settled' : p.status,
+              }));
+              setTransactions(mappedTxs);
+            }
+          } catch {
+            // Keep default 0
           }
-        } catch {
-          // Keep default 0
         }
       }
     }
@@ -522,9 +617,7 @@ export default function App() {
   const handleTeacherCreated = (newTeacherData: any) => {
     const assigned =
       newTeacherData.assignedClassName ||
-      (newTeacherData.assignedClassStreamIds?.length
-        ? newTeacherData.assignedClassStreamIds.join(', ')
-        : 'Unassigned');
+      resolveTeacherAssignedClasses(newTeacherData.assignedClassStreamIds);
 
     const roleName = newTeacherData.role
       ? newTeacherData.role === 'TEACHER'
@@ -587,6 +680,34 @@ export default function App() {
     }
   }, [user, currentTab]);
 
+  // Listen for standalone hash navigation e.g. #/archive or #/archived-records or ?view=archive
+  useEffect(() => {
+    const checkHashRoute = () => {
+      const hash = window.location.hash;
+      const search = window.location.search;
+      if (hash === '#/archive' || hash === '#/archived-records' || search.includes('view=archive')) {
+        if (isAuthenticated) {
+          const isPermitted = user?.role && [
+            UserRole.SUPER_ADMIN,
+            UserRole.ADMIN,
+            UserRole.SCHOOL_ADMIN,
+            UserRole.HEAD_TEACHER,
+          ].includes(user.role);
+          if (isPermitted) {
+            setAppView('archive');
+          } else {
+            setAppView('portal');
+          }
+        }
+      } else if (appView === 'archive' && !hash && !search.includes('view=archive')) {
+        setAppView('portal');
+      }
+    };
+    checkHashRoute();
+    window.addEventListener('hashchange', checkHashRoute);
+    return () => window.removeEventListener('hashchange', checkHashRoute);
+  }, [isAuthenticated, user, appView]);
+
   // Super Admin Purge Demo Data Handler
   const handlePurgeDemo = async () => {
     if (!window.confirm('Are you sure you want to purge all demo data? This will clear test students, test teachers, and test ledger records.')) {
@@ -606,20 +727,53 @@ export default function App() {
   // Render Public Landing Page
   if (appView === 'landing') {
     return (
-      <LandingPage
-        onNavigateLogin={() => setAppView('login')}
-        isAuthenticated={isAuthenticated}
-        onNavigatePortal={() => setAppView('portal')}
-      />
+      <>
+        <LandingPage
+          onNavigateLogin={() => setAppView('login')}
+          isAuthenticated={isAuthenticated}
+          onNavigatePortal={() => setAppView('portal')}
+          onOpenLegalModal={handleOpenLegalModal}
+        />
+        <CookieBanner onOpenPreferences={() => handleOpenLegalModal('cookies')} />
+        <LegalModal
+          isOpen={legalModalOpen}
+          onClose={() => setLegalModalOpen(false)}
+          initialTab={legalModalTab}
+        />
+      </>
     );
   }
 
   // Render Single Dedicated Login Page
   if (appView === 'login') {
     return (
-      <LoginPage
-        onSuccess={() => setAppView('portal')}
-        onNavigateLanding={() => setAppView('landing')}
+      <>
+        <LoginPage
+          onSuccess={() => setAppView('portal')}
+          onNavigateLanding={() => setAppView('landing')}
+          onOpenLegalModal={handleOpenLegalModal}
+        />
+        <CookieBanner onOpenPreferences={() => handleOpenLegalModal('cookies')} />
+        <LegalModal
+          isOpen={legalModalOpen}
+          onClose={() => setLegalModalOpen(false)}
+          initialTab={legalModalTab}
+        />
+      </>
+    );
+  }
+
+  // Render Standalone Archived Records Page
+  if (appView === 'archive') {
+    return (
+      <StandaloneArchivedRecordsPage
+        onBackToPortal={() => {
+          setAppView('portal');
+          if (window.location.hash === '#/archive' || window.location.hash === '#/archived-records') {
+            window.history.pushState(null, '', window.location.pathname + window.location.search);
+          }
+        }}
+        onRefreshStudents={refreshStudentsAndFees}
       />
     );
   }
@@ -627,11 +781,20 @@ export default function App() {
   // Fallback: If not authenticated, ensure landing view
   if (!isAuthenticated && !isLoading) {
     return (
-      <LandingPage
-        onNavigateLogin={() => setAppView('login')}
-        isAuthenticated={false}
-        onNavigatePortal={() => setAppView('portal')}
-      />
+      <>
+        <LandingPage
+          onNavigateLogin={() => setAppView('login')}
+          isAuthenticated={false}
+          onNavigatePortal={() => setAppView('portal')}
+          onOpenLegalModal={handleOpenLegalModal}
+        />
+        <CookieBanner onOpenPreferences={() => handleOpenLegalModal('cookies')} />
+        <LegalModal
+          isOpen={legalModalOpen}
+          onClose={() => setLegalModalOpen(false)}
+          initialTab={legalModalTab}
+        />
+      </>
     );
   }
 
@@ -641,6 +804,12 @@ export default function App() {
       <Sidebar
         currentTab={currentTab}
         onSelectTab={(tab) => {
+          if (tab === 'archived-records') {
+            setAppView('archive');
+            window.location.hash = '/archive';
+            setMobileSidebarOpen(false);
+            return;
+          }
           setCurrentTab(tab);
           setMobileSidebarOpen(false);
           window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -648,10 +817,11 @@ export default function App() {
         mobileOpen={mobileSidebarOpen}
         onCloseMobile={() => setMobileSidebarOpen(false)}
         onNavigateLanding={() => setAppView('landing')}
+        onOpenLegalModal={handleOpenLegalModal}
       />
 
       {/* Main Content Viewport (offset by sidebar width on desktop) */}
-      <div className="lg:pl-64 flex flex-col flex-1 min-w-0">
+      <div className="lg:pl-64 print:pl-0 print:m-0 print:w-full flex flex-col flex-1 min-w-0">
         {/* Top Operational Header: Pure Maroon (#800000) */}
         <Header
           onToggleMobile={() => setMobileSidebarOpen(true)}
@@ -679,7 +849,7 @@ export default function App() {
         {/* Term Lifecycle Notice Banner */}
         {currentContext?.termNotice && (
           <div
-            className={`px-4 sm:px-6 lg:px-8 py-2 text-xs flex items-center justify-between shadow-xs ${
+            className={`no-print print:hidden term-lifecycle-banner px-4 sm:px-6 lg:px-8 py-2 text-xs flex items-center justify-between shadow-xs ${
               currentContext.termNotice.type === 'TERM_ENDED'
                 ? 'bg-[#550000] text-rose-100 border-b border-[#770000]'
                 : currentContext.termNotice.type === 'ENDING_SOON'
@@ -714,7 +884,7 @@ export default function App() {
         )}
 
         {/* Dynamic Route Content */}
-        <main className="flex-1 px-4 sm:px-6 lg:px-8 pt-4 max-w-7xl w-full mx-auto">
+        <main className="flex-1 px-4 sm:px-6 lg:px-8 pt-4 max-w-7xl w-full mx-auto print:p-0 print:m-0 print:max-w-none print:w-full">
           {currentTab === 'dashboard' && (
             (() => {
               switch (user?.role) {
@@ -829,6 +999,10 @@ export default function App() {
                 onOpenAdmitModal={() => setAdmitModalOpen(true)}
                 onViewReportCard={handleViewReportCard}
                 onRefreshStudents={refreshStudentsAndFees}
+                onNavigateStandaloneArchive={() => {
+                  setAppView('archive');
+                  window.location.hash = '/archive';
+                }}
                 onUpdateStudent={(updated) =>
                   setStudents((prev) =>
                     prev.map((s) => (s.id === updated.id ? { ...s, ...updated } : s))
@@ -892,6 +1066,8 @@ export default function App() {
 
           {currentTab === 'timetable' && <TimetableView />}
 
+          {currentTab === 'library' && <LibraryView />}
+
           {currentTab === 'attendance-register' && (
             <AttendanceRegisterView onOpenSmsModal={handleOpenSms} />
           )}
@@ -953,11 +1129,55 @@ export default function App() {
           )}
 
           {currentTab === 'user-management' && (
-            <UserManagementView onNavigateTab={(tab) => setCurrentTab(tab as any)} />
+            <UserManagementView
+              onNavigateTab={(tab) => {
+                if (tab === 'archived-records') {
+                  setAppView('archive');
+                  window.location.hash = '/archive';
+                } else {
+                  setCurrentTab(tab as any);
+                }
+              }}
+            />
+          )}
+
+          {currentTab === 'archived-records' && (
+            <div className="p-8 text-center bg-white rounded-2xl border border-slate-200 shadow-xs space-y-4 max-w-2xl mx-auto my-12">
+              <div className="w-16 h-16 mx-auto rounded-2xl bg-rose-50 text-rose-800 flex items-center justify-center">
+                <span className="material-symbols-outlined text-[36px]">inventory_2</span>
+              </div>
+              <div>
+                <h2 className="text-xl font-black text-slate-900">Enterprise Archive & Compliance Vault</h2>
+                <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+                  The archived accounts and preserved records repository is configured as a standalone application workspace for optimal screen space and compliance printing.
+                </p>
+              </div>
+              <div className="flex items-center justify-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAppView('archive');
+                    window.location.hash = '/archive';
+                  }}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#800000] hover:bg-[#600000] text-white rounded-xl text-xs font-bold shadow-sm transition-all cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[18px]">open_in_full</span>
+                  <span>Open Standalone Archive Page</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => window.open(`${window.location.origin}${window.location.pathname}#/archive`, '_blank')}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[18px]">open_in_new</span>
+                  <span>New Window</span>
+                </button>
+              </div>
+            </div>
           )}
 
           {currentTab === 'system-logs' && <SystemLogsView />}
-          {currentTab === 'complaints' && <ComplaintsView />}
+          {(currentTab === 'concerns' || currentTab === 'complaints') && <ConcernsView />}
           {currentTab === 'lunch-fee-management' && <LunchFeeManagementView />}
           {currentTab === 'parent-profile' && (
             <ParentProfileView onNavigateTab={(tab) => setCurrentTab(tab as any)} />
@@ -1114,6 +1334,14 @@ export default function App() {
         onSuccessCallback={() => {
           setChangePasswordModalOpen(false);
         }}
+      />
+
+      {/* Global Regulatory & Legal Compliance Modals */}
+      <CookieBanner onOpenPreferences={() => handleOpenLegalModal('cookies')} />
+      <LegalModal
+        isOpen={legalModalOpen}
+        onClose={() => setLegalModalOpen(false)}
+        initialTab={legalModalTab}
       />
     </div>
   );

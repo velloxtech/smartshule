@@ -5,11 +5,12 @@ import { apiService } from '../../services/api';
 interface LoginPageProps {
   onSuccess: () => void;
   onNavigateLanding: () => void;
+  onOpenLegalModal?: (tab: 'terms' | 'privacy' | 'cookies' | 'child_protection') => void;
 }
 
 type AuthMode = 'login' | 'forgot_request' | 'forgot_verify' | 'initial_setup' | 'register';
 
-export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLanding }) => {
+export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLanding, onOpenLegalModal }) => {
   const { login, isLoading, error: authError } = useAuth();
   const [authMode, setAuthMode] = useState<AuthMode>('login');
 
@@ -30,6 +31,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLandi
   const [regPassword, setRegPassword] = useState('');
   const [regConfirmPassword, setRegConfirmPassword] = useState('');
   const [regRole, setRegRole] = useState<'SUPER_ADMIN' | 'ADMIN' | 'PARENT' | 'TEACHER'>('SUPER_ADMIN');
+  const [agreeToTerms, setAgreeToTerms] = useState(false);
   const [regLoading, setRegLoading] = useState(false);
   const [regSuccess, setRegSuccess] = useState<string | null>(null);
   const [regError, setRegError] = useState<string | null>(null);
@@ -100,6 +102,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLandi
     }
     if (regPassword !== regConfirmPassword) {
       setRegError('Passwords do not match.');
+      return;
+    }
+    if (!agreeToTerms) {
+      setRegError('Please confirm your agreement to the Terms & Conditions and Data Protection Notice.');
       return;
     }
 
@@ -775,6 +781,36 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLandi
                   </div>
                 </div>
 
+                {/* Statutory Terms & Data Protection Consent Checkbox */}
+                <div className="flex items-start gap-2.5 pt-1 bg-gray-50 p-2.5 rounded-xl border border-gray-200">
+                  <input
+                    id="agreeTermsCheckbox"
+                    type="checkbox"
+                    checked={agreeToTerms}
+                    onChange={(e) => setAgreeToTerms(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded text-[#7a1228] focus:ring-[#7a1228] cursor-pointer shrink-0"
+                  />
+                  <label htmlFor="agreeTermsCheckbox" className="text-xs text-gray-700 leading-snug cursor-pointer">
+                    I have read and agree to the{' '}
+                    <button
+                      type="button"
+                      onClick={() => onOpenLegalModal?.('terms')}
+                      className="text-[#7a1228] font-bold underline hover:text-[#5c0a1a]"
+                    >
+                      Terms & Conditions
+                    </button>{' '}
+                    and consent to the processing of personal data under the{' '}
+                    <button
+                      type="button"
+                      onClick={() => onOpenLegalModal?.('privacy')}
+                      className="text-[#7a1228] font-bold underline hover:text-[#5c0a1a]"
+                    >
+                      Kenya Data Protection Act, 2019
+                    </button>
+                    .
+                  </label>
+                </div>
+
                 <div className="pt-2 space-y-2">
                   <button
                     type="submit"
@@ -816,13 +852,43 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLandi
               <span className="material-symbols-outlined text-[14px] text-green-600">verified_user</span>
               <span>256-Bit SSL Encrypted</span>
             </div>
-            <span>ODPC Compliant</span>
+            <span>ODPC Registered & Compliant</span>
           </div>
         </div>
       </main>
 
       {/* Page Footer & Vellox Tech Watermark */}
-      <footer className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 text-center text-xs text-rose-200/80 flex flex-col items-center justify-center gap-1">
+      <footer className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 text-center text-xs text-rose-200/80 flex flex-col items-center justify-center gap-2">
+        <div className="flex items-center flex-wrap justify-center gap-x-4 gap-y-1.5 text-[11px] text-rose-200">
+          <button
+            onClick={() => onOpenLegalModal?.('terms')}
+            className="hover:text-white underline cursor-pointer"
+          >
+            Terms & Conditions
+          </button>
+          <span>•</span>
+          <button
+            onClick={() => onOpenLegalModal?.('privacy')}
+            className="hover:text-white underline cursor-pointer"
+          >
+            Privacy Policy (KDPA 2019)
+          </button>
+          <span>•</span>
+          <button
+            onClick={() => onOpenLegalModal?.('cookies')}
+            className="hover:text-white underline cursor-pointer"
+          >
+            Cookie Settings
+          </button>
+          <span>•</span>
+          <button
+            onClick={() => onOpenLegalModal?.('child_protection')}
+            className="hover:text-white underline cursor-pointer"
+          >
+            Learner Data Protection
+          </button>
+        </div>
+
         <p>Grace Seeds School · &quot;The future Begins Here&quot;</p>
         <p className="text-[11px] text-rose-300/70">SmartShule · Competency-Based Curriculum System</p>
         <div className="flex items-center gap-1.5 text-xs text-rose-100 font-medium">

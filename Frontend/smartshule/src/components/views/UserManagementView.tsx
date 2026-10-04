@@ -7,7 +7,7 @@ interface UserManagementViewProps {
   onNavigateTab?: (tabId: string) => void;
 }
 
-export const UserManagementView: React.FC<UserManagementViewProps> = () => {
+export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNavigateTab }) => {
   const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<ManageableUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -317,6 +317,15 @@ export const UserManagementView: React.FC<UserManagementViewProps> = () => {
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => onNavigateTab?.('archived-records')}
+            title="View and restore archived parent & learner user accounts"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-surface-container-high hover:bg-surface-container border border-outline-variant/30 text-on-surface rounded-lg text-xs font-bold shadow-xs transition-all cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[17px] text-rose-800">inventory_2</span>
+            <span>Archived Accounts</span>
+          </button>
           <button
             onClick={() => setIsCreateOpen(true)}
             className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-container text-xs font-bold shadow-xs transition-all cursor-pointer"

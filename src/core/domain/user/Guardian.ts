@@ -58,6 +58,13 @@ export class Guardian extends Entity<GuardianProps> {
     }
   }
 
+  public unlinkStudent(studentId: string): void {
+    if (this._props.studentIds.includes(studentId)) {
+      this._props.studentIds = this._props.studentIds.filter(id => id !== studentId);
+      this.touch();
+    }
+  }
+
   public updateDetails(details: {
     emergencyContact?: string;
     nationalId?: string;

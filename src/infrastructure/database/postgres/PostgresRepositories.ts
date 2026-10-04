@@ -27,9 +27,14 @@ import {
   ExpenseFilterCriteria,
   OtherIncomeFilterCriteria
 } from '../../../core/ports/repositories/IFeeRepository';
+import {
+  IDeletedStudentRepository,
+  DeletedStudentFilterCriteria
+} from '../../../core/ports/repositories/IDeletedStudentRepository';
 
 import { User, UserRole, UserStatus } from '../../../core/domain/user/User';
 import { Student, StudentGender, CbcGradeLevel, StudentStatus } from '../../../core/domain/user/Student';
+import { DeletedStudent } from '../../../core/domain/user/DeletedStudent';
 import { Teacher } from '../../../core/domain/user/Teacher';
 import { Guardian, GuardianRelationship } from '../../../core/domain/user/Guardian';
 import { School } from '../../../core/domain/academic/School';
@@ -329,10 +334,15 @@ export class PostgresDatabaseInitializer {
         classroom_id VARCHAR(100) NOT NULL,
         stream_id VARCHAR(100),
         slots JSONB NOT NULL,
+        periods JSONB,
+        days JSONB,
         is_active BOOLEAN DEFAULT true,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+
+      ALTER TABLE timetables ADD COLUMN IF NOT EXISTS periods JSONB;
+      ALTER TABLE timetables ADD COLUMN IF NOT EXISTS days JSONB;
 
       CREATE TABLE IF NOT EXISTS attendance_registers (
         id VARCHAR(100) PRIMARY KEY,
@@ -455,6 +465,7 @@ export class PostgresDatabaseInitializer {
         strand_and_work_covered TEXT NOT NULL,
         reference TEXT NOT NULL,
         comments TEXT,
+        reflection TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
@@ -569,6 +580,84 @@ export class PostgresDatabaseInitializer {
       CREATE INDEX IF NOT EXISTS idx_lunch_expenses_category ON lunch_expenses(category);
       CREATE INDEX IF NOT EXISTS idx_lunch_expenses_date ON lunch_expenses(expense_date);
       CREATE INDEX IF NOT EXISTS idx_lunch_expenses_term ON lunch_expenses(term_id);
+
+      CREATE TABLE IF NOT EXISTS deleted_students (
+        id VARCHAR(100) PRIMARY KEY,
+        student_id VARCHAR(100) NOT NULL,
+        admission_number VARCHAR(100) NOT NULL,
+        first_name VARCHAR(100) NOT NULL,
+        middle_name VARCHAR(100),
+        last_name VARCHAR(100) NOT NULL,
+        upi_number VARCHAR(100),
+        school_id VARCHAR(100) NOT NULL,
+        grade_level VARCHAR(50) NOT NULL,
+        classroom_id VARCHAR(100),
+        stream_id VARCHAR(100),
+        academic_year_id VARCHAR(100),
+        student_data JSONB NOT NULL,
+        linked_data JSONB NOT NULL DEFAULT '{}'::jsonb,
+        pending_work_cleared JSONB NOT NULL DEFAULT '{}'::jsonb,
+        deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        deleted_by_user_id VARCHAR(100),
+        reason TEXT
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_deleted_students_school ON deleted_students(school_id);
+      CREATE INDEX IF NOT EXISTS idx_deleted_students_student_id ON deleted_students(student_id);
+      CREATE INDEX IF NOT EXISTS idx_deleted_students_admission ON deleted_students(admission_number);
+      CREATE INDEX IF NOT EXISTS idx_deleted_students_deleted_at ON deleted_students(deleted_at DESC);
+
+      CREATE TABLE IF NOT EXISTS books (
+        id VARCHAR(100) PRIMARY KEY,
+        school_id VARCHAR(100) NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        author VARCHAR(255) NOT NULL,
+        isbn VARCHAR(100),
+        category VARCHAR(100) NOT NULL DEFAULT 'CBC Textbooks',
+        publisher VARCHAR(255),
+        publication_year INT,
+        copies_total INT NOT NULL DEFAULT 1,
+        copies_available INT NOT NULL DEFAULT 1,
+        shelf_location VARCHAR(100),
+        condition VARCHAR(50) NOT NULL DEFAULT 'GOOD',
+        grade_level VARCHAR(50),
+        cover_image_url TEXT,
+        description TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_books_school ON books(school_id);
+      CREATE INDEX IF NOT EXISTS idx_books_category ON books(category);
+      CREATE INDEX IF NOT EXISTS idx_books_grade ON books(grade_level);
+
+      CREATE TABLE IF NOT EXISTS book_loans (
+        id VARCHAR(100) PRIMARY KEY,
+        school_id VARCHAR(100) NOT NULL,
+        book_id VARCHAR(100) NOT NULL,
+        book_title VARCHAR(255) NOT NULL,
+        borrower_type VARCHAR(50) NOT NULL DEFAULT 'STUDENT',
+        borrower_id VARCHAR(100) NOT NULL,
+        borrower_name VARCHAR(255) NOT NULL,
+        borrower_admission_or_number VARCHAR(100),
+        borrower_grade_or_class VARCHAR(100),
+        issue_date VARCHAR(50) NOT NULL,
+        due_date VARCHAR(50) NOT NULL,
+        return_date VARCHAR(50),
+        status VARCHAR(50) NOT NULL DEFAULT 'ISSUED',
+        fine_amount NUMERIC(10,2) NOT NULL DEFAULT 0,
+        fine_paid BOOLEAN NOT NULL DEFAULT FALSE,
+        remarks TEXT,
+        issued_by_user_id VARCHAR(100),
+        received_by_user_id VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_book_loans_school ON book_loans(school_id);
+      CREATE INDEX IF NOT EXISTS idx_book_loans_book ON book_loans(book_id);
+      CREATE INDEX IF NOT EXISTS idx_book_loans_borrower ON book_loans(borrower_id);
+      CREATE INDEX IF NOT EXISTS idx_book_loans_status ON book_loans(status);
     `;
 
     await pool.query(ddl);
@@ -580,6 +669,7 @@ export class PostgresDatabaseInitializer {
       ALTER TABLE lesson_plans ADD COLUMN IF NOT EXISTS reviewed_by_user_id VARCHAR(100);
       ALTER TABLE lesson_plans ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMP;
       ALTER TABLE lesson_plans ADD COLUMN IF NOT EXISTS review_remarks TEXT;
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS reflection TEXT;
       ALTER TABLE students ADD COLUMN IF NOT EXISTS classroom_id VARCHAR(100);
       ALTER TABLE users ALTER COLUMN email DROP NOT NULL;
       CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone);
@@ -1104,6 +1194,9 @@ export class PostgresCbcAssessmentRepository implements ICbcAssessmentRepository
   public async deleteFormative(id: string): Promise<void> {
     await this.pool.query('DELETE FROM formative_assessments WHERE id = $1', [id]);
   }
+  public async deleteFormativesByStudent(studentId: string): Promise<void> {
+    await this.pool.query('DELETE FROM formative_assessments WHERE student_id = $1', [studentId]);
+  }
   public async findSummativeById(id: string): Promise<SummativeAssessment | null> {
     const res = await this.pool.query('SELECT * FROM summative_assessments WHERE id = $1', [id]);
     if (!res.rows.length) return null;
@@ -1140,6 +1233,9 @@ export class PostgresCbcAssessmentRepository implements ICbcAssessmentRepository
     ]);
   }
   public async updateSummative(s: SummativeAssessment): Promise<void> { await this.saveSummative(s); }
+  public async deleteSummativesByStudent(studentId: string): Promise<void> {
+    await this.pool.query('DELETE FROM summative_assessments WHERE student_id = $1', [studentId]);
+  }
   public async findReportCardById(id: string): Promise<CbcReportCard | null> {
     const res = await this.pool.query('SELECT * FROM cbc_report_cards WHERE id = $1', [id]);
     if (!res.rows.length) return null;
@@ -1151,6 +1247,10 @@ export class PostgresCbcAssessmentRepository implements ICbcAssessmentRepository
     if (!res.rows.length) return null;
     const r = res.rows[0];
     return CbcReportCard.create({ studentId: r.student_id, termId: r.term_id, academicYearId: r.academic_year_id, gradeLevel: r.grade_level, streamId: r.stream_id, learningAreaAssessments: typeof r.learning_area_assessments === 'string' ? JSON.parse(r.learning_area_assessments) : r.learning_area_assessments, coreCompetencyAssessments: typeof r.core_competency_assessments === 'string' ? JSON.parse(r.core_competency_assessments) : r.core_competency_assessments, valueAssessments: typeof r.value_assessments === 'string' ? JSON.parse(r.value_assessments) : r.value_assessments, attendanceDaysPresent: Number(r.attendance_days_present), attendanceDaysTotal: Number(r.attendance_days_total), classTeacherRemarks: r.class_teacher_remarks, headTeacherRemarks: r.head_teacher_remarks, overallAverageScore: Number(r.overall_average_score), overallPerformanceLevel: r.overall_performance_level }, r.id, r.created_at, r.updated_at);
+  }
+  public async findReportCardsByStudent(studentId: string): Promise<CbcReportCard[]> {
+    const res = await this.pool.query('SELECT * FROM cbc_report_cards WHERE student_id = $1', [studentId]);
+    return res.rows.map(r => CbcReportCard.create({ studentId: r.student_id, termId: r.term_id, academicYearId: r.academic_year_id, gradeLevel: r.grade_level, streamId: r.stream_id, learningAreaAssessments: typeof r.learning_area_assessments === 'string' ? JSON.parse(r.learning_area_assessments) : r.learning_area_assessments, coreCompetencyAssessments: typeof r.core_competency_assessments === 'string' ? JSON.parse(r.core_competency_assessments) : r.core_competency_assessments, valueAssessments: typeof r.value_assessments === 'string' ? JSON.parse(r.value_assessments) : r.value_assessments, attendanceDaysPresent: Number(r.attendance_days_present), attendanceDaysTotal: Number(r.attendance_days_total), classTeacherRemarks: r.class_teacher_remarks, headTeacherRemarks: r.head_teacher_remarks, overallAverageScore: Number(r.overall_average_score), overallPerformanceLevel: r.overall_performance_level }, r.id, r.created_at, r.updated_at));
   }
   public async findReportCardsByTerm(termId: string, streamId?: string): Promise<CbcReportCard[]> {
     const res = await this.pool.query('SELECT * FROM cbc_report_cards WHERE term_id = $1', [termId]);
@@ -1181,6 +1281,9 @@ export class PostgresCbcAssessmentRepository implements ICbcAssessmentRepository
     ]);
   }
   public async updateReportCard(rc: CbcReportCard): Promise<void> { await this.saveReportCard(rc); }
+  public async deleteReportCardsByStudent(studentId: string): Promise<void> {
+    await this.pool.query('DELETE FROM cbc_report_cards WHERE student_id = $1', [studentId]);
+  }
 }
 
 export class PostgresSchemeOfWorkRepository implements ISchemeOfWorkRepository {
@@ -1353,47 +1456,127 @@ export class PostgresLessonPlanRepository implements ILessonPlanRepository {
 
 export class PostgresTimetableRepository implements ITimetableRepository {
   constructor(private pool: Pool) {}
+
+  private mapRowToTimetable(r: any): Timetable {
+    let slots: any[] = [];
+    let periods: any = undefined;
+    let days: any = undefined;
+
+    if (r.periods) {
+      periods = typeof r.periods === 'string' ? JSON.parse(r.periods) : r.periods;
+    }
+    if (r.days) {
+      days = typeof r.days === 'string' ? JSON.parse(r.days) : r.days;
+    }
+
+    const rawSlots = typeof r.slots === 'string' ? JSON.parse(r.slots) : (r.slots || []);
+    if (Array.isArray(rawSlots)) {
+      slots = rawSlots;
+    } else if (rawSlots && typeof rawSlots === 'object') {
+      slots = rawSlots.slots || [];
+      if (!periods && rawSlots.periods) periods = rawSlots.periods;
+      if (!days && rawSlots.days) days = rawSlots.days;
+    }
+
+    return Timetable.create(
+      {
+        schoolId: r.school_id,
+        academicYearId: r.academic_year_id,
+        termId: r.term_id,
+        classRoomId: r.classroom_id,
+        streamId: r.stream_id || '',
+        slots,
+        periods,
+        days,
+        isActive: r.is_active
+      },
+      r.id,
+      r.created_at,
+      r.updated_at
+    );
+  }
+
   public async findById(id: string): Promise<Timetable | null> {
     const res = await this.pool.query('SELECT * FROM timetables WHERE id = $1', [id]);
     if (!res.rows.length) return null;
-    const r = res.rows[0];
-    return Timetable.create({ schoolId: r.school_id, academicYearId: r.academic_year_id, termId: r.term_id, classRoomId: r.classroom_id, streamId: r.stream_id, slots: typeof r.slots === 'string' ? JSON.parse(r.slots) : r.slots, isActive: r.is_active }, r.id, r.created_at, r.updated_at);
+    return this.mapRowToTimetable(res.rows[0]);
   }
-  public async findByStream(streamId: string, termId: string): Promise<Timetable | null> {
-    const res = await this.pool.query('SELECT * FROM timetables WHERE stream_id = $1 AND term_id = $2 LIMIT 1', [streamId, termId]);
+
+  public async findByStream(streamId: string, termId?: string): Promise<Timetable | null> {
+    let q = 'SELECT * FROM timetables WHERE stream_id = $1';
+    const params: any[] = [streamId];
+    if (termId && termId.trim() !== '') {
+      q += ' AND (term_id = $2 OR term_id IS NULL OR term_id = \'\')';
+      params.push(termId);
+    }
+    q += ' ORDER BY updated_at DESC LIMIT 1';
+    const res = await this.pool.query(q, params);
     if (!res.rows.length) return null;
-    const r = res.rows[0];
-    return Timetable.create({ schoolId: r.school_id, academicYearId: r.academic_year_id, termId: r.term_id, classRoomId: r.classroom_id, streamId: r.stream_id, slots: typeof r.slots === 'string' ? JSON.parse(r.slots) : r.slots, isActive: r.is_active }, r.id, r.created_at, r.updated_at);
+    return this.mapRowToTimetable(res.rows[0]);
   }
-  public async findByClass(classRoomId: string, termId: string): Promise<Timetable[]> {
-    const res = await this.pool.query('SELECT * FROM timetables WHERE classroom_id = $1 AND term_id = $2', [classRoomId, termId]);
-    return res.rows.map(r => Timetable.create({ schoolId: r.school_id, academicYearId: r.academic_year_id, termId: r.term_id, classRoomId: r.classroom_id, streamId: r.stream_id, slots: typeof r.slots === 'string' ? JSON.parse(r.slots) : r.slots, isActive: r.is_active }, r.id, r.created_at, r.updated_at));
+
+  public async findByClass(classRoomId: string, termId?: string): Promise<Timetable[]> {
+    let q = 'SELECT * FROM timetables WHERE classroom_id = $1';
+    const params: any[] = [classRoomId];
+    if (termId && termId.trim() !== '') {
+      q += ' AND (term_id = $2 OR term_id IS NULL OR term_id = \'\')';
+      params.push(termId);
+    }
+    q += ' ORDER BY updated_at DESC';
+    const res = await this.pool.query(q, params);
+    return res.rows.map(r => this.mapRowToTimetable(r));
   }
-  public async findByTeacher(teacherId: string, termId: string): Promise<any[]> {
-    const res = await this.pool.query('SELECT * FROM timetables WHERE term_id = $1', [termId]);
+
+  public async findByTeacher(teacherId: string, termId?: string): Promise<any[]> {
+    let q = 'SELECT * FROM timetables';
+    const params: any[] = [];
+    if (termId && termId.trim() !== '') {
+      q += ' WHERE term_id = $1 OR term_id IS NULL OR term_id = \'\'';
+      params.push(termId);
+    }
+    const res = await this.pool.query(q, params);
     const slots: any[] = [];
     for (const r of res.rows) {
       const parsedSlots = typeof r.slots === 'string' ? JSON.parse(r.slots) : r.slots;
-      for (const s of parsedSlots) {
+      const list = Array.isArray(parsedSlots) ? parsedSlots : (parsedSlots?.slots || []);
+      for (const s of list) {
         if (s.teacherId === teacherId) {
           slots.push({
+            id: s.id,
+            timetableId: r.id,
             dayOfWeek: s.dayOfWeek,
             periodNumber: s.periodNumber,
             streamId: r.stream_id,
+            classRoomId: r.classroom_id,
             learningAreaName: s.learningAreaName,
+            learningAreaId: s.learningAreaId,
+            teacherName: s.teacherName,
             roomName: s.roomName,
             startTime: s.startTime,
-            endTime: s.endTime
+            endTime: s.endTime,
+            isBreak: s.isBreak ?? false,
+            isLunch: s.isLunch ?? false,
+            label: s.label
           });
         }
       }
     }
     return slots;
   }
+
   public async save(tt: Timetable): Promise<void> {
-    const q = `INSERT INTO timetables (id, school_id, academic_year_id, term_id, classroom_id, stream_id, slots, is_active, created_at, updated_at)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-               ON CONFLICT (id) DO UPDATE SET slots = EXCLUDED.slots, updated_at = NOW()`;
+    const q = `INSERT INTO timetables (id, school_id, academic_year_id, term_id, classroom_id, stream_id, slots, periods, days, is_active, created_at, updated_at)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+               ON CONFLICT (id) DO UPDATE SET
+                 slots = EXCLUDED.slots,
+                 periods = EXCLUDED.periods,
+                 days = EXCLUDED.days,
+                 classroom_id = EXCLUDED.classroom_id,
+                 stream_id = EXCLUDED.stream_id,
+                 term_id = EXCLUDED.term_id,
+                 academic_year_id = EXCLUDED.academic_year_id,
+                 is_active = EXCLUDED.is_active,
+                 updated_at = NOW()`;
     await this.pool.query(q, [
       tt.id,
       tt.schoolId,
@@ -1401,12 +1584,15 @@ export class PostgresTimetableRepository implements ITimetableRepository {
       tt.termId,
       tt.classRoomId,
       (tt.streamId && tt.streamId.trim() !== '') ? tt.streamId : null,
-      JSON.stringify(tt.slots),
+      JSON.stringify(tt.slots || []),
+      tt.periods ? JSON.stringify(tt.periods) : null,
+      tt.days ? JSON.stringify(tt.days) : null,
       tt.isActive,
       tt.createdAt,
       tt.updatedAt
     ]);
   }
+
   public async update(tt: Timetable): Promise<void> { await this.save(tt); }
   public async delete(id: string): Promise<void> { await this.pool.query('DELETE FROM timetables WHERE id = $1', [id]); }
 }
@@ -1478,6 +1664,20 @@ export class PostgresAttendanceRepository implements IAttendanceRepository {
     ]);
   }
   public async updateRegister(reg: AttendanceRegister): Promise<void> { await this.saveRegister(reg); }
+  public async findRegistersByStudent(studentId: string): Promise<AttendanceRegister[]> {
+    const res = await this.pool.query(
+      `SELECT * FROM attendance_registers WHERE entries::text LIKE $1`,
+      [`%"studentId":"${studentId}"%`]
+    );
+    return res.rows.map(r => AttendanceRegister.create({ schoolId: r.school_id, classRoomId: r.classroom_id, streamId: r.stream_id, academicYearId: r.academic_year_id, termId: r.term_id, date: r.date, type: r.type, lessonId: r.lesson_id, markedByTeacherId: r.marked_by_teacher_id, entries: typeof r.entries === 'string' ? JSON.parse(r.entries) : r.entries }, r.id, r.created_at, r.updated_at));
+  }
+  public async removeStudentFromRegisters(studentId: string): Promise<void> {
+    const registers = await this.findRegistersByStudent(studentId);
+    for (const reg of registers) {
+      reg.removeEntry(studentId);
+      await this.saveRegister(reg);
+    }
+  }
 }
 
 export class PostgresFeeRepository implements IFeeRepository {
@@ -1554,8 +1754,15 @@ export class PostgresFeeRepository implements IFeeRepository {
     let q = 'SELECT * FROM student_invoices WHERE 1=1';
     const params: any[] = [];
     if (filters.studentId) { params.push(filters.studentId); q += ` AND student_id = $${params.length}`; }
+    if (filters.studentIds && filters.studentIds.length > 0) {
+      params.push(filters.studentIds);
+      q += ` AND student_id = ANY($${params.length})`;
+    }
+    if (filters.schoolId) { params.push(filters.schoolId); q += ` AND school_id = $${params.length}`; }
     if (filters.termId) { params.push(filters.termId); q += ` AND term_id = $${params.length}`; }
     if (filters.academicYearId) { params.push(filters.academicYearId); q += ` AND academic_year_id = $${params.length}`; }
+    if (filters.status) { params.push(filters.status); q += ` AND status = $${params.length}`; }
+    q += ' ORDER BY created_at DESC';
     const res = await this.pool.query(q, params);
     return res.rows.map(r => StudentInvoice.create({ schoolId: r.school_id, studentId: r.student_id, feeStructureId: r.fee_structure_id, academicYearId: r.academic_year_id, termId: r.term_id, invoiceNumber: r.invoice_number, items: typeof r.items === 'string' ? JSON.parse(r.items) : r.items, amountBilled: Number(r.amount_billed), discountAmount: Number(r.discount_amount), amountPayable: Number(r.amount_payable), amountPaid: Number(r.amount_paid), balance: Number(r.balance), status: r.status as InvoiceStatus, dueDate: r.due_date }, r.id, r.created_at, r.updated_at));
   }
@@ -1566,6 +1773,9 @@ export class PostgresFeeRepository implements IFeeRepository {
     await this.pool.query(q, [inv.id, inv.schoolId, inv.studentId, inv.feeStructureId, inv.academicYearId, inv.termId, inv.invoiceNumber, JSON.stringify(inv.items), inv.amountBilled, inv.discountAmount, inv.amountPayable, inv.amountPaid, inv.balance, inv.status, inv.dueDate, inv.createdAt, inv.updatedAt]);
   }
   public async updateInvoice(inv: StudentInvoice): Promise<void> { await this.saveInvoice(inv); }
+  public async deleteInvoicesByStudentId(studentId: string): Promise<void> {
+    await this.pool.query('DELETE FROM student_invoices WHERE student_id = $1', [studentId]);
+  }
   public async findPaymentById(id: string): Promise<Payment | null> {
     const res = await this.pool.query('SELECT * FROM payments WHERE id = $1', [id]);
     if (!res.rows.length) return null;
@@ -1585,8 +1795,19 @@ export class PostgresFeeRepository implements IFeeRepository {
     return Payment.create({ schoolId: r.school_id, invoiceId: r.invoice_id, studentId: r.student_id, receiptNumber: r.receipt_number, amount: Number(r.amount), paymentMethod: r.payment_method, transactionReference: r.transaction_reference, mpesaPhoneNumber: r.mpesa_phone_number, paymentDate: r.payment_date, recordedByUserId: r.recorded_by_user_id, status: r.status as PaymentStatus, notes: r.notes }, r.id, r.created_at, r.updated_at);
   }
   public async findPayments(filters: PaymentFilterCriteria): Promise<Payment[]> {
-    const res = await this.pool.query('SELECT * FROM payments');
+    let q = 'SELECT * FROM payments WHERE 1=1';
+    const params: any[] = [];
+    if (filters.schoolId) { params.push(filters.schoolId); q += ` AND school_id = $${params.length}`; }
+    if (filters.studentId) { params.push(filters.studentId); q += ` AND student_id = $${params.length}`; }
+    if (filters.invoiceId) { params.push(filters.invoiceId); q += ` AND invoice_id = $${params.length}`; }
+    if (filters.startDate) { params.push(filters.startDate); q += ` AND payment_date >= $${params.length}`; }
+    if (filters.endDate) { params.push(filters.endDate); q += ` AND payment_date <= $${params.length}`; }
+    q += ' ORDER BY payment_date DESC';
+    const res = await this.pool.query(q, params);
     return res.rows.map(r => Payment.create({ schoolId: r.school_id, invoiceId: r.invoice_id, studentId: r.student_id, receiptNumber: r.receipt_number, amount: Number(r.amount), paymentMethod: r.payment_method, transactionReference: r.transaction_reference, mpesaPhoneNumber: r.mpesa_phone_number, paymentDate: r.payment_date, recordedByUserId: r.recorded_by_user_id, status: r.status as PaymentStatus, notes: r.notes }, r.id, r.created_at, r.updated_at));
+  }
+  public async deletePaymentsByStudentId(studentId: string): Promise<void> {
+    await this.pool.query('DELETE FROM payments WHERE student_id = $1', [studentId]);
   }
   public async savePayment(p: Payment): Promise<void> {
     const q = `INSERT INTO payments (id, school_id, invoice_id, student_id, receipt_number, amount, payment_method, transaction_reference, mpesa_phone_number, payment_date, recorded_by_user_id, status, notes, created_at, updated_at)
@@ -1725,5 +1946,115 @@ export class PostgresFeeRepository implements IFeeRepository {
 
   public async deleteOtherIncome(id: string): Promise<void> {
     await this.pool.query('DELETE FROM other_incomes WHERE id = $1', [id]);
+  }
+}
+
+export class PostgresDeletedStudentRepository implements IDeletedStudentRepository {
+  constructor(private pool: Pool) {}
+
+  private mapRow(r: any): DeletedStudent {
+    return DeletedStudent.create({
+      studentId: r.student_id,
+      admissionNumber: r.admission_number,
+      firstName: r.first_name,
+      middleName: r.middle_name || undefined,
+      lastName: r.last_name,
+      upiNumber: r.upi_number || undefined,
+      schoolId: r.school_id,
+      gradeLevel: r.grade_level,
+      classroomId: r.classroom_id || undefined,
+      streamId: r.stream_id || undefined,
+      academicYearId: r.academic_year_id || undefined,
+      studentData: typeof r.student_data === 'string' ? JSON.parse(r.student_data) : (r.student_data || {}),
+      linkedData: typeof r.linked_data === 'string' ? JSON.parse(r.linked_data) : (r.linked_data || {}),
+      pendingWorkCleared: typeof r.pending_work_cleared === 'string' ? JSON.parse(r.pending_work_cleared) : (r.pending_work_cleared || {}),
+      deletedAt: r.deleted_at ? new Date(r.deleted_at) : new Date(),
+      deletedByUserId: r.deleted_by_user_id || undefined,
+      reason: r.reason || undefined
+    }, r.id);
+  }
+
+  public async save(d: DeletedStudent): Promise<void> {
+    const q = `INSERT INTO deleted_students (
+      id, student_id, admission_number, first_name, middle_name, last_name,
+      upi_number, school_id, grade_level, classroom_id, stream_id,
+      academic_year_id, student_data, linked_data, pending_work_cleared,
+      deleted_at, deleted_by_user_id, reason
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+    ON CONFLICT (id) DO UPDATE SET
+      student_data = EXCLUDED.student_data,
+      linked_data = EXCLUDED.linked_data,
+      pending_work_cleared = EXCLUDED.pending_work_cleared,
+      reason = EXCLUDED.reason`;
+
+    await this.pool.query(q, [
+      d.id,
+      d.studentId,
+      d.admissionNumber,
+      d.firstName,
+      d.middleName || null,
+      d.lastName,
+      d.upiNumber || null,
+      d.schoolId,
+      d.gradeLevel,
+      d.classroomId || null,
+      d.streamId || null,
+      d.academicYearId || null,
+      JSON.stringify(d.studentData),
+      JSON.stringify(d.linkedData),
+      JSON.stringify(d.pendingWorkCleared),
+      d.deletedAt,
+      d.deletedByUserId || null,
+      d.reason || null
+    ]);
+  }
+
+  public async findById(id: string): Promise<DeletedStudent | null> {
+    const res = await this.pool.query('SELECT * FROM deleted_students WHERE id = $1', [id]);
+    if (!res.rows.length) return null;
+    return this.mapRow(res.rows[0]);
+  }
+
+  public async findByStudentId(studentId: string): Promise<DeletedStudent | null> {
+    const res = await this.pool.query('SELECT * FROM deleted_students WHERE student_id = $1 ORDER BY deleted_at DESC LIMIT 1', [studentId]);
+    if (!res.rows.length) return null;
+    return this.mapRow(res.rows[0]);
+  }
+
+  public async findByAdmissionNumber(admissionNumber: string, schoolId?: string): Promise<DeletedStudent | null> {
+    let q = 'SELECT * FROM deleted_students WHERE admission_number = $1';
+    const params = [admissionNumber];
+    if (schoolId) {
+      params.push(schoolId);
+      q += ` AND school_id = $${params.length}`;
+    }
+    q += ' ORDER BY deleted_at DESC LIMIT 1';
+    const res = await this.pool.query(q, params);
+    if (!res.rows.length) return null;
+    return this.mapRow(res.rows[0]);
+  }
+
+  public async findAll(filters?: DeletedStudentFilterCriteria): Promise<DeletedStudent[]> {
+    let q = 'SELECT * FROM deleted_students WHERE 1=1';
+    const params: any[] = [];
+    if (filters?.schoolId) {
+      params.push(filters.schoolId);
+      q += ` AND school_id = $${params.length}`;
+    }
+    if (filters?.gradeLevel) {
+      params.push(filters.gradeLevel);
+      q += ` AND grade_level = $${params.length}`;
+    }
+    if (filters?.search) {
+      params.push(`%${filters.search}%`);
+      q += ` AND (first_name ILIKE $${params.length} OR last_name ILIKE $${params.length} OR admission_number ILIKE $${params.length})`;
+    }
+    q += ' ORDER BY deleted_at DESC';
+    const res = await this.pool.query(q, params);
+    return res.rows.map(r => this.mapRow(r));
+  }
+
+  public async delete(id: string): Promise<void> {
+    await this.pool.query('DELETE FROM deleted_students WHERE id = $1', [id]);
   }
 }

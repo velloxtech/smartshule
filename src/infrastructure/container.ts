@@ -6,14 +6,18 @@ import { ICbcAssessmentRepository } from '../core/ports/repositories/ICbcAssessm
 import { ISchemeOfWorkRepository, ILessonPlanRepository } from '../core/ports/repositories/ISchemeOfWorkRepository';
 import { ITimetableRepository, IAttendanceRepository } from '../core/ports/repositories/ITimetableRepository';
 import { IFeeRepository } from '../core/ports/repositories/IFeeRepository';
+import { IDeletedStudentRepository } from '../core/ports/repositories/IDeletedStudentRepository';
 import { IMediaRepository } from '../core/ports/repositories/IMediaRepository';
 import { IEDiaryRepository } from '../core/ports/repositories/IEDiaryRepository';
 import { IRecordOfWorkRepository } from '../core/ports/repositories/IRecordOfWorkRepository';
 import { IComplaintRepository } from '../core/ports/repositories/IComplaintRepository';
 import { ISystemLogRepository } from '../core/ports/repositories/ISystemLogRepository';
 import { ILunchFeeRepository } from '../core/ports/repositories/ILunchFeeRepository';
+import { ILibraryRepository } from '../core/ports/repositories/ILibraryRepository';
 import { InMemoryLunchFeeRepository } from './database/in-memory/InMemoryLunchFeeRepository';
+import { InMemoryLibraryRepository } from './database/in-memory/InMemoryLibraryRepository';
 import { LunchFeeUseCases } from '../application/finance/LunchFeeUseCases';
+import { LibraryUseCases } from '../application/library/LibraryUseCases';
 import { InMemoryRecordOfWorkRepository } from './database/postgres/PostgresRecordOfWorkRepository';
 import { InMemoryComplaintRepository } from './database/in-memory/InMemoryComplaintRepository';
 import { InMemorySystemLogRepository } from './database/in-memory/InMemorySystemLogRepository';
@@ -34,7 +38,8 @@ import {
   InMemoryAttendanceRepository,
   InMemoryFeeRepository,
   InMemoryMediaRepository,
-  InMemoryEDiaryRepository
+  InMemoryEDiaryRepository,
+  InMemoryDeletedStudentRepository
 } from './database/in-memory/InMemoryRepositories';
 
 import { DatabaseFactory, RepositoryBundle } from './database/DatabaseFactory';
@@ -67,6 +72,7 @@ export class AppContainer {
   // Repositories
   public userRepository: IUserRepository;
   public studentRepository: IStudentRepository;
+  public deletedStudentRepository: IDeletedStudentRepository;
   public teacherRepository: ITeacherRepository;
   public guardianRepository: IGuardianRepository;
   public academicRepository: IAcademicRepository;
@@ -82,6 +88,7 @@ export class AppContainer {
   public complaintRepository: IComplaintRepository;
   public systemLogRepository: ISystemLogRepository;
   public lunchFeeRepository: ILunchFeeRepository;
+  public libraryRepository: ILibraryRepository;
 
   // Services
   public readonly tokenService = new JwtAuthTokenService();
@@ -104,6 +111,7 @@ export class AppContainer {
   public attendanceUseCases!: AttendanceUseCases;
   public feeUseCases!: FeeUseCases;
   public lunchFeeUseCases!: LunchFeeUseCases;
+  public libraryUseCases!: LibraryUseCases;
   public analyticsUseCases!: AnalyticsUseCases;
   public visualMediaUseCases!: VisualMediaUseCases;
   public ediaryUseCases!: EDiaryUseCases;
@@ -114,6 +122,7 @@ export class AppContainer {
   constructor(customRepositories?: Partial<RepositoryBundle>) {
     this.userRepository = customRepositories?.userRepository || new InMemoryUserRepository();
     this.studentRepository = customRepositories?.studentRepository || new InMemoryStudentRepository();
+    this.deletedStudentRepository = customRepositories?.deletedStudentRepository || new InMemoryDeletedStudentRepository();
     this.teacherRepository = customRepositories?.teacherRepository || new InMemoryTeacherRepository();
     this.guardianRepository = customRepositories?.guardianRepository || new InMemoryGuardianRepository();
     this.academicRepository = customRepositories?.academicRepository || new InMemoryAcademicRepository();
@@ -135,6 +144,8 @@ export class AppContainer {
       customRepositories?.systemLogRepository || new InMemorySystemLogRepository();
     this.lunchFeeRepository =
       customRepositories?.lunchFeeRepository || new InMemoryLunchFeeRepository();
+    this.libraryRepository =
+      customRepositories?.libraryRepository || new InMemoryLibraryRepository();
 
     this.initUseCases();
   }
@@ -161,7 +172,11 @@ export class AppContainer {
       this.feeRepository,
       this.cbcAssessmentRepository,
       this.attendanceRepository,
-      this.lunchFeeRepository
+      this.lunchFeeRepository,
+      this.deletedStudentRepository,
+      this.complaintRepository,
+      this.ediaryRepository,
+      this.mediaRepository
     );
     this.teacherUseCases = new TeacherUseCases(this.teacherRepository, this.userRepository, this.passwordHasher);
     this.academicUseCases = new AcademicUseCases(this.academicRepository);
@@ -180,9 +195,14 @@ export class AppContainer {
       this.teacherRepository
     );
     
-    // <-- Initialize the new Records of Work Use Case here
     this.recordOfWorkUseCases = new RecordOfWorkUseCases(this.recordOfWorkRepository); 
     this.complaintUseCases = new ComplaintUseCases(this.complaintRepository, this.userRepository);
+    this.libraryUseCases = new LibraryUseCases(
+      this.libraryRepository,
+      this.studentRepository,
+      this.guardianRepository,
+      this.userRepository
+    );
     this.systemLogUseCases = new SystemLogUseCases(this.systemLogRepository);
     
     this.timetableUseCases = new TimetableUseCases(this.timetableRepository, this.academicRepository, this.teacherRepository);

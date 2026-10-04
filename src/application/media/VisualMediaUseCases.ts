@@ -90,6 +90,28 @@ export class VisualMediaUseCases {
     return guardian;
   }
 
+  public async getLinkedStudentIdsForUser(userId: string): Promise<string[]> {
+    const guardian = await this.getGuardianForUser(userId);
+    if (!guardian) return [];
+
+    const linkedStudentIds = new Set<string>(guardian.studentIds || []);
+    const allStudents = await this.studentRepository.findAll();
+    let updated = false;
+    for (const s of allStudents) {
+      if (s.guardianIds && s.guardianIds.includes(guardian.id)) {
+        linkedStudentIds.add(s.id);
+        if (!guardian.studentIds.includes(s.id)) {
+          guardian.linkStudent(s.id);
+          updated = true;
+        }
+      }
+    }
+    if (updated) {
+      await this.guardianRepository.update(guardian);
+    }
+    return Array.from(linkedStudentIds);
+  }
+
   // ==========================================
   // 1. PARENT HELP REQUESTS (Image Question Upload)
   // ==========================================
@@ -99,7 +121,8 @@ export class VisualMediaUseCases {
       throw new NotFoundError('Guardian profile for User', dto.guardianUserId);
     }
 
-    if (!guardian.studentIds.includes(dto.studentId)) {
+    const childIds = await this.getLinkedStudentIdsForUser(dto.guardianUserId);
+    if (!childIds.includes(dto.studentId)) {
       throw new ForbiddenError('Access denied: You can only submit help requests for your linked children.');
     }
 
@@ -159,17 +182,18 @@ export class VisualMediaUseCases {
 
     if (filters.requestingUser?.role === UserRole.GUARDIAN || filters.requestingUser?.role === UserRole.PARENT) {
       const guardian = await this.getGuardianForUser(filters.requestingUser.userId);
-      if (!guardian || !guardian.studentIds.length) {
+      const childIds = await this.getLinkedStudentIdsForUser(filters.requestingUser.userId);
+      if (!guardian || !childIds.length) {
         return [];
       }
       guardianIdFilter = guardian.id;
       if (filters.studentId) {
-        if (!guardian.studentIds.includes(filters.studentId)) {
+        if (!childIds.includes(filters.studentId)) {
           throw new ForbiddenError('Access denied: You cannot view help requests for other learners.');
         }
         studentIdsToQuery = [filters.studentId];
       } else {
-        studentIdsToQuery = guardian.studentIds;
+        studentIdsToQuery = childIds;
       }
     } else if (filters.studentId) {
       studentIdsToQuery = [filters.studentId];
@@ -276,18 +300,18 @@ export class VisualMediaUseCases {
     let studentIdsToQuery: string[] | undefined = undefined;
 
     if (filters.requestingUser?.role === UserRole.GUARDIAN || filters.requestingUser?.role === UserRole.PARENT) {
-      const guardian = await this.getGuardianForUser(filters.requestingUser.userId);
-      if (!guardian || !guardian.studentIds.length) {
+      const childIds = await this.getLinkedStudentIdsForUser(filters.requestingUser.userId);
+      if (childIds.length === 0) {
         return [];
       }
 
       if (filters.studentId) {
-        if (!guardian.studentIds.includes(filters.studentId)) {
+        if (!childIds.includes(filters.studentId)) {
           throw new ForbiddenError('Access denied: You can only view progress photos for your registered children.');
         }
         studentIdsToQuery = [filters.studentId];
       } else {
-        studentIdsToQuery = guardian.studentIds;
+        studentIdsToQuery = childIds;
       }
     } else if (filters.studentId) {
       studentIdsToQuery = [filters.studentId];

@@ -20,12 +20,14 @@ export interface AddSlotDTO {
   termId?: string;
   schoolId?: string;
   academicYearId?: string;
-  dayOfWeek: DayOfWeek;
+  dayOfWeek: DayOfWeek | string;
   periodNumber: number;
   startTime: string;
   endTime: string;
   learningAreaId?: string;
+  learningAreaName?: string;
   teacherId?: string;
+  teacherName?: string;
   roomName?: string;
   isBreak?: boolean;
   isLunch?: boolean;
@@ -77,20 +79,29 @@ export class TimetableUseCases {
         timetable = classTimetables[0];
       }
     }
+    if (!timetable && dto.streamId) {
+      timetable = await this.timetableRepository.findByStream(dto.streamId);
+    }
+    if (!timetable && dto.classRoomId) {
+      const classTimetables = await this.timetableRepository.findByClass(dto.classRoomId);
+      if (classTimetables && classTimetables.length > 0) {
+        timetable = classTimetables[0];
+      }
+    }
+
     if (!timetable) {
       // Auto-create timetable
       const schoolId = dto.schoolId || 'school-001';
       const academicYearId = dto.academicYearId || 'year-2026';
       const termId = dto.termId || 'term-2026-t1';
-      let classRoomId = dto.classRoomId || dto.timetableId?.replace('timetable-', '');
-      const classes = await this.academicRepository.findAllClasses(schoolId);
-      const foundClass = classes.find(c => c.id === classRoomId);
-      if (foundClass) {
-        classRoomId = foundClass.id;
-      } else if (classes.length > 0) {
-        classRoomId = classes[0].id;
-      } else {
-        classRoomId = 'class-001';
+      let classRoomId = dto.classRoomId || (dto.timetableId && !dto.timetableId.startsWith('timetable-') ? dto.timetableId : undefined);
+      if (!classRoomId) {
+        const classes = await this.academicRepository.findAllClasses(schoolId);
+        if (classes.length > 0) {
+          classRoomId = classes[0].id;
+        } else {
+          classRoomId = 'class-001';
+        }
       }
       timetable = Timetable.create(
         {
@@ -107,27 +118,49 @@ export class TimetableUseCases {
       await this.timetableRepository.save(timetable);
     }
 
-    // Conflict Check 1: Check if teacher is already booked elsewhere at that day & period
+    // Conflict Check: Check if teacher is already booked elsewhere at that day & period
     if (dto.teacherId && !dto.isBreak && !dto.isLunch) {
       const teacherSlots = await this.timetableRepository.findByTeacher(dto.teacherId, timetable.termId);
-      const conflict = teacherSlots.find(
-        s => s.dayOfWeek === dto.dayOfWeek && s.periodNumber === dto.periodNumber && s.streamId && timetable.streamId && s.streamId !== timetable.streamId
-      );
+      const conflict = teacherSlots.find(s => {
+        const isSameDay = String(s.dayOfWeek).trim().toUpperCase() === String(dto.dayOfWeek).trim().toUpperCase();
+        const isSamePeriod = Number(s.periodNumber) === Number(dto.periodNumber);
+        if (!isSameDay || !isSamePeriod) return false;
+
+        const isSameTimetable = (timetable.id && s.timetableId && s.timetableId === timetable.id) ||
+          (s.classRoomId === timetable.classRoomId && (s.streamId || '') === (timetable.streamId || ''));
+
+        return !isSameTimetable;
+      });
+
       if (conflict) {
+        let conflictLocation = 'another class';
+        try {
+          if (conflict.classRoomId) {
+            const cls = await this.academicRepository.findClassById(conflict.classRoomId);
+            if (cls) {
+              conflictLocation = cls.name;
+              if (conflict.streamId) {
+                const stream = await this.academicRepository.findStreamById(conflict.streamId);
+                if (stream) conflictLocation += ` (${stream.name})`;
+              }
+            }
+          }
+        } catch (_) {}
+        const teacherLabel = dto.teacherName || 'Teacher';
         throw new ConflictError(
-          `Teacher is already booked in another class on ${dto.dayOfWeek}, Period ${dto.periodNumber}.`
+          `Revoked Clash: ${teacherLabel} is already scheduled in ${conflictLocation} on ${dto.dayOfWeek}, Period ${dto.periodNumber}. A teacher cannot have two classes simultaneously.`
         );
       }
     }
 
-    let learningAreaName = dto.label;
-    if (dto.learningAreaId) {
+    let learningAreaName = dto.learningAreaName || dto.label;
+    if (!learningAreaName && dto.learningAreaId) {
       const area = await this.academicRepository.findLearningAreaById(dto.learningAreaId);
       if (area) learningAreaName = area.name;
     }
 
-    let teacherName: string | undefined;
-    if (dto.teacherId) {
+    let teacherName: string | undefined = dto.teacherName;
+    if (!teacherName && dto.teacherId) {
       const teacher = await this.teacherRepository.findById(dto.teacherId);
       if (teacher) {
         teacherName = `Teacher (${teacher.employeeNumber})`;
@@ -180,6 +213,83 @@ export class TimetableUseCases {
         timetable = classTimetables[0];
       }
     }
+    if (!timetable && dto.streamId) {
+      timetable = await this.timetableRepository.findByStream(dto.streamId);
+    }
+    if (!timetable && dto.classRoomId) {
+      const classTimetables = await this.timetableRepository.findByClass(dto.classRoomId);
+      if (classTimetables && classTimetables.length > 0) {
+        timetable = classTimetables[0];
+      }
+    }
+
+    // Determine target identifiers and term
+    const targetClassRoomId = timetable?.classRoomId || dto.classRoomId || '';
+    const targetStreamId = timetable?.streamId || dto.streamId || '';
+    const targetTimetableId = timetable?.id || dto.timetableId || '';
+    const effectiveTermId = timetable?.termId || dto.termId || 'term-2026-t1';
+
+    // Conflict Check 1: Intra-grid conflict (same teacher scheduled multiple times in this grid at same day & period)
+    const seenTeacherSlots = new Map<string, string>();
+    for (const slot of (dto.slots || [])) {
+      if (slot.teacherId && !slot.isBreak && !slot.isLunch) {
+        const key = `${String(slot.dayOfWeek).trim().toUpperCase()}_${Number(slot.periodNumber)}_${slot.teacherId}`;
+        if (seenTeacherSlots.has(key)) {
+          const teacherLabel = slot.teacherName || 'Teacher';
+          throw new ConflictError(
+            `Conflict in grid: ${teacherLabel} is assigned more than once to ${slot.dayOfWeek}, Period ${slot.periodNumber}.`
+          );
+        }
+        seenTeacherSlots.set(key, slot.id || 'slot');
+      }
+    }
+
+    // Conflict Check 2: Inter-timetable conflict (is teacher booked in any other class/stream at this day & period?)
+    const uniqueTeacherIds = Array.from(new Set(
+      (dto.slots || [])
+        .filter(s => s.teacherId && !s.isBreak && !s.isLunch)
+        .map(s => s.teacherId as string)
+    ));
+
+    for (const tId of uniqueTeacherIds) {
+      const existingTeacherSlots = await this.timetableRepository.findByTeacher(tId, effectiveTermId);
+      const slotsForThisTeacher = (dto.slots || []).filter(
+        s => s.teacherId === tId && !s.isBreak && !s.isLunch
+      );
+
+      for (const slot of slotsForThisTeacher) {
+        const conflict = existingTeacherSlots.find(existing => {
+          const isSameDay = String(existing.dayOfWeek).trim().toUpperCase() === String(slot.dayOfWeek).trim().toUpperCase();
+          const isSamePeriod = Number(existing.periodNumber) === Number(slot.periodNumber);
+          if (!isSameDay || !isSamePeriod) return false;
+
+          const isSameTimetable = (targetTimetableId && existing.timetableId && existing.timetableId === targetTimetableId) ||
+            (existing.classRoomId === targetClassRoomId && (existing.streamId || '') === (targetStreamId || ''));
+
+          return !isSameTimetable;
+        });
+
+        if (conflict) {
+          let conflictLocation = 'another class';
+          try {
+            if (conflict.classRoomId) {
+              const cls = await this.academicRepository.findClassById(conflict.classRoomId);
+              if (cls) {
+                conflictLocation = cls.name;
+                if (conflict.streamId) {
+                  const stream = await this.academicRepository.findStreamById(conflict.streamId);
+                  if (stream) conflictLocation += ` (${stream.name})`;
+                }
+              }
+            }
+          } catch (_) {}
+          const teacherLabel = slot.teacherName || 'Teacher';
+          throw new ConflictError(
+            `Revoked Clash: ${teacherLabel} is already scheduled in ${conflictLocation} on ${slot.dayOfWeek}, Period ${slot.periodNumber}. A teacher cannot have two classes simultaneously.`
+          );
+        }
+      }
+    }
 
     if (timetable) {
       timetable.updateGrid(dto.periods, dto.days, dto.slots);
@@ -209,7 +319,7 @@ export class TimetableUseCases {
         days: dto.days,
         isActive: true
       },
-      IdGenerator.generate()
+      dto.timetableId || IdGenerator.generate()
     );
 
     await this.timetableRepository.save(newTimetable);
@@ -227,13 +337,19 @@ export class TimetableUseCases {
 
   public async getStreamTimetable(streamIdOrClassId?: string, termId?: string, classRoomId?: string) {
     let timetable = null;
-    if (streamIdOrClassId) {
+    if (streamIdOrClassId && streamIdOrClassId !== classRoomId) {
       timetable = await this.timetableRepository.findByStream(streamIdOrClassId, termId || '');
+      if (!timetable && termId) {
+        timetable = await this.timetableRepository.findByStream(streamIdOrClassId);
+      }
     }
     if (!timetable) {
       const targetClass = classRoomId || streamIdOrClassId;
       if (targetClass) {
-        const classTimetables = await this.timetableRepository.findByClass(targetClass, termId || '');
+        let classTimetables = await this.timetableRepository.findByClass(targetClass, termId || '');
+        if ((!classTimetables || classTimetables.length === 0) && termId) {
+          classTimetables = await this.timetableRepository.findByClass(targetClass);
+        }
         if (classTimetables && classTimetables.length > 0) {
           timetable = classTimetables[0];
         }
@@ -243,7 +359,7 @@ export class TimetableUseCases {
     return timetable.toJSON();
   }
 
-  public async getTeacherTimetable(teacherId: string, termId: string) {
+  public async getTeacherTimetable(teacherId: string, termId?: string) {
     const slots = await this.timetableRepository.findByTeacher(teacherId, termId);
     return slots;
   }

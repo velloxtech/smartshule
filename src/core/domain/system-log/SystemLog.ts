@@ -9,6 +9,7 @@ export type SystemLogCategory =
   | 'ACADEMICS'
   | 'SYSTEM'
   | 'COMPLAINTS'
+  | 'CONCERNS'
   | 'COMMUNICATION';
 
 export type SystemLogStatus = 'SUCCESS' | 'FAILED';

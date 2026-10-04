@@ -155,7 +155,18 @@ export class AttendanceUseCases {
           }
         }
       }
-      if (!guardian || !guardian.studentIds.includes(studentId)) {
+
+      const linkedChildIds = new Set<string>(guardian?.studentIds || []);
+      if (guardian) {
+        const allS = await this.studentRepository.findAll();
+        for (const s of allS) {
+          if (s.guardianIds && s.guardianIds.includes(guardian.id)) {
+            linkedChildIds.add(s.id);
+          }
+        }
+      }
+
+      if (!guardian || !linkedChildIds.has(studentId)) {
         throw new ForbiddenError('Access denied: You are only permitted to view attendance for your registered children.');
       }
     }
