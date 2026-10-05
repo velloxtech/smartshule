@@ -1773,6 +1773,9 @@ export class PostgresFeeRepository implements IFeeRepository {
     await this.pool.query(q, [inv.id, inv.schoolId, inv.studentId, inv.feeStructureId, inv.academicYearId, inv.termId, inv.invoiceNumber, JSON.stringify(inv.items), inv.amountBilled, inv.discountAmount, inv.amountPayable, inv.amountPaid, inv.balance, inv.status, inv.dueDate, inv.createdAt, inv.updatedAt]);
   }
   public async updateInvoice(inv: StudentInvoice): Promise<void> { await this.saveInvoice(inv); }
+  public async deleteInvoice(id: string): Promise<void> {
+    await this.pool.query('DELETE FROM student_invoices WHERE id = $1', [id]);
+  }
   public async deleteInvoicesByStudentId(studentId: string): Promise<void> {
     await this.pool.query('DELETE FROM student_invoices WHERE student_id = $1', [studentId]);
   }

@@ -793,6 +793,10 @@ export class InMemoryFeeRepository implements IFeeRepository {
     this.invoices.set(invoice.id, invoice);
   }
 
+  public async deleteInvoice(id: string): Promise<void> {
+    this.invoices.delete(id);
+  }
+
   public async deleteInvoicesByStudentId(studentId: string): Promise<void> {
     for (const [id, inv] of this.invoices.entries()) {
       if (inv.studentId === studentId) {

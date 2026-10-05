@@ -730,6 +730,52 @@ export class FeeUseCases {
     };
   }
 
+  // 2b. Delete Hanging Invoice (Only allowed when zero payments recorded)
+  public async deleteInvoice(invoiceId: string, requestingUser?: any): Promise<{ success: boolean; message: string; deletedInvoiceId: string }> {
+    if (requestingUser) {
+      const allowedRoles = [UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT];
+      if (!allowedRoles.includes(requestingUser.role)) {
+        throw new ForbiddenError('Only school administrators or accountants can delete fee invoices');
+      }
+    }
+
+    const invoice = await this.feeRepository.findInvoiceById(invoiceId);
+    if (!invoice) {
+      throw new NotFoundError('Invoice', invoiceId);
+    }
+
+    // Strict validation: Can ONLY delete hanging invoices (with zero payments recorded)
+    const amountPaid = Number(invoice.amountPaid) || 0;
+    if (amountPaid > 0 || invoice.status === InvoiceStatus.PAID || invoice.status === InvoiceStatus.PARTIALLY_PAID) {
+      throw new ValidationError(
+        `Cannot delete invoice #${invoice.invoiceNumber}. It has KES ${amountPaid.toLocaleString()} in recorded payments. Only hanging invoices with zero payments can be deleted.`
+      );
+    }
+
+    // Double check payments repository to ensure no payment records are associated
+    const linkedPayments = await this.feeRepository.findPayments({ invoiceId });
+    if (linkedPayments && linkedPayments.length > 0) {
+      throw new ValidationError(
+        `Cannot delete invoice #${invoice.invoiceNumber}. It has ${linkedPayments.length} linked payment record(s).`
+      );
+    }
+
+    await this.feeRepository.deleteInvoice(invoiceId);
+
+    // Clean up from pending KCB transactions if any
+    for (const [checkoutReqId, pending] of this.pendingKcbTransactions.entries()) {
+      if (pending.invoiceId === invoiceId) {
+        this.pendingKcbTransactions.delete(checkoutReqId);
+      }
+    }
+
+    return {
+      success: true,
+      message: `Hanging invoice #${invoice.invoiceNumber} deleted successfully.`,
+      deletedInvoiceId: invoiceId
+    };
+  }
+
   // 3. Payment Processing
   public async recordPayment(dto: RecordPaymentDTO) {
     const invoice = await this.feeRepository.findInvoiceById(dto.invoiceId);

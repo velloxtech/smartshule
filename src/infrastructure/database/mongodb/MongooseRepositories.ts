@@ -1108,6 +1108,9 @@ export class MongoFeeRepository implements IFeeRepository {
   public async updateInvoice(invoice: StudentInvoice): Promise<void> {
     await InvoiceModel.findByIdAndUpdate(invoice.id, invoice.toJSON());
   }
+  public async deleteInvoice(id: string): Promise<void> {
+    await InvoiceModel.deleteOne({ _id: id });
+  }
   public async deleteInvoicesByStudentId(studentId: string): Promise<void> {
     await InvoiceModel.deleteMany({ studentId });
   }

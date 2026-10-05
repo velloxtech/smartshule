@@ -239,6 +239,30 @@ export class FinanceController {
     }
   };
 
+  public deleteInvoice = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const id = req.params.id as string;
+      const result = await this.feeUseCases.deleteInvoice(id, req.user);
+
+      this.systemLogUseCases?.log({
+        level: 'AUDIT',
+        category: 'FINANCE',
+        action: 'INVOICE_DELETED',
+        actorEmail: req.user?.email,
+        actorUserId: req.user?.userId,
+        actorRole: req.user?.role,
+        ipAddress: req.ip || (req.socket?.remoteAddress as string),
+        status: 'SUCCESS',
+        details: result.message,
+        metadata: { invoiceId: id }
+      }).catch(() => {});
+
+      return res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  };
+
   public recordPayment = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const result = await this.feeUseCases.recordPayment(req.body);

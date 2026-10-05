@@ -356,6 +356,7 @@ export function createApiRouter(container: AppContainer): Router {
   financeRouter.post('/invoices/generate', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT), validateBody(GenerateInvoicesSchema), financeController.generateInvoices);
   financeRouter.post('/sync-fees', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT), validateBody(SyncFeesSchema), financeController.syncFees);
   financeRouter.get('/invoices', authMiddleware, financeController.listInvoices); // Parent isolated
+  financeRouter.delete('/invoices/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT), financeController.deleteInvoice);
   financeRouter.get('/summary', authMiddleware, financeController.getFinanceSummary); // Parent vs Admin summary
   financeRouter.post('/payments', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ACCOUNTANT), validateBody(RecordPaymentSchema), financeController.recordPayment);
   financeRouter.get('/payments', authMiddleware, financeController.listPayments); // Parent isolated

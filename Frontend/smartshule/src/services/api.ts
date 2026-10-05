@@ -1206,6 +1206,12 @@ export const apiService = {
     return apiFetch<ApiResponse<StudentInvoice[]>>(`/finance/invoices${qs ? `?${qs}` : ''}`);
   },
 
+  deleteInvoice: async (id: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/finance/invoices/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    });
+  },
+
   getFinanceSummary: async (schoolId?: string): Promise<ApiResponse<FinanceSummaryData>> => {
     return apiFetch<ApiResponse<FinanceSummaryData>>(`/finance/summary${schoolId ? `?schoolId=${schoolId}` : ''}`);
   },

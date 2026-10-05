@@ -36,6 +36,48 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
   const [expandedInvoiceId, setExpandedInvoiceId] = useState<string | null>(null);
   const [smsSentSuccess, setSmsSentSuccess] = useState<string | null>(null);
 
+  // Hanging Invoice Deletion state
+  const isGuardian = user?.role === UserRole.GUARDIAN || user?.role === UserRole.PARENT;
+  const canManageInvoices = !isGuardian;
+  const [invoiceToDelete, setInvoiceToDelete] = useState<StudentInvoice | null>(null);
+  const [isDeletingInvoice, setIsDeletingInvoice] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteSuccess, setDeleteSuccess] = useState<string | null>(null);
+
+  const isHangingInvoice = (inv: StudentInvoice): boolean => {
+    const paid = Number(inv.amountPaid) || 0;
+    return paid === 0 && inv.status !== 'PAID' && inv.status !== 'PARTIALLY_PAID';
+  };
+
+  const handleDeleteInvoice = async () => {
+    if (!invoiceToDelete) return;
+    setIsDeletingInvoice(true);
+    setDeleteError(null);
+    try {
+      const res = await apiService.deleteInvoice(invoiceToDelete.id);
+      if (res?.success === false) {
+        throw new Error(res.message || 'Failed to delete invoice');
+      }
+      setDeleteSuccess(`Invoice #${invoiceToDelete.invoiceNumber} deleted successfully.`);
+      setInvoiceToDelete(null);
+      if (selectedStudent) {
+        const statementRes = await apiService.getFeeStatement(selectedStudent.id).catch(() => null);
+        if (statementRes?.success && statementRes.data) {
+          setStatementData(statementRes.data);
+        }
+      }
+      if (onRefreshStudents) {
+        await onRefreshStudents();
+      }
+      setTimeout(() => setDeleteSuccess(null), 4000);
+    } catch (err: any) {
+      console.error('Delete invoice error:', err);
+      setDeleteError(err?.message || 'Failed to delete invoice. Please try again.');
+    } finally {
+      setIsDeletingInvoice(false);
+    }
+  };
+
   // Initialize selected student if initialStudentId is provided or on first mount
   useEffect(() => {
     if (initialStudentId && students.length > 0) {
@@ -747,6 +789,28 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                       {/* TAB 1: INVOICES BREAKDOWN */}
                       {activeTab === 'invoices' && (
                         <div className="space-y-4">
+                          {deleteSuccess && (
+                            <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-xl flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className="material-symbols-outlined text-[18px] text-emerald-600">check_circle</span>
+                                <span>{deleteSuccess}</span>
+                              </div>
+                              <button onClick={() => setDeleteSuccess(null)} className="text-emerald-700 hover:text-emerald-900 cursor-pointer">
+                                <span className="material-symbols-outlined text-[16px]">close</span>
+                              </button>
+                            </div>
+                          )}
+                          {deleteError && (
+                            <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-xl flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className="material-symbols-outlined text-[18px] text-rose-600">error</span>
+                                <span>{deleteError}</span>
+                              </div>
+                              <button onClick={() => setDeleteError(null)} className="text-rose-700 hover:text-rose-900 cursor-pointer">
+                                <span className="material-symbols-outlined text-[16px]">close</span>
+                              </button>
+                            </div>
+                          )}
                           {invoicesList.length === 0 ? (
                             <div className="p-8 text-center text-xs text-on-surface-variant bg-surface-container-low rounded-xl border border-outline-variant/20">
                               <span className="material-symbols-outlined text-[32px] text-outline opacity-60 mb-1">
@@ -796,6 +860,21 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                                             >
                                               {inv.status}
                                             </span>
+                                            {canManageInvoices && isHangingInvoice(inv) && (
+                                              <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setDeleteError(null);
+                                                  setInvoiceToDelete(inv);
+                                                }}
+                                                className="px-2 py-0.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded text-[10px] font-bold inline-flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                                                title="Delete Unsettled Hanging Invoice (0 Payments)"
+                                              >
+                                                <span className="material-symbols-outlined text-[13px]">delete</span>
+                                                <span>Delete</span>
+                                              </button>
+                                            )}
                                           </div>
                                           <div className="text-[11px] text-on-surface-variant mt-0.5">
                                             Due Date: {inv.dueDate || 'End of Term'} · {inv.items?.length || 0} line items
@@ -839,9 +918,26 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                                       <div className="p-4 bg-surface-container-lowest border-t border-outline-variant/20 space-y-3">
                                         <div className="font-bold text-xs text-on-surface uppercase tracking-wider flex items-center justify-between">
                                           <span>Invoice Item Breakdown</span>
-                                          <span className="text-[11px] font-normal text-on-surface-variant">
-                                            Items: {inv.items?.length || 0}
-                                          </span>
+                                          <div className="flex items-center gap-2">
+                                            {canManageInvoices && isHangingInvoice(inv) && (
+                                              <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setDeleteError(null);
+                                                  setInvoiceToDelete(inv);
+                                                }}
+                                                className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1 shadow-2xs"
+                                                title="Delete Unsettled Hanging Invoice (0 Payments)"
+                                              >
+                                                <span className="material-symbols-outlined text-[14px]">delete</span>
+                                                <span>Delete Hanging Invoice</span>
+                                              </button>
+                                            )}
+                                            <span className="text-[11px] font-normal text-on-surface-variant font-sans">
+                                              Items: {inv.items?.length || 0}
+                                            </span>
+                                          </div>
                                         </div>
                                         {inv.items && inv.items.length > 0 ? (
                                           <div className="overflow-x-auto rounded-lg border border-outline-variant/30">
@@ -1152,6 +1248,111 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
           initialStudent={selectedStudent}
           onPaymentRecorded={handlePaymentSuccess}
         />
+      )}
+
+      {/* 3. Delete Hanging Invoice Confirmation Modal */}
+      {invoiceToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-xs overflow-y-auto animate-fade-in">
+          <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-outline-variant/30 my-auto">
+            <div className="bg-rose-700 text-white p-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[20px]">warning</span>
+                <h3 className="font-semibold text-sm">Delete Hanging Invoice</h3>
+              </div>
+              <button
+                onClick={() => {
+                  if (!isDeletingInvoice) {
+                    setInvoiceToDelete(null);
+                    setDeleteError(null);
+                  }
+                }}
+                disabled={isDeletingInvoice}
+                className="text-rose-100 hover:text-white cursor-pointer disabled:opacity-50"
+              >
+                <span className="material-symbols-outlined text-[18px]">close</span>
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4 text-xs">
+              <p className="text-on-surface">
+                Are you sure you want to delete invoice <strong className="font-data-mono text-primary">#{invoiceToDelete.invoiceNumber}</strong>?
+              </p>
+
+              <div className="p-3 bg-surface-container-low rounded-xl border border-outline-variant/20 space-y-2 font-data-mono">
+                <div className="flex justify-between text-on-surface-variant font-sans">
+                  <span>Student / Adm:</span>
+                  <span className="font-semibold text-on-surface">
+                    {selectedStudent?.name || invoiceToDelete.studentId} ({selectedStudent?.admNo || ''})
+                  </span>
+                </div>
+                <div className="flex justify-between text-on-surface-variant font-sans">
+                  <span>Billed Amount:</span>
+                  <span className="font-bold text-on-surface">
+                    KES {(invoiceToDelete.amountPayable || invoiceToDelete.amountBilled || 0).toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between text-on-surface-variant font-sans">
+                  <span>Amount Paid:</span>
+                  <span className="font-bold text-emerald-700">
+                    KES {(invoiceToDelete.amountPaid || 0).toLocaleString()} (0 Payments)
+                  </span>
+                </div>
+                <div className="flex justify-between text-on-surface-variant font-sans">
+                  <span>Status:</span>
+                  <span className="px-2 py-0.5 rounded bg-rose-100 text-rose-800 font-bold text-[10px] uppercase">
+                    {invoiceToDelete.status} (Hanging)
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-2.5 bg-amber-50 border border-amber-200 text-amber-900 rounded-lg text-[11px] flex items-start gap-2">
+                <span className="material-symbols-outlined text-[16px] text-amber-700 shrink-0 mt-0.5">info</span>
+                <span>
+                  This action removes this unsettled billing entry from the ledger. Only hanging invoices with <strong>zero payments recorded</strong> can be deleted. This action cannot be undone.
+                </span>
+              </div>
+
+              {deleteError && (
+                <div className="p-2.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-lg text-xs flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-sm shrink-0">error</span>
+                  <span>{deleteError}</span>
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-surface-container">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setInvoiceToDelete(null);
+                    setDeleteError(null);
+                  }}
+                  disabled={isDeletingInvoice}
+                  className="px-3.5 py-2 bg-surface-container hover:bg-surface-container-high text-on-surface rounded-lg text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteInvoice}
+                  disabled={isDeletingInvoice}
+                  className="px-4 py-2 bg-error hover:bg-rose-700 text-white rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  {isDeletingInvoice ? (
+                    <>
+                      <div className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin"></div>
+                      <span>Deleting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="material-symbols-outlined text-sm">delete</span>
+                      <span>Confirm Delete</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

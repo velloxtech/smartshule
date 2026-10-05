@@ -60,7 +60,7 @@ export interface IFeeRepository {
   findInvoices(filters: InvoiceFilterCriteria): Promise<StudentInvoice[]>;
   saveInvoice(invoice: StudentInvoice): Promise<void>;
   updateInvoice(invoice: StudentInvoice): Promise<void>;
-  deleteInvoice?(id: string): Promise<void>;
+  deleteInvoice(id: string): Promise<void>;
   deleteInvoicesByStudentId(studentId: string): Promise<void>;
 
   // Payments (Fee Inflows)
