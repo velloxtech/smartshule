@@ -213,7 +213,7 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
             <span>Take Roll Call</span>
           </button>
           <button
-            onClick={onOpenUploadMarks}
+            onClick={() => onOpenUploadMarks()}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-secondary text-white hover:bg-secondary-container text-xs font-semibold shadow-xs transition-all cursor-pointer"
           >
             <span className="material-symbols-outlined text-[16px]">grade</span>
@@ -356,7 +356,7 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
         </button>
 
         <button
-          onClick={onOpenUploadMarks}
+          onClick={() => onOpenUploadMarks()}
           className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 hover:border-secondary hover:shadow-sm transition-all text-left flex flex-col justify-between gap-3 cursor-pointer group"
         >
           <div className="w-9 h-9 rounded-lg bg-secondary-container text-on-secondary-container flex items-center justify-center group-hover:bg-secondary group-hover:text-white transition-colors">
@@ -369,7 +369,7 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
         </button>
 
         <button
-          onClick={onOpenNewLessonPlan}
+          onClick={() => onOpenNewLessonPlan()}
           className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 hover:border-primary hover:shadow-sm transition-all text-left flex flex-col justify-between gap-3 cursor-pointer group"
         >
           <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
@@ -382,7 +382,7 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
         </button>
 
         <button
-          onClick={onOpenNewScheme}
+          onClick={() => onOpenNewScheme()}
           className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 hover:border-primary hover:shadow-sm transition-all text-left flex flex-col justify-between gap-3 cursor-pointer group"
         >
           <div className="w-9 h-9 rounded-lg bg-surface-container text-on-surface flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-colors">
@@ -549,13 +549,13 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
 
           <div className="mt-4 pt-3 border-t border-surface-container flex items-center justify-between text-xs">
             <button
-              onClick={onOpenNewScheme}
+              onClick={() => onOpenNewScheme()}
               className="font-bold text-primary hover:underline cursor-pointer"
             >
               + New Scheme
             </button>
             <button
-              onClick={onOpenNewLessonPlan}
+              onClick={() => onOpenNewLessonPlan()}
               className="font-bold text-secondary hover:underline cursor-pointer"
             >
               + New Lesson Plan

@@ -32,11 +32,30 @@ services:
         generateValue: true
       - key: CORS_ORIGIN
         value: "*"
+      - key: APP_URL
+        value: https://smartshule-vg15.onrender.com
+      - key: FRONTEND_URL
+        value: https://smartshule-vg15.onrender.com
       - key: STORAGE_PROVIDER
         value: local
       - key: SMS_PROVIDER
         value: africastalking
+      # KCB Buni Developer API Platform (Set credentials in Render Dashboard under Environment)
+      - key: KCB_BUNI_CONSUMER_KEY
+        sync: false
+      - key: KCB_BUNI_CONSUMER_SECRET
+        sync: false
+      - key: KCB_BUNI_BASE_URL
+        value: https://uat.buni.kcbgroup.com
+      - key: KCB_BUNI_SHORTCODE
+        value: "522533"
+      - key: KCB_BUNI_SHARED_SHORTCODE
+        value: "true"
+      - key: KCB_BUNI_CALLBACK_URL
+        value: https://smartshule-vg15.onrender.com/api/v1/finance/kcb-buni/callback
       - key: MPESA_ENV
         value: sandbox
       - key: MPESA_SHORTCODE
         value: "174379"
+      - key: MPESA_CALLBACK_URL
+        value: https://smartshule-vg15.onrender.com/api/v1/finance/mpesa/callback

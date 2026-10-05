@@ -452,11 +452,18 @@ export const CreateSchemeModal: React.FC<CreateSchemeModalProps> = ({
             </div>
           </div>
 
-          <div className="pt-2">
+          <div className="pt-2 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 py-2.5 bg-surface-container hover:bg-surface-container-high text-on-surface-variant font-semibold rounded-lg text-sm transition-all cursor-pointer"
+            >
+              Cancel
+            </button>
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-2.5 bg-primary text-white font-semibold rounded-lg hover:bg-primary-container text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              className="flex-1 py-2.5 bg-primary text-white font-semibold rounded-lg hover:bg-primary-container text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
             >
               <span className="material-symbols-outlined text-[18px]">verified</span>
               <span>{isLoading ? 'Creating Scheme...' : 'Save Scheme of Work'}</span>

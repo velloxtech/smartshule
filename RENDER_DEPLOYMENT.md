@@ -73,11 +73,56 @@ This guide walks you through deploying the unified **SmartShule CBC Management P
 | `JWT_SECRET` | *32+ character random secret* | Used for JWT authentication |
 | `JWT_REFRESH_SECRET` | *32+ character random secret* | Used for refresh tokens |
 | `CORS_ORIGIN` | `*` | Or your custom domain |
+| `APP_URL` | `https://smartshule-vg15.onrender.com` | Production application base URL |
+| `FRONTEND_URL` | `https://smartshule-vg15.onrender.com` | Production frontend URL |
+| `KCB_BUNI_BASE_URL` | `https://uat.buni.kcbgroup.com` | KCB Buni Sandbox API Base URL |
+| `KCB_BUNI_SHORTCODE` | `522533` | School Paybill Shortcode |
+| `KCB_BUNI_SHARED_SHORTCODE` | `true` | Shared Paybill rail identifier |
+| `KCB_BUNI_CONSUMER_KEY` | `smtVhniT3fWOyKhswLJerkPSYlca` | KCB Sandbox Consumer Key |
+| `KCB_BUNI_CONSUMER_SECRET` | `TDYUByGQIY1uQKcX7kYFtc9Stk5IkLbbDKhEpGe_7UAa` | KCB Sandbox Consumer Secret |
+| `KCB_BUNI_CALLBACK_URL` | `https://smartshule-vg15.onrender.com/api/v1/finance/kcb-buni/callback` | Public HTTPS STK Push callback URL |
+| `MPESA_CALLBACK_URL` | `https://smartshule-vg15.onrender.com/api/v1/finance/mpesa/callback` | Public HTTPS fallback M-Pesa callback |
 | `SMS_PROVIDER` | `africastalking` | Or `simulator` |
 | `STORAGE_PROVIDER` | `local` | Or `cloudinary` / `s3` |
 
 7. Click **Create Web Service**.
-8. Once built, visit your Render URL (e.g. `https://smartshule.onrender.com`). You will see the login page and all tables will have been automatically initialized in Supabase!
+8. Once built, visit your Render URL: `https://smartshule-vg15.onrender.com`. You will see the login page and all tables will have been automatically initialized in Supabase!
+
+---
+
+## 🏦 KCB Buni Developer Gateway & Payment Callback Setup
+
+SmartShule is configured with the **KCB Buni Developer API Platform (UAT / Sandbox)** on Paybill `522533` with account reference `8048859#<learner>`.
+
+### Configured Callbacks on Render (`https://smartshule-vg15.onrender.com`):
+
+1. **M-Pesa Express STK Push Callback:**
+   - **URL**: `https://smartshule-vg15.onrender.com/api/v1/finance/kcb-buni/callback`
+   - **Method**: `POST`
+   - **Description**: Handles real-time transaction outcome notifications for STK Push fee payments initiated from the SmartShule Finance portal or parent fee payment link. Updates fee invoice, records the payment, and triggers an instant SMS receipt.
+
+2. **C2B Bill Validation (Paybill 522533):**
+   - **URL**: `https://smartshule-vg15.onrender.com/api/v1/finance/kcb-buni/validate`
+   - **Method**: `POST`
+   - **Description**: Called by KCB when a parent initiates a Paybill deposit. Validates the learner account reference (`8048859#...`), student admission number, and outstanding balance before accepting funds.
+
+3. **C2B Bill Confirmation (Paybill 522533 / KCB App):**
+   - **URL**: `https://smartshule-vg15.onrender.com/api/v1/finance/kcb-buni/confirm`
+   - **Method**: `POST`
+   - **Description**: Called by KCB upon successful completion of the Paybill deposit. Performs idempotent payment recording into the cash flow ledger and dispatches parent SMS receipt.
+
+4. **Legacy M-Pesa Fallback Callback:**
+   - **URL**: `https://smartshule-vg15.onrender.com/api/v1/finance/mpesa/callback`
+   - **Method**: `POST`
+
+### Registering URLs in KCB Buni Developer Portal:
+1. Log in to [https://buni.kcbgroup.com](https://buni.kcbgroup.com).
+2. Go to **My Apps** > Select your SmartShule App.
+3. In the App Details & API subscriptions, paste:
+   - **Callback URL / Webhook**: `https://smartshule-vg15.onrender.com/api/v1/finance/kcb-buni/callback`
+   - **Validation URL**: `https://smartshule-vg15.onrender.com/api/v1/finance/kcb-buni/validate`
+   - **Confirmation URL**: `https://smartshule-vg15.onrender.com/api/v1/finance/kcb-buni/confirm`
+4. Save and publish your app settings.
 
 ---
 

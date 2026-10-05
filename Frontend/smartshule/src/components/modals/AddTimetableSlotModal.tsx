@@ -60,6 +60,8 @@ export const AddTimetableSlotModal: React.FC<AddTimetableSlotModalProps> = ({
   const [learningAreaId, setLearningAreaId] = useState<string>(initialSlot?.learningAreaId || '');
   const [teacherId, setTeacherId] = useState<string>(initialSlot?.teacherId || '');
   const [roomName, setRoomName] = useState<string>(initialSlot?.roomName || '');
+  const [isCustomRoom, setIsCustomRoom] = useState<boolean>(false);
+  const [customRoomValue, setCustomRoomValue] = useState<string>(initialSlot?.roomName || '');
   const [isBreak, setIsBreak] = useState<boolean>(initialSlot?.isBreak || false);
   const [breakLabel, setBreakLabel] = useState<string>(initialSlot?.label || '');
   const [isLoading, setIsLoading] = useState(false);
@@ -116,7 +118,12 @@ export const AddTimetableSlotModal: React.FC<AddTimetableSlotModalProps> = ({
       if (initialSlot.endTime) setEndTime(initialSlot.endTime);
       if (initialSlot.learningAreaId) setLearningAreaId(initialSlot.learningAreaId);
       if (initialSlot.teacherId) setTeacherId(initialSlot.teacherId);
-      if (initialSlot.roomName) setRoomName(initialSlot.roomName);
+      if (initialSlot.roomName) {
+        setRoomName(initialSlot.roomName);
+        setCustomRoomValue(initialSlot.roomName);
+      } else {
+        setIsCustomRoom(false);
+      }
       if (initialSlot.isBreak !== undefined) setIsBreak(initialSlot.isBreak);
       if (initialSlot.label) setBreakLabel(initialSlot.label);
     }
@@ -246,6 +253,44 @@ export const AddTimetableSlotModal: React.FC<AddTimetableSlotModalProps> = ({
     };
   }, [isOpen, teacherId, dayOfWeek, periodNumber, selectedClassRoomId, selectedStreamId, isBreak, timetableId, termId, classesList, teachers]);
 
+  const currentClassObj = classesList.find((c) => c.id === selectedClassRoomId);
+  const currentStreamObj = streamsList.find((s) => s.id === selectedStreamId);
+  const activeClassRoomLabel = currentClassObj
+    ? (currentStreamObj ? `${currentClassObj.name} ${currentStreamObj.name}` : `${currentClassObj.name} Room`)
+    : 'Classroom';
+
+  const allClassroomOptions = classesList
+    .map((c) => `${c.name} Room`)
+    .filter((name) => name !== activeClassRoomLabel && name !== `${currentClassObj?.name} Room`);
+
+  const STANDARD_LABS = [
+    'Integrated Science Lab',
+    'Computer / ICT Lab',
+    'Pre-Technical Studies Workshop',
+    'Home Science & Nutrition Lab',
+    'Creative Arts & Music Studio',
+    'School Library & Resource Hub',
+  ];
+
+  const STANDARD_FACILITIES = [
+    'School Hall / Auditorium',
+    'Agriculture Demonstration Plot',
+    'Sports Field & Physical Education',
+    'General Classroom',
+    'Remedial Study Hall',
+  ];
+
+  const PREDEFINED_ROOMS = [
+    activeClassRoomLabel,
+    ...STANDARD_LABS,
+    ...STANDARD_FACILITIES,
+    ...allClassroomOptions,
+  ];
+
+  const isExistingNonStandardRoom = Boolean(
+    roomName && !PREDEFINED_ROOMS.includes(roomName)
+  );
+
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -265,6 +310,10 @@ export const AddTimetableSlotModal: React.FC<AddTimetableSlotModalProps> = ({
       ? (selectedTeacher.name || selectedTeacher.user?.fullName || `Teacher ${selectedTeacher.tscNumber || ''}`)
       : undefined;
 
+    const finalRoomName = isBreak
+      ? undefined
+      : (isCustomRoom ? customRoomValue.trim() : (roomName || activeClassRoomLabel));
+
     try {
       const res = await apiService.addTimetableSlot({
         timetableId: timetableId || undefined,
@@ -279,7 +328,7 @@ export const AddTimetableSlotModal: React.FC<AddTimetableSlotModalProps> = ({
         learningAreaName: isBreak ? undefined : (selectedArea?.name || selectedArea?.code),
         teacherId: isBreak ? undefined : teacherId,
         teacherName: isBreak ? undefined : resolvedTeacherName,
-        roomName: isBreak ? undefined : roomName,
+        roomName: isBreak ? undefined : finalRoomName,
         isBreak,
         isLunch: isBreak && breakLabel.toLowerCase().includes('lunch'),
         label: isBreak ? breakLabel : undefined,
@@ -538,22 +587,124 @@ export const AddTimetableSlotModal: React.FC<AddTimetableSlotModalProps> = ({
               )}
 
               <div>
-                <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">
-                  Classroom / Lab
-                </label>
-                <input
-                  type="text"
-                  value={roomName}
-                  onChange={(e) => setRoomName(e.target.value)}
-                  required
-                  placeholder="e.g. Science Lab 1, Grade 7 East"
-                  className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2 text-xs text-on-surface font-semibold"
-                />
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold uppercase text-on-surface-variant">
+                    Classroom / Lab
+                  </label>
+                  {!isCustomRoom ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCustomRoom(true);
+                        setCustomRoomValue(roomName || activeClassRoomLabel);
+                      }}
+                      className="text-[11px] font-bold text-primary hover:underline cursor-pointer flex items-center gap-0.5"
+                    >
+                      <span className="material-symbols-outlined text-[13px]">edit_note</span>
+                      <span>Custom Room</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCustomRoom(false);
+                        setRoomName(activeClassRoomLabel);
+                      }}
+                      className="text-[11px] font-bold text-primary hover:underline cursor-pointer flex items-center gap-0.5"
+                    >
+                      <span className="material-symbols-outlined text-[13px]">list</span>
+                      <span>Select from Dropdown</span>
+                    </button>
+                  )}
+                </div>
+
+                {!isCustomRoom ? (
+                  <select
+                    value={roomName || activeClassRoomLabel}
+                    onChange={(e) => {
+                      if (e.target.value === '__CUSTOM__') {
+                        setIsCustomRoom(true);
+                        setCustomRoomValue('');
+                      } else {
+                        setRoomName(e.target.value);
+                      }
+                    }}
+                    required
+                    className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2 text-xs text-on-surface font-semibold focus:outline-primary cursor-pointer"
+                  >
+                    <optgroup label="Assigned Class Room">
+                      <option value={activeClassRoomLabel}>
+                        {activeClassRoomLabel} (Current Class)
+                      </option>
+                    </optgroup>
+
+                    <optgroup label="Laboratories & Specialist Facilities">
+                      {STANDARD_LABS.map((lab) => (
+                        <option key={lab} value={lab}>
+                          {lab}
+                        </option>
+                      ))}
+                    </optgroup>
+
+                    <optgroup label="Shared & Outdoor Facilities">
+                      {STANDARD_FACILITIES.map((facility) => (
+                        <option key={facility} value={facility}>
+                          {facility}
+                        </option>
+                      ))}
+                    </optgroup>
+
+                    {allClassroomOptions.length > 0 && (
+                      <optgroup label="Other Classrooms">
+                        {allClassroomOptions.map((opt) => (
+                          <option key={opt} value={opt}>
+                            {opt}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+
+                    {isExistingNonStandardRoom && (
+                      <optgroup label="Custom Assigned Room">
+                        <option value={roomName}>{roomName}</option>
+                      </optgroup>
+                    )}
+
+                    <optgroup label="Custom / Other">
+                      <option value="__CUSTOM__">Other (Enter custom room name)...</option>
+                    </optgroup>
+                  </select>
+                ) : (
+                  <div className="space-y-1.5">
+                    <input
+                      type="text"
+                      value={customRoomValue}
+                      onChange={(e) => {
+                        setCustomRoomValue(e.target.value);
+                        setRoomName(e.target.value);
+                      }}
+                      placeholder="e.g. Science Lab 1, Grade 7 East, Pavilion 2"
+                      required
+                      autoFocus
+                      className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2 text-xs text-on-surface font-semibold focus:outline-primary"
+                    />
+                    <p className="text-[10px] text-on-surface-variant">
+                      Type specific facility or room designation.
+                    </p>
+                  </div>
+                )}
               </div>
             </>
           )}
 
           <div className="pt-3 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="py-2.5 px-4 bg-surface-container hover:bg-surface-container-high text-on-surface-variant font-bold rounded-lg transition-all text-xs cursor-pointer"
+            >
+              Cancel
+            </button>
             {initialSlot?.id && onDeleteSlot && (
               <button
                 type="button"

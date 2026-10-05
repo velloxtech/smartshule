@@ -16,6 +16,7 @@ export function createExpressApp(container: AppContainer): Express {
   const rawCors = process.env.CORS_ORIGIN || process.env.FRONTEND_URL || '*';
   const corsOrigin = rawCors === '*' ? '*' : rawCors.trim().replace(/\/+$/, '');
   const allowedOrigins = [
+    'https://smartshule-vg15.onrender.com',
     'https://smartshule-1.onrender.com',
     'http://localhost:5173',
     'http://localhost:3000'
@@ -85,7 +86,7 @@ export function createExpressApp(container: AppContainer): Express {
         documentation: '/api',
         apiRoot: '/api/v1'
       },
-      frontendUrl: process.env.FRONTEND_URL || 'https://smartshule-1.onrender.com'
+      frontendUrl: process.env.FRONTEND_URL || 'https://smartshule-vg15.onrender.com'
     });
   });
 

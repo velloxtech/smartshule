@@ -28,14 +28,14 @@ export class KcbBuniPaymentAdapter implements IKcbBuniPaymentGateway {
     baseUrl = process.env.KCB_BUNI_BASE_URL || 'https://uat.buni.kcbgroup.com',
     orgShortCode = process.env.KCB_BUNI_SHORTCODE || '522533',
     sharedShortCode = process.env.KCB_BUNI_SHARED_SHORTCODE !== 'false',
-    callbackUrl = process.env.KCB_BUNI_CALLBACK_URL || 'https://api.smartshule.ac.ke/api/v1/finance/kcb-buni/callback'
+    callbackUrl = process.env.KCB_BUNI_CALLBACK_URL || 'https://smartshule-vg15.onrender.com/api/v1/finance/kcb-buni/callback'
   ) {
-    this.consumerKey = consumerKey;
-    this.consumerSecret = consumerSecret;
-    this.baseUrl = baseUrl.replace(/\/+$/, '');
-    this.orgShortCode = orgShortCode;
+    this.consumerKey = (consumerKey || '').trim();
+    this.consumerSecret = (consumerSecret || '').trim();
+    this.baseUrl = (baseUrl || '').trim().replace(/\/+$/, '');
+    this.orgShortCode = (orgShortCode || '').trim();
     this.sharedShortCode = sharedShortCode;
-    this.callbackUrl = callbackUrl;
+    this.callbackUrl = (callbackUrl || '').trim();
   }
 
   public getShortCode(): string {
@@ -123,16 +123,17 @@ export class KcbBuniPaymentAdapter implements IKcbBuniPaymentGateway {
     }
 
     // 3. Ensure valid public HTTPS callback URL acceptable by KCB Buni
-    let targetCallback = request.callbackUrl || this.callbackUrl;
+    let targetCallback = (request.callbackUrl || this.callbackUrl || '').trim();
     if (
       !targetCallback ||
       !targetCallback.startsWith('https://') ||
       targetCallback.includes('localhost') ||
       targetCallback.includes('127.0.0.1')
     ) {
-      targetCallback = (process.env.KCB_BUNI_CALLBACK_URL && process.env.KCB_BUNI_CALLBACK_URL.startsWith('https://'))
-        ? process.env.KCB_BUNI_CALLBACK_URL
-        : 'https://api.smartshule.ac.ke/api/v1/finance/kcb-buni/callback';
+      const envCallback = process.env.KCB_BUNI_CALLBACK_URL?.trim();
+      targetCallback = (envCallback && envCallback.startsWith('https://'))
+        ? envCallback
+        : 'https://smartshule-vg15.onrender.com/api/v1/finance/kcb-buni/callback';
     }
 
     const orgShortCode = request.orgShortCode || this.orgShortCode || '522533';

@@ -988,7 +988,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
           <div className="mt-md pt-sm">
             <button
-              onClick={() => onNavigateTab('invoices-mpesa')}
+              onClick={() => onNavigateTab('system-logs')}
               className="w-full py-xs rounded-lg bg-surface-container text-primary font-label-md text-label-md font-semibold flex items-center justify-center gap-xs hover:bg-surface-container-highest transition-colors cursor-pointer"
             >
               <span>View All System Logs</span>

@@ -41,11 +41,11 @@ export const env = {
 
   // 4. KCB Buni Developer Gateway API
   kcbBuni: {
-    consumerKey: process.env.KCB_BUNI_CONSUMER_KEY || '',
-    consumerSecret: process.env.KCB_BUNI_CONSUMER_SECRET || '',
-    baseUrl: process.env.KCB_BUNI_BASE_URL || 'https://uat.buni.kcbgroup.com',
-    shortCode: process.env.KCB_BUNI_SHORTCODE || '522533',
-    callbackUrl: process.env.KCB_BUNI_CALLBACK_URL || 'https://api.smartshule.ac.ke/api/v1/finance/kcb-buni/callback',
+    consumerKey: (process.env.KCB_BUNI_CONSUMER_KEY || '').trim(),
+    consumerSecret: (process.env.KCB_BUNI_CONSUMER_SECRET || '').trim(),
+    baseUrl: (process.env.KCB_BUNI_BASE_URL || 'https://uat.buni.kcbgroup.com').trim().replace(/\/+$/, ''),
+    shortCode: (process.env.KCB_BUNI_SHORTCODE || '522533').trim(),
+    callbackUrl: (process.env.KCB_BUNI_CALLBACK_URL?.trim()) || 'https://smartshule-vg15.onrender.com/api/v1/finance/kcb-buni/callback',
   },
 
   // 5. WhatsApp API (Multi-Device Baileys & Meta Cloud API)
@@ -61,12 +61,12 @@ export const env = {
 
   // 6. Safaricom M-Pesa Daraja Gateway API
   mpesa: {
-    shortCode: process.env.MPESA_SHORTCODE || '174379',
-    passKey: process.env.MPESA_PASSKEY || '',
-    consumerKey: process.env.MPESA_CONSUMER_KEY || '',
-    consumerSecret: process.env.MPESA_CONSUMER_SECRET || '',
-    env: (process.env.MPESA_ENV || 'sandbox') as 'sandbox' | 'production',
-    callbackUrl: process.env.MPESA_CALLBACK_URL || 'http://localhost:3000/api/v1/payments/mpesa/callback',
+    shortCode: (process.env.MPESA_SHORTCODE || '174379').trim(),
+    passKey: (process.env.MPESA_PASSKEY || '').trim(),
+    consumerKey: (process.env.MPESA_CONSUMER_KEY || '').trim(),
+    consumerSecret: (process.env.MPESA_CONSUMER_SECRET || '').trim(),
+    env: ((process.env.MPESA_ENV || 'sandbox').trim()) as 'sandbox' | 'production',
+    callbackUrl: (process.env.MPESA_CALLBACK_URL?.trim()) || 'https://smartshule-vg15.onrender.com/api/v1/finance/mpesa/callback',
   },
 
   // 7. SMS Communication Gateways (Africa's Talking / Twilio)

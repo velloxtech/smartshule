@@ -601,10 +601,17 @@ export const LearningAreasView: React.FC = () => {
                 </label>
               </div>
 
-              <div className="pt-3">
+              <div className="pt-3 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddSubjectOpen(false)}
+                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
                 <button
                   type="submit"
-                  className="w-full py-2.5 bg-[#800000] hover:bg-[#660000] text-white font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
+                  className="flex-1 py-2.5 bg-[#800000] hover:bg-[#660000] text-white font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
                 >
                   Save Subject into Database
                 </button>
@@ -698,10 +705,17 @@ export const LearningAreasView: React.FC = () => {
                 </select>
               </div>
 
-              <div className="pt-3">
+              <div className="pt-3 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddStreamOpen(false)}
+                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
                 <button
                   type="submit"
-                  className="w-full py-2.5 bg-slate-900 hover:bg-black text-white font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
+                  className="flex-1 py-2.5 bg-slate-900 hover:bg-black text-white font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
                 >
                   Save Stream into Database
                 </button>
@@ -784,10 +798,17 @@ export const LearningAreasView: React.FC = () => {
                 </select>
               </div>
 
-              <div className="pt-3">
+              <div className="pt-3 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddClassOpen(false)}
+                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
                 <button
                   type="submit"
-                  className="w-full py-2.5 bg-[#800000] hover:bg-[#660000] text-white font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
+                  className="flex-1 py-2.5 bg-[#800000] hover:bg-[#660000] text-white font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
                 >
                   Save Class into Database
                 </button>

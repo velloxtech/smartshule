@@ -442,8 +442,9 @@ export default function App() {
     setCbcModalOpen(true);
   };
 
-  const handleOpenSms = (target: 'absentee' | 'fee' | 'all' = 'all') => {
-    setSmsTarget(target);
+  const handleOpenSms = (target: any = 'all') => {
+    const validTarget = target === 'absentee' || target === 'fee' ? target : 'all';
+    setSmsTarget(validTarget);
     setSmsModalOpen(true);
   };
 
@@ -937,7 +938,8 @@ export default function App() {
                     <TeacherDashboardView
                       onNavigateTab={(tab) => setCurrentTab(tab)}
                       onOpenUploadMarks={(student) => {
-                        setUploadMarksInitialStudent(student);
+                        const st = (student && typeof student === 'object' && 'id' in student && typeof (student as any).id === 'string') ? student : undefined;
+                        setUploadMarksInitialStudent(st);
                         setUploadMarksModalOpen(true);
                       }}
                       onOpenNewLessonPlan={() => setCreateLessonPlanModalOpen(true)}

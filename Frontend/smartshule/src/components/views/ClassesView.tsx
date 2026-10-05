@@ -326,10 +326,17 @@ export const ClassesView: React.FC = () => {
                   </select>
                 </div>
               </div>
-              <div className="pt-2">
+              <div className="pt-2 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddClassOpen(false)}
+                  className="flex-1 py-2 bg-surface-container hover:bg-surface-container-high text-on-surface-variant font-bold rounded-lg cursor-pointer transition-colors"
+                >
+                  Cancel
+                </button>
                 <button
                   type="submit"
-                  className="w-full py-2 bg-primary text-white font-bold rounded-lg hover:bg-primary-container"
+                  className="flex-1 py-2 bg-primary text-white font-bold rounded-lg hover:bg-primary-container cursor-pointer transition-colors"
                 >
                   Create Class
                 </button>
@@ -391,10 +398,17 @@ export const ClassesView: React.FC = () => {
                   })}
                 </select>
               </div>
-              <div className="pt-2">
+              <div className="pt-2 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddStreamOpen(false)}
+                  className="flex-1 py-2 bg-surface-container hover:bg-surface-container-high text-on-surface-variant font-bold rounded-lg cursor-pointer transition-colors"
+                >
+                  Cancel
+                </button>
                 <button
                   type="submit"
-                  className="w-full py-2 bg-primary text-white font-bold rounded-lg hover:bg-primary-container"
+                  className="flex-1 py-2 bg-primary text-white font-bold rounded-lg hover:bg-primary-container cursor-pointer transition-colors"
                 >
                   Create Stream
                 </button>

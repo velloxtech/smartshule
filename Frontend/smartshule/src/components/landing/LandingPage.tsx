@@ -201,7 +201,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {/* Feature 1 */}
-            <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 hover:border-[#7a1228]/30 hover:shadow-md transition-all">
+            <div id="cbc-framework" className="p-6 rounded-2xl bg-slate-50 border border-slate-200 hover:border-[#7a1228]/30 hover:shadow-md transition-all scroll-mt-24">
               <div className="w-12 h-12 rounded-xl bg-[#7a1228] text-white flex items-center justify-center mb-4">
                 <span className="material-symbols-outlined text-[24px]">rule</span>
               </div>
@@ -213,7 +213,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
 
             {/* Feature 2 */}
-            <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 hover:border-[#7a1228]/30 hover:shadow-md transition-all">
+            <div id="mpesa" className="p-6 rounded-2xl bg-slate-50 border border-slate-200 hover:border-[#7a1228]/30 hover:shadow-md transition-all scroll-mt-24">
               <div className="w-12 h-12 rounded-xl bg-[#006a63] text-white flex items-center justify-center mb-4">
                 <span className="material-symbols-outlined text-[24px]">point_of_sale</span>
               </div>

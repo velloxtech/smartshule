@@ -346,10 +346,17 @@ export const StrandsView: React.FC = () => {
                   className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2"
                 />
               </div>
-              <div className="pt-2">
+              <div className="pt-2 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddStrandOpen(false)}
+                  className="flex-1 py-2 bg-surface-container hover:bg-surface-container-high text-on-surface-variant font-bold rounded-lg cursor-pointer transition-colors"
+                >
+                  Cancel
+                </button>
                 <button
                   type="submit"
-                  className="w-full py-2 bg-primary text-white font-bold rounded-lg hover:bg-primary-container cursor-pointer transition-colors"
+                  className="flex-1 py-2 bg-primary text-white font-bold rounded-lg hover:bg-primary-container cursor-pointer transition-colors"
                 >
                   Create Strand
                 </button>
@@ -403,10 +410,17 @@ export const StrandsView: React.FC = () => {
                   className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2"
                 />
               </div>
-              <div className="pt-2">
+              <div className="pt-2 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddSubStrandOpen(false)}
+                  className="flex-1 py-2 bg-surface-container hover:bg-surface-container-high text-on-surface-variant font-bold rounded-lg cursor-pointer transition-colors"
+                >
+                  Cancel
+                </button>
                 <button
                   type="submit"
-                  className="w-full py-2 bg-primary text-white font-bold rounded-lg hover:bg-primary-container cursor-pointer transition-colors"
+                  className="flex-1 py-2 bg-primary text-white font-bold rounded-lg hover:bg-primary-container cursor-pointer transition-colors"
                 >
                   Save Sub-strand
                 </button>
