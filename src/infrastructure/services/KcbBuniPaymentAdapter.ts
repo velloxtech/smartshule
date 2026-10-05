@@ -155,7 +155,7 @@ export class KcbBuniPaymentAdapter implements IKcbBuniPaymentGateway {
       amount: String(amountVal),
       invoiceNumber,
       sharedShortCode: this.sharedShortCode,
-      orgShortCode,
+      orgShortCode: this.sharedShortCode ? '' : orgShortCode,
       orgPassKey: (request as any).orgPassKey || process.env.KCB_BUNI_PASSKEY || '',
       callbackUrl: targetCallback,
       transactionDescription: description
