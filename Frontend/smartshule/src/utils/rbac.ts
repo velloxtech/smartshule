@@ -385,6 +385,25 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
     group: 'Digital Diary & Media',
     items: [
       {
+        id: 'announcements',
+        label: 'Notice Board & Circulars',
+        icon: 'campaign',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.HEAD_TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
+          UserRole.ADMISSIONS,
+          UserRole.BURSAR,
+          UserRole.ACCOUNTANT,
+          UserRole.TEACHER,
+          UserRole.PARENT,
+          UserRole.GUARDIAN,
+          UserRole.STUDENT,
+        ],
+      },
+      {
         id: 'ediary',
         label: 'Digital eDiary',
         icon: 'edit_note',

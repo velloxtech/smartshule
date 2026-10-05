@@ -50,6 +50,7 @@ import { StudentFeeCheckerView } from './components/views/StudentFeeCheckerView'
 import { ArchivedRecordsView } from './components/views/ArchivedRecordsView';
 import { StandaloneArchivedRecordsPage } from './components/views/StandaloneArchivedRecordsPage';
 import { LibraryView } from './components/views/LibraryView';
+import { AnnouncementsView } from './components/views/AnnouncementsView';
 
 // Modals
 import { MpesaStkModal } from './components/modals/MpesaStkModal';
@@ -1107,6 +1108,8 @@ export default function App() {
           {currentTab === 'financial-reports' && <FinancialReportsView />}
 
           {currentTab === 'ediary' && <EDiaryView />}
+
+          {currentTab === 'announcements' && <AnnouncementsView />}
 
           {currentTab === 'visual-cbc' && <VisualCBCView />}
 

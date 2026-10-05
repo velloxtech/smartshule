@@ -30,7 +30,8 @@ export type TabType =
   | 'parent-profile'
   | 'student-fee-search'
   | 'archived-records'
-  | 'library';
+  | 'library'
+  | 'announcements';
 
 export type SystemLogLevel = 'INFO' | 'WARN' | 'ERROR' | 'AUDIT';
 export type SystemLogCategory =
@@ -1361,4 +1362,52 @@ export interface LibraryStats {
   lostDamagedCount: number;
   categoriesCount: Record<string, number>;
 }
+
+export type AnnouncementCategory =
+  | 'GENERAL'
+  | 'ACADEMIC'
+  | 'FEES'
+  | 'EVENT'
+  | 'HOLIDAY'
+  | 'EMERGENCY'
+  | 'SPORTS'
+  | 'EXAM';
+
+export type AnnouncementPriority = 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
+
+export type AnnouncementAudience =
+  | 'ALL'
+  | 'PARENTS'
+  | 'TEACHERS'
+  | 'STUDENTS'
+  | 'SPECIFIC_GRADE';
+
+export type AnnouncementStatus = 'PUBLISHED' | 'DRAFT' | 'ARCHIVED';
+
+export interface Announcement {
+  id: string;
+  schoolId: string;
+  title: string;
+  content: string;
+  category: AnnouncementCategory;
+  priority: AnnouncementPriority;
+  targetAudience: AnnouncementAudience;
+  targetGradeLevel?: string;
+  authorName: string;
+  authorRole: string;
+  authorUserId?: string;
+  publishDate: string;
+  expiryDate?: string;
+  isPinned: boolean;
+  status: AnnouncementStatus;
+  attachmentName?: string;
+  attachmentUrl?: string;
+  sendSmsBroadcast?: boolean;
+  sendWhatsAppBroadcast?: boolean;
+  acknowledgements?: string[];
+  acknowledgementCount?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 

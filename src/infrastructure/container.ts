@@ -14,10 +14,13 @@ import { IComplaintRepository } from '../core/ports/repositories/IComplaintRepos
 import { ISystemLogRepository } from '../core/ports/repositories/ISystemLogRepository';
 import { ILunchFeeRepository } from '../core/ports/repositories/ILunchFeeRepository';
 import { ILibraryRepository } from '../core/ports/repositories/ILibraryRepository';
+import { IAnnouncementRepository } from '../core/ports/repositories/IAnnouncementRepository';
 import { InMemoryLunchFeeRepository } from './database/in-memory/InMemoryLunchFeeRepository';
 import { InMemoryLibraryRepository } from './database/in-memory/InMemoryLibraryRepository';
+import { InMemoryAnnouncementRepository } from './database/in-memory/InMemoryAnnouncementRepository';
 import { LunchFeeUseCases } from '../application/finance/LunchFeeUseCases';
 import { LibraryUseCases } from '../application/library/LibraryUseCases';
+import { AnnouncementUseCases } from '../application/announcements/AnnouncementUseCases';
 import { InMemoryRecordOfWorkRepository } from './database/postgres/PostgresRecordOfWorkRepository';
 import { InMemoryComplaintRepository } from './database/in-memory/InMemoryComplaintRepository';
 import { InMemorySystemLogRepository } from './database/in-memory/InMemorySystemLogRepository';
@@ -89,6 +92,7 @@ export class AppContainer {
   public systemLogRepository: ISystemLogRepository;
   public lunchFeeRepository: ILunchFeeRepository;
   public libraryRepository: ILibraryRepository;
+  public announcementRepository: IAnnouncementRepository;
 
   // Services
   public readonly tokenService = new JwtAuthTokenService();
@@ -112,6 +116,7 @@ export class AppContainer {
   public feeUseCases!: FeeUseCases;
   public lunchFeeUseCases!: LunchFeeUseCases;
   public libraryUseCases!: LibraryUseCases;
+  public announcementUseCases!: AnnouncementUseCases;
   public analyticsUseCases!: AnalyticsUseCases;
   public visualMediaUseCases!: VisualMediaUseCases;
   public ediaryUseCases!: EDiaryUseCases;
@@ -146,6 +151,8 @@ export class AppContainer {
       customRepositories?.lunchFeeRepository || new InMemoryLunchFeeRepository();
     this.libraryRepository =
       customRepositories?.libraryRepository || new InMemoryLibraryRepository();
+    this.announcementRepository =
+      customRepositories?.announcementRepository || new InMemoryAnnouncementRepository();
 
     this.initUseCases();
   }
@@ -204,6 +211,11 @@ export class AppContainer {
       this.userRepository
     );
     this.systemLogUseCases = new SystemLogUseCases(this.systemLogRepository);
+    this.announcementUseCases = new AnnouncementUseCases(
+      this.announcementRepository,
+      this.notificationService,
+      this.whatsAppService
+    );
     
     this.timetableUseCases = new TimetableUseCases(this.timetableRepository, this.academicRepository, this.teacherRepository);
     this.attendanceUseCases = new AttendanceUseCases(

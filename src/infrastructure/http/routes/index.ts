@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { AppContainer } from '../../container';
-import { createAuthMiddleware, requireRoles } from '../middlewares/authMiddleware';
+import { createAuthMiddleware, createOptionalAuthMiddleware, requireRoles } from '../middlewares/authMiddleware';
 import { validateBody } from '../middlewares/validateRequest';
 import { UserRole } from '../../../core/domain/user/User';
 
@@ -136,10 +136,16 @@ import {
   ReturnBookSchema,
   UpdateLoanStatusSchema
 } from '../controllers/LibraryController';
+import {
+  AnnouncementController,
+  CreateAnnouncementSchema,
+  UpdateAnnouncementSchema
+} from '../controllers/AnnouncementController';
 
 export function createApiRouter(container: AppContainer): Router {
   const router = Router();
   const authMiddleware = createAuthMiddleware(container.tokenService);
+  const optionalAuthMiddleware = createOptionalAuthMiddleware(container.tokenService);
 
   const authController = new AuthController(container.authUseCases, container.systemLogUseCases);
   const studentController = new StudentController(container.studentUseCases, container.systemLogUseCases);
@@ -159,6 +165,7 @@ export function createApiRouter(container: AppContainer): Router {
   const complaintController = new ComplaintController(container.complaintUseCases, container.systemLogUseCases);
   const systemLogController = new SystemLogController(container.systemLogUseCases);
   const libraryController = new LibraryController(container.libraryUseCases, container.systemLogUseCases);
+  const announcementController = new AnnouncementController(container.announcementUseCases, container.systemLogUseCases);
 
   // ==========================================
   // 1. AUTH ROUTES
@@ -686,6 +693,34 @@ export function createApiRouter(container: AppContainer): Router {
   libraryRouter.get('/stats', authMiddleware, libraryController.getStats);
 
   router.use('/library', libraryRouter);
+
+  // ==========================================
+  // 17c. ANNOUNCEMENT & NOTICE BOARD ROUTES
+  // ==========================================
+  const announcementRouter = Router();
+  const allowedAnnouncementManageRoles = requireRoles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.HEAD_TEACHER,
+    UserRole.DEPUTY_HEAD_TEACHER,
+    UserRole.TEACHER
+  );
+
+  // Notice Board: List & View (All School Community Members / Public Notice Board)
+  announcementRouter.get('/', optionalAuthMiddleware, announcementController.listAnnouncements);
+  announcementRouter.get('/:id', optionalAuthMiddleware, announcementController.getAnnouncement);
+
+  // Management (Admins, Head Teachers, Teachers)
+  announcementRouter.post('/', authMiddleware, allowedAnnouncementManageRoles, validateBody(CreateAnnouncementSchema), announcementController.createAnnouncement);
+  announcementRouter.put('/:id', authMiddleware, allowedAnnouncementManageRoles, validateBody(UpdateAnnouncementSchema), announcementController.updateAnnouncement);
+  announcementRouter.delete('/:id', authMiddleware, allowedAnnouncementManageRoles, announcementController.deleteAnnouncement);
+  announcementRouter.post('/:id/pin', authMiddleware, allowedAnnouncementManageRoles, announcementController.togglePin);
+
+  // Acknowledge Receipt (Parents, Students, Staff)
+  announcementRouter.post('/:id/acknowledge', authMiddleware, announcementController.acknowledge);
+
+  router.use('/announcements', announcementRouter);
 
   // ==========================================
   // 18. POSTMAN SPEC EXPORT ROUTES

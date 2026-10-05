@@ -67,6 +67,7 @@ import { IComplaintRepository } from '../../core/ports/repositories/IComplaintRe
 import { ISystemLogRepository } from '../../core/ports/repositories/ISystemLogRepository';
 import { ILunchFeeRepository } from '../../core/ports/repositories/ILunchFeeRepository';
 import { ILibraryRepository } from '../../core/ports/repositories/ILibraryRepository';
+import { IAnnouncementRepository } from '../../core/ports/repositories/IAnnouncementRepository';
 import {
   PostgresRecordOfWorkRepository,
   InMemoryRecordOfWorkRepository,
@@ -79,6 +80,7 @@ import { InMemoryLunchFeeRepository } from './in-memory/InMemoryLunchFeeReposito
 import { PostgresLunchFeeRepository } from './postgres/PostgresLunchFeeRepository';
 import { PostgresLibraryRepository } from './postgres/PostgresLibraryRepository';
 import { InMemoryLibraryRepository } from './in-memory/InMemoryLibraryRepository';
+import { InMemoryAnnouncementRepository } from './in-memory/InMemoryAnnouncementRepository';
 
 export interface RepositoryBundle {
   userRepository: IUserRepository;
@@ -100,6 +102,7 @@ export interface RepositoryBundle {
   systemLogRepository?: ISystemLogRepository;
   lunchFeeRepository?: ILunchFeeRepository;
   libraryRepository?: ILibraryRepository;
+  announcementRepository?: IAnnouncementRepository;
 }
 
 export class DatabaseFactory {
@@ -126,7 +129,8 @@ export class DatabaseFactory {
         timetableRepository: new MongoTimetableRepository(),
         attendanceRepository: new MongoAttendanceRepository(),
         feeRepository: new MongoFeeRepository(),
-        systemLogRepository: new InMemorySystemLogRepository()
+        systemLogRepository: new InMemorySystemLogRepository(),
+        announcementRepository: new InMemoryAnnouncementRepository()
       };
     }
 
@@ -187,6 +191,7 @@ export class DatabaseFactory {
         systemLogRepository: new PostgresSystemLogRepository(pool),
         lunchFeeRepository: new PostgresLunchFeeRepository(pool),
         libraryRepository: new PostgresLibraryRepository(pool),
+        announcementRepository: new InMemoryAnnouncementRepository(),
       };
     }
 
@@ -212,6 +217,7 @@ export class DatabaseFactory {
       systemLogRepository: new InMemorySystemLogRepository(),
       lunchFeeRepository: new InMemoryLunchFeeRepository(),
       libraryRepository: new InMemoryLibraryRepository(),
+      announcementRepository: new InMemoryAnnouncementRepository(),
     };
   }
 }

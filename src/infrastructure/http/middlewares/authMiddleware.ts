@@ -32,6 +32,20 @@ export function createAuthMiddleware(tokenService: IAuthTokenService) {
   };
 }
 
+export function createOptionalAuthMiddleware(tokenService: IAuthTokenService) {
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      const payload = tokenService.verifyAccessToken(token);
+      if (payload) {
+        req.user = payload;
+      }
+    }
+    next();
+  };
+}
+
 export function requireRoles(...allowedRoles: (UserRole | UserRole[])[]) {
   const flatRoles = allowedRoles.flat(Infinity) as UserRole[];
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {

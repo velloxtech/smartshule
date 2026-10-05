@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { apiService } from '../../services/api';
 import { FeeStructure, SchoolInfo } from '../../types';
 import { CreateFeeStructureModal } from '../modals/CreateFeeStructureModal';
@@ -46,6 +48,9 @@ export const FeeStructureView: React.FC = () => {
 
       if (schoolRes?.success && schoolRes.data) {
         setSchool(schoolRes.data);
+        getSchoolLogoBase64(schoolRes.data.logoUrl);
+      } else {
+        getSchoolLogoBase64();
       }
     } catch {
       setStructures([]);
@@ -102,30 +107,344 @@ export const FeeStructureView: React.FC = () => {
     setExpandedCards({});
   };
 
-  const getTermBreakdown = (s: FeeStructure) => {
-    const t1 = s.term1Total ?? s.termBreakdown?.term1 ?? s.items?.reduce((sum, it) => {
-      if (it.termBreakdown?.term1 !== undefined) return sum + (Number(it.termBreakdown.term1) || 0);
-      const div = it.termDivisions?.find((d) => d.termNumber === 1);
-      return sum + (div ? Number(div.amount) || 0 : Math.round((Number(it.amount) || 0) / 3));
-    }, 0) ?? Math.round((s.totalAmount || 0) / 3);
+  const getStructureTotal = (s: FeeStructure): number => {
+    if (s.totalAmount) return s.totalAmount;
+    if (s.items && Array.isArray(s.items)) {
+      return s.items.reduce((sum, it) => sum + (Number(it.amount) || 0), 0);
+    }
+    return 0;
+  };
 
-    const t2 = s.term2Total ?? s.termBreakdown?.term2 ?? s.items?.reduce((sum, it) => {
-      if (it.termBreakdown?.term2 !== undefined) return sum + (Number(it.termBreakdown.term2) || 0);
-      const div = it.termDivisions?.find((d) => d.termNumber === 2);
-      return sum + (div ? Number(div.amount) || 0 : Math.round((Number(it.amount) || 0) / 3));
-    }, 0) ?? Math.round((s.totalAmount || 0) / 3);
+  const getSchoolLogoBase64 = async (customUrl?: string): Promise<string | null> => {
+    const urlsToTry = [customUrl, '/logo.png', '/logo.jpg'].filter(Boolean) as string[];
+    for (const url of urlsToTry) {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) continue;
+        const blob = await res.blob();
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+        if (base64 && base64.startsWith('data:image')) {
+          return base64;
+        }
+      } catch {
+        // try next fallback
+      }
+    }
+    return null;
+  };
 
-    const t3 = s.term3Total ?? s.termBreakdown?.term3 ?? s.items?.reduce((sum, it) => {
-      if (it.termBreakdown?.term3 !== undefined) return sum + (Number(it.termBreakdown.term3) || 0);
-      const div = it.termDivisions?.find((d) => d.termNumber === 3);
-      return sum + (div ? Number(div.amount) || 0 : Math.max(0, (Number(it.amount) || 0) - Math.round((Number(it.amount) || 0) / 3) * 2));
-    }, 0) ?? Math.max(0, (s.totalAmount || 0) - t1 - t2);
+  const renderFeeStructurePage = (
+    doc: jsPDF,
+    structure: FeeStructure,
+    schoolInfo: SchoolInfo | null,
+    logoBase64?: string | null
+  ) => {
+    const total = getStructureTotal(structure);
+    const gradeName = resolveGradeName(structure.gradeLevel);
+    const yearName = resolveAcademicYearName(structure.academicYearId);
+    const schoolName = schoolInfo?.name || 'Grace Seeds School';
+    const motto = schoolInfo?.motto || 'The Future Begins Here';
+    const centerCode = schoolInfo?.centerCode || 'KNEC-08291';
+    const email = schoolInfo?.email || 'schoolgraceseeds@gmail.com';
+    const phone = schoolInfo?.phone || '0745436312';
 
-    const total = s.totalAmount || (t1 + t2 + t3);
-    const p1 = s.termPercentages?.term1 ?? (total > 0 ? Math.round((t1 / total) * 100) : 0);
-    const p2 = s.termPercentages?.term2 ?? (total > 0 ? Math.round((t2 / total) * 100) : 0);
-    const p3 = s.termPercentages?.term3 ?? (total > 0 ? Math.max(0, 100 - p1 - p2) : 0);
-    return { t1, t2, t3, total, p1, p2, p3 };
+    // 1. Burgundy Accent Top Bar
+    doc.setFillColor(122, 18, 40);
+    doc.rect(0, 0, 210, 4, 'F');
+
+    let curY = 7;
+
+    // 2. School Logo (Centered Letterhead Crest)
+    if (logoBase64) {
+      const logoW = 18;
+      const logoH = 16;
+      const logoX = (210 - logoW) / 2;
+      try {
+        const format = logoBase64.includes('image/png') ? 'PNG' : 'JPEG';
+        doc.addImage(logoBase64, format, logoX, curY, logoW, logoH);
+      } catch {
+        try {
+          doc.addImage(logoBase64, 'JPEG', logoX, curY, logoW, logoH);
+        } catch {
+          // ignore if image format issue
+        }
+      }
+      curY += logoH + 4;
+    } else {
+      curY += 8;
+    }
+
+    // 3. School Letterhead
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(16);
+    doc.setTextColor(17, 24, 39);
+    doc.text(schoolName.toUpperCase(), 105, curY, { align: 'center' });
+    curY += 5;
+
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8.5);
+    doc.setTextColor(75, 85, 99);
+    doc.text(`"${motto}"`, 105, curY, { align: 'center' });
+    curY += 4.5;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(107, 114, 128);
+    doc.text(
+      `KNEC Center Code: ${centerCode}   |   Email: ${email}   |   Tel: ${phone}`,
+      105,
+      curY,
+      { align: 'center' }
+    );
+    curY += 3.5;
+
+    // Divider
+    doc.setDrawColor(229, 231, 235);
+    doc.setLineWidth(0.3);
+    doc.line(14, curY, 196, curY);
+    curY += 3;
+
+    // 4. Official Badge
+    doc.setFillColor(255, 241, 242);
+    doc.roundedRect(45, curY, 120, 6.5, 2, 2, 'F');
+    doc.setDrawColor(254, 205, 211);
+    doc.roundedRect(45, curY, 120, 6.5, 2, 2, 'S');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(122, 18, 40);
+    doc.text('OFFICIAL RATIFIED ANNUAL CBC FEE SCHEDULE', 105, curY + 4.3, { align: 'center' });
+    curY += 9.5;
+
+    // 5. Meta Details Card
+    doc.setFillColor(249, 250, 251);
+    doc.setDrawColor(229, 231, 235);
+    doc.roundedRect(14, curY, 182, 16, 2, 2, 'FD');
+
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(107, 114, 128);
+    doc.text('CLASS / GRADE', 20, curY + 5.5);
+    doc.text('ACADEMIC YEAR', 65, curY + 5.5);
+    doc.text('ANNUAL DUE DATE', 110, curY + 5.5);
+    doc.text('TOTAL ANNUAL FEE', 155, curY + 5.5);
+
+    doc.setFontSize(9);
+    doc.setTextColor(17, 24, 39);
+    doc.text(gradeName, 20, curY + 11.5);
+    doc.text(yearName, 65, curY + 11.5);
+    doc.text(structure.dueDate || 'End of Academic Year', 110, curY + 11.5);
+    doc.setTextColor(122, 18, 40);
+    doc.text(`KES ${total.toLocaleString()}`, 155, curY + 11.5);
+    curY += 19;
+
+    // 6. Itemized Breakdown Table
+    const tableRows = (structure.items || []).map((it, idx) => [
+      (idx + 1).toString(),
+      it.name,
+      it.category,
+      it.isOptional ? 'Optional' : 'Mandatory',
+      `KES ${(Number(it.amount) || 0).toLocaleString()}`
+    ]);
+
+    autoTable(doc, {
+      startY: curY,
+      head: [['#', 'Item Description', 'Category', 'Billing Type', 'Annual Amount']],
+      body: tableRows.length > 0 ? tableRows : [['-', 'No items configured for this level', '-', '-', 'KES 0']],
+      foot: [['', 'TOTAL ANNUAL FEE (WHOLE YEAR)', '', '', `KES ${total.toLocaleString()}`]],
+      theme: 'grid',
+      headStyles: {
+        fillColor: [122, 18, 40],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 8.5,
+        halign: 'left'
+      },
+      bodyStyles: {
+        fontSize: 8,
+        textColor: [31, 41, 55],
+        cellPadding: 2.5
+      },
+      alternateRowStyles: {
+        fillColor: [250, 250, 250]
+      },
+      footStyles: {
+        fillColor: [249, 250, 251],
+        textColor: [122, 18, 40],
+        fontStyle: 'bold',
+        fontSize: 8.5
+      },
+      columnStyles: {
+        0: { cellWidth: 10, halign: 'center' },
+        1: { cellWidth: 'auto' },
+        2: { cellWidth: 35 },
+        3: { cellWidth: 26, halign: 'center' },
+        4: { cellWidth: 38, halign: 'right', fontStyle: 'bold' }
+      },
+      margin: { left: 14, right: 14 }
+    });
+
+    // 7. Payment Instructions & Official Endorsements
+    const lastTable = (doc as any).lastAutoTable;
+    let finalY = (lastTable && lastTable.finalY ? lastTable.finalY : 180) + 7;
+    if (finalY + 45 > 280) {
+      doc.addPage('a4', 'portrait');
+      finalY = 20;
+    }
+
+    // Payment Box
+    doc.setFillColor(249, 250, 251);
+    doc.setDrawColor(229, 231, 235);
+    doc.roundedRect(14, finalY, 105, 34, 2, 2, 'FD');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(17, 24, 39);
+    doc.text('Official Payment Instructions:', 18, finalY + 6);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(75, 85, 99);
+    doc.text('1. M-Pesa Paybill: 522533', 18, finalY + 12);
+    doc.text(`2. Account: 8048859#<Student Name & ${gradeName}>`, 18, finalY + 17);
+    doc.text('3. Bank: KCB Bank Kenya | Acc: 1122334455', 18, finalY + 22);
+    doc.setFontSize(7);
+    doc.setTextColor(107, 114, 128);
+    doc.text('NB: Official school receipts issued upon payment confirmation.', 18, finalY + 28);
+
+    // Signature & Stamp
+    doc.setDrawColor(156, 163, 175);
+    doc.setLineWidth(0.4);
+    doc.line(135, finalY + 18, 194, finalY + 18);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(107, 114, 128);
+    doc.text('Principal / School Director Signature', 164, finalY + 22, { align: 'center' });
+    doc.text('Official School Rubber Stamp', 164, finalY + 27, { align: 'center' });
+    doc.text(`Issued: ${new Date().toLocaleDateString('en-GB')}`, 164, finalY + 32, { align: 'center' });
+
+    // 8. Footer Watermark
+    doc.setFontSize(7);
+    doc.setTextColor(156, 163, 175);
+    doc.text(
+      `SmartShule Verified Fee Schedule  |  Valid for Academic Year ${yearName}  |  Generated on ${new Date().toLocaleDateString('en-GB')}`,
+      105,
+      289,
+      { align: 'center' }
+    );
+  };
+
+  const downloadPDF = async (structure: FeeStructure) => {
+    const logoBase64 = await getSchoolLogoBase64(school?.logoUrl);
+    const gradeName = resolveGradeName(structure.gradeLevel);
+    const yearName = resolveAcademicYearName(structure.academicYearId);
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    renderFeeStructurePage(doc, structure, school, logoBase64);
+    doc.save(`Fee_Schedule_${gradeName.replace(/[^a-zA-Z0-9]/g, '_')}_${yearName}.pdf`);
+  };
+
+  const downloadAllPDF = async () => {
+    if (structures.length === 0) {
+      alert('No fee structures available to download.');
+      return;
+    }
+    const logoBase64 = await getSchoolLogoBase64(school?.logoUrl);
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    structures.forEach((s, idx) => {
+      if (idx > 0) {
+        doc.addPage('a4', 'portrait');
+      }
+      renderFeeStructurePage(doc, s, school, logoBase64);
+    });
+    const dateStr = new Date().toISOString().split('T')[0];
+    doc.save(`SmartShule_All_Fee_Structures_${dateStr}.pdf`);
+  };
+
+  const downloadCSV = (structure: FeeStructure) => {
+    const total = getStructureTotal(structure);
+    const gradeName = resolveGradeName(structure.gradeLevel);
+    const yearName = resolveAcademicYearName(structure.academicYearId);
+
+    const rows = [
+      ['School Name', school?.name || 'Grace Seeds School'],
+      ['Schedule Title', structure.title],
+      ['Grade / Class', gradeName],
+      ['Academic Year', yearName],
+      ['Annual Due Date', structure.dueDate || 'N/A'],
+      [''],
+      ['#', 'Item Description', 'Category', 'Billing Type', 'Annual Amount (KES)'],
+      ...(structure.items || []).map((it, idx) => [
+        idx + 1,
+        `"${(it.name || '').replace(/"/g, '""')}"`,
+        it.category,
+        it.isOptional ? 'Optional' : 'Mandatory',
+        Number(it.amount) || 0
+      ]),
+      [''],
+      ['Total Annual Fee (KES)', '', '', '', total]
+    ];
+
+    const csvContent = rows.map((r) => r.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Fee_Schedule_${gradeName.replace(/[^a-zA-Z0-9]/g, '_')}_${yearName}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadAllCSV = () => {
+    if (structures.length === 0) {
+      alert('No fee structures available to download.');
+      return;
+    }
+
+    const rows: (string | number)[][] = [
+      ['Class / Grade', 'Schedule Title', 'Academic Year', 'Item Description', 'Category', 'Billing Type', 'Annual Amount (KES)', 'Total Structure Fee (KES)']
+    ];
+
+    structures.forEach((s) => {
+      const total = getStructureTotal(s);
+      const gradeName = resolveGradeName(s.gradeLevel);
+      const yearName = resolveAcademicYearName(s.academicYearId);
+
+      if (s.items && s.items.length > 0) {
+        s.items.forEach((it, idx) => {
+          rows.push([
+            idx === 0 ? gradeName : '',
+            idx === 0 ? `"${(s.title || '').replace(/"/g, '""')}"` : '',
+            idx === 0 ? yearName : '',
+            `"${(it.name || '').replace(/"/g, '""')}"`,
+            it.category,
+            it.isOptional ? 'Optional' : 'Mandatory',
+            Number(it.amount) || 0,
+            idx === 0 ? total : ''
+          ]);
+        });
+      } else {
+        rows.push([gradeName, `"${(s.title || '').replace(/"/g, '""')}"`, yearName, 'No items configured', '', '', 0, total]);
+      }
+      rows.push(['', '', '', '', '', '', '', '']);
+    });
+
+    const csvContent = rows.map((r) => r.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `SmartShule_All_Fee_Structures_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   // Filter structures with chunking
@@ -148,10 +467,7 @@ export const FeeStructureView: React.FC = () => {
   };
 
   // Cumulative Metrics
-  const totalAnnualValue = structures.reduce((sum, s) => sum + (getTermBreakdown(s).total || 0), 0);
-  const totalT1Value = structures.reduce((sum, s) => sum + (getTermBreakdown(s).t1 || 0), 0);
-  const totalT2Value = structures.reduce((sum, s) => sum + (getTermBreakdown(s).t2 || 0), 0);
-  const totalT3Value = structures.reduce((sum, s) => sum + (getTermBreakdown(s).t3 || 0), 0);
+  const totalAnnualValue = structures.reduce((sum, s) => sum + getStructureTotal(s), 0);
 
   const handleInitializeGraceSeeds = async () => {
     if (!window.confirm('Initialize or update official Grace Seeds School fee structures (Playgroup to Grade 6)? This sets up verified rates for Tuition, Activity, and Assessment.')) {
@@ -188,7 +504,7 @@ export const FeeStructureView: React.FC = () => {
             </span>
           </h1>
           <p className="text-xs sm:text-sm text-gray-500 mt-1">
-            Approved annual schedules, term allocations, and payment channels
+            Approved whole-year fee schedules and payment channels
           </p>
         </div>
 
@@ -200,6 +516,24 @@ export const FeeStructureView: React.FC = () => {
           >
             <span className="material-symbols-outlined text-[17px] text-gray-500">menu_book</span>
             <span>Stationery &amp; Books</span>
+          </button>
+
+          <button
+            onClick={downloadAllPDF}
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#7a1228] hover:bg-[#5c0a1a] text-white font-semibold rounded-xl text-xs shadow-2xs transition-all cursor-pointer"
+            title="Export all fee structures as official PDF document"
+          >
+            <span className="material-symbols-outlined text-[17px]">picture_as_pdf</span>
+            <span>Export All (PDF)</span>
+          </button>
+
+          <button
+            onClick={downloadAllCSV}
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-gray-50 text-gray-700 font-semibold rounded-xl text-xs border border-gray-200 shadow-2xs transition-all cursor-pointer"
+            title="Export all fee structures as CSV spreadsheet"
+          >
+            <span className="material-symbols-outlined text-[17px] text-emerald-700">table_chart</span>
+            <span>Export All (CSV)</span>
           </button>
 
           <button
@@ -269,18 +603,15 @@ export const FeeStructureView: React.FC = () => {
             <span className="text-base font-bold text-gray-900">{structures.length} Configured</span>
           </div>
           <div className="pl-4 pr-4">
-            <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider block">Cumulative Annual</span>
+            <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider block">Cumulative Annual Value</span>
             <span className="text-base font-bold font-mono text-[#7a1228]">
               KES {totalAnnualValue.toLocaleString()}
             </span>
           </div>
           <div className="pl-4">
-            <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider block">Term 1 Allocation</span>
+            <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider block">Average Annual Fee</span>
             <span className="text-base font-bold font-mono text-gray-800">
-              KES {totalT1Value.toLocaleString()}
-              <span className="text-[10px] font-normal text-gray-400 ml-1">
-                ({totalAnnualValue > 0 ? Math.round((totalT1Value / totalAnnualValue) * 100) : 0}%)
-              </span>
+              KES {structures.length > 0 ? Math.round(totalAnnualValue / structures.length).toLocaleString() : 0}
             </span>
           </div>
         </div>
@@ -435,7 +766,7 @@ export const FeeStructureView: React.FC = () => {
         /* CARD GRID: Clean & Scannable with Progressive Disclosure */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredStructures.map((s) => {
-            const { t1, t2, t3, total, p1, p2, p3 } = getTermBreakdown(s);
+            const total = getStructureTotal(s);
             const isExpanded = !!expandedCards[s.id];
             const itemCount = s.items?.length || 0;
 
@@ -469,6 +800,14 @@ export const FeeStructureView: React.FC = () => {
                     <div className="flex items-center gap-1">
                       <button
                         type="button"
+                        onClick={() => downloadPDF(s)}
+                        title="Download official PDF fee schedule"
+                        className="p-1 rounded-lg text-rose-700 hover:text-white hover:bg-[#7a1228] transition-colors cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-[17px]">picture_as_pdf</span>
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => handleDuplicate(s)}
                         title="Duplicate schedule"
                         className="p-1 rounded-lg text-gray-400 hover:text-[#7a1228] hover:bg-rose-50 transition-colors cursor-pointer"
@@ -487,37 +826,28 @@ export const FeeStructureView: React.FC = () => {
                   </div>
 
                   {/* Primary Anchor: Annual Total */}
-                  <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 flex items-center justify-between">
-                    <span className="text-xs font-bold text-gray-600">Annual Total</span>
-                    <span className="text-lg font-bold font-mono text-[#7a1228]">
+                  <div className="bg-rose-50/50 rounded-xl p-3.5 border border-rose-100 flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-bold text-gray-700">Whole-Year Fee</span>
+                      <span className="text-[10px] text-gray-400 block">Full annual billing</span>
+                    </div>
+                    <span className="text-xl font-bold font-mono text-[#7a1228]">
                       KES {total.toLocaleString()}
                     </span>
                   </div>
 
-                  {/* Chunked Term Breakdown (3 distinct visual units) */}
-                  <div className="grid grid-cols-3 gap-2 text-center">
+                  <div className="grid grid-cols-2 gap-2 text-center text-xs">
                     <div className="p-2 rounded-xl bg-gray-50 border border-gray-100">
-                      <span className="text-[10px] uppercase font-bold text-gray-500 block">Term 1</span>
-                      <span className="font-mono font-bold text-xs text-gray-900 block mt-0.5">
-                        KES {t1.toLocaleString()}
+                      <span className="text-[10px] uppercase font-bold text-gray-500 block">Line Items</span>
+                      <span className="font-mono font-bold text-xs text-gray-800 block mt-0.5">
+                        {itemCount} {itemCount === 1 ? 'Item' : 'Items'}
                       </span>
-                      <span className="text-[10px] font-semibold text-[#7a1228] block">({p1}%)</span>
                     </div>
-
                     <div className="p-2 rounded-xl bg-gray-50 border border-gray-100">
-                      <span className="text-[10px] uppercase font-bold text-gray-500 block">Term 2</span>
-                      <span className="font-mono font-bold text-xs text-gray-900 block mt-0.5">
-                        KES {t2.toLocaleString()}
+                      <span className="text-[10px] uppercase font-bold text-gray-500 block">Billing Period</span>
+                      <span className="font-mono font-bold text-xs text-gray-800 block mt-0.5">
+                        Whole Year
                       </span>
-                      <span className="text-[10px] font-semibold text-amber-700 block">({p2}%)</span>
-                    </div>
-
-                    <div className="p-2 rounded-xl bg-gray-50 border border-gray-100">
-                      <span className="text-[10px] uppercase font-bold text-gray-500 block">Term 3</span>
-                      <span className="font-mono font-bold text-xs text-gray-900 block mt-0.5">
-                        KES {t3.toLocaleString()}
-                      </span>
-                      <span className="text-[10px] font-semibold text-blue-700 block">({p3}%)</span>
                     </div>
                   </div>
 
@@ -569,14 +899,25 @@ export const FeeStructureView: React.FC = () => {
 
                 {/* Card Action Footer */}
                 <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
-                  <button
-                    type="button"
-                    onClick={() => setInspectingStructure(s)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[#7a1228] hover:bg-rose-50 font-bold text-xs cursor-pointer transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">visibility</span>
-                    <span>Official Document</span>
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setInspectingStructure(s)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[#7a1228] hover:bg-rose-50 font-bold text-xs cursor-pointer transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">visibility</span>
+                      <span>View</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => downloadPDF(s)}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-white bg-[#7a1228] hover:bg-[#5c0a1a] font-semibold text-xs cursor-pointer transition-colors shadow-2xs"
+                      title="Download official PDF fee schedule"
+                    >
+                      <span className="material-symbols-outlined text-[15px]">picture_as_pdf</span>
+                      <span>Download PDF</span>
+                    </button>
+                  </div>
                   <span className="text-[11px] text-gray-400 font-mono">
                     {s.academicYearId || '2026'}
                   </span>
@@ -593,44 +934,56 @@ export const FeeStructureView: React.FC = () => {
               <thead className="bg-gray-50 text-gray-600 uppercase font-bold text-[11px] tracking-wider border-b border-gray-200">
                 <tr>
                   <th className="py-3 px-4">Level / Class</th>
-                  <th className="py-3 px-4 text-center text-[#7a1228]">Term 1</th>
-                  <th className="py-3 px-4 text-center text-amber-700">Term 2</th>
-                  <th className="py-3 px-4 text-center text-blue-700">Term 3</th>
-                  <th className="py-3 px-4 text-right text-gray-900 font-bold">Annual Total</th>
+                  <th className="py-3 px-4">Schedule Title</th>
+                  <th className="py-3 px-4 text-center">Academic Year</th>
+                  <th className="py-3 px-4 text-center">Items</th>
+                  <th className="py-3 px-4 text-right text-gray-900 font-bold">Whole Year Total</th>
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {filteredStructures.map((s) => {
-                  const { t1, t2, t3, total, p1, p2, p3 } = getTermBreakdown(s);
+                  const total = getStructureTotal(s);
 
                   return (
                     <tr key={s.id} className="hover:bg-gray-50/70 transition-colors">
                       <td className="py-3.5 px-4 font-bold text-gray-900">
-                        <div className="flex items-center gap-2">
-                          <span className="bg-rose-50 text-[#7a1228] px-2 py-0.5 rounded border border-rose-200 text-xs">
-                            {resolveGradeName(s.gradeLevel)}
-                          </span>
-                          <span className="text-xs font-semibold text-gray-700">{s.title}</span>
-                        </div>
+                        <span className="bg-rose-50 text-[#7a1228] px-2.5 py-1 rounded-md border border-rose-200 text-xs font-semibold">
+                          {resolveGradeName(s.gradeLevel)}
+                        </span>
                       </td>
-                      <td className="py-3.5 px-4 text-center font-mono font-medium text-gray-700">
-                        <div>KES {t1.toLocaleString()}</div>
-                        <span className="text-[10px] text-[#7a1228] font-bold">({p1}%)</span>
+                      <td className="py-3.5 px-4 text-xs font-semibold text-gray-700">
+                        {s.title}
                       </td>
-                      <td className="py-3.5 px-4 text-center font-mono font-medium text-gray-700">
-                        <div>KES {t2.toLocaleString()}</div>
-                        <span className="text-[10px] text-amber-700 font-bold">({p2}%)</span>
+                      <td className="py-3.5 px-4 text-center font-mono text-xs text-gray-600">
+                        {s.academicYearId || '2026'}
                       </td>
-                      <td className="py-3.5 px-4 text-center font-mono font-medium text-gray-700">
-                        <div>KES {t3.toLocaleString()}</div>
-                        <span className="text-[10px] text-blue-700 font-bold">({p3}%)</span>
+                      <td className="py-3.5 px-4 text-center">
+                        <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded font-mono text-[11px] font-semibold">
+                          {s.items?.length || 0}
+                        </span>
                       </td>
-                      <td className="py-3.5 px-4 font-mono font-bold text-[#7a1228] text-right">
+                      <td className="py-3.5 px-4 font-mono font-bold text-[#7a1228] text-right text-sm">
                         KES {total.toLocaleString()}
                       </td>
                       <td className="py-3.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-1">
+                          <button
+                            type="button"
+                            onClick={() => downloadPDF(s)}
+                            title="Download official PDF Fee Schedule"
+                            className="p-1 rounded text-rose-700 hover:text-white hover:bg-[#7a1228] transition-colors cursor-pointer"
+                          >
+                            <span className="material-symbols-outlined text-[17px]">picture_as_pdf</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => downloadCSV(s)}
+                            title="Download CSV spreadsheet"
+                            className="p-1 rounded text-gray-400 hover:text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer"
+                          >
+                            <span className="material-symbols-outlined text-[17px]">table_chart</span>
+                          </button>
                           <button
                             type="button"
                             onClick={() => setInspectingStructure(s)}
@@ -690,8 +1043,26 @@ export const FeeStructureView: React.FC = () => {
               <div className="flex items-center gap-2">
                 <button
                   type="button"
+                  onClick={() => downloadPDF(inspectingStructure)}
+                  className="px-3 py-1.5 bg-white text-[#7a1228] hover:bg-rose-50 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1 shadow-2xs"
+                  title="Download official PDF fee schedule"
+                >
+                  <span className="material-symbols-outlined text-[16px]">picture_as_pdf</span>
+                  <span>Download PDF</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => downloadCSV(inspectingStructure)}
+                  className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1 border border-white/20"
+                  title="Download as Excel/CSV spreadsheet"
+                >
+                  <span className="material-symbols-outlined text-[16px]">table_chart</span>
+                  <span>CSV</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => window.print()}
-                  className="px-3 py-1.5 bg-white text-[#7a1228] hover:bg-rose-50 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
+                  className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1 border border-white/20"
                 >
                   <span className="material-symbols-outlined text-[16px]">print</span>
                   <span>Print Document</span>
@@ -755,7 +1126,7 @@ export const FeeStructureView: React.FC = () => {
                 <div>
                   <span className="text-gray-500 block uppercase font-medium text-[10px]">Whole Year Total</span>
                   <span className="font-mono font-bold text-[#7a1228]">
-                    KES {getTermBreakdown(inspectingStructure).total.toLocaleString()}
+                    KES {getStructureTotal(inspectingStructure).toLocaleString()}
                   </span>
                 </div>
               </div>
@@ -765,37 +1136,35 @@ export const FeeStructureView: React.FC = () => {
                 <table className="w-full text-left text-xs">
                   <thead className="bg-gray-100 text-gray-800 font-bold border-b border-gray-300">
                     <tr>
-                      <th className="py-2.5 px-3">#</th>
+                      <th className="py-2.5 px-3 w-10">#</th>
                       <th className="py-2.5 px-3">Item Description</th>
                       <th className="py-2.5 px-3">Category</th>
-                      <th className="py-2.5 px-3 text-center text-[#7a1228]">Term 1 (KES)</th>
-                      <th className="py-2.5 px-3 text-center text-amber-700">Term 2 (KES)</th>
-                      <th className="py-2.5 px-3 text-center text-blue-700">Term 3 (KES)</th>
-                      <th className="py-2.5 px-3 text-right text-gray-900">Total (KES)</th>
+                      <th className="py-2.5 px-3 text-center">Billing Type</th>
+                      <th className="py-2.5 px-3 text-right text-gray-900">Annual Fee (KES)</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {inspectingStructure.items?.map((it, idx) => {
                       const itemAmt = Number(it.amount) || 0;
-                      const div1 = it.termDivisions?.find((d) => d.termNumber === 1);
-                      const div2 = it.termDivisions?.find((d) => d.termNumber === 2);
-                      const div3 = it.termDivisions?.find((d) => d.termNumber === 3);
-
-                      const t1 = it.termBreakdown?.term1 ?? div1?.amount ?? Math.round(itemAmt / 3);
-                      const t2 = it.termBreakdown?.term2 ?? div2?.amount ?? Math.round(itemAmt / 3);
-                      const t3 = it.termBreakdown?.term3 ?? div3?.amount ?? Math.max(0, itemAmt - t1 - t2);
 
                       return (
                         <tr key={it.id || idx}>
                           <td className="py-2 px-3 text-gray-500 font-mono">{idx + 1}</td>
                           <td className="py-2 px-3 font-semibold text-gray-900">
                             {it.name}
-                            {it.isOptional && <span className="ml-1 text-[10px] text-gray-500">(Optional)</span>}
                           </td>
                           <td className="py-2 px-3 text-gray-600 text-[11px]">{it.category}</td>
-                          <td className="py-2 px-3 text-center font-mono text-gray-800">KES {t1.toLocaleString()}</td>
-                          <td className="py-2 px-3 text-center font-mono text-gray-800">KES {t2.toLocaleString()}</td>
-                          <td className="py-2 px-3 text-center font-mono text-gray-800">KES {t3.toLocaleString()}</td>
+                          <td className="py-2 px-3 text-center">
+                            {it.isOptional ? (
+                              <span className="text-[10px] bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-full font-medium">
+                                Optional
+                              </span>
+                            ) : (
+                              <span className="text-[10px] bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-full font-medium">
+                                Mandatory
+                              </span>
+                            )}
+                          </td>
                           <td className="py-2 px-3 text-right font-mono font-bold text-gray-900">
                             KES {itemAmt.toLocaleString()}
                           </td>
@@ -805,20 +1174,11 @@ export const FeeStructureView: React.FC = () => {
                   </tbody>
                   <tfoot className="bg-gray-100 font-bold border-t-2 border-gray-400">
                     <tr>
-                      <td colSpan={3} className="py-2.5 px-3 uppercase text-gray-900">
-                        Total Annual Ratified Fee:
-                      </td>
-                      <td className="py-2.5 px-3 text-center font-mono text-[#7a1228]">
-                        KES {getTermBreakdown(inspectingStructure).t1.toLocaleString()}
-                      </td>
-                      <td className="py-2.5 px-3 text-center font-mono text-amber-700">
-                        KES {getTermBreakdown(inspectingStructure).t2.toLocaleString()}
-                      </td>
-                      <td className="py-2.5 px-3 text-center font-mono text-blue-700">
-                        KES {getTermBreakdown(inspectingStructure).t3.toLocaleString()}
+                      <td colSpan={4} className="py-2.5 px-3 uppercase text-gray-900">
+                        Total Annual Fee (Whole Year):
                       </td>
                       <td className="py-2.5 px-3 text-right font-mono text-base text-[#7a1228]">
-                        KES {getTermBreakdown(inspectingStructure).total.toLocaleString()}
+                        KES {getStructureTotal(inspectingStructure).toLocaleString()}
                       </td>
                     </tr>
                   </tfoot>

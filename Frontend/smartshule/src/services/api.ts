@@ -62,6 +62,7 @@ import {
   Book,
   BookLoan,
   LibraryStats,
+  Announcement,
 } from '../types';
 function resolveApiBaseUrl(): string {
   let url = ((import.meta as any).env?.VITE_API_URL || '').trim();
@@ -102,15 +103,24 @@ export const setAuthToken = (token: string | null) => {
 };
 
 export const getStoredAuthToken = (): string | null => {
-  return authToken;
+  if (authToken) return authToken;
+  if (typeof window !== 'undefined' && window.localStorage) {
+    return (
+      localStorage.getItem('smartshule_token') ||
+      localStorage.getItem('token') ||
+      localStorage.getItem('authToken')
+    );
+  }
+  return null;
 };
 
 const getHeaders = () => {
+  const token = getStoredAuthToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
-  if (authToken) {
-    headers['Authorization'] = `Bearer ${authToken}`;
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
   }
   return headers;
 };
@@ -2096,7 +2106,62 @@ export const libraryApi = {
   getStats: async (schoolId?: string): Promise<ApiResponse<LibraryStats>> => {
     return apiFetch<ApiResponse<LibraryStats>>(`/library/stats${schoolId ? `?schoolId=${schoolId}` : ''}`);
   },
+
+  // ==========================================
+  // ANNOUNCEMENTS & NOTICE BOARD
+  // ==========================================
+  getAnnouncements: async (params?: Record<string, any>): Promise<ApiResponse<Announcement[]>> => {
+    const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+    return apiFetch<ApiResponse<Announcement[]>>(`/announcements${qs}`);
+  },
+
+  getAnnouncement: async (id: string): Promise<ApiResponse<Announcement>> => {
+    return apiFetch<ApiResponse<Announcement>>(`/announcements/${id}`);
+  },
+
+  createAnnouncement: async (data: Partial<Announcement>): Promise<ApiResponse<Announcement>> => {
+    return apiFetch<ApiResponse<Announcement>>('/announcements', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateAnnouncement: async (id: string, data: Partial<Announcement>): Promise<ApiResponse<Announcement>> => {
+    return apiFetch<ApiResponse<Announcement>>(`/announcements/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  deleteAnnouncement: async (id: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/announcements/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  togglePinAnnouncement: async (id: string): Promise<ApiResponse<Announcement>> => {
+    return apiFetch<ApiResponse<Announcement>>(`/announcements/${id}/pin`, {
+      method: 'POST',
+    });
+  },
+
+  acknowledgeAnnouncement: async (id: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/announcements/${id}/acknowledge`, {
+      method: 'POST',
+    });
+  },
 };
+
+// Named exports for static binding & resilient importing
+export const getAnnouncements = apiService.getAnnouncements;
+export const getAnnouncement = apiService.getAnnouncement;
+export const createAnnouncement = apiService.createAnnouncement;
+export const updateAnnouncement = apiService.updateAnnouncement;
+export const deleteAnnouncement = apiService.deleteAnnouncement;
+export const togglePinAnnouncement = apiService.togglePinAnnouncement;
+export const acknowledgeAnnouncement = apiService.acknowledgeAnnouncement;
+
+export default apiService;
 
 
 
