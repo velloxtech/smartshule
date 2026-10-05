@@ -343,7 +343,8 @@ export class FinanceController {
         message: 'KCB Buni M-Pesa Express prompt sent successfully',
         data: result
       });
-    } catch (err) {
+    } catch (err: any) {
+      console.error(`[KCB Buni STK Error] Phone: ${req.body?.phoneNumber} | Reason: ${err.message || err}`);
       next(err);
     }
   };

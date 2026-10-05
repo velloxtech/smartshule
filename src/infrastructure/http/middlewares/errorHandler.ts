@@ -3,6 +3,7 @@ import { DomainError } from '../../../core/domain/shared/Errors';
 
 export function errorHandler(err: any, req: Request, res: Response, next: NextFunction) {
   if (err instanceof DomainError) {
+    console.warn(`[Client Error ${err.statusCode}] ${req.method} ${req.originalUrl} - ${err.message}`);
     return res.status(err.statusCode).json({
       success: false,
       message: err.message,
