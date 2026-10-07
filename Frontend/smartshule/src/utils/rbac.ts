@@ -88,6 +88,19 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
         ],
       },
       {
+        id: 'geofencing',
+        label: 'School Geofencing',
+        icon: 'share_location',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.HEAD_TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
+          UserRole.TEACHER,
+        ],
+      },
+      {
         id: 'classes-streams',
         label: 'Classes & Streams',
         icon: 'meeting_room',

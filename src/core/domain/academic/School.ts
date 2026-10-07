@@ -10,6 +10,10 @@ export interface SchoolProps {
   address: string;
   logoUrl?: string;
   currency: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  geofenceRadius?: number; // In meters, default 250
+  geofenceEnabled?: boolean; // Default true
 }
 
 export class School extends Entity<SchoolProps> {
@@ -53,6 +57,22 @@ export class School extends Entity<SchoolProps> {
     return this._props.currency;
   }
 
+  public get latitude(): number | null | undefined {
+    return this._props.latitude;
+  }
+
+  public get longitude(): number | null | undefined {
+    return this._props.longitude;
+  }
+
+  public get geofenceRadius(): number {
+    return this._props.geofenceRadius ?? 250;
+  }
+
+  public get geofenceEnabled(): boolean {
+    return this._props.geofenceEnabled ?? true;
+  }
+
   public updateDetails(updates: Partial<SchoolProps>): void {
     Object.assign(this._props, updates);
     this.touch();
@@ -70,6 +90,10 @@ export class School extends Entity<SchoolProps> {
       address: this.address,
       logoUrl: this.logoUrl,
       currency: this.currency,
+      latitude: this.latitude,
+      longitude: this.longitude,
+      geofenceRadius: this.geofenceRadius,
+      geofenceEnabled: this.geofenceEnabled,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt
     };

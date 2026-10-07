@@ -178,7 +178,7 @@ export const SuperAdminDashboardView: React.FC<SuperAdminDashboardViewProps> = (
       </div>
 
       {/* Global Quick Navigation Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         <div
           onClick={() => onNavigateTab('user-management')}
           className="p-5 rounded-2xl bg-white border border-outline-variant/30 hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer flex items-center gap-4 group"
@@ -220,6 +220,21 @@ export const SuperAdminDashboardView: React.FC<SuperAdminDashboardViewProps> = (
             <h3 className="font-bold text-sm text-on-surface">Teaching & Staff Roster</h3>
             <p className="text-xs text-on-surface-variant mt-0.5">
               {totalTeachers} Certified Educators on staff
+            </p>
+          </div>
+        </div>
+
+        <div
+          onClick={() => onNavigateTab('geofencing')}
+          className="p-5 rounded-2xl bg-white border border-outline-variant/30 hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer flex items-center gap-4"
+        >
+          <div className="w-12 h-12 rounded-xl bg-rose-50 text-rose-800 flex items-center justify-center shrink-0">
+            <span className="material-symbols-outlined text-[26px]">share_location</span>
+          </div>
+          <div>
+            <h3 className="font-bold text-sm text-on-surface">School Geofencing</h3>
+            <p className="text-xs text-on-surface-variant mt-0.5">
+              Director coordinates & compound clock-in perimeter
             </p>
           </div>
         </div>

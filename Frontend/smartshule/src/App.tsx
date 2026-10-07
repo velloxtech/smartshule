@@ -21,6 +21,7 @@ import { TeacherDashboardView } from './components/views/TeacherDashboardView';
 import { ParentDashboardView } from './components/views/ParentDashboardView';
 import { StudentsView } from './components/views/StudentsView';
 import { TeachersView } from './components/views/TeachersView';
+import { GeofenceView } from './components/views/GeofenceView';
 import { ClassesView } from './components/views/ClassesView';
 import { LearningAreasView } from './components/views/LearningAreasView';
 import { AssessmentsView } from './components/views/AssessmentsView';
@@ -687,7 +688,12 @@ export default function App() {
     const checkHashRoute = () => {
       const hash = window.location.hash;
       const search = window.location.search;
-      if (hash === '#/archive' || hash === '#/archived-records' || search.includes('view=archive')) {
+      if (hash === '#/geofencing' || hash === '#/geofence' || search.includes('view=geofencing')) {
+        if (isAuthenticated) {
+          setCurrentTab('geofencing');
+          if (appView !== 'portal') setAppView('portal');
+        }
+      } else if (hash === '#/archive' || hash === '#/archived-records' || search.includes('view=archive')) {
         if (isAuthenticated) {
           const isPermitted = user?.role && [
             UserRole.SUPER_ADMIN,
@@ -1022,6 +1028,7 @@ export default function App() {
             <TeachersView
               teachers={teachers}
               onToggleClockIn={handleToggleClockIn}
+              onNavigateTab={(tab) => setCurrentTab(tab as any)}
               onOpenOnboardTeacher={
                 user?.role && [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.ADMISSIONS].includes(user.role)
                   ? () => setOnboardTeacherModalOpen(true)
@@ -1036,6 +1043,10 @@ export default function App() {
                 )
               }
             />
+          )}
+
+          {currentTab === 'geofencing' && (
+            <GeofenceView onNavigateTab={(tab) => setCurrentTab(tab as any)} />
           )}
 
           {currentTab === 'classes-streams' && <ClassesView />}

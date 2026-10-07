@@ -3,7 +3,8 @@ import { School, SchoolProps } from '../../core/domain/academic/School';
 import { AcademicYear, AcademicTerm } from '../../core/domain/academic/AcademicYear';
 import { ClassRoom, Stream, LearningArea, EducationLevel } from '../../core/domain/academic/ClassRoom';
 import { CbcGradeLevel } from '../../core/domain/user/Student';
-import { IdGenerator, NotFoundError } from '../../core/domain/shared/Errors';
+import { UserRole } from '../../core/domain/user/User';
+import { IdGenerator, NotFoundError, ForbiddenError } from '../../core/domain/shared/Errors';
 
 export class AcademicUseCases {
   constructor(private readonly academicRepository: IAcademicRepository) {}
@@ -29,7 +30,11 @@ export class AcademicUseCases {
           phone: '0745436312',
           address: 'KEMRI Street, Kisian, Kisumu, Kenya',
           logoUrl: '/logo.png',
-          currency: 'KES'
+          currency: 'KES',
+          latitude: -0.061234,
+          longitude: 34.721234,
+          geofenceRadius: 250,
+          geofenceEnabled: true
         },
         id || 'school-001'
       );
@@ -51,13 +56,75 @@ export class AcademicUseCases {
           phone: '0745436312',
           address: school.address || 'KEMRI Street, Kisian, Kisumu, Kenya',
           logoUrl: school.logoUrl || '/logo.png',
-          currency: school.currency || 'KES'
+          currency: school.currency || 'KES',
+          latitude: school.latitude ?? -0.061234,
+          longitude: school.longitude ?? 34.721234,
+          geofenceRadius: school.geofenceRadius ?? 250,
+          geofenceEnabled: school.geofenceEnabled ?? true
         },
         school.id
       );
       await this.academicRepository.updateSchool(school);
     }
     return school.toJSON();
+  }
+
+  public async getGeofenceConfig(schoolId?: string) {
+    const school = await this.getSchool(schoolId);
+    return {
+      latitude: (school as any).latitude ?? -0.061234,
+      longitude: (school as any).longitude ?? 34.721234,
+      geofenceRadius: (school as any).geofenceRadius ?? 250,
+      geofenceEnabled: (school as any).geofenceEnabled ?? true,
+      schoolName: school.name,
+      address: school.address,
+      updatedAt: (school as any).updatedAt
+    };
+  }
+
+  public async updateGeofenceConfig(
+    dto: {
+      latitude: number;
+      longitude: number;
+      geofenceRadius?: number;
+      geofenceEnabled?: boolean;
+      address?: string;
+    },
+    userRole?: UserRole,
+    schoolId?: string
+  ) {
+    // Strictly enforce: ONLY Super Admin and School Director can enter or update coordinates!
+    const isAuthorized =
+      userRole === UserRole.SUPER_ADMIN ||
+      userRole === UserRole.ADMIN ||
+      userRole === UserRole.SCHOOL_ADMIN;
+
+    if (!isAuthorized) {
+      throw new ForbiddenError(
+        'School compound geofence coordinates can only be configured by the Super Administrator and School Director.'
+      );
+    }
+
+    let school = await this.academicRepository.getSchool(schoolId);
+    if (!school) {
+      await this.getSchool(schoolId);
+      school = await this.academicRepository.getSchool(schoolId);
+    }
+
+    if (!school) {
+      throw new NotFoundError('School record not found.');
+    }
+
+    school.updateDetails({
+      latitude: dto.latitude,
+      longitude: dto.longitude,
+      geofenceRadius: dto.geofenceRadius ?? school.geofenceRadius ?? 250,
+      geofenceEnabled: dto.geofenceEnabled !== undefined ? dto.geofenceEnabled : school.geofenceEnabled,
+      address: dto.address || school.address
+    });
+
+    await this.academicRepository.updateSchool(school);
+    return this.getGeofenceConfig(school.id);
   }
 
 

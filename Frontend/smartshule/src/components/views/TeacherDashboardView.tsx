@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Student, TimetableSlot, SchemeOfWork, LessonPlan } from '../../types';
 import { EditTeacherProfileModal } from '../modals/EditTeacherProfileModal';
 import { resolveGradeName, resolveStreamName } from '../../utils/formatters';
+import { TeacherGeofenceClockInCard } from './TeacherGeofenceClockInCard';
 
 interface TeacherDashboardViewProps {
   onNavigateTab: (tabId: any) => void;
@@ -220,6 +221,25 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
             <span>Upload Marks</span>
           </button>
         </div>
+      </div>
+
+      {/* Real-Time School Compound Geofence Clock-In Section */}
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between px-1">
+          <span className="text-xs font-bold text-on-surface flex items-center gap-1.5">
+            <span className="material-symbols-outlined text-[16px] text-rose-800">share_location</span>
+            School Compound Clock-In Station
+          </span>
+          <button
+            type="button"
+            onClick={() => onNavigateTab('geofencing')}
+            className="text-xs font-semibold text-primary hover:text-primary-container inline-flex items-center gap-1 cursor-pointer"
+          >
+            <span>Open Standalone Geofencing Page</span>
+            <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+          </button>
+        </div>
+        <TeacherGeofenceClockInCard teacherName={teacherName} />
       </div>
 
       {/* 4 Core Teacher KPI Cards (Pure Database Metrics) */}

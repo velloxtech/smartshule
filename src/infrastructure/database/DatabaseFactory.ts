@@ -68,6 +68,9 @@ import { ISystemLogRepository } from '../../core/ports/repositories/ISystemLogRe
 import { ILunchFeeRepository } from '../../core/ports/repositories/ILunchFeeRepository';
 import { ILibraryRepository } from '../../core/ports/repositories/ILibraryRepository';
 import { IAnnouncementRepository } from '../../core/ports/repositories/IAnnouncementRepository';
+import { ITeacherClockInRepository } from '../../core/ports/repositories/ITeacherClockInRepository';
+import { InMemoryTeacherClockInRepository } from './in-memory/InMemoryTeacherClockInRepository';
+import { PostgresTeacherClockInRepository } from './postgres/PostgresTeacherClockInRepository';
 import {
   PostgresRecordOfWorkRepository,
   InMemoryRecordOfWorkRepository,
@@ -103,6 +106,7 @@ export interface RepositoryBundle {
   lunchFeeRepository?: ILunchFeeRepository;
   libraryRepository?: ILibraryRepository;
   announcementRepository?: IAnnouncementRepository;
+  teacherClockInRepository?: ITeacherClockInRepository;
 }
 
 export class DatabaseFactory {
@@ -192,6 +196,7 @@ export class DatabaseFactory {
         lunchFeeRepository: new PostgresLunchFeeRepository(pool),
         libraryRepository: new PostgresLibraryRepository(pool),
         announcementRepository: new InMemoryAnnouncementRepository(),
+        teacherClockInRepository: new PostgresTeacherClockInRepository(pool),
       };
     }
 
@@ -218,6 +223,7 @@ export class DatabaseFactory {
       lunchFeeRepository: new InMemoryLunchFeeRepository(),
       libraryRepository: new InMemoryLibraryRepository(),
       announcementRepository: new InMemoryAnnouncementRepository(),
+      teacherClockInRepository: new InMemoryTeacherClockInRepository(),
     };
   }
 }

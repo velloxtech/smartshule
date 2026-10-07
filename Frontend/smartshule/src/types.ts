@@ -2,6 +2,7 @@ export type TabType =
   | 'dashboard'
   | 'students-guardians'
   | 'teachers-staff'
+  | 'geofencing'
   | 'classes-streams'
   | 'learning-areas'
   | 'assessments'
@@ -348,9 +349,42 @@ export interface SchoolInfo {
   address: string;
   logoUrl?: string;
   currency: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  geofenceRadius?: number;
+  geofenceEnabled?: boolean;
 }
 
 export type School = SchoolInfo;
+
+export interface GeofenceConfig {
+  latitude: number;
+  longitude: number;
+  geofenceRadius: number;
+  geofenceEnabled: boolean;
+  schoolName?: string;
+  address?: string;
+  updatedAt?: string;
+}
+
+export interface TeacherClockInRecord {
+  id: string;
+  schoolId: string;
+  teacherId: string;
+  teacherName?: string;
+  date: string;
+  clockInTime?: string;
+  clockOutTime?: string;
+  status: 'CLOCKED_IN' | 'CLOCKED_OUT';
+  latitude?: number | null;
+  longitude?: number | null;
+  distanceMeters?: number | null;
+  inCompound: boolean;
+  accuracyMeters?: number | null;
+  verifiedBy?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
 
 export interface AcademicYear {
   id: string;

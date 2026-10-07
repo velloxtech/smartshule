@@ -63,6 +63,8 @@ import {
   BookLoan,
   LibraryStats,
   Announcement,
+  GeofenceConfig,
+  TeacherClockInRecord,
 } from '../types';
 function resolveApiBaseUrl(): string {
   let url = ((import.meta as any).env?.VITE_API_URL || '').trim();
@@ -1058,6 +1060,39 @@ export const apiService = {
     return apiFetch<ApiResponse<any>>(
       `/attendance/student/${studentId}?termId=${termId}&academicYearId=${academicYearId}`
     );
+  },
+
+  // 8b. Geofencing & Teacher Clock-In Endpoints
+  getGeofenceConfig: async (): Promise<ApiResponse<GeofenceConfig>> => {
+    return apiFetch<ApiResponse<GeofenceConfig>>('/geofence');
+  },
+
+  updateGeofenceConfig: async (data: Partial<GeofenceConfig>): Promise<ApiResponse<GeofenceConfig>> => {
+    return apiFetch<ApiResponse<GeofenceConfig>>('/geofence', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  clockInTeacher: async (data: {
+    action: 'CLOCK_IN' | 'CLOCK_OUT';
+    latitude?: number;
+    longitude?: number;
+    accuracy?: number;
+  }): Promise<ApiResponse<TeacherClockInRecord>> => {
+    return apiFetch<ApiResponse<TeacherClockInRecord>>('/geofence/clock-in', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  getMyTodayClockIn: async (): Promise<ApiResponse<TeacherClockInRecord | null>> => {
+    return apiFetch<ApiResponse<TeacherClockInRecord | null>>('/geofence/today');
+  },
+
+  getGeofenceClockInRecords: async (date?: string): Promise<ApiResponse<TeacherClockInRecord[]>> => {
+    const url = date ? `/geofence/records?date=${encodeURIComponent(date)}` : '/geofence/records';
+    return apiFetch<ApiResponse<TeacherClockInRecord[]>>(url);
   },
 
   // 9. Finance, Invoices & M-Pesa Endpoints

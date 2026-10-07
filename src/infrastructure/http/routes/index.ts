@@ -142,6 +142,12 @@ import {
   UpdateAnnouncementSchema
 } from '../controllers/AnnouncementController';
 
+import {
+  GeofenceController,
+  UpdateGeofenceSchema,
+  ClockInSchema
+} from '../controllers/GeofenceController';
+
 export function createApiRouter(container: AppContainer): Router {
   const router = Router();
   const authMiddleware = createAuthMiddleware(container.tokenService);
@@ -166,6 +172,7 @@ export function createApiRouter(container: AppContainer): Router {
   const systemLogController = new SystemLogController(container.systemLogUseCases);
   const libraryController = new LibraryController(container.libraryUseCases, container.systemLogUseCases);
   const announcementController = new AnnouncementController(container.announcementUseCases, container.systemLogUseCases);
+  const geofenceController = new GeofenceController(container.geofenceUseCases);
 
   // ==========================================
   // 1. AUTH ROUTES
@@ -351,6 +358,48 @@ export function createApiRouter(container: AppContainer): Router {
   attendanceRouter.get('/report', authMiddleware, attendanceController.getAttendanceReport);
   attendanceRouter.get('/student/:studentId', authMiddleware, attendanceController.getStudentSummary);
   router.use('/attendance', attendanceRouter);
+
+  // ==========================================
+  // 8b. GEOFENCING & TEACHER CLOCK-IN ROUTES
+  // ==========================================
+  const geofenceRouter = Router();
+  // Read compound coordinates & geofence configuration (all authenticated users)
+  geofenceRouter.get('/', authMiddleware, geofenceController.getGeofenceConfig);
+
+  // Update compound coordinates (STRICTLY restricted to Super Admin & School Director!)
+  geofenceRouter.put(
+    '/',
+    authMiddleware,
+    requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN),
+    validateBody(UpdateGeofenceSchema),
+    geofenceController.updateGeofenceConfig
+  );
+
+  // Teacher clock-in / clock-out (verified against school compound boundaries)
+  geofenceRouter.post(
+    '/clock-in',
+    authMiddleware,
+    validateBody(ClockInSchema),
+    geofenceController.clockIn
+  );
+
+  // Teacher today's clock-in status
+  geofenceRouter.get('/today', authMiddleware, geofenceController.getTodayStatus);
+
+  // Audit logs of all teacher clock-ins (Super Admin, School Director, Head Teacher)
+  geofenceRouter.get(
+    '/records',
+    authMiddleware,
+    requireRoles(
+      UserRole.SUPER_ADMIN,
+      UserRole.ADMIN,
+      UserRole.SCHOOL_ADMIN,
+      UserRole.HEAD_TEACHER,
+      UserRole.DEPUTY_HEAD_TEACHER
+    ),
+    geofenceController.listRecords
+  );
+  router.use('/geofence', geofenceRouter);
 
   // ==========================================
   // 9. FINANCE & FEE PAYMENTS (KCB BUNI / BANK) ROUTES

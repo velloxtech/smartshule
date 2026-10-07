@@ -9,6 +9,7 @@ interface TeachersViewProps {
   onOpenOnboardTeacher?: () => void;
   onDeleteTeacher?: (teacherId: string) => void;
   onAssignTeacher?: (teacherId: string, assignedClass: string) => void;
+  onNavigateTab?: (tabId: string) => void;
 }
 
 const CBC_STANDARD_CLASSES = [
@@ -36,6 +37,7 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
   onOpenOnboardTeacher,
   onDeleteTeacher,
   onAssignTeacher,
+  onNavigateTab,
 }) => {
   const { user } = useAuth();
   const canOnboard = Boolean(
@@ -371,6 +373,21 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
+          {onNavigateTab && (
+            <button
+              type="button"
+              onClick={() => onNavigateTab('geofencing')}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-surface-container hover:bg-surface-container-high border border-outline-variant/30 text-on-surface rounded-lg text-xs font-semibold shadow-xs transition-all cursor-pointer"
+              title="Open standalone School Compound Geofencing page"
+            >
+              <span className="material-symbols-outlined text-rose-800 text-[16px]">share_location</span>
+              <span>School Geofencing</span>
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-teal-100 text-teal-800">
+                GPS
+              </span>
+            </button>
+          )}
+
           {onOpenOnboardTeacher && canOnboard && (
             <button
               onClick={onOpenOnboardTeacher}
@@ -388,18 +405,18 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
       </div>
 
       {/* Search Input Bar */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="relative flex-1 max-w-md">
-          <span className="absolute left-3 top-2.5 material-symbols-outlined text-outline text-[18px]">search</span>
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by teacher name, TSC number, or learning area..."
-            className="w-full pl-9 pr-4 py-2 text-xs bg-surface-container-lowest border border-outline-variant/30 rounded-lg focus:outline-primary shadow-xs"
-          />
-        </div>
-      </div>
+          <div className="flex items-center justify-between gap-4">
+            <div className="relative flex-1 max-w-md">
+              <span className="absolute left-3 top-2.5 material-symbols-outlined text-outline text-[18px]">search</span>
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by teacher name, TSC number, or learning area..."
+                className="w-full pl-9 pr-4 py-2 text-xs bg-surface-container-lowest border border-outline-variant/30 rounded-lg focus:outline-primary shadow-xs"
+              />
+            </div>
+          </div>
 
       {/* Faculty Cards Grid */}
       {filtered.length === 0 ? (

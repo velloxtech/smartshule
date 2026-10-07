@@ -15,12 +15,15 @@ import { ISystemLogRepository } from '../core/ports/repositories/ISystemLogRepos
 import { ILunchFeeRepository } from '../core/ports/repositories/ILunchFeeRepository';
 import { ILibraryRepository } from '../core/ports/repositories/ILibraryRepository';
 import { IAnnouncementRepository } from '../core/ports/repositories/IAnnouncementRepository';
+import { ITeacherClockInRepository } from '../core/ports/repositories/ITeacherClockInRepository';
 import { InMemoryLunchFeeRepository } from './database/in-memory/InMemoryLunchFeeRepository';
 import { InMemoryLibraryRepository } from './database/in-memory/InMemoryLibraryRepository';
 import { InMemoryAnnouncementRepository } from './database/in-memory/InMemoryAnnouncementRepository';
+import { InMemoryTeacherClockInRepository } from './database/in-memory/InMemoryTeacherClockInRepository';
 import { LunchFeeUseCases } from '../application/finance/LunchFeeUseCases';
 import { LibraryUseCases } from '../application/library/LibraryUseCases';
 import { AnnouncementUseCases } from '../application/announcements/AnnouncementUseCases';
+import { GeofenceUseCases } from '../application/attendance/GeofenceUseCases';
 import { InMemoryRecordOfWorkRepository } from './database/postgres/PostgresRecordOfWorkRepository';
 import { InMemoryComplaintRepository } from './database/in-memory/InMemoryComplaintRepository';
 import { InMemorySystemLogRepository } from './database/in-memory/InMemorySystemLogRepository';
@@ -93,6 +96,7 @@ export class AppContainer {
   public lunchFeeRepository: ILunchFeeRepository;
   public libraryRepository: ILibraryRepository;
   public announcementRepository: IAnnouncementRepository;
+  public teacherClockInRepository: ITeacherClockInRepository;
 
   // Services
   public readonly tokenService = new JwtAuthTokenService();
@@ -113,6 +117,7 @@ export class AppContainer {
   public curriculumUseCases!: CurriculumPlanUseCases;
   public timetableUseCases!: TimetableUseCases;
   public attendanceUseCases!: AttendanceUseCases;
+  public geofenceUseCases!: GeofenceUseCases;
   public feeUseCases!: FeeUseCases;
   public lunchFeeUseCases!: LunchFeeUseCases;
   public libraryUseCases!: LibraryUseCases;
@@ -153,6 +158,8 @@ export class AppContainer {
       customRepositories?.libraryRepository || new InMemoryLibraryRepository();
     this.announcementRepository =
       customRepositories?.announcementRepository || new InMemoryAnnouncementRepository();
+    this.teacherClockInRepository =
+      customRepositories?.teacherClockInRepository || new InMemoryTeacherClockInRepository();
 
     this.initUseCases();
   }
@@ -224,6 +231,12 @@ export class AppContainer {
       this.guardianRepository,
       this.userRepository,
       this.notificationService
+    );
+    this.geofenceUseCases = new GeofenceUseCases(
+      this.academicRepository,
+      this.teacherRepository,
+      this.userRepository,
+      this.teacherClockInRepository
     );
     this.feeUseCases = new FeeUseCases(
       this.feeRepository,

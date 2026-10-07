@@ -139,6 +139,29 @@ export class PostgresDatabaseInitializer {
         address TEXT NOT NULL,
         logo_url TEXT,
         currency VARCHAR(20) DEFAULT 'KES',
+        latitude DOUBLE PRECISION,
+        longitude DOUBLE PRECISION,
+        geofence_radius DOUBLE PRECISION DEFAULT 250,
+        geofence_enabled BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS teacher_clockins (
+        id VARCHAR(100) PRIMARY KEY,
+        school_id VARCHAR(100) NOT NULL,
+        teacher_id VARCHAR(100) NOT NULL,
+        teacher_name VARCHAR(150),
+        date VARCHAR(50) NOT NULL,
+        clock_in_time VARCHAR(50),
+        clock_out_time VARCHAR(50),
+        status VARCHAR(50) DEFAULT 'CLOCKED_IN',
+        latitude DOUBLE PRECISION,
+        longitude DOUBLE PRECISION,
+        distance_meters DOUBLE PRECISION,
+        in_compound BOOLEAN DEFAULT true,
+        accuracy_meters DOUBLE PRECISION,
+        verified_by VARCHAR(100) DEFAULT 'GPS_GEOFENCE',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
@@ -672,6 +695,10 @@ export class PostgresDatabaseInitializer {
       ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS reflection TEXT;
       ALTER TABLE students ADD COLUMN IF NOT EXISTS classroom_id VARCHAR(100);
       ALTER TABLE users ALTER COLUMN email DROP NOT NULL;
+      ALTER TABLE schools ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION;
+      ALTER TABLE schools ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION;
+      ALTER TABLE schools ADD COLUMN IF NOT EXISTS geofence_radius DOUBLE PRECISION DEFAULT 250;
+      ALTER TABLE schools ADD COLUMN IF NOT EXISTS geofence_enabled BOOLEAN DEFAULT true;
       CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone);
 
       DO $$ 
@@ -962,13 +989,36 @@ export class PostgresAcademicRepository implements IAcademicRepository {
     const res = id ? await this.pool.query('SELECT * FROM schools WHERE id = $1', [id]) : await this.pool.query('SELECT * FROM schools LIMIT 1');
     if (!res.rows.length) return null;
     const r = res.rows[0];
-    return School.create({ name: r.name, code: r.code, centerCode: r.center_code, motto: r.motto, email: r.email, phone: r.phone, address: r.address, logoUrl: r.logo_url, currency: r.currency }, r.id, r.created_at, r.updated_at);
+    return School.create({
+      name: r.name,
+      code: r.code,
+      centerCode: r.center_code,
+      motto: r.motto,
+      email: r.email,
+      phone: r.phone,
+      address: r.address,
+      logoUrl: r.logo_url,
+      currency: r.currency,
+      latitude: r.latitude != null ? parseFloat(r.latitude) : null,
+      longitude: r.longitude != null ? parseFloat(r.longitude) : null,
+      geofenceRadius: r.geofence_radius != null ? parseFloat(r.geofence_radius) : 250,
+      geofenceEnabled: r.geofence_enabled !== false
+    }, r.id, r.created_at, r.updated_at);
   }
   public async saveSchool(s: School): Promise<void> {
-    const q = `INSERT INTO schools (id, name, code, center_code, motto, email, phone, address, logo_url, currency, created_at, updated_at)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-               ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, motto = EXCLUDED.motto, phone = EXCLUDED.phone, address = EXCLUDED.address, updated_at = NOW()`;
-    await this.pool.query(q, [s.id, s.name, s.code, s.centerCode, s.motto, s.email, s.phone, s.address, s.logoUrl, s.currency, s.createdAt, s.updatedAt]);
+    const q = `INSERT INTO schools (id, name, code, center_code, motto, email, phone, address, logo_url, currency, latitude, longitude, geofence_radius, geofence_enabled, created_at, updated_at)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+               ON CONFLICT (id) DO UPDATE SET
+                 name = EXCLUDED.name,
+                 motto = EXCLUDED.motto,
+                 phone = EXCLUDED.phone,
+                 address = EXCLUDED.address,
+                 latitude = EXCLUDED.latitude,
+                 longitude = EXCLUDED.longitude,
+                 geofence_radius = EXCLUDED.geofence_radius,
+                 geofence_enabled = EXCLUDED.geofence_enabled,
+                 updated_at = NOW()`;
+    await this.pool.query(q, [s.id, s.name, s.code, s.centerCode, s.motto, s.email, s.phone, s.address, s.logoUrl, s.currency, s.latitude, s.longitude, s.geofenceRadius, s.geofenceEnabled, s.createdAt, s.updatedAt]);
   }
   public async updateSchool(s: School): Promise<void> { await this.saveSchool(s); }
   public async findYearById(id: string): Promise<AcademicYear | null> {
