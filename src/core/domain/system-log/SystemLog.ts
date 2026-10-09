@@ -24,6 +24,7 @@ export interface SystemLogProps {
   actorEmail?: string;
   actorRole?: string;
   ipAddress?: string;
+  macAddress?: string;
   status: SystemLogStatus;
   details: string;
   metadata?: Record<string, any>;
@@ -41,6 +42,7 @@ export class SystemLog extends Entity<SystemLogProps> {
       actorEmail?: string;
       actorRole?: string;
       ipAddress?: string;
+      macAddress?: string;
       status?: SystemLogStatus;
       details: string;
       metadata?: Record<string, any>;
@@ -60,6 +62,7 @@ export class SystemLog extends Entity<SystemLogProps> {
         actorEmail: props.actorEmail,
         actorRole: props.actorRole,
         ipAddress: props.ipAddress,
+        macAddress: props.macAddress,
         status: props.status || 'SUCCESS',
         details: props.details,
         metadata: props.metadata || {}
@@ -106,6 +109,10 @@ export class SystemLog extends Entity<SystemLogProps> {
     return this._props.ipAddress;
   }
 
+  public get macAddress(): string | undefined {
+    return this._props.macAddress;
+  }
+
   public get status(): SystemLogStatus {
     return this._props.status;
   }
@@ -130,6 +137,7 @@ export class SystemLog extends Entity<SystemLogProps> {
       actorEmail: this.actorEmail,
       actorRole: this.actorRole,
       ipAddress: this.ipAddress,
+      macAddress: this.macAddress,
       status: this.status,
       details: this.details,
       metadata: this.metadata || {},

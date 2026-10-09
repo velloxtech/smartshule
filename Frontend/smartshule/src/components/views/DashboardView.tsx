@@ -3,6 +3,7 @@ import { Student, Teacher, SystemActivity, DashboardSummary, UserRole } from '..
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { getRoleDisplayName } from '../../utils/rbac';
+import { FacultyAttendanceRosterCard } from './FacultyAttendanceRosterCard';
 
 interface DashboardViewProps {
   students: Student[];
@@ -326,7 +327,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       </div>
 
       {/* School Director WhatsApp Module Quick Access Banner */}
-      <div className="rounded-2xl bg-gradient-to-r from-emerald-900 via-teal-950 to-slate-900 text-white p-4 sm:p-5 shadow-sm my-2 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border border-emerald-600/30">
+      <div className="rounded-2xl bg-gradient-to-r from-emerald-900 to-teal-800 text-white p-4 sm:p-5 shadow-sm my-2 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border border-emerald-600/30">
         <div className="flex items-center gap-3 sm:gap-4">
           <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-400 shrink-0 shadow-inner">
             <span className="material-symbols-outlined text-[28px] sm:text-[32px]">chat</span>
@@ -546,6 +547,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Live Faculty Attendance & Compound Geofence Roster */}
+      <FacultyAttendanceRosterCard onNavigateTab={onNavigateTab} />
 
       {/* Primary Analytic Row: Attendance Breakdown & CBC Competency Distribution */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-md my-sm">

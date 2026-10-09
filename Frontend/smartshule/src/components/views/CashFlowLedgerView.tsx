@@ -309,7 +309,7 @@ export const CashFlowLedgerView: React.FC = () => {
           <div className="mt-3.5 pt-3 border-t border-outline-variant/20 flex items-center justify-between text-xs text-on-surface-variant">
             <span>Disbursed Expenses</span>
             <span className="font-semibold text-rose-700 dark:text-rose-400">
-              {ledgerData?.voteHeadBreakdown.length || 0} Vote Heads
+              {ledgerData ? ledgerData.voteHeadBreakdown.filter((vh) => vh.totalSpent > 0).length : 0} Vote Heads
             </span>
           </div>
           <div className="absolute top-0 left-0 right-0 h-1 bg-rose-500"></div>

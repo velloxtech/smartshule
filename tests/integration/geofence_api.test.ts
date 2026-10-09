@@ -157,4 +157,25 @@ describe('Geofence & Teacher Clock-In API Integration Tests', () => {
     expect(Array.isArray(res.body.data)).toBe(true);
     expect(res.body.data.length).toBeGreaterThan(0);
   });
+
+  it('GET /api/v1/geofence/roster returns full faculty daily roster for School Director & Admin', async () => {
+    const res = await request(app)
+      .get('/api/v1/geofence/roster')
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.summary).toBeDefined();
+    expect(Array.isArray(res.body.data.roster)).toBe(true);
+    expect(res.body.data.summary.totalTeachers).toBeGreaterThan(0);
+  });
+
+  it('GET /api/v1/geofence/roster is blocked (403 Forbidden) for regular Teacher', async () => {
+    const res = await request(app)
+      .get('/api/v1/geofence/roster')
+      .set('Authorization', `Bearer ${teacherToken}`);
+
+    expect(res.status).toBe(403);
+    expect(res.body.success).toBe(false);
+  });
 });

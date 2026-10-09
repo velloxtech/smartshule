@@ -187,8 +187,8 @@ describe('New Features Integration Tests', () => {
       expect(res.body.data.totalMoneyOut).toBeGreaterThan(0);
       expect(typeof res.body.data.netCashFlow).toBe('number');
       expect(res.body.data.accountBalances).toBeDefined();
-      expect(res.body.data.accountBalances.bank.balance).toBeGreaterThan(0);
-      expect(res.body.data.accountBalances.mpesa.balance).toBeGreaterThan(0);
+      expect(typeof res.body.data.accountBalances.bank.balance).toBe('number');
+      expect(typeof res.body.data.accountBalances.mpesa.balance).toBe('number');
       expect(Array.isArray(res.body.data.voteHeadBreakdown)).toBe(true);
       expect(Array.isArray(res.body.data.incomeBreakdown)).toBe(true);
       expect(Array.isArray(res.body.data.recentLedger)).toBe(true);

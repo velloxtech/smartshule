@@ -21,6 +21,7 @@ export interface CreateSystemLogInput {
   actorEmail?: string;
   actorRole?: string;
   ipAddress?: string;
+  macAddress?: string;
   status?: SystemLogStatus;
   details: string;
   metadata?: Record<string, any>;
@@ -50,6 +51,7 @@ export class SystemLogUseCases {
         actorEmail: input.actorEmail,
         actorRole: input.actorRole,
         ipAddress: input.ipAddress,
+        macAddress: input.macAddress,
         status: input.status || 'SUCCESS',
         details: input.details,
         metadata: input.metadata || {}
@@ -112,6 +114,7 @@ export class SystemLogUseCases {
       'Actor Email',
       'Actor Role',
       'IP Address',
+      'MAC / Device ID',
       'Status',
       'Details',
       'Metadata'
@@ -134,6 +137,7 @@ export class SystemLogUseCases {
       escapeCsvField(log.actorEmail || 'System'),
       escapeCsvField(log.actorRole || '--'),
       escapeCsvField(log.ipAddress || '--'),
+      escapeCsvField(log.macAddress || '--'),
       escapeCsvField(log.status),
       escapeCsvField(log.details),
       escapeCsvField(log.metadata || {})

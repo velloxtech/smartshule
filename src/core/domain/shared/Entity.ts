@@ -15,6 +15,10 @@ export abstract class Entity<T> {
     return this._id;
   }
 
+  public get props(): T {
+    return this._props;
+  }
+
   public get createdAt(): Date {
     return this._createdAt;
   }

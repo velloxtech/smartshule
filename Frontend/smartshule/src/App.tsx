@@ -52,6 +52,11 @@ import { ArchivedRecordsView } from './components/views/ArchivedRecordsView';
 import { StandaloneArchivedRecordsPage } from './components/views/StandaloneArchivedRecordsPage';
 import { LibraryView } from './components/views/LibraryView';
 import { AnnouncementsView } from './components/views/AnnouncementsView';
+import { PayrollManagementView } from './components/views/PayrollManagementView';
+import { ClinicManagementView } from './components/views/ClinicManagementView';
+import { InventoryManagementView } from './components/views/InventoryManagementView';
+import { DisciplineClubsView } from './components/views/DisciplineClubsView';
+import { MasterBroadsheetView } from './components/views/MasterBroadsheetView';
 
 // Modals
 import { MpesaStkModal } from './components/modals/MpesaStkModal';
@@ -1073,6 +1078,7 @@ export default function App() {
           )}
 
           {currentTab === 'cbc-analytics' && <CompetencyAnalyticsView />}
+          {currentTab === 'broadsheets' && <MasterBroadsheetView />}
 
           {currentTab === 'schemes-lesson-plans' && <SchemesView />}
 
@@ -1117,6 +1123,7 @@ export default function App() {
           {currentTab === 'expenses-management' && <ExpensesView />}
           {currentTab === 'capitation-income' && <CapitationIncomeView />}
           {currentTab === 'financial-reports' && <FinancialReportsView />}
+          {currentTab === 'payroll' && <PayrollManagementView />}
 
           {currentTab === 'ediary' && <EDiaryView />}
 
@@ -1198,6 +1205,10 @@ export default function App() {
           {currentTab === 'parent-profile' && (
             <ParentProfileView onNavigateTab={(tab) => setCurrentTab(tab as any)} />
           )}
+
+          {currentTab === 'clinic' && <ClinicManagementView />}
+          {currentTab === 'discipline' && <DisciplineClubsView />}
+          {currentTab === 'inventory' && <InventoryManagementView />}
         </main>
 
         {/* Global Portal Footer: Pure Maroon (#800000) & Vellox Tech Watermark */}

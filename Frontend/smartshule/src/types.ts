@@ -32,7 +32,12 @@ export type TabType =
   | 'student-fee-search'
   | 'archived-records'
   | 'library'
-  | 'announcements';
+  | 'announcements'
+  | 'payroll'
+  | 'clinic'
+  | 'inventory'
+  | 'discipline'
+  | 'broadsheets';
 
 export type SystemLogLevel = 'INFO' | 'WARN' | 'ERROR' | 'AUDIT';
 export type SystemLogCategory =
@@ -57,6 +62,7 @@ export interface SystemAuditLog {
   actorEmail?: string;
   actorRole?: string;
   ipAddress?: string;
+  macAddress?: string;
   status: SystemLogStatus;
   details: string;
   metadata?: Record<string, any>;
@@ -384,6 +390,41 @@ export interface TeacherClockInRecord {
   verifiedBy?: string;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface FacultyRosterItem {
+  teacherId: string;
+  userId: string;
+  name: string;
+  email: string;
+  phoneNumber: string;
+  tscNumber?: string;
+  employeeNumber: string;
+  specialization: string[];
+  assignedClassStreamIds: string[];
+  qualification?: string;
+  date: string;
+  status: 'CLOCKED_IN' | 'CLOCKED_OUT' | 'NOT_CLOCKED_IN';
+  clockInTime: string | null;
+  clockOutTime: string | null;
+  distanceMeters: number | null;
+  inCompound: boolean;
+  accuracyMeters: number | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  verifiedBy?: string | null;
+}
+
+export interface FacultyDailyRoster {
+  date: string;
+  summary: {
+    totalTeachers: number;
+    clockedIn: number;
+    clockedOut: number;
+    notClockedIn: number;
+    attendancePercentage: number;
+  };
+  roster: FacultyRosterItem[];
 }
 
 export interface AcademicYear {
@@ -1442,6 +1483,229 @@ export interface Announcement {
   acknowledgementCount?: number;
   createdAt: string;
   updatedAt: string;
+}
+
+// ==========================================
+// PAYROLL & LEAVE MANAGEMENT
+// ==========================================
+export interface PayrollRecord {
+  id: string;
+  schoolId: string;
+  teacherId: string;
+  teacherName: string;
+  month: string;
+  basicSalary: number;
+  houseAllowance: number;
+  commuterAllowance: number;
+  responsibilityAllowance: number;
+  grossSalary: number;
+  nssf: number;
+  shif: number;
+  housingLevy: number;
+  paye: number;
+  otherDeductions: number;
+  totalDeductions: number;
+  netSalary: number;
+  status: 'DRAFT' | 'APPROVED' | 'PAID';
+  paymentMethod?: 'BANK_TRANSFER' | 'MPESA' | 'CHEQUE';
+  paymentReference?: string;
+  paidAt?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StaffLeave {
+  id: string;
+  schoolId: string;
+  teacherId: string;
+  teacherName: string;
+  leaveType: 'ANNUAL' | 'SICK' | 'MATERNITY' | 'PATERNITY' | 'COMPASSIONATE' | 'STUDY';
+  startDate: string;
+  endDate: string;
+  daysCount: number;
+  reason: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  approvedBy?: string;
+  approvalRemarks?: string;
+  substituteTeacherName?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ==========================================
+// CLINIC & INFIRMARY
+// ==========================================
+export interface StudentMedicalProfile {
+  id: string;
+  studentId: string;
+  studentName?: string;
+  admissionNumber?: string;
+  bloodGroup?: 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-' | 'O+' | 'O-' | 'UNKNOWN';
+  allergies: string[];
+  chronicConditions: string[];
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  insurancePolicyNumber?: string;
+  immunizationUpToDate: boolean;
+  notes?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ClinicVisit {
+  id: string;
+  schoolId: string;
+  studentId: string;
+  studentName: string;
+  gradeLevel?: string;
+  visitDate: string;
+  visitTime: string;
+  symptoms: string[];
+  temperatureCelsius?: number;
+  treatmentAdministered: string;
+  medicationDispensed?: string;
+  nurseRemarks: string;
+  parentNotified: boolean;
+  status: 'RESOLVED' | 'UNDER_OBSERVATION' | 'REFERRED_TO_HOSPITAL';
+  referredHospitalName?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ==========================================
+// INVENTORY & ASSETS
+// ==========================================
+export interface InventoryItem {
+  id: string;
+  schoolId: string;
+  itemName: string;
+  category: 'STATIONERY' | 'TEXTBOOKS' | 'LAB_EQUIPMENT' | 'KITCHEN_FOOD' | 'CLEANING' | 'UNIFORMS';
+  unit: string;
+  quantityInStock: number;
+  reorderLevel: number;
+  unitCost: number;
+  supplier?: string;
+  notes?: string;
+  isLowStock?: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StockTransaction {
+  id: string;
+  schoolId: string;
+  itemId: string;
+  itemName: string;
+  type: 'STOCK_IN' | 'STOCK_OUT';
+  quantity: number;
+  issuedTo?: string;
+  authorizedBy: string;
+  date: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface FixedAsset {
+  id: string;
+  schoolId: string;
+  assetName: string;
+  assetTag: string;
+  category: 'FURNITURE_DESKS' | 'COMPUTERS_IT' | 'LAB_APPARATUS' | 'SPORTS_EQUIPMENT' | 'AUDIO_VISUAL';
+  purchaseDate: string;
+  purchaseCost: number;
+  location: string;
+  condition: 'EXCELLENT' | 'GOOD' | 'NEEDS_REPAIR' | 'DAMAGED';
+  assignedTo?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ==========================================
+// DISCIPLINE & CO-CURRICULAR CLUBS
+// ==========================================
+export interface CoCurricularClub {
+  id: string;
+  schoolId: string;
+  clubName: string;
+  category: 'SCOUTS_GIRLGUIDES' | 'RED_CROSS' | 'DEBATE_DRAMA' | 'STEM_ROBOTICS' | 'SPORTS_ATHLETICS' | 'MUSIC_BAND' | 'ENVIRONMENTAL';
+  patronTeacherId: string;
+  patronTeacherName: string;
+  meetingDay: string;
+  memberStudentIds: string[];
+  memberCount?: number;
+  members?: Array<{ id: string; name: string; admissionNumber: string; gradeLevel: string }>;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DisciplineIncident {
+  id: string;
+  schoolId: string;
+  studentId: string;
+  studentName: string;
+  gradeLevel?: string;
+  date: string;
+  incidentType: 'MERIT_COMMENDATION' | 'INFRACTION_WARNING' | 'COUNSELING_REFERRAL';
+  cbcCoreValue: 'LOVE' | 'RESPECT' | 'RESPONSIBILITY' | 'INTEGRITY' | 'PEACE' | 'PATRIOTISM' | 'UNITY';
+  title: string;
+  description: string;
+  actionTaken: string;
+  points: number;
+  loggedByTeacherName: string;
+  parentInformed: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ==========================================
+// MASTER BROADSHEETS
+// ==========================================
+export interface BroadsheetSubjectScore {
+  learningAreaId: string;
+  learningAreaName: string;
+  performanceLevel: string;
+  numericScore: number;
+  levelLabel: string;
+}
+
+export interface BroadsheetRow {
+  studentId: string;
+  admissionNumber: string;
+  studentName: string;
+  gender: string;
+  subjects: Record<string, BroadsheetSubjectScore>;
+  totalScore: number;
+  averageScore: number;
+  overallPerformanceLevel: string;
+  rank: number;
+}
+
+export interface BroadsheetSubjectSummary {
+  learningAreaId: string;
+  learningAreaName: string;
+  averageScore: number;
+  counts: {
+    EE: number;
+    ME: number;
+    AE: number;
+    BE: number;
+  };
+}
+
+export interface BroadsheetResult {
+  streamId: string;
+  streamName: string;
+  className: string;
+  gradeLevel: string;
+  termName: string;
+  yearName: string;
+  learningAreas: Array<{ id: string; name: string }>;
+  rows: BroadsheetRow[];
+  subjectSummaries: BroadsheetSubjectSummary[];
+  streamMeanScore: number;
+  totalStudents: number;
 }
 
 

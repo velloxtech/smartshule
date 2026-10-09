@@ -3,6 +3,7 @@ import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { GeofenceConfig, TeacherClockInRecord, UserRole } from '../../types';
 import { TeacherGeofenceClockInCard } from './TeacherGeofenceClockInCard';
+import { FacultyAttendanceRosterCard } from './FacultyAttendanceRosterCard';
 
 interface GeofenceViewProps {
   onNavigateTab?: (tabId: string) => void;
@@ -675,146 +676,11 @@ export const GeofenceView: React.FC<GeofenceViewProps> = ({ onNavigateTab }) => 
         </div>
       </div>
 
-      {/* Faculty Today Clock-In Audit Table */}
-      <div className="bg-white rounded-2xl p-6 shadow-xs border border-outline-variant/30 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-surface-container">
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-rose-800 text-[22px]">
-              how_to_reg
-            </span>
-            <div>
-              <h3 className="font-bold text-base text-on-surface">
-                Faculty Geofence Roll-Call Audit
-              </h3>
-              <p className="text-xs text-on-surface-variant">
-                Live registry of teacher clock-in events with stamped GPS distance verification
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={loadClockInRecords}
-              disabled={loadingRecords}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-xs font-semibold text-gray-800 transition-all cursor-pointer"
-            >
-              <span
-                className={`material-symbols-outlined text-[16px] text-[#7a1228] ${
-                  loadingRecords ? 'animate-spin' : ''
-                }`}
-              >
-                sync
-              </span>
-              <span>{loadingRecords ? 'Refreshing...' : 'Refresh Audit'}</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Search & Filter Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
-          <div className="relative flex-1 max-w-sm">
-            <span className="absolute left-3 top-2.5 material-symbols-outlined text-gray-400 text-[18px]">
-              search
-            </span>
-            <input
-              type="text"
-              value={searchFilter}
-              onChange={(e) => setSearchFilter(e.target.value)}
-              placeholder="Search faculty name or ID..."
-              className="w-full pl-9 pr-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-lg focus:outline-primary"
-            />
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500 font-medium">Status:</span>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as any)}
-              className="px-3 py-2 text-xs bg-gray-50 border border-gray-200 rounded-lg focus:outline-primary"
-            >
-              <option value="ALL">All Records ({records.length})</option>
-              <option value="CLOCKED_IN">Clocked In ({clockedInCount})</option>
-              <option value="CLOCKED_OUT">Clocked Out ({clockedOutCount})</option>
-            </select>
-          </div>
-        </div>
-
-        {filteredRecords.length === 0 ? (
-          <div className="py-12 text-center text-on-surface-variant">
-            <span className="material-symbols-outlined text-4xl text-gray-400 mb-2">
-              fingerprint
-            </span>
-            <p className="font-semibold text-sm text-on-surface">
-              No clock-in records matching the criteria
-            </p>
-            <p className="text-xs text-gray-500 mt-1">
-              As educators clock in from within the school compound, verified entries will
-              appear here.
-            </p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="border-b border-surface-container bg-gray-50 text-gray-600 uppercase tracking-wider text-[10px]">
-                  <th className="py-2.5 px-3 font-semibold">Educator Name</th>
-                  <th className="py-2.5 px-3 font-semibold">Status</th>
-                  <th className="py-2.5 px-3 font-semibold">Clock In</th>
-                  <th className="py-2.5 px-3 font-semibold">Clock Out</th>
-                  <th className="py-2.5 px-3 font-semibold">Distance to Center</th>
-                  <th className="py-2.5 px-3 font-semibold">GPS Coordinates</th>
-                  <th className="py-2.5 px-3 font-semibold">Compliance</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {filteredRecords.map((r) => (
-                  <tr key={r.id} className="hover:bg-gray-50/80 transition-colors">
-                    <td className="py-3 px-3 font-semibold text-gray-900">
-                      {r.teacherName || 'Faculty Member'}
-                    </td>
-                    <td className="py-3 px-3">
-                      <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                          r.status === 'CLOCKED_IN'
-                            ? 'bg-teal-100 text-teal-800'
-                            : 'bg-gray-100 text-gray-700'
-                        }`}
-                      >
-                        {r.status === 'CLOCKED_IN' ? 'Clocked In' : 'Clocked Out'}
-                      </span>
-                    </td>
-                    <td className="py-3 px-3 font-data-mono font-semibold text-gray-900">
-                      {r.clockInTime || '--:--'}
-                    </td>
-                    <td className="py-3 px-3 font-data-mono text-gray-500">
-                      {r.clockOutTime || '--:--'}
-                    </td>
-                    <td className="py-3 px-3">
-                      <span className="font-data-mono font-bold text-teal-700">
-                        {r.distanceMeters != null ? `${r.distanceMeters}m` : 'Verified'}
-                      </span>
-                    </td>
-                    <td className="py-3 px-3 font-data-mono text-[11px] text-gray-500">
-                      {r.latitude != null && r.longitude != null
-                        ? `${r.latitude.toFixed(4)}, ${r.longitude.toFixed(4)}`
-                        : 'GPS Recorded'}
-                    </td>
-                    <td className="py-3 px-3">
-                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-teal-800">
-                        <span className="material-symbols-outlined text-[14px] text-teal-700">
-                          verified
-                        </span>
-                        <span>Inside Compound</span>
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+      {/* Comprehensive Faculty Attendance & Clock-In Roster */}
+      <FacultyAttendanceRosterCard
+        onNavigateTab={onNavigateTab}
+        showFullPageLink={false}
+      />
     </div>
   );
 };

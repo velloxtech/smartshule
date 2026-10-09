@@ -147,6 +147,35 @@ import {
   UpdateGeofenceSchema,
   ClockInSchema
 } from '../controllers/GeofenceController';
+import {
+  PayrollController,
+  GeneratePayrollSchema,
+  CustomPayrollSchema,
+  MarkPaidSchema,
+  ApplyLeaveSchema,
+  ReviewLeaveSchema
+} from '../controllers/PayrollController';
+import {
+  ClinicController,
+  UpdateMedicalProfileSchema,
+  LogClinicVisitSchema,
+  UpdateVisitStatusSchema
+} from '../controllers/ClinicController';
+import {
+  InventoryController,
+  CreateInventoryItemSchema,
+  UpdateInventoryItemSchema,
+  RecordStockTxSchema,
+  CreateFixedAssetSchema,
+  UpdateFixedAssetSchema
+} from '../controllers/InventoryController';
+import {
+  DisciplineController,
+  CreateClubSchema,
+  AddClubMemberSchema,
+  LogIncidentSchema
+} from '../controllers/DisciplineController';
+import { BroadsheetController } from '../controllers/BroadsheetController';
 
 export function createApiRouter(container: AppContainer): Router {
   const router = Router();
@@ -173,6 +202,11 @@ export function createApiRouter(container: AppContainer): Router {
   const libraryController = new LibraryController(container.libraryUseCases, container.systemLogUseCases);
   const announcementController = new AnnouncementController(container.announcementUseCases, container.systemLogUseCases);
   const geofenceController = new GeofenceController(container.geofenceUseCases);
+  const payrollController = new PayrollController(container.payrollUseCases);
+  const clinicController = new ClinicController(container.clinicUseCases);
+  const inventoryController = new InventoryController(container.inventoryUseCases);
+  const disciplineController = new DisciplineController(container.disciplineUseCases);
+  const broadsheetController = new BroadsheetController(container.broadsheetUseCases);
 
   // ==========================================
   // 1. AUTH ROUTES
@@ -398,6 +432,20 @@ export function createApiRouter(container: AppContainer): Router {
       UserRole.DEPUTY_HEAD_TEACHER
     ),
     geofenceController.listRecords
+  );
+
+  // Faculty daily attendance & clock-in roster (Super Admin, School Director, Head Teacher, Deputy)
+  geofenceRouter.get(
+    '/roster',
+    authMiddleware,
+    requireRoles(
+      UserRole.SUPER_ADMIN,
+      UserRole.ADMIN,
+      UserRole.SCHOOL_ADMIN,
+      UserRole.HEAD_TEACHER,
+      UserRole.DEPUTY_HEAD_TEACHER
+    ),
+    geofenceController.getFacultyRoster
   );
   router.use('/geofence', geofenceRouter);
 
@@ -770,6 +818,96 @@ export function createApiRouter(container: AppContainer): Router {
   announcementRouter.post('/:id/acknowledge', authMiddleware, announcementController.acknowledge);
 
   router.use('/announcements', announcementRouter);
+
+  // ==========================================
+  // 17d. STAFF PAYROLL & LEAVE MANAGEMENT ROUTES
+  // ==========================================
+  const payrollRouter = Router();
+  const allowedPayrollAdminRoles = requireRoles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ADMIN,
+    UserRole.SCHOOL_ADMIN
+  );
+  const allowedPayrollViewRoles = requireRoles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.HEAD_TEACHER,
+    UserRole.DEPUTY_HEAD_TEACHER
+  );
+
+  payrollRouter.get('/stats', authMiddleware, allowedPayrollViewRoles, payrollController.getStats);
+  payrollRouter.get('/', authMiddleware, allowedPayrollViewRoles, payrollController.listPayrolls);
+  payrollRouter.get('/:id', authMiddleware, allowedPayrollViewRoles, payrollController.getPayroll);
+  payrollRouter.post('/generate', authMiddleware, allowedPayrollAdminRoles, validateBody(GeneratePayrollSchema), payrollController.generateMonthly);
+  payrollRouter.post('/custom', authMiddleware, allowedPayrollAdminRoles, validateBody(CustomPayrollSchema), payrollController.createCustom);
+  payrollRouter.patch('/:id/approve', authMiddleware, allowedPayrollAdminRoles, payrollController.approvePayroll);
+  payrollRouter.patch('/:id/pay', authMiddleware, allowedPayrollAdminRoles, validateBody(MarkPaidSchema), payrollController.markPaid);
+  payrollRouter.get('/teacher/:teacherId', authMiddleware, payrollController.getTeacherPayrolls);
+  payrollRouter.get('/leaves/list', authMiddleware, payrollController.listLeaves);
+  payrollRouter.post('/leaves/apply', authMiddleware, validateBody(ApplyLeaveSchema), payrollController.applyLeave);
+  payrollRouter.patch('/leaves/:id/review', authMiddleware, allowedPayrollViewRoles, validateBody(ReviewLeaveSchema), payrollController.reviewLeave);
+
+  router.use('/payroll', payrollRouter);
+
+  // ==========================================
+  // 17e. SCHOOL CLINIC & INFIRMARY ROUTES
+  // ==========================================
+  const clinicRouter = Router();
+  clinicRouter.get('/stats', authMiddleware, clinicController.getStats);
+  clinicRouter.get('/profile/:studentId', authMiddleware, clinicController.getProfile);
+  clinicRouter.put('/profile/:studentId', authMiddleware, validateBody(UpdateMedicalProfileSchema), clinicController.updateProfile);
+  clinicRouter.get('/visits', authMiddleware, clinicController.listVisits);
+  clinicRouter.post('/visits', authMiddleware, validateBody(LogClinicVisitSchema), clinicController.logVisit);
+  clinicRouter.get('/visits/:id', authMiddleware, clinicController.getVisit);
+  clinicRouter.patch('/visits/:id/status', authMiddleware, validateBody(UpdateVisitStatusSchema), clinicController.updateStatus);
+
+  router.use('/clinic', clinicRouter);
+
+  // ==========================================
+  // 17f. INVENTORY, STORES & FIXED ASSETS ROUTES
+  // ==========================================
+  const inventoryRouter = Router();
+  inventoryRouter.get('/stats', authMiddleware, inventoryController.getStats);
+  inventoryRouter.get('/items', authMiddleware, inventoryController.listItems);
+  inventoryRouter.post('/items', authMiddleware, validateBody(CreateInventoryItemSchema), inventoryController.createItem);
+  inventoryRouter.put('/items/:id', authMiddleware, validateBody(UpdateInventoryItemSchema), inventoryController.updateItem);
+  inventoryRouter.delete('/items/:id', authMiddleware, inventoryController.deleteItem);
+  inventoryRouter.get('/low-stock', authMiddleware, inventoryController.getLowStockAlerts);
+  inventoryRouter.post('/transactions', authMiddleware, validateBody(RecordStockTxSchema), inventoryController.recordTransaction);
+  inventoryRouter.get('/transactions', authMiddleware, inventoryController.listTransactions);
+  inventoryRouter.get('/assets', authMiddleware, inventoryController.listAssets);
+  inventoryRouter.post('/assets', authMiddleware, validateBody(CreateFixedAssetSchema), inventoryController.createAsset);
+  inventoryRouter.put('/assets/:id', authMiddleware, validateBody(UpdateFixedAssetSchema), inventoryController.updateAsset);
+  inventoryRouter.delete('/assets/:id', authMiddleware, inventoryController.deleteAsset);
+
+  router.use('/inventory', inventoryRouter);
+
+  // ==========================================
+  // 17g. CO-CURRICULAR CLUBS & CBC DISCIPLINE INCIDENT LOG ROUTES
+  // ==========================================
+  const disciplineRouter = Router();
+  disciplineRouter.get('/stats', authMiddleware, disciplineController.getStats);
+  disciplineRouter.get('/clubs', authMiddleware, disciplineController.listClubs);
+  disciplineRouter.get('/clubs/:id', authMiddleware, disciplineController.getClub);
+  disciplineRouter.post('/clubs', authMiddleware, validateBody(CreateClubSchema), disciplineController.createClub);
+  disciplineRouter.post('/clubs/:id/members', authMiddleware, validateBody(AddClubMemberSchema), disciplineController.addMember);
+  disciplineRouter.delete('/clubs/:id/members/:studentId', authMiddleware, disciplineController.removeMember);
+  disciplineRouter.delete('/clubs/:id', authMiddleware, disciplineController.deleteClub);
+  disciplineRouter.get('/incidents', authMiddleware, disciplineController.listIncidents);
+  disciplineRouter.post('/incidents', authMiddleware, validateBody(LogIncidentSchema), disciplineController.logIncident);
+  disciplineRouter.post('/incidents/:id/parent-informed', authMiddleware, disciplineController.markInformed);
+  disciplineRouter.get('/student/:studentId', authMiddleware, disciplineController.getStudentProfile);
+
+  router.use('/discipline', disciplineRouter);
+
+  // ==========================================
+  // 17h. MASTER BROADSHEETS & CONSOLIDATED MARKSHEETS ROUTES
+  // ==========================================
+  const broadsheetRouter = Router();
+  broadsheetRouter.get('/stream', authMiddleware, broadsheetController.getStreamBroadsheet);
+
+  router.use('/broadsheets', broadsheetRouter);
 
   // ==========================================
   // 18. POSTMAN SPEC EXPORT ROUTES

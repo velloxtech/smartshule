@@ -7,9 +7,13 @@ import morgan from 'morgan';
 import { AppContainer } from '../container';
 import { createApiRouter } from './routes';
 import { errorHandler } from './middlewares/errorHandler';
+import { createAccountabilityMiddleware } from './middlewares/accountabilityMiddleware';
 
 export function createExpressApp(container: AppContainer): Express {
   const app = express();
+
+  // Enable trust proxy for accurate client IP behind reverse proxies/load balancers
+  app.set('trust proxy', true);
 
   // Standard Middlewares
   app.use(helmet({ contentSecurityPolicy: false }));
@@ -36,6 +40,7 @@ export function createExpressApp(container: AppContainer): Express {
   }));
   app.use(express.json({ limit: '25mb' }));
   app.use(express.urlencoded({ limit: '25mb', extended: true }));
+  app.use(createAccountabilityMiddleware(container.systemLogUseCases));
 
   // Serve uploads directory statically for photo storage
   const uploadDir = path.resolve(process.cwd(), 'data', 'uploads');

@@ -63,8 +63,20 @@ import {
   BookLoan,
   LibraryStats,
   Announcement,
+  PayrollRecord,
+  StaffLeave,
+  StudentMedicalProfile,
+  ClinicVisit,
+  InventoryItem,
+  StockTransaction,
+  FixedAsset,
+  CoCurricularClub,
+  DisciplineIncident,
+  BroadsheetResult,
   GeofenceConfig,
   TeacherClockInRecord,
+  FacultyRosterItem,
+  FacultyDailyRoster,
 } from '../types';
 function resolveApiBaseUrl(): string {
   let url = ((import.meta as any).env?.VITE_API_URL || '').trim();
@@ -116,10 +128,36 @@ export const getStoredAuthToken = (): string | null => {
   return null;
 };
 
+export const getDeviceFingerprint = (): string => {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return 'WEB-CLIENT';
+  }
+  let fp = localStorage.getItem('smartshule_device_fingerprint');
+  if (!fp) {
+    try {
+      const screenSpec = `${window.screen?.width || 0}x${window.screen?.height || 0}x${window.screen?.colorDepth || 24}`;
+      const navSpec = `${navigator.userAgent || ''}-${navigator.language || ''}-${navigator.hardwareConcurrency || 1}`;
+      let hash = 0;
+      const combined = `${screenSpec}-${navSpec}`;
+      for (let i = 0; i < combined.length; i++) {
+        hash = (hash << 5) - hash + combined.charCodeAt(i);
+        hash |= 0;
+      }
+      const randomNonce = Math.random().toString(36).substring(2, 8).toUpperCase();
+      fp = `DEV-${Math.abs(hash).toString(16).toUpperCase()}-${randomNonce}`;
+      localStorage.setItem('smartshule_device_fingerprint', fp);
+    } catch {
+      fp = `DEV-${Date.now().toString(16).toUpperCase()}`;
+    }
+  }
+  return fp;
+};
+
 const getHeaders = () => {
   const token = getStoredAuthToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
+    'X-Device-Fingerprint': getDeviceFingerprint(),
   };
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
@@ -1093,6 +1131,11 @@ export const apiService = {
   getGeofenceClockInRecords: async (date?: string): Promise<ApiResponse<TeacherClockInRecord[]>> => {
     const url = date ? `/geofence/records?date=${encodeURIComponent(date)}` : '/geofence/records';
     return apiFetch<ApiResponse<TeacherClockInRecord[]>>(url);
+  },
+
+  getFacultyDailyRoster: async (date?: string): Promise<ApiResponse<FacultyDailyRoster>> => {
+    const url = date ? `/geofence/roster?date=${encodeURIComponent(date)}` : '/geofence/roster';
+    return apiFetch<ApiResponse<FacultyDailyRoster>>(url);
   },
 
   // 9. Finance, Invoices & M-Pesa Endpoints
@@ -2185,6 +2228,247 @@ export const libraryApi = {
       method: 'POST',
     });
   },
+
+  // ==========================================
+  // STAFF PAYROLL & LEAVE MANAGEMENT
+  // ==========================================
+  getPayrollStats: async (month?: string): Promise<ApiResponse<any>> => {
+    const params = month ? `?month=${month}` : '';
+    return apiFetch<ApiResponse<any>>(`/payroll/stats${params}`);
+  },
+
+  getPayrolls: async (month?: string): Promise<ApiResponse<PayrollRecord[]>> => {
+    const params = month ? `?month=${month}` : '';
+    return apiFetch<ApiResponse<PayrollRecord[]>>(`/payroll${params}`);
+  },
+
+  generateMonthlyPayroll: async (month: string): Promise<ApiResponse<PayrollRecord[]>> => {
+    return apiFetch<ApiResponse<PayrollRecord[]>>('/payroll/generate', {
+      method: 'POST',
+      body: JSON.stringify({ month }),
+    });
+  },
+
+  createCustomPayroll: async (data: Partial<PayrollRecord>): Promise<ApiResponse<PayrollRecord>> => {
+    return apiFetch<ApiResponse<PayrollRecord>>('/payroll/custom', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  approvePayroll: async (id: string): Promise<ApiResponse<PayrollRecord>> => {
+    return apiFetch<ApiResponse<PayrollRecord>>(`/payroll/${id}/approve`, {
+      method: 'PATCH',
+    });
+  },
+
+  markPayrollPaid: async (id: string, paymentMethod: string, reference?: string): Promise<ApiResponse<PayrollRecord>> => {
+    return apiFetch<ApiResponse<PayrollRecord>>(`/payroll/${id}/pay`, {
+      method: 'PATCH',
+      body: JSON.stringify({ paymentMethod, reference }),
+    });
+  },
+
+  getLeaves: async (teacherId?: string): Promise<ApiResponse<StaffLeave[]>> => {
+    const params = teacherId ? `?teacherId=${teacherId}` : '';
+    return apiFetch<ApiResponse<StaffLeave[]>>(`/payroll/leaves/list${params}`);
+  },
+
+  applyLeave: async (data: any): Promise<ApiResponse<StaffLeave>> => {
+    return apiFetch<ApiResponse<StaffLeave>>('/payroll/leaves/apply', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  reviewLeave: async (id: string, action: 'APPROVE' | 'REJECT', remarks?: string): Promise<ApiResponse<StaffLeave>> => {
+    return apiFetch<ApiResponse<StaffLeave>>(`/payroll/leaves/${id}/review`, {
+      method: 'PATCH',
+      body: JSON.stringify({ action, remarks }),
+    });
+  },
+
+  // ==========================================
+  // CLINIC & INFIRMARY
+  // ==========================================
+  getClinicStats: async (): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/clinic/stats');
+  },
+
+  getStudentMedicalProfile: async (studentId: string): Promise<ApiResponse<StudentMedicalProfile>> => {
+    return apiFetch<ApiResponse<StudentMedicalProfile>>(`/clinic/profile/${studentId}`);
+  },
+
+  updateStudentMedicalProfile: async (studentId: string, data: Partial<StudentMedicalProfile>): Promise<ApiResponse<StudentMedicalProfile>> => {
+    return apiFetch<ApiResponse<StudentMedicalProfile>>(`/clinic/profile/${studentId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  getClinicVisits: async (studentId?: string, date?: string): Promise<ApiResponse<ClinicVisit[]>> => {
+    const params = new URLSearchParams();
+    if (studentId) params.append('studentId', studentId);
+    if (date) params.append('date', date);
+    return apiFetch<ApiResponse<ClinicVisit[]>>(`/clinic/visits?${params.toString()}`);
+  },
+
+  logClinicVisit: async (data: any): Promise<ApiResponse<ClinicVisit>> => {
+    return apiFetch<ApiResponse<ClinicVisit>>('/clinic/visits', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateClinicVisitStatus: async (id: string, status: string, referredHospitalName?: string): Promise<ApiResponse<ClinicVisit>> => {
+    return apiFetch<ApiResponse<ClinicVisit>>(`/clinic/visits/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status, referredHospitalName }),
+    });
+  },
+
+  // ==========================================
+  // INVENTORY & FIXED ASSETS
+  // ==========================================
+  getInventoryStats: async (): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/inventory/stats');
+  },
+
+  getInventoryItems: async (category?: string): Promise<ApiResponse<InventoryItem[]>> => {
+    const params = category ? `?category=${category}` : '';
+    return apiFetch<ApiResponse<InventoryItem[]>>(`/inventory/items${params}`);
+  },
+
+  addInventoryItem: async (data: any): Promise<ApiResponse<InventoryItem>> => {
+    return apiFetch<ApiResponse<InventoryItem>>('/inventory/items', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateInventoryItem: async (id: string, data: any): Promise<ApiResponse<InventoryItem>> => {
+    return apiFetch<ApiResponse<InventoryItem>>(`/inventory/items/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  deleteInventoryItem: async (id: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/inventory/items/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  getLowStockAlerts: async (): Promise<ApiResponse<InventoryItem[]>> => {
+    return apiFetch<ApiResponse<InventoryItem[]>>('/inventory/low-stock');
+  },
+
+  recordStockTransaction: async (data: any): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/inventory/transactions', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  getStockTransactions: async (itemId?: string): Promise<ApiResponse<StockTransaction[]>> => {
+    const params = itemId ? `?itemId=${itemId}` : '';
+    return apiFetch<ApiResponse<StockTransaction[]>>(`/inventory/transactions${params}`);
+  },
+
+  getFixedAssets: async (category?: string): Promise<ApiResponse<FixedAsset[]>> => {
+    const params = category ? `?category=${category}` : '';
+    return apiFetch<ApiResponse<FixedAsset[]>>(`/inventory/assets${params}`);
+  },
+
+  addFixedAsset: async (data: any): Promise<ApiResponse<FixedAsset>> => {
+    return apiFetch<ApiResponse<FixedAsset>>('/inventory/assets', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateFixedAsset: async (id: string, data: any): Promise<ApiResponse<FixedAsset>> => {
+    return apiFetch<ApiResponse<FixedAsset>>(`/inventory/assets/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  deleteFixedAsset: async (id: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/inventory/assets/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  // ==========================================
+  // DISCIPLINE & CO-CURRICULAR CLUBS
+  // ==========================================
+  getDisciplineStats: async (): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/discipline/stats');
+  },
+
+  getClubs: async (): Promise<ApiResponse<CoCurricularClub[]>> => {
+    return apiFetch<ApiResponse<CoCurricularClub[]>>('/discipline/clubs');
+  },
+
+  getClub: async (id: string): Promise<ApiResponse<CoCurricularClub>> => {
+    return apiFetch<ApiResponse<CoCurricularClub>>(`/discipline/clubs/${id}`);
+  },
+
+  createClub: async (data: any): Promise<ApiResponse<CoCurricularClub>> => {
+    return apiFetch<ApiResponse<CoCurricularClub>>('/discipline/clubs', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  addClubMember: async (clubId: string, studentId: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/discipline/clubs/${clubId}/members`, {
+      method: 'POST',
+      body: JSON.stringify({ studentId }),
+    });
+  },
+
+  removeClubMember: async (clubId: string, studentId: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/discipline/clubs/${clubId}/members/${studentId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  deleteClub: async (id: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/discipline/clubs/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  getDisciplineIncidents: async (studentId?: string, type?: string): Promise<ApiResponse<DisciplineIncident[]>> => {
+    const params = new URLSearchParams();
+    if (studentId) params.append('studentId', studentId);
+    if (type) params.append('type', type);
+    return apiFetch<ApiResponse<DisciplineIncident[]>>(`/discipline/incidents?${params.toString()}`);
+  },
+
+  logDisciplineIncident: async (data: any): Promise<ApiResponse<DisciplineIncident>> => {
+    return apiFetch<ApiResponse<DisciplineIncident>>('/discipline/incidents', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  getStudentDisciplineProfile: async (studentId: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/discipline/student/${studentId}`);
+  },
+
+  // ==========================================
+  // MASTER BROADSHEETS
+  // ==========================================
+  getStreamBroadsheet: async (streamId: string, termId?: string, academicYearId?: string): Promise<ApiResponse<BroadsheetResult>> => {
+    const params = new URLSearchParams();
+    params.append('streamId', streamId);
+    if (termId) params.append('termId', termId);
+    if (academicYearId) params.append('academicYearId', academicYearId);
+    return apiFetch<ApiResponse<BroadsheetResult>>(`/broadsheets/stream?${params.toString()}`);
+  },
 };
 
 // Named exports for static binding & resilient importing
@@ -2195,6 +2479,49 @@ export const updateAnnouncement = apiService.updateAnnouncement;
 export const deleteAnnouncement = apiService.deleteAnnouncement;
 export const togglePinAnnouncement = apiService.togglePinAnnouncement;
 export const acknowledgeAnnouncement = apiService.acknowledgeAnnouncement;
+
+export const getPayrollStats = apiService.getPayrollStats;
+export const getPayrolls = apiService.getPayrolls;
+export const generateMonthlyPayroll = apiService.generateMonthlyPayroll;
+export const createCustomPayroll = apiService.createCustomPayroll;
+export const approvePayroll = apiService.approvePayroll;
+export const markPayrollPaid = apiService.markPayrollPaid;
+export const getLeaves = apiService.getLeaves;
+export const applyLeave = apiService.applyLeave;
+export const reviewLeave = apiService.reviewLeave;
+
+export const getClinicStats = apiService.getClinicStats;
+export const getStudentMedicalProfile = apiService.getStudentMedicalProfile;
+export const updateStudentMedicalProfile = apiService.updateStudentMedicalProfile;
+export const getClinicVisits = apiService.getClinicVisits;
+export const logClinicVisit = apiService.logClinicVisit;
+export const updateClinicVisitStatus = apiService.updateClinicVisitStatus;
+
+export const getInventoryStats = apiService.getInventoryStats;
+export const getInventoryItems = apiService.getInventoryItems;
+export const addInventoryItem = apiService.addInventoryItem;
+export const updateInventoryItem = apiService.updateInventoryItem;
+export const deleteInventoryItem = apiService.deleteInventoryItem;
+export const getLowStockAlerts = apiService.getLowStockAlerts;
+export const recordStockTransaction = apiService.recordStockTransaction;
+export const getStockTransactions = apiService.getStockTransactions;
+export const getFixedAssets = apiService.getFixedAssets;
+export const addFixedAsset = apiService.addFixedAsset;
+export const updateFixedAsset = apiService.updateFixedAsset;
+export const deleteFixedAsset = apiService.deleteFixedAsset;
+
+export const getDisciplineStats = apiService.getDisciplineStats;
+export const getClubs = apiService.getClubs;
+export const getClub = apiService.getClub;
+export const createClub = apiService.createClub;
+export const addClubMember = apiService.addClubMember;
+export const removeClubMember = apiService.removeClubMember;
+export const deleteClub = apiService.deleteClub;
+export const getDisciplineIncidents = apiService.getDisciplineIncidents;
+export const logDisciplineIncident = apiService.logDisciplineIncident;
+export const getStudentDisciplineProfile = apiService.getStudentDisciplineProfile;
+
+export const getStreamBroadsheet = apiService.getStreamBroadsheet;
 
 export default apiService;
 

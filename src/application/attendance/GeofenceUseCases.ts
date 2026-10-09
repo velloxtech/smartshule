@@ -232,4 +232,72 @@ export class GeofenceUseCases {
     });
     return records.map(r => r.toJSON());
   }
+
+  public async getFacultyDailyRoster(date?: string, schoolId?: string) {
+    const todayDate = date || new Date().toISOString().split('T')[0];
+    const teachers = await this.teacherRepository.findAll();
+    const clockInRecords = await this.teacherClockInRepository.findRecords({
+      date: todayDate,
+      schoolId
+    });
+
+    const recordsByTeacherId = new Map<string, any>();
+    for (const r of clockInRecords) {
+      recordsByTeacherId.set(r.teacherId, r.toJSON());
+    }
+
+    const roster = await Promise.all(
+      teachers.map(async t => {
+        const u = await this.userRepository.findById(t.userId);
+        const record = recordsByTeacherId.get(t.id) || recordsByTeacherId.get(t.userId) || null;
+
+        let status: 'CLOCKED_IN' | 'CLOCKED_OUT' | 'NOT_CLOCKED_IN' = 'NOT_CLOCKED_IN';
+        if (record) {
+          status = record.status === 'CLOCKED_IN' ? 'CLOCKED_IN' : 'CLOCKED_OUT';
+        }
+
+        return {
+          teacherId: t.id,
+          userId: t.userId,
+          name: u ? u.fullName : 'Faculty Educator',
+          email: u?.email || '',
+          phoneNumber: u?.phone || '',
+          tscNumber: t.tscNumber || '',
+          employeeNumber: t.employeeNumber || '',
+          specialization: t.specialization || [],
+          assignedClassStreamIds: t.assignedClassStreamIds || [],
+          qualification: t.qualification || '',
+          date: todayDate,
+          status,
+          clockInTime: record?.clockInTime || null,
+          clockOutTime: record?.clockOutTime || null,
+          distanceMeters: record?.distanceMeters ?? null,
+          inCompound: record?.inCompound ?? false,
+          accuracyMeters: record?.accuracyMeters ?? null,
+          latitude: record?.latitude ?? null,
+          longitude: record?.longitude ?? null,
+          verifiedBy: record?.verifiedBy || (record ? 'GPS_GEOFENCE' : null)
+        };
+      })
+    );
+
+    const totalTeachers = roster.length;
+    const clockedIn = roster.filter(r => r.status === 'CLOCKED_IN').length;
+    const clockedOut = roster.filter(r => r.status === 'CLOCKED_OUT').length;
+    const notClockedIn = roster.filter(r => r.status === 'NOT_CLOCKED_IN').length;
+    const attendancePercentage =
+      totalTeachers > 0 ? Math.round(((clockedIn + clockedOut) / totalTeachers) * 100) : 0;
+
+    return {
+      date: todayDate,
+      summary: {
+        totalTeachers,
+        clockedIn,
+        clockedOut,
+        notClockedIn,
+        attendancePercentage
+      },
+      roster
+    };
+  }
 }

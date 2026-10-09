@@ -623,7 +623,7 @@ export const FinancialReportsView: React.FC = () => {
                     <div className="font-semibold text-on-surface">Ministry of Education Capitation Grants</div>
                     <div className="text-xs text-on-surface-variant">Free Primary Education (FPE) & JSS Capitation (KES 15,040 / Learner)</div>
                   </div>
-                  <div className="font-bold text-on-surface">{formatKes(incomeCategoryBreakdown.CAPITATION_GRANT || 1050000)}</div>
+                  <div className="font-bold text-on-surface">{formatKes(incomeCategoryBreakdown.CAPITATION_GRANT || 0)}</div>
                 </div>
 
                 <div className="py-3 px-4 flex items-center justify-between text-sm hover:bg-surface-variant/10 transition-colors">
@@ -631,7 +631,7 @@ export const FinancialReportsView: React.FC = () => {
                     <div className="font-semibold text-on-surface">Uniform, Stationery & Book Sales</div>
                     <div className="text-xs text-on-surface-variant">School uniforms, physical education kits, CBC exercise books</div>
                   </div>
-                  <div className="font-bold text-on-surface">{formatKes(incomeCategoryBreakdown.UNIFORM_SALES || 240000)}</div>
+                  <div className="font-bold text-on-surface">{formatKes(incomeCategoryBreakdown.UNIFORM_SALES || 0)}</div>
                 </div>
 
                 <div className="py-3 px-4 flex items-center justify-between text-sm hover:bg-surface-variant/10 transition-colors">
@@ -639,7 +639,7 @@ export const FinancialReportsView: React.FC = () => {
                     <div className="font-semibold text-on-surface">Grounds, Hall & Bus Facility Hire</div>
                     <div className="text-xs text-on-surface-variant">Weekend sports ground hire, school bus rentals for community events</div>
                   </div>
-                  <div className="font-bold text-on-surface">{formatKes(incomeCategoryBreakdown.FACILITY_HIRE || 110000)}</div>
+                  <div className="font-bold text-on-surface">{formatKes(incomeCategoryBreakdown.FACILITY_HIRE || 0)}</div>
                 </div>
 
                 <div className="py-3 px-4 flex items-center justify-between text-sm hover:bg-surface-variant/10 transition-colors">
@@ -647,7 +647,7 @@ export const FinancialReportsView: React.FC = () => {
                     <div className="font-semibold text-on-surface">PTA Development Levies & Philanthropic Grants</div>
                     <div className="text-xs text-on-surface-variant">Voluntary parent donations, alumni bursary fund contributions</div>
                   </div>
-                  <div className="font-bold text-on-surface">{formatKes(incomeCategoryBreakdown.DONATION_GRANT || 75000)}</div>
+                  <div className="font-bold text-on-surface">{formatKes(incomeCategoryBreakdown.DONATION_GRANT || 0)}</div>
                 </div>
               </div>
             </div>

@@ -1927,7 +1927,7 @@ export class FeeUseCases {
     let cashIn = 0, cashOut = 0;
 
     for (const p of completedPayments) {
-      if ([PaymentMethod.KCB_BUNI, PaymentMethod.BANK_TRANSFER, PaymentMethod.BANK_DEPOSIT, PaymentMethod.CARD].includes(p.paymentMethod)) {
+      if ([PaymentMethod.KCB_BUNI, PaymentMethod.BANK_TRANSFER, PaymentMethod.BANK_DEPOSIT, PaymentMethod.CARD, PaymentMethod.CHEQUE].includes(p.paymentMethod)) {
         bankIn += p.amount;
       } else if (p.paymentMethod === PaymentMethod.MPESA) {
         mpesaIn += p.amount;
@@ -1956,10 +1956,10 @@ export class FeeUseCases {
       }
     }
 
-    // Baseline opening balances for realistic display in demo school (KES)
-    const openingBank = 450000;
-    const openingMpesa = 125000;
-    const openingCash = 35000;
+    // Only reflect actual recorded funds (no presumed or mock money)
+    const openingBank = 0;
+    const openingMpesa = 0;
+    const openingCash = 0;
 
     const currentBankBalance = openingBank + bankIn - bankOut;
     const currentMpesaBalance = openingMpesa + mpesaIn - mpesaOut;

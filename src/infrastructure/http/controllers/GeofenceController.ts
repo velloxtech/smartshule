@@ -109,4 +109,18 @@ export class GeofenceController {
       next(err);
     }
   };
+
+  public getFacultyRoster = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const date = req.query.date as string | undefined;
+      const schoolId = req.user?.schoolId;
+      const rosterData = await this.geofenceUseCases.getFacultyDailyRoster(date, schoolId);
+      return res.status(200).json({
+        success: true,
+        data: rosterData
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
 }

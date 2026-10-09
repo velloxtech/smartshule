@@ -56,6 +56,7 @@ export class InMemorySystemLogRepository implements ISystemLogRepository {
             (l.actorEmail && l.actorEmail.toLowerCase().includes(q)) ||
             (l.actorRole && l.actorRole.toLowerCase().includes(q)) ||
             (l.ipAddress && l.ipAddress.toLowerCase().includes(q)) ||
+            (l.macAddress && l.macAddress.toLowerCase().includes(q)) ||
             (l.metadata && JSON.stringify(l.metadata).toLowerCase().includes(q))
         );
       }

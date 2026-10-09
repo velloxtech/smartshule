@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { Teacher, LessonPlan } from '../../types';
+import { FacultyAttendanceRosterCard } from './FacultyAttendanceRosterCard';
 
 interface DeputyDashboardViewProps {
   teachers: Teacher[];
@@ -177,6 +178,9 @@ export const DeputyDashboardView: React.FC<DeputyDashboardViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Live Faculty Attendance & Geofence Clock-In Roster */}
+      <FacultyAttendanceRosterCard onNavigateTab={onNavigateTab} />
 
       {/* Main Interactive Approval Queue */}
       <div className="p-6 rounded-2xl bg-white border border-outline-variant/30 shadow-xs">

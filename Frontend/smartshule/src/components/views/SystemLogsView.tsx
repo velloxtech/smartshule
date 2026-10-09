@@ -295,7 +295,7 @@ export const SystemLogsView: React.FC = () => {
             </span>
             <input
               type="text"
-              placeholder="Search action, details, actor, IP..."
+              placeholder="Search action, details, actor, IP, MAC / Device..."
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
@@ -421,6 +421,7 @@ export const SystemLogsView: React.FC = () => {
                 <th className="py-3 px-3">Category</th>
                 <th className="py-3 px-4">Action & Details</th>
                 <th className="py-3 px-4">Actor</th>
+                <th className="py-3 px-4">IP & MAC / Device</th>
                 <th className="py-3 px-3">Status</th>
                 <th className="py-3 px-4 text-right">Details</th>
               </tr>
@@ -428,7 +429,7 @@ export const SystemLogsView: React.FC = () => {
             <tbody className="divide-y divide-slate-100 text-xs">
               {loading && logs.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-400">
+                  <td colSpan={8} className="py-12 text-center text-slate-400">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <span className="material-symbols-outlined text-[32px] animate-spin text-primary">
                         progress_activity
@@ -439,7 +440,7 @@ export const SystemLogsView: React.FC = () => {
                 </tr>
               ) : logs.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-500">
+                  <td colSpan={8} className="py-12 text-center text-slate-500">
                     <div className="flex flex-col items-center justify-center gap-2 max-w-sm mx-auto">
                       <span className="material-symbols-outlined text-[40px] text-slate-300">
                         receipt_long
@@ -505,11 +506,18 @@ export const SystemLogsView: React.FC = () => {
                               {log.actorRole}
                             </span>
                           )}
-                          {log.ipAddress && (
-                            <span className="font-mono text-slate-400">
-                              {log.ipAddress}
-                            </span>
-                          )}
+                        </div>
+                      </td>
+
+                      {/* IP & MAC / Device Accountability */}
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <div className="flex items-center gap-1 font-mono text-[11px] text-slate-700" title={`Client IP Address: ${log.ipAddress || 'Internal'}`}>
+                          <span className="material-symbols-outlined text-[13px] text-slate-400">lan</span>
+                          <span>{log.ipAddress || '127.0.0.1'}</span>
+                        </div>
+                        <div className="flex items-center gap-1 font-mono text-[10px] text-slate-500 mt-0.5" title={`Hardware MAC / Device Identifier: ${log.macAddress || 'N/A'}`}>
+                          <span className="material-symbols-outlined text-[12px] text-slate-400">fingerprint</span>
+                          <span className="truncate max-w-[140px]">{log.macAddress || 'N/A'}</span>
                         </div>
                       </td>
 
@@ -643,9 +651,29 @@ export const SystemLogsView: React.FC = () => {
                     {selectedLog.status}
                   </span>
                 </div>
-                <div>
-                  <span className="text-[10px] uppercase font-semibold text-slate-400 block">IP Address</span>
-                  <span className="font-mono text-slate-800">{selectedLog.ipAddress || 'Internal / N/A'}</span>
+              </div>
+
+              {/* Network & Hardware Device Accountability */}
+              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[15px] text-primary">security</span>
+                  Network & Hardware Device Accountability
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-0.5">
+                  <div className="p-2.5 rounded-lg bg-white border border-slate-200">
+                    <span className="text-[10px] uppercase font-semibold text-slate-400 block">Client IP Address</span>
+                    <span className="font-mono font-bold text-slate-900 text-xs flex items-center gap-1.5 mt-0.5">
+                      <span className="material-symbols-outlined text-[15px] text-slate-500">lan</span>
+                      {selectedLog.ipAddress || 'Internal / N/A'}
+                    </span>
+                  </div>
+                  <div className="p-2.5 rounded-lg bg-white border border-slate-200">
+                    <span className="text-[10px] uppercase font-semibold text-slate-400 block">Hardware MAC / Device Identifier</span>
+                    <span className="font-mono font-bold text-slate-900 text-xs flex items-center gap-1.5 mt-0.5">
+                      <span className="material-symbols-outlined text-[15px] text-slate-500">fingerprint</span>
+                      {selectedLog.macAddress || 'N/A (Layer-3 Routed)'}
+                    </span>
+                  </div>
                 </div>
               </div>
 

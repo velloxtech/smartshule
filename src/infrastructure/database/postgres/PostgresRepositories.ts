@@ -526,6 +526,7 @@ export class PostgresDatabaseInitializer {
         actor_email VARCHAR(150),
         actor_role VARCHAR(50),
         ip_address VARCHAR(100),
+        mac_address VARCHAR(150),
         status VARCHAR(50) NOT NULL DEFAULT 'SUCCESS',
         details TEXT NOT NULL,
         metadata JSONB DEFAULT '{}'::jsonb,

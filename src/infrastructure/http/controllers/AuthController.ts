@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { AuthUseCases } from '../../../application/auth/AuthUseCases';
 import { UserRole, UserStatus } from '../../../core/domain/user/User';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
+import { resolveNetworkIdentity } from '../../utils/networkAccountability';
 
 export const RegisterUserSchema = z.object({
   email: z.string().email().optional().or(z.literal('')),
@@ -120,6 +121,8 @@ export class AuthController {
       const result = await this.authUseCases.login(req.body);
       console.log(`[Auth] ✅ Authenticated user: "${attemptedId}" as ${result.user.role}`);
 
+      const identity = resolveNetworkIdentity(req);
+
       this.systemLogUseCases?.log({
         schoolId: result.user.schoolId,
         level: 'INFO',
@@ -128,10 +131,11 @@ export class AuthController {
         actorUserId: result.user.id,
         actorEmail: result.user.email || result.user.phone || attemptedId,
         actorRole: result.user.role,
-        ipAddress: req.ip || (req.socket?.remoteAddress as string),
+        ipAddress: identity.ipAddress,
+        macAddress: identity.macAddress,
         status: 'SUCCESS',
-        details: `User ${result.user.email || result.user.phone} (${result.user.role}) logged in successfully`,
-        metadata: { userId: result.user.id, role: result.user.role }
+        details: `User ${result.user.email || result.user.phone} (${result.user.role}) logged in successfully [Device: ${identity.macAddress}]`,
+        metadata: { userId: result.user.id, role: result.user.role, userAgent: identity.userAgent }
       }).catch(() => {});
 
       return res.status(200).json({
@@ -142,15 +146,18 @@ export class AuthController {
     } catch (err: any) {
       console.warn(`[Auth] ❌ Login failed for "${attemptedId}": ${err.message}`);
 
+      const identity = resolveNetworkIdentity(req);
+
       this.systemLogUseCases?.log({
         level: 'WARN',
         category: 'AUTH',
         action: 'LOGIN_FAILED',
         actorEmail: attemptedId,
-        ipAddress: req.ip || (req.socket?.remoteAddress as string),
+        ipAddress: identity.ipAddress,
+        macAddress: identity.macAddress,
         status: 'FAILED',
-        details: `Failed login attempt for ${attemptedId}: ${err.message}`,
-        metadata: { attemptedIdentifier: attemptedId, error: err.message }
+        details: `Failed login attempt for ${attemptedId}: ${err.message} [Device: ${identity.macAddress}]`,
+        metadata: { attemptedIdentifier: attemptedId, error: err.message, userAgent: identity.userAgent }
       }).catch(() => {});
 
       next(err);

@@ -283,5 +283,51 @@ describe('School Compound Geofencing & Teacher Clock-In Unit Tests', () => {
       expect(today).not.toBeNull();
       expect(today?.status).toBe('CLOCKED_IN');
     });
+
+    it('should generate a full faculty daily roster with clock-in statuses for directors and deputies', async () => {
+      // Create second teacher
+      const teacher2User = User.create({
+        email: 'john.ochieng@smartshule.ac.ke',
+        firstName: 'John',
+        lastName: 'Ochieng',
+        phone: '0711223344',
+        role: UserRole.TEACHER,
+        status: UserStatus.ACTIVE,
+        passwordHash: 'hash'
+      }, 'user-teacher-2');
+      await userRepo.save(teacher2User);
+
+      const teacher2 = Teacher.create({
+        userId: teacher2User.id,
+        employeeNumber: 'EMP-002',
+        tscNumber: 'TSC-998877',
+        specialization: ['Mathematics'],
+        assignedClassStreamIds: ['stream-2']
+      }, 'teacher-002');
+      await teacherRepo.save(teacher2);
+
+      // Teacher 1 clocks in inside compound
+      await geofenceUseCases.clockInTeacher({
+        userId: teacherUser.id,
+        action: 'CLOCK_IN',
+        latitude: SCHOOL_LAT,
+        longitude: SCHOOL_LON
+      });
+
+      // Retrieve full roster
+      const rosterData = await geofenceUseCases.getFacultyDailyRoster();
+      expect(rosterData.summary.totalTeachers).toBe(2);
+      expect(rosterData.summary.clockedIn).toBe(1);
+      expect(rosterData.summary.notClockedIn).toBe(1);
+
+      const t1Entry = rosterData.roster.find(r => r.userId === teacherUser.id);
+      expect(t1Entry?.status).toBe('CLOCKED_IN');
+      expect(t1Entry?.inCompound).toBe(true);
+      expect(t1Entry?.clockInTime).toBeDefined();
+
+      const t2Entry = rosterData.roster.find(r => r.userId === teacher2User.id);
+      expect(t2Entry?.status).toBe('NOT_CLOCKED_IN');
+      expect(t2Entry?.clockInTime).toBeNull();
+    });
   });
 });

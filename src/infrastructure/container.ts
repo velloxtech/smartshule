@@ -27,6 +27,19 @@ import { GeofenceUseCases } from '../application/attendance/GeofenceUseCases';
 import { InMemoryRecordOfWorkRepository } from './database/postgres/PostgresRecordOfWorkRepository';
 import { InMemoryComplaintRepository } from './database/in-memory/InMemoryComplaintRepository';
 import { InMemorySystemLogRepository } from './database/in-memory/InMemorySystemLogRepository';
+import { IPayrollRepository } from '../core/ports/repositories/IPayrollRepository';
+import { IClinicRepository } from '../core/ports/repositories/IClinicRepository';
+import { IInventoryRepository } from '../core/ports/repositories/IInventoryRepository';
+import { IDisciplineRepository } from '../core/ports/repositories/IDisciplineRepository';
+import { InMemoryPayrollRepository } from './database/in-memory/InMemoryPayrollRepository';
+import { InMemoryClinicRepository } from './database/in-memory/InMemoryClinicRepository';
+import { InMemoryInventoryRepository } from './database/in-memory/InMemoryInventoryRepository';
+import { InMemoryDisciplineRepository } from './database/in-memory/InMemoryDisciplineRepository';
+import { PayrollUseCases } from '../application/payroll/PayrollUseCases';
+import { ClinicUseCases } from '../application/health/ClinicUseCases';
+import { InventoryUseCases } from '../application/inventory/InventoryUseCases';
+import { DisciplineUseCases } from '../application/discipline/DisciplineUseCases';
+import { BroadsheetUseCases } from '../application/academics/BroadsheetUseCases';
 import { RecordOfWorkUseCases } from '../application/curriculum-plans/RecordOfWorkUseCases';
 import { ComplaintUseCases } from '../application/complaints/ComplaintUseCases';
 import { SystemLogUseCases } from '../application/system-logs/SystemLogUseCases';
@@ -97,6 +110,10 @@ export class AppContainer {
   public libraryRepository: ILibraryRepository;
   public announcementRepository: IAnnouncementRepository;
   public teacherClockInRepository: ITeacherClockInRepository;
+  public payrollRepository: IPayrollRepository;
+  public clinicRepository: IClinicRepository;
+  public inventoryRepository: IInventoryRepository;
+  public disciplineRepository: IDisciplineRepository;
 
   // Services
   public readonly tokenService = new JwtAuthTokenService();
@@ -128,6 +145,11 @@ export class AppContainer {
   public recordOfWorkUseCases!: RecordOfWorkUseCases; // <-- Added Property
   public complaintUseCases!: ComplaintUseCases;
   public systemLogUseCases!: SystemLogUseCases;
+  public payrollUseCases!: PayrollUseCases;
+  public clinicUseCases!: ClinicUseCases;
+  public inventoryUseCases!: InventoryUseCases;
+  public disciplineUseCases!: DisciplineUseCases;
+  public broadsheetUseCases!: BroadsheetUseCases;
 
   constructor(customRepositories?: Partial<RepositoryBundle>) {
     this.userRepository = customRepositories?.userRepository || new InMemoryUserRepository();
@@ -160,6 +182,10 @@ export class AppContainer {
       customRepositories?.announcementRepository || new InMemoryAnnouncementRepository();
     this.teacherClockInRepository =
       customRepositories?.teacherClockInRepository || new InMemoryTeacherClockInRepository();
+    this.payrollRepository = new InMemoryPayrollRepository();
+    this.clinicRepository = new InMemoryClinicRepository();
+    this.inventoryRepository = new InMemoryInventoryRepository();
+    this.disciplineRepository = new InMemoryDisciplineRepository();
 
     this.initUseCases();
   }
@@ -293,6 +319,31 @@ export class AppContainer {
       const reply = await this.whatsAppService.handleInboundMessage(fromPhone, text, { useAI: true });
       return { replyText: reply.replyText, intent: reply.intent, ignored: reply.ignored };
     });
+
+    this.payrollUseCases = new PayrollUseCases(
+      this.payrollRepository,
+      this.teacherRepository,
+      this.userRepository,
+      this.teacherClockInRepository
+    );
+    this.clinicUseCases = new ClinicUseCases(
+      this.clinicRepository,
+      this.studentRepository,
+      this.guardianRepository,
+      this.notificationService
+    );
+    this.inventoryUseCases = new InventoryUseCases(this.inventoryRepository);
+    this.disciplineUseCases = new DisciplineUseCases(
+      this.disciplineRepository,
+      this.studentRepository,
+      this.guardianRepository,
+      this.notificationService
+    );
+    this.broadsheetUseCases = new BroadsheetUseCases(
+      this.academicRepository,
+      this.studentRepository,
+      this.cbcAssessmentRepository
+    );
   }
 
   public async ensureAdminAccounts(): Promise<void> {

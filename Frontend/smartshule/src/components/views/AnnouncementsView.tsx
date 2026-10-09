@@ -917,13 +917,13 @@ export const AnnouncementsView: React.FC = () => {
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
       {/* 1. Header Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 p-6 rounded-2xl text-white shadow-xl">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-[#500b1b] via-[#7a1228] to-[#991b36] p-6 rounded-2xl text-white shadow-xl">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-amber-400 text-3xl">campaign</span>
+            <span className="material-symbols-outlined text-amber-300 text-3xl">campaign</span>
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Notice Board & Circulars</h1>
           </div>
-          <p className="text-slate-300 text-sm max-w-2xl">
+          <p className="text-rose-100/90 text-sm max-w-2xl">
             Official communications, administrative circulars, urgent safety alerts, and whole-year school directives.
           </p>
         </div>

@@ -32,6 +32,7 @@ function mapRowToSystemLog(row: any): SystemLog {
       actorEmail: row.actor_email || undefined,
       actorRole: row.actor_role || undefined,
       ipAddress: row.ip_address || undefined,
+      macAddress: row.mac_address || undefined,
       status: row.status as SystemLogStatus,
       details: row.details,
       metadata: metadata || {}
@@ -50,11 +51,11 @@ export class PostgresSystemLogRepository implements ISystemLogRepository {
       INSERT INTO system_logs (
         id, school_id, timestamp, level, category, action,
         actor_user_id, actor_email, actor_role, ip_address,
-        status, details, metadata, created_at, updated_at
+        mac_address, status, details, metadata, created_at, updated_at
       ) VALUES (
         $1, $2, $3, $4, $5, $6,
         $7, $8, $9, $10,
-        $11, $12, $13, $14, $15
+        $11, $12, $13, $14, $15, $16
       ) RETURNING *;
     `;
 
@@ -69,6 +70,7 @@ export class PostgresSystemLogRepository implements ISystemLogRepository {
       log.actorEmail || null,
       log.actorRole || null,
       log.ipAddress || null,
+      log.macAddress || null,
       log.status,
       log.details,
       JSON.stringify(log.metadata || {}),
@@ -125,7 +127,8 @@ export class PostgresSystemLogRepository implements ISystemLogRepository {
         details ILIKE $${idx} OR
         actor_email ILIKE $${idx} OR
         actor_role ILIKE $${idx} OR
-        ip_address ILIKE $${idx}
+        ip_address ILIKE $${idx} OR
+        mac_address ILIKE $${idx}
       )`);
       values.push(`%${criteria.search}%`);
       idx++;

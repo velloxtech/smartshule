@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { Student, Teacher, LessonPlan, SchemeOfWork } from '../../types';
+import { FacultyAttendanceRosterCard } from './FacultyAttendanceRosterCard';
 
 interface HeadTeacherDashboardViewProps {
   students: Student[];
@@ -163,6 +164,9 @@ export const HeadTeacherDashboardView: React.FC<HeadTeacherDashboardViewProps> =
           </div>
         </div>
       </div>
+
+      {/* Live Faculty Attendance & Geofence Clock-In Roster */}
+      <FacultyAttendanceRosterCard onNavigateTab={onNavigateTab} />
 
       {/* Curriculum Supervision & Lesson Plans Review Summary */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
