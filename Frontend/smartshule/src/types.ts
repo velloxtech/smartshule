@@ -37,7 +37,9 @@ export type TabType =
   | 'clinic'
   | 'inventory'
   | 'discipline'
-  | 'broadsheets';
+  | 'broadsheets'
+  | 'occurrence-records'
+  | 'curriculum-tracker';
 
 export type SystemLogLevel = 'INFO' | 'WARN' | 'ERROR' | 'AUDIT';
 export type SystemLogCategory =
@@ -1668,6 +1670,8 @@ export interface BroadsheetSubjectScore {
   performanceLevel: string;
   numericScore: number;
   levelLabel: string;
+  points?: number; // 4, 3, 2, 1
+  subjectRank?: number;
 }
 
 export interface BroadsheetRow {
@@ -1675,17 +1679,29 @@ export interface BroadsheetRow {
   admissionNumber: string;
   studentName: string;
   gender: string;
+  streamId?: string;
+  streamName?: string;
   subjects: Record<string, BroadsheetSubjectScore>;
   totalScore: number;
   averageScore: number;
+  totalPoints?: number;
+  meanPoints?: number;
   overallPerformanceLevel: string;
   rank: number;
+  streamRank?: number;
+  classRank?: number;
+  remarks?: string;
 }
 
 export interface BroadsheetSubjectSummary {
   learningAreaId: string;
   learningAreaName: string;
   averageScore: number;
+  meanPoints?: number;
+  highestScore?: number;
+  lowestScore?: number;
+  highestScorerName?: string;
+  passRate?: number;
   counts: {
     EE: number;
     ME: number;
@@ -1694,18 +1710,271 @@ export interface BroadsheetSubjectSummary {
   };
 }
 
+export interface GenderStats {
+  boysCount: number;
+  girlsCount: number;
+  totalCount: number;
+  boysMeanScore: number;
+  girlsMeanScore: number;
+  boysMeanPoints: number;
+  girlsMeanPoints: number;
+  boysEE: number;
+  boysME: number;
+  boysAE: number;
+  boysBE: number;
+  girlsEE: number;
+  girlsME: number;
+  girlsAE: number;
+  girlsBE: number;
+  topBoyName?: string;
+  topBoyScore?: number;
+  topGirlName?: string;
+  topGirlScore?: number;
+}
+
+export interface ClassRankingItem {
+  rank: number;
+  classId?: string;
+  className: string;
+  streamId?: string;
+  streamName: string;
+  totalStudents: number;
+  meanScore: number;
+  overallPerformanceLevel: string;
+  topStudentName?: string;
+  topStudentScore?: number;
+  topStudentAdmissionNumber?: string;
+  qualityPassRate?: number; // percentage of students with EE or ME
+  counts?: {
+    EE: number;
+    ME: number;
+    AE: number;
+    BE: number;
+  };
+}
+
+export interface BestClassPerSubjectItem {
+  learningAreaId: string;
+  learningAreaName: string;
+  bestStreamId?: string;
+  bestStreamName: string;
+  bestClassName: string;
+  meanScore: number;
+  performanceLevel: string;
+  totalStudents: number;
+  runnerUpStreamName?: string;
+  runnerUpClassName?: string;
+  runnerUpMeanScore?: number;
+}
+
+export interface BestStudentPerSubjectItem {
+  learningAreaId: string;
+  learningAreaName: string;
+  studentId: string;
+  studentName: string;
+  admissionNumber: string;
+  className: string;
+  streamName: string;
+  gender: string;
+  score: number;
+  performanceLevel: string;
+}
+
+export interface StreamSection {
+  streamId: string;
+  streamName: string;
+  className: string;
+  rows: BroadsheetRow[];
+  subjectSummaries: BroadsheetSubjectSummary[];
+  streamMeanScore: number;
+  streamMeanPoints: number;
+  totalStudents: number;
+}
+
 export interface BroadsheetResult {
   streamId: string;
   streamName: string;
+  classId?: string;
   className: string;
   gradeLevel: string;
   termName: string;
   yearName: string;
+  examType?: string;
   learningAreas: Array<{ id: string; name: string }>;
   rows: BroadsheetRow[];
+  streamSections?: StreamSection[];
   subjectSummaries: BroadsheetSubjectSummary[];
   streamMeanScore: number;
+  streamMeanPoints?: number;
   totalStudents: number;
+  totalClassStudents?: number;
+  genderStats?: GenderStats;
+  classRankings?: ClassRankingItem[];
+  bestClassesPerSubject?: BestClassPerSubjectItem[];
+  bestStudentsPerSubject?: BestStudentPerSubjectItem[];
 }
+
+// ==========================================
+// DAILY OCCURRENCE BOOK (OB) / INCIDENT RECORDS
+// ==========================================
+export type OccurrenceCategory =
+  | 'DISCIPLINARY'
+  | 'ACCIDENT_INJURY'
+  | 'MEDICAL_ILLNESS'
+  | 'PROPERTY_DAMAGE_LOSS'
+  | 'SECURITY_SAFETY'
+  | 'ACADEMIC_CLASSROOM'
+  | 'COMMENDATION_GOOD_DEED'
+  | 'GENERAL';
+
+export type OccurrenceSeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+
+export type OccurrenceStatus = 'OPEN' | 'INVESTIGATING' | 'RESOLVED' | 'ESCALATED';
+
+export interface OccurrenceRecord {
+  id: string;
+  schoolId: string;
+  occurrenceNumber: string;
+  title: string;
+  description: string;
+  category: OccurrenceCategory;
+  severity: OccurrenceSeverity;
+  date: string; // YYYY-MM-DD
+  time: string; // e.g. "10:30 AM"
+  location: string;
+  reportedByTeacherId: string;
+  reportedByTeacherName: string;
+  reportedByRole?: string;
+  studentIds: string[];
+  studentNames: string[];
+  witnesses?: string;
+  immediateActionTaken?: string;
+  status: OccurrenceStatus;
+  resolutionNotes?: string;
+  resolvedBy?: string;
+  resolvedAt?: string;
+  parentNotified: boolean;
+  parentNotificationMethod?: 'SMS' | 'PHONE_CALL' | 'IN_PERSON' | 'NONE';
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OccurrenceDailySummary {
+  date: string;
+  totalIncidents: number;
+  openCount: number;
+  investigatingCount: number;
+  resolvedCount: number;
+  escalatedCount: number;
+  bySeverity: {
+    low: number;
+    medium: number;
+    high: number;
+    critical: number;
+  };
+  byCategory: Record<string, number>;
+  incidents: OccurrenceRecord[];
+}
+
+// ==========================================
+// CURRICULUM PROGRESS TRACKER TYPES
+// ==========================================
+
+export type WeekCoverageStatus = 'PENDING' | 'IN_PROGRESS' | 'COVERED' | 'DELAYED';
+
+export interface CurriculumTrackerWeekItem {
+  id: string;
+  weekNumber: number;
+  strand: string;
+  subStrand: string;
+  learningOutcomes: string;
+  plannedLessons: number;
+  targetDate?: string;
+  suggestedActivities?: string;
+  resources?: string;
+  isCovered: boolean;
+  status: WeekCoverageStatus;
+  coveredAt?: string;
+  lessonsTaught?: number;
+  teacherComment?: string;
+  confirmedByTeacherId?: string;
+  confirmedByTeacherName?: string;
+  hodRemarks?: string;
+}
+
+export interface CurriculumTrackerStats {
+  totalWeeks: number;
+  coveredWeeks: number;
+  inProgressWeeks: number;
+  pendingWeeks: number;
+  delayedWeeks: number;
+  completionPercentage: number;
+  commentsCount: number;
+}
+
+export interface CurriculumTracker {
+  id: string;
+  schoolId: string;
+  teacherId: string;
+  teacherName: string;
+  learningAreaId: string;
+  subjectName: string;
+  classRoomId: string;
+  className: string;
+  streamId?: string;
+  streamName?: string;
+  academicYear: string;
+  term: string;
+  totalWeeks: number;
+  items: CurriculumTrackerWeekItem[];
+  status: 'ACTIVE' | 'COMPLETED' | 'ARCHIVED';
+  stats: CurriculumTrackerStats;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateCurriculumTrackerDTO {
+  schoolId?: string;
+  teacherId?: string;
+  teacherName?: string;
+  learningAreaId: string;
+  subjectName: string;
+  classRoomId: string;
+  className: string;
+  streamId?: string;
+  streamName?: string;
+  academicYear?: string;
+  term?: string;
+  totalWeeks?: number;
+  items?: Partial<CurriculumTrackerWeekItem>[];
+}
+
+export interface ConfirmWeekCoveredDTO {
+  covered?: boolean;
+  coveredAt?: string;
+  comment?: string;
+  lessonsTaught?: number;
+  status?: WeekCoverageStatus;
+}
+
+export interface CurriculumSummarySubject {
+  subjectName: string;
+  totalTrackers: number;
+  coveredWeeks: number;
+  totalWeeks: number;
+  completionRate: number;
+}
+
+export interface CurriculumSchoolSummary {
+  totalTrackers: number;
+  totalWeeksAll: number;
+  coveredWeeksAll: number;
+  inProgressWeeksAll: number;
+  pendingWeeksAll: number;
+  commentsCountAll: number;
+  overallPercentage: number;
+  subjects: CurriculumSummarySubject[];
+}
+
 
 

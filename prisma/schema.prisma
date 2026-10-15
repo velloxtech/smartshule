@@ -526,3 +526,63 @@ model BookLoan {
   @@index([status], map: "idx_book_loans_status")
   @@map("book_loans")
 }
+
+model OccurrenceRecord {
+  id                       String    @id @default(uuid())
+  schoolId                 String    @map("school_id")
+  occurrenceNumber         String    @map("occurrence_number")
+  title                    String
+  description              String
+  category                 String
+  severity                 String
+  date                     String
+  time                     String
+  location                 String
+  reportedByTeacherId      String    @map("reported_by_teacher_id")
+  reportedByTeacherName    String    @map("reported_by_teacher_name")
+  reportedByRole           String?   @map("reported_by_role")
+  studentIds               String[]  @map("student_ids")
+  studentNames             String[]  @map("student_names")
+  witnesses                String?
+  immediateActionTaken     String?   @map("immediate_action_taken")
+  status                   String    @default("OPEN")
+  resolutionNotes          String?   @map("resolution_notes")
+  resolvedBy               String?   @map("resolved_by")
+  resolvedAt               DateTime? @map("resolved_at")
+  parentNotified           Boolean   @default(false) @map("parent_notified")
+  parentNotificationMethod String?   @default("NONE") @map("parent_notification_method")
+  createdAt                DateTime  @default(now()) @map("created_at")
+  updatedAt                DateTime  @updatedAt @map("updated_at")
+
+  @@index([schoolId], map: "idx_occurrence_school_id")
+  @@index([date], map: "idx_occurrence_date")
+  @@index([status], map: "idx_occurrence_status")
+  @@index([category], map: "idx_occurrence_category")
+  @@map("occurrence_records")
+}
+
+model CurriculumTracker {
+  id             String   @id @default(uuid())
+  schoolId       String   @map("school_id")
+  teacherId      String   @map("teacher_id")
+  teacherName    String   @map("teacher_name")
+  learningAreaId String   @map("learning_area_id")
+  subjectName    String   @map("subject_name")
+  classRoomId    String   @map("classroom_id")
+  className      String   @map("class_name")
+  streamId       String?  @map("stream_id")
+  streamName     String?  @map("stream_name")
+  academicYear   String   @map("academic_year")
+  term           String
+  totalWeeks     Int      @default(12) @map("total_weeks")
+  items          Json     @default("[]")
+  status         String   @default("ACTIVE")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([schoolId], map: "idx_curr_tracker_school")
+  @@index([teacherId], map: "idx_curr_tracker_teacher")
+  @@index([classRoomId], map: "idx_curr_tracker_class")
+  @@index([term, academicYear], map: "idx_curr_tracker_term")
+  @@map("curriculum_trackers")
+}

@@ -73,10 +73,17 @@ import {
   CoCurricularClub,
   DisciplineIncident,
   BroadsheetResult,
+  OccurrenceRecord,
+  OccurrenceDailySummary,
   GeofenceConfig,
   TeacherClockInRecord,
   FacultyRosterItem,
   FacultyDailyRoster,
+  CurriculumTracker,
+  CurriculumTrackerWeekItem,
+  CreateCurriculumTrackerDTO,
+  ConfirmWeekCoveredDTO,
+  CurriculumSchoolSummary,
 } from '../types';
 function resolveApiBaseUrl(): string {
   let url = ((import.meta as any).env?.VITE_API_URL || '').trim();
@@ -196,7 +203,7 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
   return res.json();
 }
 
-export const apiService = {
+const coreApiService = {
   // Health & Status Check
   checkHealth: async (): Promise<boolean> => {
     try {
@@ -2462,66 +2469,270 @@ export const libraryApi = {
   // ==========================================
   // MASTER BROADSHEETS
   // ==========================================
-  getStreamBroadsheet: async (streamId: string, termId?: string, academicYearId?: string): Promise<ApiResponse<BroadsheetResult>> => {
+  getStreamBroadsheet: async (
+    streamId: string,
+    termId?: string,
+    academicYearId?: string,
+    classId?: string,
+    examType?: string
+  ): Promise<ApiResponse<BroadsheetResult>> => {
     const params = new URLSearchParams();
     params.append('streamId', streamId);
     if (termId) params.append('termId', termId);
     if (academicYearId) params.append('academicYearId', academicYearId);
+    if (classId) params.append('classId', classId);
+    if (examType) params.append('examType', examType);
     return apiFetch<ApiResponse<BroadsheetResult>>(`/broadsheets/stream?${params.toString()}`);
+  },
+
+  getBroadsheetAnalytics: async (classId: string, termId?: string, academicYearId?: string): Promise<ApiResponse<{
+    classId: string;
+    className: string;
+    classRankings: any[];
+    bestClassesPerSubject: any[];
+    bestStudentsPerSubject: any[];
+  }>> => {
+    const params = new URLSearchParams();
+    params.append('classId', classId);
+    if (termId) params.append('termId', termId);
+    if (academicYearId) params.append('academicYearId', academicYearId);
+    return apiFetch<ApiResponse<any>>(`/broadsheets/analytics?${params.toString()}`);
+  },
+
+  // Daily Occurrence Book (OB) / Incident Records
+  getOccurrences: async (params?: {
+    date?: string;
+    startDate?: string;
+    endDate?: string;
+    category?: string;
+    severity?: string;
+    status?: string;
+    studentId?: string;
+    teacherId?: string;
+    search?: string;
+  }): Promise<ApiResponse<OccurrenceRecord[]>> => {
+    const q = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, val]) => {
+        if (val) q.append(key, val);
+      });
+    }
+    const queryStr = q.toString();
+    return apiFetch<ApiResponse<OccurrenceRecord[]>>(`/occurrences${queryStr ? `?${queryStr}` : ''}`);
+  },
+
+  getOccurrenceDailySummary: async (date?: string): Promise<ApiResponse<OccurrenceDailySummary>> => {
+    const q = date ? `?date=${encodeURIComponent(date)}` : '';
+    return apiFetch<ApiResponse<OccurrenceDailySummary>>(`/occurrences/daily-summary${q}`);
+  },
+
+  getOccurrence: async (id: string): Promise<ApiResponse<OccurrenceRecord>> => {
+    return apiFetch<ApiResponse<OccurrenceRecord>>(`/occurrences/${id}`);
+  },
+
+  createOccurrence: async (data: any): Promise<ApiResponse<OccurrenceRecord>> => {
+    return apiFetch<ApiResponse<OccurrenceRecord>>('/occurrences', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateOccurrenceStatus: async (
+    id: string,
+    statusData: { status: string; resolutionNotes?: string; resolvedBy?: string }
+  ): Promise<ApiResponse<OccurrenceRecord>> => {
+    return apiFetch<ApiResponse<OccurrenceRecord>>(`/occurrences/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify(statusData),
+    });
+  },
+
+  updateOccurrence: async (id: string, data: any): Promise<ApiResponse<OccurrenceRecord>> => {
+    return apiFetch<ApiResponse<OccurrenceRecord>>(`/occurrences/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  deleteOccurrence: async (id: string): Promise<ApiResponse<{ message: string }>> => {
+    return apiFetch<ApiResponse<{ message: string }>>(`/occurrences/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  // ==========================================
+  // CURRICULUM PROGRESS TRACKER
+  // ==========================================
+  getCurriculumTrackers: async (params?: {
+    schoolId?: string;
+    teacherId?: string;
+    classRoomId?: string;
+    streamId?: string;
+    learningAreaId?: string;
+    term?: string;
+    academicYear?: string;
+    status?: string;
+    search?: string;
+  }): Promise<ApiResponse<CurriculumTracker[]>> => {
+    const q = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([k, v]) => {
+        if (v !== undefined && v !== '') q.append(k, String(v));
+      });
+    }
+    return apiFetch<ApiResponse<CurriculumTracker[]>>(`/curriculum-tracker?${q.toString()}`);
+  },
+
+  getCurriculumTrackerById: async (id: string): Promise<ApiResponse<CurriculumTracker>> => {
+    return apiFetch<ApiResponse<CurriculumTracker>>(`/curriculum-tracker/${id}`);
+  },
+
+  createCurriculumTracker: async (data: CreateCurriculumTrackerDTO): Promise<ApiResponse<CurriculumTracker>> => {
+    return apiFetch<ApiResponse<CurriculumTracker>>('/curriculum-tracker', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateTrackerWeekPlan: async (
+    id: string,
+    weekNumber: number,
+    data: Partial<CurriculumTrackerWeekItem>
+  ): Promise<ApiResponse<CurriculumTracker>> => {
+    return apiFetch<ApiResponse<CurriculumTracker>>(`/curriculum-tracker/${id}/weeks/${weekNumber}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  confirmTrackerWeekCovered: async (
+    id: string,
+    weekNumber: number,
+    data: ConfirmWeekCoveredDTO
+  ): Promise<ApiResponse<CurriculumTracker>> => {
+    return apiFetch<ApiResponse<CurriculumTracker>>(`/curriculum-tracker/${id}/weeks/${weekNumber}/confirm-covered`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateTrackerWeekComment: async (
+    id: string,
+    weekNumber: number,
+    comment: string
+  ): Promise<ApiResponse<CurriculumTracker>> => {
+    return apiFetch<ApiResponse<CurriculumTracker>>(`/curriculum-tracker/${id}/weeks/${weekNumber}/comment`, {
+      method: 'PUT',
+      body: JSON.stringify({ comment }),
+    });
+  },
+
+  batchUpdateTrackerWeeks: async (
+    id: string,
+    weeks: Partial<CurriculumTrackerWeekItem>[]
+  ): Promise<ApiResponse<CurriculumTracker>> => {
+    return apiFetch<ApiResponse<CurriculumTracker>>(`/curriculum-tracker/${id}/batch-weeks`, {
+      method: 'PUT',
+      body: JSON.stringify({ weeks }),
+    });
+  },
+
+  getCurriculumSummary: async (params?: {
+    schoolId?: string;
+    term?: string;
+    academicYear?: string;
+  }): Promise<ApiResponse<CurriculumSchoolSummary>> => {
+    const q = new URLSearchParams();
+    if (params?.schoolId) q.append('schoolId', params.schoolId);
+    if (params?.term) q.append('term', params.term);
+    if (params?.academicYear) q.append('academicYear', params.academicYear);
+    return apiFetch<ApiResponse<CurriculumSchoolSummary>>(`/curriculum-tracker/summary?${q.toString()}`);
+  },
+
+  deleteCurriculumTracker: async (id: string): Promise<ApiResponse<{ message: string }>> => {
+    return apiFetch<ApiResponse<{ message: string }>>(`/curriculum-tracker/${id}`, {
+      method: 'DELETE',
+    });
   },
 };
 
+// Unified apiService containing core and extended domain endpoints
+export const apiService = {
+  ...coreApiService,
+  ...libraryApi,
+};
+
 // Named exports for static binding & resilient importing
-export const getAnnouncements = apiService.getAnnouncements;
-export const getAnnouncement = apiService.getAnnouncement;
-export const createAnnouncement = apiService.createAnnouncement;
-export const updateAnnouncement = apiService.updateAnnouncement;
-export const deleteAnnouncement = apiService.deleteAnnouncement;
-export const togglePinAnnouncement = apiService.togglePinAnnouncement;
-export const acknowledgeAnnouncement = apiService.acknowledgeAnnouncement;
+export const getAnnouncements = libraryApi.getAnnouncements;
+export const getAnnouncement = libraryApi.getAnnouncement;
+export const createAnnouncement = libraryApi.createAnnouncement;
+export const updateAnnouncement = libraryApi.updateAnnouncement;
+export const deleteAnnouncement = libraryApi.deleteAnnouncement;
+export const togglePinAnnouncement = libraryApi.togglePinAnnouncement;
+export const acknowledgeAnnouncement = libraryApi.acknowledgeAnnouncement;
 
-export const getPayrollStats = apiService.getPayrollStats;
-export const getPayrolls = apiService.getPayrolls;
-export const generateMonthlyPayroll = apiService.generateMonthlyPayroll;
-export const createCustomPayroll = apiService.createCustomPayroll;
-export const approvePayroll = apiService.approvePayroll;
-export const markPayrollPaid = apiService.markPayrollPaid;
-export const getLeaves = apiService.getLeaves;
-export const applyLeave = apiService.applyLeave;
-export const reviewLeave = apiService.reviewLeave;
+export const getPayrollStats = libraryApi.getPayrollStats;
+export const getPayrolls = libraryApi.getPayrolls;
+export const generateMonthlyPayroll = libraryApi.generateMonthlyPayroll;
+export const createCustomPayroll = libraryApi.createCustomPayroll;
+export const approvePayroll = libraryApi.approvePayroll;
+export const markPayrollPaid = libraryApi.markPayrollPaid;
+export const getLeaves = libraryApi.getLeaves;
+export const applyLeave = libraryApi.applyLeave;
+export const reviewLeave = libraryApi.reviewLeave;
 
-export const getClinicStats = apiService.getClinicStats;
-export const getStudentMedicalProfile = apiService.getStudentMedicalProfile;
-export const updateStudentMedicalProfile = apiService.updateStudentMedicalProfile;
-export const getClinicVisits = apiService.getClinicVisits;
-export const logClinicVisit = apiService.logClinicVisit;
-export const updateClinicVisitStatus = apiService.updateClinicVisitStatus;
+export const getClinicStats = libraryApi.getClinicStats;
+export const getStudentMedicalProfile = libraryApi.getStudentMedicalProfile;
+export const updateStudentMedicalProfile = libraryApi.updateStudentMedicalProfile;
+export const getClinicVisits = libraryApi.getClinicVisits;
+export const logClinicVisit = libraryApi.logClinicVisit;
+export const updateClinicVisitStatus = libraryApi.updateClinicVisitStatus;
 
-export const getInventoryStats = apiService.getInventoryStats;
-export const getInventoryItems = apiService.getInventoryItems;
-export const addInventoryItem = apiService.addInventoryItem;
-export const updateInventoryItem = apiService.updateInventoryItem;
-export const deleteInventoryItem = apiService.deleteInventoryItem;
-export const getLowStockAlerts = apiService.getLowStockAlerts;
-export const recordStockTransaction = apiService.recordStockTransaction;
-export const getStockTransactions = apiService.getStockTransactions;
-export const getFixedAssets = apiService.getFixedAssets;
-export const addFixedAsset = apiService.addFixedAsset;
-export const updateFixedAsset = apiService.updateFixedAsset;
-export const deleteFixedAsset = apiService.deleteFixedAsset;
+export const getInventoryStats = libraryApi.getInventoryStats;
+export const getInventoryItems = libraryApi.getInventoryItems;
+export const addInventoryItem = libraryApi.addInventoryItem;
+export const updateInventoryItem = libraryApi.updateInventoryItem;
+export const deleteInventoryItem = libraryApi.deleteInventoryItem;
+export const getLowStockAlerts = libraryApi.getLowStockAlerts;
+export const recordStockTransaction = libraryApi.recordStockTransaction;
+export const getStockTransactions = libraryApi.getStockTransactions;
+export const getFixedAssets = libraryApi.getFixedAssets;
+export const addFixedAsset = libraryApi.addFixedAsset;
+export const updateFixedAsset = libraryApi.updateFixedAsset;
+export const deleteFixedAsset = libraryApi.deleteFixedAsset;
 
-export const getDisciplineStats = apiService.getDisciplineStats;
-export const getClubs = apiService.getClubs;
-export const getClub = apiService.getClub;
-export const createClub = apiService.createClub;
-export const addClubMember = apiService.addClubMember;
-export const removeClubMember = apiService.removeClubMember;
-export const deleteClub = apiService.deleteClub;
-export const getDisciplineIncidents = apiService.getDisciplineIncidents;
-export const logDisciplineIncident = apiService.logDisciplineIncident;
-export const getStudentDisciplineProfile = apiService.getStudentDisciplineProfile;
+export const getDisciplineStats = libraryApi.getDisciplineStats;
+export const getClubs = libraryApi.getClubs;
+export const getClub = libraryApi.getClub;
+export const createClub = libraryApi.createClub;
+export const addClubMember = libraryApi.addClubMember;
+export const removeClubMember = libraryApi.removeClubMember;
+export const deleteClub = libraryApi.deleteClub;
+export const getDisciplineIncidents = libraryApi.getDisciplineIncidents;
+export const logDisciplineIncident = libraryApi.logDisciplineIncident;
+export const getStudentDisciplineProfile = libraryApi.getStudentDisciplineProfile;
 
-export const getStreamBroadsheet = apiService.getStreamBroadsheet;
+export const getStreamBroadsheet = libraryApi.getStreamBroadsheet;
+export const getBroadsheetAnalytics = libraryApi.getBroadsheetAnalytics;
+
+export const getOccurrences = libraryApi.getOccurrences;
+export const getOccurrenceDailySummary = libraryApi.getOccurrenceDailySummary;
+export const getOccurrence = libraryApi.getOccurrence;
+export const createOccurrence = libraryApi.createOccurrence;
+export const updateOccurrenceStatus = libraryApi.updateOccurrenceStatus;
+export const updateOccurrence = libraryApi.updateOccurrence;
+export const deleteOccurrence = libraryApi.deleteOccurrence;
+
+// Curriculum Progress Tracker named exports
+export const getCurriculumTrackers = libraryApi.getCurriculumTrackers;
+export const getCurriculumTrackerById = libraryApi.getCurriculumTrackerById;
+export const createCurriculumTracker = libraryApi.createCurriculumTracker;
+export const updateTrackerWeekPlan = libraryApi.updateTrackerWeekPlan;
+export const confirmTrackerWeekCovered = libraryApi.confirmTrackerWeekCovered;
+export const updateTrackerWeekComment = libraryApi.updateTrackerWeekComment;
+export const batchUpdateTrackerWeeks = libraryApi.batchUpdateTrackerWeeks;
+export const getCurriculumSummary = libraryApi.getCurriculumSummary;
+export const deleteCurriculumTracker = libraryApi.deleteCurriculumTracker;
 
 export default apiService;
 

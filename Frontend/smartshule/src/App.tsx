@@ -57,6 +57,8 @@ import { ClinicManagementView } from './components/views/ClinicManagementView';
 import { InventoryManagementView } from './components/views/InventoryManagementView';
 import { DisciplineClubsView } from './components/views/DisciplineClubsView';
 import { MasterBroadsheetView } from './components/views/MasterBroadsheetView';
+import { OccurrenceBookView } from './components/views/OccurrenceBookView';
+import { CurriculumTrackerView } from './components/views/CurriculumTrackerView';
 
 // Modals
 import { MpesaStkModal } from './components/modals/MpesaStkModal';
@@ -1209,6 +1211,8 @@ export default function App() {
           {currentTab === 'clinic' && <ClinicManagementView />}
           {currentTab === 'discipline' && <DisciplineClubsView />}
           {currentTab === 'inventory' && <InventoryManagementView />}
+          {currentTab === 'occurrence-records' && <OccurrenceBookView />}
+          {currentTab === 'curriculum-tracker' && <CurriculumTrackerView />}
         </main>
 
         {/* Global Portal Footer: Pure Maroon (#800000) & Vellox Tech Watermark */}

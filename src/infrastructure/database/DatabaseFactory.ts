@@ -69,8 +69,14 @@ import { ILunchFeeRepository } from '../../core/ports/repositories/ILunchFeeRepo
 import { ILibraryRepository } from '../../core/ports/repositories/ILibraryRepository';
 import { IAnnouncementRepository } from '../../core/ports/repositories/IAnnouncementRepository';
 import { ITeacherClockInRepository } from '../../core/ports/repositories/ITeacherClockInRepository';
+import { IOccurrenceRepository } from '../../core/ports/repositories/IOccurrenceRepository';
+import { ICurriculumTrackerRepository } from '../../core/ports/repositories/ICurriculumTrackerRepository';
 import { InMemoryTeacherClockInRepository } from './in-memory/InMemoryTeacherClockInRepository';
 import { PostgresTeacherClockInRepository } from './postgres/PostgresTeacherClockInRepository';
+import { InMemoryOccurrenceRepository } from './in-memory/InMemoryOccurrenceRepository';
+import { PostgresOccurrenceRepository } from './postgres/PostgresOccurrenceRepository';
+import { InMemoryCurriculumTrackerRepository } from './in-memory/InMemoryCurriculumTrackerRepository';
+import { PostgresCurriculumTrackerRepository } from './postgres/PostgresCurriculumTrackerRepository';
 import {
   PostgresRecordOfWorkRepository,
   InMemoryRecordOfWorkRepository,
@@ -107,6 +113,8 @@ export interface RepositoryBundle {
   libraryRepository?: ILibraryRepository;
   announcementRepository?: IAnnouncementRepository;
   teacherClockInRepository?: ITeacherClockInRepository;
+  occurrenceRepository?: IOccurrenceRepository;
+  curriculumTrackerRepository?: ICurriculumTrackerRepository;
 }
 
 export class DatabaseFactory {
@@ -197,6 +205,8 @@ export class DatabaseFactory {
         libraryRepository: new PostgresLibraryRepository(pool),
         announcementRepository: new InMemoryAnnouncementRepository(),
         teacherClockInRepository: new PostgresTeacherClockInRepository(pool),
+        occurrenceRepository: new PostgresOccurrenceRepository(pool),
+        curriculumTrackerRepository: new PostgresCurriculumTrackerRepository(pool),
       };
     }
 
@@ -224,6 +234,8 @@ export class DatabaseFactory {
       libraryRepository: new InMemoryLibraryRepository(),
       announcementRepository: new InMemoryAnnouncementRepository(),
       teacherClockInRepository: new InMemoryTeacherClockInRepository(),
+      occurrenceRepository: new InMemoryOccurrenceRepository(),
+      curriculumTrackerRepository: new InMemoryCurriculumTrackerRepository(),
     };
   }
 }

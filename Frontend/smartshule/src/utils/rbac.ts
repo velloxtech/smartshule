@@ -234,6 +234,19 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
         ],
       },
       {
+        id: 'curriculum-tracker',
+        label: 'Curriculum Tracker',
+        icon: 'fact_check',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.HEAD_TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
+          UserRole.TEACHER,
+        ],
+      },
+      {
         id: 'timetable',
         label: 'Class Timetable',
         icon: 'calendar_view_week',
@@ -441,6 +454,19 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
         id: 'discipline',
         label: 'Discipline & Clubs',
         icon: 'military_tech',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.HEAD_TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
+          UserRole.TEACHER,
+        ],
+      },
+      {
+        id: 'occurrence-records',
+        label: 'Daily Occurrence Book',
+        icon: 'event_note',
         allowedRoles: [
           UserRole.SUPER_ADMIN,
           UserRole.ADMIN,

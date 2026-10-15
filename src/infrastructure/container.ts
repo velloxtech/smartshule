@@ -43,6 +43,12 @@ import { BroadsheetUseCases } from '../application/academics/BroadsheetUseCases'
 import { RecordOfWorkUseCases } from '../application/curriculum-plans/RecordOfWorkUseCases';
 import { ComplaintUseCases } from '../application/complaints/ComplaintUseCases';
 import { SystemLogUseCases } from '../application/system-logs/SystemLogUseCases';
+import { OccurrenceUseCases } from '../application/occurrences/OccurrenceUseCases';
+import { IOccurrenceRepository } from '../core/ports/repositories/IOccurrenceRepository';
+import { InMemoryOccurrenceRepository } from './database/in-memory/InMemoryOccurrenceRepository';
+import { CurriculumTrackerUseCases } from '../application/curriculum-tracker/CurriculumTrackerUseCases';
+import { ICurriculumTrackerRepository } from '../core/ports/repositories/ICurriculumTrackerRepository';
+import { InMemoryCurriculumTrackerRepository } from './database/in-memory/InMemoryCurriculumTrackerRepository';
 
 import {
   InMemoryUserRepository,
@@ -114,6 +120,8 @@ export class AppContainer {
   public clinicRepository: IClinicRepository;
   public inventoryRepository: IInventoryRepository;
   public disciplineRepository: IDisciplineRepository;
+  public occurrenceRepository: IOccurrenceRepository;
+  public curriculumTrackerRepository: ICurriculumTrackerRepository;
 
   // Services
   public readonly tokenService = new JwtAuthTokenService();
@@ -150,6 +158,8 @@ export class AppContainer {
   public inventoryUseCases!: InventoryUseCases;
   public disciplineUseCases!: DisciplineUseCases;
   public broadsheetUseCases!: BroadsheetUseCases;
+  public occurrenceUseCases!: OccurrenceUseCases;
+  public curriculumTrackerUseCases!: CurriculumTrackerUseCases;
 
   constructor(customRepositories?: Partial<RepositoryBundle>) {
     this.userRepository = customRepositories?.userRepository || new InMemoryUserRepository();
@@ -186,6 +196,10 @@ export class AppContainer {
     this.clinicRepository = new InMemoryClinicRepository();
     this.inventoryRepository = new InMemoryInventoryRepository();
     this.disciplineRepository = new InMemoryDisciplineRepository();
+    this.occurrenceRepository =
+      customRepositories?.occurrenceRepository || new InMemoryOccurrenceRepository();
+    this.curriculumTrackerRepository =
+      customRepositories?.curriculumTrackerRepository || new InMemoryCurriculumTrackerRepository();
 
     this.initUseCases();
   }
@@ -343,6 +357,16 @@ export class AppContainer {
       this.academicRepository,
       this.studentRepository,
       this.cbcAssessmentRepository
+    );
+    this.occurrenceUseCases = new OccurrenceUseCases(
+      this.occurrenceRepository,
+      this.studentRepository,
+      this.guardianRepository,
+      this.notificationService
+    );
+    this.curriculumTrackerUseCases = new CurriculumTrackerUseCases(
+      this.curriculumTrackerRepository,
+      this.teacherRepository
     );
   }
 

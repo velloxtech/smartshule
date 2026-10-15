@@ -682,6 +682,64 @@ export class PostgresDatabaseInitializer {
       CREATE INDEX IF NOT EXISTS idx_book_loans_book ON book_loans(book_id);
       CREATE INDEX IF NOT EXISTS idx_book_loans_borrower ON book_loans(borrower_id);
       CREATE INDEX IF NOT EXISTS idx_book_loans_status ON book_loans(status);
+
+      CREATE TABLE IF NOT EXISTS occurrence_records (
+        id VARCHAR(100) PRIMARY KEY,
+        school_id VARCHAR(100) NOT NULL,
+        occurrence_number VARCHAR(100) NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        description TEXT NOT NULL,
+        category VARCHAR(50) NOT NULL,
+        severity VARCHAR(50) NOT NULL,
+        date VARCHAR(20) NOT NULL,
+        time VARCHAR(20) NOT NULL,
+        location VARCHAR(255) NOT NULL,
+        reported_by_teacher_id VARCHAR(100) NOT NULL,
+        reported_by_teacher_name VARCHAR(100) NOT NULL,
+        reported_by_role VARCHAR(100),
+        student_ids JSONB DEFAULT '[]',
+        student_names JSONB DEFAULT '[]',
+        witnesses TEXT,
+        immediate_action_taken TEXT,
+        status VARCHAR(50) DEFAULT 'OPEN',
+        resolution_notes TEXT,
+        resolved_by VARCHAR(100),
+        resolved_at TIMESTAMP,
+        parent_notified BOOLEAN DEFAULT false,
+        parent_notification_method VARCHAR(50) DEFAULT 'NONE',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_occurrence_school_id ON occurrence_records(school_id);
+      CREATE INDEX IF NOT EXISTS idx_occurrence_date ON occurrence_records(date);
+      CREATE INDEX IF NOT EXISTS idx_occurrence_status ON occurrence_records(status);
+      CREATE INDEX IF NOT EXISTS idx_occurrence_category ON occurrence_records(category);
+
+      CREATE TABLE IF NOT EXISTS curriculum_trackers (
+        id VARCHAR(100) PRIMARY KEY,
+        school_id VARCHAR(100) NOT NULL,
+        teacher_id VARCHAR(100) NOT NULL,
+        teacher_name VARCHAR(255) NOT NULL,
+        learning_area_id VARCHAR(100) NOT NULL,
+        subject_name VARCHAR(255) NOT NULL,
+        classroom_id VARCHAR(100) NOT NULL,
+        class_name VARCHAR(128) NOT NULL,
+        stream_id VARCHAR(100),
+        stream_name VARCHAR(128),
+        academic_year VARCHAR(32) NOT NULL,
+        term VARCHAR(32) NOT NULL,
+        total_weeks INT NOT NULL DEFAULT 12,
+        items JSONB NOT NULL DEFAULT '[]',
+        status VARCHAR(32) NOT NULL DEFAULT 'ACTIVE',
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_curr_tracker_school ON curriculum_trackers(school_id);
+      CREATE INDEX IF NOT EXISTS idx_curr_tracker_teacher ON curriculum_trackers(teacher_id);
+      CREATE INDEX IF NOT EXISTS idx_curr_tracker_class ON curriculum_trackers(classroom_id);
+      CREATE INDEX IF NOT EXISTS idx_curr_tracker_term ON curriculum_trackers(term, academic_year);
     `;
 
     await pool.query(ddl);
@@ -1124,7 +1182,21 @@ export class PostgresAcademicRepository implements IAcademicRepository {
     return LearningArea.create({ name: r.name, code: r.code, gradeLevel: r.grade_level, educationLevel: r.education_level, isElective: r.is_elective, schoolId: r.school_id }, r.id, r.created_at, r.updated_at);
   }
   public async findAllLearningAreas(filters?: { gradeLevel?: CbcGradeLevel; schoolId?: string }): Promise<LearningArea[]> {
-    const res = await this.pool.query('SELECT * FROM learning_areas');
+    let q = 'SELECT * FROM learning_areas';
+    const params: any[] = [];
+    const conditions: string[] = [];
+    if (filters?.gradeLevel) {
+      params.push(filters.gradeLevel);
+      conditions.push(`grade_level = $${params.length}`);
+    }
+    if (filters?.schoolId) {
+      params.push(filters.schoolId);
+      conditions.push(`school_id = $${params.length}`);
+    }
+    if (conditions.length > 0) {
+      q += ' WHERE ' + conditions.join(' AND ');
+    }
+    const res = await this.pool.query(q, params);
     return res.rows.map(r => LearningArea.create({ name: r.name, code: r.code, gradeLevel: r.grade_level, educationLevel: r.education_level, isElective: r.is_elective, schoolId: r.school_id }, r.id, r.created_at, r.updated_at));
   }
   public async saveLearningArea(la: LearningArea): Promise<void> {

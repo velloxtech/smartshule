@@ -214,6 +214,22 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
             <span>Take Roll Call</span>
           </button>
           <button
+            onClick={() => onNavigateTab('occurrence-records')}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-xs font-semibold shadow-xs border border-outline-variant/30 transition-all cursor-pointer"
+            title="Log or view today's incidents in the Daily Occurrence Book"
+          >
+            <span className="material-symbols-outlined text-[16px] text-amber-700">event_note</span>
+            <span>Occurrence Book</span>
+          </button>
+          <button
+            onClick={() => onNavigateTab('curriculum-tracker')}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 text-xs font-semibold shadow-xs transition-all cursor-pointer"
+            title="Track weekly syllabus progress & confirm coverage"
+          >
+            <span className="material-symbols-outlined text-[16px] text-emerald-700">fact_check</span>
+            <span>Curriculum Tracker</span>
+          </button>
+          <button
             onClick={() => onOpenUploadMarks()}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-secondary text-white hover:bg-secondary-container text-xs font-semibold shadow-xs transition-all cursor-pointer"
           >
@@ -361,7 +377,7 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
       </div>
 
       {/* Teacher Quick Action Tiles */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
         <button
           onClick={() => onNavigateTab('attendance-register')}
           className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 hover:border-primary hover:shadow-sm transition-all text-left flex flex-col justify-between gap-3 cursor-pointer group"
@@ -385,6 +401,19 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
           <div>
             <div className="font-bold text-xs text-on-surface">Upload Marks</div>
             <div className="text-[11px] text-on-surface-variant">Auto-evaluate CBC remarks</div>
+          </div>
+        </button>
+
+        <button
+          onClick={() => onNavigateTab('curriculum-tracker')}
+          className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 hover:border-emerald-600 hover:shadow-sm transition-all text-left flex flex-col justify-between gap-3 cursor-pointer group"
+        >
+          <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center group-hover:bg-emerald-700 group-hover:text-white transition-colors">
+            <span className="material-symbols-outlined text-[20px]">fact_check</span>
+          </div>
+          <div>
+            <div className="font-bold text-xs text-on-surface">Curriculum Tracker</div>
+            <div className="text-[11px] text-on-surface-variant">Weekly syllabus progress</div>
           </div>
         </button>
 
@@ -424,6 +453,19 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
           <div>
             <div className="font-bold text-xs text-on-surface">Edit Timetable</div>
             <div className="text-[11px] text-on-surface-variant">Manage periods & rooms</div>
+          </div>
+        </button>
+
+        <button
+          onClick={() => onNavigateTab('occurrence-records')}
+          className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 hover:border-[#7a1228] hover:shadow-sm transition-all text-left flex flex-col justify-between gap-3 cursor-pointer group"
+        >
+          <div className="w-9 h-9 rounded-lg bg-rose-50 text-[#7a1228] flex items-center justify-center group-hover:bg-[#7a1228] group-hover:text-white transition-colors">
+            <span className="material-symbols-outlined text-[20px]">event_note</span>
+          </div>
+          <div>
+            <div className="font-bold text-xs text-on-surface">Occurrence Book</div>
+            <div className="text-[11px] text-on-surface-variant">Log daily incident</div>
           </div>
         </button>
       </div>

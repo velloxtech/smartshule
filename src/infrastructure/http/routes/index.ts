@@ -176,6 +176,20 @@ import {
   LogIncidentSchema
 } from '../controllers/DisciplineController';
 import { BroadsheetController } from '../controllers/BroadsheetController';
+import {
+  OccurrenceController,
+  CreateOccurrenceSchema,
+  UpdateOccurrenceStatusSchema,
+  UpdateOccurrenceSchema
+} from '../controllers/OccurrenceController';
+import {
+  CurriculumTrackerController,
+  CreateCurriculumTrackerSchema,
+  UpdateWeekPlanSchema,
+  ConfirmWeekCoveredSchema,
+  UpdateWeekCommentSchema,
+  BatchUpdateWeeksSchema
+} from '../controllers/CurriculumTrackerController';
 
 export function createApiRouter(container: AppContainer): Router {
   const router = Router();
@@ -207,6 +221,8 @@ export function createApiRouter(container: AppContainer): Router {
   const inventoryController = new InventoryController(container.inventoryUseCases);
   const disciplineController = new DisciplineController(container.disciplineUseCases);
   const broadsheetController = new BroadsheetController(container.broadsheetUseCases);
+  const occurrenceController = new OccurrenceController(container.occurrenceUseCases);
+  const curriculumTrackerController = new CurriculumTrackerController(container.curriculumTrackerUseCases);
 
   // ==========================================
   // 1. AUTH ROUTES
@@ -906,8 +922,78 @@ export function createApiRouter(container: AppContainer): Router {
   // ==========================================
   const broadsheetRouter = Router();
   broadsheetRouter.get('/stream', authMiddleware, broadsheetController.getStreamBroadsheet);
+  broadsheetRouter.get('/analytics', authMiddleware, broadsheetController.getClassAnalytics);
 
   router.use('/broadsheets', broadsheetRouter);
+
+  // ==========================================
+  // 17i. DAILY OCCURRENCE BOOK / INCIDENT RECORDS ROUTES
+  // ==========================================
+  const occurrenceRouter = Router();
+  occurrenceRouter.get('/daily-summary', authMiddleware, occurrenceController.getDailySummary);
+  occurrenceRouter.get('/stats', authMiddleware, occurrenceController.getDailySummary);
+  occurrenceRouter.get('/', authMiddleware, occurrenceController.listOccurrences);
+  occurrenceRouter.get('/:id', authMiddleware, occurrenceController.getOccurrence);
+  occurrenceRouter.post('/', authMiddleware, validateBody(CreateOccurrenceSchema), occurrenceController.createOccurrence);
+  occurrenceRouter.patch('/:id/status', authMiddleware, validateBody(UpdateOccurrenceStatusSchema), occurrenceController.updateStatus);
+  occurrenceRouter.put('/:id/status', authMiddleware, validateBody(UpdateOccurrenceStatusSchema), occurrenceController.updateStatus);
+  occurrenceRouter.put('/:id', authMiddleware, validateBody(UpdateOccurrenceSchema), occurrenceController.updateOccurrence);
+  occurrenceRouter.delete('/:id', authMiddleware, occurrenceController.deleteOccurrence);
+
+  router.use('/occurrences', occurrenceRouter);
+  router.use('/occurrence-book', occurrenceRouter);
+
+  // ==========================================
+  // 17j. CURRICULUM PROGRESS TRACKER ROUTES
+  // ==========================================
+  const curriculumTrackerRouter = Router();
+  curriculumTrackerRouter.get('/summary', authMiddleware, curriculumTrackerController.getSummary);
+  curriculumTrackerRouter.get('/', authMiddleware, curriculumTrackerController.list);
+  curriculumTrackerRouter.get('/:id', authMiddleware, curriculumTrackerController.getById);
+  curriculumTrackerRouter.post(
+    '/',
+    authMiddleware,
+    requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.SUPER_ADMIN),
+    validateBody(CreateCurriculumTrackerSchema),
+    curriculumTrackerController.create
+  );
+  curriculumTrackerRouter.put(
+    '/:id/weeks/:weekNumber',
+    authMiddleware,
+    requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.SUPER_ADMIN),
+    validateBody(UpdateWeekPlanSchema),
+    curriculumTrackerController.updateWeekPlan
+  );
+  curriculumTrackerRouter.post(
+    '/:id/weeks/:weekNumber/confirm-covered',
+    authMiddleware,
+    requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.SUPER_ADMIN),
+    validateBody(ConfirmWeekCoveredSchema),
+    curriculumTrackerController.confirmWeekCovered
+  );
+  curriculumTrackerRouter.put(
+    '/:id/weeks/:weekNumber/comment',
+    authMiddleware,
+    requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.SUPER_ADMIN),
+    validateBody(UpdateWeekCommentSchema),
+    curriculumTrackerController.updateWeekComment
+  );
+  curriculumTrackerRouter.put(
+    '/:id/batch-weeks',
+    authMiddleware,
+    requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.SUPER_ADMIN),
+    validateBody(BatchUpdateWeeksSchema),
+    curriculumTrackerController.batchUpdateWeeks
+  );
+  curriculumTrackerRouter.delete(
+    '/:id',
+    authMiddleware,
+    requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.SUPER_ADMIN),
+    curriculumTrackerController.delete
+  );
+
+  router.use('/curriculum-tracker', curriculumTrackerRouter);
+  router.use('/curriculum-trackers', curriculumTrackerRouter);
 
   // ==========================================
   // 18. POSTMAN SPEC EXPORT ROUTES
