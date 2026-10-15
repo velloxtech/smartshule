@@ -134,9 +134,22 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
     group: 'CBC Competencies & Grading',
     items: [
       {
-        id: 'assessments',
-        label: 'Formative & Summative',
-        icon: 'assignment',
+        id: 'formative-assessments',
+        label: 'Formative (Continuous / CATs)',
+        icon: 'fact_check',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.HEAD_TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
+          UserRole.TEACHER,
+        ],
+      },
+      {
+        id: 'summative-assessments',
+        label: 'Summative (Terminal Exams)',
+        icon: 'military_tech',
         allowedRoles: [
           UserRole.SUPER_ADMIN,
           UserRole.ADMIN,

@@ -269,16 +269,11 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
             {/* School Header */}
             <div className="text-center pb-3 border-b border-surface-container">
               <div className="text-base font-bold text-[#7a1228] uppercase tracking-wide">
-                {schoolData?.name || 'SmartShule Academy'}
+                {schoolData?.name || 'Grace Seeds School'}
               </div>
-              {(schoolData?.knecCode || schoolData?.registrationNumber) && (
-                <div className="text-[11px] text-on-surface-variant font-data-mono">
-                  KNEC / Reg: {schoolData?.knecCode || schoolData?.registrationNumber}
-                </div>
-              )}
-              {schoolData?.address && (
-                <div className="text-[10px] text-outline mt-0.5">{schoolData.address}</div>
-              )}
+              <div className="text-[10px] text-outline mt-0.5">
+                {schoolData?.address || 'KEMRI Street, Kisian, Kisumu, Kenya'} · Tel: {schoolData?.phone || '0745436312'} · Email: {schoolData?.email || 'schoolgraceseeds@gmail.com'}
+              </div>
               <div className="mt-2 inline-block px-3 py-0.5 bg-surface-container rounded-full text-[10px] font-bold text-on-surface uppercase tracking-wider">
                 {recordedResult.channel === 'CASH' ? 'Official Cash Receipt' : 'Bank Deposit Acknowledgment'}
               </div>

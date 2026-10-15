@@ -63,6 +63,10 @@ export const RecordSummativeSchema = z.object({
   evaluationDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date format must be YYYY-MM-DD').optional()
 });
 
+export const RecordSummativeBatchSchema = z.object({
+  assessments: z.array(RecordSummativeSchema).min(1, 'At least one subject mark is required')
+});
+
 export const GenerateReportCardSchema = z.object({
   studentId: z.string().min(1),
   termId: z.string().min(1),
@@ -259,6 +263,36 @@ export class CbcAssessmentController {
     }
   };
 
+  public recordSummativeBatch = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const user = (req as any).user;
+      const assessments = req.body.assessments;
+      const results = await this.cbcUseCases.recordSummativeBatch(assessments);
+
+      this.systemLogUseCases?.log({
+        schoolId: (req as any).user?.schoolId || 'school-001',
+        level: 'AUDIT',
+        category: 'ACADEMICS',
+        action: 'BATCH_MARKS_UPLOADED',
+        actorUserId: user?.userId || user?.id,
+        actorEmail: user?.email,
+        actorRole: user?.role,
+        ipAddress: req.ip || (req.socket?.remoteAddress as string),
+        status: 'SUCCESS',
+        details: `Batch recorded ${results.length} subject marks for learner`,
+        metadata: { count: results.length }
+      }).catch(() => {});
+
+      return res.status(201).json({
+        success: true,
+        message: `Successfully uploaded ${results.length} subject marks`,
+        data: results
+      });
+    } catch (err: any) {
+      next(err);
+    }
+  };
+
   public listSummatives = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { studentId, learningAreaId, termId, academicYearId } = req.query;
@@ -389,6 +423,30 @@ export class CbcAssessmentController {
       }).catch(() => {});
 
       return res.status(200).json({ success: true, message: 'Formative assessment deleted successfully' });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public deleteSummative = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      await this.cbcUseCases.deleteSummative(req.params.id as string, (req as any).user);
+
+      this.systemLogUseCases?.log({
+        schoolId: (req as any).user?.schoolId || 'school-001',
+        level: 'WARN',
+        category: 'ACADEMICS',
+        action: 'SUMMATIVE_MARKS_DELETED',
+        actorUserId: (req as any).user?.userId || (req as any).user?.id,
+        actorEmail: (req as any).user?.email,
+        actorRole: (req as any).user?.role,
+        ipAddress: req.ip || (req.socket?.remoteAddress as string),
+        status: 'SUCCESS',
+        details: `Deleted summative exam mark record ${req.params.id}`,
+        metadata: { assessmentId: req.params.id }
+      }).catch(() => {});
+
+      return res.status(200).json({ success: true, message: 'Summative assessment deleted successfully' });
     } catch (err) {
       next(err);
     }

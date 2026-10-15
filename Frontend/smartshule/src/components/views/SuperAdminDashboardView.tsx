@@ -154,7 +154,7 @@ export const SuperAdminDashboardView: React.FC<SuperAdminDashboardViewProps> = (
             { role: 'Deputy Head', handle: 'deputy', desc: 'Lesson plan approval queue & timetables', icon: 'fact_check', color: 'border-indigo-200 bg-indigo-50/50 text-indigo-900', tab: 'schemes-lesson-plans' },
             { role: 'Admissions', handle: 'admissions', desc: 'Learner intake & teacher account onboarding', icon: 'person_add', color: 'border-blue-200 bg-blue-50/50 text-blue-900', tab: 'students-guardians' },
             { role: 'Bursar', handle: 'bursar', desc: 'Isolated finance, ledgers, & fee collection', icon: 'account_balance_wallet', color: 'border-amber-200 bg-amber-50/50 text-amber-900', tab: 'cashflow-ledger' },
-            { role: 'Teacher', handle: 'teacher', desc: 'CBC rubrics, eDiary, & lesson plan submission', icon: 'menu_book', color: 'border-emerald-200 bg-emerald-50/50 text-emerald-900', tab: 'assessments' },
+            { role: 'Teacher', handle: 'teacher', desc: 'CBC rubrics, eDiary, & lesson plan submission', icon: 'menu_book', color: 'border-emerald-200 bg-emerald-50/50 text-emerald-900', tab: 'formative-assessments' },
             { role: 'Parent', handle: 'parent', desc: 'Fee clearance, child report cards, & eDiary', icon: 'family_restroom', color: 'border-sky-200 bg-sky-50/50 text-sky-900', tab: 'report-cards' },
           ].map((item) => (
             <div

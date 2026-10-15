@@ -24,7 +24,7 @@ export class AcademicUseCases {
         {
           name: 'Grace Seeds School',
           code: 'GSS-001',
-          centerCode: 'KNEC-08291',
+          centerCode: undefined,
           motto: 'The future Begins Here',
           email: 'schoolgraceseeds@gmail.com',
           phone: '0745436312',
@@ -50,7 +50,7 @@ export class AcademicUseCases {
         {
           name: 'Grace Seeds School',
           code: school.code || 'GSS-001',
-          centerCode: school.centerCode || 'KNEC-08291',
+          centerCode: school.centerCode,
           motto: 'The future Begins Here',
           email: 'schoolgraceseeds@gmail.com',
           phone: '0745436312',

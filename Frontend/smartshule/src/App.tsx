@@ -25,6 +25,8 @@ import { GeofenceView } from './components/views/GeofenceView';
 import { ClassesView } from './components/views/ClassesView';
 import { LearningAreasView } from './components/views/LearningAreasView';
 import { AssessmentsView } from './components/views/AssessmentsView';
+import { FormativeAssessmentsView } from './components/views/FormativeAssessmentsView';
+import { SummativeAssessmentsView } from './components/views/SummativeAssessmentsView';
 import { StrandsView } from './components/views/StrandsView';
 import { ReportCardsView } from './components/views/ReportCardsView';
 import { CompetencyAnalyticsView } from './components/views/CompetencyAnalyticsView';
@@ -121,6 +123,7 @@ export default function App() {
   const [selectedStudentForReport, setSelectedStudentForReport] = useState<Student | undefined>(undefined);
   const [uploadMarksModalOpen, setUploadMarksModalOpen] = useState(false);
   const [uploadMarksInitialStudent, setUploadMarksInitialStudent] = useState<Student | undefined>(undefined);
+  const [uploadMarksInitialType, setUploadMarksInitialType] = useState<'SUMMATIVE' | 'FORMATIVE'>('SUMMATIVE');
   const [createLessonPlanModalOpen, setCreateLessonPlanModalOpen] = useState(false);
   const [createSchemeModalOpen, setCreateSchemeModalOpen] = useState(false);
   const [backendConnected, setBackendConnected] = useState(false);
@@ -1060,13 +1063,29 @@ export default function App() {
 
           {currentTab === 'learning-areas' && <LearningAreasView />}
 
-          {currentTab === 'assessments' && (
-            <AssessmentsView
+          {(currentTab === 'assessments' || currentTab === 'formative-assessments') && (
+            <FormativeAssessmentsView
               assessments={assessments}
-              onOpenNewAssessment={() => handleOpenCbc()}
+              students={students}
+              onOpenNewAssessment={() => {
+                setUploadMarksInitialType('FORMATIVE');
+                setUploadMarksModalOpen(true);
+              }}
               onDeleteAssessment={(deletedId) =>
                 setAssessments((prev) => prev.filter((a) => a.id !== deletedId))
               }
+              onNavigateTab={(tab) => setCurrentTab(tab as any)}
+            />
+          )}
+
+          {currentTab === 'summative-assessments' && (
+            <SummativeAssessmentsView
+              students={students}
+              onOpenUploadMarks={() => {
+                setUploadMarksInitialType('SUMMATIVE');
+                setUploadMarksModalOpen(true);
+              }}
+              onNavigateTab={(tab) => setCurrentTab(tab as any)}
             />
           )}
 
@@ -1315,8 +1334,11 @@ export default function App() {
           setUploadMarksModalOpen(false);
           setUploadMarksInitialStudent(undefined);
         }}
-        onMarksUploaded={() => {}}
+        onMarksUploaded={() => {
+          refreshStudentsAndFees();
+        }}
         initialStudent={uploadMarksInitialStudent}
+        initialAssessmentType={uploadMarksInitialType}
       />
 
       <CreateLessonPlanModal

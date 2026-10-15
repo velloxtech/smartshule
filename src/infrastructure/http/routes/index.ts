@@ -51,6 +51,7 @@ import {
   CreateSubStrandSchema,
   RecordFormativeSchema,
   RecordSummativeSchema,
+  RecordSummativeBatchSchema,
   GenerateReportCardSchema
 } from '../controllers/CbcAssessmentController';
 
@@ -353,7 +354,9 @@ export function createApiRouter(container: AppContainer): Router {
   cbcRouter.get('/formative', authMiddleware, cbcController.listFormatives);
   cbcRouter.delete('/formative/:id', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), cbcController.deleteFormative);
   cbcRouter.post('/summative', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), validateBody(RecordSummativeSchema), cbcController.recordSummative);
+  cbcRouter.post('/summative/batch', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), validateBody(RecordSummativeBatchSchema), cbcController.recordSummativeBatch);
   cbcRouter.get('/summative', authMiddleware, cbcController.listSummatives);
+  cbcRouter.delete('/summative/:id', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), cbcController.deleteSummative);
   cbcRouter.post('/report-cards/generate', authMiddleware, requireRoles(UserRole.HEAD_TEACHER, UserRole.TEACHER, UserRole.SUPER_ADMIN), validateBody(GenerateReportCardSchema), cbcController.generateReportCard);
   cbcRouter.get('/report-cards', authMiddleware, cbcController.getReportCard);
   cbcRouter.get('/analytics', authMiddleware, cbcController.getAnalytics);

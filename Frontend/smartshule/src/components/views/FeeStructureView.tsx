@@ -149,7 +149,6 @@ export const FeeStructureView: React.FC = () => {
     const yearName = resolveAcademicYearName(structure.academicYearId);
     const schoolName = schoolInfo?.name || 'Grace Seeds School';
     const motto = schoolInfo?.motto || 'The Future Begins Here';
-    const centerCode = schoolInfo?.centerCode || 'KNEC-08291';
     const email = schoolInfo?.email || 'schoolgraceseeds@gmail.com';
     const phone = schoolInfo?.phone || '0745436312';
 
@@ -195,8 +194,9 @@ export const FeeStructureView: React.FC = () => {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7.5);
     doc.setTextColor(107, 114, 128);
+    const address = schoolInfo?.address || 'KEMRI Street, Kisian, Kisumu, Kenya';
     doc.text(
-      `KNEC Center Code: ${centerCode}   |   Email: ${email}   |   Tel: ${phone}`,
+      `${address} · Tel: ${phone} · Email: ${email}`,
       105,
       curY,
       { align: 'center' }
@@ -1100,7 +1100,7 @@ export const FeeStructureView: React.FC = () => {
                   </div>
                 </div>
                 <div className="text-[11px] text-gray-500 pt-1">
-                  KNEC Center Code: <span className="font-mono font-bold text-gray-800">{school?.centerCode || 'KNEC-08291'}</span> · Email: {school?.email || 'schoolgraceseeds@gmail.com'} · Tel: {school?.phone || '0745436312'}
+                  {school?.address || 'KEMRI Street, Kisian, Kisumu, Kenya'} · Tel: {school?.phone || '0745436312'} · Email: {school?.email || 'schoolgraceseeds@gmail.com'}
                 </div>
                 <div className="pt-2">
                   <span className="inline-block px-3 py-1 bg-gray-100 rounded-full font-bold uppercase text-xs tracking-wider text-gray-800">

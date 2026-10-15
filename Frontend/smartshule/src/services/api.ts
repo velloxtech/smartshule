@@ -382,6 +382,10 @@ const coreApiService = {
     return apiFetch<ApiResponse<AcademicTerm[]>>('/academics/terms');
   },
 
+  getAcademicTermsByYear: async (yearId: string): Promise<ApiResponse<AcademicTerm[]>> => {
+    return apiFetch<ApiResponse<AcademicTerm[]>>(`/academics/terms/by-year/${yearId}`);
+  },
+
   updateTerm: async (id: string, data: Partial<AcademicTerm>): Promise<ApiResponse<AcademicTerm>> => {
     return apiFetch<ApiResponse<AcademicTerm>>(`/academics/terms/${id}`, {
       method: 'PUT',
@@ -824,6 +828,13 @@ const coreApiService = {
     });
   },
 
+  recordSummativeBatch: async (data: { assessments: any[] }): Promise<ApiResponse<BackendSummativeAssessment[]>> => {
+    return apiFetch<ApiResponse<BackendSummativeAssessment[]>>('/cbc/summative/batch', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
   listSummatives: async (params?: {
     studentId?: string;
     learningAreaId?: string;
@@ -836,6 +847,12 @@ const coreApiService = {
     if (params?.termId) q.append('termId', params.termId);
     if (params?.academicYearId) q.append('academicYearId', params.academicYearId);
     return apiFetch<ApiResponse<BackendSummativeAssessment[]>>(`/cbc/summative?${q.toString()}`);
+  },
+
+  deleteSummative: async (id: string): Promise<ApiResponse<void>> => {
+    return apiFetch<ApiResponse<void>>(`/cbc/summative/${id}`, {
+      method: 'DELETE',
+    });
   },
 
   generateReportCard: async (data: {

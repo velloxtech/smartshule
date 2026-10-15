@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { apiService } from '../../services/api';
 import {
   Student,
@@ -12,25 +12,58 @@ import {
 } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { resolveStreamName, resolveGradeName, resolveAcademicYearName } from '../../utils/formatters';
+import {
+  CanonicalSubjectItem,
+  getSubjectCanonicalKey,
+  getCanonicalInitial,
+  getCanonicalName,
+  CANONICAL_ORDER,
+} from '../views/SummativeAssessmentsView';
+
+export const getSubjectInitials = (nameOrCode: string): string => {
+  const key = getSubjectCanonicalKey(nameOrCode);
+  return getCanonicalInitial(key);
+};
+
+export const getStandardRemark = (level: 'EE' | 'ME' | 'AE' | 'BE'): string => {
+  switch (level) {
+    case 'EE':
+      return 'Exceeds expected curriculum competencies. Demonstrates exemplary conceptual understanding, high accuracy, and creative problem solving.';
+    case 'ME':
+      return 'Meets expected CBC learning competencies effectively. Demonstrates solid conceptual comprehension and consistent skill application.';
+    case 'AE':
+      return 'Approaching expected learning competencies. Grasps basic concepts but benefits from guided practice and reinforcement.';
+    case 'BE':
+      return 'Below expected competency level. Requires structured scaffolding, intensive teacher remediation, and guided interventions.';
+  }
+};
+
+export interface SubjectMarkEntry {
+  rawScore: string;
+  maxScore: string;
+  remarks: string;
+  isCustomRemark: boolean;
+}
 
 interface UploadMarksModalProps {
   isOpen: boolean;
   onClose: () => void;
   onMarksUploaded?: () => void;
   initialStudent?: Student;
+  initialAssessmentType?: 'SUMMATIVE' | 'FORMATIVE';
 }
 
 // Curated default CBC Learning Areas to ensure dropdowns are always populated
 const DEFAULT_CBC_LEARNING_AREAS: BackendLearningArea[] = [
-  { id: 'la-math-g7', code: 'MATH', name: 'Mathematics' } as any,
-  { id: 'la-eng-g7', code: 'ENG', name: 'English Language' } as any,
-  { id: 'la-kisw-g7', code: 'KISW', name: 'Kiswahili Lugha' } as any,
-  { id: 'la-sci-g7', code: 'SCI', name: 'Integrated Science' } as any,
-  { id: 'la-soc-g7', code: 'SOC', name: 'Social Studies' } as any,
-  { id: 'la-cre-g7', code: 'CRE', name: 'Religious Education (CRE / IRE)' } as any,
-  { id: 'la-arts-g7', code: 'ARTS', name: 'Creative Arts & Sports' } as any,
-  { id: 'la-agri-g7', code: 'AGRI', name: 'Agriculture & Nutrition' } as any,
-  { id: 'la-pretech-g7', code: 'PTECH', name: 'Pre-Technical Studies' } as any,
+  { id: 'la-mat', code: 'MATH', name: 'Mathematics' } as any,
+  { id: 'la-eng', code: 'ENG', name: 'English Language' } as any,
+  { id: 'la-kis', code: 'KISW', name: 'Kiswahili Language' } as any,
+  { id: 'la-sci', code: 'SCI', name: 'Science and Technology' } as any,
+  { id: 'la-soc', code: 'SST', name: 'Social Studies' } as any,
+  { id: 'la-cre', code: 'CRE', name: 'Christian Religious Education' } as any,
+  { id: 'la-agr', code: 'AGRI', name: 'Agriculture & Nutrition' } as any,
+  { id: 'la-art', code: 'ARTS', name: 'Creative Arts & Sports' } as any,
+  { id: 'la-pret', code: 'PRETECH', name: 'Pre-Technical Studies' } as any,
 ];
 
 interface DefaultStrandItem {
@@ -304,6 +337,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
   onClose,
   onMarksUploaded,
   initialStudent,
+  initialAssessmentType = 'SUMMATIVE',
 }) => {
   const { user } = useAuth();
 
@@ -327,7 +361,13 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
   // Curriculum Subject / Learning Area Dropdowns State
   const [learningAreas, setLearningAreas] = useState<BackendLearningArea[]>([]);
   const [selectedLearningAreaId, setSelectedLearningAreaId] = useState<string>('');
-  const [assessmentType, setAssessmentType] = useState<'SUMMATIVE' | 'FORMATIVE'>('SUMMATIVE');
+  const [assessmentType, setAssessmentType] = useState<'SUMMATIVE' | 'FORMATIVE'>(initialAssessmentType);
+
+  useEffect(() => {
+    if (initialAssessmentType) {
+      setAssessmentType(initialAssessmentType);
+    }
+  }, [initialAssessmentType, isOpen]);
 
   // Strand and Sub-strand Dropdowns State
   const [strands, setStrands] = useState<BackendStrand[]>([]);
@@ -341,16 +381,127 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
   const [observedValue, setObservedValue] = useState<string>('INTEGRITY');
   const [specificOutcomeTested, setSpecificOutcomeTested] = useState<string>('Competency mastery evaluation');
 
-  // Marks Inputs & CBC Evaluation
+  // Formative Marks Inputs & Single Rubric Evaluation (Used in Formative Mode)
   const [rawScore, setRawScore] = useState<string>('');
   const [maxScore, setMaxScore] = useState<string>('100');
   const [customRemarks, setCustomRemarks] = useState<string>('');
   const [isCustomRemarkEdited, setIsCustomRemarkEdited] = useState(false);
 
+  // Multi-Subject Marks State (for Summative Examinations - All Subjects Entry)
+  const [subjectMarks, setSubjectMarks] = useState<Record<string, SubjectMarkEntry>>({});
+  const [loadingExistingMarks, setLoadingExistingMarks] = useState<boolean>(false);
+  const [existingMarksCount, setExistingMarksCount] = useState<number>(0);
+
   // Form State
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Distinct Canonical Subjects: Grouped & de-duplicated so each subject appears EXACTLY ONCE
+  const effectiveSubjects: CanonicalSubjectItem[] = useMemo(() => {
+    // 1. Identify target grade from selected learner or filtered class
+    const student = students.find((s) => s.id === selectedStudentId);
+    let targetGrade = '';
+    if (student) {
+      targetGrade = (student.gradeLevel || student.grade || '').toUpperCase().replace(/[\s-]/g, '_');
+    }
+    if (!targetGrade && filterClassId) {
+      const cls = classes.find((c) => c.id === filterClassId);
+      if (cls) {
+        targetGrade = (cls.gradeLevel || cls.name || '').toUpperCase().replace(/[\s-]/g, '_');
+      }
+    }
+
+    // 2. Filter learning areas for the specific grade level if available
+    let sourceList = learningAreas;
+    if (targetGrade && learningAreas.length > 0) {
+      const matching = learningAreas.filter((la: any) => {
+        const laGrade = (la.gradeLevel || la.grade_level || '').toUpperCase().replace(/[\s-]/g, '_');
+        return laGrade && (laGrade === targetGrade || targetGrade.includes(laGrade) || laGrade.includes(targetGrade));
+      });
+      if (matching.length > 0) {
+        sourceList = matching;
+      }
+    }
+
+    // 3. Map into canonical dictionary to de-duplicate completely
+    const canonicalMap = new Map<string, {
+      id: string;
+      key: string;
+      code: string;
+      name: string;
+      initial: string;
+      aliasSet: Set<string>;
+    }>();
+
+    // Register grade-matched or general learning areas first
+    sourceList.forEach((la) => {
+      const key = getSubjectCanonicalKey(`${la.code || ''} ${la.name || ''} ${la.id || ''}`);
+      if (!canonicalMap.has(key)) {
+        canonicalMap.set(key, {
+          id: la.id, // Primary DB ID for recording marks
+          key,
+          code: la.code || key,
+          name: getCanonicalName(key, la.name),
+          initial: getCanonicalInitial(key),
+          aliasSet: new Set([la.id, la.code, la.name, key].filter(Boolean) as string[]),
+        });
+      } else {
+        const item = canonicalMap.get(key)!;
+        item.aliasSet.add(la.id);
+        if (la.code) item.aliasSet.add(la.code);
+        if (la.name) item.aliasSet.add(la.name);
+      }
+    });
+
+    // Backfill with standard CBC subjects if not present
+    DEFAULT_CBC_LEARNING_AREAS.forEach((defLa) => {
+      const key = getSubjectCanonicalKey(`${defLa.code || ''} ${defLa.name || ''} ${defLa.id || ''}`);
+      if (!canonicalMap.has(key)) {
+        canonicalMap.set(key, {
+          id: defLa.id,
+          key,
+          code: defLa.code || key,
+          name: getCanonicalName(key, defLa.name),
+          initial: getCanonicalInitial(key),
+          aliasSet: new Set([defLa.id, defLa.code, defLa.name, key].filter(Boolean) as string[]),
+        });
+      } else {
+        canonicalMap.get(key)!.aliasSet.add(defLa.id);
+      }
+    });
+
+    // Also register aliases from all other learning areas in DB so existing records match
+    learningAreas.forEach((la) => {
+      const key = getSubjectCanonicalKey(`${la.code || ''} ${la.name || ''} ${la.id || ''}`);
+      if (canonicalMap.has(key)) {
+        const item = canonicalMap.get(key)!;
+        item.aliasSet.add(la.id);
+        if (la.code) item.aliasSet.add(la.code);
+        if (la.name) item.aliasSet.add(la.name);
+      }
+    });
+
+    // Sort strictly according to standard CBC national curriculum order
+    const list = Array.from(canonicalMap.values()).map((c) => ({
+      id: c.id,
+      key: c.key,
+      code: c.code,
+      name: c.name,
+      initial: c.initial,
+      aliasIds: Array.from(c.aliasSet),
+    }));
+
+    list.sort((a, b) => {
+      const idxA = CANONICAL_ORDER.indexOf(a.key);
+      const idxB = CANONICAL_ORDER.indexOf(b.key);
+      const rankA = idxA === -1 ? 999 : idxA;
+      const rankB = idxB === -1 ? 999 : idxB;
+      return rankA - rankB;
+    });
+
+    return list;
+  }, [learningAreas, selectedStudentId, students, filterClassId, classes]);
 
   // Load initial academic context, classes, learners, and learning areas from DB
   useEffect(() => {
@@ -632,7 +783,271 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
     }
   }, [filterClassId, filterStreamId, learnerSearch, filteredStudents, selectedStudentId]);
 
-  // CBC Standard Dynamic Evaluation Engine
+  // Effect to load existing summative marks whenever learner, year, or term changes
+  useEffect(() => {
+    if (!isOpen || !selectedStudentId) return;
+
+    let isCancelled = false;
+    setLoadingExistingMarks(true);
+
+    const effYear = academicYearId || 'year-2026';
+    const effTerm = termId || 'term-2026-t1';
+
+    apiService
+      .listSummatives({
+        studentId: selectedStudentId,
+        academicYearId: effYear,
+        termId: effTerm,
+      })
+      .then((res) => {
+        if (isCancelled) return;
+        const records = res?.data || [];
+        const newMarks: Record<string, SubjectMarkEntry> = {};
+        let loadedCount = 0;
+
+        effectiveSubjects.forEach((sub) => {
+          const match = records.find(
+            (r: any) =>
+              r.learningAreaId === sub.id ||
+              (sub.aliasIds && sub.aliasIds.includes(r.learningAreaId)) ||
+              getSubjectCanonicalKey(r.learningAreaId) === sub.key ||
+              (sub.code && r.learningAreaId === sub.code) ||
+              (r.learningAreaName && sub.name && r.learningAreaName.toLowerCase() === sub.name.toLowerCase())
+          );
+
+          if (match) {
+            const raw = match.strandScores?.[0]?.rawScore;
+            const max = match.strandScores?.[0]?.maxScore || 100;
+            const pct = max > 0 && typeof raw === 'number' ? Math.round((raw / max) * 100) : 0;
+            const level = match.overallPerformanceLevel || (pct >= 80 ? 'EE' : pct >= 60 ? 'ME' : pct >= 40 ? 'AE' : 'BE');
+            newMarks[sub.id] = {
+              rawScore: typeof raw === 'number' ? String(raw) : '',
+              maxScore: String(max),
+              remarks: match.teacherRemarks || getStandardRemark(level as any),
+              isCustomRemark: !!match.teacherRemarks,
+            };
+            if (typeof raw === 'number') loadedCount++;
+          } else {
+            newMarks[sub.id] = {
+              rawScore: '',
+              maxScore: '100',
+              remarks: '',
+              isCustomRemark: false,
+            };
+          }
+        });
+
+        setSubjectMarks(newMarks);
+        setExistingMarksCount(loadedCount);
+      })
+      .catch((err) => {
+        console.error('Failed to load existing student summatives:', err);
+        const blankMarks: Record<string, SubjectMarkEntry> = {};
+        effectiveSubjects.forEach((sub) => {
+          blankMarks[sub.id] = {
+            rawScore: '',
+            maxScore: '100',
+            remarks: '',
+            isCustomRemark: false,
+          };
+        });
+        setSubjectMarks(blankMarks);
+        setExistingMarksCount(0);
+      })
+      .finally(() => {
+        if (!isCancelled) setLoadingExistingMarks(false);
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [isOpen, selectedStudentId, academicYearId, termId, effectiveSubjects]);
+
+  // Handle updates for a specific subject's score
+  const handleSubjectScoreChange = (subId: string, value: string) => {
+    setSubjectMarks((prev) => {
+      const current = prev[subId] || { rawScore: '', maxScore: '100', remarks: '', isCustomRemark: false };
+      const num = parseFloat(value);
+      const max = parseFloat(current.maxScore) || 100;
+      let newRemarks = current.remarks;
+      if (!current.isCustomRemark && !isNaN(num) && value.trim() !== '') {
+        const pct = max > 0 ? (num / max) * 100 : 0;
+        const lvl: 'EE' | 'ME' | 'AE' | 'BE' = pct >= 80 ? 'EE' : pct >= 60 ? 'ME' : pct >= 40 ? 'AE' : 'BE';
+        newRemarks = getStandardRemark(lvl);
+      } else if (value.trim() === '' && !current.isCustomRemark) {
+        newRemarks = '';
+      }
+      return {
+        ...prev,
+        [subId]: {
+          ...current,
+          rawScore: value,
+          remarks: newRemarks,
+        },
+      };
+    });
+  };
+
+  const handleSubjectMaxChange = (subId: string, value: string) => {
+    setSubjectMarks((prev) => {
+      const current = prev[subId] || { rawScore: '', maxScore: '100', remarks: '', isCustomRemark: false };
+      return {
+        ...prev,
+        [subId]: {
+          ...current,
+          maxScore: value,
+        },
+      };
+    });
+  };
+
+  const handleSubjectRemarksChange = (subId: string, remarks: string) => {
+    setSubjectMarks((prev) => {
+      const current = prev[subId] || { rawScore: '', maxScore: '100', remarks: '', isCustomRemark: false };
+      return {
+        ...prev,
+        [subId]: {
+          ...current,
+          remarks,
+          isCustomRemark: true,
+        },
+      };
+    });
+  };
+
+  const handleSetAllMaxTo100 = () => {
+    setSubjectMarks((prev) => {
+      const next = { ...prev };
+      Object.keys(next).forEach((key) => {
+        next[key] = { ...next[key], maxScore: '100' };
+      });
+      return next;
+    });
+  };
+
+  const handleClearAllMarks = () => {
+    setSubjectMarks((prev) => {
+      const next = { ...prev };
+      Object.keys(next).forEach((key) => {
+        next[key] = { ...next[key], rawScore: '', remarks: '', isCustomRemark: false };
+      });
+      return next;
+    });
+  };
+
+  // Evaluate single subject rubric
+  const getSubjectRubric = (raw: string, max: string) => {
+    const num = parseFloat(raw);
+    const mx = parseFloat(max) || 100;
+    if (isNaN(num) || raw.trim() === '') {
+      return {
+        hasMark: false,
+        percentage: 0,
+        level: '—',
+        badgeColor: 'bg-slate-50 text-slate-400 border-slate-200',
+      };
+    }
+    const pct = mx > 0 ? Math.round((num / mx) * 100) : 0;
+    if (pct >= 80) {
+      return {
+        hasMark: true,
+        percentage: pct,
+        level: 'EE',
+        badgeColor: 'bg-teal-100 text-teal-900 border-teal-300',
+      };
+    }
+    if (pct >= 60) {
+      return {
+        hasMark: true,
+        percentage: pct,
+        level: 'ME',
+        badgeColor: 'bg-rose-100 text-[#7a1228] border-rose-300',
+      };
+    }
+    if (pct >= 40) {
+      return {
+        hasMark: true,
+        percentage: pct,
+        level: 'AE',
+        badgeColor: 'bg-amber-100 text-amber-900 border-amber-300',
+      };
+    }
+    return {
+      hasMark: true,
+      percentage: pct,
+      level: 'BE',
+      badgeColor: 'bg-rose-100 text-rose-800 border-rose-300',
+    };
+  };
+
+  // Compute aggregate statistics across all entered subjects
+  const marksSummary = useMemo(() => {
+    let totalRaw = 0;
+    let totalMax = 0;
+    let count = 0;
+    let totalPoints = 0;
+
+    effectiveSubjects.forEach((sub) => {
+      const entry = subjectMarks[sub.id];
+      if (entry && entry.rawScore.trim() !== '') {
+        const raw = parseFloat(entry.rawScore);
+        const max = parseFloat(entry.maxScore) || 100;
+        if (!isNaN(raw) && raw >= 0) {
+          totalRaw += raw;
+          totalMax += max;
+          count++;
+          const pct = max > 0 ? (raw / max) * 100 : 0;
+          const pts = pct >= 80 ? 4 : pct >= 60 ? 3 : pct >= 40 ? 2 : 1;
+          totalPoints += pts;
+        }
+      }
+    });
+
+    const meanPct = totalMax > 0 ? Math.round((totalRaw / totalMax) * 100) : 0;
+    const meanGpa = count > 0 ? (totalPoints / count).toFixed(2) : '0.00';
+    const overallLevel: 'EE' | 'ME' | 'AE' | 'BE' | '—' =
+      meanPct >= 80 ? 'EE' : meanPct >= 60 ? 'ME' : meanPct >= 40 ? 'AE' : count > 0 ? 'BE' : '—';
+
+    let levelBadgeColor = 'bg-slate-100 text-slate-700 border-slate-300';
+    if (overallLevel === 'EE') levelBadgeColor = 'bg-teal-100 text-teal-900 border-teal-300';
+    else if (overallLevel === 'ME') levelBadgeColor = 'bg-[#7a1228]/15 text-[#7a1228] border-[#7a1228]/30';
+    else if (overallLevel === 'AE') levelBadgeColor = 'bg-amber-100 text-amber-900 border-amber-300';
+    else if (overallLevel === 'BE') levelBadgeColor = 'bg-rose-100 text-rose-800 border-rose-300';
+
+    return {
+      totalRaw,
+      totalMax,
+      count,
+      totalSubjects: effectiveSubjects.length,
+      meanPct,
+      meanGpa,
+      overallLevel,
+      levelBadgeColor,
+    };
+  }, [subjectMarks, effectiveSubjects]);
+
+  // Learner Navigation Indexing
+  const currentIndex = filteredStudents.findIndex((s) => s.id === selectedStudentId);
+  const hasPrev = currentIndex > 0;
+  const hasNext = currentIndex >= 0 && currentIndex < filteredStudents.length - 1;
+
+  const goToPrevStudent = () => {
+    if (hasPrev) {
+      setSelectedStudentId(filteredStudents[currentIndex - 1].id);
+      setError(null);
+      setSuccessMessage(null);
+    }
+  };
+
+  const goToNextStudent = () => {
+    if (hasNext) {
+      setSelectedStudentId(filteredStudents[currentIndex + 1].id);
+      setError(null);
+      setSuccessMessage(null);
+    }
+  };
+
+  // Formative single evaluation calculation
   const numScore = parseFloat(rawScore) || 0;
   const numMax = parseFloat(maxScore) || 100;
   const percentage = numMax > 0 ? Math.round((numScore / numMax) * 100) : 0;
@@ -646,29 +1061,28 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
     performanceLevel = 'EE';
     levelTitle = 'Exceeding Expectations (EE) - Level 4';
     levelBadgeColor = 'bg-teal-100 text-teal-900 border-teal-300';
-    standardCbcRemark = 'Exceeds expected curriculum competencies. Demonstrates exemplary conceptual understanding, high accuracy, creative problem solving, and independent application.';
+    standardCbcRemark = getStandardRemark('EE');
   } else if (percentage >= 60) {
     performanceLevel = 'ME';
     levelTitle = 'Meeting Expectations (ME) - Level 3';
     levelBadgeColor = 'bg-[#7a1228]/15 text-[#7a1228] border-[#7a1228]/30';
-    standardCbcRemark = 'Meets expected CBC learning competencies effectively. Demonstrates solid conceptual comprehension, consistent application of skills, and required task completion.';
+    standardCbcRemark = getStandardRemark('ME');
   } else if (percentage >= 40) {
     performanceLevel = 'AE';
     levelTitle = 'Approaching Expectations (AE) - Level 2';
     levelBadgeColor = 'bg-amber-100 text-amber-900 border-amber-300';
-    standardCbcRemark = 'Approaching expected learning competencies. Grasps basic principles and concepts but benefits from guided teacher practice, scaffolding, and reinforced exercises.';
+    standardCbcRemark = getStandardRemark('AE');
   } else {
     performanceLevel = 'BE';
     levelTitle = 'Below Expectations (BE) - Level 1';
     levelBadgeColor = 'bg-rose-100 text-rose-800 border-rose-300';
-    standardCbcRemark = 'Below expected competency level. Requires structured scaffolding, intensive teacher remediation, and personalized interventions to master foundational learning outcomes.';
+    standardCbcRemark = getStandardRemark('BE');
   }
 
-  // Update remarks default if not manually overridden
   const activeRemarks = isCustomRemarkEdited ? customRemarks : standardCbcRemark;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent, shouldAdvance: boolean = false) => {
+    if (e) e.preventDefault();
     setIsLoading(true);
     setError(null);
     setSuccessMessage(null);
@@ -680,54 +1094,85 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
       return;
     }
 
-    if (!selectedLearningAreaId) {
-      setError('Please select a valid learning area / subject');
-      setIsLoading(false);
-      return;
-    }
-
-    if (assessmentType === 'FORMATIVE' && !selectedSubStrandId) {
-      setError('Please select a valid sub-strand for formative assessment.');
-      setIsLoading(false);
-      return;
-    }
-
     const effectiveYearId = academicYearId || 'year-2026';
     const effectiveTermId = termId || 'term-2026-t1';
     const effectiveTeacherId = (user?.id && user.id.trim() !== '') ? user.id : 'tch-default-01';
 
     try {
       if (assessmentType === 'SUMMATIVE') {
-        const payload = {
-          studentId: selectedStudentId,
-          teacherId: effectiveTeacherId,
-          learningAreaId: selectedLearningAreaId,
-          termId: effectiveTermId,
-          academicYearId: effectiveYearId,
-          strandScores: selectedStrandId
-            ? [
-                {
-                  strandId: selectedStrandId,
-                  performanceLevel,
-                  rawScore: numScore,
-                  maxScore: numMax,
-                },
-              ]
-            : [],
-          overallPerformanceLevel: performanceLevel,
-          teacherRemarks: activeRemarks,
-          evaluationDate: new Date().toISOString().split('T')[0],
-        };
+        const validSubjects = effectiveSubjects.filter((sub) => {
+          const entry = subjectMarks[sub.id];
+          return entry && entry.rawScore.trim() !== '' && !isNaN(parseFloat(entry.rawScore));
+        });
 
-        const res = await apiService.recordSummativeAssessment(payload);
-        if (res.success) {
-          setSuccessMessage(`Marks uploaded successfully! Recorded as ${performanceLevel} (${percentage}%) according to CBC standards.`);
-          setTimeout(() => {
-            onMarksUploaded?.();
-            onClose();
-          }, 1500);
+        if (validSubjects.length === 0) {
+          setError('Please enter marks for at least one subject before saving.');
+          setIsLoading(false);
+          return;
+        }
+
+        const assessments = validSubjects.map((sub) => {
+          const entry = subjectMarks[sub.id];
+          const raw = parseFloat(entry.rawScore);
+          const max = parseFloat(entry.maxScore) || 100;
+          const pct = max > 0 ? Math.round((raw / max) * 100) : 0;
+          const level: 'EE' | 'ME' | 'AE' | 'BE' = pct >= 80 ? 'EE' : pct >= 60 ? 'ME' : pct >= 40 ? 'AE' : 'BE';
+          const remarks = (entry.remarks && entry.remarks.trim()) || getStandardRemark(level);
+
+          return {
+            studentId: selectedStudentId,
+            teacherId: effectiveTeacherId,
+            learningAreaId: sub.id,
+            termId: effectiveTermId,
+            academicYearId: effectiveYearId,
+            strandScores: [
+              {
+                strandId: `str-${sub.id}`,
+                strandTitle: `${sub.name} Assessment`,
+                performanceLevel: level,
+                rawScore: raw,
+                maxScore: max,
+              },
+            ],
+            overallPerformanceLevel: level,
+            teacherRemarks: remarks,
+            evaluationDate: new Date().toISOString().split('T')[0],
+          };
+        });
+
+        const res = await apiService.recordSummativeBatch({ assessments });
+        if (res.success || Array.isArray(res.data)) {
+          const studentName = student.name || 'Learner';
+          setSuccessMessage(`Marks saved for ${validSubjects.length} subjects for ${studentName}! Mean: ${marksSummary.meanPct}% (${marksSummary.overallLevel})`);
+          onMarksUploaded?.();
+
+          if (shouldAdvance && hasNext) {
+            setTimeout(() => {
+              goToNextStudent();
+              setSuccessMessage(null);
+            }, 800);
+          } else if (!shouldAdvance) {
+            setTimeout(() => {
+              onClose();
+            }, 1200);
+          }
+        } else {
+          throw new Error(res.message || 'Failed to batch save summative marks');
         }
       } else {
+        // Formative single evaluation flow
+        if (!selectedLearningAreaId) {
+          setError('Please select a valid learning area / subject');
+          setIsLoading(false);
+          return;
+        }
+
+        if (!selectedSubStrandId) {
+          setError('Please select a valid sub-strand for formative assessment.');
+          setIsLoading(false);
+          return;
+        }
+
         const payload = {
           studentId: selectedStudentId,
           teacherId: effectiveTeacherId,
@@ -751,12 +1196,12 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
           setTimeout(() => {
             onMarksUploaded?.();
             onClose();
-          }, 1500);
+          }, 1200);
         }
       }
     } catch (err: any) {
       console.error('Error recording assessment:', err);
-      setError(err.message || 'Failed to record CBC marks');
+      setError(err.message || 'Failed to record marks');
     } finally {
       setIsLoading(false);
     }
@@ -768,7 +1213,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
-      <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-xl w-full max-h-[92vh] sm:max-h-[90vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
+      <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-4xl w-full max-h-[92vh] sm:max-h-[90vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
         {/* Maroon Header */}
         <div className="bg-[#7a1228] text-white p-4 sm:p-5 flex items-center justify-between shrink-0 shadow-xs">
           <div className="flex items-center gap-2.5">
@@ -935,11 +1380,31 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
               <label className="block font-bold text-on-surface-variant uppercase text-xs">
                 Select Learner *
               </label>
-              {filteredStudents.length > 5 && (
-                <span className="text-[10px] text-gray-500">
-                  Type name or admission number to search
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={!hasPrev}
+                  onClick={goToPrevStudent}
+                  className="px-2 py-0.5 rounded bg-white border border-slate-300 text-slate-700 disabled:opacity-40 text-[11px] font-bold hover:bg-slate-50 transition-colors cursor-pointer flex items-center gap-0.5"
+                  title="Previous Learner"
+                >
+                  <span className="material-symbols-outlined text-[14px]">arrow_back</span>
+                  <span>Prev</span>
+                </button>
+                <span className="text-[11px] font-bold text-slate-600 font-data-mono">
+                  {filteredStudents.length > 0 ? `${currentIndex + 1} of ${filteredStudents.length}` : '0 of 0'}
                 </span>
-              )}
+                <button
+                  type="button"
+                  disabled={!hasNext}
+                  onClick={goToNextStudent}
+                  className="px-2 py-0.5 rounded bg-white border border-slate-300 text-slate-700 disabled:opacity-40 text-[11px] font-bold hover:bg-slate-50 transition-colors cursor-pointer flex items-center gap-0.5"
+                  title="Next Learner"
+                >
+                  <span>Next</span>
+                  <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+                </button>
+              </div>
             </div>
 
             {/* Quick Search Input */}
@@ -1034,340 +1499,527 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
             )}
           </div>
 
-          {/* 4. Subject / Learning Area Dropdown */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block font-bold text-on-surface-variant uppercase mb-1">
-                Learning Area / Subject *
-              </label>
-              <select
-                value={selectedLearningAreaId}
-                onChange={(e) => setSelectedLearningAreaId(e.target.value)}
-                required
-                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-on-surface font-semibold cursor-pointer"
-              >
-                {learningAreas.length === 0 ? (
-                  <option value="">No subjects found</option>
-                ) : (
-                  learningAreas.map((la) => (
-                    <option key={la.id} value={la.id}>
-                      {la.name} {la.code ? `(${la.code})` : ''}
-                    </option>
-                  ))
-                )}
-              </select>
-            </div>
+          {/* SUMMATIVE MODE: Multi-Subject Marksheet Grid (All Subjects Displayed Ready for Mark Entry) */}
+          {assessmentType === 'SUMMATIVE' && (
+            <div className="space-y-3.5">
+              {/* Summary Statistics Card */}
+              <div className="p-3.5 bg-gradient-to-r from-slate-50 via-rose-50/20 to-slate-50 border border-slate-200 rounded-xl flex flex-wrap items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-center gap-4 sm:gap-6 flex-wrap">
+                  <div>
+                    <span className="text-[10px] font-bold uppercase text-slate-500 block">Subjects Filled</span>
+                    <span className="font-bold text-xs text-slate-800">
+                      <strong className="text-sm font-data-mono text-[#7a1228]">{marksSummary.count}</strong> of {marksSummary.totalSubjects}
+                    </span>
+                  </div>
+                  <div className="h-7 w-[1px] bg-slate-200 hidden sm:block" />
+                  <div>
+                    <span className="text-[10px] font-bold uppercase text-slate-500 block">Total Marks</span>
+                    <span className="font-bold text-xs text-slate-800 font-data-mono">
+                      <strong className="text-sm text-slate-900">{marksSummary.totalRaw}</strong>
+                      <span className="text-slate-400"> / {marksSummary.totalMax}</span>
+                    </span>
+                  </div>
+                  <div className="h-7 w-[1px] bg-slate-200 hidden sm:block" />
+                  <div>
+                    <span className="text-[10px] font-bold uppercase text-slate-500 block">Mean Score</span>
+                    <span className="font-bold text-sm text-[#7a1228] font-data-mono">
+                      {marksSummary.meanPct}%
+                    </span>
+                  </div>
+                  <div className="h-7 w-[1px] bg-slate-200 hidden sm:block" />
+                  <div>
+                    <span className="text-[10px] font-bold uppercase text-slate-500 block">Projected Level</span>
+                    <span className={`px-2 py-0.5 rounded text-xs font-bold border ${marksSummary.levelBadgeColor}`}>
+                      {marksSummary.overallLevel}
+                    </span>
+                  </div>
+                  <div className="h-7 w-[1px] bg-slate-200 hidden sm:block" />
+                  <div>
+                    <span className="text-[10px] font-bold uppercase text-slate-500 block">GPA Points</span>
+                    <span className="font-bold text-xs text-slate-800 font-data-mono">
+                      {marksSummary.meanGpa} / 4.00
+                    </span>
+                  </div>
+                </div>
 
-            {/* Curriculum Strand Dropdown */}
-            <div>
-              <label className="block font-bold text-on-surface-variant uppercase mb-1">
-                Curriculum Strand {assessmentType === 'FORMATIVE' ? '*' : '(Optional)'}
-              </label>
-              <select
-                value={selectedStrandId}
-                onChange={(e) => setSelectedStrandId(e.target.value)}
-                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-on-surface cursor-pointer"
-              >
-                {strands.length === 0 ? (
-                  <option value="">No strands defined for this subject</option>
-                ) : (
-                  <>
-                    <option value="">Select Strand</option>
-                    {strands.map((st) => (
-                      <option key={st.id} value={st.id}>
-                        {st.code ? `[${st.code}] ` : ''}{st.title}
-                      </option>
-                    ))}
-                  </>
-                )}
-              </select>
-            </div>
-          </div>
-
-          {/* 5. Formative-Specific Dropdowns (Sub-strand, Method, Competency, Value) */}
-          {assessmentType === 'FORMATIVE' && (
-            <div className="p-3.5 bg-rose-50/40 border border-rose-200/60 rounded-xl space-y-3">
-              <div className="text-[11px] font-bold uppercase tracking-wider text-[#7a1228] flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-[16px]">psychology</span>
-                <span>Formative CBC Competency Evaluation</span>
+                <div className="flex items-center gap-1.5 ml-auto">
+                  <button
+                    type="button"
+                    onClick={handleSetAllMaxTo100}
+                    className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded text-[11px] font-bold text-slate-700 transition-colors cursor-pointer"
+                    title="Reset all Max Scores to 100"
+                  >
+                    Set Max = 100
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleClearAllMarks}
+                    className="px-2.5 py-1 bg-white hover:bg-rose-50 border border-rose-200 rounded text-[11px] font-bold text-rose-700 transition-colors cursor-pointer"
+                    title="Clear all entered marks for this learner"
+                  >
+                    Clear All
+                  </button>
+                </div>
               </div>
 
-              {/* Sub-Strand Dropdown */}
-              <div>
-                <label className="block font-bold text-on-surface-variant uppercase mb-1">
-                  Sub-Strand Outcome *
-                </label>
-                <select
-                  value={selectedSubStrandId}
-                  onChange={(e) => setSelectedSubStrandId(e.target.value)}
-                  required
-                  className="w-full bg-white border border-rose-200 rounded-lg p-2.5 text-on-surface cursor-pointer"
-                >
-                  {subStrands.length === 0 ? (
-                    <option value="">No sub-strands defined</option>
-                  ) : (
-                    <>
-                      <option value="">Select Sub-Strand</option>
-                      {subStrands.map((sub) => (
-                        <option key={sub.id} value={sub.id}>
-                          {sub.code ? `[${sub.code}] ` : ''}{sub.title}
-                        </option>
-                      ))}
-                    </>
+              {/* Existing Marks notification banner */}
+              {existingMarksCount > 0 && (
+                <div className="px-3 py-2 rounded-lg bg-teal-50 border border-teal-200 text-teal-900 text-xs flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[16px] text-teal-700">task_alt</span>
+                    <span>
+                      <strong>{existingMarksCount}</strong> existing subject marks loaded for this term. Any updates will overwrite existing marks.
+                    </span>
+                  </div>
+                  {loadingExistingMarks && (
+                    <span className="text-[10px] text-teal-600 animate-pulse font-medium">Refreshing...</span>
                   )}
-                </select>
-              </div>
+                </div>
+              )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* Assessment Method Dropdown */}
-                <div>
-                  <label className="block font-bold text-on-surface-variant uppercase mb-1">
-                    Assessment Method *
-                  </label>
-                  <select
-                    value={assessmentMethod}
-                    onChange={(e) => setAssessmentMethod(e.target.value)}
-                    className="w-full bg-white border border-rose-200 rounded-lg p-2.5 text-on-surface cursor-pointer"
-                  >
-                    {CBC_ASSESSMENT_METHODS.map((m) => (
-                      <option key={m.value} value={m.value}>
-                        {m.label}
-                      </option>
-                    ))}
-                  </select>
+              {/* Multi-Subject Entry Marksheet List */}
+              <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-xs">
+                {/* Table Header */}
+                <div className="bg-slate-100 border-b border-slate-200 px-4 py-2.5 grid grid-cols-12 gap-2 text-[11px] font-bold uppercase text-slate-600 tracking-wider items-center">
+                  <div className="col-span-5 sm:col-span-4">Learning Area / Subject</div>
+                  <div className="col-span-4 sm:col-span-3 text-center">Marks (Score / Out Of)</div>
+                  <div className="col-span-3 sm:col-span-2 text-center">CBC Level</div>
+                  <div className="col-span-12 sm:col-span-3 hidden sm:block">Pedagogical Remarks</div>
                 </div>
 
-                {/* Specific Outcome Tested Input */}
-                <div>
-                  <label className="block font-bold text-on-surface-variant uppercase mb-1">
-                    Specific Learning Outcome Tested
-                  </label>
-                  <input
-                    type="text"
-                    value={specificOutcomeTested}
-                    onChange={(e) => setSpecificOutcomeTested(e.target.value)}
-                    placeholder="e.g. Identification and guided problem solving"
-                    className="w-full bg-white border border-rose-200 rounded-lg p-2.5 text-xs text-on-surface focus:outline-primary"
-                  />
-                </div>
-              </div>
+                {/* Table Rows */}
+                <div className="divide-y divide-slate-100 max-h-[380px] overflow-y-auto">
+                  {effectiveSubjects.map((sub, index) => {
+                    const mark = subjectMarks[sub.id] || { rawScore: '', maxScore: '100', remarks: '', isCustomRemark: false };
+                    const initials = getSubjectInitials(sub.code || sub.name);
+                    const rubric = getSubjectRubric(mark.rawScore, mark.maxScore);
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* Core Competency Tested Dropdown */}
-                <div>
-                  <label className="block font-bold text-on-surface-variant uppercase mb-1">
-                    Core Competency Demonstrated *
-                  </label>
-                  <select
-                    value={targetedCompetency}
-                    onChange={(e) => setTargetedCompetency(e.target.value)}
-                    className="w-full bg-white border border-rose-200 rounded-lg p-2.5 text-on-surface cursor-pointer"
-                  >
-                    {CBC_CORE_COMPETENCIES.map((c) => (
-                      <option key={c.value} value={c.value}>
-                        {c.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                    return (
+                      <div
+                        key={sub.id}
+                        className={`px-4 py-2.5 grid grid-cols-12 gap-2 items-center transition-colors ${
+                          rubric.hasMark ? 'bg-slate-50/50 hover:bg-slate-50' : 'hover:bg-slate-50/70'
+                        }`}
+                      >
+                        {/* Subject Initials & Name */}
+                        <div className="col-span-5 sm:col-span-4 flex items-center gap-2.5 min-w-0">
+                          <span className="w-10 h-7 rounded-md bg-[#7a1228] text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs font-data-mono">
+                            {initials}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="font-bold text-xs text-slate-900 truncate" title={sub.name}>
+                              {sub.name}
+                            </p>
+                            <p className="text-[10px] text-slate-500 font-data-mono">
+                              {sub.code || `SUB-${index + 1}`}
+                            </p>
+                          </div>
+                        </div>
 
-                {/* Core Value Observed Dropdown */}
-                <div>
-                  <label className="block font-bold text-on-surface-variant uppercase mb-1">
-                    Core Value Observed *
-                  </label>
-                  <select
-                    value={observedValue}
-                    onChange={(e) => setObservedValue(e.target.value)}
-                    className="w-full bg-white border border-rose-200 rounded-lg p-2.5 text-on-surface cursor-pointer"
-                  >
-                    {CBC_CORE_VALUES.map((v) => (
-                      <option key={v.value} value={v.value}>
-                        {v.label}
-                      </option>
-                    ))}
-                  </select>
+                        {/* Score & Max Inputs */}
+                        <div className="col-span-4 sm:col-span-3 flex items-center justify-center gap-1.5">
+                          <input
+                            type="number"
+                            min="0"
+                            max={parseFloat(mark.maxScore) || 1000}
+                            step="1"
+                            tabIndex={index + 1}
+                            value={mark.rawScore}
+                            onChange={(e) => handleSubjectScoreChange(sub.id, e.target.value)}
+                            placeholder="0"
+                            className="w-16 sm:w-20 text-center bg-white border border-slate-300 focus:border-[#7a1228] focus:ring-1 focus:ring-[#7a1228] rounded-lg py-1.5 px-1 font-bold font-data-mono text-sm text-slate-900 shadow-xs"
+                          />
+                          <span className="text-slate-400 font-bold text-xs">/</span>
+                          <input
+                            type="number"
+                            min="10"
+                            max="1000"
+                            value={mark.maxScore}
+                            onChange={(e) => handleSubjectMaxChange(sub.id, e.target.value)}
+                            className="w-12 text-center bg-slate-100 border border-slate-200 rounded-md py-1 px-1 font-semibold font-data-mono text-xs text-slate-600"
+                            title="Maximum score"
+                          />
+                        </div>
+
+                        {/* Live CBC Rubric Badge */}
+                        <div className="col-span-3 sm:col-span-2 flex items-center justify-center">
+                          <span
+                            className={`w-full py-1 text-center rounded-md text-[11px] font-bold border transition-all font-data-mono ${rubric.badgeColor}`}
+                          >
+                            {rubric.hasMark ? `${rubric.level} ${rubric.percentage}%` : '—'}
+                          </span>
+                        </div>
+
+                        {/* Remarks Input */}
+                        <div className="col-span-12 sm:col-span-3 mt-1 sm:mt-0">
+                          <input
+                            type="text"
+                            value={mark.remarks}
+                            onChange={(e) => handleSubjectRemarksChange(sub.id, e.target.value)}
+                            placeholder={rubric.hasMark ? getStandardRemark(rubric.level as any) : 'Auto pedagogical remarks...'}
+                            className="w-full text-[11px] bg-slate-50 border border-slate-200 rounded-md px-2 py-1 text-slate-700 truncate focus:bg-white focus:border-slate-400 focus:outline-none"
+                            title={mark.remarks || 'Pedagogical teacher remarks'}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
           )}
 
-          {/* 6. Numerical Marks Entry & Performance Rubric Dropdown */}
-          <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-xs uppercase text-primary">
-                Learner Numerical Marks & KICD Rubric
-              </span>
-              <span className="text-[11px] text-on-surface-variant font-medium">
-                Standard CBC Rating
-              </span>
-            </div>
+          {/* FORMATIVE MODE: Single Sub-strand Competency Evaluation */}
+          {assessmentType === 'FORMATIVE' && (
+            <div className="space-y-4">
+              {/* Subject & Strand */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-on-surface-variant uppercase mb-1">
+                    Learning Area / Subject *
+                  </label>
+                  <select
+                    value={selectedLearningAreaId}
+                    onChange={(e) => setSelectedLearningAreaId(e.target.value)}
+                    required
+                    className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-on-surface font-semibold cursor-pointer"
+                  >
+                    {effectiveSubjects.length === 0 ? (
+                      <option value="">No subjects found</option>
+                    ) : (
+                      effectiveSubjects.map((sub) => (
+                        <option key={sub.id} value={sub.id}>
+                          {sub.name} ({sub.code || sub.initial})
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block font-semibold text-on-surface-variant mb-1">
-                  Marks Scored (Score)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  max={numMax}
-                  step="1"
-                  required
-                  value={rawScore}
-                  onChange={(e) => {
-                    setRawScore(e.target.value);
-                    setIsCustomRemarkEdited(false);
-                  }}
-                  placeholder="e.g. 75"
-                  className="w-full bg-surface-container-lowest border border-outline-variant/40 rounded-lg p-2.5 text-base font-bold font-data-mono text-on-surface"
-                />
+                <div>
+                  <label className="block font-bold text-on-surface-variant uppercase mb-1">
+                    Curriculum Strand *
+                  </label>
+                  <select
+                    value={selectedStrandId}
+                    onChange={(e) => setSelectedStrandId(e.target.value)}
+                    className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-on-surface cursor-pointer"
+                  >
+                    {strands.length === 0 ? (
+                      <option value="">No strands defined for this subject</option>
+                    ) : (
+                      <>
+                        <option value="">Select Strand</option>
+                        {strands.map((st) => (
+                          <option key={st.id} value={st.id}>
+                            {st.code ? `[${st.code}] ` : ''}{st.title}
+                          </option>
+                        ))}
+                      </>
+                    )}
+                  </select>
+                </div>
               </div>
 
-              <div>
-                <label className="block font-semibold text-on-surface-variant mb-1">
-                  Out Of (Max Score)
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="1000"
-                  required
-                  value={maxScore}
-                  onChange={(e) => {
-                    setMaxScore(e.target.value);
-                    setIsCustomRemarkEdited(false);
-                  }}
-                  className="w-full bg-surface-container-lowest border border-outline-variant/40 rounded-lg p-2.5 text-base font-bold font-data-mono text-on-surface"
-                />
-              </div>
-            </div>
+              {/* Formative Details */}
+              <div className="p-3.5 bg-rose-50/40 border border-rose-200/60 rounded-xl space-y-3">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-[#7a1228] flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[16px]">psychology</span>
+                  <span>Formative CBC Competency Evaluation</span>
+                </div>
 
-            {/* Quick Rubric Selector Buttons */}
-            <div>
-              <label className="block text-[10px] font-bold text-on-surface-variant uppercase mb-1.5">
-                Quick Rubric Level Selector (KICD 4-Point Benchmark)
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setRawScore(String(Math.round(numMax * 0.85)));
-                    setIsCustomRemarkEdited(false);
-                  }}
-                  className={`px-2 py-1.5 rounded-lg border font-bold text-xs transition-all cursor-pointer ${
-                    performanceLevel === 'EE'
-                      ? 'bg-teal-700 text-white border-teal-800 shadow-xs'
-                      : 'bg-white border-teal-300 text-teal-800 hover:bg-teal-50'
-                  }`}
-                >
-                  EE (80-100%)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setRawScore(String(Math.round(numMax * 0.70)));
-                    setIsCustomRemarkEdited(false);
-                  }}
-                  className={`px-2 py-1.5 rounded-lg border font-bold text-xs transition-all cursor-pointer ${
-                    performanceLevel === 'ME'
-                      ? 'bg-[#7a1228] text-white border-[#5e0d1e] shadow-xs'
-                      : 'bg-white border-rose-300 text-[#7a1228] hover:bg-rose-50'
-                  }`}
-                >
-                  ME (60-79%)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setRawScore(String(Math.round(numMax * 0.50)));
-                    setIsCustomRemarkEdited(false);
-                  }}
-                  className={`px-2 py-1.5 rounded-lg border font-bold text-xs transition-all cursor-pointer ${
-                    performanceLevel === 'AE'
-                      ? 'bg-amber-700 text-white border-amber-800 shadow-xs'
-                      : 'bg-white border-amber-300 text-amber-800 hover:bg-amber-50'
-                  }`}
-                >
-                  AE (40-59%)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setRawScore(String(Math.round(numMax * 0.25)));
-                    setIsCustomRemarkEdited(false);
-                  }}
-                  className={`px-2 py-1.5 rounded-lg border font-bold text-xs transition-all cursor-pointer ${
-                    performanceLevel === 'BE'
-                      ? 'bg-rose-700 text-white border-rose-800 shadow-xs'
-                      : 'bg-white border-rose-300 text-rose-800 hover:bg-rose-50'
-                  }`}
-                >
-                  BE (0-39%)
-                </button>
-              </div>
-            </div>
+                <div>
+                  <label className="block font-bold text-on-surface-variant uppercase mb-1">
+                    Sub-Strand Outcome *
+                  </label>
+                  <select
+                    value={selectedSubStrandId}
+                    onChange={(e) => setSelectedSubStrandId(e.target.value)}
+                    required
+                    className="w-full bg-white border border-rose-200 rounded-lg p-2.5 text-on-surface cursor-pointer"
+                  >
+                    {subStrands.length === 0 ? (
+                      <option value="">No sub-strands defined</option>
+                    ) : (
+                      <>
+                        <option value="">Select Sub-Strand</option>
+                        {subStrands.map((sub) => (
+                          <option key={sub.id} value={sub.id}>
+                            {sub.code ? `[${sub.code}] ` : ''}{sub.title}
+                          </option>
+                        ))}
+                      </>
+                    )}
+                  </select>
+                </div>
 
-            {/* Dynamic CBC Live Evaluation Result */}
-            <div className={`p-3.5 rounded-xl border flex flex-col gap-1.5 transition-all ${levelBadgeColor}`}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-xl font-bold font-data-mono">{percentage}%</span>
-                  <span className="font-bold text-xs uppercase px-2 py-0.5 rounded bg-white/70">
-                    {performanceLevel}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-bold text-on-surface-variant uppercase mb-1">
+                      Assessment Method *
+                    </label>
+                    <select
+                      value={assessmentMethod}
+                      onChange={(e) => setAssessmentMethod(e.target.value)}
+                      className="w-full bg-white border border-rose-200 rounded-lg p-2.5 text-on-surface cursor-pointer"
+                    >
+                      {CBC_ASSESSMENT_METHODS.map((m) => (
+                        <option key={m.value} value={m.value}>
+                          {m.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-on-surface-variant uppercase mb-1">
+                      Specific Learning Outcome Tested
+                    </label>
+                    <input
+                      type="text"
+                      value={specificOutcomeTested}
+                      onChange={(e) => setSpecificOutcomeTested(e.target.value)}
+                      placeholder="e.g. Identification and guided problem solving"
+                      className="w-full bg-white border border-rose-200 rounded-lg p-2.5 text-xs text-on-surface focus:outline-primary"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-bold text-on-surface-variant uppercase mb-1">
+                      Core Competency Demonstrated *
+                    </label>
+                    <select
+                      value={targetedCompetency}
+                      onChange={(e) => setTargetedCompetency(e.target.value)}
+                      className="w-full bg-white border border-rose-200 rounded-lg p-2.5 text-on-surface cursor-pointer"
+                    >
+                      {CBC_CORE_COMPETENCIES.map((c) => (
+                        <option key={c.value} value={c.value}>
+                          {c.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-on-surface-variant uppercase mb-1">
+                      Core Value Observed *
+                    </label>
+                    <select
+                      value={observedValue}
+                      onChange={(e) => setObservedValue(e.target.value)}
+                      className="w-full bg-white border border-rose-200 rounded-lg p-2.5 text-on-surface cursor-pointer"
+                    >
+                      {CBC_CORE_VALUES.map((v) => (
+                        <option key={v.value} value={v.value}>
+                          {v.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Formative Marks Entry */}
+              <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-xs uppercase text-primary">
+                    Learner Numerical Marks & KICD Rubric
+                  </span>
+                  <span className="text-[11px] text-on-surface-variant font-medium">
+                    Standard CBC Rating
                   </span>
                 </div>
-                <span className="font-bold text-xs">{levelTitle}</span>
-              </div>
-              <p className="text-[11px] leading-relaxed italic">
-                "{standardCbcRemark}"
-              </p>
-            </div>
-          </div>
 
-          {/* 7. Teacher CBC Evaluated Pedagogical Remarks */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="block font-bold text-on-surface-variant uppercase">
-                Evaluated Pedagogical Remarks
-              </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold text-on-surface-variant mb-1">
+                      Marks Scored (Score)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max={numMax}
+                      step="1"
+                      required
+                      value={rawScore}
+                      onChange={(e) => {
+                        setRawScore(e.target.value);
+                        setIsCustomRemarkEdited(false);
+                      }}
+                      placeholder="e.g. 75"
+                      className="w-full bg-surface-container-lowest border border-outline-variant/40 rounded-lg p-2.5 text-base font-bold font-data-mono text-on-surface"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-on-surface-variant mb-1">
+                      Out Of (Max Score)
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="1000"
+                      required
+                      value={maxScore}
+                      onChange={(e) => {
+                        setMaxScore(e.target.value);
+                        setIsCustomRemarkEdited(false);
+                      }}
+                      className="w-full bg-surface-container-lowest border border-outline-variant/40 rounded-lg p-2.5 text-base font-bold font-data-mono text-on-surface"
+                    />
+                  </div>
+                </div>
+
+                {/* Quick Rubric Selector Buttons */}
+                <div>
+                  <label className="block text-[10px] font-bold text-on-surface-variant uppercase mb-1.5">
+                    Quick Rubric Level Selector (KICD 4-Point Benchmark)
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRawScore(String(Math.round(numMax * 0.85)));
+                        setIsCustomRemarkEdited(false);
+                      }}
+                      className={`px-2 py-1.5 rounded-lg border font-bold text-xs transition-all cursor-pointer ${
+                        performanceLevel === 'EE'
+                          ? 'bg-teal-700 text-white border-teal-800 shadow-xs'
+                          : 'bg-white border-teal-300 text-teal-800 hover:bg-teal-50'
+                      }`}
+                    >
+                      EE (80-100%)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRawScore(String(Math.round(numMax * 0.70)));
+                        setIsCustomRemarkEdited(false);
+                      }}
+                      className={`px-2 py-1.5 rounded-lg border font-bold text-xs transition-all cursor-pointer ${
+                        performanceLevel === 'ME'
+                          ? 'bg-[#7a1228] text-white border-[#5e0d1e] shadow-xs'
+                          : 'bg-white border-rose-300 text-[#7a1228] hover:bg-rose-50'
+                      }`}
+                    >
+                      ME (60-79%)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRawScore(String(Math.round(numMax * 0.50)));
+                        setIsCustomRemarkEdited(false);
+                      }}
+                      className={`px-2 py-1.5 rounded-lg border font-bold text-xs transition-all cursor-pointer ${
+                        performanceLevel === 'AE'
+                          ? 'bg-amber-700 text-white border-amber-800 shadow-xs'
+                          : 'bg-white border-amber-300 text-amber-800 hover:bg-amber-50'
+                      }`}
+                    >
+                      AE (40-59%)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRawScore(String(Math.round(numMax * 0.25)));
+                        setIsCustomRemarkEdited(false);
+                      }}
+                      className={`px-2 py-1.5 rounded-lg border font-bold text-xs transition-all cursor-pointer ${
+                        performanceLevel === 'BE'
+                          ? 'bg-rose-700 text-white border-rose-800 shadow-xs'
+                          : 'bg-white border-rose-300 text-rose-800 hover:bg-rose-50'
+                      }`}
+                    >
+                      BE (0-39%)
+                    </button>
+                  </div>
+                </div>
+
+                {/* Dynamic CBC Live Evaluation Result */}
+                <div className={`p-3.5 rounded-xl border flex flex-col gap-1.5 transition-all ${levelBadgeColor}`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl font-bold font-data-mono">{percentage}%</span>
+                      <span className="font-bold text-xs uppercase px-2 py-0.5 rounded bg-white/70">
+                        {performanceLevel}
+                      </span>
+                    </div>
+                    <span className="font-bold text-xs">{levelTitle}</span>
+                  </div>
+                  <p className="text-[11px] leading-relaxed italic">
+                    "{standardCbcRemark}"
+                  </p>
+                </div>
+              </div>
+
+              {/* Formative Remarks */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block font-bold text-on-surface-variant uppercase">
+                    Evaluated Pedagogical Remarks
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCustomRemarkEdited(false);
+                      setCustomRemarks('');
+                    }}
+                    className="text-[10px] text-primary hover:underline font-semibold cursor-pointer"
+                  >
+                    Reset to CBC Standard
+                  </button>
+                </div>
+                <textarea
+                  rows={3}
+                  required
+                  value={activeRemarks}
+                  onChange={(e) => {
+                    setCustomRemarks(e.target.value);
+                    setIsCustomRemarkEdited(true);
+                  }}
+                  placeholder="Enter or customize CBC remarks..."
+                  className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-xs text-on-surface leading-relaxed"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Bottom Action Footer */}
+          <div className="pt-3 flex flex-col sm:flex-row items-center justify-between gap-2.5 border-t border-slate-200">
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full sm:w-auto px-4 py-2 border border-slate-300 rounded-lg text-slate-700 font-bold hover:bg-slate-50 transition-colors cursor-pointer text-xs"
+            >
+              Cancel
+            </button>
+
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              {assessmentType === 'SUMMATIVE' && hasNext && (
+                <button
+                  type="button"
+                  disabled={isLoading}
+                  onClick={() => handleSubmit(undefined, true)}
+                  className="flex-1 sm:flex-none px-4 py-2 bg-slate-800 text-white font-bold rounded-lg hover:bg-slate-900 shadow-sm transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5 text-xs"
+                  title="Save marks and advance immediately to next student"
+                >
+                  <span className="material-symbols-outlined text-[16px]">fast_forward</span>
+                  <span>Save & Next Learner</span>
+                </button>
+              )}
+
               <button
-                type="button"
-                onClick={() => {
-                  setIsCustomRemarkEdited(false);
-                  setCustomRemarks('');
-                }}
-                className="text-[10px] text-primary hover:underline font-semibold cursor-pointer"
+                type="submit"
+                disabled={isLoading}
+                className="flex-1 sm:flex-none px-5 py-2 bg-[#7a1228] text-white font-bold rounded-lg hover:bg-[#5e0d1e] shadow-md transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5 text-xs"
               >
-                Reset to CBC Standard
+                <span className="material-symbols-outlined text-[16px]">save</span>
+                <span>{isLoading ? 'Saving...' : assessmentType === 'SUMMATIVE' ? 'Save All Subject Marks' : 'Save Formative Evaluation'}</span>
               </button>
             </div>
-            <textarea
-              rows={3}
-              required
-              value={activeRemarks}
-              onChange={(e) => {
-                setCustomRemarks(e.target.value);
-                setIsCustomRemarkEdited(true);
-              }}
-              placeholder="Enter or customize CBC remarks..."
-              className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-xs text-on-surface leading-relaxed"
-            />
-            <p className="text-[10px] text-on-surface-variant mt-1">
-              Remarks are automatically pre-filled to match KICD National CBC benchmarks for <strong className="font-bold">{performanceLevel}</strong>.
-            </p>
-          </div>
-
-          {/* Submit Button */}
-          <div className="pt-2">
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full py-2.5 bg-[#7a1228] text-white font-bold rounded-lg hover:bg-[#5e0d1e] shadow-md transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2 text-xs"
-            >
-              <span className="material-symbols-outlined text-[16px]">save</span>
-              <span>{isLoading ? 'Saving Evaluation...' : 'Save CBC Marks & Evaluated Remarks'}</span>
-            </button>
           </div>
         </form>
       </div>

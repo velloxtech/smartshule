@@ -172,8 +172,6 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
 
 
   const schoolName = schoolInfo?.name || 'Grace Seeds School';
-  const schoolCode = schoolInfo?.registrationNumber || schoolInfo?.code || 'MOE/PRI/2026/04882';
-  const knecCode = schoolInfo?.centerCode || schoolInfo?.knecCode || '41802105';
   const schoolMotto = schoolInfo?.motto || 'The future Begins Here';
   const schoolAddress = schoolInfo?.address || 'KEMRI Street, Kisian, Kisumu, Kenya';
   const schoolPhone = schoolInfo?.phone || '0745436312';
@@ -698,7 +696,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
       <img src="/logo.png" alt="Grace Seeds School Logo" class="logo" onerror="if(!this.src.endsWith('/logo.jpg')){this.src='/logo.jpg';}" />
       <h1 class="school-title">GRACE SEEDS SCHOOL</h1>
       <div class="sub-title">MINISTRY OF EDUCATION · CBC SUMMATIVE EVALUATION REPORT</div>
-      <div class="meta-info">MoE Reg: ${schoolCode} · KNEC Centre: ${knecCode} · ${schoolAddress} · Tel: ${schoolPhone} · Email: ${schoolEmail}</div>
+      <div class="meta-info">${schoolAddress} · Tel: ${schoolPhone} · Email: ${schoolEmail}</div>
       <div class="motto">&quot;${schoolMotto}&quot;</div>
       <div class="badge">Learner Competency Summative Dossier · ${termName} ${yearName}</div>
     </div>
@@ -1151,7 +1149,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
             MINISTRY OF EDUCATION · CBC SUMMATIVE EVALUATION REPORT
           </p>
           <p className="text-[11px] print:text-[7.5px] text-gray-600 font-medium mt-0.5 print:mt-0">
-            MoE Reg: <strong>{schoolCode}</strong> · Assessment Centre: <strong>{knecCode}</strong> · {schoolAddress} · Tel: <strong>{schoolPhone}</strong> · Email: <strong>{schoolEmail}</strong>
+            {schoolAddress} · Tel: <strong>{schoolPhone}</strong> · Email: <strong>{schoolEmail}</strong>
           </p>
           <p className="text-xs print:text-[7.5px] italic text-[#800000] font-semibold mt-0.5 print:mt-0">
             &quot;{schoolMotto}&quot;

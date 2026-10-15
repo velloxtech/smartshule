@@ -48,6 +48,7 @@ export interface ICbcAssessmentRepository {
   findSummatives(filters: SummativeFilterCriteria): Promise<SummativeAssessment[]>;
   saveSummative(assessment: SummativeAssessment): Promise<void>;
   updateSummative(assessment: SummativeAssessment): Promise<void>;
+  deleteSummative(id: string): Promise<void>;
   deleteSummativesByStudent(studentId: string): Promise<void>;
 
   // Report Cards

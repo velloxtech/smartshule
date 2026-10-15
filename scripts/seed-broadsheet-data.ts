@@ -22,16 +22,22 @@ async function seed() {
     await client.query(`
       INSERT INTO schools (id, name, code, center_code, motto, email, phone, address, currency)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-      ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, updated_at = NOW()
+      ON CONFLICT (id) DO UPDATE SET 
+        name = EXCLUDED.name, 
+        center_code = EXCLUDED.center_code,
+        email = EXCLUDED.email,
+        phone = EXCLUDED.phone,
+        address = EXCLUDED.address,
+        updated_at = NOW()
     `, [
       'school-001',
-      'SmartShule Academy',
-      'SCH-001',
-      'KNC-2026-001',
-      'Excellence in Competency & Integrity',
-      'info@smartshule.ac.ke',
-      '+254700000001',
-      'Nairobi Central, Kenya',
+      'Grace Seeds School',
+      'GSS-001',
+      null,
+      'The Future Begins Here',
+      'schoolgraceseeds@gmail.com',
+      '0745436312',
+      'KEMRI Street, Kisian, Kisumu, Kenya',
       'KES'
     ]);
 

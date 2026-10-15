@@ -487,6 +487,10 @@ export class InMemoryCbcAssessmentRepository implements ICbcAssessmentRepository
     this.summatives.set(assessment.id, assessment);
   }
 
+  public async deleteSummative(id: string): Promise<void> {
+    this.summatives.delete(id);
+  }
+
   public async deleteSummativesByStudent(studentId: string): Promise<void> {
     for (const [id, s] of this.summatives.entries()) {
       if (s.studentId === studentId) {

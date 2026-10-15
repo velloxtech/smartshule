@@ -26,6 +26,26 @@ const GRADE_ORDER: Record<string, number> = {
   GRADE_9: 11,
 };
 
+const getSubjectInitials = (nameOrCode: string): string => {
+  if (!nameOrCode) return 'SUB';
+  const clean = nameOrCode.trim().toUpperCase();
+  if (clean.includes('MATH')) return 'MAT';
+  if (clean.includes('ENG')) return 'ENG';
+  if (clean.includes('KISW') || clean.includes('SWAHILI')) return 'KIS';
+  if (clean.includes('INTEGRATED SCIENCE') || clean.includes('SCIENCE') || clean.includes('SCI')) return 'SCI';
+  if (clean.includes('SOCIAL')) return 'SOC';
+  if (clean.includes('RELIGIOUS') || clean.includes('CRE') || clean.includes('IRE')) return 'CRE';
+  if (clean.includes('AGRI') || clean.includes('NUTRITION')) return 'AGR';
+  if (clean.includes('CREATIVE') || clean.includes('ARTS') || clean.includes('MUSIC')) return 'ART';
+  if (clean.includes('PRE-TECH') || clean.includes('TECHNICAL')) return 'PTECH';
+  if (clean.includes('FRENCH')) return 'FRE';
+  if (clean.includes('GERMAN')) return 'GER';
+  if (clean.includes('ARABIC')) return 'ARA';
+  if (clean.includes('INDIGENOUS')) return 'IND';
+  const firstWord = clean.replace(/[^A-Z0-9]/g, ' ').trim().split(/\s+/)[0];
+  return firstWord.slice(0, 4) || 'SUB';
+};
+
 export const MasterBroadsheetView: React.FC = () => {
   const [classes, setClasses] = useState<ClassRoom[]>([]);
   const [streams, setStreams] = useState<StreamItem[]>([]);
@@ -559,7 +579,8 @@ export const MasterBroadsheetView: React.FC = () => {
     if (!broadsheet) return;
 
     const lines: string[] = [];
-    lines.push('SMARTSHULE ACADEMY - CONSOLIDATED MASTER BROADSHEET & ANALYTICS REPORT');
+    lines.push('GRACE SEEDS SCHOOL - CONSOLIDATED MASTER BROADSHEET & ANALYTICS REPORT');
+    lines.push('KEMRI Street, Kisian, Kisumu, Kenya · Tel: 0745436312 · Email: schoolgraceseeds@gmail.com');
     lines.push(`Academic Term: ${selectedTerm}, Year: ${selectedYear}, Class: ${broadsheet.className}, Stream: ${broadsheet.streamName}`);
     lines.push(`Generated On: ${new Date().toLocaleDateString('en-KE')}`);
     lines.push('');
@@ -1087,9 +1108,11 @@ export const MasterBroadsheetView: React.FC = () => {
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden p-6 print:border-none print:shadow-none print:p-0">
         <div className="text-center border-b pb-4 mb-6">
           <h2 className="text-xl md:text-2xl font-black text-slate-900 uppercase tracking-wider">
-            SMARTSHULE ACADEMY
+            GRACE SEEDS SCHOOL
           </h2>
-          <p className="text-xs text-slate-500 font-medium">Ministry of Education CBC Assessment Framework</p>
+          <p className="text-xs text-slate-600 font-medium">
+            KEMRI Street, Kisian, Kisumu, Kenya · Tel: 0745436312 · Email: schoolgraceseeds@gmail.com
+          </p>
           <div className="mt-2 inline-flex items-center gap-3 text-xs font-bold text-indigo-900 bg-indigo-50 px-4 py-1.5 rounded-full border border-indigo-200">
             <span>Class: {broadsheet?.className || 'Grade Level'}</span>
             <span>•</span>
@@ -1697,9 +1720,14 @@ export const MasterBroadsheetView: React.FC = () => {
 
                                 {/* Dynamic Subjects */}
                                 {broadsheet.learningAreas.map((la) => (
-                                  <th key={la.id} className="p-2 border text-center min-w-[105px]">
-                                    <div className="font-bold text-[11px] truncate" title={la.name}>{la.name}</div>
-                                    <div className="text-[9px] text-slate-500 font-medium">Score • Lvl • Pts • Pos</div>
+                                  <th key={la.id} className="p-2 border text-center min-w-[85px] bg-rose-50/30">
+                                    <div className="font-black text-xs font-mono text-[#7a1228] tracking-wider">
+                                      {getSubjectInitials(la.code || la.name)}
+                                    </div>
+                                    <div className="font-bold text-[10px] text-slate-700 truncate max-w-[80px] mx-auto" title={la.name}>
+                                      {la.name}
+                                    </div>
+                                    <div className="text-[8px] text-slate-400 font-medium">Score • Lvl • Pts</div>
                                   </th>
                                 ))}
 
@@ -1996,9 +2024,14 @@ export const MasterBroadsheetView: React.FC = () => {
 
                             {/* Dynamic Subjects */}
                             {broadsheet.learningAreas.map((la) => (
-                              <th key={la.id} className="p-2 border text-center min-w-[105px]">
-                                <div className="font-bold text-[11px] truncate" title={la.name}>{la.name}</div>
-                                <div className="text-[9px] text-slate-500 font-medium">Score • Lvl • Pts • Pos</div>
+                              <th key={la.id} className="p-2 border text-center min-w-[85px] bg-rose-50/30">
+                                <div className="font-black text-xs font-mono text-[#7a1228] tracking-wider">
+                                  {getSubjectInitials(la.code || la.name)}
+                                </div>
+                                <div className="font-bold text-[10px] text-slate-700 truncate max-w-[80px] mx-auto" title={la.name}>
+                                  {la.name}
+                                </div>
+                                <div className="text-[8px] text-slate-400 font-medium">Score • Lvl • Pts</div>
                               </th>
                             ))}
 

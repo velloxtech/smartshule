@@ -284,6 +284,14 @@ export class CbcAssessmentUseCases {
       }
     }
 
+    const existing = await this.cbcRepository.findSummatives({
+      studentId: dto.studentId,
+      learningAreaId: dto.learningAreaId,
+      termId: termId || 'term-default',
+      academicYearId: academicYearId || 'year-default'
+    });
+    const assessmentId = (existing && existing.length > 0) ? existing[0].id : IdGenerator.generate();
+
     const assessment = SummativeAssessment.create(
       {
         studentId: dto.studentId,
@@ -296,11 +304,20 @@ export class CbcAssessmentUseCases {
         teacherRemarks: dto.teacherRemarks || 'Meeting CBC curriculum learning expectations.',
         evaluationDate: dto.evaluationDate || new Date().toISOString().split('T')[0]
       },
-      IdGenerator.generate()
+      assessmentId
     );
 
     await this.cbcRepository.saveSummative(assessment);
     return assessment.toJSON();
+  }
+
+  public async recordSummativeBatch(dtos: RecordSummativeDTO[]) {
+    const results = [];
+    for (const dto of dtos) {
+      const res = await this.recordSummativeAssessment(dto);
+      results.push(res);
+    }
+    return results;
   }
 
   public async listSummativeAssessments(filters: SummativeFilterCriteria & { requestingUser?: UserContext }) {
@@ -756,5 +773,23 @@ export class CbcAssessmentUseCases {
       }
     }
     await this.cbcRepository.deleteFormative(id);
+  }
+
+  public async deleteSummative(id: string, requestingUser?: UserContext): Promise<void> {
+    const assessment = await this.cbcRepository.findSummativeById(id);
+    if (!assessment) throw new NotFoundError('Summative assessment', id);
+    if (requestingUser?.role === UserRole.TEACHER) {
+      let isOwner = assessment.teacherId === requestingUser.userId;
+      if (!isOwner && this.teacherRepository) {
+        const teacherProfile = await this.teacherRepository.findByUserId(requestingUser.userId);
+        if (teacherProfile && assessment.teacherId === teacherProfile.id) {
+          isOwner = true;
+        }
+      }
+      if (!isOwner) {
+        throw new ForbiddenError('You can only delete your own summative assessments.');
+      }
+    }
+    await this.cbcRepository.deleteSummative(id);
   }
 }

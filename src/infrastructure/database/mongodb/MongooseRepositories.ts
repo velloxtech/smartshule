@@ -858,6 +858,9 @@ export class MongoCbcAssessmentRepository implements ICbcAssessmentRepository {
   public async updateSummative(assessment: SummativeAssessment): Promise<void> {
     await SummativeModel.findByIdAndUpdate(assessment.id, assessment.toJSON());
   }
+  public async deleteSummative(id: string): Promise<void> {
+    await SummativeModel.findByIdAndDelete(id);
+  }
   public async deleteSummativesByStudent(studentId: string): Promise<void> {
     await SummativeModel.deleteMany({ studentId });
   }

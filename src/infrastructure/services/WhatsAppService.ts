@@ -117,7 +117,7 @@ export class WhatsAppService {
     let phone = '0745436312';
     let email = 'schoolgraceseeds@gmail.com';
     let address = 'KEMRI Street, Kisian, Kisumu, Kenya';
-    let centerCode = 'KNEC-08291';
+    let centerCode = '';
 
     if (this.academicRepository) {
       try {
@@ -128,7 +128,7 @@ export class WhatsAppService {
           phone = s.phone || phone;
           email = s.email || email;
           address = s.address || address;
-          centerCode = s.centerCode || centerCode;
+          centerCode = s.centerCode || '';
         }
       } catch {}
     }
@@ -886,7 +886,7 @@ export class WhatsAppService {
       `━━━━━━━━━━━━━━━━━━━━\n` +
       `🏛️ *Institution:* ${school.name}\n` +
       `📜 *Motto:* _"${school.motto}"_\n` +
-      `🏷️ *KNEC / CBC Center Code:* ${school.centerCode}\n\n` +
+      (school.centerCode ? `🏷️ *KNEC / CBC Center Code:* ${school.centerCode}\n\n` : '\n') +
       `📞 *Official Phone:* ${school.phone}\n` +
       `✉️ *Email:* ${school.email}\n` +
       `📍 *Physical Address:* ${school.address}\n\n` +

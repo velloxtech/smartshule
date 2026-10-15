@@ -6,6 +6,8 @@ export type TabType =
   | 'classes-streams'
   | 'learning-areas'
   | 'assessments'
+  | 'formative-assessments'
+  | 'summative-assessments'
   | 'competencies-strands'
   | 'report-cards'
   | 'cbc-analytics'

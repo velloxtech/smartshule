@@ -275,7 +275,7 @@ export const WhatsAppBotView: React.FC = () => {
     const learnerName = s ? s.name : 'your child';
     const admNo = s ? s.admNo : 'ADM-001';
     const balance = s ? s.feeBalance : 12000;
-    const schoolName = user?.schoolName || 'SmartShule Academy';
+    const schoolName = user?.schoolName || 'Grace Seeds School';
     const childGrade = s ? (s.grade || '') : '';
     const childAcc = `8048859#${learnerName}${childGrade ? ' ' + childGrade : ''}`;
 

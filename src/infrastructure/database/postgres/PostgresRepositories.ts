@@ -1339,7 +1339,7 @@ export class PostgresCbcAssessmentRepository implements ICbcAssessmentRepository
   public async saveSummative(s: SummativeAssessment): Promise<void> {
     const q = `INSERT INTO summative_assessments (id, student_id, teacher_id, learning_area_id, term_id, academic_year_id, strand_scores, overall_performance_level, teacher_remarks, evaluation_date, created_at, updated_at)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-               ON CONFLICT (id) DO UPDATE SET overall_performance_level = EXCLUDED.overall_performance_level, strand_scores = EXCLUDED.strand_scores, updated_at = NOW()`;
+               ON CONFLICT (id) DO UPDATE SET overall_performance_level = EXCLUDED.overall_performance_level, strand_scores = EXCLUDED.strand_scores, teacher_remarks = EXCLUDED.teacher_remarks, evaluation_date = EXCLUDED.evaluation_date, updated_at = NOW()`;
     await this.pool.query(q, [
       s.id,
       s.studentId,
@@ -1356,6 +1356,9 @@ export class PostgresCbcAssessmentRepository implements ICbcAssessmentRepository
     ]);
   }
   public async updateSummative(s: SummativeAssessment): Promise<void> { await this.saveSummative(s); }
+  public async deleteSummative(id: string): Promise<void> {
+    await this.pool.query('DELETE FROM summative_assessments WHERE id = $1', [id]);
+  }
   public async deleteSummativesByStudent(studentId: string): Promise<void> {
     await this.pool.query('DELETE FROM summative_assessments WHERE student_id = $1', [studentId]);
   }
