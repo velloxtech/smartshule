@@ -3,6 +3,7 @@ import { IGuardianRepository } from '../../core/ports/repositories/ITeacherRepos
 import { IAuthTokenService, IPasswordHasher, INotificationService } from '../../core/ports/services/IExternalServices';
 import { User, UserRole, UserStatus } from '../../core/domain/user/User';
 import { IdGenerator, ConflictError, UnauthorizedError, NotFoundError, ForbiddenError, ValidationError } from '../../core/domain/shared/Errors';
+import { PhoneUtils } from '../../infrastructure/utils/PhoneUtils';
 
 export interface RegisterUserDTO {
   email?: string;
@@ -173,11 +174,15 @@ export class AuthUseCases {
     let user: User | null = null;
 
     // Check if input looks like a phone number
-    const isPhonePattern = /^(\+?254|0)?[17]\d{8}$/.test(rawIdentifier.replace(/[\s-]/g, '')) ||
-                           /^\+?\d{8,15}$/.test(rawIdentifier.replace(/[\s-]/g, ''));
+    const cleanPhoneDigits = rawIdentifier.replace(/[\s-]/g, '');
+    const isPhonePattern = /^(\+?254|0)?[17]\d{8}$/.test(cleanPhoneDigits) ||
+                           /^\+?\d{8,15}$/.test(cleanPhoneDigits);
 
     if (isPhonePattern) {
-      user = await this.userRepository.findByPhone(rawIdentifier);
+      user = await this.userRepository.findByPhone(cleanPhoneDigits);
+      if (!user && cleanPhoneDigits !== rawIdentifier) {
+        user = await this.userRepository.findByPhone(rawIdentifier);
+      }
     }
 
     if (!user) {
@@ -186,6 +191,9 @@ export class AuthUseCases {
 
     if (!user) {
       user = await this.userRepository.findByPhone(rawIdentifier);
+      if (!user && cleanPhoneDigits !== rawIdentifier) {
+        user = await this.userRepository.findByPhone(cleanPhoneDigits);
+      }
     }
 
     if (!user && (lookupEmail === 'teacher' || lookupEmail === 'teacher@smartshule.ac.ke')) {
@@ -197,7 +205,10 @@ export class AuthUseCases {
 
     // Fallback: check guardian emergencyContact if guardianRepository is present
     if (!user && this.guardianRepository) {
-      const g = await this.guardianRepository.findByPhone(rawIdentifier);
+      let g = await this.guardianRepository.findByPhone(rawIdentifier);
+      if (!g && cleanPhoneDigits !== rawIdentifier) {
+        g = await this.guardianRepository.findByPhone(cleanPhoneDigits);
+      }
       if (g) {
         user = await this.userRepository.findById(g.userId);
       }
@@ -213,14 +224,26 @@ export class AuthUseCases {
 
     let isMatch = await this.passwordHasher.compare(dto.password, user.passwordHash);
     const isParentRole = user.role === UserRole.PARENT || user.role === UserRole.GUARDIAN;
+    let isDefaultPhonePassword = false;
     let isDefaultIdPassword = false;
 
-    // For parent accounts, check if default National ID was supplied
+    // Check if password matches user's phone number
+    if (!isMatch && user.phone && PhoneUtils.areMatches(user.phone, dto.password)) {
+      isMatch = true;
+      isDefaultPhonePassword = true;
+    }
+
+    // For parent accounts, check emergency contact or fallback national ID
     if (!isMatch && isParentRole && this.guardianRepository) {
       const g = await this.guardianRepository.findByUserId(user.id);
-      if (g && g.nationalId && g.nationalId.trim() === dto.password.trim()) {
-        isMatch = true;
-        isDefaultIdPassword = true;
+      if (g) {
+        if (g.emergencyContact && PhoneUtils.areMatches(g.emergencyContact, dto.password)) {
+          isMatch = true;
+          isDefaultPhonePassword = true;
+        } else if (g.nationalId && g.nationalId.trim() === dto.password.trim()) {
+          isMatch = true;
+          isDefaultIdPassword = true;
+        }
       }
     }
 
@@ -228,8 +251,11 @@ export class AuthUseCases {
       throw new UnauthorizedError('Invalid email, phone number, or password.');
     }
 
-    // Check if guardian authenticated with their National ID
-    if (this.guardianRepository && isParentRole && !isDefaultIdPassword) {
+    // Check if user authenticated with their default phone or national ID
+    if (!isDefaultPhonePassword && user.phone && PhoneUtils.areMatches(user.phone, dto.password)) {
+      isDefaultPhonePassword = true;
+    }
+    if (!isDefaultIdPassword && this.guardianRepository && isParentRole) {
       const g = await this.guardianRepository.findByUserId(user.id);
       if (g && g.nationalId && g.nationalId.trim() === dto.password.trim()) {
         isDefaultIdPassword = true;
@@ -237,7 +263,7 @@ export class AuthUseCases {
     }
 
     let mustChangePassword = user.mustChangePassword;
-    if (isParentRole && isDefaultIdPassword) {
+    if (isDefaultPhonePassword || (isParentRole && isDefaultIdPassword)) {
       mustChangePassword = true;
       user.setMustChangePassword(true);
       await this.userRepository.update(user);
@@ -310,10 +336,17 @@ export class AuthUseCases {
     }
 
     let isMatch = await this.passwordHasher.compare(dto.currentPassword, user.passwordHash);
+    if (!isMatch && user.phone && PhoneUtils.areMatches(user.phone, dto.currentPassword)) {
+      isMatch = true;
+    }
     if (!isMatch && this.guardianRepository && (user.role === UserRole.PARENT || user.role === UserRole.GUARDIAN)) {
       const g = await this.guardianRepository.findByUserId(user.id);
-      if (g && g.nationalId && g.nationalId.trim() === dto.currentPassword.trim()) {
-        isMatch = true;
+      if (g) {
+        if (g.emergencyContact && PhoneUtils.areMatches(g.emergencyContact, dto.currentPassword)) {
+          isMatch = true;
+        } else if (g.nationalId && g.nationalId.trim() === dto.currentPassword.trim()) {
+          isMatch = true;
+        }
       }
     }
 
@@ -554,7 +587,8 @@ export class AuthUseCases {
       }
     }
 
-    const passwordHash = await this.passwordHasher.hash(dto.password);
+    const initialPassword = dto.password?.trim() || cleanPhone || 'ChangeMe@123';
+    const passwordHash = await this.passwordHasher.hash(initialPassword);
     const userId = IdGenerator.generate();
 
     const user = User.create(

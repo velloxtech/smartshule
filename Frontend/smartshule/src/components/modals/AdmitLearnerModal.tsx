@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Student, ClassRoom, StreamItem } from '../../types';
+import { Student, ClassRoom, StreamItem, UserRole } from '../../types';
 import { apiService } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import { generateNextSequentialNumber } from '../../utils/sequenceGenerator';
 import {
   KENYAN_COUNTIES,
@@ -25,9 +26,20 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
   onAdmit,
   existingStudents,
 }) => {
+  const { user } = useAuth();
+  const isBillingAuthorized = [
+    UserRole.SUPER_ADMIN,
+    UserRole.ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.HEAD_TEACHER,
+    UserRole.BURSAR,
+    UserRole.ACCOUNTANT
+  ].includes(user?.role as UserRole);
+
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [authorizeBillingImmediately, setAuthorizeBillingImmediately] = useState(false);
 
   // Step 1: Learner Identity & School Admission (Given by school)
   const [admissionNumber, setAdmissionNumber] = useState('');
@@ -368,6 +380,8 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
       dataProtectionConsent: true,
       createParentAccount,
       sendWelcomeSms,
+      authorizeBilling: isBillingAuthorized ? authorizeBillingImmediately : false,
+      admissionFee: 1500,
       guardian: {
         firstName: gFirst,
         lastName: gLast,
@@ -783,22 +797,22 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                 </div>
               </div>
 
-              {/* Class Fee Structure Card (Look up class fee structure and bill in full) */}
-              <div className="p-4 bg-amber-50/70 border border-amber-200 rounded-2xl text-slate-800">
-                <div className="flex items-center justify-between mb-2.5">
+              {/* Class Fee Structure Card (Termly + Admission Fee) */}
+              <div className="p-4 bg-amber-50/70 border border-amber-200 rounded-2xl text-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="material-symbols-outlined text-amber-700 text-lg">receipt_long</span>
                     <span className="text-xs font-bold uppercase tracking-wider text-amber-900">
-                      Class Fee Structure — {matchedFeeStructure?.title || `${currentClass?.name || gradeLevel.replace('_', ' ')} Fee Structure`}
+                      Class Term Fee Schedule — {matchedFeeStructure?.title || `${currentClass?.name || gradeLevel.replace('_', ' ')} Fee Structure`}
                     </span>
                   </div>
                   <span className="text-xs font-bold font-mono px-2 py-0.5 rounded-full bg-amber-200/80 text-amber-950">
-                    Billed in Full
+                    Termly CBC Rate
                   </span>
                 </div>
 
-                <p className="text-[11px] text-slate-600 mb-3">
-                  Upon admission, this learner is billed in full with the complete line items of the class fee structure.
+                <p className="text-[11px] text-slate-600">
+                  Standard termly CBC fee items for this learner's grade level. Routine term bills apply strictly to tuition and term activities.
                 </p>
 
                 {matchedFeeStructure?.items && matchedFeeStructure.items.length > 0 ? (
@@ -831,19 +845,80 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                       );
                     })}
                     <div className="flex items-center justify-between text-xs pt-2.5 font-bold text-amber-950 border-t border-amber-200">
-                      <span>Total Annual Fee Structure (Whole Year):</span>
+                      <span>Term Fee Subtotal:</span>
                       <span className="font-mono text-sm text-[#7a1228]">KES {Number(totalFee).toLocaleString()}</span>
                     </div>
                   </div>
                 ) : (
                   <div className="bg-white/90 rounded-xl p-3 border border-amber-100 text-xs flex items-center justify-between">
                     <div>
-                      <span className="font-semibold text-slate-800">Standard CBC Grade Fee Structure</span>
-                      <p className="text-[11px] text-slate-500">Will be generated and billed in full upon admission.</p>
+                      <span className="font-semibold text-slate-800">Standard CBC Grade Fee Schedule</span>
+                      <p className="text-[11px] text-slate-500">Term fee configured for this grade level.</p>
                     </div>
                     <span className="font-mono font-bold text-sm text-[#7a1228]">KES {Number(totalFee).toLocaleString()}</span>
                   </div>
                 )}
+
+                {/* Dedicated Admission Fee Guarantee (One-Time) */}
+                <div className="p-3 bg-white/95 rounded-xl border border-emerald-200 flex items-center justify-between shadow-2xs">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-100">
+                      <span className="material-symbols-outlined text-[18px]">how_to_reg</span>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-xs text-slate-900">One-Time Admission & Registration Fee</span>
+                        <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.2 rounded-full">
+                          Admit Modal Exclusive
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        Guaranteed one-time charge attached to new admissions. Cannot be billed twice on any continuing learner.
+                      </p>
+                    </div>
+                  </div>
+                  <span className="font-mono font-bold text-xs text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 shrink-0">
+                    KES 1,500
+                  </span>
+                </div>
+
+                {/* Billing Authorization Control */}
+                <div className="p-3.5 rounded-xl border transition-colors bg-white border-amber-200 shadow-2xs">
+                  {isBillingAuthorized ? (
+                    <label className="flex items-start gap-2.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={authorizeBillingImmediately}
+                        onChange={(e) => setAuthorizeBillingImmediately(e.target.checked)}
+                        className="mt-0.5 rounded text-[#7a1228] focus:ring-[#7a1228] w-4 h-4 cursor-pointer"
+                      />
+                      <div className="text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-slate-900">
+                            Authorize & Bill Learner Now Upon Admission
+                          </span>
+                          <span className="text-[10px] bg-amber-100 text-amber-900 font-semibold px-1.5 py-0.2 rounded">
+                            Role Authorized
+                          </span>
+                        </div>
+                        <span className="text-[11px] text-slate-500 block mt-1 leading-relaxed">
+                          When checked, generates an invoice immediately (Term Fee + KES 1,500 Admission Fee).
+                          <strong> Leave unchecked when importing or feeding data into the database</strong> so learners are registered cleanly without billing until later authorized.
+                        </span>
+                      </div>
+                    </label>
+                  ) : (
+                    <div className="flex items-start gap-2.5 text-xs text-slate-600">
+                      <span className="material-symbols-outlined text-amber-600 text-[20px] shrink-0 mt-0.5">lock</span>
+                      <div>
+                        <span className="font-bold text-slate-800 block">Billing Authorization Deferred</span>
+                        <span className="text-[11px] text-slate-500 leading-relaxed block mt-0.5">
+                          Your account role ({user?.role || 'Staff'}) does not have billing authority. This learner will be enrolled cleanly; invoice generation is deferred until authorized by Accounts, Headteacher, or School Admin.
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* SNE Inclusion Category */}
@@ -1006,7 +1081,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                     placeholder="+2547XXXXXXXX"
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white font-mono"
                   />
-                  <span className="text-[10px] text-slate-500">For instant fee receipts & morning roll-call alerts</span>
+                  <span className="text-[10px] text-emerald-700 font-medium">For instant fee receipts, morning alerts & portal login (username & default password)</span>
                 </div>
               </div>
 

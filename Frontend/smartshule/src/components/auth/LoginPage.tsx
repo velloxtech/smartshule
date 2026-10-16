@@ -328,7 +328,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLandi
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-gray-600 mb-1.5">
-                      Email Address / Phone Number
+                      Phone Number / Email Address
                     </label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 material-symbols-outlined text-[18px]">
@@ -372,7 +372,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLandi
                         required
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Enter your password..."
+                        placeholder="Enter password or default phone number..."
                         className="w-full pl-9 pr-10 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-[#7a1228] focus:bg-white transition-colors"
                       />
                       <button
@@ -386,6 +386,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLandi
                         </span>
                       </button>
                     </div>
+                    <p className="text-[11px] text-slate-500 mt-1">
+                      First-time login? Use your registered phone number as your default password.
+                    </p>
                   </div>
 
                   <div className="pt-2">

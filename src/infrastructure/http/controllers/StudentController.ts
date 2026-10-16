@@ -21,6 +21,8 @@ export const RegisterStudentSchema = z.object({
   medicalConditions: z.string().optional(),
   specialNeeds: z.string().optional(),
   profilePhotoUrl: z.string().optional(),
+  authorizeBilling: z.boolean().optional(),
+  admissionFee: z.number().optional(),
   guardian: z
     .object({
       firstName: z.string().min(1),
@@ -110,7 +112,7 @@ export class StudentController {
 
   public registerStudent = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const student = await this.studentUseCases.registerStudent(req.body);
+      const student = await this.studentUseCases.registerStudent(req.body, (req as any).user);
 
       this.systemLogUseCases?.log({
         schoolId: (student as any).schoolId || req.body.schoolId,

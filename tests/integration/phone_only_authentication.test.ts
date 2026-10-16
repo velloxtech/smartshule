@@ -122,10 +122,84 @@ describe('Phone-Only Authentication & Optional Email Integration Tests', () => {
       expect(viewRes.status).toBe(200);
       expect(viewRes.body.data.firstName).toBe('Baraka');
     });
+
+    it('should allow guardian to log in using phone number for both username and default password', async () => {
+      const guardianPhone = '0788776655';
+      const guardianId = 'ID11223344';
+
+      const admitRes = await request(app)
+        .post('/api/v1/students')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          admissionNumber: 'ADM-PHONE-002',
+          firstName: 'Amani',
+          lastName: 'Otieno',
+          dateOfBirth: '2016-08-20',
+          gender: 'FEMALE',
+          gradeLevel: 'GRADE_2',
+          guardian: {
+            firstName: 'Baba',
+            lastName: 'Amani',
+            phone: guardianPhone,
+            nationalId: guardianId,
+            relationship: 'FATHER',
+            emergencyContact: guardianPhone,
+          },
+        });
+
+      expect(admitRes.status).toBe(201);
+      expect(admitRes.body.success).toBe(true);
+
+      // Login using phone number as BOTH username and password
+      const loginRes = await request(app)
+        .post('/api/v1/auth/login')
+        .send({
+          email: guardianPhone, // phone entered in identifier field
+          password: guardianPhone, // phone entered as password
+        });
+
+      expect(loginRes.status).toBe(200);
+      expect(loginRes.body.success).toBe(true);
+      expect(loginRes.body.data.user.role).toBe('GUARDIAN');
+      expect(loginRes.body.data.user.mustChangePassword).toBe(true);
+
+      // Verify that international format +254 also works seamlessly
+      const intlLoginRes = await request(app)
+        .post('/api/v1/auth/login')
+        .send({
+          identifier: '+254788776655',
+          password: '0788776655',
+        });
+      expect(intlLoginRes.status).toBe(200);
+      expect(intlLoginRes.body.success).toBe(true);
+
+      // Change password using phone number as current password
+      const token = loginRes.body.data.accessToken;
+      const changePassRes = await request(app)
+        .post('/api/v1/auth/change-password')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          currentPassword: guardianPhone,
+          newPassword: 'MySecurePassword@2026',
+        });
+
+      expect(changePassRes.status).toBe(200);
+      expect(changePassRes.body.success).toBe(true);
+
+      // Verify login with new password works
+      const newLoginRes = await request(app)
+        .post('/api/v1/auth/login')
+        .send({
+          identifier: guardianPhone,
+          password: 'MySecurePassword@2026',
+        });
+      expect(newLoginRes.status).toBe(200);
+      expect(newLoginRes.body.data.user.mustChangePassword).toBe(false);
+    });
   });
 
   describe('3. Teacher Onboarding with Phone-Only', () => {
-    it('should onboard a teacher with phone only and allow login', async () => {
+    it('should onboard a teacher with phone only and allow login with national ID or phone password', async () => {
       const teacherPhone = '0722334455';
       const nationalId = 'TSC-998877';
 
@@ -159,6 +233,18 @@ describe('Phone-Only Authentication & Optional Email Integration Tests', () => {
       expect(teacherLoginRes.body.data.user.role).toBe('TEACHER');
       expect(teacherLoginRes.body.data.user.phone).toBe(teacherPhone);
       expect(teacherLoginRes.body.data.user.email).toBeUndefined();
+
+      // Teacher should ALSO be able to log in using phone number as password
+      const teacherPhoneLogin = await request(app)
+        .post('/api/v1/auth/login')
+        .send({
+          identifier: teacherPhone,
+          password: teacherPhone,
+        });
+
+      expect(teacherPhoneLogin.status).toBe(200);
+      expect(teacherPhoneLogin.body.success).toBe(true);
+      expect(teacherPhoneLogin.body.data.user.role).toBe('TEACHER');
     });
   });
 

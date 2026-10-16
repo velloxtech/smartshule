@@ -32,6 +32,14 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
 }) => {
   const { user } = useAuth();
   const isTeacher = user?.role === UserRole.TEACHER;
+  const isBillingAuthorized = [
+    UserRole.SUPER_ADMIN,
+    UserRole.ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.HEAD_TEACHER,
+    UserRole.BURSAR,
+    UserRole.ACCOUNTANT
+  ].includes(user?.role as UserRole);
 
   const [search, setSearch] = useState('');
   const [selectedGrade, setSelectedGrade] = useState('All');
@@ -57,6 +65,13 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
   } | null>(null);
 
   const handleSyncFeeBalances = async () => {
+    if (!isBillingAuthorized) {
+      setSyncFeedback({
+        type: 'error',
+        message: 'Billing Authorization Required: Only Accounts (Bursar/Accountant), Headteacher, or School Admin accounts can bill students or sync fee balances.'
+      });
+      return;
+    }
     try {
       setIsSyncingFees(true);
       setSyncFeedback(null);
@@ -177,18 +192,20 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
 
         {!isTeacher && (
           <div className="flex items-center gap-2.5 self-start sm:self-auto flex-wrap">
-            <button
-              type="button"
-              onClick={handleSyncFeeBalances}
-              disabled={isSyncingFees}
-              title="Look up and attach full class fee structures to any existing learners missing fee invoices"
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-surface-container-high text-primary hover:bg-primary/10 border border-primary/30 rounded-lg text-sm font-semibold shadow-xs transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span className={`material-symbols-outlined text-[18px] ${isSyncingFees ? 'animate-spin' : ''}`}>
-                {isSyncingFees ? 'sync' : 'account_balance_wallet'}
-              </span>
-              <span>{isSyncingFees ? 'Syncing Fees...' : 'Sync Fee Balances'}</span>
-            </button>
+            {isBillingAuthorized && (
+              <button
+                type="button"
+                onClick={handleSyncFeeBalances}
+                disabled={isSyncingFees}
+                title="Authorize and attach ratified fee structures to enrolled learners missing invoices"
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-surface-container-high text-primary hover:bg-primary/10 border border-primary/30 rounded-lg text-sm font-semibold shadow-xs transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <span className={`material-symbols-outlined text-[18px] ${isSyncingFees ? 'animate-spin' : ''}`}>
+                  {isSyncingFees ? 'sync' : 'account_balance_wallet'}
+                </span>
+                <span>{isSyncingFees ? 'Authorizing & Syncing...' : 'Authorize & Sync Fee Balances'}</span>
+              </button>
+            )}
 
             <button
               type="button"

@@ -562,6 +562,9 @@ export interface CbcReportCardData {
   learningAreaAssessments: Array<{
     learningAreaId: string;
     learningAreaName: string;
+    code?: string;
+    levelLabel?: string;
+    rawScore?: number;
     performanceLevel: string;
     score?: number;
     rubricScore?: number;

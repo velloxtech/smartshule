@@ -13,7 +13,7 @@ import { IMediaRepository } from '../../core/ports/repositories/IMediaRepository
 import { Student, StudentGender, CbcGradeLevel, StudentStatus } from '../../core/domain/user/Student';
 import { DeletedStudent, DeletedStudentLinkedData, ClearedPendingWork } from '../../core/domain/user/DeletedStudent';
 import { Guardian, GuardianRelationship } from '../../core/domain/user/Guardian';
-import { User, UserRole, UserStatus } from '../../core/domain/user/User';
+import { User, UserRole, UserStatus, isBillingAuthorizedRole } from '../../core/domain/user/User';
 import { IdGenerator, NotFoundError, ConflictError, ValidationError, ForbiddenError } from '../../core/domain/shared/Errors';
 import { IPasswordHasher } from '../../core/ports/services/IExternalServices';
 import { StudentInvoice, InvoiceStatus, FeeStructure, FeeItem, Payment } from '../../core/domain/finance/Fee';
@@ -82,6 +82,8 @@ export interface RegisterStudentDTO {
   profilePhotoUrl?: string;
   createParentAccount?: boolean;
   sendWelcomeSms?: boolean;
+  authorizeBilling?: boolean;
+  admissionFee?: number;
   guardian?: {
     firstName: string;
     lastName: string;
@@ -145,7 +147,26 @@ export class StudentUseCases {
     private readonly mediaRepository?: IMediaRepository
   ) {}
 
-  public async registerStudent(dto: RegisterStudentDTO) {
+  public async hasStudentBeenBilledAdmission(studentId: string): Promise<boolean> {
+    if (!this.feeRepository) return false;
+    try {
+      const invoices = await this.feeRepository.findInvoices({ studentId });
+      for (const inv of invoices) {
+        if (Array.isArray(inv.items)) {
+          for (const it of inv.items) {
+            if (it.category === 'ADMISSION' || (it.name && it.name.toLowerCase().includes('admission'))) {
+              return true;
+            }
+          }
+        }
+      }
+    } catch {
+      // ignore
+    }
+    return false;
+  }
+
+  public async registerStudent(dto: RegisterStudentDTO, requestingUser?: UserContext) {
     let admissionNumber = dto.admissionNumber?.trim();
     if (!admissionNumber) {
       const allStudents = await this.studentRepository.findAll({ schoolId: dto.schoolId });
@@ -191,8 +212,8 @@ export class StudentUseCases {
       isExistingParent = !!guardianUser;
 
       if (!guardianUser && shouldCreateAccount) {
-        // Use National ID / Phone as default password for parent account, requiring password change on first login
-        const parentDefaultPassword = dto.guardian.nationalId?.trim() || guardianPhone || process.env.DEFAULT_PARENT_PASSWORD || dto.admissionNumber || 'Parent@123';
+        // Use Phone Number as default password for parent account (with National ID fallback), requiring password change on first login
+        const parentDefaultPassword = guardianPhone || dto.guardian.nationalId?.trim() || process.env.DEFAULT_PARENT_PASSWORD || dto.admissionNumber || 'Parent@123';
         const defaultPasswordHash = await this.passwordHasher.hash(parentDefaultPassword);
         guardianUser = User.create(
           {
@@ -321,9 +342,23 @@ export class StudentUseCases {
       }
     }
 
-    // Look for the class fee structure and add invoice in full
+    // Billing authorization check:
+    // Only Accounts, Headteacher, or School Admin accounts are authorized to bill students.
+    // If authorizeBilling is explicitly false (e.g. data ingestion / import), we never bill.
+    // If authorizeBilling is explicitly true, we verify the requesting user has an authorized role.
+    // If authorizeBilling is undefined, we bill if the user has an authorized role or in unauthenticated test calls.
+    const isBillingAuthorized = !requestingUser || isBillingAuthorizedRole(requestingUser.role);
+    if (dto.authorizeBilling === true && requestingUser && !isBillingAuthorizedRole(requestingUser.role)) {
+      throw new ForbiddenError(
+        `Billing authorization denied. Only Accounts, Headteacher, or School Admin accounts are authorized to bill students (Role "${requestingUser.role}" is not authorized).`
+      );
+    }
+
+    const shouldBillOnAdmission = dto.authorizeBilling !== false && isBillingAuthorized;
+
+    // Look for the class fee structure and add invoice in full if authorized
     let createdInvoice: any = null;
-    if (this.feeRepository) {
+    if (shouldBillOnAdmission && this.feeRepository) {
       try {
         const schoolId = student.schoolId || dto.schoolId || 'school-001';
         let academicYearId = student.academicYearId || dto.academicYearId;
@@ -352,10 +387,12 @@ export class StudentUseCases {
         // Fallback to any fee structure matching this grade level in the school
         if (!feeStructure) {
           const allStructures = await this.feeRepository.findAllFeeStructures(schoolId);
-          feeStructure = allStructures.find(fs => fs.gradeLevel === student.gradeLevel) || null;
+          feeStructure = allStructures.find(fs => fs.gradeLevel === student.gradeLevel && (fs.termId === termId || fs.termId === 'ALL')) || null;
         }
 
-        // If no fee structure exists for this grade in the DB, create ratified Grace Seeds School fee structure
+        const termNum = termId.toLowerCase().includes('t2') || termId.toLowerCase().includes('term-2') ? 2 : (termId.toLowerCase().includes('t3') || termId.toLowerCase().includes('term-3') ? 3 : 1);
+
+        // If no fee structure exists for this grade in the DB, create ratified Grace Seeds School termly fee structure
         if (!feeStructure) {
           const isUpperPrimary = ['GRADE_4', 'GRADE_5', 'GRADE_6'].includes(student.gradeLevel);
           const isLowerPrimary = ['GRADE_1', 'GRADE_2', 'GRADE_3'].includes(student.gradeLevel);
@@ -365,66 +402,42 @@ export class StudentUseCases {
           const tuitionTerm = isUpperPrimary ? 5700 : (isLowerPrimary ? 5000 : (isPrePrimary ? 4500 : 5000));
           const activityTerm = (isUpperPrimary || isLowerPrimary) ? 500 : (isPrePrimary ? 300 : 500);
           const assessmentTerm = 300;
-          const admissionFee = 1500;
 
           const defaultItems: FeeItem[] = [
             {
               id: IdGenerator.generate(),
               name: 'Tuition Fee',
-              amount: tuitionTerm * 3,
+              amount: tuitionTerm,
               category: 'TUITION',
               isOptional: false,
-              termBreakdown: {
-                term1: tuitionTerm,
-                term2: tuitionTerm,
-                term3: tuitionTerm,
-              },
-            },
-            {
-              id: IdGenerator.generate(),
-              name: 'Activity Fee',
-              amount: activityTerm * 2, // 1st & 2nd term ONLY
-              category: 'ACTIVITY',
-              isOptional: false,
-              termBreakdown: {
-                term1: activityTerm,
-                term2: activityTerm,
-                term3: 0,
-              },
-            },
-            {
-              id: IdGenerator.generate(),
-              name: 'Assessment Fee',
-              amount: assessmentTerm * 3,
-              category: 'ASSESSMENT',
-              isOptional: false,
-              termBreakdown: {
-                term1: assessmentTerm,
-                term2: assessmentTerm,
-                term3: assessmentTerm,
-              },
-            },
-            {
-              id: IdGenerator.generate(),
-              name: 'Admission Fee',
-              amount: admissionFee,
-              category: 'ADMISSION',
-              isOptional: false,
-              termBreakdown: {
-                term1: admissionFee,
-                term2: 0,
-                term3: 0,
-              },
             },
           ];
+
+          if (termNum !== 3) {
+            defaultItems.push({
+              id: IdGenerator.generate(),
+              name: 'Activity Fee',
+              amount: activityTerm,
+              category: 'ACTIVITY',
+              isOptional: false,
+            });
+          }
+
+          defaultItems.push({
+            id: IdGenerator.generate(),
+            name: 'Assessment Fee',
+            amount: assessmentTerm,
+            category: 'ASSESSMENT',
+            isOptional: false,
+          });
 
           feeStructure = FeeStructure.create(
             {
               schoolId,
               academicYearId: academicYearId || 'year-2026',
-              termId: 'ALL',
+              termId,
               gradeLevel: student.gradeLevel,
-              title: `${gradeName} Annual Fee Schedule`,
+              title: `${gradeName} CBC Term ${termNum} Fee Schedule`,
               items: defaultItems,
               dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
             },
@@ -463,20 +476,19 @@ export class StudentUseCases {
             const invoiceNumber = `INV-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
             const dueDate = feeStructure.dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-            const termNum = targetTermId.toLowerCase().includes('t2') || targetTermId.toLowerCase().includes('term-2') ? 2 : (targetTermId.toLowerCase().includes('t3') || targetTermId.toLowerCase().includes('term-3') ? 3 : 1);
             const invoiceItems: FeeItem[] = [];
 
             if (isWholeYearStructure) {
               for (const it of feeStructure.items) {
+                // Routine items: exclude admission fee from base loop; we attach it explicitly once if not previously billed
+                if (it.category === 'ADMISSION' || (it.name && it.name.toLowerCase().includes('admission'))) {
+                  continue;
+                }
                 let amt = Number(it.amount) || 0;
                 if (it.termBreakdown) {
                   if (termNum === 1 && it.termBreakdown.term1 !== undefined) amt = Number(it.termBreakdown.term1);
                   else if (termNum === 2 && it.termBreakdown.term2 !== undefined) amt = Number(it.termBreakdown.term2);
                   else if (termNum === 3 && it.termBreakdown.term3 !== undefined) amt = Number(it.termBreakdown.term3);
-                }
-                // Include Admission Fee once upon new student admission
-                if (it.category === 'ADMISSION') {
-                  amt = it.termBreakdown?.term1 ?? (Number(it.amount) || 1500);
                 }
 
                 if (amt > 0) {
@@ -491,12 +503,31 @@ export class StudentUseCases {
               }
             } else {
               for (const it of feeStructure.items) {
+                // Exclude any existing admission item to prevent duplicate
+                if (it.category === 'ADMISSION' || (it.name && it.name.toLowerCase().includes('admission'))) {
+                  continue;
+                }
                 invoiceItems.push({
                   id: IdGenerator.generate(),
                   name: it.name,
                   amount: Number(it.amount) || 0,
                   category: it.category,
                   isOptional: it.isOptional,
+                });
+              }
+            }
+
+            // Check if student was ever billed admission fee before
+            const alreadyBilledAdmission = await this.hasStudentBeenBilledAdmission(student.id);
+            if (!alreadyBilledAdmission) {
+              const admissionFeeAmount = dto.admissionFee !== undefined ? Number(dto.admissionFee) : 1500;
+              if (admissionFeeAmount > 0) {
+                invoiceItems.push({
+                  id: IdGenerator.generate(),
+                  name: 'Admission Fee',
+                  amount: admissionFeeAmount,
+                  category: 'ADMISSION',
+                  isOptional: false,
                 });
               }
             }
@@ -677,7 +708,7 @@ export class StudentUseCases {
       const parentUser = User.create(
         {
           email: newEmail?.trim() ? newEmail.trim().toLowerCase() : undefined,
-          passwordHash: await this.passwordHasher.hash('Parent@123'),
+          passwordHash: await this.passwordHasher.hash(newPhone || newEmergencyContact || 'Parent@123'),
           firstName: guardianFirstName || 'Parent',
           lastName: guardianLastName || student.lastName,
           role: UserRole.GUARDIAN,

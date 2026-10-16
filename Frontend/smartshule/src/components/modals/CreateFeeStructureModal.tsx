@@ -21,50 +21,47 @@ export interface FeeLineItemState {
 const TEMPLATES: Record<string, { label: string; desc: string; icon: string; gradeLevel: string; items: FeeLineItemState[] }> = {
   graceseed_pp: {
     label: 'Pre-Primary (PG, PP1, PP2)',
-    desc: 'Tuition 13,500 · Activity 600 · Assessment 900',
+    desc: 'Term 1 & 2: KES 5,100 · Term 3: KES 4,800',
     icon: 'child_care',
     gradeLevel: 'PLAYGROUP',
     items: [
-      { id: 'gs-1', name: 'Tuition Fee', category: 'TUITION', isOptional: false, amount: '13500' },
-      { id: 'gs-2', name: 'Activity Fee', category: 'ACTIVITY', isOptional: false, amount: '600' },
-      { id: 'gs-3', name: 'Assessment Fee', category: 'ASSESSMENT', isOptional: false, amount: '900' },
-      { id: 'gs-4', name: 'Admission Fee', category: 'ADMISSION', isOptional: true, amount: '1500' },
+      { id: 'gs-1', name: 'Tuition Fee', category: 'TUITION', isOptional: false, amount: '4500' },
+      { id: 'gs-2', name: 'Activity Fee', category: 'ACTIVITY', isOptional: false, amount: '300' },
+      { id: 'gs-3', name: 'Assessment Fee', category: 'ASSESSMENT', isOptional: false, amount: '300' },
     ],
   },
   graceseed_lower: {
     label: 'Lower Primary (Grade 1 - 3)',
-    desc: 'Tuition 15,000 · Activity 1,000 · Assessment 900',
+    desc: 'Term 1 & 2: KES 5,800 · Term 3: KES 5,300',
     icon: 'school',
     gradeLevel: 'GRADE_1',
     items: [
-      { id: 'gs-1', name: 'Tuition Fee', category: 'TUITION', isOptional: false, amount: '15000' },
-      { id: 'gs-2', name: 'Activity Fee', category: 'ACTIVITY', isOptional: false, amount: '1000' },
-      { id: 'gs-3', name: 'Assessment Fee', category: 'ASSESSMENT', isOptional: false, amount: '900' },
-      { id: 'gs-4', name: 'Admission Fee', category: 'ADMISSION', isOptional: true, amount: '1500' },
+      { id: 'gs-1', name: 'Tuition Fee', category: 'TUITION', isOptional: false, amount: '5000' },
+      { id: 'gs-2', name: 'Activity Fee', category: 'ACTIVITY', isOptional: false, amount: '500' },
+      { id: 'gs-3', name: 'Assessment Fee', category: 'ASSESSMENT', isOptional: false, amount: '300' },
     ],
   },
   graceseed_upper: {
     label: 'Upper Primary (Grade 4 - 6)',
-    desc: 'Tuition 17,100 · Activity 1,000 · Assessment 900',
+    desc: 'Term 1 & 2: KES 6,500 · Term 3: KES 6,000',
     icon: 'menu_book',
     gradeLevel: 'GRADE_4',
     items: [
-      { id: 'gs-1', name: 'Tuition Fee', category: 'TUITION', isOptional: false, amount: '17100' },
-      { id: 'gs-2', name: 'Activity Fee', category: 'ACTIVITY', isOptional: false, amount: '1000' },
-      { id: 'gs-3', name: 'Assessment Fee', category: 'ASSESSMENT', isOptional: false, amount: '900' },
-      { id: 'gs-4', name: 'Admission Fee', category: 'ADMISSION', isOptional: true, amount: '1500' },
+      { id: 'gs-1', name: 'Tuition Fee', category: 'TUITION', isOptional: false, amount: '5700' },
+      { id: 'gs-2', name: 'Activity Fee', category: 'ACTIVITY', isOptional: false, amount: '500' },
+      { id: 'gs-3', name: 'Assessment Fee', category: 'ASSESSMENT', isOptional: false, amount: '300' },
     ],
   },
   junior_secondary: {
     label: 'Junior School (Grade 7 - 9)',
-    desc: 'Tuition 75,000 · Assessment 18,000 · Activity 5,000',
+    desc: 'Tuition 25,000 · Assessment 6,000 · Activity 2,000',
     icon: 'account_balance',
     gradeLevel: 'GRADE_7',
     items: [
-      { id: 'js-1', name: 'Tuition Fee', category: 'TUITION', isOptional: false, amount: '75000' },
-      { id: 'js-2', name: 'CBC Assessment Practical Kits', category: 'ASSESSMENT', isOptional: false, amount: '18000' },
-      { id: 'js-3', name: 'Activity & Sports Levy', category: 'ACTIVITY', isOptional: false, amount: '5000' },
-      { id: 'js-4', name: 'Hot Lunch Programme', category: 'MEALS', isOptional: true, amount: '25500' },
+      { id: 'js-1', name: 'Tuition Fee', category: 'TUITION', isOptional: false, amount: '25000' },
+      { id: 'js-2', name: 'CBC Assessment Practical Kits', category: 'ASSESSMENT', isOptional: false, amount: '6000' },
+      { id: 'js-3', name: 'Activity & Sports Levy', category: 'ACTIVITY', isOptional: false, amount: '2000' },
+      { id: 'js-4', name: 'Hot Lunch Programme', category: 'MEALS', isOptional: true, amount: '8500' },
     ],
   },
 };
@@ -78,6 +75,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
   initialData,
 }) => {
   const [gradeLevel, setGradeLevel] = useState('PLAYGROUP');
+  const [selectedTermId, setSelectedTermId] = useState('term-2026-t1');
   const [title, setTitle] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [items, setItems] = useState<FeeLineItemState[]>(DEFAULT_FEE_ITEMS);
@@ -88,7 +86,13 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
   const [schoolId, setSchoolId] = useState('');
   const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
   const [selectedYearId, setSelectedYearId] = useState('');
-  const [, setTerms] = useState<AcademicTerm[]>([]);
+  const [terms, setTerms] = useState<AcademicTerm[]>([]);
+
+  const resolveTermLabel = (termId: string) => {
+    if (termId.toLowerCase().includes('t3') || termId.toLowerCase().includes('term-3') || termId.endsWith('3')) return 'Term 3';
+    if (termId.toLowerCase().includes('t2') || termId.toLowerCase().includes('term-2') || termId.endsWith('2')) return 'Term 2';
+    return 'Term 1';
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -112,6 +116,10 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
           const termsRes = await apiService.getTerms(currentYear.id);
           if (termsRes?.success && termsRes.data) {
             setTerms(termsRes.data);
+            const currentTerm = contextRes?.data?.currentTerm || termsRes.data.find((t) => t.isCurrent) || termsRes.data[0];
+            if (currentTerm?.id) {
+              setSelectedTermId(currentTerm.id);
+            }
           }
         }
       } catch (err) {
@@ -127,6 +135,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
     if (initialData) {
       if (initialData.gradeLevel) setGradeLevel(initialData.gradeLevel);
       if (initialData.academicYearId) setSelectedYearId(initialData.academicYearId);
+      if (initialData.termId && initialData.termId !== 'ALL') setSelectedTermId(initialData.termId);
       if (initialData.dueDate) setDueDate(initialData.dueDate);
       if (initialData.title) setTitle(`${initialData.title} (Copy)`);
 
@@ -148,9 +157,10 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
       const yearObj = academicYears.find((y) => y.id === selectedYearId);
       const yearName = yearObj ? resolveAcademicYearName(yearObj.name || yearObj.id) : '2026';
       const gradeName = resolveGradeName(gradeLevel);
-      setTitle(`${gradeName} CBC Annual Fee Schedule — ${yearName}`);
+      const termLabel = resolveTermLabel(selectedTermId);
+      setTitle(`${gradeName} CBC ${termLabel} Fee Schedule — ${yearName}`);
     }
-  }, [isOpen, initialData, selectedYearId, gradeLevel, academicYears]);
+  }, [isOpen, initialData, selectedYearId, selectedTermId, gradeLevel, academicYears]);
 
   if (!isOpen) return null;
 
@@ -166,14 +176,24 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
     }
     const yearObj = academicYears.find((y) => y.id === yearId);
     const yearName = yearObj ? resolveAcademicYearName(yearObj.name || yearObj.id) : '2026';
-    setTitle(`${resolveGradeName(gradeLevel)} CBC Annual Fee Schedule — ${yearName}`);
+    const termLabel = resolveTermLabel(selectedTermId);
+    setTitle(`${resolveGradeName(gradeLevel)} CBC ${termLabel} Fee Schedule — ${yearName}`);
+  };
+
+  const handleTermChange = (newTermId: string) => {
+    setSelectedTermId(newTermId);
+    const yearObj = academicYears.find((y) => y.id === selectedYearId);
+    const yearName = yearObj ? resolveAcademicYearName(yearObj.name || yearObj.id) : '2026';
+    const termLabel = resolveTermLabel(newTermId);
+    setTitle(`${resolveGradeName(gradeLevel)} CBC ${termLabel} Fee Schedule — ${yearName}`);
   };
 
   const handleGradeChange = (newGrade: string) => {
     setGradeLevel(newGrade);
     const yearObj = academicYears.find((y) => y.id === selectedYearId);
     const yearName = yearObj ? resolveAcademicYearName(yearObj.name || yearObj.id) : '2026';
-    setTitle(`${resolveGradeName(newGrade)} CBC Annual Fee Schedule — ${yearName}`);
+    const termLabel = resolveTermLabel(selectedTermId);
+    setTitle(`${resolveGradeName(newGrade)} CBC ${termLabel} Fee Schedule — ${yearName}`);
   };
 
   // Apply preset template
@@ -289,38 +309,19 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
       .filter((it) => it.name.trim() !== '')
       .map((it) => {
         const amt = Number(it.amount) || 0;
-        const t1 = Math.round(amt / 3);
-        const t2 = Math.round(amt / 3);
-        const t3 = Math.max(0, amt - t1 - t2);
-
         return {
           name: it.name.trim(),
           amount: amt,
           isOptional: it.isOptional,
           category: it.category,
-          termBreakdown: {
-            term1: t1,
-            term2: t2,
-            term3: t3,
-          },
-          termPercentages: {
-            term1: amt > 0 ? Number(((t1 / amt) * 100).toFixed(1)) : 33.3,
-            term2: amt > 0 ? Number(((t2 / amt) * 100).toFixed(1)) : 33.3,
-            term3: amt > 0 ? Number(((t3 / amt) * 100).toFixed(1)) : 33.4,
-          },
-          termDivisions: [
-            { termNumber: 1, termName: 'Term 1', amount: t1, percentage: amt > 0 ? Number(((t1 / amt) * 100).toFixed(1)) : 33.3 },
-            { termNumber: 2, termName: 'Term 2', amount: t2, percentage: amt > 0 ? Number(((t2 / amt) * 100).toFixed(1)) : 33.3 },
-            { termNumber: 3, termName: 'Term 3', amount: t3, percentage: amt > 0 ? Number(((t3 / amt) * 100).toFixed(1)) : 33.4 },
-          ],
         };
       });
 
-    const defaultTitle = `${gradeLevel.replace('_', ' ')} CBC Annual Fee Schedule`;
+    const defaultTitle = `${gradeLevel.replace('_', ' ')} CBC ${resolveTermLabel(selectedTermId)} Fee Schedule`;
     const payload = {
       schoolId: schoolId || 'school-001',
       academicYearId: selectedYearId,
-      termId: 'ALL',
+      termId: selectedTermId,
       gradeLevel,
       title: title.trim() || defaultTitle,
       dueDate: dueDate || `${new Date().getFullYear()}-12-31`,
@@ -356,16 +357,16 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
             </div>
             <div>
               <h3 className="font-bold text-base sm:text-lg">
-                {initialData ? 'Duplicate / Edit Fee Structure' : 'New Annual Fee Structure'}
+                {initialData ? 'Duplicate / Edit Fee Structure' : 'New Termly Fee Structure'}
               </h3>
               <p className="text-xs text-rose-200 mt-0.5">
-                Set up whole-year annual fee schedules for CBC classes (KES)
+                Set up termly fee schedules for CBC classes (KES)
               </p>
             </div>
           </div>
           <div className="flex items-center gap-3">
             <div className="hidden sm:block text-right bg-white/10 px-3 py-1.5 rounded-xl border border-white/20">
-              <span className="text-[10px] text-rose-200 uppercase font-semibold block">Total Annual Fee</span>
+              <span className="text-[10px] text-rose-200 uppercase font-semibold block">Total Termly Fee</span>
               <span className="font-mono font-bold text-sm text-white">
                 KES {fullAnnualTotal.toLocaleString()}
               </span>
@@ -391,7 +392,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
 
           {/* 1. Basic Structure Settings */}
           <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200 space-y-3.5">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
               <div>
                 <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1">
                   Academic Year
@@ -410,6 +411,32 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
                     ))
                   ) : (
                     <option value="">No years created</option>
+                  )}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1">
+                  Academic Term
+                </label>
+                <select
+                  value={selectedTermId}
+                  onChange={(e) => handleTermChange(e.target.value)}
+                  required
+                  className="w-full bg-white border border-gray-300 rounded-xl p-2 text-xs text-gray-900 font-semibold focus:outline-[#7a1228]"
+                >
+                  {terms.length > 0 ? (
+                    terms.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name} {t.isCurrent ? '(Active Term)' : ''}
+                      </option>
+                    ))
+                  ) : (
+                    <>
+                      <option value="term-2026-t1">Term 1 (First Term)</option>
+                      <option value="term-2026-t2">Term 2 (Second Term)</option>
+                      <option value="term-2026-t3">Term 3 (Third Term)</option>
+                    </>
                   )}
                 </select>
               </div>
@@ -453,7 +480,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Grade 1 CBC Annual Fee Schedule — 2026"
+                  placeholder="e.g. Grade 1 CBC Term 1 Fee Schedule"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   className="w-full bg-white border border-gray-300 rounded-xl p-2 text-xs text-gray-900 font-semibold focus:outline-[#7a1228]"
@@ -507,7 +534,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
                   Fee Line Items ({items.length})
                 </h4>
                 <p className="text-[11px] text-gray-500">
-                  Enter the whole-year annual amount (KES) for each fee component.
+                  Enter the termly amount (KES) for each fee component.
                 </p>
               </div>
 
@@ -530,7 +557,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
                       <th className="py-2.5 px-3 w-8">#</th>
                       <th className="py-2.5 px-3 min-w-[220px]">Item Description</th>
                       <th className="py-2.5 px-3 min-w-[140px]">Category</th>
-                      <th className="py-2.5 px-3 text-right min-w-[140px] text-[#7a1228]">Whole Year Amount (KES)</th>
+                      <th className="py-2.5 px-3 text-right min-w-[140px] text-[#7a1228]">Term Amount (KES)</th>
                       <th className="py-2.5 px-2 text-center w-20">Optional?</th>
                       <th className="py-2.5 px-2 text-center w-20">Actions</th>
                     </tr>
@@ -634,7 +661,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
                   <tfoot className="bg-gray-50/90 font-bold border-t-2 border-gray-200 text-xs">
                     <tr>
                       <td colSpan={3} className="py-2.5 px-3 uppercase text-gray-700">
-                        Total Annual Amount:
+                        Total Termly Amount:
                       </td>
                       <td className="py-2.5 px-3 text-right font-mono font-bold text-sm text-[#7a1228]">
                         KES {fullAnnualTotal.toLocaleString()}
@@ -655,7 +682,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
                 className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-medium cursor-pointer transition-colors"
               >
                 <span className="material-symbols-outlined text-[14px] text-amber-600">restaurant</span>
-                <span>+ Lunch Scheme (KES 9,000/yr)</span>
+                <span>+ Lunch Scheme (KES 3,000/term)</span>
               </button>
               <button
                 type="button"
@@ -663,7 +690,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
                 className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-medium cursor-pointer transition-colors"
               >
                 <span className="material-symbols-outlined text-[14px] text-blue-600">directions_bus</span>
-                <span>+ Transport (KES 12,000/yr)</span>
+                <span>+ Transport (KES 4,000/term)</span>
               </button>
               <button
                 type="button"
@@ -684,7 +711,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
             </div>
           </div>
 
-          {/* 3. Live Whole-Year Summary Cards */}
+          {/* 3. Live Termly Summary Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 bg-gray-50 p-3.5 rounded-2xl border border-gray-200">
             <div className="bg-white p-3 rounded-xl border border-gray-200 text-center shadow-2xs">
               <span className="text-[10px] font-bold uppercase text-gray-500 block">Total Line Items</span>
@@ -708,7 +735,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
             </div>
 
             <div className="bg-white p-3 rounded-xl border border-emerald-100 text-center shadow-2xs">
-              <span className="text-[10px] font-bold uppercase text-gray-500 block">Total Annual Fee</span>
+              <span className="text-[10px] font-bold uppercase text-gray-500 block">Total Termly Fee</span>
               <span className="text-sm sm:text-base font-mono font-bold text-emerald-700 block mt-0.5">
                 KES {fullAnnualTotal.toLocaleString()}
               </span>
@@ -740,7 +767,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
             ) : (
               <>
                 <span className="material-symbols-outlined text-[18px]">check_circle</span>
-                <span>Save Annual Fee Structure</span>
+                <span>Save Termly Fee Structure</span>
               </>
             )}
           </button>

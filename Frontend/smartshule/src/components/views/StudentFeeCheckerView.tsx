@@ -36,9 +36,52 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
   const [expandedInvoiceId, setExpandedInvoiceId] = useState<string | null>(null);
   const [smsSentSuccess, setSmsSentSuccess] = useState<string | null>(null);
 
-  // Hanging Invoice Deletion state
+  // Hanging Invoice Deletion & Billing Authorization state
   const isGuardian = user?.role === UserRole.GUARDIAN || user?.role === UserRole.PARENT;
   const canManageInvoices = !isGuardian;
+  const isBillingAuthorized = [
+    UserRole.SUPER_ADMIN,
+    UserRole.ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.HEAD_TEACHER,
+    UserRole.BURSAR,
+    UserRole.ACCOUNTANT
+  ].includes(user?.role as UserRole);
+
+  const [isAuthorizingBilling, setIsAuthorizingBilling] = useState(false);
+  const [billingAuthFeedback, setBillingAuthFeedback] = useState<string | null>(null);
+
+  const handleAuthorizeBilling = async () => {
+    if (!selectedStudent) return;
+    setIsAuthorizingBilling(true);
+    setBillingAuthFeedback(null);
+    try {
+      const res = await apiService.generateInvoices({
+        studentId: selectedStudent.id,
+        schoolId: (selectedStudent as any).schoolId || 'school-001',
+        academicYearId: 'year-2026',
+        termId: 'term-2026-t1',
+      });
+      if (res.success) {
+        setBillingAuthFeedback('Student successfully authorized and billed for Term 1.');
+        const statementRes = await apiService.getFeeStatement(selectedStudent.id).catch(() => null);
+        if (statementRes?.success && statementRes.data) {
+          setStatementData(statementRes.data);
+        }
+        if (onRefreshStudents) {
+          await onRefreshStudents();
+        }
+        setTimeout(() => setBillingAuthFeedback(null), 5000);
+      } else {
+        setBillingAuthFeedback(res.message || 'Failed to authorize billing for student.');
+      }
+    } catch (err: any) {
+      setBillingAuthFeedback(err.message || 'Error authorizing student billing.');
+    } finally {
+      setIsAuthorizingBilling(false);
+    }
+  };
+
   const [invoiceToDelete, setInvoiceToDelete] = useState<StudentInvoice | null>(null);
   const [isDeletingInvoice, setIsDeletingInvoice] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -812,12 +855,48 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                             </div>
                           )}
                           {invoicesList.length === 0 ? (
-                            <div className="p-8 text-center text-xs text-on-surface-variant bg-surface-container-low rounded-xl border border-outline-variant/20">
-                              <span className="material-symbols-outlined text-[32px] text-outline opacity-60 mb-1">
-                                receipt
-                              </span>
-                              <p className="font-semibold text-on-surface">No invoices currently billed for this learner.</p>
-                              <p className="mt-1">Invoices are automatically generated when fee structures are synced.</p>
+                            <div className="p-8 text-center bg-surface-container-low rounded-2xl border border-dashed border-outline-variant/40 space-y-3">
+                              <div className="w-12 h-12 rounded-full bg-amber-50 text-amber-700 flex items-center justify-center mx-auto border border-amber-200">
+                                <span className="material-symbols-outlined text-[26px]">pending_actions</span>
+                              </div>
+                              <div>
+                                <h4 className="text-sm font-bold text-on-surface">Learner Not Yet Billed (Pending Authorization)</h4>
+                                <p className="text-xs text-on-surface-variant max-w-md mx-auto mt-1 leading-relaxed">
+                                  This learner was admitted or imported into the database with fee billing deferred. In accordance with system security policy, billing will only take place once explicitly authorized by Accounts, Headteacher, or School Admin accounts.
+                                </p>
+                              </div>
+                              {isBillingAuthorized ? (
+                                <div className="pt-2">
+                                  <button
+                                    type="button"
+                                    onClick={handleAuthorizeBilling}
+                                    disabled={isAuthorizingBilling}
+                                    className="inline-flex items-center gap-2 px-4 py-2 bg-[#7a1228] hover:bg-[#5c0a1a] text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                                  >
+                                    {isAuthorizingBilling ? (
+                                      <>
+                                        <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                        <span>Authorizing & Billing...</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <span className="material-symbols-outlined text-[16px]">how_to_reg</span>
+                                        <span>Authorize &amp; Bill Learner Now (Term 1)</span>
+                                      </>
+                                    )}
+                                  </button>
+                                  {billingAuthFeedback && (
+                                    <p className="text-xs text-emerald-700 font-semibold mt-2.5 animate-in fade-in">
+                                      {billingAuthFeedback}
+                                    </p>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 text-amber-800 text-xs font-medium border border-amber-200">
+                                  <span className="material-symbols-outlined text-[16px]">lock</span>
+                                  <span>Awaiting billing authorization from Accounts, Headteacher, or School Admin</span>
+                                </div>
+                              )}
                             </div>
                           ) : (
                             <div className="space-y-3">

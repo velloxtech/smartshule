@@ -29,16 +29,62 @@ export const getSubjectCanonicalKey = (nameOrCodeOrId: string): string => {
   if (!nameOrCodeOrId) return 'OTHER';
   const clean = nameOrCodeOrId.trim().toUpperCase();
 
-  if (clean.includes('MATH')) return 'MATH';
-  if (clean.includes('ENG')) return 'ENG';
+  // 1. Creative Arts (MUST come before CRE so 'CREA' / 'la-g3-crea' / 'Creative Arts' is never merged into CRE)
+  if (
+    clean.includes('CREATIVE') ||
+    clean.includes('CREA') ||
+    clean.includes('CRA') ||
+    (clean.includes('ART') && !clean.includes('SMART'))
+  ) {
+    return 'CREA';
+  }
+
+  // 2. English Reading (MUST come before ENG so 'English Reading Activities' is never merged into ENG)
+  if (
+    clean.includes('READING') ||
+    clean.includes('REA') ||
+    clean.includes('LITERACY')
+  ) {
+    return 'REA';
+  }
+
+  // 3. Kusoma Activities (Kusoma / Wakinga / Lower primary literacy)
+  if (
+    clean.includes('KUSOMA') ||
+    clean.includes('KUSO') ||
+    clean.includes('WKU')
+  ) {
+    return 'KUSO';
+  }
+
+  // 4. Environmental Activities
+  if (
+    clean.includes('ENVIRONMENT') ||
+    clean.includes('ENVI') ||
+    clean.includes('SENV') ||
+    clean.includes('ENV')
+  ) {
+    return 'ENVI';
+  }
+
+  // 5. English Language
+  if (clean.includes('ENG') || clean.includes('ENGLISH')) return 'ENG';
+
+  // 6. Kiswahili Language
   if (clean.includes('KISW') || clean.includes('SWAHILI') || clean.includes('KIS')) return 'KISW';
+
+  // 7. Mathematics
+  if (clean.includes('MATH') || clean.includes('MAT')) return 'MATH';
+
+  // 8. Christian / Islamic Religious Education
+  if (clean.includes('RELIGIOUS') || clean.includes('CRE') || clean.includes('IRE') || clean.includes('HRE')) return 'CRE';
+
+  // 9. Upper Primary & Junior Secondary Subjects
   if (clean.includes('INTEGRATED SCIENCE') || clean.includes('INTSCI') || clean.includes('SCI_TECH') || clean.includes('SCIENCE') || clean.includes('SCI')) return 'SCI';
   if (clean.includes('HEALTH') || clean.includes('HLTH')) return 'HLTH';
   if (clean.includes('SOCIAL') || clean.includes('SST') || clean.includes('SOC')) return 'SST';
-  if (clean.includes('RELIGIOUS') || clean.includes('CRE') || clean.includes('IRE')) return 'CRE';
   if (clean.includes('AGRI') || clean.includes('NUTRITION') || clean.includes('AGR')) return 'AGRI';
   if (clean.includes('PRE-TECH') || clean.includes('PRETECH') || clean.includes('TECHNICAL') || clean.includes('PTECH') || clean.includes('PRET')) return 'PRETECH';
-  if (clean.includes('CREATIVE') || clean.includes('ARTS') || clean.includes('MUSIC') || clean.includes('ART')) return 'ARTS';
   if (clean.includes('BUSINESS') || clean.includes('BUS')) return 'BUS';
   if (clean.includes('COMPUTER') || clean.includes('COMP')) return 'COMP';
   if (clean.includes('FRENCH') || clean.includes('FRE')) return 'FRE';
@@ -51,12 +97,16 @@ export const getSubjectCanonicalKey = (nameOrCodeOrId: string): string => {
 
 export const getCanonicalInitial = (canonicalKey: string): string => {
   switch (canonicalKey) {
-    case 'MATH': return 'MAT';
     case 'ENG': return 'ENG';
+    case 'REA': return 'REA';
+    case 'MATH': return 'MAT';
     case 'KISW': return 'KIS';
+    case 'KUSO': return 'KUSO';
+    case 'ENVI': return 'ENVI';
+    case 'CRE': return 'CRE';
+    case 'CREA': return 'CREA';
     case 'SCI': return 'SCI';
     case 'SST': return 'SST';
-    case 'CRE': return 'CRE';
     case 'AGRI': return 'AGR';
     case 'ARTS': return 'ART';
     case 'PRETECH': return 'PRET';
@@ -72,12 +122,16 @@ export const getCanonicalInitial = (canonicalKey: string): string => {
 
 export const getCanonicalName = (canonicalKey: string, fallbackName?: string): string => {
   switch (canonicalKey) {
-    case 'MATH': return 'Mathematics';
-    case 'ENG': return 'English Language';
-    case 'KISW': return 'Kiswahili Language';
+    case 'ENG': return 'English Language Activities';
+    case 'REA': return 'English Reading Activities';
+    case 'MATH': return 'Mathematical Activities';
+    case 'KISW': return 'Kiswahili Language Activities';
+    case 'KUSO': return 'Kusoma Activities';
+    case 'ENVI': return 'Environmental Activities';
+    case 'CRE': return 'Christian Religious Education';
+    case 'CREA': return 'Creative Arts Activities';
     case 'SCI': return 'Science and Technology';
     case 'SST': return 'Social Studies';
-    case 'CRE': return 'Christian Religious Education';
     case 'AGRI': return 'Agriculture & Nutrition';
     case 'ARTS': return 'Creative Arts & Sports';
     case 'PRETECH': return 'Pre-Technical Studies';
@@ -98,12 +152,16 @@ export const getSubjectInitials = (nameOrCode: string): string => {
 };
 
 export const CANONICAL_ORDER = [
-  'MATH',
   'ENG',
+  'REA',
+  'MATH',
   'KISW',
+  'KUSO',
+  'ENVI',
+  'CRE',
+  'CREA',
   'SCI',
   'SST',
-  'CRE',
   'AGRI',
   'ARTS',
   'PRETECH',
@@ -113,18 +171,18 @@ export const CANONICAL_ORDER = [
   'FRE',
   'GER',
   'ARA',
+  'IND',
 ];
 
 const DEFAULT_CBC_SUBJECTS: BackendLearningArea[] = [
-  { id: 'la-mat', code: 'MATH', name: 'Mathematics' } as any,
-  { id: 'la-eng', code: 'ENG', name: 'English Language' } as any,
-  { id: 'la-kis', code: 'KISW', name: 'Kiswahili Language' } as any,
-  { id: 'la-sci', code: 'SCI', name: 'Science and Technology' } as any,
-  { id: 'la-soc', code: 'SST', name: 'Social Studies' } as any,
-  { id: 'la-cre', code: 'CRE', name: 'Christian Religious Education' } as any,
-  { id: 'la-agr', code: 'AGRI', name: 'Agriculture & Nutrition' } as any,
-  { id: 'la-art', code: 'ARTS', name: 'Creative Arts & Sports' } as any,
-  { id: 'la-pret', code: 'PRETECH', name: 'Pre-Technical Studies' } as any,
+  { id: 'la-g3-eng', code: 'ENG', name: 'English Language Activities', gradeLevel: 'GRADE_3' } as any,
+  { id: 'la-g3-rea', code: 'REA', name: 'English Reading Activities', gradeLevel: 'GRADE_3' } as any,
+  { id: 'la-g3-mat', code: 'MAT', name: 'Mathematical Activities', gradeLevel: 'GRADE_3' } as any,
+  { id: 'la-g3-kis', code: 'KIS', name: 'Kiswahili Language Activities', gradeLevel: 'GRADE_3' } as any,
+  { id: 'la-g3-wku', code: 'KUSO', name: 'Kusoma Activities', gradeLevel: 'GRADE_3' } as any,
+  { id: 'la-g3-senv', code: 'ENVI', name: 'Environmental Activities', gradeLevel: 'GRADE_3' } as any,
+  { id: 'la-g3-cre', code: 'CRE', name: 'Christian Religious Education', gradeLevel: 'GRADE_3' } as any,
+  { id: 'la-g3-crea', code: 'CREA', name: 'Creative Arts Activities', gradeLevel: 'GRADE_3' } as any,
 ];
 
 export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> = ({
@@ -149,6 +207,46 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
   const [terms, setTerms] = useState<AcademicTerm[]>([]);
   const [classes, setClasses] = useState<ClassRoom[]>([]);
   const [allLearningAreas, setAllLearningAreas] = useState<BackendLearningArea[]>(learningAreas);
+  const [internalStudents, setInternalStudents] = useState<Student[]>(students);
+
+  // Synchronize or load students if parent passed an empty array
+  useEffect(() => {
+    if (students && students.length > 0) {
+      setInternalStudents(students);
+    } else {
+      apiService
+        .getStudents()
+        .then((res) => {
+          if (res?.data && Array.isArray(res.data) && res.data.length > 0) {
+            const mapped: Student[] = res.data.map((st: any) => ({
+              id: st.id,
+              admNo: st.admissionNumber || st.admNo || 'ADM',
+              name: st.name || st.fullName || `${st.firstName || ''} ${st.lastName || ''}`.trim() || 'Learner',
+              grade: st.className || (st.gradeLevel ? st.gradeLevel.replace(/_/g, ' ') : 'Grade 3'),
+              stream: st.streamName || st.stream || 'Grade 3',
+              gender:
+                (st.gender || 'M').toUpperCase().startsWith('F') ||
+                (st.gender || 'M').toUpperCase().startsWith('G')
+                  ? 'Girl'
+                  : 'Boy',
+              classroomId: st.classroomId,
+              gradeLevel: st.gradeLevel,
+              status: st.status || 'Active',
+              upi: st.upiNumber || '--',
+              nemis: st.upiNumber || '--',
+              guardianName: st.guardianName || '--',
+              guardianPhone: st.guardianPhone || '--',
+              feeBalance: 0,
+              totalFee: 0,
+              attendanceRate: 100,
+              cbcRating: 'ME' as any,
+            }));
+            setInternalStudents(mapped);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [students]);
 
   // Load dropdown metadata
   useEffect(() => {
@@ -160,11 +258,13 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
           learningAreas.length > 0 ? Promise.resolve({ data: learningAreas }) : apiService.getLearningAreas(),
         ]);
 
+        let activeYrId = '';
         if (yearsRes.status === 'fulfilled' && yearsRes.value?.data) {
           const yrs = yearsRes.value.data;
           setAcademicYears(yrs);
           const currentYr = yrs.find((y: any) => y.isCurrent) || yrs[0];
           if (currentYr) {
+            activeYrId = currentYr.id;
             setSelectedYearId(currentYr.id);
             if (currentYr.terms && currentYr.terms.length > 0) {
               setTerms(currentYr.terms);
@@ -182,6 +282,19 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
           setAllLearningAreas(laRes.value.data);
         } else if (allLearningAreas.length === 0) {
           setAllLearningAreas(DEFAULT_CBC_SUBJECTS);
+        }
+
+        // Fetch terms for the active year immediately so selectedTermId is never left empty
+        const termsRes = await apiService.getTerms(activeYrId || undefined).catch(() => null);
+        if (termsRes?.data && termsRes.data.length > 0) {
+          setTerms(termsRes.data);
+          const activeTerm =
+            termsRes.data.find((t: any) => t.isCurrent) ||
+            termsRes.data.find((t: any) => t.name.toLowerCase().includes('term 3')) ||
+            termsRes.data[termsRes.data.length - 1];
+          if (activeTerm) {
+            setSelectedTermId(activeTerm.id);
+          }
         }
       } catch (err) {
         console.error('Failed to load metadata in SummativeAssessmentsView', err);
@@ -207,7 +320,10 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
           if (res?.data && res.data.length > 0) {
             setTerms(res.data);
             if (!res.data.some((t) => t.id === selectedTermId)) {
-              const curr = res.data.find((t) => t.isCurrent) || res.data[0];
+              const curr =
+                res.data.find((t) => t.isCurrent) ||
+                res.data.find((t) => t.name.toLowerCase().includes('term 3')) ||
+                res.data[0];
               setSelectedTermId(curr?.id || '');
             }
           }
@@ -226,11 +342,25 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
         termId: selectedTermId || undefined,
       });
 
-      if (res?.data && Array.isArray(res.data)) {
-        setSummatives(res.data);
-      } else {
-        setSummatives([]);
+      let loaded = res?.data && Array.isArray(res.data) ? res.data : [];
+
+      // If no records returned with the current termId, try the alternate termId format
+      if (loaded.length === 0 && selectedTermId) {
+        const altTermId = selectedTermId.includes('-t')
+          ? selectedTermId.replace('-t', '-')
+          : selectedTermId.replace(/-(\d)$/, '-t$1');
+        const altRes = await apiService
+          .listSummatives({
+            academicYearId: selectedYearId || undefined,
+            termId: altTermId,
+          })
+          .catch(() => null);
+        if (altRes?.data && Array.isArray(altRes.data) && altRes.data.length > 0) {
+          loaded = altRes.data;
+        }
       }
+
+      setSummatives(loaded);
     } catch (err: any) {
       console.error('Error fetching summatives:', err);
       setError(err.message || 'Failed to load summative assessments');
@@ -246,8 +376,8 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
 
   // Distinct Canonical Subjects: Grouped & de-duplicated so each subject appears EXACTLY ONCE
   const effectiveSubjects: CanonicalSubjectItem[] = useMemo(() => {
-    // 1. Identify which class is selected (if any) to filter by grade level
-    let filteredLearningAreas = allLearningAreas;
+    // 1. Identify which learning areas to include based on selected class or assessed summatives
+    let sourceList: BackendLearningArea[] = [];
     if (selectedClassId !== 'All') {
       const cls = classes.find((c) => c.id === selectedClassId);
       if (cls && cls.gradeLevel) {
@@ -255,12 +385,28 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
           (la: any) => la.gradeLevel === cls.gradeLevel || la.grade_level === cls.gradeLevel
         );
         if (matching.length > 0) {
-          filteredLearningAreas = matching;
+          sourceList = matching;
         }
       }
     }
 
-    const sourceList = filteredLearningAreas.length > 0 ? filteredLearningAreas : DEFAULT_CBC_SUBJECTS;
+    if (sourceList.length === 0) {
+      if (summatives.length > 0) {
+        const assessedLaIds = new Set(summatives.map((s) => s.learningAreaId.toLowerCase()));
+        const matchingFromAll = allLearningAreas.filter(
+          (la) =>
+            assessedLaIds.has(la.id.toLowerCase()) ||
+            assessedLaIds.has((la.code || '').toLowerCase()) ||
+            assessedLaIds.has(getSubjectCanonicalKey(la.id).toLowerCase())
+        );
+        if (matchingFromAll.length > 0) {
+          sourceList = matchingFromAll;
+        }
+      }
+      if (sourceList.length === 0) {
+        sourceList = allLearningAreas.length > 0 ? allLearningAreas : DEFAULT_CBC_SUBJECTS;
+      }
+    }
 
     // 2. Map every learning area to its canonical key and group them
     const canonicalMap = new Map<string, {
@@ -278,7 +424,7 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
         canonicalMap.set(key, {
           id: key, // Use canonical key as primary ID for columns
           key,
-          code: la.code || key,
+          code: getCanonicalInitial(key),
           name: getCanonicalName(key, la.name),
           initial: getCanonicalInitial(key),
           aliasSet: new Set([la.id, la.code, la.name, key].filter(Boolean) as string[]),
@@ -311,7 +457,7 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
         canonicalMap.set(key, {
           id: key,
           key,
-          code: key,
+          code: getCanonicalInitial(key),
           name: getCanonicalName(key, s.learningAreaId),
           initial: getCanonicalInitial(key),
           aliasSet: new Set([s.learningAreaId, key]),
@@ -346,17 +492,17 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
     classes.forEach((c) => {
       c.streams?.forEach((st) => set.add(st.name));
     });
-    students.forEach((s) => {
+    internalStudents.forEach((s) => {
       if (s.stream) set.add(s.stream);
     });
     return Array.from(set).sort();
-  }, [classes, students]);
+  }, [classes, internalStudents]);
 
   // Helper to extract score percentage from summative record
   const getScoreInfo = (s?: BackendSummativeAssessment) => {
     if (!s) return { score: 0, level: '--', points: 0, hasMark: false };
 
-    let score = 0;
+    let score = -1;
     if (s.strandScores && s.strandScores.length > 0) {
       let totalRaw = 0;
       let totalMax = 0;
@@ -373,12 +519,13 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
       }
     }
 
-    if (score === 0) {
+    if (score === -1) {
       switch (s.overallPerformanceLevel) {
         case 'EE': score = 85; break;
         case 'ME': score = 70; break;
         case 'AE': score = 55; break;
         case 'BE': score = 40; break;
+        default: score = 0; break;
       }
     }
 
@@ -397,14 +544,20 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
         studentSummativeMap.set(s.studentId, new Map());
       }
       const sMap = studentSummativeMap.get(s.studentId)!;
-      const canon = getSubjectCanonicalKey(s.learningAreaId);
+      // Exact learning area ID matches (e.g. 'la-g3-eng')
       sMap.set(s.learningAreaId, s);
-      sMap.set(canon, s);
+      sMap.set(s.learningAreaId.toLowerCase(), s);
+
+      // Canonical key fallback
+      const canon = getSubjectCanonicalKey(s.learningAreaId);
+      if (!sMap.has(canon)) {
+        sMap.set(canon, s);
+      }
     });
 
-    // 2. Identify candidate students (either in students list or appearing in summative records)
+    // 2. Identify candidate students (using internalStudents with live database records)
     const candidateMap = new Map<string, Student>();
-    students.forEach((st) => candidateMap.set(st.id, st));
+    internalStudents.forEach((st) => candidateMap.set(st.id, st));
 
     summatives.forEach((s) => {
       if (!candidateMap.has(s.studentId)) {
@@ -412,8 +565,8 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
           id: s.studentId,
           admNo: (s as any).admissionNumber || 'ADM',
           name: (s as any).studentName || 'Learner',
-          grade: (s as any).gradeLevel || 'Grade 4',
-          stream: (s as any).streamName || 'East',
+          grade: (s as any).gradeLevel || 'Grade 3',
+          stream: (s as any).streamName || 'Grade 3',
           gender: 'M',
         } as any);
       }
@@ -462,13 +615,18 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
       > = {};
 
       effectiveSubjects.forEach((sub) => {
-        let record = studentRecords?.get(sub.key) || studentRecords?.get(sub.id) || studentRecords?.get(sub.code);
-        if (!record && studentRecords) {
+        let record: BackendSummativeAssessment | undefined;
+        if (studentRecords) {
+          // Priority 1: Check by direct learningAreaId or alias in sub.aliasIds
           for (const alias of sub.aliasIds) {
             if (studentRecords.has(alias)) {
               record = studentRecords.get(alias);
               break;
             }
+          }
+          // Priority 2: Check by canonical key or sub.id
+          if (!record) {
+            record = studentRecords.get(sub.id) || studentRecords.get(sub.key) || studentRecords.get(sub.code);
           }
         }
 
@@ -496,13 +654,16 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
       else if (overallLevel === 'BE') remark = 'Requires academic intervention and structured remedial support in core areas.';
       else if (overallLevel === '--') remark = 'No exam marks recorded for this academic period.';
 
+      const gRaw = (st.gender || 'M').toUpperCase();
+      const gender = (gRaw.startsWith('F') || gRaw.startsWith('G')) ? 'F' : 'M';
+
       return {
         studentId: st.id,
         admNo: st.admNo || 'ADM',
         name: st.name || 'Learner',
-        grade: st.grade || 'Grade 4',
-        stream: st.stream || 'East',
-        gender: (st.gender || 'M').toUpperCase().startsWith('F') ? 'F' : 'M',
+        grade: st.grade || 'Grade 3',
+        stream: st.stream || 'Grade 3',
+        gender,
         student: st,
         subjectScores,
         totalMarks,
@@ -522,7 +683,7 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
     });
 
     return rows;
-  }, [summatives, students, effectiveSubjects, classes, selectedClassId, selectedStream, searchQuery]);
+  }, [summatives, internalStudents, effectiveSubjects, classes, selectedClassId, selectedStream, searchQuery]);
 
   // Overall Marksheet Metrics
   const summaryStats = useMemo(() => {

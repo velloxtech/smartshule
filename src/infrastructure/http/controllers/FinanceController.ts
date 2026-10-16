@@ -201,9 +201,9 @@ export class FinanceController {
     }
   };
 
-  public generateInvoices = async (req: Request, res: Response, next: NextFunction) => {
+  public generateInvoices = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const result = await this.feeUseCases.generateInvoices(req.body);
+      const result = await this.feeUseCases.generateInvoices(req.body, req.user);
       return res.status(201).json({ success: true, data: result });
     } catch (err) {
       next(err);
@@ -216,7 +216,7 @@ export class FinanceController {
       const result = await this.feeUseCases.syncStudentFeeBalances({
         ...req.body,
         schoolId: req.body?.schoolId || userSchoolId
-      });
+      }, req.user);
       return res.status(200).json(result);
     } catch (err) {
       next(err);

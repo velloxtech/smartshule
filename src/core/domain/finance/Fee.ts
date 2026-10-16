@@ -72,7 +72,39 @@ export interface FeeStructureProps {
 
 export class FeeStructure extends Entity<FeeStructureProps> {
   public static create(props: FeeStructureProps, id: string, createdAt?: Date, updatedAt?: Date): FeeStructure {
+    const isTermSpecific = props.termId && props.termId !== 'ALL' && props.termId !== 'ANNUAL';
+
     const normalizedItems: FeeItem[] = (props.items || []).map(item => {
+      const rawItemAmount = Number(item.amount) || 0;
+
+      // When the fee structure is explicitly termly (attached to a specific academic term)
+      if (isTermSpecific) {
+        let t1 = item.termBreakdown?.term1;
+        let t2 = item.termBreakdown?.term2;
+        let t3 = item.termBreakdown?.term3;
+
+        const termIdLower = (props.termId || '').toLowerCase();
+        if (termIdLower.includes('t1') || termIdLower.includes('term-1') || termIdLower.endsWith('1')) {
+          t1 = rawItemAmount;
+        } else if (termIdLower.includes('t2') || termIdLower.includes('term-2') || termIdLower.endsWith('2')) {
+          t2 = rawItemAmount;
+        } else if (termIdLower.includes('t3') || termIdLower.includes('term-3') || termIdLower.endsWith('3')) {
+          t3 = rawItemAmount;
+        }
+
+        return {
+          ...item,
+          amount: rawItemAmount,
+          termBreakdown: {
+            term1: t1,
+            term2: t2,
+            term3: t3,
+          },
+          termPercentages: item.termPercentages,
+          termDivisions: item.termDivisions
+        };
+      }
+
       let t1 = item.termBreakdown?.term1;
       let t2 = item.termBreakdown?.term2;
       let t3 = item.termBreakdown?.term3;
@@ -101,8 +133,6 @@ export class FeeStructure extends Entity<FeeStructureProps> {
         p2 = props.termPercentages.term2;
         p3 = props.termPercentages.term3;
       }
-
-      const rawItemAmount = Number(item.amount) || 0;
 
       // If percentages are defined with an item amount but term amounts were not given:
       if (rawItemAmount > 0 && (t1 === undefined && t2 === undefined && t3 === undefined) && (p1 !== undefined || p2 !== undefined || p3 !== undefined)) {

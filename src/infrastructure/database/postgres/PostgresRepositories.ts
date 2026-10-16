@@ -1331,7 +1331,13 @@ export class PostgresCbcAssessmentRepository implements ICbcAssessmentRepository
     const params: any[] = [];
     if (filters.studentId) { params.push(filters.studentId); q += ` AND student_id = $${params.length}`; }
     if (filters.learningAreaId) { params.push(filters.learningAreaId); q += ` AND learning_area_id = $${params.length}`; }
-    if (filters.termId) { params.push(filters.termId); q += ` AND term_id = $${params.length}`; }
+    if (filters.termId) {
+      const altTermId = filters.termId.includes('-t')
+        ? filters.termId.replace('-t', '-')
+        : filters.termId.replace(/-(\d)$/, '-t$1');
+      params.push(filters.termId, altTermId);
+      q += ` AND (term_id = $${params.length - 1} OR term_id = $${params.length})`;
+    }
     if (filters.academicYearId) { params.push(filters.academicYearId); q += ` AND academic_year_id = $${params.length}`; }
     const res = await this.pool.query(q, params);
     return res.rows.map(r => SummativeAssessment.create({ studentId: r.student_id, teacherId: r.teacher_id, learningAreaId: r.learning_area_id, termId: r.term_id, academicYearId: r.academic_year_id, strandScores: typeof r.strand_scores === 'string' ? JSON.parse(r.strand_scores) : r.strand_scores, overallPerformanceLevel: r.overall_performance_level, teacherRemarks: r.teacher_remarks, evaluationDate: r.evaluation_date }, r.id, r.created_at, r.updated_at));

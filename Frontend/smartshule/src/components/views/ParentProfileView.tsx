@@ -338,7 +338,7 @@ export const ParentProfileView: React.FC<ParentProfileViewProps> = ({ onNavigate
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  National ID (Login Password ID)
+                  National ID Number
                 </label>
                 <input
                   type="text"
@@ -420,9 +420,14 @@ export const ParentProfileView: React.FC<ParentProfileViewProps> = ({ onNavigate
               <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
                 Phone Number
               </span>
-              <span className="font-mono text-sm text-slate-900 font-semibold">
-                {guardianUser?.phone || 'Not specified'}
-              </span>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="font-mono text-sm text-slate-900 font-semibold">
+                  {guardianUser?.phone || 'Not specified'}
+                </span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold" title="Portal login username & default password">
+                  Login Phone
+                </span>
+              </div>
             </div>
 
             <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/60">
@@ -438,14 +443,9 @@ export const ParentProfileView: React.FC<ParentProfileViewProps> = ({ onNavigate
               <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
                 National ID Number
               </span>
-              <div className="flex items-center gap-1.5">
-                <span className="font-mono text-sm text-slate-900 font-semibold">
-                  {guardian?.nationalId || '28475921'}
-                </span>
-                <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 font-bold" title="Default password for parent sign-in">
-                  ID Login
-                </span>
-              </div>
+              <span className="font-mono text-sm text-slate-900 font-semibold">
+                {guardian?.nationalId || '28475921'}
+              </span>
             </div>
 
             <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/60">

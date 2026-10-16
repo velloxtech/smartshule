@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { AppContainer } from '../../container';
 import { createAuthMiddleware, createOptionalAuthMiddleware, requireRoles } from '../middlewares/authMiddleware';
 import { validateBody } from '../middlewares/validateRequest';
-import { UserRole } from '../../../core/domain/user/User';
+import { UserRole, BILLING_AUTHORIZED_ROLES } from '../../../core/domain/user/User';
 
 import {
   AuthController,
@@ -290,7 +290,7 @@ export function createApiRouter(container: AppContainer): Router {
   // 3. STUDENT & GUARDIAN ROUTES
   // ==========================================
   const studentRouter = Router();
-  studentRouter.post('/', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.ADMISSIONS), validateBody(RegisterStudentSchema), studentController.registerStudent);
+  studentRouter.post('/', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.ADMISSIONS, UserRole.ACCOUNTANT, UserRole.BURSAR), validateBody(RegisterStudentSchema), studentController.registerStudent);
   studentRouter.post('/promote-bulk', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.ADMISSIONS), validateBody(BulkPromoteStudentsSchema), studentController.promoteStudentsBulk);
   studentRouter.post('/:id/promote', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.ADMISSIONS), validateBody(PromoteStudentSchema), studentController.promoteStudent);
   studentRouter.get('/guardian/me', authMiddleware, studentController.getGuardianPortalData);
@@ -472,14 +472,14 @@ export function createApiRouter(container: AppContainer): Router {
   // 9. FINANCE & FEE PAYMENTS (KCB BUNI / BANK) ROUTES
   // ==========================================
   const financeRouter = Router();
-  financeRouter.post('/structures', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT), validateBody(CreateFeeStructureSchema), financeController.createFeeStructure);
-  financeRouter.post('/structures/init-graceseed', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT, UserRole.ADMIN, UserRole.HEAD_TEACHER), financeController.initGraceSeedsStructures);
+  financeRouter.post('/structures', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), validateBody(CreateFeeStructureSchema), financeController.createFeeStructure);
+  financeRouter.post('/structures/init-graceseed', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), financeController.initGraceSeedsStructures);
   financeRouter.get('/structures', authMiddleware, financeController.listFeeStructures);
-  financeRouter.delete('/structures/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT), financeController.deleteFeeStructure);
-  financeRouter.post('/invoices/generate', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT), validateBody(GenerateInvoicesSchema), financeController.generateInvoices);
-  financeRouter.post('/sync-fees', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT), validateBody(SyncFeesSchema), financeController.syncFees);
+  financeRouter.delete('/structures/:id', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), financeController.deleteFeeStructure);
+  financeRouter.post('/invoices/generate', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), validateBody(GenerateInvoicesSchema), financeController.generateInvoices);
+  financeRouter.post('/sync-fees', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), validateBody(SyncFeesSchema), financeController.syncFees);
   financeRouter.get('/invoices', authMiddleware, financeController.listInvoices); // Parent isolated
-  financeRouter.delete('/invoices/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT), financeController.deleteInvoice);
+  financeRouter.delete('/invoices/:id', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), financeController.deleteInvoice);
   financeRouter.get('/summary', authMiddleware, financeController.getFinanceSummary); // Parent vs Admin summary
   financeRouter.post('/payments', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ACCOUNTANT), validateBody(RecordPaymentSchema), financeController.recordPayment);
   financeRouter.get('/payments', authMiddleware, financeController.listPayments); // Parent isolated

@@ -38,7 +38,7 @@ import {
   IncomeSource
 } from '../../core/domain/finance/Fee';
 import { CbcGradeLevel } from '../../core/domain/user/Student';
-import { UserRole } from '../../core/domain/user/User';
+import { UserRole, isBillingAuthorizedRole } from '../../core/domain/user/User';
 import {
   IdGenerator,
   NotFoundError,
@@ -170,8 +170,31 @@ export class FeeUseCases {
     return 1;
   }
 
+  public verifyBillingAuthorization(requestingUser?: UserContext): void {
+    if (requestingUser && !isBillingAuthorizedRole(requestingUser.role)) {
+      throw new ForbiddenError(
+        `Billing authorization denied. Only Accounts, Headteacher, or School Admin accounts are authorized to bill students or generate invoices (Role "${requestingUser.role}" is not authorized).`
+      );
+    }
+  }
+
+  public async hasStudentBeenBilledAdmission(studentId: string): Promise<boolean> {
+    const invoices = await this.feeRepository.findInvoices({ studentId });
+    for (const inv of invoices) {
+      if (Array.isArray(inv.items)) {
+        for (const it of inv.items) {
+          if (it.category === 'ADMISSION' || (it.name && it.name.toLowerCase().includes('admission'))) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
   public extractTermInvoiceItems(feeStructure: FeeStructure, termNumber: number | null): FeeItem[] {
-    if (termNumber === null) {
+    const isTermStructure = feeStructure.termId && feeStructure.termId !== 'ALL' && feeStructure.termId !== 'ANNUAL';
+    if (isTermStructure || termNumber === null) {
       return feeStructure.items.map(item => ({
         id: IdGenerator.generate(),
         name: item.name,
@@ -244,33 +267,61 @@ export class FeeUseCases {
     return feeStructure.toJSON();
   }
 
+  public getGraceSeedsTermItemsForGrade(gradeLevel: CbcGradeLevel, termNumber: number): FeeItem[] {
+    const isUpperPrimary = [CbcGradeLevel.GRADE_4, CbcGradeLevel.GRADE_5, CbcGradeLevel.GRADE_6].includes(gradeLevel);
+    const isLowerPrimary = [CbcGradeLevel.GRADE_1, CbcGradeLevel.GRADE_2, CbcGradeLevel.GRADE_3].includes(gradeLevel);
+    const isPrePrimary = [CbcGradeLevel.PLAYGROUP, CbcGradeLevel.PP1, CbcGradeLevel.PP2].includes(gradeLevel);
+
+    const tuitionTerm = isUpperPrimary ? 5700 : (isLowerPrimary ? 5000 : (isPrePrimary ? 4500 : 5000));
+    const activityTerm = (isUpperPrimary || isLowerPrimary) ? 500 : (isPrePrimary ? 300 : 500);
+    const assessmentTerm = 300;
+
+    const items: FeeItem[] = [
+      {
+        id: IdGenerator.generate(),
+        name: 'Tuition Fee',
+        amount: tuitionTerm,
+        category: 'TUITION',
+        isOptional: false,
+      },
+    ];
+
+    // Activity fee applies to Term 1 & Term 2 ONLY in Grace Seeds School
+    if (termNumber !== 3) {
+      items.push({
+        id: IdGenerator.generate(),
+        name: 'Activity Fee',
+        amount: activityTerm,
+        category: 'ACTIVITY',
+        isOptional: false,
+      });
+    }
+
+    items.push({
+      id: IdGenerator.generate(),
+      name: 'Assessment Fee',
+      amount: assessmentTerm,
+      category: 'ASSESSMENT',
+      isOptional: false,
+    });
+
+    return items;
+  }
+
   public getGraceSeedsDefaultItemsForGrade(gradeLevel: CbcGradeLevel): FeeItem[] {
     const isUpperPrimary = [CbcGradeLevel.GRADE_4, CbcGradeLevel.GRADE_5, CbcGradeLevel.GRADE_6].includes(gradeLevel);
     const isLowerPrimary = [CbcGradeLevel.GRADE_1, CbcGradeLevel.GRADE_2, CbcGradeLevel.GRADE_3].includes(gradeLevel);
     const isPrePrimary = [CbcGradeLevel.PLAYGROUP, CbcGradeLevel.PP1, CbcGradeLevel.PP2].includes(gradeLevel);
 
-    // Official Grace Seeds School Fee Structure:
-    // Pre-Primary (Playgroup, PP1, PP2):
-    //   - Fee (Tuition): 4,500 (T1: 4500, T2: 4500, T3: 4500)
-    //   - Activity fee: 300 (T1: 300, T2: 300, T3: 0)
-    //   - Assessment: 300 (T1: 300, T2: 300, T3: 300)
-    //   - Term Totals: T1: 5100, T2: 5100, T3: 4800 (Annual: 15,000)
-    // Grade 1-3:
-    //   - Fee (Tuition): 5,000 (T1: 5000, T2: 5000, T3: 5000)
-    //   - Activity fee: 500 (T1: 500, T2: 500, T3: 0)
-    //   - Assessment: 300 (T1: 300, T2: 300, T3: 300)
-    //   - Term Totals: T1: 5800, T2: 5800, T3: 5300 (Annual: 16,900)
-    // Grade 4-6:
-    //   - Fee (Tuition): 5,700 (T1: 5700, T2: 5700, T3: 5700)
-    //   - Activity fee: 500 (T1: 500, T2: 500, T3: 0)
-    //   - Assessment: 300 (T1: 300, T2: 300, T3: 300)
-    //   - Term Totals: T1: 6500, T2: 6500, T3: 6000 (Annual: 19,000)
-    // Other Charges: Admission: 1500 (once off), Lunch: 1000/mo (3000/term)
+    // Official Grace Seeds School Termly Rate Baseline:
+    // Pre-Primary (Playgroup, PP1, PP2): T1: 5100, T2: 5100, T3: 4800 (Tuition 4500, Activity 300 in T1/T2, Assessment 300)
+    // Grade 1-3: T1: 5800, T2: 5800, T3: 5300 (Tuition 5000, Activity 500 in T1/T2, Assessment 300)
+    // Grade 4-6: T1: 6500, T2: 6500, T3: 6000 (Tuition 5700, Activity 500 in T1/T2, Assessment 300)
+    // Note: Admission Fee (1500) is strictly attached to the Admit Learner Modal and never billed on recurring term structures.
 
     const tuitionTerm = isUpperPrimary ? 5700 : (isLowerPrimary ? 5000 : (isPrePrimary ? 4500 : 5000));
     const activityTerm = (isUpperPrimary || isLowerPrimary) ? 500 : (isPrePrimary ? 300 : 500);
     const assessmentTerm = 300;
-    const admissionFee = 1500;
 
     return [
       {
@@ -339,28 +390,6 @@ export class FeeUseCases {
           { termNumber: 3, termName: 'Term 3', amount: assessmentTerm, percentage: 33.4 },
         ],
       },
-      {
-        id: IdGenerator.generate(),
-        name: 'Admission Fee',
-        amount: admissionFee, // Once off on admission
-        category: 'ADMISSION',
-        isOptional: true, // Only applied for new admissions
-        termBreakdown: {
-          term1: admissionFee,
-          term2: 0,
-          term3: 0,
-        },
-        termPercentages: {
-          term1: 100,
-          term2: 0,
-          term3: 0,
-        },
-        termDivisions: [
-          { termNumber: 1, termName: 'Term 1', amount: admissionFee, percentage: 100 },
-          { termNumber: 2, termName: 'Term 2', amount: 0, percentage: 0 },
-          { termNumber: 3, termName: 'Term 3', amount: 0, percentage: 0 },
-        ],
-      },
     ];
   }
 
@@ -369,56 +398,101 @@ export class FeeUseCases {
     const targetYearId = academicYearId || 'year-2026';
     const dueDate = `${new Date().getFullYear()}-12-31`;
 
-    const grades: { grade: CbcGradeLevel; title: string }[] = [
-      { grade: CbcGradeLevel.PLAYGROUP, title: 'Playgroup CBC Annual Fee Schedule' },
-      { grade: CbcGradeLevel.PP1, title: 'PP1 CBC Annual Fee Schedule' },
-      { grade: CbcGradeLevel.PP2, title: 'PP2 CBC Annual Fee Schedule' },
-      { grade: CbcGradeLevel.GRADE_1, title: 'Grade 1 CBC Annual Fee Schedule' },
-      { grade: CbcGradeLevel.GRADE_2, title: 'Grade 2 CBC Annual Fee Schedule' },
-      { grade: CbcGradeLevel.GRADE_3, title: 'Grade 3 CBC Annual Fee Schedule' },
-      { grade: CbcGradeLevel.GRADE_4, title: 'Grade 4 CBC Annual Fee Schedule' },
-      { grade: CbcGradeLevel.GRADE_5, title: 'Grade 5 CBC Annual Fee Schedule' },
-      { grade: CbcGradeLevel.GRADE_6, title: 'Grade 6 CBC Annual Fee Schedule' },
+    const grades: { grade: CbcGradeLevel; label: string }[] = [
+      { grade: CbcGradeLevel.PLAYGROUP, label: 'Playgroup' },
+      { grade: CbcGradeLevel.PP1, label: 'PP1' },
+      { grade: CbcGradeLevel.PP2, label: 'PP2' },
+      { grade: CbcGradeLevel.GRADE_1, label: 'Grade 1' },
+      { grade: CbcGradeLevel.GRADE_2, label: 'Grade 2' },
+      { grade: CbcGradeLevel.GRADE_3, label: 'Grade 3' },
+      { grade: CbcGradeLevel.GRADE_4, label: 'Grade 4' },
+      { grade: CbcGradeLevel.GRADE_5, label: 'Grade 5' },
+      { grade: CbcGradeLevel.GRADE_6, label: 'Grade 6' },
+    ];
+
+    const terms = [
+      { termId: 'term-2026-t1', termNumber: 1, name: 'Term 1' },
+      { termId: 'term-2026-t2', termNumber: 2, name: 'Term 2' },
+      { termId: 'term-2026-t3', termNumber: 3, name: 'Term 3' },
     ];
 
     const results: any[] = [];
 
+    // 1. Create termly fee structures for Term 1, Term 2, and Term 3
     for (const g of grades) {
-      const items = this.getGraceSeedsDefaultItemsForGrade(g.grade);
+      for (const t of terms) {
+        const termItems = this.getGraceSeedsTermItemsForGrade(g.grade, t.termNumber);
+        const title = `${g.label} CBC ${t.name} Fee Schedule`;
 
-      const existing = await this.feeRepository.findFeeStructure(g.grade, 'ALL', targetYearId);
-      if (existing) {
-        const updated = FeeStructure.create(
+        const existing = await this.feeRepository.findFeeStructure(g.grade, t.termId, targetYearId);
+        if (existing && existing.termId === t.termId) {
+          const updated = FeeStructure.create(
+            {
+              schoolId: targetSchoolId,
+              academicYearId: targetYearId,
+              termId: t.termId,
+              gradeLevel: g.grade,
+              title,
+              items: termItems,
+              dueDate,
+            },
+            existing.id,
+            existing.createdAt,
+            new Date()
+          );
+          await this.feeRepository.updateFeeStructure(updated);
+          results.push(updated.toJSON());
+        } else {
+          const created = FeeStructure.create(
+            {
+              schoolId: targetSchoolId,
+              academicYearId: targetYearId,
+              termId: t.termId,
+              gradeLevel: g.grade,
+              title,
+              items: termItems,
+              dueDate,
+            },
+            IdGenerator.generate()
+          );
+          await this.feeRepository.saveFeeStructure(created);
+          results.push(created.toJSON());
+        }
+      }
+
+      // Also maintain/update the combined ALL schedule for any legacy queries
+      const allItems = this.getGraceSeedsDefaultItemsForGrade(g.grade);
+      const existingAll = await this.feeRepository.findFeeStructure(g.grade, 'ALL', targetYearId);
+      if (existingAll && existingAll.termId === 'ALL') {
+        const updatedAll = FeeStructure.create(
           {
             schoolId: targetSchoolId,
             academicYearId: targetYearId,
             termId: 'ALL',
             gradeLevel: g.grade,
-            title: g.title,
-            items,
+            title: `${g.label} CBC Combined Fee Schedule`,
+            items: allItems,
             dueDate,
           },
-          existing.id,
-          existing.createdAt,
+          existingAll.id,
+          existingAll.createdAt,
           new Date()
         );
-        await this.feeRepository.updateFeeStructure(updated);
-        results.push(updated.toJSON());
+        await this.feeRepository.updateFeeStructure(updatedAll);
       } else {
-        const created = FeeStructure.create(
+        const createdAll = FeeStructure.create(
           {
             schoolId: targetSchoolId,
             academicYearId: targetYearId,
             termId: 'ALL',
             gradeLevel: g.grade,
-            title: g.title,
-            items,
+            title: `${g.label} CBC Combined Fee Schedule`,
+            items: allItems,
             dueDate,
           },
           IdGenerator.generate()
         );
-        await this.feeRepository.saveFeeStructure(created);
-        results.push(created.toJSON());
+        await this.feeRepository.saveFeeStructure(createdAll);
       }
     }
 
@@ -431,7 +505,8 @@ export class FeeUseCases {
   }
 
   // 2. Invoicing
-  public async generateInvoices(dto: GenerateInvoicesDTO) {
+  public async generateInvoices(dto: GenerateInvoicesDTO, requestingUser?: UserContext) {
+    this.verifyBillingAuthorization(requestingUser);
     const generatedInvoices = [];
     const termNumber = await this.resolveTermNumber(dto.termId);
 
@@ -454,7 +529,15 @@ export class FeeUseCases {
       );
       const carriedForwardBalance = unpaidPriorInvoices.reduce((sum, inv) => sum + inv.balance, 0);
 
-      const baseItems = this.extractTermInvoiceItems(feeStructure, termNumber);
+      const rawBaseItems = this.extractTermInvoiceItems(feeStructure, termNumber);
+      // Admission fee is one-time; ensure it cannot be charged twice on a student
+      const alreadyBilledAdmission = await this.hasStudentBeenBilledAdmission(student.id);
+      const baseItems = rawBaseItems.filter(it => {
+        if (it.category === 'ADMISSION' || (it.name && it.name.toLowerCase().includes('admission'))) {
+          return !alreadyBilledAdmission && it.amount > 0;
+        }
+        return it.amount > 0;
+      });
       const invoiceItems = [...baseItems];
       if (carriedForwardBalance > 0) {
         invoiceItems.push({
@@ -527,7 +610,15 @@ export class FeeUseCases {
         );
         const carriedForwardBalance = unpaidPriorInvoices.reduce((sum, inv) => sum + inv.balance, 0);
 
-        const baseItems = this.extractTermInvoiceItems(feeStructure, termNumber);
+        const rawBaseItems = this.extractTermInvoiceItems(feeStructure, termNumber);
+        // Admission fee is one-time; ensure it cannot be charged twice on a student
+        const alreadyBilledAdmission = await this.hasStudentBeenBilledAdmission(student.id);
+        const baseItems = rawBaseItems.filter(it => {
+          if (it.category === 'ADMISSION' || (it.name && it.name.toLowerCase().includes('admission'))) {
+            return !alreadyBilledAdmission && it.amount > 0;
+          }
+          return it.amount > 0;
+        });
         const invoiceItems = [...baseItems];
         if (carriedForwardBalance > 0) {
           invoiceItems.push({
@@ -585,7 +676,8 @@ export class FeeUseCases {
     academicYearId?: string;
     termId?: string;
     gradeLevel?: CbcGradeLevel;
-  }) {
+  }, requestingUser?: UserContext) {
+    this.verifyBillingAuthorization(requestingUser);
     const schoolId = dto.schoolId || 'school-001';
     let academicYearId = dto.academicYearId;
     let termId = dto.termId;
@@ -625,21 +717,22 @@ export class FeeUseCases {
       let feeStructure = await this.feeRepository.findFeeStructure(student.gradeLevel, termId, academicYearId);
       if (!feeStructure) {
         const allStructures = await this.feeRepository.findAllFeeStructures(schoolId);
-        feeStructure = allStructures.find(fs => fs.gradeLevel === student.gradeLevel) || null;
+        feeStructure = allStructures.find(fs => fs.gradeLevel === student.gradeLevel && (fs.termId === termId || fs.termId === 'ALL')) || null;
       }
 
-      // If no fee structure exists for this grade in the DB, create ratified Grace Seeds School fee structure
+      // If no fee structure exists for this grade in the DB, create ratified Grace Seeds School termly fee structure
       if (!feeStructure) {
         const gradeName = student.gradeLevel.replace('_', ' ');
-        const defaultItems = this.getGraceSeedsDefaultItemsForGrade(student.gradeLevel);
+        const termNum = (await this.resolveTermNumber(termId)) || 1;
+        const defaultItems = this.getGraceSeedsTermItemsForGrade(student.gradeLevel, termNum);
 
         feeStructure = FeeStructure.create(
           {
             schoolId,
             academicYearId: academicYearId || 'year-2026',
-            termId: 'ALL',
+            termId,
             gradeLevel: student.gradeLevel,
-            title: `${gradeName} Annual Fee Schedule`,
+            title: `${gradeName} CBC Term ${termNum} Fee Schedule`,
             items: defaultItems,
             dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
           },
@@ -664,7 +757,9 @@ export class FeeUseCases {
       const carriedForwardBalance = unpaidPriorInvoices.reduce((sum, inv) => sum + inv.balance, 0);
 
       const termNumber = await this.resolveTermNumber(targetTerm);
-      const baseItems = this.extractTermInvoiceItems(feeStructure, termNumber);
+      const rawBaseItems = this.extractTermInvoiceItems(feeStructure, termNumber);
+      // Exclude one-time admission fee from recurring fee sync
+      const baseItems = rawBaseItems.filter(it => it.category !== 'ADMISSION' && !it.name.toLowerCase().includes('admission'));
       const invoiceItems = [...baseItems];
       if (carriedForwardBalance > 0) {
         invoiceItems.push({

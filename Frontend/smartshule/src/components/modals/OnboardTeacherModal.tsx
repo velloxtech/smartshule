@@ -250,7 +250,7 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
     try {
       const res = await apiService.registerTeacher({
         email: email.trim() || undefined,
-        password: nationalId.trim(),
+        password: cleanPhone || nationalId.trim(),
         nationalId: nationalId.trim(),
         firstName: firstName.trim(),
         lastName: lastName.trim(),
@@ -479,10 +479,7 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
                     placeholder="e.g. 24891028"
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white font-mono"
                   />
-                  <span className="text-[10px] text-emerald-700 font-semibold flex items-center gap-1 mt-0.5">
-                    <span className="material-symbols-outlined text-[12px]">key</span>
-                    <span>Teacher login password will be set to this National ID</span>
-                  </span>
+                  <span className="text-[10px] text-slate-500">Kenyan National ID Card number</span>
                 </div>
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
@@ -496,6 +493,10 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
                     placeholder="+2547XXXXXXXX"
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white font-mono"
                   />
+                  <span className="text-[10px] text-emerald-700 font-semibold flex items-center gap-1 mt-0.5">
+                    <span className="material-symbols-outlined text-[12px]">key</span>
+                    <span>Teacher login username & default password will be their phone number</span>
+                  </span>
                 </div>
               </div>
 

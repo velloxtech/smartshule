@@ -8,6 +8,7 @@ import { StationeryRequirementsModal } from '../modals/StationeryRequirementsMod
 import { resolveGradeName, resolveAcademicYearName } from '../../utils/formatters';
 
 type EducationTier = 'ALL' | 'PRE_PRIMARY' | 'LOWER_PRIMARY' | 'UPPER_PRIMARY' | 'JUNIOR_SECONDARY';
+type TermFilter = 'ALL' | 'TERM_1' | 'TERM_2' | 'TERM_3';
 
 export const FeeStructureView: React.FC = () => {
   const [structures, setStructures] = useState<FeeStructure[]>([]);
@@ -16,8 +17,9 @@ export const FeeStructureView: React.FC = () => {
   const [isRequirementsOpen, setIsRequirementsOpen] = useState(false);
   const [clonedData, setClonedData] = useState<FeeStructure | null>(null);
 
-  // Cognitive Chunking: Education Tier & Progressive Disclosure
+  // Cognitive Chunking: Education Tier & Term Filtering
   const [selectedTier, setSelectedTier] = useState<EducationTier>('ALL');
+  const [selectedTerm, setSelectedTerm] = useState<TermFilter>('ALL');
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
 
   // Search & Filtering
@@ -60,7 +62,7 @@ export const FeeStructureView: React.FC = () => {
   };
 
   const handleDeleteFeeStructure = async (id: string, title: string) => {
-    if (window.confirm(`Are you sure you want to delete annual fee structure "${title}"? This cannot be undone.`)) {
+    if (window.confirm(`Are you sure you want to delete fee schedule "${title}"? This cannot be undone.`)) {
       try {
         const res = await apiService.deleteFeeStructure(id);
         if (res.success) {
@@ -89,6 +91,43 @@ export const FeeStructureView: React.FC = () => {
     if (g.includes('GRADE_4') || g.includes('GRADE_5') || g.includes('GRADE_6') || g === 'GRADE 4' || g === 'GRADE 5' || g === 'GRADE 6') return 'UPPER_PRIMARY';
     if (g.includes('GRADE_7') || g.includes('GRADE_8') || g.includes('GRADE_9') || g === 'GRADE 7' || g === 'GRADE 8' || g === 'GRADE 9') return 'JUNIOR_SECONDARY';
     return 'ALL';
+  };
+
+  const getTermName = (termId?: string): string => {
+    if (!termId || termId === 'ALL' || termId === 'ANNUAL') return 'All Terms / Annual';
+    if (termId === 'TERM_1') return 'Term 1';
+    if (termId === 'TERM_2') return 'Term 2';
+    if (termId === 'TERM_3') return 'Term 3';
+    return termId.replace('_', ' ');
+  };
+
+  const getTermBadge = (termId?: string) => {
+    if (termId === 'TERM_1') {
+      return (
+        <span className="text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200 px-2 py-0.5 rounded-md">
+          Term 1
+        </span>
+      );
+    }
+    if (termId === 'TERM_2') {
+      return (
+        <span className="text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-md">
+          Term 2
+        </span>
+      );
+    }
+    if (termId === 'TERM_3') {
+      return (
+        <span className="text-[10px] font-bold bg-purple-50 text-purple-800 border border-purple-200 px-2 py-0.5 rounded-md">
+          Term 3
+        </span>
+      );
+    }
+    return (
+      <span className="text-[10px] font-semibold bg-gray-100 text-gray-700 border border-gray-200 px-2 py-0.5 rounded-md">
+        All Terms
+      </span>
+    );
   };
 
   const toggleExpandCard = (id: string) => {
@@ -217,7 +256,11 @@ export const FeeStructureView: React.FC = () => {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
     doc.setTextColor(122, 18, 40);
-    doc.text('OFFICIAL RATIFIED ANNUAL CBC FEE SCHEDULE', 105, curY + 4.3, { align: 'center' });
+    const termLabel = getTermName(structure.termId);
+    const badgeText = structure.termId && structure.termId !== 'ALL' && structure.termId !== 'ANNUAL'
+      ? `OFFICIAL RATIFIED CBC ${termLabel.toUpperCase()} FEE SCHEDULE`
+      : 'OFFICIAL RATIFIED CBC TERMLY FEE SCHEDULE';
+    doc.text(badgeText, 105, curY + 4.3, { align: 'center' });
     curY += 9.5;
 
     // 5. Meta Details Card
@@ -229,15 +272,15 @@ export const FeeStructureView: React.FC = () => {
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(107, 114, 128);
     doc.text('CLASS / GRADE', 20, curY + 5.5);
-    doc.text('ACADEMIC YEAR', 65, curY + 5.5);
-    doc.text('ANNUAL DUE DATE', 110, curY + 5.5);
-    doc.text('TOTAL ANNUAL FEE', 155, curY + 5.5);
+    doc.text('ACADEMIC YEAR & TERM', 65, curY + 5.5);
+    doc.text('TERM DUE DATE', 110, curY + 5.5);
+    doc.text('TOTAL TERM FEE', 155, curY + 5.5);
 
     doc.setFontSize(9);
     doc.setTextColor(17, 24, 39);
     doc.text(gradeName, 20, curY + 11.5);
-    doc.text(yearName, 65, curY + 11.5);
-    doc.text(structure.dueDate || 'End of Academic Year', 110, curY + 11.5);
+    doc.text(`${yearName} · ${termLabel}`, 65, curY + 11.5);
+    doc.text(structure.dueDate || 'Start of Academic Term', 110, curY + 11.5);
     doc.setTextColor(122, 18, 40);
     doc.text(`KES ${total.toLocaleString()}`, 155, curY + 11.5);
     curY += 19;
@@ -253,9 +296,9 @@ export const FeeStructureView: React.FC = () => {
 
     autoTable(doc, {
       startY: curY,
-      head: [['#', 'Item Description', 'Category', 'Billing Type', 'Annual Amount']],
+      head: [['#', 'Item Description', 'Category', 'Billing Type', 'Term Amount']],
       body: tableRows.length > 0 ? tableRows : [['-', 'No items configured for this level', '-', '-', 'KES 0']],
-      foot: [['', 'TOTAL ANNUAL FEE (WHOLE YEAR)', '', '', `KES ${total.toLocaleString()}`]],
+      foot: [['', `TOTAL TERMLY FEE (${termLabel.toUpperCase()})`, '', '', `KES ${total.toLocaleString()}`]],
       theme: 'grid',
       headStyles: {
         fillColor: [122, 18, 40],
@@ -332,7 +375,7 @@ export const FeeStructureView: React.FC = () => {
     doc.setFontSize(7);
     doc.setTextColor(156, 163, 175);
     doc.text(
-      `SmartShule Verified Fee Schedule  |  Valid for Academic Year ${yearName}  |  Generated on ${new Date().toLocaleDateString('en-GB')}`,
+      `SmartShule Verified CBC Termly Fee Schedule  |  Valid for ${yearName} (${termLabel})  |  Generated on ${new Date().toLocaleDateString('en-GB')}`,
       105,
       289,
       { align: 'center' }
@@ -343,9 +386,10 @@ export const FeeStructureView: React.FC = () => {
     const logoBase64 = await getSchoolLogoBase64(school?.logoUrl);
     const gradeName = resolveGradeName(structure.gradeLevel);
     const yearName = resolveAcademicYearName(structure.academicYearId);
+    const termSlug = (structure.termId || 'term').toLowerCase();
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     renderFeeStructurePage(doc, structure, school, logoBase64);
-    doc.save(`Fee_Schedule_${gradeName.replace(/[^a-zA-Z0-9]/g, '_')}_${yearName}.pdf`);
+    doc.save(`Fee_Schedule_${gradeName.replace(/[^a-zA-Z0-9]/g, '_')}_${termSlug}_${yearName}.pdf`);
   };
 
   const downloadAllPDF = async () => {
@@ -369,15 +413,17 @@ export const FeeStructureView: React.FC = () => {
     const total = getStructureTotal(structure);
     const gradeName = resolveGradeName(structure.gradeLevel);
     const yearName = resolveAcademicYearName(structure.academicYearId);
+    const termLabel = getTermName(structure.termId);
 
     const rows = [
       ['School Name', school?.name || 'Grace Seeds School'],
       ['Schedule Title', structure.title],
       ['Grade / Class', gradeName],
       ['Academic Year', yearName],
-      ['Annual Due Date', structure.dueDate || 'N/A'],
+      ['Term', termLabel],
+      ['Term Due Date', structure.dueDate || 'N/A'],
       [''],
-      ['#', 'Item Description', 'Category', 'Billing Type', 'Annual Amount (KES)'],
+      ['#', 'Item Description', 'Category', 'Billing Type', 'Term Amount (KES)'],
       ...(structure.items || []).map((it, idx) => [
         idx + 1,
         `"${(it.name || '').replace(/"/g, '""')}"`,
@@ -386,7 +432,7 @@ export const FeeStructureView: React.FC = () => {
         Number(it.amount) || 0
       ]),
       [''],
-      ['Total Annual Fee (KES)', '', '', '', total]
+      ['Total Term Fee (KES)', '', '', '', total]
     ];
 
     const csvContent = rows.map((r) => r.join(',')).join('\n');
@@ -394,7 +440,8 @@ export const FeeStructureView: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Fee_Schedule_${gradeName.replace(/[^a-zA-Z0-9]/g, '_')}_${yearName}.csv`;
+    const termSlug = (structure.termId || 'term').toLowerCase();
+    a.download = `Fee_Schedule_${gradeName.replace(/[^a-zA-Z0-9]/g, '_')}_${termSlug}_${yearName}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -408,13 +455,14 @@ export const FeeStructureView: React.FC = () => {
     }
 
     const rows: (string | number)[][] = [
-      ['Class / Grade', 'Schedule Title', 'Academic Year', 'Item Description', 'Category', 'Billing Type', 'Annual Amount (KES)', 'Total Structure Fee (KES)']
+      ['Class / Grade', 'Schedule Title', 'Academic Year', 'Term', 'Item Description', 'Category', 'Billing Type', 'Term Amount (KES)', 'Total Term Fee (KES)']
     ];
 
     structures.forEach((s) => {
       const total = getStructureTotal(s);
       const gradeName = resolveGradeName(s.gradeLevel);
       const yearName = resolveAcademicYearName(s.academicYearId);
+      const termLabel = getTermName(s.termId);
 
       if (s.items && s.items.length > 0) {
         s.items.forEach((it, idx) => {
@@ -422,6 +470,7 @@ export const FeeStructureView: React.FC = () => {
             idx === 0 ? gradeName : '',
             idx === 0 ? `"${(s.title || '').replace(/"/g, '""')}"` : '',
             idx === 0 ? yearName : '',
+            idx === 0 ? termLabel : '',
             `"${(it.name || '').replace(/"/g, '""')}"`,
             it.category,
             it.isOptional ? 'Optional' : 'Mandatory',
@@ -430,9 +479,9 @@ export const FeeStructureView: React.FC = () => {
           ]);
         });
       } else {
-        rows.push([gradeName, `"${(s.title || '').replace(/"/g, '""')}"`, yearName, 'No items configured', '', '', 0, total]);
+        rows.push([gradeName, `"${(s.title || '').replace(/"/g, '""')}"`, yearName, termLabel, 'No items configured', '', '', 0, total]);
       }
-      rows.push(['', '', '', '', '', '', '', '']);
+      rows.push(['', '', '', '', '', '', '', '', '']);
     });
 
     const csvContent = rows.map((r) => r.join(',')).join('\n');
@@ -454,7 +503,8 @@ export const FeeStructureView: React.FC = () => {
       s.gradeLevel?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesGrade = gradeFilter === 'ALL' || s.gradeLevel === gradeFilter;
     const matchesTier = selectedTier === 'ALL' || getTierForGrade(s.gradeLevel) === selectedTier;
-    return matchesSearch && matchesGrade && matchesTier;
+    const matchesTerm = selectedTerm === 'ALL' || s.termId === selectedTerm || (!s.termId && selectedTerm === 'ALL');
+    return matchesSearch && matchesGrade && matchesTier && matchesTerm;
   });
 
   // Calculate Tier Counts for quick mental anchoring
@@ -466,11 +516,18 @@ export const FeeStructureView: React.FC = () => {
     JUNIOR_SECONDARY: structures.filter((s) => getTierForGrade(s.gradeLevel) === 'JUNIOR_SECONDARY').length,
   };
 
+  const termCounts = {
+    ALL: structures.length,
+    TERM_1: structures.filter((s) => s.termId === 'TERM_1').length,
+    TERM_2: structures.filter((s) => s.termId === 'TERM_2').length,
+    TERM_3: structures.filter((s) => s.termId === 'TERM_3').length,
+  };
+
   // Cumulative Metrics
-  const totalAnnualValue = structures.reduce((sum, s) => sum + getStructureTotal(s), 0);
+  const totalScheduleValue = structures.reduce((sum, s) => sum + getStructureTotal(s), 0);
 
   const handleInitializeGraceSeeds = async () => {
-    if (!window.confirm('Initialize or update official Grace Seeds School fee structures (Playgroup to Grade 6)? This sets up verified rates for Tuition, Activity, and Assessment.')) {
+    if (!window.confirm('Initialize or update official Grace Seeds School termly fee schedules (Term 1, Term 2, Term 3 for Playgroup to Grade 6)? This sets up verified rates for Tuition, Activity, and Assessment.')) {
       return;
     }
     setIsInitializing(true);
@@ -478,7 +535,7 @@ export const FeeStructureView: React.FC = () => {
     try {
       const res = await apiService.initGraceSeedsFeeStructures();
       if (res.success) {
-        setInitFeedback('Fee schedules initialized successfully for all classes.');
+        setInitFeedback('Ratified termly fee schedules (Term 1, Term 2, Term 3) initialized successfully for all classes.');
         await loadStructures();
       } else {
         alert(res.message || 'Failed to initialize Grace Seeds fee structures');
@@ -498,13 +555,13 @@ export const FeeStructureView: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-2">
-            <span>Annual Fee Structures</span>
+            <span>Termly Fee Structures</span>
             <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-rose-50 text-[#7a1228] border border-rose-200">
-              {structures.length} {structures.length === 1 ? 'Class' : 'Classes'}
+              {structures.length} {structures.length === 1 ? 'Schedule' : 'Schedules'}
             </span>
           </h1>
           <p className="text-xs sm:text-sm text-gray-500 mt-1">
-            Approved whole-year fee schedules and payment channels
+            Approved termly fee schedules (Term 1, Term 2, Term 3) and payment channels
           </p>
         </div>
 
@@ -540,14 +597,14 @@ export const FeeStructureView: React.FC = () => {
             onClick={handleInitializeGraceSeeds}
             disabled={isInitializing}
             className="inline-flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-gray-50 text-gray-700 font-semibold rounded-xl text-xs border border-gray-200 shadow-2xs transition-all cursor-pointer disabled:opacity-50"
-            title="Auto-configure ratified schedules"
+            title="Auto-configure ratified term schedules (Grace Seeds)"
           >
             {isInitializing ? (
               <span className="w-3.5 h-3.5 border-2 border-gray-700 border-t-transparent rounded-full animate-spin" />
             ) : (
               <span className="material-symbols-outlined text-[17px] text-amber-600">bolt</span>
             )}
-            <span>Auto Setup</span>
+            <span>Init Term Schedules</span>
           </button>
 
           <button
@@ -560,6 +617,29 @@ export const FeeStructureView: React.FC = () => {
             <span className="material-symbols-outlined text-[18px]">add</span>
             <span>New Fee Structure</span>
           </button>
+        </div>
+      </div>
+
+      {/* Policy Notice: Termly Schedules & One-Time Admission Fee */}
+      <div className="p-4 rounded-2xl bg-amber-50/90 border border-amber-200 text-amber-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+        <div className="flex items-start gap-3">
+          <span className="material-symbols-outlined text-[22px] text-amber-700 shrink-0 mt-0.5">
+            verified_user
+          </span>
+          <div className="text-xs space-y-0.5">
+            <span className="font-bold block text-sm text-amber-900">
+              Termly Fee Structures &amp; Non-Duplicating Admission Policy
+            </span>
+            <p className="text-amber-800 leading-relaxed">
+              Standard fee structures below are configured <strong>term-by-term (Term 1, Term 2, Term 3)</strong> covering tuition, assessment, and activities.
+              The <strong>Admission Fee (KES 1,500)</strong> is a one-time charge attached exclusively to the <strong>Admit Learner Modal</strong> and is strictly prevented from being charged more than once per student.
+            </p>
+          </div>
+        </div>
+        <div className="shrink-0 self-end sm:self-center">
+          <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
+            One-Time Admission · KES 1,500
+          </span>
         </div>
       </div>
 
@@ -599,98 +679,136 @@ export const FeeStructureView: React.FC = () => {
         {/* Compact Key Financial Anchors */}
         <div className="flex items-center gap-4 sm:gap-6 flex-wrap divide-x divide-gray-100 text-xs">
           <div className="pr-4">
-            <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider block">Total Classes</span>
+            <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider block">Total Schedules</span>
             <span className="text-base font-bold text-gray-900">{structures.length} Configured</span>
           </div>
           <div className="pl-4 pr-4">
-            <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider block">Cumulative Annual Value</span>
+            <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider block">Cumulative Schedule Value</span>
             <span className="text-base font-bold font-mono text-[#7a1228]">
-              KES {totalAnnualValue.toLocaleString()}
+              KES {totalScheduleValue.toLocaleString()}
             </span>
           </div>
           <div className="pl-4">
-            <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider block">Average Annual Fee</span>
+            <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider block">Average Term Fee</span>
             <span className="text-base font-bold font-mono text-gray-800">
-              KES {structures.length > 0 ? Math.round(totalAnnualValue / structures.length).toLocaleString() : 0}
+              KES {structures.length > 0 ? Math.round(totalScheduleValue / structures.length).toLocaleString() : 0}
             </span>
           </div>
         </div>
       </div>
 
-      {/* 3. COGNITIVE CHUNKING: EDUCATION LEVEL TABS */}
-      <div className="flex items-center justify-between gap-3 flex-wrap border-b border-gray-200 pb-2">
-        <div className="flex items-center gap-1.5 flex-wrap">
+      {/* 3. COGNITIVE CHUNKING: TERM TABS & EDUCATION LEVEL TABS */}
+      <div className="space-y-2 border-b border-gray-200 pb-3">
+        {/* Term Tabs */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs font-bold text-gray-500 uppercase tracking-wider mr-1">Term:</span>
           {(
             [
-              { id: 'ALL', label: 'All Classes', count: tierCounts.ALL },
-              { id: 'PRE_PRIMARY', label: 'Pre-Primary', count: tierCounts.PRE_PRIMARY },
-              { id: 'LOWER_PRIMARY', label: 'Lower Primary', count: tierCounts.LOWER_PRIMARY },
-              { id: 'UPPER_PRIMARY', label: 'Upper Primary', count: tierCounts.UPPER_PRIMARY },
-              { id: 'JUNIOR_SECONDARY', label: 'Junior School', count: tierCounts.JUNIOR_SECONDARY },
+              { id: 'ALL', label: 'All Terms', count: termCounts.ALL },
+              { id: 'TERM_1', label: 'Term 1', count: termCounts.TERM_1 },
+              { id: 'TERM_2', label: 'Term 2', count: termCounts.TERM_2 },
+              { id: 'TERM_3', label: 'Term 3', count: termCounts.TERM_3 },
             ] as const
-          ).map((tier) => {
-            const isActive = selectedTier === tier.id;
+          ).map((term) => {
+            const isActive = selectedTerm === term.id;
             return (
               <button
-                key={tier.id}
-                onClick={() => setSelectedTier(tier.id)}
+                key={term.id}
+                onClick={() => setSelectedTerm(term.id)}
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                   isActive
                     ? 'bg-[#7a1228] text-white shadow-xs'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900'
+                    : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                 }`}
               >
-                <span>{tier.label}</span>
+                <span>{term.label}</span>
                 <span
                   className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                    isActive ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-700'
+                    isActive ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-600'
                   }`}
                 >
-                  {tier.count}
+                  {term.count}
                 </span>
               </button>
             );
           })}
         </div>
 
-        {/* View Toggle & Expand Controls */}
-        <div className="flex items-center gap-2">
-          {viewMode === 'grid' && filteredStructures.length > 0 && (
-            <button
-              type="button"
-              onClick={isAllExpanded ? collapseAllCards : expandAllCards}
-              className="text-xs font-semibold text-[#7a1228] hover:underline cursor-pointer flex items-center gap-1"
-            >
-              <span className="material-symbols-outlined text-[16px]">
-                {isAllExpanded ? 'unfold_less' : 'unfold_more'}
-              </span>
-              <span>{isAllExpanded ? 'Collapse All' : 'Expand All'}</span>
-            </button>
-          )}
+        {/* Education Level Tabs */}
+        <div className="flex items-center justify-between gap-3 flex-wrap pt-1">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {(
+              [
+                { id: 'ALL', label: 'All Classes', count: tierCounts.ALL },
+                { id: 'PRE_PRIMARY', label: 'Pre-Primary', count: tierCounts.PRE_PRIMARY },
+                { id: 'LOWER_PRIMARY', label: 'Lower Primary', count: tierCounts.LOWER_PRIMARY },
+                { id: 'UPPER_PRIMARY', label: 'Upper Primary', count: tierCounts.UPPER_PRIMARY },
+                { id: 'JUNIOR_SECONDARY', label: 'Junior School', count: tierCounts.JUNIOR_SECONDARY },
+              ] as const
+            ).map((tier) => {
+              const isActive = selectedTier === tier.id;
+              return (
+                <button
+                  key={tier.id}
+                  onClick={() => setSelectedTier(tier.id)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    isActive
+                      ? 'bg-[#7a1228] text-white shadow-xs'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900'
+                  }`}
+                >
+                  <span>{tier.label}</span>
+                  <span
+                    className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                      isActive ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-700'
+                    }`}
+                  >
+                    {tier.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
 
-          <div className="flex items-center bg-gray-100 p-1 rounded-xl border border-gray-200">
-            <button
-              type="button"
-              onClick={() => setViewMode('grid')}
-              title="Card Grid View"
-              className={`p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
-                viewMode === 'grid' ? 'bg-white text-[#7a1228] shadow-xs' : 'text-gray-500 hover:text-gray-900'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[16px]">grid_view</span>
-              <span className="hidden sm:inline">Cards</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('table')}
-              title="Compact Table View"
-              className={`p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
-                viewMode === 'table' ? 'bg-white text-[#7a1228] shadow-xs' : 'text-gray-500 hover:text-gray-900'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[16px]">table_rows</span>
-              <span className="hidden sm:inline">Table</span>
-            </button>
+          {/* View Toggle & Expand Controls */}
+          <div className="flex items-center gap-2">
+            {viewMode === 'grid' && filteredStructures.length > 0 && (
+              <button
+                type="button"
+                onClick={isAllExpanded ? collapseAllCards : expandAllCards}
+                className="text-xs font-semibold text-[#7a1228] hover:underline cursor-pointer flex items-center gap-1"
+              >
+                <span className="material-symbols-outlined text-[16px]">
+                  {isAllExpanded ? 'unfold_less' : 'unfold_more'}
+                </span>
+                <span>{isAllExpanded ? 'Collapse All' : 'Expand All'}</span>
+              </button>
+            )}
+
+            <div className="flex items-center bg-gray-100 p-1 rounded-xl border border-gray-200">
+              <button
+                type="button"
+                onClick={() => setViewMode('grid')}
+                title="Card Grid View"
+                className={`p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
+                  viewMode === 'grid' ? 'bg-white text-[#7a1228] shadow-xs' : 'text-gray-500 hover:text-gray-900'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[16px]">grid_view</span>
+                <span className="hidden sm:inline">Cards</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('table')}
+                title="Compact Table View"
+                className={`p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
+                  viewMode === 'table' ? 'bg-white text-[#7a1228] shadow-xs' : 'text-gray-500 hover:text-gray-900'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[16px]">table_rows</span>
+                <span className="hidden sm:inline">Table</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -779,13 +897,14 @@ export const FeeStructureView: React.FC = () => {
                   {/* Card Header: Class Identification & Action Toolbar */}
                   <div className="flex items-start justify-between border-b border-gray-100 pb-3">
                     <div>
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="text-xs font-bold text-[#7a1228] uppercase bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">
                           {resolveGradeName(s.gradeLevel)}
                         </span>
                         <span className="text-[10px] font-semibold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md">
                           {resolveAcademicYearName(s.academicYearId)}
                         </span>
+                        {getTermBadge(s.termId)}
                       </div>
                       <h3 className="font-bold text-sm text-gray-900 mt-1 leading-snug">
                         {s.title}
@@ -825,11 +944,11 @@ export const FeeStructureView: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Primary Anchor: Annual Total */}
+                  {/* Primary Anchor: Term Total */}
                   <div className="bg-rose-50/50 rounded-xl p-3.5 border border-rose-100 flex items-center justify-between">
                     <div>
-                      <span className="text-xs font-bold text-gray-700">Whole-Year Fee</span>
-                      <span className="text-[10px] text-gray-400 block">Full annual billing</span>
+                      <span className="text-xs font-bold text-gray-700">Term Fee</span>
+                      <span className="text-[10px] text-gray-400 block">{getTermName(s.termId)} billing</span>
                     </div>
                     <span className="text-xl font-bold font-mono text-[#7a1228]">
                       KES {total.toLocaleString()}
@@ -846,7 +965,7 @@ export const FeeStructureView: React.FC = () => {
                     <div className="p-2 rounded-xl bg-gray-50 border border-gray-100">
                       <span className="text-[10px] uppercase font-bold text-gray-500 block">Billing Period</span>
                       <span className="font-mono font-bold text-xs text-gray-800 block mt-0.5">
-                        Whole Year
+                        {getTermName(s.termId)}
                       </span>
                     </div>
                   </div>
@@ -936,8 +1055,9 @@ export const FeeStructureView: React.FC = () => {
                   <th className="py-3 px-4">Level / Class</th>
                   <th className="py-3 px-4">Schedule Title</th>
                   <th className="py-3 px-4 text-center">Academic Year</th>
+                  <th className="py-3 px-4 text-center">Term</th>
                   <th className="py-3 px-4 text-center">Items</th>
-                  <th className="py-3 px-4 text-right text-gray-900 font-bold">Whole Year Total</th>
+                  <th className="py-3 px-4 text-right text-gray-900 font-bold">Term Total</th>
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
@@ -957,6 +1077,9 @@ export const FeeStructureView: React.FC = () => {
                       </td>
                       <td className="py-3.5 px-4 text-center font-mono text-xs text-gray-600">
                         {s.academicYearId || '2026'}
+                      </td>
+                      <td className="py-3.5 px-4 text-center">
+                        {getTermBadge(s.termId)}
                       </td>
                       <td className="py-3.5 px-4 text-center">
                         <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded font-mono text-[11px] font-semibold">
@@ -1104,7 +1227,7 @@ export const FeeStructureView: React.FC = () => {
                 </div>
                 <div className="pt-2">
                   <span className="inline-block px-3 py-1 bg-gray-100 rounded-full font-bold uppercase text-xs tracking-wider text-gray-800">
-                    Official Ratified Annual CBC Fee Schedule
+                    Official Ratified CBC Termly Fee Schedule
                   </span>
                 </div>
               </div>
@@ -1116,15 +1239,17 @@ export const FeeStructureView: React.FC = () => {
                   <span className="font-bold text-gray-900">{inspectingStructure.title}</span>
                 </div>
                 <div>
-                  <span className="text-gray-500 block uppercase font-medium text-[10px]">Grade / Level</span>
-                  <span className="font-bold text-gray-900">{inspectingStructure.gradeLevel?.replace('_', ' ')}</span>
+                  <span className="text-gray-500 block uppercase font-medium text-[10px]">Grade &amp; Term</span>
+                  <span className="font-bold text-gray-900">
+                    {inspectingStructure.gradeLevel?.replace('_', ' ')} · {getTermName(inspectingStructure.termId)}
+                  </span>
                 </div>
                 <div>
-                  <span className="text-gray-500 block uppercase font-medium text-[10px]">Annual Due Date</span>
-                  <span className="font-mono font-bold text-gray-900">{inspectingStructure.dueDate}</span>
+                  <span className="text-gray-500 block uppercase font-medium text-[10px]">Term Due Date</span>
+                  <span className="font-mono font-bold text-gray-900">{inspectingStructure.dueDate || 'Start of Term'}</span>
                 </div>
                 <div>
-                  <span className="text-gray-500 block uppercase font-medium text-[10px]">Whole Year Total</span>
+                  <span className="text-gray-500 block uppercase font-medium text-[10px]">Total Term Fee</span>
                   <span className="font-mono font-bold text-[#7a1228]">
                     KES {getStructureTotal(inspectingStructure).toLocaleString()}
                   </span>
@@ -1140,7 +1265,7 @@ export const FeeStructureView: React.FC = () => {
                       <th className="py-2.5 px-3">Item Description</th>
                       <th className="py-2.5 px-3">Category</th>
                       <th className="py-2.5 px-3 text-center">Billing Type</th>
-                      <th className="py-2.5 px-3 text-right text-gray-900">Annual Fee (KES)</th>
+                      <th className="py-2.5 px-3 text-right text-gray-900">Term Fee (KES)</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
@@ -1175,7 +1300,7 @@ export const FeeStructureView: React.FC = () => {
                   <tfoot className="bg-gray-100 font-bold border-t-2 border-gray-400">
                     <tr>
                       <td colSpan={4} className="py-2.5 px-3 uppercase text-gray-900">
-                        Total Annual Fee (Whole Year):
+                        Total Term Fee ({getTermName(inspectingStructure.termId)}):
                       </td>
                       <td className="py-2.5 px-3 text-right font-mono text-base text-[#7a1228]">
                         KES {getStructureTotal(inspectingStructure).toLocaleString()}

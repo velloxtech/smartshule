@@ -358,9 +358,9 @@ export class CbcAssessmentUseCases {
       academicYearId: dto.academicYearId
     });
 
-    // Fetch registered learning areas for this student's grade (to ensure all 12 subjects are represented)
-    let allGradeAreas = await this.academicRepository.findAllLearningAreas({ gradeLevel: student.gradeLevel });
-    if (allGradeAreas.length === 0) {
+    // Fetch registered learning areas for this student's grade
+    let allGradeAreas = student.gradeLevel ? await this.academicRepository.findAllLearningAreas({ gradeLevel: student.gradeLevel }) : [];
+    if (allGradeAreas.length === 0 && summatives.length === 0) {
       allGradeAreas = await this.academicRepository.findAllLearningAreas();
     }
 
@@ -389,11 +389,14 @@ export class CbcAssessmentUseCases {
       return 42;
     };
 
+    const isTerm1 = dto.termId?.includes('1') || dto.termId?.toLowerCase().includes('term-1');
+    const isTerm2 = dto.termId?.includes('2') || dto.termId?.toLowerCase().includes('term-2');
+    const isTerm3 = dto.termId?.includes('3') || dto.termId?.toLowerCase().includes('term-3') || (!isTerm1 && !isTerm2);
+
     // 1. Add summatives explicitly recorded for this term
     for (const summ of summatives) {
       const area = await this.academicRepository.findLearningAreaById(summ.learningAreaId);
       const rubricVal = PerformanceLevelScores[summ.overallPerformanceLevel].score;
-      totalScoreSum += rubricVal;
       let summRawScore: number | undefined;
       let summMaxScore: number | undefined;
       if (summ.strandScores && summ.strandScores.length > 0) {
@@ -404,21 +407,25 @@ export class CbcAssessmentUseCases {
         }
       }
       const pct = toPercent(summRawScore && summMaxScore && summMaxScore > 0 ? (summRawScore / summMaxScore) * 100 : rubricVal, summ.overallPerformanceLevel);
+      totalScoreSum += pct;
 
       learningAreaAssessments.push({
         learningAreaId: summ.learningAreaId,
         learningAreaName: area ? area.name : 'Learning Area',
+        code: area?.code,
+        levelLabel: summ.overallPerformanceLevel === PerformanceLevel.EXCEEDING_EXPECTATIONS ? 'EE' : summ.overallPerformanceLevel === PerformanceLevel.MEETING_EXPECTATIONS ? 'ME' : summ.overallPerformanceLevel === PerformanceLevel.APPROACHING_EXPECTATIONS ? 'AE' : 'BE',
         performanceLevel: summ.overallPerformanceLevel,
         score: pct,
+        rawScore: summRawScore,
         rubricScore: rubricVal,
-        term1Score: Math.max(35, pct - 6),
-        term2Score: Math.max(40, pct - 3),
-        term3Score: pct,
+        term1Score: isTerm1 ? pct : undefined,
+        term2Score: isTerm2 ? pct : undefined,
+        term3Score: isTerm3 ? pct : undefined,
         teacherRemarks: summ.teacherRemarks || 'Demonstrates strong understanding and mastery of core strand learning outcomes.'
       });
     }
 
-    // 2. Ensure all registered learning areas for this grade (e.g. 12 subjects) are always included
+    // 2. Ensure all registered learning areas for this grade are included if not yet evaluated
     for (const area of allGradeAreas) {
       if (!learningAreaAssessments.some(a => a.learningAreaId === area.id || a.learningAreaName.toLowerCase() === area.name.toLowerCase())) {
         const areaFormatives = formatives.filter(f => f.learningAreaId === area.id);
@@ -434,18 +441,20 @@ export class CbcAssessmentUseCases {
           rubricVal = PerformanceLevelScores[level].score;
           teacherRemarks = `Continuous assessment indicates ${PerformanceLevelScores[level].label.toLowerCase()}.`;
         }
-        totalScoreSum += rubricVal;
         const pct = toPercent(rubricVal, level);
+        totalScoreSum += pct;
 
         learningAreaAssessments.push({
           learningAreaId: area.id,
           learningAreaName: area.name,
+          code: area.code,
+          levelLabel: level === PerformanceLevel.EXCEEDING_EXPECTATIONS ? 'EE' : level === PerformanceLevel.MEETING_EXPECTATIONS ? 'ME' : level === PerformanceLevel.APPROACHING_EXPECTATIONS ? 'AE' : 'BE',
           performanceLevel: level,
           score: pct,
           rubricScore: rubricVal,
-          term1Score: Math.max(35, pct - 6),
-          term2Score: Math.max(40, pct - 3),
-          term3Score: pct,
+          term1Score: isTerm1 ? pct : undefined,
+          term2Score: isTerm2 ? pct : undefined,
+          term3Score: isTerm3 ? pct : undefined,
           teacherRemarks
         });
       }
@@ -461,50 +470,58 @@ export class CbcAssessmentUseCases {
       if (t3) entry.term3Score = toPercent(PerformanceLevelScores[t3.overallPerformanceLevel].score, t3.overallPerformanceLevel);
     }
 
-    // 4. Calculate multi-term overall averages for Term 1, Term 2, and Term 3
-    const term1Avg = learningAreaAssessments.length > 0
-      ? Math.round(learningAreaAssessments.reduce((sum, a) => sum + (a.term1Score || 70), 0) / learningAreaAssessments.length)
-      : 72;
-    const term2Avg = learningAreaAssessments.length > 0
-      ? Math.round(learningAreaAssessments.reduce((sum, a) => sum + (a.term2Score || 74), 0) / learningAreaAssessments.length)
-      : 76;
-    const term3Avg = learningAreaAssessments.length > 0
-      ? Math.round(learningAreaAssessments.reduce((sum, a) => sum + (a.term3Score || 78), 0) / learningAreaAssessments.length)
-      : 80;
+    const averageScore = learningAreaAssessments.length > 0
+      ? Number((totalScoreSum / learningAreaAssessments.length).toFixed(2))
+      : 75.0;
 
-    const termTrends: TermTrendEntry[] = [
-      {
+    let overallLevel = PerformanceLevel.MEETING_EXPECTATIONS;
+    if (averageScore >= 80) overallLevel = PerformanceLevel.EXCEEDING_EXPECTATIONS;
+    else if (averageScore >= 65) overallLevel = PerformanceLevel.MEETING_EXPECTATIONS;
+    else if (averageScore >= 50) overallLevel = PerformanceLevel.APPROACHING_EXPECTATIONS;
+    else overallLevel = PerformanceLevel.BELOW_EXPECTATIONS;
+
+    // 4. Calculate multi-term overall averages strictly for terms present in the database
+    const hasT1 = learningAreaAssessments.some(a => a.term1Score !== undefined);
+    const hasT2 = learningAreaAssessments.some(a => a.term2Score !== undefined);
+    const hasT3 = learningAreaAssessments.some(a => a.term3Score !== undefined);
+
+    const termTrends: TermTrendEntry[] = [];
+
+    if (hasT1) {
+      const t1Scores = learningAreaAssessments.map(a => a.term1Score).filter((s): s is number => s !== undefined);
+      const term1Avg = t1Scores.length > 0 ? Math.round(t1Scores.reduce((sum, s) => sum + s, 0) / t1Scores.length) : Math.round(averageScore);
+      termTrends.push({
         term: 'Term 1',
         termNumber: 1,
         averageScore: term1Avg,
         performanceLevel: term1Avg >= 80 ? PerformanceLevel.EXCEEDING_EXPECTATIONS : term1Avg >= 65 ? PerformanceLevel.MEETING_EXPECTATIONS : PerformanceLevel.APPROACHING_EXPECTATIONS,
-        status: 'COMPLETED'
-      },
-      {
+        status: isTerm1 ? 'CURRENT' : 'COMPLETED'
+      });
+    }
+
+    if (hasT2) {
+      const t2Scores = learningAreaAssessments.map(a => a.term2Score).filter((s): s is number => s !== undefined);
+      const term2Avg = t2Scores.length > 0 ? Math.round(t2Scores.reduce((sum, s) => sum + s, 0) / t2Scores.length) : Math.round(averageScore);
+      termTrends.push({
         term: 'Term 2',
         termNumber: 2,
         averageScore: term2Avg,
         performanceLevel: term2Avg >= 80 ? PerformanceLevel.EXCEEDING_EXPECTATIONS : term2Avg >= 65 ? PerformanceLevel.MEETING_EXPECTATIONS : PerformanceLevel.APPROACHING_EXPECTATIONS,
-        status: 'COMPLETED'
-      },
-      {
+        status: isTerm2 ? 'CURRENT' : 'COMPLETED'
+      });
+    }
+
+    if (hasT3) {
+      const t3Scores = learningAreaAssessments.map(a => a.term3Score).filter((s): s is number => s !== undefined);
+      const term3Avg = t3Scores.length > 0 ? Math.round(t3Scores.reduce((sum, s) => sum + s, 0) / t3Scores.length) : Math.round(averageScore);
+      termTrends.push({
         term: 'Term 3',
         termNumber: 3,
         averageScore: term3Avg,
         performanceLevel: term3Avg >= 80 ? PerformanceLevel.EXCEEDING_EXPECTATIONS : term3Avg >= 65 ? PerformanceLevel.MEETING_EXPECTATIONS : PerformanceLevel.APPROACHING_EXPECTATIONS,
-        status: 'CURRENT'
-      }
-    ];
-
-    const averageScore = learningAreaAssessments.length > 0
-      ? Number((totalScoreSum / learningAreaAssessments.length).toFixed(2))
-      : 3.0;
-
-    let overallLevel = PerformanceLevel.MEETING_EXPECTATIONS;
-    if (averageScore >= 3.5) overallLevel = PerformanceLevel.EXCEEDING_EXPECTATIONS;
-    else if (averageScore >= 2.5) overallLevel = PerformanceLevel.MEETING_EXPECTATIONS;
-    else if (averageScore >= 1.5) overallLevel = PerformanceLevel.APPROACHING_EXPECTATIONS;
-    else overallLevel = PerformanceLevel.BELOW_EXPECTATIONS;
+        status: isTerm3 ? 'CURRENT' : 'COMPLETED'
+      });
+    }
 
     // Core Competency ratings
     const competencyKeys = Object.values(CoreCompetency);
@@ -639,43 +656,89 @@ export class CbcAssessmentUseCases {
     const student = await this.studentRepository.findById(studentId);
     const reportData = reportCard.toJSON();
 
-    // Hydrate multi-term trend progression if missing or empty
+    // Multi-term trend progression strictly from database records
     if (!reportData.termTrends || (reportData.termTrends as any[]).length === 0) {
       const currentAvg = reportData.overallAverageScore
         ? (reportData.overallAverageScore <= 4 ? Math.round(reportData.overallAverageScore * 25) : Math.round(reportData.overallAverageScore))
         : 78;
 
-      const t1Avg = Math.max(40, currentAvg - 6);
-      const t2Avg = Math.max(45, currentAvg - 2);
-      const t3Avg = currentAvg;
+      const currentTermNumber = termId?.includes('1') ? 1 : termId?.includes('2') ? 2 : 3;
 
-      reportData.termTrends = [
-        {
+      // Check if student has report cards for other terms in the database for this academic year
+      const allReports = await this.cbcRepository.findReportCardsByStudent(studentId).catch(() => []);
+      const yearReports = allReports.filter(r => r.academicYearId === academicYearId);
+
+      const trends: TermTrendEntry[] = [];
+      const t1Rep = yearReports.find(r => r.termId?.includes('1') || r.termId?.toLowerCase().includes('term-1'));
+      const t2Rep = yearReports.find(r => r.termId?.includes('2') || r.termId?.toLowerCase().includes('term-2'));
+      const t3Rep = yearReports.find(r => r.termId?.includes('3') || r.termId?.toLowerCase().includes('term-3'));
+
+      if (t1Rep) {
+        const avg = t1Rep.overallAverageScore <= 4 ? Math.round(t1Rep.overallAverageScore * 25) : Math.round(t1Rep.overallAverageScore);
+        trends.push({
           term: 'Term 1',
           termNumber: 1,
-          averageScore: t1Avg,
-          performanceLevel: t1Avg >= 80 ? 'EE' : t1Avg >= 65 ? 'ME' : 'AE',
-          status: 'COMPLETED'
-        },
-        {
+          averageScore: avg,
+          performanceLevel: avg >= 80 ? 'EE' : avg >= 65 ? 'ME' : avg >= 50 ? 'AE' : 'BE',
+          status: currentTermNumber === 1 ? 'CURRENT' : 'COMPLETED'
+        });
+      } else if (currentTermNumber === 1) {
+        trends.push({
+          term: 'Term 1',
+          termNumber: 1,
+          averageScore: currentAvg,
+          performanceLevel: currentAvg >= 80 ? 'EE' : currentAvg >= 65 ? 'ME' : currentAvg >= 50 ? 'AE' : 'BE',
+          status: 'CURRENT'
+        });
+      }
+
+      if (t2Rep) {
+        const avg = t2Rep.overallAverageScore <= 4 ? Math.round(t2Rep.overallAverageScore * 25) : Math.round(t2Rep.overallAverageScore);
+        trends.push({
           term: 'Term 2',
           termNumber: 2,
-          averageScore: t2Avg,
-          performanceLevel: t2Avg >= 80 ? 'EE' : t2Avg >= 65 ? 'ME' : 'AE',
-          status: 'COMPLETED'
-        },
-        {
+          averageScore: avg,
+          performanceLevel: avg >= 80 ? 'EE' : avg >= 65 ? 'ME' : avg >= 50 ? 'AE' : 'BE',
+          status: currentTermNumber === 2 ? 'CURRENT' : 'COMPLETED'
+        });
+      } else if (currentTermNumber === 2) {
+        trends.push({
+          term: 'Term 2',
+          termNumber: 2,
+          averageScore: currentAvg,
+          performanceLevel: currentAvg >= 80 ? 'EE' : currentAvg >= 65 ? 'ME' : currentAvg >= 50 ? 'AE' : 'BE',
+          status: 'CURRENT'
+        });
+      }
+
+      if (t3Rep) {
+        const avg = t3Rep.overallAverageScore <= 4 ? Math.round(t3Rep.overallAverageScore * 25) : Math.round(t3Rep.overallAverageScore);
+        trends.push({
           term: 'Term 3',
           termNumber: 3,
-          averageScore: t3Avg,
-          performanceLevel: t3Avg >= 80 ? 'EE' : t3Avg >= 65 ? 'ME' : 'AE',
+          averageScore: avg,
+          performanceLevel: avg >= 80 ? 'EE' : avg >= 65 ? 'ME' : avg >= 50 ? 'AE' : 'BE',
+          status: currentTermNumber === 3 ? 'CURRENT' : 'COMPLETED'
+        });
+      } else if (currentTermNumber === 3) {
+        trends.push({
+          term: 'Term 3',
+          termNumber: 3,
+          averageScore: currentAvg,
+          performanceLevel: currentAvg >= 80 ? 'EE' : currentAvg >= 65 ? 'ME' : currentAvg >= 50 ? 'AE' : 'BE',
           status: 'CURRENT'
-        }
-      ];
+        });
+      }
+
+      reportData.termTrends = trends;
     }
 
-    // Ensure multi-term scores exist on each learning area entry
+    // Ensure multi-term scores exist on each learning area entry strictly according to database records
     if (Array.isArray(reportData.learningAreaAssessments)) {
+      const isTerm3 = termId?.includes('3') || termId?.toLowerCase().includes('term-3');
+      const isTerm2 = termId?.includes('2') || termId?.toLowerCase().includes('term-2');
+      const isTerm1 = termId?.includes('1') || termId?.toLowerCase().includes('term-1');
+
       reportData.learningAreaAssessments = reportData.learningAreaAssessments.map(ev => {
         const baseScore = ev.score !== undefined && ev.score !== null
           ? (ev.score <= 4 ? (ev.score === 4 ? 85 : ev.score === 3 ? 75 : ev.score === 2 ? 58 : 42) : ev.score)
@@ -683,9 +746,9 @@ export class CbcAssessmentUseCases {
         return {
           ...ev,
           score: baseScore,
-          term1Score: ev.term1Score ?? Math.max(35, baseScore - 6),
-          term2Score: ev.term2Score ?? Math.max(40, baseScore - 3),
-          term3Score: ev.term3Score ?? baseScore,
+          term1Score: ev.term1Score !== undefined ? ev.term1Score : (isTerm1 ? baseScore : undefined),
+          term2Score: ev.term2Score !== undefined ? ev.term2Score : (isTerm2 ? baseScore : undefined),
+          term3Score: ev.term3Score !== undefined ? ev.term3Score : (isTerm3 ? baseScore : undefined),
         };
       });
     }

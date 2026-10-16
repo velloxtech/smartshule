@@ -8,6 +8,17 @@ interface ReportCardsViewProps {
   selectedStudent?: Student;
 }
 
+export const LOWER_PRIMARY_CBC_SUBJECTS = [
+  { name: 'English Language Activities', code: 'ENG', short: 'English' },
+  { name: 'English Reading Activities', code: 'REA', short: 'Reading' },
+  { name: 'Mathematical Activities', code: 'MAT', short: 'Math' },
+  { name: 'Kiswahili Language Activities', code: 'KIS', short: 'Kiswahili' },
+  { name: 'Kusoma Activities', code: 'KUSO', short: 'Kusoma' },
+  { name: 'Environmental Activities', code: 'ENVI', short: 'Environment' },
+  { name: 'Christian Religious Education', code: 'CRE', short: 'CRE' },
+  { name: 'Creative Arts Activities', code: 'CREA', short: 'Creative Arts' },
+];
+
 export const STANDARD_12_CBC_SUBJECTS = [
   { name: 'Mathematics', code: 'MATH', short: 'Math' },
   { name: 'English Language', code: 'ENG', short: 'English' },
@@ -34,6 +45,8 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
   const [reportCardData, setReportCardData] = useState<CbcReportCardData | null>(null);
   const [currentYear, setCurrentYear] = useState<any>(null);
   const [currentTerm, setCurrentTerm] = useState<any>(null);
+  const [availableTerms, setAvailableTerms] = useState<any[]>([]);
+  const [selectedTermId, setSelectedTermId] = useState<string>('');
   const [schoolInfo, setSchoolInfo] = useState<any>(null);
   const [learningAreas, setLearningAreas] = useState<any[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -90,6 +103,12 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
         if (ctxRes?.success && ctxRes.data) {
           setCurrentYear(ctxRes.data.currentYear);
           setCurrentTerm(ctxRes.data.currentTerm);
+          if (ctxRes.data.allTerms && Array.isArray(ctxRes.data.allTerms)) {
+            setAvailableTerms(ctxRes.data.allTerms);
+          }
+          if (ctxRes.data.currentTerm?.id) {
+            setSelectedTermId(ctxRes.data.currentTerm.id);
+          }
         }
         if (scRes?.data) {
           setSchoolInfo(scRes.data);
@@ -114,7 +133,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
 
   const loadReportCard = async (stdId: string, termId?: string, yearId?: string) => {
     if (!stdId) return;
-    const tId = termId || currentTerm?.id;
+    const tId = termId || selectedTermId || currentTerm?.id;
     const yId = yearId || currentYear?.id;
     if (!tId || !yId) {
       setReportCardData(null);
@@ -136,14 +155,16 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
   };
 
   useEffect(() => {
-    if (student?.id && currentTerm?.id && currentYear?.id) {
-      loadReportCard(student.id, currentTerm.id, currentYear.id);
+    const activeTermId = selectedTermId || currentTerm?.id;
+    if (student?.id && activeTermId && currentYear?.id) {
+      loadReportCard(student.id, activeTermId, currentYear.id);
     }
-  }, [student?.id, currentTerm?.id, currentYear?.id]);
+  }, [student?.id, selectedTermId, currentTerm?.id, currentYear?.id]);
 
   const handleGenerateReportCard = async () => {
     if (!student) return;
-    if (!currentTerm?.id || !currentYear?.id) {
+    const activeTerm = availableTerms.find(t => t.id === selectedTermId) || currentTerm;
+    if (!activeTerm?.id || !currentYear?.id) {
       alert('Academic year or term is not configured in the database.');
       return;
     }
@@ -151,13 +172,13 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
     try {
       const res = await apiService.generateReportCard({
         studentId: student.id,
-        termId: currentTerm.id,
+        termId: activeTerm.id,
         academicYearId: currentYear.id,
         classTeacherRemarks: `${student.name} demonstrates commendable diligence, discipline, and active participation in continuous CBC strand learning outcomes.`,
         headTeacherRemarks: 'Commendable performance throughout the term. Demonstrates steady growth in core competencies and moral values.',
-        closingDate: currentTerm.endDate ? new Date(currentTerm.endDate).toISOString().split('T')[0] : undefined,
-        nextTermOpeningDate: currentTerm.endDate
-          ? new Date(new Date(currentTerm.endDate).getTime() + 14 * 86400000).toISOString().split('T')[0]
+        closingDate: activeTerm.endDate ? new Date(activeTerm.endDate).toISOString().split('T')[0] : undefined,
+        nextTermOpeningDate: activeTerm.endDate
+          ? new Date(new Date(activeTerm.endDate).getTime() + 14 * 86400000).toISOString().split('T')[0]
           : undefined,
       });
       if (res.success && res.data) {
@@ -181,130 +202,204 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
   const daysTotal = (reportCardData as any)?.attendanceDaysTotal ?? reportCardData?.attendanceStats?.totalDays ?? 60;
   const attendanceRate = daysTotal > 0 ? Math.round((daysPresent / daysTotal) * 100) : 100;
 
-  // Reconcile and guarantee exactly 12 subjects are always displayed
-  const resolved12Subjects = useMemo(() => {
+  // Reconcile and dynamically resolve subjects corresponding directly to evaluated marks
+  const resolvedSubjects = useMemo(() => {
     const rawEvals = reportCardData?.learningAreaAssessments || [];
 
-    // 1. Gather all unique subject templates (from DB or default 12 CBC learning areas)
-    let masterList: { name: string; short: string; code: string; id?: string }[] = [];
-    if (learningAreas && learningAreas.length >= 12) {
-      masterList = learningAreas.slice(0, 12).map((a, i) => ({
-        name: a.name,
-        short: STANDARD_12_CBC_SUBJECTS[i]?.short || a.name.split(' ')[0],
-        code: a.code || `SUBJ${i + 1}`,
-        id: a.id,
-      }));
-    } else if (learningAreas && learningAreas.length > 0) {
-      masterList = learningAreas.map((a, i) => ({
-        name: a.name,
-        short: STANDARD_12_CBC_SUBJECTS[i]?.short || a.name.split(' ')[0],
-        code: a.code || `SUBJ${i + 1}`,
-        id: a.id,
-      }));
-      for (const std of STANDARD_12_CBC_SUBJECTS) {
-        if (!masterList.some((m) => m.name.toLowerCase().includes(std.name.toLowerCase()) || std.name.toLowerCase().includes(m.name.toLowerCase()))) {
-          masterList.push(std);
-        }
-        if (masterList.length >= 12) break;
-      }
-    } else {
-      masterList = STANDARD_12_CBC_SUBJECTS;
-    }
-
-    // Ensure strictly 12 subjects
-    while (masterList.length < 12) {
-      const idx = masterList.length;
-      masterList.push(STANDARD_12_CBC_SUBJECTS[idx] || { name: `Subject ${idx + 1}`, short: `Subj ${idx + 1}`, code: `S${idx + 1}` });
-    }
-    masterList = masterList.slice(0, 12);
-
-    // 2. Map and reconcile each subject with actual student evaluations
-    return masterList.map((subj, index) => {
-      const matched = rawEvals.find((ev: any) =>
-        (subj.id && ev.learningAreaId === subj.id) ||
-        (ev.learningAreaName && (
-          ev.learningAreaName.toLowerCase() === subj.name.toLowerCase() ||
-          ev.learningAreaName.toLowerCase().includes(subj.name.toLowerCase()) ||
-          subj.name.toLowerCase().includes(ev.learningAreaName.toLowerCase())
-        ))
-      );
-
-      if (matched) {
-        const rawScore = matched.score !== undefined && matched.score !== null ? Number(matched.score) : 78;
+    // If student has recorded assessments, use them directly as the source of truth!
+    if (rawEvals && rawEvals.length > 0) {
+      return rawEvals.map((ev: any, index: number) => {
+        const rawScore = ev.score !== undefined && ev.score !== null ? Number(ev.score) : 75;
         const score = rawScore <= 4 ? (rawScore === 4 ? 86 : rawScore === 3 ? 76 : rawScore === 2 ? 58 : 44) : rawScore;
-        const rubricScore = matched.rubricScore ?? (matched.performanceLevel?.includes('EXCEED') ? 4 : matched.performanceLevel?.includes('APPROACH') ? 2 : matched.performanceLevel?.includes('BELOW') ? 1 : 3);
-        const rubricCode: 'EE' | 'ME' | 'AE' | 'BE' = rubricScore >= 4 ? 'EE' : rubricScore === 3 ? 'ME' : rubricScore === 2 ? 'AE' : 'BE';
-        const term3Score = matched.term3Score ?? score;
-        const term2Score = matched.term2Score ?? Math.max(40, term3Score - 3);
-        const term1Score = matched.term1Score ?? Math.max(35, term3Score - 6);
+
+        let rubricCode: 'EE' | 'ME' | 'AE' | 'BE' = 'ME';
+        const rawLvl = (ev.levelLabel || ev.performanceLevel || '').toUpperCase();
+        if (rawLvl.includes('EE') || rawLvl.includes('EXCEED') || score >= 80) {
+          rubricCode = 'EE';
+        } else if (rawLvl.includes('ME') || rawLvl.includes('MEET') || score >= 65) {
+          rubricCode = 'ME';
+        } else if (rawLvl.includes('AE') || rawLvl.includes('APPROACH') || score >= 50) {
+          rubricCode = 'AE';
+        } else {
+          rubricCode = 'BE';
+        }
+
+        const rubricScore = ev.rubricScore ?? (rubricCode === 'EE' ? 4 : rubricCode === 'ME' ? 3 : rubricCode === 'AE' ? 2 : 1);
+        
+        // Strictly determine available terms from database records without dummy values
+        const activeTermNum = (() => {
+          const t = availableTerms.find(term => term.id === selectedTermId) || currentTerm;
+          if (t?.termNumber) return Number(t.termNumber);
+          const idStr = (selectedTermId || currentTerm?.id || '').toLowerCase();
+          if (idStr.includes('1') || idStr.includes('t1')) return 1;
+          if (idStr.includes('2') || idStr.includes('t2')) return 2;
+          return 3;
+        })();
+
+        const isTerm1 = activeTermNum === 1;
+        const isTerm2 = activeTermNum === 2;
+        const isTerm3 = activeTermNum === 3;
+
+        const term1Score = ev.term1Score !== undefined && ev.term1Score !== null ? Number(ev.term1Score) : (isTerm1 ? score : undefined);
+        const term2Score = ev.term2Score !== undefined && ev.term2Score !== null ? Number(ev.term2Score) : (isTerm2 ? score : undefined);
+        const term3Score = ev.term3Score !== undefined && ev.term3Score !== null ? Number(ev.term3Score) : (isTerm3 ? score : undefined);
+        const name = ev.learningAreaName || ev.name || `Subject ${index + 1}`;
+        const code = ev.code || ev.shortName || (name.length <= 6 ? name : name.split(' ')[0].toUpperCase());
+        const short = ev.shortName || ev.code || name.split(' ')[0];
 
         return {
-          id: matched.learningAreaId || subj.id || `subj-${index}`,
-          name: matched.learningAreaName || subj.name,
-          short: subj.short,
-          code: subj.code,
+          id: ev.learningAreaId || ev.id || `subj-${index}`,
+          name,
+          short,
+          code,
           score,
           rubricScore,
           rubricCode,
-          performanceLevel: matched.performanceLevel || (rubricCode === 'EE' ? 'EXCEEDING_EXPECTATIONS' : rubricCode === 'ME' ? 'MEETING_EXPECTATIONS' : rubricCode === 'AE' ? 'APPROACHING_EXPECTATIONS' : 'BELOW_EXPECTATIONS'),
-          teacherRemarks: matched.teacherRemarks || 'Demonstrates strong understanding and mastery of core strand competencies.',
+          performanceLevel: ev.performanceLevel || (rubricCode === 'EE' ? 'EXCEEDING_EXPECTATIONS' : rubricCode === 'ME' ? 'MEETING_EXPECTATIONS' : rubricCode === 'AE' ? 'APPROACHING_EXPECTATIONS' : 'BELOW_EXPECTATIONS'),
+          teacherRemarks: ev.teacherRemarks || 'Demonstrates strong understanding and mastery of core strand competencies.',
           term1Score,
           term2Score,
           term3Score,
           isAssessed: true,
         };
-      }
+      });
+    }
 
-      // Unevaluated subject: continuous formative assessment status
-      const variance = ((index * 3) % 9) - 3;
-      const term3Score = Math.min(92, Math.max(68, 76 + variance));
-      const term2Score = Math.max(62, term3Score - 3);
-      const term1Score = Math.max(58, term3Score - 6);
-      const rubricCode: 'EE' | 'ME' | 'AE' | 'BE' = term3Score >= 80 ? 'EE' : 'ME';
-      const rubricScore = rubricCode === 'EE' ? 4 : 3;
-
-      return {
-        id: subj.id || `subj-${index}`,
-        name: subj.name,
-        short: subj.short,
-        code: subj.code,
-        score: term3Score,
-        rubricScore,
-        rubricCode,
-        performanceLevel: rubricCode === 'EE' ? 'EXCEEDING_EXPECTATIONS' : 'MEETING_EXPECTATIONS',
-        teacherRemarks: 'Continuous assessment demonstrates consistent learner engagement and strand outcome progress.',
-        term1Score,
-        term2Score,
-        term3Score,
-        isAssessed: false,
-      };
+    // Fallback: If no evaluations recorded yet, determine expected curriculum subjects by student grade level
+    const gradeStr = (student?.grade || (student as any)?.gradeLevel || '').toUpperCase();
+    const isLowerPrimary = gradeStr.includes('GRADE 1') || gradeStr.includes('GRADE 2') || gradeStr.includes('GRADE 3') || gradeStr.includes('GRADE_1') || gradeStr.includes('GRADE_2') || gradeStr.includes('GRADE_3') || gradeStr.includes('PP');
+    
+    // Filter DB learning areas matching student's grade if available
+    const dbGradeAreas = (learningAreas || []).filter(la => {
+      const laGrade = (la.gradeLevel || '').toUpperCase();
+      if (isLowerPrimary) return laGrade.includes('GRADE_3') || laGrade.includes('GRADE_1') || laGrade.includes('GRADE_2');
+      return !laGrade.includes('GRADE_3') && !laGrade.includes('GRADE_1') && !laGrade.includes('GRADE_2');
     });
-  }, [reportCardData?.learningAreaAssessments, learningAreas]);
 
-  // Multi-term aggregate calculations for Term 1, 2, and 3
-  const term1Average = useMemo(() => {
-    if (reportCardData?.termTrends?.[0]?.averageScore) return Math.round(reportCardData.termTrends[0].averageScore);
-    return Math.round(resolved12Subjects.reduce((acc, s) => acc + s.term1Score, 0) / 12);
-  }, [reportCardData?.termTrends, resolved12Subjects]);
+    let templateList: { name: string; short: string; code: string; id?: string }[] = [];
+    if (dbGradeAreas.length > 0) {
+      templateList = dbGradeAreas.map(a => ({
+        name: a.name,
+        short: a.code || a.name.split(' ')[0],
+        code: a.code || 'SUBJ',
+        id: a.id
+      }));
+    } else if (isLowerPrimary) {
+      templateList = LOWER_PRIMARY_CBC_SUBJECTS;
+    } else {
+      templateList = STANDARD_12_CBC_SUBJECTS;
+    }
 
-  const term2Average = useMemo(() => {
-    if (reportCardData?.termTrends?.[1]?.averageScore) return Math.round(reportCardData.termTrends[1].averageScore);
-    return Math.round(resolved12Subjects.reduce((acc, s) => acc + s.term2Score, 0) / 12);
-  }, [reportCardData?.termTrends, resolved12Subjects]);
+    return templateList.map((subj, index) => ({
+      id: subj.id || `subj-${index}`,
+      name: subj.name,
+      short: subj.short,
+      code: subj.code,
+      score: 75,
+      rubricScore: 3,
+      rubricCode: 'ME' as const,
+      performanceLevel: 'MEETING_EXPECTATIONS',
+      teacherRemarks: 'Continuous assessment in progress.',
+      term1Score: undefined,
+      term2Score: undefined,
+      term3Score: 75,
+      isAssessed: false,
+    }));
+  }, [reportCardData?.learningAreaAssessments, learningAreas, student, selectedTermId, availableTerms, currentTerm]);
 
-  const term3Average = useMemo(() => {
-    if (reportCardData?.termTrends?.[2]?.averageScore) return Math.round(reportCardData.termTrends[2].averageScore);
-    return Math.round(resolved12Subjects.reduce((acc, s) => acc + s.term3Score, 0) / 12);
-  }, [reportCardData?.termTrends, resolved12Subjects]);
+  // Totals & Averages
+  const totalMarks = useMemo(() => {
+    return resolvedSubjects.reduce((acc, s) => acc + s.score, 0);
+  }, [resolvedSubjects]);
 
-  const totalMarks12 = useMemo(() => {
-    return resolved12Subjects.reduce((acc, s) => acc + s.score, 0);
-  }, [resolved12Subjects]);
+  const totalPossible = useMemo(() => {
+    return resolvedSubjects.length * 100;
+  }, [resolvedSubjects]);
+
+  const overallAverage = useMemo(() => {
+    if (reportCardData?.overallAverageScore !== undefined && reportCardData?.overallAverageScore !== null) {
+      const avg = Number(reportCardData.overallAverageScore);
+      return avg <= 4 ? Math.round(avg * 25) : Math.round(avg);
+    }
+    return resolvedSubjects.length > 0 ? Math.round(totalMarks / resolvedSubjects.length) : 0;
+  }, [reportCardData?.overallAverageScore, totalMarks, resolvedSubjects.length]);
+
+  const overallPerformanceLevel = useMemo(() => {
+    if (reportCardData?.overallPerformanceLevel) {
+      const lvl = reportCardData.overallPerformanceLevel.toUpperCase();
+      if (lvl === 'EE' || lvl.includes('EXCEED')) return 'Exceeding Expectations';
+      if (lvl === 'ME' || lvl.includes('MEET')) return 'Meeting Expectations';
+      if (lvl === 'AE' || lvl.includes('APPROACH')) return 'Approaching Expectations';
+      if (lvl === 'BE' || lvl.includes('BELOW')) return 'Below Expectations';
+    }
+    if (overallAverage >= 80) return 'Exceeding Expectations';
+    if (overallAverage >= 65) return 'Meeting Expectations';
+    if (overallAverage >= 50) return 'Approaching Expectations';
+    return 'Below Expectations';
+  }, [reportCardData?.overallPerformanceLevel, overallAverage]);
+
+  const activeTermNumber = useMemo(() => {
+    const t = availableTerms.find(term => term.id === selectedTermId) || currentTerm;
+    if (t?.termNumber) return Number(t.termNumber);
+    const idStr = (selectedTermId || currentTerm?.id || '').toLowerCase();
+    if (idStr.includes('1') || idStr.includes('t1')) return 1;
+    if (idStr.includes('2') || idStr.includes('t2')) return 2;
+    return 3;
+  }, [selectedTermId, availableTerms, currentTerm]);
+
+  // Check which terms have verified records in the database
+  const recordedTerms = useMemo(() => {
+    const list: { termNumber: number; label: string; short: string; averageScore: number }[] = [];
+    
+    // Check from reportCardData.termTrends first
+    const trends = reportCardData?.termTrends || [];
+    const t1Trend = trends.find((t: any) => t.termNumber === 1 || t.term?.includes('1'));
+    const t2Trend = trends.find((t: any) => t.termNumber === 2 || t.term?.includes('2'));
+    const t3Trend = trends.find((t: any) => t.termNumber === 3 || t.term?.includes('3'));
+
+    const hasT1InSubj = resolvedSubjects.some(s => s.term1Score !== undefined && s.term1Score !== null);
+    const hasT2InSubj = resolvedSubjects.some(s => s.term2Score !== undefined && s.term2Score !== null);
+    const hasT3InSubj = resolvedSubjects.some(s => s.term3Score !== undefined && s.term3Score !== null);
+
+    if (t1Trend?.averageScore !== undefined || hasT1InSubj) {
+      const avg = t1Trend?.averageScore !== undefined ? Math.round(t1Trend.averageScore) : (
+        resolvedSubjects.length > 0
+          ? Math.round(resolvedSubjects.reduce((acc, s) => acc + (s.term1Score || 0), 0) / resolvedSubjects.length)
+          : 0
+      );
+      list.push({ termNumber: 1, label: 'Term 1', short: 'T1', averageScore: avg });
+    }
+
+    if (t2Trend?.averageScore !== undefined || hasT2InSubj) {
+      const avg = t2Trend?.averageScore !== undefined ? Math.round(t2Trend.averageScore) : (
+        resolvedSubjects.length > 0
+          ? Math.round(resolvedSubjects.reduce((acc, s) => acc + (s.term2Score || 0), 0) / resolvedSubjects.length)
+          : 0
+      );
+      list.push({ termNumber: 2, label: 'Term 2', short: 'T2', averageScore: avg });
+    }
+
+    if (t3Trend?.averageScore !== undefined || hasT3InSubj) {
+      const avg = t3Trend?.averageScore !== undefined ? Math.round(t3Trend.averageScore) : overallAverage;
+      list.push({ termNumber: 3, label: 'Term 3', short: 'T3', averageScore: avg });
+    }
+
+    // Default fallback to current term if empty
+    if (list.length === 0) {
+      list.push({ termNumber: activeTermNumber, label: `Term ${activeTermNumber}`, short: `T${activeTermNumber}`, averageScore: overallAverage });
+    }
+
+    return list;
+  }, [reportCardData?.termTrends, resolvedSubjects, overallAverage, activeTermNumber]);
 
   const termGrowth = useMemo(() => {
-    return Number((term3Average - term1Average).toFixed(1));
-  }, [term3Average, term1Average]);
-
+    if (recordedTerms.length >= 2) {
+      const first = recordedTerms[0].averageScore;
+      const last = recordedTerms[recordedTerms.length - 1].averageScore;
+      return Number((last - first).toFixed(1));
+    }
+    return 0;
+  }, [recordedTerms]);
 
   const getRubricBadge = (rubric: string) => {
     switch (rubric) {
@@ -327,39 +422,196 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
 
   // Pure SVG string generator for offline HTML export and print
   const buildPerformanceGraphSVG = (
-    t1Avg: number,
-    t2Avg: number,
-    t3Avg: number,
-    subjects: typeof resolved12Subjects
+    termsList: typeof recordedTerms,
+    subjects: typeof resolvedSubjects
   ): string => {
     const getY = (val: number) => Math.round(185 - (Math.min(100, Math.max(0, val)) / 100) * 145);
-    const y1 = getY(t1Avg);
-    const y2 = getY(t2Avg);
-    const y3 = getY(t3Avg);
+    const rowSpacing = subjects.length > 0 ? Math.min(20, Math.max(12, Math.floor(155 / subjects.length))) : 15;
+    const barHeight = Math.min(9, Math.max(6, rowSpacing - 6));
 
-    const x1 = 70;
-    const x2 = 185;
-    const x3 = 300;
+    let leftSectionHTML = '';
+
+    if (termsList.length === 1) {
+      // Single Term evaluated (Term 3)
+      const term = termsList[0];
+      const eeCount = subjects.filter(s => s.rubricCode === 'EE').length;
+      const meCount = subjects.filter(s => s.rubricCode === 'ME').length;
+      const aeCount = subjects.filter(s => s.rubricCode === 'AE').length;
+      const beCount = subjects.filter(s => s.rubricCode === 'BE').length;
+      const totalSubj = Math.max(1, subjects.length);
+
+      const eeW = Math.round((eeCount / totalSubj) * 155);
+      const meW = Math.round((meCount / totalSubj) * 155);
+      const aeW = Math.round((aeCount / totalSubj) * 155);
+      const beW = Math.round((beCount / totalSubj) * 155);
+      const isPass = term.averageScore >= 65;
+
+      leftSectionHTML = `
+        <rect x="10" y="10" width="340" height="195" rx="6" fill="#ffffff" stroke="#e5e7eb" stroke-width="1" />
+        <text x="25" y="27" font-size="8.5" font-weight="bold" fill="#800000" font-family="system-ui, sans-serif" text-transform="uppercase">
+          ${term.label} CBC Mastery Profile
+        </text>
+
+        <!-- Summary Metric Header Box -->
+        <rect x="22" y="34" width="316" height="34" rx="4" fill="#faf5f5" stroke="#fecdd3" stroke-width="0.8" />
+        <text x="32" y="46" font-size="6.5" font-weight="bold" fill="#800000" font-family="system-ui, sans-serif" text-transform="uppercase">Term Mean Score</text>
+        <text x="32" y="62" font-size="13" font-weight="900" fill="#800000" font-family="system-ui, sans-serif">${term.averageScore}%</text>
+
+        <text x="135" y="46" font-size="6.5" font-weight="bold" fill="#64748b" font-family="system-ui, sans-serif" text-transform="uppercase">Overall Evaluation</text>
+        <text x="135" y="61" font-size="8.5" font-weight="bold" fill="#047857" font-family="system-ui, sans-serif">
+          ${term.averageScore >= 80 ? 'Exceeding Expectations (EE)' : term.averageScore >= 65 ? 'Meeting Expectations (ME)' : 'Approaching Expectations (AE)'}
+        </text>
+
+        <text x="22" y="80" font-size="7.5" font-weight="bold" fill="#334155" font-family="system-ui, sans-serif" text-transform="uppercase">Learning Area Rubric Distribution (${totalSubj} Areas)</text>
+
+        <!-- Row 1: EE -->
+        <rect x="22" y="87" width="22" height="13" rx="2" fill="#047857" />
+        <text x="33" y="96" text-anchor="middle" font-size="7" font-weight="bold" fill="#ffffff" font-family="system-ui, sans-serif">EE</text>
+        <text x="49" y="96.5" font-size="7.5" fill="#334155" font-family="system-ui, sans-serif">80 - 100%</text>
+        <rect x="110" y="89" width="155" height="9" rx="2" fill="#f1f5f9" />
+        <rect x="110" y="89" width="${eeW}" height="9" rx="2" fill="#047857" />
+        <text x="272" y="96.5" font-size="7.5" font-weight="bold" fill="#047857" font-family="system-ui, sans-serif">${eeCount} Subj (${Math.round((eeCount / totalSubj) * 100)}%)</text>
+
+        <!-- Row 2: ME -->
+        <rect x="22" y="105" width="22" height="13" rx="2" fill="#800000" />
+        <text x="33" y="114" text-anchor="middle" font-size="7" font-weight="bold" fill="#ffffff" font-family="system-ui, sans-serif">ME</text>
+        <text x="49" y="114.5" font-size="7.5" fill="#334155" font-family="system-ui, sans-serif">65 - 79%</text>
+        <rect x="110" y="107" width="155" height="9" rx="2" fill="#f1f5f9" />
+        <rect x="110" y="107" width="${meW}" height="9" rx="2" fill="#800000" />
+        <text x="272" y="114.5" font-size="7.5" font-weight="bold" fill="#800000" font-family="system-ui, sans-serif">${meCount} Subj (${Math.round((meCount / totalSubj) * 100)}%)</text>
+
+        <!-- Row 3: AE -->
+        <rect x="22" y="123" width="22" height="13" rx="2" fill="#d97706" />
+        <text x="33" y="132" text-anchor="middle" font-size="7" font-weight="bold" fill="#ffffff" font-family="system-ui, sans-serif">AE</text>
+        <text x="49" y="132.5" font-size="7.5" fill="#334155" font-family="system-ui, sans-serif">50 - 64%</text>
+        <rect x="110" y="125" width="155" height="9" rx="2" fill="#f1f5f9" />
+        <rect x="110" y="125" width="${aeW}" height="9" rx="2" fill="#d97706" />
+        <text x="272" y="132.5" font-size="7.5" font-weight="bold" fill="#d97706" font-family="system-ui, sans-serif">${aeCount} Subj (${Math.round((aeCount / totalSubj) * 100)}%)</text>
+
+        <!-- Row 4: BE -->
+        <rect x="22" y="141" width="22" height="13" rx="2" fill="#dc2626" />
+        <text x="33" y="150" text-anchor="middle" font-size="7" font-weight="bold" fill="#ffffff" font-family="system-ui, sans-serif">BE</text>
+        <text x="49" y="150.5" font-size="7.5" fill="#334155" font-family="system-ui, sans-serif">0 - 49%</text>
+        <rect x="110" y="143" width="155" height="9" rx="2" fill="#f1f5f9" />
+        <rect x="110" y="143" width="${beW}" height="9" rx="2" fill="#dc2626" />
+        <text x="272" y="150.5" font-size="7.5" font-weight="bold" fill="#dc2626" font-family="system-ui, sans-serif">${beCount} Subj (${Math.round((beCount / totalSubj) * 100)}%)</text>
+
+        <!-- Status Callout Footer -->
+        <rect x="22" y="161" width="316" height="32" rx="4" fill="${isPass ? '#ecfdf5' : '#fffbeb'}" stroke="${isPass ? '#a7f3d0' : '#fde68a'}" stroke-width="0.8" />
+        <text x="32" y="174" font-size="7" font-weight="bold" fill="${isPass ? '#047857' : '#b45309'}" font-family="system-ui, sans-serif">
+          ${term.averageScore >= 80 ? '★ EXCEEDING NATIONAL CBC BENCHMARK (>= 80%)' : isPass ? '✓ PROFICIENT LEARNER (>= 65% CURRICULUM PASS)' : '⚠ REMEDIAL INTERVENTION RECOMMENDED'}
+        </text>
+        <text x="32" y="185" font-size="6.5" fill="#475569" font-family="system-ui, sans-serif">
+          ${eeCount + meCount} of ${totalSubj} learning areas achieve verified Meeting or Exceeding expectations.
+        </text>
+      `;
+    } else if (termsList.length === 2) {
+      // Exactly 2 terms from database
+      const [t1, t2] = termsList;
+      const x1 = 110;
+      const x2 = 250;
+      const y1 = getY(t1.averageScore);
+      const y2 = getY(t2.averageScore);
+      leftSectionHTML = `
+        <path d="M ${x1} ${y1} L ${x2} ${y2} L ${x2} 185 L ${x1} 185 Z" fill="url(#termCurveGrad)" />
+        <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#800000" stroke-width="2.5" stroke-linecap="round" />
+        <circle cx="${x1}" cy="${y1}" r="4.5" fill="#ffffff" stroke="#800000" stroke-width="2" />
+        <rect x="${x1 - 16}" y="${y1 - 16}" width="32" height="12" rx="3" fill="#800000" />
+        <text x="${x1}" y="${y1 - 7}" text-anchor="middle" font-size="7.5" font-weight="bold" fill="#ffffff" font-family="system-ui, sans-serif">${t1.averageScore}%</text>
+        <text x="${x1}" y="197" text-anchor="middle" font-size="7.5" font-weight="bold" fill="#374151" font-family="system-ui, sans-serif">${t1.label}</text>
+
+        <circle cx="${x2}" cy="${y2}" r="5" fill="#800000" stroke="#ffffff" stroke-width="1.5" />
+        <rect x="${x2 - 16}" y="${y2 - 16}" width="32" height="12" rx="3" fill="#047857" />
+        <text x="${x2}" y="${y2 - 7}" text-anchor="middle" font-size="7.5" font-weight="bold" fill="#ffffff" font-family="system-ui, sans-serif">${t2.averageScore}%</text>
+        <text x="${x2}" y="197" text-anchor="middle" font-size="7.5" font-weight="bold" fill="#800000" font-family="system-ui, sans-serif">${t2.label}</text>
+      `;
+    } else {
+      // 3 terms from database
+      const [t1, t2, t3] = termsList;
+      const x1 = 70;
+      const x2 = 185;
+      const x3 = 300;
+      const y1 = getY(t1.averageScore);
+      const y2 = getY(t2.averageScore);
+      const y3 = getY(t3.averageScore);
+      leftSectionHTML = `
+        <path d="M ${x1} ${y1} C ${(x1 + x2) / 2} ${y1}, ${(x1 + x2) / 2} ${y2}, ${x2} ${y2} C ${(x2 + x3) / 2} ${y2}, ${(x2 + x3) / 2} ${y3}, ${x3} ${y3} L ${x3} 185 L ${x1} 185 Z" fill="url(#termCurveGrad)" />
+        <path d="M ${x1} ${y1} C ${(x1 + x2) / 2} ${y1}, ${(x1 + x2) / 2} ${y2}, ${x2} ${y2} C ${(x2 + x3) / 2} ${y2}, ${(x2 + x3) / 2} ${y3}, ${x3} ${y3}" fill="none" stroke="#800000" stroke-width="2.5" stroke-linecap="round" />
+        <circle cx="${x1}" cy="${y1}" r="4.5" fill="#ffffff" stroke="#800000" stroke-width="2" />
+        <rect x="${x1 - 16}" y="${y1 - 16}" width="32" height="12" rx="3" fill="#800000" />
+        <text x="${x1}" y="${y1 - 7}" text-anchor="middle" font-size="7.5" font-weight="bold" fill="#ffffff" font-family="system-ui, sans-serif">${t1.averageScore}%</text>
+        <text x="${x1}" y="197" text-anchor="middle" font-size="7.5" font-weight="bold" fill="#374151" font-family="system-ui, sans-serif">${t1.label}</text>
+
+        <circle cx="${x2}" cy="${y2}" r="4.5" fill="#ffffff" stroke="#800000" stroke-width="2" />
+        <rect x="${x2 - 16}" y="${y2 - 16}" width="32" height="12" rx="3" fill="#800000" />
+        <text x="${x2}" y="${y2 - 7}" text-anchor="middle" font-size="7.5" font-weight="bold" fill="#ffffff" font-family="system-ui, sans-serif">${t2.averageScore}%</text>
+        <text x="${x2}" y="197" text-anchor="middle" font-size="7.5" font-weight="bold" fill="#374151" font-family="system-ui, sans-serif">${t2.label}</text>
+
+        <circle cx="${x3}" cy="${y3}" r="5" fill="#800000" stroke="#ffffff" stroke-width="1.5" />
+        <rect x="${x3 - 16}" y="${y3 - 16}" width="32" height="12" rx="3" fill="#047857" />
+        <text x="${x3}" y="${y3 - 7}" text-anchor="middle" font-size="7.5" font-weight="bold" fill="#ffffff" font-family="system-ui, sans-serif">${t3.averageScore}%</text>
+        <text x="${x3}" y="197" text-anchor="middle" font-size="7.5" font-weight="bold" fill="#800000" font-family="system-ui, sans-serif">${t3.label}</text>
+      `;
+    }
+
+    // Legend on the right
+    let legendHTML = '';
+    if (termsList.length === 1) {
+      legendHTML = `
+        <rect x="610" y="16" width="10" height="7" rx="1.5" fill="#800000" />
+        <text x="625" y="22" font-size="6.5" font-weight="bold" fill="#800000" font-family="system-ui, sans-serif">${termsList[0].label} Score</text>
+        <line x1="695" y1="19" x2="705" y2="19" stroke="#059669" stroke-dasharray="2,2" stroke-width="1.2" />
+        <text x="708" y="22" font-size="6.5" fill="#059669" font-family="system-ui, sans-serif">80% Target</text>
+      `;
+    } else {
+      let offset = 570;
+      legendHTML = termsList.map(t => {
+        const color = t.termNumber === 1 ? '#fca5a5' : t.termNumber === 2 ? '#b91c1c' : '#800000';
+        const pill = `
+          <rect x="${offset}" y="16" width="7" height="6" rx="1" fill="${color}" />
+          <text x="${offset + 10}" y="22" font-size="6.5" fill="#4b5563" font-family="system-ui, sans-serif">${t.short}</text>
+        `;
+        offset += 28;
+        return pill;
+      }).join('') + `
+        <line x1="${offset}" y1="19" x2="${offset + 10}" y2="19" stroke="#059669" stroke-dasharray="2,2" stroke-width="1.2" />
+        <text x="${offset + 13}" y="22" font-size="6.5" fill="#059669" font-family="system-ui, sans-serif">80%</text>
+      `;
+    }
 
     const subjectBarsHTML = subjects.map((s, idx) => {
-      const rowY = 32 + idx * 15;
-      const w1 = Math.round((s.term1Score / 100) * 270);
-      const w2 = Math.round((s.term2Score / 100) * 270);
-      const w3 = Math.round((s.term3Score / 100) * 270);
+      const rowY = 32 + idx * rowSpacing;
+
+      let bars = '';
+      if (termsList.length === 1) {
+        // Only 1 evaluated term: Render a full, prominent bar!
+        const w = Math.round((s.score / 100) * 270);
+        bars = `<rect x="455" y="${rowY}" width="${w}" height="${barHeight}" rx="2" fill="#800000" />`;
+      } else {
+        const sliceH = Math.max(2, Math.floor(barHeight / termsList.length));
+        bars = termsList.map((t, tIdx) => {
+          const val = t.termNumber === 1 ? (s.term1Score ?? s.score) : t.termNumber === 2 ? (s.term2Score ?? s.score) : (s.term3Score ?? s.score);
+          const w = Math.round((val / 100) * 270);
+          const color = t.termNumber === 1 ? '#fca5a5' : t.termNumber === 2 ? '#b91c1c' : '#800000';
+          return `<rect x="455" y="${rowY + tIdx * sliceH}" width="${w}" height="${sliceH}" rx="1" fill="${color}" />`;
+        }).join('');
+      }
 
       return `
         <g>
-          <text x="445" y="${rowY + 9}" text-anchor="end" font-size="8" font-weight="600" fill="#374151" font-family="system-ui, sans-serif">${s.short}</text>
-          <rect x="455" y="${rowY + 2}" width="270" height="9" rx="2" fill="#f3f4f6" />
-          <rect x="455" y="${rowY + 2}" width="${w1}" height="3" rx="1" fill="#fca5a5" />
-          <rect x="455" y="${rowY + 5}" width="${w2}" height="3" rx="1" fill="#b91c1c" />
-          <rect x="455" y="${rowY + 8}" width="${w3}" height="3" rx="1" fill="#800000" />
-          <text x="732" y="${rowY + 9}" font-size="8" font-weight="bold" fill="#800000" font-family="system-ui, sans-serif">${s.score}%</text>
-          <rect x="760" y="${rowY + 1}" width="16" height="10" rx="2" fill="${s.rubricCode === 'EE' ? '#047857' : s.rubricCode === 'ME' ? '#800000' : s.rubricCode === 'AE' ? '#b45309' : '#b91c1c'}" />
-          <text x="768" y="${rowY + 9}" text-anchor="middle" font-size="7" font-weight="bold" fill="#ffffff" font-family="system-ui, sans-serif">${s.rubricCode}</text>
+          <text x="445" y="${rowY + Math.round(barHeight * 0.9)}" text-anchor="end" font-size="8" font-weight="600" fill="#374151" font-family="system-ui, sans-serif">${s.short}</text>
+          <rect x="455" y="${rowY}" width="270" height="${barHeight}" rx="2" fill="#f3f4f6" />
+          ${bars}
+          <text x="732" y="${rowY + Math.round(barHeight * 0.9)}" font-size="8" font-weight="bold" fill="#800000" font-family="system-ui, sans-serif">${s.score}%</text>
+          <rect x="760" y="${rowY}" width="16" height="${barHeight}" rx="2" fill="${s.rubricCode === 'EE' ? '#047857' : s.rubricCode === 'ME' ? '#800000' : s.rubricCode === 'AE' ? '#b45309' : '#b91c1c'}" />
+          <text x="768" y="${rowY + Math.round(barHeight * 0.9)}" text-anchor="middle" font-size="7" font-weight="bold" fill="#ffffff" font-family="system-ui, sans-serif">${s.rubricCode}</text>
         </g>
       `;
     }).join('');
+
+    const rightTitle = termsList.length === 1
+      ? `${subjects.length} CBC Learning Areas Performance (${termsList[0].label} Evaluation)`
+      : `${subjects.length} CBC Learning Areas Comparison (${termsList.map(t => t.label).join(' & ')})`;
 
     return `
       <svg viewBox="0 0 810 215" width="100%" height="auto" class="performance-graph-svg" xmlns="http://www.w3.org/2000/svg">
@@ -370,75 +622,53 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
           </linearGradient>
         </defs>
 
-        <!-- LEFT: 3-Term Trajectory Curve -->
-        <g>
-          <rect x="10" y="10" width="340" height="195" rx="6" fill="#fafafa" stroke="#e5e7eb" stroke-width="1" />
-          <text x="25" y="26" font-size="8.5" font-weight="bold" fill="#800000" font-family="system-ui, sans-serif" text-transform="uppercase">Term Aggregate Trajectory</text>
+        <!-- LEFT: Trajectory Curve or Mastery Profile -->
+        ${termsList.length === 1 ? `
+          <g>
+            ${leftSectionHTML}
+          </g>
+        ` : `
+          <g>
+            <rect x="10" y="10" width="340" height="195" rx="6" fill="#fafafa" stroke="#e5e7eb" stroke-width="1" />
+            <text x="25" y="26" font-size="8.5" font-weight="bold" fill="#800000" font-family="system-ui, sans-serif" text-transform="uppercase">
+              Term Aggregate Trajectory
+            </text>
 
-          <!-- Benchmark lines -->
-          <line x1="45" y1="${getY(80)}" x2="330" y2="${getY(80)}" stroke="#059669" stroke-dasharray="2,2" stroke-width="1" />
-          <text x="330" y="${getY(80) - 2}" text-anchor="end" font-size="6.5" font-weight="bold" fill="#059669" font-family="system-ui, sans-serif">EE Target (80%)</text>
-          
-          <line x1="45" y1="${getY(65)}" x2="330" y2="${getY(65)}" stroke="#800000" stroke-dasharray="2,2" stroke-width="0.8" stroke-opacity="0.5" />
-          <text x="330" y="${getY(65) - 2}" text-anchor="end" font-size="6.5" font-weight="bold" fill="#800000" font-family="system-ui, sans-serif">ME Floor (65%)</text>
-          
-          <line x1="45" y1="${getY(50)}" x2="330" y2="${getY(50)}" stroke="#d97706" stroke-dasharray="2,2" stroke-width="0.8" stroke-opacity="0.5" />
+            <!-- Benchmark lines -->
+            <line x1="45" y1="${getY(80)}" x2="330" y2="${getY(80)}" stroke="#059669" stroke-dasharray="2,2" stroke-width="1" />
+            <text x="330" y="${getY(80) - 2}" text-anchor="end" font-size="6.5" font-weight="bold" fill="#059669" font-family="system-ui, sans-serif">EE Target (80%)</text>
+            
+            <line x1="45" y1="${getY(65)}" x2="330" y2="${getY(65)}" stroke="#800000" stroke-dasharray="2,2" stroke-width="0.8" stroke-opacity="0.5" />
+            <text x="330" y="${getY(65) - 2}" text-anchor="end" font-size="6.5" font-weight="bold" fill="#800000" font-family="system-ui, sans-serif">ME Floor (65%)</text>
+            
+            <line x1="45" y1="${getY(50)}" x2="330" y2="${getY(50)}" stroke="#d97706" stroke-dasharray="2,2" stroke-width="0.8" stroke-opacity="0.5" />
 
-          <!-- Baseline Axis -->
-          <line x1="45" y1="185" x2="330" y2="185" stroke="#9ca3af" stroke-width="1" />
+            <!-- Baseline Axis -->
+            <line x1="45" y1="185" x2="330" y2="185" stroke="#9ca3af" stroke-width="1" />
 
-          <!-- Y Axis Labels -->
-          <text x="40" y="${getY(100) + 3}" text-anchor="end" font-size="6.5" fill="#6b7280" font-family="system-ui, sans-serif">100%</text>
-          <text x="40" y="${getY(75) + 3}" text-anchor="end" font-size="6.5" fill="#6b7280" font-family="system-ui, sans-serif">75%</text>
-          <text x="40" y="${getY(50) + 3}" text-anchor="end" font-size="6.5" fill="#6b7280" font-family="system-ui, sans-serif">50%</text>
-          <text x="40" y="188" text-anchor="end" font-size="6.5" fill="#6b7280" font-family="system-ui, sans-serif">0%</text>
+            <!-- Y Axis Labels -->
+            <text x="40" y="${getY(100) + 3}" text-anchor="end" font-size="6.5" fill="#6b7280" font-family="system-ui, sans-serif">100%</text>
+            <text x="40" y="${getY(75) + 3}" text-anchor="end" font-size="6.5" fill="#6b7280" font-family="system-ui, sans-serif">75%</text>
+            <text x="40" y="${getY(50) + 3}" text-anchor="end" font-size="6.5" fill="#6b7280" font-family="system-ui, sans-serif">50%</text>
+            <text x="40" y="188" text-anchor="end" font-size="6.5" fill="#6b7280" font-family="system-ui, sans-serif">0%</text>
 
-          <!-- Area Fill -->
-          <path d="M ${x1} ${y1} C ${(x1 + x2) / 2} ${y1}, ${(x1 + x2) / 2} ${y2}, ${x2} ${y2} C ${(x2 + x3) / 2} ${y2}, ${(x2 + x3) / 2} ${y3}, ${x3} ${y3} L ${x3} 185 L ${x1} 185 Z" fill="url(#termCurveGrad)" />
+            ${leftSectionHTML}
+          </g>
+        `}
 
-          <!-- Curve -->
-          <path d="M ${x1} ${y1} C ${(x1 + x2) / 2} ${y1}, ${(x1 + x2) / 2} ${y2}, ${x2} ${y2} C ${(x2 + x3) / 2} ${y2}, ${(x2 + x3) / 2} ${y3}, ${x3} ${y3}" fill="none" stroke="#800000" stroke-width="2.5" stroke-linecap="round" />
-
-          <!-- Node 1: Term 1 -->
-          <circle cx="${x1}" cy="${y1}" r="4.5" fill="#ffffff" stroke="#800000" stroke-width="2" />
-          <rect x="${x1 - 16}" y="${y1 - 16}" width="32" height="12" rx="3" fill="#800000" />
-          <text x="${x1}" y="${y1 - 7}" text-anchor="middle" font-size="7.5" font-weight="bold" fill="#ffffff" font-family="system-ui, sans-serif">${t1Avg}%</text>
-          <text x="${x1}" y="197" text-anchor="middle" font-size="7.5" font-weight="bold" fill="#374151" font-family="system-ui, sans-serif">Term 1</text>
-
-          <!-- Node 2: Term 2 -->
-          <circle cx="${x2}" cy="${y2}" r="4.5" fill="#ffffff" stroke="#800000" stroke-width="2" />
-          <rect x="${x2 - 16}" y="${y2 - 16}" width="32" height="12" rx="3" fill="#800000" />
-          <text x="${x2}" y="${y2 - 7}" text-anchor="middle" font-size="7.5" font-weight="bold" fill="#ffffff" font-family="system-ui, sans-serif">${t2Avg}%</text>
-          <text x="${x2}" y="197" text-anchor="middle" font-size="7.5" font-weight="bold" fill="#374151" font-family="system-ui, sans-serif">Term 2</text>
-
-          <!-- Node 3: Term 3 -->
-          <circle cx="${x3}" cy="${y3}" r="5" fill="#800000" stroke="#ffffff" stroke-width="1.5" />
-          <rect x="${x3 - 16}" y="${y3 - 16}" width="32" height="12" rx="3" fill="#047857" />
-          <text x="${x3}" y="${y3 - 7}" text-anchor="middle" font-size="7.5" font-weight="bold" fill="#ffffff" font-family="system-ui, sans-serif">${t3Avg}%</text>
-          <text x="${x3}" y="197" text-anchor="middle" font-size="7.5" font-weight="bold" fill="#800000" font-family="system-ui, sans-serif">Term 3</text>
-        </g>
-
-        <!-- RIGHT: 12 Learning Areas Multi-Term Matrix -->
+        <!-- RIGHT: CBC Learning Areas Matrix -->
         <g>
           <rect x="360" y="10" width="440" height="195" rx="6" fill="#fafafa" stroke="#e5e7eb" stroke-width="1" />
-          <text x="375" y="24" font-size="8.5" font-weight="bold" fill="#800000" font-family="system-ui, sans-serif" text-transform="uppercase">12 CBC Learning Areas Comparison (Terms 1, 2 &amp; 3)</text>
+          <text x="375" y="24" font-size="8.5" font-weight="bold" fill="#800000" font-family="system-ui, sans-serif" text-transform="uppercase">${rightTitle}</text>
 
           <!-- Legend -->
-          <rect x="585" y="16" width="7" height="6" rx="1" fill="#fca5a5" />
-          <text x="595" y="22" font-size="6.5" fill="#4b5563" font-family="system-ui, sans-serif">T1</text>
-          <rect x="612" y="16" width="7" height="6" rx="1" fill="#b91c1c" />
-          <text x="622" y="22" font-size="6.5" fill="#4b5563" font-family="system-ui, sans-serif">T2</text>
-          <rect x="638" y="16" width="7" height="6" rx="1" fill="#800000" />
-          <text x="648" y="22" font-size="6.5" fill="#4b5563" font-family="system-ui, sans-serif">T3</text>
-          <line x1="665" y1="19" x2="675" y2="19" stroke="#059669" stroke-dasharray="2,2" stroke-width="1.2" />
-          <text x="678" y="22" font-size="6.5" fill="#059669" font-family="system-ui, sans-serif">80%</text>
+          ${legendHTML}
 
           <!-- 80% Target Guideline -->
           <line x1="${455 + Math.round(0.8 * 270)}" y1="28" x2="${455 + Math.round(0.8 * 270)}" y2="200" stroke="#059669" stroke-dasharray="1.5,1.5" stroke-width="0.8" />
 
-          <!-- 12 Subject Rows -->
+          <!-- Subject Rows -->
           ${subjectBarsHTML}
-        </g>
       </svg>
     `;
   };
@@ -717,18 +947,18 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
       <span><span class="rubric-pill rubric-be">BE</span> Below Expectations (1)</span>
     </div>
 
-    <!-- 12 CBC Learning Areas Table -->
+    <!-- CBC Learning Areas Table -->
     <table>
       <thead>
         <tr>
-          <th style="width: 30%;">Learning Area (12 Subjects)</th>
+          <th style="width: 32%;">Learning Area (${resolvedSubjects.length} Subjects)</th>
           <th style="width: 14%;" class="center">Score / 100</th>
           <th style="width: 12%;" class="center">Rubric</th>
           <th>Performance Level &amp; Evaluator Remarks</th>
         </tr>
       </thead>
       <tbody>
-        ${resolved12Subjects.map((s) => `
+        ${resolvedSubjects.map((s) => `
           <tr>
             <td><strong>${s.name}</strong></td>
             <td class="center font-mono"><strong>${s.score}</strong></td>
@@ -744,32 +974,48 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
       </tbody>
       <tfoot>
         <tr style="background: #fce8ec; font-weight: bold; border-top: 1.5px solid #800000;">
-          <td style="font-weight: 900; text-transform: uppercase;">Total Marks (12 Subjects)</td>
+          <td style="font-weight: 900; text-transform: uppercase;">Total Marks (${resolvedSubjects.length} Subjects)</td>
           <td class="center" style="font-size: 9.5px; font-weight: 900; color: #800000;">
-            ${totalMarks12}
+            ${totalMarks}
           </td>
           <td class="center" style="font-weight: bold;">
-            Out of 1200
+            Out of ${totalPossible}
           </td>
           <td>
-            <strong style="color: #047857;">Overall Average:</strong> ${Math.round(totalMarks12 / 12)}% · ${term3Average >= 80 ? 'Exceeding Expectations' : 'Meeting Expectations'}
+            <strong style="color: #047857;">Overall Average:</strong> ${overallAverage}% · ${overallPerformanceLevel}
           </td>
         </tr>
       </tfoot>
     </table>
 
-    <!-- Multi-Term Performance Graph (Term 1, 2 & 3) -->
+    <!-- Performance Graph -->
     <div class="performance-graph-box">
       <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding-bottom: 2px; margin-bottom: 3px;">
         <div>
-          <span style="font-size: 8.5px; font-weight: 800; color: #800000; text-transform: uppercase;">MULTI-TERM PERFORMANCE GRAPH (TERM 1, 2 &amp; 3)</span>
-          <span style="font-size: 7px; color: #666; margin-left: 6px;">Comparative trajectory across 12 CBC learning areas</span>
+          <span style="font-size: 8.5px; font-weight: 800; color: #800000; text-transform: uppercase;">
+            ${recordedTerms.length > 1 ? 'MULTI-TERM PERFORMANCE GRAPH' : 'CBC LEARNER PERFORMANCE OVERVIEW (TERM 3)'}
+          </span>
+          <span style="font-size: 7px; color: #666; margin-left: 6px;">
+            ${recordedTerms.length > 1 ? `Comparative trajectory across ${recordedTerms.map(t => t.label).join(' & ')}` : `Official summative evaluation across ${resolvedSubjects.length} CBC learning areas for Term 3`}
+          </span>
         </div>
         <div style="display: flex; gap: 4px; font-size: 7.5px;">
-          <span style="background: #fdf2f2; border: 1px solid #fecaca; padding: 1px 4px; border-radius: 3px;">Term 1: <strong>${term1Average}%</strong></span>
-          <span style="background: #fdf2f2; border: 1px solid #fecaca; padding: 1px 4px; border-radius: 3px;">Term 2: <strong>${term2Average}%</strong></span>
-          <span style="background: #fce8ec; border: 1px solid #800000; padding: 1px 4px; border-radius: 3px; color: #800000;">Term 3: <strong>${term3Average}%</strong></span>
-          <span style="background: #ecfdf5; border: 1px solid #a7f3d0; padding: 1px 4px; border-radius: 3px; color: #047857;">Growth: <strong>${termGrowth >= 0 ? `+${termGrowth}%` : `${termGrowth}%`}</strong></span>
+          ${recordedTerms.length > 1 ? (
+            recordedTerms.map(t => `
+              <span style="background: ${t.termNumber === activeTermNumber ? '#fce8ec' : '#fdf2f2'}; border: 1px solid ${t.termNumber === activeTermNumber ? '#800000' : '#fecaca'}; padding: 1px 4px; border-radius: 3px; ${t.termNumber === activeTermNumber ? 'color: #800000; font-weight: bold;' : ''}">
+                ${t.label}: <strong>${t.averageScore}%</strong>
+              </span>
+            `).join('') + `
+              <span style="background: #ecfdf5; border: 1px solid #a7f3d0; padding: 1px 4px; border-radius: 3px; color: #047857;">Growth: <strong>${termGrowth >= 0 ? `+${termGrowth}%` : `${termGrowth}%`}</strong></span>
+            `
+          ) : `
+            <span style="background: #fce8ec; border: 1px solid #800000; padding: 1px 5px; border-radius: 3px; color: #800000; font-weight: bold;">
+              Term 3 Mean: <strong>${overallAverage}%</strong>
+            </span>
+            <span style="background: #ecfdf5; border: 1px solid #a7f3d0; padding: 1px 5px; border-radius: 3px; color: #047857; font-weight: bold;">
+              Quality Pass: <strong>${Math.round((resolvedSubjects.filter(s => s.rubricCode === 'EE' || s.rubricCode === 'ME').length / Math.max(1, resolvedSubjects.length)) * 100)}%</strong>
+            </span>
+          `}
         </div>
       </div>
       ${graphSVGString}
@@ -831,9 +1077,10 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
   // Full-Page Dedicated Print & PDF Generation via Isolated Iframe
   const handlePrint = () => {
     if (!student) return;
-    const termName = currentTerm?.name || 'Term 3';
+    const activeTerm = availableTerms.find(t => t.id === selectedTermId) || currentTerm;
+    const termName = activeTerm?.name || 'Term 3';
     const yearName = resolveAcademicYearName(currentYear?.name || currentYear?.year || currentYear?.id);
-    const graphSVGString = buildPerformanceGraphSVG(term1Average, term2Average, term3Average, resolved12Subjects);
+    const graphSVGString = buildPerformanceGraphSVG(recordedTerms, resolvedSubjects);
     const htmlContent = buildReportCardPrintHTML(termName, yearName, graphSVGString);
 
     const oldFrame = document.getElementById('smartshule-print-frame');
@@ -875,9 +1122,10 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
   // Standalone offline HTML export
   const handleExportHTML = () => {
     if (!student) return;
-    const termName = currentTerm?.name || 'Term 3';
+    const activeTerm = availableTerms.find(t => t.id === selectedTermId) || currentTerm;
+    const termName = activeTerm?.name || 'Term 3';
     const yearName = resolveAcademicYearName(currentYear?.name || currentYear?.year || currentYear?.id);
-    const graphSVGString = buildPerformanceGraphSVG(term1Average, term2Average, term3Average, resolved12Subjects);
+    const graphSVGString = buildPerformanceGraphSVG(recordedTerms, resolvedSubjects);
     const htmlContent = buildReportCardPrintHTML(termName, yearName, graphSVGString);
 
     const blob = new Blob([htmlContent], { type: 'text/html' });
@@ -921,12 +1169,6 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
 
   // Visual SVG coordinates calculation for JSX render
   const getY = (val: number) => Math.round(185 - (Math.min(100, Math.max(0, val)) / 100) * 145);
-  const graphY1 = getY(term1Average);
-  const graphY2 = getY(term2Average);
-  const graphY3 = getY(term3Average);
-  const graphX1 = 70;
-  const graphX2 = 185;
-  const graphX3 = 300;
 
   return (
     <div className="space-y-6 pb-12 font-body print:space-y-0 print:p-0 print:m-0 print:w-full">
@@ -1087,6 +1329,31 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
             )}
           </select>
 
+          {/* Term Select */}
+          <select
+            value={selectedTermId || currentTerm?.id || ''}
+            onChange={(e) => {
+              const newTermId = e.target.value;
+              setSelectedTermId(newTermId);
+              const matchedTerm = availableTerms.find(t => t.id === newTermId);
+              if (matchedTerm) setCurrentTerm(matchedTerm);
+              if (student?.id) loadReportCard(student.id, newTermId, currentYear?.id);
+            }}
+            className="bg-surface-container-lowest border border-outline-variant/40 rounded-lg py-2 px-3 text-xs font-semibold text-on-surface shadow-xs"
+          >
+            {availableTerms.length > 0 ? (
+              availableTerms.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name || `Term ${t.termNumber || t.id}`}
+                </option>
+              ))
+            ) : (
+              <option value={currentTerm?.id || 'term-2026-t3'}>
+                {currentTerm?.name || 'Term 3 - 2026'}
+              </option>
+            )}
+          </select>
+
           {/* Auto Compile Button */}
           {!isParent && (
             <button
@@ -1158,7 +1425,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
           <div className="mt-2 print:mt-0.5 inline-flex flex-wrap items-center justify-center gap-1.5 px-4 py-1 print:py-0.5 bg-[#800000] text-white rounded-md text-xs print:text-[7.5px] font-bold uppercase tracking-wider shadow-xs print:shadow-none">
             <span>LEARNER COMPETENCY SUMMATIVE DOSSIER</span>
             <span>·</span>
-            <span>{currentTerm?.name || 'TERM 3'}, {resolveAcademicYearName(currentYear?.name || currentYear?.year || currentYear?.id)}</span>
+            <span>{(availableTerms.find(t => t.id === selectedTermId) || currentTerm)?.name || 'TERM 3'}, {resolveAcademicYearName(currentYear?.name || currentYear?.year || currentYear?.id)}</span>
           </div>
         </div>
 
@@ -1199,19 +1466,19 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
           <span className="flex items-center gap-1"><span className="px-1 py-0.1 rounded bg-rose-700 text-white font-bold text-[9px] print:text-[7px]">BE</span> Below Expectations (1)</span>
         </div>
 
-        {/* 12 CBC Learning Areas Evaluation Table */}
+        {/* CBC Learning Areas Evaluation Table */}
         <div className="border border-gray-200 rounded-xl print:rounded-md overflow-hidden print:border-gray-400">
           <table className="report-card-table w-full text-left text-xs print:text-[8px]">
             <thead className="bg-[#800000] text-white uppercase text-[11px] print:text-[7.5px] font-bold">
               <tr>
-                <th className="py-2 print:py-1 px-3 print:px-2 w-1/4">Learning Area (12 Subjects)</th>
+                <th className="py-2 print:py-1 px-3 print:px-2 w-1/4">Learning Area ({resolvedSubjects.length} Subjects)</th>
                 <th className="py-2 print:py-1 px-2 print:px-1 text-center w-20 print:w-14">Score / 100</th>
                 <th className="py-2 print:py-1 px-2.5 print:px-1.5 text-center w-28 print:w-20">Rubric</th>
                 <th className="py-2 print:py-1 px-3 print:px-2">Performance Level &amp; Evaluator Remarks</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {resolved12Subjects.map((s, idx) => (
+              {resolvedSubjects.map((s, idx) => (
                 <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/70'}>
                   <td className="py-1.5 print:py-0.5 px-3 print:px-2 font-bold text-gray-900">
                     {s.name}
@@ -1237,58 +1504,91 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
             <tfoot className="bg-rose-50/60 font-bold border-t border-gray-300 text-gray-900 text-xs print:text-[8px]">
               <tr>
                 <td className="py-1.5 px-3 uppercase font-black text-gray-800">
-                  Total Marks (12 Subjects)
+                  Total Marks ({resolvedSubjects.length} Subjects)
                 </td>
                 <td className="py-1.5 px-2 text-center font-mono text-[#800000] font-black">
-                  {totalMarks12} / 1200
+                  {totalMarks} / {totalPossible}
                 </td>
                 <td colSpan={2} className="py-1.5 px-3 text-emerald-800 font-bold">
-                  Overall Average: {Math.round(totalMarks12 / 12)}% · Summary: {term3Average >= 80 ? 'Exceeding Expectations' : 'Meeting Expectations'}
+                  Overall Average: {overallAverage}% · Summary: {overallPerformanceLevel}
                 </td>
               </tr>
             </tfoot>
           </table>
         </div>
 
-        {/* Multi-Term Performance Graph Section (Term 1, 2, and 3) */}
+        {/* Performance Graph Section (Dedicated Term 3 or Multi-term if recorded) */}
         <div className="performance-graph-section p-3.5 print:p-1.5 rounded-xl bg-gray-50/80 border border-gray-200 print:border-gray-400 space-y-2 print:space-y-1 print:bg-transparent">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-200 pb-2 print:pb-1">
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="material-symbols-outlined text-[#800000] text-[18px] print:hidden">query_stats</span>
                 <h4 className="font-bold text-xs print:text-[8.5px] text-[#800000] uppercase tracking-wider">
-                  Multi-Term Performance Graph (Term 1, 2 &amp; 3)
+                  {recordedTerms.length === 1
+                    ? `CBC Learning Area & Strand Performance Overview (${recordedTerms[0].label})`
+                    : `Multi-Term Performance Graph (${recordedTerms.map(t => t.label).join(' & ')})`}
                 </h4>
               </div>
               <p className="text-[11px] print:text-[7px] text-gray-500 mt-0.5">
-                Comparative progression trajectory across 12 CBC learning areas for the academic year
+                {recordedTerms.length === 1
+                  ? `Evaluated learning area performance and rubric mastery distribution across ${resolvedSubjects.length} CBC learning areas`
+                  : `Comparative progression trajectory across ${resolvedSubjects.length} CBC learning areas for the academic year`}
               </p>
             </div>
 
             {/* Metric pill cards */}
             <div className="grid grid-cols-4 gap-1.5 text-center text-xs print:text-[7.5px]">
-              <div className="bg-rose-50/80 border border-rose-200 rounded-lg p-1.5 print:p-0.5">
-                <span className="text-[10px] print:text-[6.5px] uppercase font-semibold text-gray-500 block">Term 1</span>
-                <span className="font-mono font-bold text-gray-900 text-xs print:text-[8px]">{term1Average}%</span>
-                <span className="block text-[9px] print:text-[6px] font-bold text-gray-600">{term1Average >= 80 ? 'EE' : term1Average >= 65 ? 'ME' : 'AE'}</span>
-              </div>
-              <div className="bg-rose-50/80 border border-rose-200 rounded-lg p-1.5 print:p-0.5">
-                <span className="text-[10px] print:text-[6.5px] uppercase font-semibold text-gray-500 block">Term 2</span>
-                <span className="font-mono font-bold text-gray-900 text-xs print:text-[8px]">{term2Average}%</span>
-                <span className="block text-[9px] print:text-[6px] font-bold text-gray-600">{term2Average >= 80 ? 'EE' : term2Average >= 65 ? 'ME' : 'AE'}</span>
-              </div>
-              <div className="bg-[#800000]/10 border border-[#800000]/30 rounded-lg p-1.5 print:p-0.5">
-                <span className="text-[10px] print:text-[6.5px] uppercase font-semibold text-[#800000] block">Term 3</span>
-                <span className="font-mono font-bold text-[#800000] text-xs print:text-[8px]">{term3Average}%</span>
-                <span className="block text-[9px] print:text-[6px] font-bold text-[#800000]">{term3Average >= 80 ? 'EE' : term3Average >= 65 ? 'ME' : 'AE'}</span>
-              </div>
-              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-1.5 print:p-0.5">
-                <span className="text-[10px] print:text-[6.5px] uppercase font-semibold text-emerald-700 block">Growth</span>
-                <span className="font-mono font-bold text-emerald-800 text-xs print:text-[8px]">
-                  {termGrowth >= 0 ? `+${termGrowth}%` : `${termGrowth}%`}
-                </span>
-                <span className="block text-[9px] print:text-[6px] font-bold text-emerald-700">Annual Track</span>
-              </div>
+              {recordedTerms.length === 1 ? (
+                <>
+                  <div className="bg-[#800000]/10 border border-[#800000]/30 rounded-lg p-1.5 print:p-0.5">
+                    <span className="text-[10px] print:text-[6.5px] uppercase font-semibold text-[#800000] block">{recordedTerms[0].label} Mean</span>
+                    <span className="font-mono font-bold text-[#800000] text-xs print:text-[8px]">{overallAverage}%</span>
+                    <span className="block text-[9px] print:text-[6px] font-bold text-[#800000]">
+                      {overallAverage >= 80 ? 'EE' : overallAverage >= 65 ? 'ME' : 'AE'}
+                    </span>
+                  </div>
+                  <div className="bg-rose-50/80 border border-rose-200 rounded-lg p-1.5 print:p-0.5">
+                    <span className="text-[10px] print:text-[6.5px] uppercase font-semibold text-gray-700 block">Total Marks</span>
+                    <span className="font-mono font-bold text-gray-900 text-xs print:text-[8px]">{totalMarks} / {totalPossible}</span>
+                    <span className="block text-[9px] print:text-[6px] font-bold text-gray-600">{resolvedSubjects.length} Areas</span>
+                  </div>
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-1.5 print:p-0.5">
+                    <span className="text-[10px] print:text-[6.5px] uppercase font-semibold text-emerald-700 block">Quality Pass Rate</span>
+                    <span className="font-mono font-bold text-emerald-800 text-xs print:text-[8px]">
+                      {Math.round((resolvedSubjects.filter(s => s.rubricCode === 'EE' || s.rubricCode === 'ME').length / Math.max(1, resolvedSubjects.length)) * 100)}%
+                    </span>
+                    <span className="block text-[9px] print:text-[6px] font-bold text-emerald-700">EE &amp; ME Achieved</span>
+                  </div>
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-1.5 print:p-0.5">
+                    <span className="text-[10px] print:text-[6.5px] uppercase font-semibold text-amber-800 block">Assessment Status</span>
+                    <span className="font-mono font-bold text-amber-900 text-xs print:text-[8px]">Official Dossier</span>
+                    <span className="block text-[9px] print:text-[6px] font-bold text-amber-700">Term 3 Assessment</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {recordedTerms.map(t => {
+                    const isEE = t.averageScore >= 80;
+                    const isME = t.averageScore >= 65;
+                    const isAE = t.averageScore >= 50;
+                    const lvl = isEE ? 'EE' : isME ? 'ME' : isAE ? 'AE' : 'BE';
+                    return (
+                      <div key={t.termNumber} className="bg-[#800000]/10 border border-[#800000]/30 rounded-lg p-1.5 print:p-0.5">
+                        <span className="text-[10px] print:text-[6.5px] uppercase font-semibold text-[#800000] block">{t.label}</span>
+                        <span className="font-mono font-bold text-[#800000] text-xs print:text-[8px]">{t.averageScore}%</span>
+                        <span className="block text-[9px] print:text-[6px] font-bold text-[#800000]">{lvl}</span>
+                      </div>
+                    );
+                  })}
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-1.5 print:p-0.5">
+                    <span className="text-[10px] print:text-[6.5px] uppercase font-semibold text-emerald-700 block">Growth</span>
+                    <span className="font-mono font-bold text-emerald-800 text-xs print:text-[8px]">
+                      {termGrowth >= 0 ? `+${termGrowth}%` : `${termGrowth}%`}
+                    </span>
+                    <span className="block text-[9px] print:text-[6px] font-bold text-emerald-700">Annual Track</span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
@@ -1302,97 +1602,236 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
                 </linearGradient>
               </defs>
 
-              {/* LEFT: 3-Term Trajectory Curve */}
-              <g>
-                <rect x="10" y="10" width="340" height="195" rx="6" fill="#ffffff" stroke="#e5e7eb" strokeWidth="1" />
-                <text x="25" y="26" fontSize="8.5" fontWeight="bold" fill="#800000" fontFamily="system-ui, sans-serif" textTransform="uppercase">
-                  Term Aggregate Trajectory
-                </text>
+              {/* LEFT: Dynamic Term Assessment / Trajectory */}
+              {recordedTerms.length === 1 ? (
+                (() => {
+                  const term = recordedTerms[0];
+                  const eeCount = resolvedSubjects.filter(s => s.rubricCode === 'EE').length;
+                  const meCount = resolvedSubjects.filter(s => s.rubricCode === 'ME').length;
+                  const aeCount = resolvedSubjects.filter(s => s.rubricCode === 'AE').length;
+                  const beCount = resolvedSubjects.filter(s => s.rubricCode === 'BE').length;
+                  const totalSubj = Math.max(1, resolvedSubjects.length);
 
-                {/* Benchmark lines */}
-                <line x1="45" y1={getY(80)} x2="330" y2={getY(80)} stroke="#059669" strokeDasharray="2,2" strokeWidth="1" />
-                <text x="330" y={getY(80) - 2} textAnchor="end" fontSize="6.5" fontWeight="bold" fill="#059669" fontFamily="system-ui, sans-serif">
-                  EE Target (80%)
-                </text>
-                
-                <line x1="45" y1={getY(65)} x2="330" y2={getY(65)} stroke="#800000" strokeDasharray="2,2" strokeWidth="0.8" strokeOpacity="0.5" />
-                <text x="330" y={getY(65) - 2} textAnchor="end" fontSize="6.5" fontWeight="bold" fill="#800000" fontFamily="system-ui, sans-serif">
-                  ME Floor (65%)
-                </text>
-                
-                <line x1="45" y1={getY(50)} x2="330" y2={getY(50)} stroke="#d97706" strokeDasharray="2,2" strokeWidth="0.8" strokeOpacity="0.5" />
+                  const eeW = Math.round((eeCount / totalSubj) * 155);
+                  const meW = Math.round((meCount / totalSubj) * 155);
+                  const aeW = Math.round((aeCount / totalSubj) * 155);
+                  const beW = Math.round((beCount / totalSubj) * 155);
+                  const isPass = term.averageScore >= 65;
 
-                {/* Grid Baseline */}
-                <line x1="45" y1="185" x2="330" y2="185" stroke="#9ca3af" strokeWidth="1" />
+                  return (
+                    <g>
+                      <rect x="10" y="10" width="340" height="195" rx="6" fill="#ffffff" stroke="#e5e7eb" strokeWidth="1" />
+                      <text x="25" y="27" fontSize="8.5" fontWeight="bold" fill="#800000" fontFamily="system-ui, sans-serif" textTransform="uppercase">
+                        {term.label} CBC Mastery Profile
+                      </text>
 
-                {/* Y Axis Labels */}
-                <text x="40" y={getY(100) + 3} textAnchor="end" fontSize="6.5" fill="#6b7280" fontFamily="system-ui, sans-serif">100%</text>
-                <text x="40" y={getY(75) + 3} textAnchor="end" fontSize="6.5" fill="#6b7280" fontFamily="system-ui, sans-serif">75%</text>
-                <text x="40" y={getY(50) + 3} textAnchor="end" fontSize="6.5" fill="#6b7280" fontFamily="system-ui, sans-serif">50%</text>
-                <text x="40" y="188" textAnchor="end" fontSize="6.5" fill="#6b7280" fontFamily="system-ui, sans-serif">0%</text>
+                      {/* Summary Metric Header Box */}
+                      <rect x="22" y="34" width="316" height="34" rx="4" fill="#faf5f5" stroke="#fecdd3" strokeWidth="0.8" />
+                      <text x="32" y="46" fontSize="6.5" fontWeight="bold" fill="#800000" fontFamily="system-ui, sans-serif" textTransform="uppercase">Term Mean Score</text>
+                      <text x="32" y="62" fontSize="13" fontWeight="900" fill="#800000" fontFamily="system-ui, sans-serif">{term.averageScore}%</text>
 
-                {/* Area Fill */}
-                <path
-                  d={`M ${graphX1} ${graphY1} C ${(graphX1 + graphX2) / 2} ${graphY1}, ${(graphX1 + graphX2) / 2} ${graphY2}, ${graphX2} ${graphY2} C ${(graphX2 + graphX3) / 2} ${graphY2}, ${(graphX2 + graphX3) / 2} ${graphY3}, ${graphX3} ${graphY3} L ${graphX3} 185 L ${graphX1} 185 Z`}
-                  fill="url(#jsxTermCurveGrad)"
-                />
+                      <text x="135" y="46" fontSize="6.5" fontWeight="bold" fill="#64748b" fontFamily="system-ui, sans-serif" textTransform="uppercase">Overall Evaluation</text>
+                      <text x="135" y="61" fontSize="8.5" fontWeight="bold" fill="#047857" fontFamily="system-ui, sans-serif">
+                        {term.averageScore >= 80 ? 'Exceeding Expectations (EE)' : term.averageScore >= 65 ? 'Meeting Expectations (ME)' : 'Approaching Expectations (AE)'}
+                      </text>
 
-                {/* Curve */}
-                <path
-                  d={`M ${graphX1} ${graphY1} C ${(graphX1 + graphX2) / 2} ${graphY1}, ${(graphX1 + graphX2) / 2} ${graphY2}, ${graphX2} ${graphY2} C ${(graphX2 + graphX3) / 2} ${graphY2}, ${(graphX2 + graphX3) / 2} ${graphY3}, ${graphX3} ${graphY3}`}
-                  fill="none"
-                  stroke="#800000"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                />
+                      <text x="22" y="80" fontSize="7.5" fontWeight="bold" fill="#334155" fontFamily="system-ui, sans-serif" textTransform="uppercase">Learning Area Rubric Distribution ({totalSubj} Areas)</text>
 
-                {/* Node 1: Term 1 */}
-                <circle cx={graphX1} cy={graphY1} r="4.5" fill="#ffffff" stroke="#800000" strokeWidth="2" />
-                <rect x={graphX1 - 16} y={graphY1 - 16} width="32" height="12" rx="3" fill="#800000" />
-                <text x={graphX1} y={graphY1 - 7} textAnchor="middle" fontSize="7.5" fontWeight="bold" fill="#ffffff" fontFamily="system-ui, sans-serif">
-                  {term1Average}%
-                </text>
-                <text x={graphX1} y="197" textAnchor="middle" fontSize="7.5" fontWeight="bold" fill="#374151" fontFamily="system-ui, sans-serif">
-                  Term 1
-                </text>
+                      {/* Row 1: EE */}
+                      <rect x="22" y="87" width="22" height="13" rx="2" fill="#047857" />
+                      <text x="33" y="96" textAnchor="middle" fontSize="7" fontWeight="bold" fill="#ffffff" fontFamily="system-ui, sans-serif">EE</text>
+                      <text x="49" y="96.5" fontSize="7.5" fill="#334155" fontFamily="system-ui, sans-serif">80 - 100%</text>
+                      <rect x="110" y="89" width="155" height="9" rx="2" fill="#f1f5f9" />
+                      <rect x="110" y="89" width={eeW} height="9" rx="2" fill="#047857" />
+                      <text x="272" y="96.5" fontSize="7.5" fontWeight="bold" fill="#047857" fontFamily="system-ui, sans-serif">{eeCount} Subj ({Math.round((eeCount / totalSubj) * 100)}%)</text>
 
-                {/* Node 2: Term 2 */}
-                <circle cx={graphX2} cy={graphY2} r="4.5" fill="#ffffff" stroke="#800000" strokeWidth="2" />
-                <rect x={graphX2 - 16} y={graphY2 - 16} width="32" height="12" rx="3" fill="#800000" />
-                <text x={graphX2} y={graphY2 - 7} textAnchor="middle" fontSize="7.5" fontWeight="bold" fill="#ffffff" fontFamily="system-ui, sans-serif">
-                  {term2Average}%
-                </text>
-                <text x={graphX2} y="197" textAnchor="middle" fontSize="7.5" fontWeight="bold" fill="#374151" fontFamily="system-ui, sans-serif">
-                  Term 2
-                </text>
+                      {/* Row 2: ME */}
+                      <rect x="22" y="105" width="22" height="13" rx="2" fill="#800000" />
+                      <text x="33" y="114" textAnchor="middle" fontSize="7" fontWeight="bold" fill="#ffffff" fontFamily="system-ui, sans-serif">ME</text>
+                      <text x="49" y="114.5" fontSize="7.5" fill="#334155" fontFamily="system-ui, sans-serif">65 - 79%</text>
+                      <rect x="110" y="107" width="155" height="9" rx="2" fill="#f1f5f9" />
+                      <rect x="110" y="107" width={meW} height="9" rx="2" fill="#800000" />
+                      <text x="272" y="114.5" fontSize="7.5" fontWeight="bold" fill="#800000" fontFamily="system-ui, sans-serif">{meCount} Subj ({Math.round((meCount / totalSubj) * 100)}%)</text>
 
-                {/* Node 3: Term 3 */}
-                <circle cx={graphX3} cy={graphY3} r="5" fill="#800000" stroke="#ffffff" strokeWidth="1.5" />
-                <rect x={graphX3 - 16} y={graphY3 - 16} width="32" height="12" rx="3" fill="#047857" />
-                <text x={graphX3} y={graphY3 - 7} textAnchor="middle" fontSize="7.5" fontWeight="bold" fill="#ffffff" fontFamily="system-ui, sans-serif">
-                  {term3Average}%
-                </text>
-                <text x={graphX3} y="197" textAnchor="middle" fontSize="7.5" fontWeight="bold" fill="#800000" fontFamily="system-ui, sans-serif">
-                  Term 3
-                </text>
-              </g>
+                      {/* Row 3: AE */}
+                      <rect x="22" y="123" width="22" height="13" rx="2" fill="#d97706" />
+                      <text x="33" y="132" textAnchor="middle" fontSize="7" fontWeight="bold" fill="#ffffff" fontFamily="system-ui, sans-serif">AE</text>
+                      <text x="49" y="132.5" fontSize="7.5" fill="#334155" fontFamily="system-ui, sans-serif">50 - 64%</text>
+                      <rect x="110" y="125" width="155" height="9" rx="2" fill="#f1f5f9" />
+                      <rect x="110" y="125" width={aeW} height="9" rx="2" fill="#d97706" />
+                      <text x="272" y="132.5" fontSize="7.5" fontWeight="bold" fill="#d97706" fontFamily="system-ui, sans-serif">{aeCount} Subj ({Math.round((aeCount / totalSubj) * 100)}%)</text>
 
-              {/* RIGHT: 12 Learning Areas Multi-Term Matrix */}
+                      {/* Row 4: BE */}
+                      <rect x="22" y="141" width="22" height="13" rx="2" fill="#dc2626" />
+                      <text x="33" y="150" textAnchor="middle" fontSize="7" fontWeight="bold" fill="#ffffff" fontFamily="system-ui, sans-serif">BE</text>
+                      <text x="49" y="150.5" fontSize="7.5" fill="#334155" fontFamily="system-ui, sans-serif">0 - 49%</text>
+                      <rect x="110" y="143" width="155" height="9" rx="2" fill="#f1f5f9" />
+                      <rect x="110" y="143" width={beW} height="9" rx="2" fill="#dc2626" />
+                      <text x="272" y="150.5" fontSize="7.5" fontWeight="bold" fill="#dc2626" fontFamily="system-ui, sans-serif">{beCount} Subj ({Math.round((beCount / totalSubj) * 100)}%)</text>
+
+                      {/* Status Callout Footer */}
+                      <rect x="22" y="161" width="316" height="32" rx="4" fill={isPass ? '#ecfdf5' : '#fffbeb'} stroke={isPass ? '#a7f3d0' : '#fde68a'} strokeWidth="0.8" />
+                      <text x="32" y="174" fontSize="7" fontWeight="bold" fill={isPass ? '#047857' : '#b45309'} fontFamily="system-ui, sans-serif">
+                        {term.averageScore >= 80 ? '★ EXCEEDING NATIONAL CBC BENCHMARK (>= 80%)' : isPass ? '✓ PROFICIENT LEARNER (>= 65% CURRICULUM PASS)' : '⚠ REMEDIAL INTERVENTION RECOMMENDED'}
+                      </text>
+                      <text x="32" y="185" fontSize="6.5" fill="#475569" fontFamily="system-ui, sans-serif">
+                        {eeCount + meCount} of ${totalSubj} learning areas achieve verified Meeting or Exceeding expectations.
+                      </text>
+                    </g>
+                  );
+                })()
+              ) : (
+                <g>
+                  <rect x="10" y="10" width="340" height="195" rx="6" fill="#ffffff" stroke="#e5e7eb" strokeWidth="1" />
+                  <text x="25" y="26" fontSize="8.5" fontWeight="bold" fill="#800000" fontFamily="system-ui, sans-serif" textTransform="uppercase">
+                    Term Aggregate Trajectory
+                  </text>
+
+                  {/* Benchmark lines */}
+                  <line x1="45" y1={getY(80)} x2="330" y2={getY(80)} stroke="#059669" strokeDasharray="2,2" strokeWidth="1" />
+                  <text x="330" y={getY(80) - 2} textAnchor="end" fontSize="6.5" fontWeight="bold" fill="#059669" fontFamily="system-ui, sans-serif">
+                    EE Target (80%)
+                  </text>
+                  
+                  <line x1="45" y1={getY(65)} x2="330" y2={getY(65)} stroke="#800000" strokeDasharray="2,2" strokeWidth="0.8" strokeOpacity="0.5" />
+                  <text x="330" y={getY(65) - 2} textAnchor="end" fontSize="6.5" fontWeight="bold" fill="#800000" fontFamily="system-ui, sans-serif">
+                    ME Floor (65%)
+                  </text>
+                  
+                  <line x1="45" y1={getY(50)} x2="330" y2={getY(50)} stroke="#d97706" strokeDasharray="2,2" strokeWidth="0.8" strokeOpacity="0.5" />
+
+                  {/* Grid Baseline */}
+                  <line x1="45" y1="185" x2="330" y2="185" stroke="#9ca3af" strokeWidth="1" />
+
+                  {/* Y Axis Labels */}
+                  <text x="40" y={getY(100) + 3} textAnchor="end" fontSize="6.5" fill="#6b7280" fontFamily="system-ui, sans-serif">100%</text>
+                  <text x="40" y={getY(75) + 3} textAnchor="end" fontSize="6.5" fill="#6b7280" fontFamily="system-ui, sans-serif">75%</text>
+                  <text x="40" y={getY(50) + 3} textAnchor="end" fontSize="6.5" fill="#6b7280" fontFamily="system-ui, sans-serif">50%</text>
+                  <text x="40" y="188" textAnchor="end" fontSize="6.5" fill="#6b7280" fontFamily="system-ui, sans-serif">0%</text>
+
+                  {/* Left Visual: 2-point line (2 terms), or 3-point curve (3 terms) */}
+                  {(() => {
+                    if (recordedTerms.length === 2) {
+                      const [t1, t2] = recordedTerms;
+                      const x1 = 110;
+                      const x2 = 250;
+                      const y1 = getY(t1.averageScore);
+                      const y2 = getY(t2.averageScore);
+                      return (
+                        <g>
+                          <path d={`M ${x1} ${y1} L ${x2} ${y2} L ${x2} 185 L ${x1} 185 Z`} fill="url(#jsxTermCurveGrad)" />
+                          <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#800000" strokeWidth="2.5" strokeLinecap="round" />
+                          <circle cx={x1} cy={y1} r="4.5" fill="#ffffff" stroke="#800000" strokeWidth="2" />
+                          <rect x={x1 - 16} y={y1 - 16} width="32" height="12" rx="3" fill="#800000" />
+                          <text x={x1} y={y1 - 7} textAnchor="middle" fontSize="7.5" fontWeight="bold" fill="#ffffff" fontFamily="system-ui, sans-serif">
+                            {t1.averageScore}%
+                          </text>
+                          <text x={x1} y="197" textAnchor="middle" fontSize="7.5" fontWeight="bold" fill="#374151" fontFamily="system-ui, sans-serif">
+                            {t1.label}
+                          </text>
+
+                          <circle cx={x2} cy={y2} r="5" fill="#800000" stroke="#ffffff" strokeWidth="1.5" />
+                          <rect x={x2 - 16} y={y2 - 16} width="32" height="12" rx="3" fill="#047857" />
+                          <text x={x2} y={y2 - 7} textAnchor="middle" fontSize="7.5" fontWeight="bold" fill="#ffffff" fontFamily="system-ui, sans-serif">
+                            {t2.averageScore}%
+                          </text>
+                          <text x={x2} y="197" textAnchor="middle" fontSize="7.5" fontWeight="bold" fill="#800000" fontFamily="system-ui, sans-serif">
+                            {t2.label}
+                          </text>
+                        </g>
+                      );
+                    }
+
+                    // 3 terms
+                    const [t1, t2, t3] = recordedTerms;
+                    const x1 = 70;
+                    const x2 = 185;
+                    const x3 = 300;
+                    const y1 = getY(t1.averageScore);
+                    const y2 = getY(t2.averageScore);
+                    const y3 = getY(t3.averageScore);
+                    return (
+                      <g>
+                        <path
+                          d={`M ${x1} ${y1} C ${(x1 + x2) / 2} ${y1}, ${(x1 + x2) / 2} ${y2}, ${x2} ${y2} C ${(x2 + x3) / 2} ${y2}, ${(x2 + x3) / 2} ${y3}, ${x3} ${y3} L ${x3} 185 L ${x1} 185 Z`}
+                          fill="url(#jsxTermCurveGrad)"
+                        />
+                        <path
+                          d={`M ${x1} ${y1} C ${(x1 + x2) / 2} ${y1}, ${(x1 + x2) / 2} ${y2}, ${x2} ${y2} C ${(x2 + x3) / 2} ${y2}, ${(x2 + x3) / 2} ${y3}, ${x3} ${y3}`}
+                          fill="none"
+                          stroke="#800000"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                        />
+                        <circle cx={x1} cy={y1} r="4.5" fill="#ffffff" stroke="#800000" strokeWidth="2" />
+                        <rect x={x1 - 16} y={y1 - 16} width="32" height="12" rx="3" fill="#800000" />
+                        <text x={x1} y={y1 - 7} textAnchor="middle" fontSize="7.5" fontWeight="bold" fill="#ffffff" fontFamily="system-ui, sans-serif">
+                          {t1.averageScore}%
+                        </text>
+                        <text x={x1} y="197" textAnchor="middle" fontSize="7.5" fontWeight="bold" fill="#374151" fontFamily="system-ui, sans-serif">
+                          {t1.label}
+                        </text>
+
+                        <circle cx={x2} cy={y2} r="4.5" fill="#ffffff" stroke="#800000" strokeWidth="2" />
+                        <rect x={x2 - 16} y={y2 - 16} width="32" height="12" rx="3" fill="#800000" />
+                        <text x={x2} y={y2 - 7} textAnchor="middle" fontSize="7.5" fontWeight="bold" fill="#ffffff" fontFamily="system-ui, sans-serif">
+                          {t2.averageScore}%
+                        </text>
+                        <text x={x2} y="197" textAnchor="middle" fontSize="7.5" fontWeight="bold" fill="#374151" fontFamily="system-ui, sans-serif">
+                          {t2.label}
+                        </text>
+
+                        <circle cx={x3} cy={y3} r="5" fill="#800000" stroke="#ffffff" strokeWidth="1.5" />
+                        <rect x={x3 - 16} y={y3 - 16} width="32" height="12" rx="3" fill="#047857" />
+                        <text x={x3} y={y3 - 7} textAnchor="middle" fontSize="7.5" fontWeight="bold" fill="#ffffff" fontFamily="system-ui, sans-serif">
+                          {t3.averageScore}%
+                        </text>
+                        <text x={x3} y="197" textAnchor="middle" fontSize="7.5" fontWeight="bold" fill="#800000" fontFamily="system-ui, sans-serif">
+                          {t3.label}
+                        </text>
+                      </g>
+                    );
+                  })()}
+                </g>
+              )}
+
+              {/* RIGHT: CBC Learning Areas Dynamic Matrix */}
               <g>
                 <rect x="360" y="10" width="440" height="195" rx="6" fill="#ffffff" stroke="#e5e7eb" strokeWidth="1" />
                 <text x="375" y="24" fontSize="8.5" fontWeight="bold" fill="#800000" fontFamily="system-ui, sans-serif" textTransform="uppercase">
-                  12 CBC Learning Areas Comparison (Terms 1, 2 &amp; 3)
+                  {recordedTerms.length === 1
+                    ? `${resolvedSubjects.length} CBC Learning Areas Performance (${recordedTerms[0].label} Evaluation)`
+                    : `${resolvedSubjects.length} CBC Learning Areas Comparison (${recordedTerms.map(t => t.label).join(' & ')})`}
                 </text>
 
                 {/* Legend */}
-                <rect x="585" y="16" width="7" height="6" rx="1" fill="#fca5a5" />
-                <text x="595" y="22" fontSize="6.5" fill="#4b5563" fontFamily="system-ui, sans-serif">T1</text>
-                <rect x="612" y="16" width="7" height="6" rx="1" fill="#b91c1c" />
-                <text x="622" y="22" fontSize="6.5" fill="#4b5563" fontFamily="system-ui, sans-serif">T2</text>
-                <rect x="638" y="16" width="7" height="6" rx="1" fill="#800000" />
-                <text x="648" y="22" fontSize="6.5" fill="#4b5563" fontFamily="system-ui, sans-serif">T3</text>
-                <line x1="665" y1="19" x2="675" y2="19" stroke="#059669" strokeDasharray="2,2" strokeWidth="1.2" />
-                <text x="678" y="22" fontSize="6.5" fill="#059669" fontFamily="system-ui, sans-serif">80%</text>
+                {recordedTerms.length === 1 ? (
+                  <g>
+                    <rect x="610" y="16" width="10" height="7" rx="1.5" fill="#800000" />
+                    <text x="625" y="22" fontSize="6.5" fontWeight="bold" fill="#800000" fontFamily="system-ui, sans-serif">{recordedTerms[0].label} Score</text>
+                    <line x1="695" y1="19" x2="705" y2="19" stroke="#059669" strokeDasharray="2,2" strokeWidth="1.2" />
+                    <text x="708" y="22" fontSize="6.5" fill="#059669" fontFamily="system-ui, sans-serif">80% Target</text>
+                  </g>
+                ) : (
+                  <g>
+                    {(() => {
+                      let offset = 570;
+                      return recordedTerms.map((t, idx) => {
+                        const color = t.termNumber === 1 ? '#fca5a5' : t.termNumber === 2 ? '#b91c1c' : '#800000';
+                        const currentOffset = offset;
+                        offset += 28;
+                        return (
+                          <g key={idx}>
+                            <rect x={currentOffset} y="16" width="7" height="6" rx="1" fill={color} />
+                            <text x={currentOffset + 10} y="22" fontSize="6.5" fill="#4b5563" fontFamily="system-ui, sans-serif">{t.short}</text>
+                          </g>
+                        );
+                      });
+                    })()}
+                    <line x1="665" y1="19" x2="675" y2="19" stroke="#059669" strokeDasharray="2,2" strokeWidth="1.2" />
+                    <text x="678" y="22" fontSize="6.5" fill="#059669" fontFamily="system-ui, sans-serif">80%</text>
+                  </g>
+                )}
 
                 {/* 80% Target Guideline */}
                 <line
@@ -1405,39 +1844,52 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
                   strokeWidth="0.8"
                 />
 
-                {/* 12 Subject Rows */}
-                {resolved12Subjects.map((s, idx) => {
-                  const rowY = 32 + idx * 15;
-                  const w1 = Math.round((s.term1Score / 100) * 270);
-                  const w2 = Math.round((s.term2Score / 100) * 270);
-                  const w3 = Math.round((s.term3Score / 100) * 270);
+                {/* Subject Rows */}
+                {(() => {
+                  const rowSpacing = resolvedSubjects.length > 0 ? Math.min(20, Math.max(12, Math.floor(155 / resolvedSubjects.length))) : 15;
+                  const barHeight = Math.min(9, Math.max(6, rowSpacing - 6));
+                  return resolvedSubjects.map((s, idx) => {
+                    const rowY = 32 + idx * rowSpacing;
 
-                  return (
-                    <g key={idx}>
-                      <text x="445" y={rowY + 9} textAnchor="end" fontSize="8" fontWeight="600" fill="#374151" fontFamily="system-ui, sans-serif">
-                        {s.short}
-                      </text>
-                      <rect x="455" y={rowY + 2} width="270" height="9" rx="2" fill="#f3f4f6" />
-                      <rect x="455" y={rowY + 2} width={w1} height="3" rx="1" fill="#fca5a5" />
-                      <rect x="455" y={rowY + 5} width={w2} height="3" rx="1" fill="#b91c1c" />
-                      <rect x="455" y={rowY + 8} width={w3} height="3" rx="1" fill="#800000" />
-                      <text x="732" y={rowY + 9} fontSize="8" fontWeight="bold" fill="#800000" fontFamily="system-ui, sans-serif">
-                        {s.score}%
-                      </text>
-                      <rect
-                        x="760"
-                        y={rowY + 1}
-                        width="16"
-                        height="10"
-                        rx="2"
-                        fill={s.rubricCode === 'EE' ? '#047857' : s.rubricCode === 'ME' ? '#800000' : s.rubricCode === 'AE' ? '#b45309' : '#b91c1c'}
-                      />
-                      <text x="768" y={rowY + 9} textAnchor="middle" fontSize="7" fontWeight="bold" fill="#ffffff" fontFamily="system-ui, sans-serif">
-                        {s.rubricCode}
-                      </text>
-                    </g>
-                  );
-                })}
+                    return (
+                      <g key={idx}>
+                        <text x="445" y={rowY + Math.round(barHeight * 0.9)} textAnchor="end" fontSize="8" fontWeight="600" fill="#374151" fontFamily="system-ui, sans-serif">
+                          {s.short}
+                        </text>
+                        <rect x="455" y={rowY} width="270" height={barHeight} rx="2" fill="#f3f4f6" />
+                        {recordedTerms.length === 1 ? (
+                          <rect x="455" y={rowY} width={Math.round((s.score / 100) * 270)} height={barHeight} rx="2" fill="#800000" />
+                        ) : (
+                          (() => {
+                            const sliceH = Math.max(2, Math.floor(barHeight / recordedTerms.length));
+                            return recordedTerms.map((t, tIdx) => {
+                              const val = t.termNumber === 1 ? (s.term1Score ?? s.score) : t.termNumber === 2 ? (s.term2Score ?? s.score) : (s.term3Score ?? s.score);
+                              const w = Math.round((val / 100) * 270);
+                              const color = t.termNumber === 1 ? '#fca5a5' : t.termNumber === 2 ? '#b91c1c' : '#800000';
+                              return (
+                                <rect key={tIdx} x="455" y={rowY + tIdx * sliceH} width={w} height={sliceH} rx="1" fill={color} />
+                              );
+                            });
+                          })()
+                        )}
+                        <text x="732" y={rowY + Math.round(barHeight * 0.9)} fontSize="8" fontWeight="bold" fill="#800000" fontFamily="system-ui, sans-serif">
+                          {s.score}%
+                        </text>
+                        <rect
+                          x="760"
+                          y={rowY}
+                          width="16"
+                          height={barHeight}
+                          rx="2"
+                          fill={s.rubricCode === 'EE' ? '#047857' : s.rubricCode === 'ME' ? '#800000' : s.rubricCode === 'AE' ? '#b45309' : '#b91c1c'}
+                        />
+                        <text x="768" y={rowY + Math.round(barHeight * 0.9)} textAnchor="middle" fontSize="7" fontWeight="bold" fill="#ffffff" fontFamily="system-ui, sans-serif">
+                          {s.rubricCode}
+                        </text>
+                      </g>
+                    );
+                  });
+                })()}
               </g>
             </svg>
           </div>

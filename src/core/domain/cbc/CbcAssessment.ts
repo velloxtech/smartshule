@@ -331,6 +331,8 @@ export class SummativeAssessment extends Entity<SummativeAssessmentProps> {
 export interface LearningAreaReportEntry {
   learningAreaId: string;
   learningAreaName: string;
+  code?: string;
+  levelLabel?: string;
   performanceLevel: PerformanceLevel;
   score: number; // 1-4 or percentage score out of 100
   rawScore?: number;

@@ -15,6 +15,20 @@ export enum UserRole {
   STUDENT = 'STUDENT'
 }
 
+export const BILLING_AUTHORIZED_ROLES: UserRole[] = [
+  UserRole.SUPER_ADMIN,
+  UserRole.ADMIN,
+  UserRole.SCHOOL_ADMIN,
+  UserRole.HEAD_TEACHER,
+  UserRole.BURSAR,
+  UserRole.ACCOUNTANT
+];
+
+export function isBillingAuthorizedRole(role?: string | UserRole): boolean {
+  if (!role) return false;
+  return BILLING_AUTHORIZED_ROLES.includes(role as UserRole);
+}
+
 export enum UserStatus {
   ACTIVE = 'ACTIVE',
   INACTIVE = 'INACTIVE',
