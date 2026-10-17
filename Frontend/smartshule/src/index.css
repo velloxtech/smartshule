@@ -1,6 +1,16 @@
 @import "tailwindcss";
 
 @theme {
+  --color-maroon: #7b1c35;
+  --color-maroon-deep: #5a1226;
+  --color-maroon-light: #9e2644;
+  --color-maroon-pale: #f9eef1;
+  --color-gold: #e8a92a;
+  --color-gold-light: #f5c84a;
+  --color-cream: #fdfaf6;
+  --color-text: #1f0a10;
+  --color-muted: #8a6470;
+
   --color-primary: #7a1228;
   --color-on-primary: #ffffff;
   --color-primary-container: #5c0a1a;

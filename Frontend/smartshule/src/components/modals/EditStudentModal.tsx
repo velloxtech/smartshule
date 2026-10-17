@@ -349,11 +349,11 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
                 <span className="material-symbols-outlined text-[18px]">contact_phone</span>
                 <span>Parent / Guardian Contact Numbers (Can Change)</span>
               </div>
-              <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold">SMS / STK Alerts</span>
+              <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold">SMS / Receipt Alerts</span>
             </div>
 
             <p className="text-[11px] text-on-surface-variant">
-              Phone numbers can change over time. Keep this updated to ensure instant M-Pesa STK receipts and school notifications reach you.
+              Phone numbers can change over time. Keep this updated to ensure instant SMS fee receipts and school notifications reach you.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

@@ -1,7 +1,113 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react'
+import ProgrammesPage from './ProgrammesPage'
+import AdmissionsPage from './AdmissionsPage'
+import CloudSky from './CloudSky'
+import LearnerOnboardingPage from './LearnerOnboardingPage'
 
-interface LandingPageProps {
-  onNavigateLogin: () => void;
+const logo = '/logo.jpg'
+const whatsappImg = '/hero-school.png'
+const heroSchool = '/hero-school.png'
+
+const NAV_LINKS = [
+  { name: 'Home', view: 'home', section: null },
+  { name: 'About Us', view: 'home', section: 'about' },
+  { name: 'Programmes', view: 'programmes', section: null },
+  { name: 'Admissions', view: 'admissions', section: null },
+  { name: 'Contact', view: 'home', section: 'contact' },
+]
+
+const PROGRAMMES = [
+  {
+    level: 'Playgroup',
+    age: 'Ages 2 – 3',
+    desc: 'Sensory exploration, socialization, music, and motor skill development in a warm, nurturing space.',
+    emoji: '🌱',
+  },
+  {
+    level: 'PP1 (Pre-Primary 1)',
+    age: 'Age 4',
+    desc: 'CBC foundational areas: Language, Mathematical activities, Environmental, and Psychomotor skills.',
+    emoji: '🎨',
+  },
+  {
+    level: 'PP2 (Pre-Primary 2)',
+    age: 'Age 5',
+    desc: 'Phonics, early numeracy, social values, and creative expression preparing learners for Lower Primary.',
+    emoji: '🌻',
+  },
+  {
+    level: 'Lower Primary',
+    age: 'Grade 1 – 3',
+    desc: 'CBC Key Stage 1: Literacy, Kiswahili, English, Math, Hygiene & Nutrition, and Creative Arts.',
+    emoji: '📚',
+  },
+  {
+    level: 'Upper Primary',
+    age: 'Grade 4 – 6',
+    desc: 'CBC Key Stage 2: Science & Tech, Social Studies, Creative Arts, and Digital Literacy.',
+    emoji: '🔬',
+  },
+]
+
+const STATS = [
+  { value: '500+', label: 'Happy pupils enrolled' },
+  { value: '1:15', label: 'Teacher-to-pupil ratio' },
+  { value: '13+', label: 'Years of excellence' },
+  { value: '12', label: 'Extra-curricular clubs' },
+]
+
+const KEY_OBJECTIVES = [
+  {
+    key: 'a',
+    title: 'Problem Solving',
+    desc: 'To develop Skills that will help in problem solving',
+    icon: '💡',
+  },
+  {
+    key: 'b',
+    title: 'Confidence & Resilience',
+    desc: 'To bring out a confident child with ability to take up challenges',
+    icon: '🦁',
+  },
+  {
+    key: 'c',
+    title: 'Teamwork & Cooperation',
+    desc: 'To teach a child to work, learn and get along with others',
+    icon: '🤝',
+  },
+  {
+    key: 'd',
+    title: 'Nurturing Full Potential',
+    desc: "To nurture each child's talent and bring out their full potential",
+    icon: '🌱',
+  },
+]
+
+const VALUES = [
+  {
+    title: 'Faith & Character',
+    desc: 'We cultivate children of strong moral character, rooted in values of honesty, kindness, and integrity.',
+    icon: '✝️',
+  },
+  {
+    title: 'Holistic Learning',
+    desc: 'Academics, arts, sports, and social development are woven together — we nurture the whole child.',
+    icon: '🌍',
+  },
+  {
+    title: 'Safe & Nurturing',
+    desc: 'Every child deserves to feel safe and seen. Our environment is warm, inclusive, and child-centred.',
+    icon: '🤝',
+  },
+  {
+    title: 'Excellence',
+    desc: 'We hold high aspirations for every pupil and equip them with skills to achieve their very best.',
+    icon: '⭐',
+  },
+]
+
+export interface LandingPageProps {
+  onNavigateLogin?: () => void;
   isAuthenticated?: boolean;
   onNavigatePortal?: () => void;
   onOpenLegalModal?: (tab: 'terms' | 'privacy' | 'cookies' | 'child_protection') => void;
@@ -13,626 +119,716 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   onNavigatePortal,
   onOpenLegalModal,
 }) => {
-  const [activePortalTab, setActivePortalTab] = useState<'admin' | 'teacher' | 'finance' | 'parent'>('admin');
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [currentPage, setCurrentPage] = useState<'home' | 'programmes' | 'admissions' | 'onboarding'>('home')
+  const [showEnrolModal, setShowEnrolModal] = useState(false)
+  const [modalSubmitted, setModalSubmitted] = useState(false)
+  const [enrolForm, setEnrolForm] = useState({
+    parentName: '',
+    phone: '',
+    email: '',
+    childName: '',
+    programme: 'Playgroup',
+  })
 
-  const portals = {
-    admin: {
-      title: 'School Administrator Portal',
-      subtitle: 'Complete Institutional Governance & Curriculum Oversight',
-      description:
-        'Manage whole-school CBC academic sessions, enroll learners with instant UPI/NEMIS generation, oversee educator assignments, verify KNEC summative assessments, and monitor institution-wide financial health.',
-      features: [
-        'Automated NEMIS UPI Learner Admission with National Education Database validation',
-        'Educator Onboarding & Subject/Stream Allocation',
-        'Executive CBC Briefs & MoE Stamp Verified PDF Exporting',
-        'System Audit Logs & Africa\'s Talking SMS Broadcasting',
-      ],
-      badge: 'Full Oversight',
-      icon: 'admin_panel_settings',
-    },
-    teacher: {
-      title: 'CBC Educator & Classroom Portal',
-      subtitle: 'Streamlined Curriculum Syllabus Planning & Competency Rubrics',
-      description:
-        'Designed specifically for CBC teachers. Build 40-minute pedagogical lesson plans with guided 4-step outcomes, record daily student attendance roll calls, and evaluate formative competency rubrics on EE, ME, AE, and BE scales.',
-      features: [
-        'Curriculum-Aligned Weekly Schemes of Work Generator',
-        '4-Step CBC Lesson Plan Builder with Reflection Journal',
-        'Formative Rubric Scoring for Core Competencies & Values',
-        'Instant Timetable View with Room & Subject Clash Detection',
-      ],
-      badge: 'Pedagogy & Rubrics',
-      icon: 'menu_book',
-    },
-    finance: {
-      title: 'Finance & Bursar Portal',
-      subtitle: 'KCB Buni M-Pesa Express & Fee Management',
-      description:
-        'Transform fee collection with real-time mobile money integration. Trigger instant KCB Buni STK Push requests straight to parent phone numbers, print official receipts, generate batch termly invoices, and follow up arrears with automated SMS alerts.',
-      features: [
-        'Direct KCB Buni STK Push Billing to Parent M-Pesa Wallets',
-        'Itemized CBC Grade Fee Structure Management (Tuition, Meals, Transport)',
-        'Automated Official School Receipts & Double-Entry Ledger Reconciliation',
-        'Fee Defaulters Tracking with Automated SMS Payment Reminders',
-      ],
-      badge: 'KCB Buni M-Pesa',
-      icon: 'payments',
-    },
-    parent: {
-      title: 'Parent & Guardian Portal',
-      subtitle: 'Real-Time Learner Competency Tracking & Mobile Payments',
-      description:
-        'Keep parents actively involved in their child\'s CBC growth. View continuous assessment feedback from teachers, access official printable CBC report cards, view daily roll-call attendance, and settle term fees via 1-click M-Pesa.',
-      features: [
-        'Holistic CBC Progress Reports (Exceeding, Meeting, Approaching, Below)',
-        '1-Click Mobile Fee Payment with Instant Confirmation SMS',
-        'Daily Morning & Afternoon Roll Call Attendance Alerts',
-        'Direct Educator Observations & Homework Follow-ups',
-      ],
-      badge: 'Parent Engagement',
-      icon: 'family_restroom',
-    },
-  };
+  useEffect(() => {
+    const handleHash = () => {
+      const hash = window.location.hash.toLowerCase()
+      if (hash === '#onboard' || hash === '#onboarding' || hash === '#admitted-onboarding') {
+        setCurrentPage('onboarding')
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      } else if (hash === '#programmes') {
+        setCurrentPage('programmes')
+      } else if (hash === '#admissions') {
+        setCurrentPage('admissions')
+      }
+    }
+    handleHash()
+    window.addEventListener('hashchange', handleHash)
+    return () => window.removeEventListener('hashchange', handleHash)
+  }, [])
 
-  const selectedPortal = portals[activePortalTab];
+  const handleNavClick = (link: typeof NAV_LINKS[0]) => {
+    setMenuOpen(false)
+    if (link.view === 'programmes') {
+      setCurrentPage('programmes')
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } else if (link.view === 'admissions') {
+      setCurrentPage('admissions')
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } else {
+      setCurrentPage('home')
+      if (link.section) {
+        setTimeout(() => {
+          const el = document.getElementById(link.section)
+          if (el) el.scrollIntoView({ behavior: 'smooth' })
+        }, 100)
+      } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      }
+    }
+  }
+
+  const handleModalSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    setModalSubmitted(true)
+    setTimeout(() => {
+      setModalSubmitted(false)
+      setShowEnrolModal(false)
+      setEnrolForm({ parentName: '', phone: '', email: '', childName: '', programme: 'Playgroup' })
+    }, 3000)
+  }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col">
-      {/* Top Notification Banner */}
-      <div className="bg-[#800000] text-white text-xs py-2 px-4 text-center font-medium flex items-center justify-center gap-2 border-b border-[#660000]">
-        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-        <span>Competency-Based Curriculum Framework & Automated Assessment CBA Bridge Active</span>
+    <div className="min-h-screen bg-[#fdfaf6] text-[#1f0a10]">
+
+      <div className="bg-[#5a1226] text-white text-xs py-2 px-6 text-center tracking-wide flex justify-between items-center max-w-7xl mx-auto">
+        <span className="hidden sm:inline">📍 Kisumu, Kisian, KEMRI Road</span>
+        <span className="mx-auto sm:mx-0">📞 Admissions open for 2027 — Call us: <span className="font-semibold text-[#f5c84a]">0745 436312</span></span>
+        <span className="hidden md:inline text-white/70">✉️ schoolgraceseeds@gmail.com</span>
       </div>
 
-      {/* Navigation Bar */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img
-              src="/logo.png"
-              alt="School Logo"
-              className="w-10 h-10 rounded-xl object-cover shadow-md shadow-rose-950/20 border border-[#7a1228]/20 shrink-0"
-              onError={(e) => {
-                (e.target as HTMLElement).style.display = 'none';
-                const fallback = (e.target as HTMLElement).nextElementSibling;
-                if (fallback) (fallback as HTMLElement).style.display = 'flex';
-              }}
-            />
-            <div className="w-10 h-10 rounded-xl bg-[#7a1228] text-white hidden items-center justify-center font-bold shadow-md shadow-rose-950/20 shrink-0">
-              <span className="material-symbols-outlined text-[24px]">school</span>
-            </div>
+      <nav className="sticky top-0 z-50 bg-[#7b1c35] shadow-lg">
+        <div className="max-w-7xl mx-auto px-6 lg:px-12 flex items-center justify-between h-16">
+          <button
+            onClick={() => {
+              setCurrentPage('home')
+              window.scrollTo({ top: 0, behavior: 'smooth' })
+            }}
+            className="flex items-center gap-3 cursor-pointer text-left"
+          >
+            <img src={logo} alt="Grace Seeds School crest" className="h-10 w-10 rounded-full object-cover bg-white p-0.5" />
             <div>
-              <div className="font-bold text-xl tracking-tight text-[#7a1228] leading-none">
-                Grace Seeds School
-              </div>
-              <p className="text-[11px] text-slate-500 font-medium">“The future Begins Here” · SmartShule CBC</p>
+              <p style={{ fontFamily: 'Fraunces, serif' }} className="text-white font-semibold text-base leading-tight">Grace Seeds School</p>
+              <p className="text-white/60 text-[10px] tracking-widest uppercase">School</p>
             </div>
+          </button>
+
+          <div className="hidden md:flex items-center gap-6">
+            {NAV_LINKS.map(link => (
+              <button
+                key={link.name}
+                onClick={() => handleNavClick(link)}
+                className={`text-sm font-semibold transition-colors duration-200 cursor-pointer ${
+                  (currentPage === 'programmes' && link.view === 'programmes') ||
+                  (currentPage === 'admissions' && link.view === 'admissions') ||
+                  (currentPage === 'home' && link.name === 'Home')
+                    ? 'text-[#f5c84a] font-bold border-b-2 border-[#f5c84a] pb-0.5'
+                    : 'text-white/80 hover:text-white'
+                }`}
+              >
+                {link.name}
+              </button>
+            ))}
           </div>
 
-          <nav className="hidden lg:flex items-center gap-7 text-sm font-semibold text-slate-600">
-            <a href="#features" className="hover:text-[#7a1228] transition-colors">Key Features</a>
-            <a href="#portals" className="hover:text-[#7a1228] transition-colors">Role Portals</a>
-            <a href="#cbc-framework" className="hover:text-[#7a1228] transition-colors">CBC Rubrics</a>
-            <a href="#mpesa" className="hover:text-[#7a1228] transition-colors">M-Pesa STK</a>
-          </nav>
-
-          <div className="flex items-center gap-2.5">
-
-            <button
-              onClick={isAuthenticated && onNavigatePortal ? onNavigatePortal : onNavigateLogin}
-              className="px-5 py-2.5 bg-[#7a1228] hover:bg-[#5c0a1a] text-white font-semibold text-sm rounded-xl shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[18px]">
-                {isAuthenticated ? 'dashboard' : 'login'}
-              </span>
-              <span>{isAuthenticated ? 'Go to Dashboard' : 'Sign In to Portal'}</span>
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-rose-50/50 via-white to-slate-50 pt-16 pb-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="text-center max-w-3xl mx-auto">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-rose-100/80 border border-rose-200 text-[#7a1228] text-xs font-semibold mb-6">
-              <span className="material-symbols-outlined text-[16px] text-[#006a63]">verified</span>
-              <span>KICD CBC Standards & National Education Guidelines Aligned</span>
-            </div>
-
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 leading-[1.15]">
-              Intelligent School Management Built for <span className="text-[#7a1228]">Kenyan CBC Schools</span>
-            </h1>
-
-            <p className="mt-6 text-lg sm:text-xl text-slate-600 leading-relaxed">
-              Unified institutional software integrating formative competency rubrics (EE, ME, AE, BE),
-              KCB Buni M-Pesa Express & Paybill 522533 billing, pedagogical lesson planning, and continuous assessment reporting.
-            </p>
-
-            <div className="mt-9 flex flex-col sm:flex-row items-center justify-center gap-4">
+          <div className="hidden md:flex items-center gap-3">
+            {onNavigateLogin && (
               <button
                 onClick={isAuthenticated && onNavigatePortal ? onNavigatePortal : onNavigateLogin}
-                className="w-full sm:w-auto px-8 py-4 bg-[#7a1228] hover:bg-[#5c0a1a] text-white font-bold rounded-2xl shadow-xl shadow-rose-950/25 hover:shadow-2xl transition-all flex items-center justify-center gap-2.5 text-base cursor-pointer"
+                className="bg-white/10 hover:bg-white/20 border border-white/25 text-white font-semibold text-sm px-5 py-2 rounded-full transition-all duration-200 cursor-pointer flex items-center gap-1.5"
               >
-                <span className="material-symbols-outlined text-[20px]">rocket_launch</span>
-                <span>{isAuthenticated ? 'Return to Dashboard' : 'Launch School Portal'}</span>
+                <span>{isAuthenticated ? 'Portal Dashboard' : 'Sign In'}</span>
               </button>
-            </div>
-          </div>
-
-          {/* Quick Metrics Cards */}
-          <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-5xl mx-auto">
-            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs text-center">
-              <div className="text-3xl font-extrabold text-[#7a1228]">100%</div>
-              <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-1">KICD CBC Aligned</div>
-              <p className="text-[11px] text-slate-400 mt-1">EE, ME, AE, BE Rubrics</p>
-            </div>
-            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs text-center">
-              <div className="text-3xl font-extrabold text-[#006a63]">M-Pesa</div>
-              <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-1">KCB Buni STK</div>
-              <p className="text-[11px] text-slate-400 mt-1">Instant Parent Checkout</p>
-            </div>
-            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs text-center">
-              <div className="text-3xl font-extrabold text-[#7a1228]">KNEC CBA</div>
-              <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-1">Portal Bridge</div>
-              <p className="text-[11px] text-slate-400 mt-1">Automated UPI NEMIS</p>
-            </div>
-            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs text-center">
-              <div className="text-3xl font-extrabold text-[#653400]">SMS Alerts</div>
-              <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-1">Africa's Talking</div>
-              <p className="text-[11px] text-slate-400 mt-1">Roll Call & Balance SMS</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Core Capabilities Section */}
-      <section id="features" className="py-20 bg-white border-t border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-[#006a63] mb-2">Pillars of SmartShule</h2>
-            <h3 className="text-3xl font-extrabold text-slate-900 sm:text-4xl">
-              Everything Your School Needs in the CBC Era
-            </h3>
-            <p className="mt-3 text-sm text-slate-600">
-              Purpose-built tools addressing the unique demands of modern primary and junior secondary institutions.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {/* Feature 1 */}
-            <div id="cbc-framework" className="p-6 rounded-2xl bg-slate-50 border border-slate-200 hover:border-[#7a1228]/30 hover:shadow-md transition-all scroll-mt-24">
-              <div className="w-12 h-12 rounded-xl bg-[#7a1228] text-white flex items-center justify-center mb-4">
-                <span className="material-symbols-outlined text-[24px]">rule</span>
-              </div>
-              <h4 className="text-lg font-bold text-slate-900 mb-2">CBC 4-Level Assessment Scale</h4>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Record formative and summative evaluations using official KICD standards: Exceeding Expectations (EE),
-                Meeting Expectations (ME), Approaching (AE), and Below (BE) with specific competency notes.
-              </p>
-            </div>
-
-            {/* Feature 2 */}
-            <div id="mpesa" className="p-6 rounded-2xl bg-slate-50 border border-slate-200 hover:border-[#7a1228]/30 hover:shadow-md transition-all scroll-mt-24">
-              <div className="w-12 h-12 rounded-xl bg-[#006a63] text-white flex items-center justify-center mb-4">
-                <span className="material-symbols-outlined text-[24px]">point_of_sale</span>
-              </div>
-              <h4 className="text-lg font-bold text-slate-900 mb-2">KCB Buni M-Pesa Express</h4>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Initiate remote STK push fee collection directly to parent mobile devices. Payments instantly update
-                learner ledgers, zero out balances, and generate verified school receipts.
-              </p>
-            </div>
-
-            {/* Feature 3 */}
-            <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 hover:border-[#7a1228]/30 hover:shadow-md transition-all">
-              <div className="w-12 h-12 rounded-xl bg-[#7a1228] text-white flex items-center justify-center mb-4">
-                <span className="material-symbols-outlined text-[24px]">verified</span>
-              </div>
-              <h4 className="text-lg font-bold text-slate-900 mb-2">KNEC CBA & NEMIS Bridge</h4>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Ensure compliance with Ministry of Education regulations. Automatic generation of Nemis UPI identifiers,
-                Grade 3 - 6 core strand exports, and synchronized assessment archives.
-              </p>
-            </div>
-
-            {/* Feature 4 */}
-            <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 hover:border-[#7a1228]/30 hover:shadow-md transition-all">
-              <div className="w-12 h-12 rounded-xl bg-[#653400] text-white flex items-center justify-center mb-4">
-                <span className="material-symbols-outlined text-[24px]">edit_calendar</span>
-              </div>
-              <h4 className="text-lg font-bold text-slate-900 mb-2">Schemes & 40-Min Lesson Plans</h4>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Structure termly schemes of work and 40-minute pedagogical lesson plans with Introduction,
-                Identification, Practical Observation, and Teacher Self-Reflection phases.
-              </p>
-            </div>
-
-            {/* Feature 5 */}
-            <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 hover:border-[#7a1228]/30 hover:shadow-md transition-all">
-              <div className="w-12 h-12 rounded-xl bg-[#7a1228] text-white flex items-center justify-center mb-4">
-                <span className="material-symbols-outlined text-[24px]">calendar_view_week</span>
-              </div>
-              <h4 className="text-lg font-bold text-slate-900 mb-2">Timetable Conflict Engine</h4>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Automate weekly class schedules with intelligent collision detection that prevents educator or room
-                double-booking across streams from Pre-Primary through Junior Secondary.
-              </p>
-            </div>
-
-            {/* Feature 6 */}
-            <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200 hover:border-[#7a1228]/30 hover:shadow-md transition-all">
-              <div className="w-12 h-12 rounded-xl bg-[#006a63] text-white flex items-center justify-center mb-4">
-                <span className="material-symbols-outlined text-[24px]">sms</span>
-              </div>
-              <h4 className="text-lg font-bold text-slate-900 mb-2">Parent Portal & SMS Gateway</h4>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Keep guardians continuously updated with real-time digital report cards, fee breakdown statements,
-                and instant SMS notifications via Africa\'s Talking gateway for morning roll call absentees.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Kenyan Constitution Compliance Framework Section */}
-      <section id="constitution" className="py-20 bg-gradient-to-b from-slate-50 via-rose-50/30 to-slate-50 border-t border-slate-200 relative overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="text-center max-w-3xl mx-auto mb-16">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#7a1228]/10 border border-[#7a1228]/20 text-[#7a1228] text-xs font-bold mb-4 uppercase tracking-wider">
-              <span className="material-symbols-outlined text-[16px]">gavel</span>
-              <span>Constitutional Legal Grounding</span>
-            </div>
-            <h2 className="text-3xl font-extrabold text-slate-900 sm:text-4xl">
-              Anchored in the Constitution of Kenya (2010)
-            </h2>
-            <p className="mt-4 text-base text-slate-600 leading-relaxed">
-              SmartShule is engineered from the ground up to uphold the supreme law of the Republic of Kenya.
-              Every learner admission, educator onboarding, and institutional workflow strictly honors constitutional safeguards.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Pillar 1: Article 53 */}
-            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 rounded-2xl bg-rose-100 text-[#7a1228] flex items-center justify-center font-bold">
-                    <span className="material-symbols-outlined text-[26px]">child_care</span>
-                  </div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-rose-50 text-[#7a1228] border border-rose-200">
-                    Art. 53 · Children's Rights
-                  </span>
-                </div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2">
-                  Best Interests & Compulsory Education
-                </h3>
-                <p className="text-xs text-slate-600 leading-relaxed space-y-1.5">
-                  Guarantees every child a name and nationality from birth via Birth Certificate validation for automated NEMIS UPI. Enforces Article 53(1)(b) right to basic education and Article 53(2) paramount best interests principle.
-                </p>
-              </div>
-              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2 text-[11px] font-semibold text-emerald-700">
-                <span className="material-symbols-outlined text-[16px]">verified</span>
-                <span>Zero Corporal Punishment (Sec 36)</span>
-              </div>
-            </div>
-
-            {/* Pillar 2: Article 237 */}
-            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 rounded-2xl bg-teal-100 text-teal-800 flex items-center justify-center font-bold">
-                    <span className="material-symbols-outlined text-[26px]">badge</span>
-                  </div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-teal-50 text-teal-800 border border-teal-200">
-                    Art. 237 · TSC Mandate
-                  </span>
-                </div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2">
-                  Teachers Service Commission Prerequisite
-                </h3>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  Under Article 237(2), no educator is onboarded without a verified TSC Registration Number and KICD Competency-Based Assessment (CBA) training credentials.
-                </p>
-              </div>
-              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2 text-[11px] font-semibold text-teal-800">
-                <span className="material-symbols-outlined text-[16px]">check_circle</span>
-                <span>Mandatory TSC Registration Check</span>
-              </div>
-            </div>
-
-            {/* Pillar 3: Article 54 */}
-            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
-                    <span className="material-symbols-outlined text-[26px]">accessible_forward</span>
-                  </div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
-                    Art. 54 · Special Needs
-                  </span>
-                </div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2">
-                  Inclusive Education & Disability Accommodations
-                </h3>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  Integrated with Kenya Institute of Special Education (KISE) protocols. Supports Braille, Kenyan Sign Language (KSL), mobility access, and personalized neurodiverse learning tracks.
-                </p>
-              </div>
-              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2 text-[11px] font-semibold text-emerald-800">
-                <span className="material-symbols-outlined text-[16px]">accessibility_new</span>
-                <span>KISE Inclusive CBC Standards</span>
-              </div>
-            </div>
-
-            {/* Pillar 4: Article 31 & DPA 2019 */}
-            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 rounded-2xl bg-indigo-100 text-indigo-800 flex items-center justify-center font-bold">
-                    <span className="material-symbols-outlined text-[26px]">lock</span>
-                  </div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-800 border border-indigo-200">
-                    Art. 31 · Data Privacy
-                  </span>
-                </div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2">
-                  Minor Data Privacy & Guardian Consent
-                </h3>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  Compliant with Section 33 of the Data Protection Act (2019) and ODPC guidelines. Mandatory statutory parental consent before processing learner biodata, academic marks, and health records.
-                </p>
-              </div>
-              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2 text-[11px] font-semibold text-indigo-800">
-                <span className="material-symbols-outlined text-[16px]">verified_user</span>
-                <span>ODPC Registered Data Controller</span>
-              </div>
-            </div>
-
-            {/* Pillar 5: Chapter 11 Devolution */}
-            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold">
-                    <span className="material-symbols-outlined text-[26px]">map</span>
-                  </div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
-                    Chapter 11 · Devolution
-                  </span>
-                </div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2">
-                  All 47 Kenyan Counties Coordinated
-                </h3>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  Harmonizes devolved pre-primary education (ECDE) under County Governments with national primary and junior secondary oversight via Sub-County Education Directorates.
-                </p>
-              </div>
-              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2 text-[11px] font-semibold text-amber-800">
-                <span className="material-symbols-outlined text-[16px]">explore</span>
-                <span>All 47 Counties Supported</span>
-              </div>
-            </div>
-
-            {/* Pillar 6: Chapter Six & Article 27 */}
-            <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-800 flex items-center justify-center font-bold">
-                    <span className="material-symbols-outlined text-[26px]">gavel</span>
-                  </div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-rose-50 text-rose-800 border border-rose-200">
-                    Chapter 6 · Integrity
-                  </span>
-                </div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2">
-                  Leadership, Integrity & Equal Opportunity
-                </h3>
-                <p className="text-xs text-slate-600 leading-relaxed">
-                  Mandatory Chapter Six integrity pledges for educators and administrators. Upholds Article 27 non-discrimination, ensuring equal access regardless of gender, religion, or background.
-                </p>
-              </div>
-              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2 text-[11px] font-semibold text-rose-800">
-                <span className="material-symbols-outlined text-[16px]">balance</span>
-                <span>Article 27 Non-Discrimination Policy</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Constitutional CTA Banner */}
-          <div className="mt-12 p-8 rounded-3xl bg-gradient-to-r from-[#7a1228] to-[#5c0a1a] text-white flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl">
-            <div className="space-y-2 text-center md:text-left">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 text-xs font-bold text-amber-300">
-                <span className="material-symbols-outlined text-[16px]">verified</span>
-                <span>Official MoE & TSC Compliance</span>
-              </div>
-              <h3 className="text-2xl font-bold">Standard Institutional CBC Governance</h3>
-              <p className="text-xs text-rose-100 max-w-xl">
-                Grace Seeds School operates fully aligned with Ministry of Education CBC standards and KNEC assessments.
-              </p>
-            </div>
+            )}
             <button
-              onClick={isAuthenticated && onNavigatePortal ? onNavigatePortal : onNavigateLogin}
-              className="px-6 py-3.5 bg-white hover:bg-rose-50 text-[#7a1228] font-bold text-sm rounded-xl shadow-lg transition-all flex items-center gap-2 cursor-pointer shrink-0"
+              onClick={() => {
+                setCurrentPage('admissions')
+                window.scrollTo({ top: 0, behavior: 'smooth' })
+              }}
+              className="bg-[#e8a92a] hover:bg-[#f5c84a] text-[#5a1226] font-bold text-sm px-6 py-2 rounded-full transition-all duration-200 shadow hover:scale-105 cursor-pointer"
             >
-              <span className="material-symbols-outlined text-[18px]">
-                {isAuthenticated ? 'dashboard' : 'login'}
-              </span>
-              <span>{isAuthenticated ? 'Open Dashboard' : 'Sign In to Portal'}</span>
+              Enrol Now
+            </button>
+          </div>
+
+          <button onClick={() => setMenuOpen(!menuOpen)} className="md:hidden text-white p-2" aria-label="Toggle menu">
+            <div className={`w-5 h-0.5 bg-current mb-1.5 transition-all ${menuOpen ? 'rotate-45 translate-y-2' : ''}`} />
+            <div className={`w-5 h-0.5 bg-current mb-1.5 transition-all ${menuOpen ? 'opacity-0' : ''}`} />
+            <div className={`w-5 h-0.5 bg-current transition-all ${menuOpen ? '-rotate-45 -translate-y-2' : ''}`} />
+          </button>
+        </div>
+
+        <div
+          className={`md:hidden bg-[#5a1226] border-t border-white/10 px-6 transition-all duration-300 ease-in-out overflow-hidden flex flex-col ${
+            menuOpen ? 'max-h-96 py-4 opacity-100 gap-4' : 'max-h-0 py-0 opacity-0 pointer-events-none'
+          }`}
+        >
+          {NAV_LINKS.map(link => (
+            <button
+              key={link.name}
+              onClick={() => handleNavClick(link)}
+              className="text-left text-white/80 hover:text-white text-sm font-semibold py-1"
+            >
+              {link.name}
+            </button>
+          ))}
+          <div className="flex flex-col gap-2 pt-2 border-t border-white/10">
+            {onNavigateLogin && (
+              <button
+                onClick={() => {
+                  setMenuOpen(false)
+                  if (isAuthenticated && onNavigatePortal) onNavigatePortal()
+                  else onNavigateLogin()
+                }}
+                className="bg-white/15 border border-white/30 text-white font-bold text-sm px-6 py-2.5 rounded-full text-center cursor-pointer"
+              >
+                {isAuthenticated ? 'Portal Dashboard' : 'Sign In to Portal'}
+              </button>
+            )}
+            <button
+              onClick={() => {
+                setMenuOpen(false)
+                setCurrentPage('admissions')
+                window.scrollTo({ top: 0, behavior: 'smooth' })
+              }}
+              className="bg-[#e8a92a] text-[#5a1226] font-bold text-sm px-6 py-2.5 rounded-full text-center cursor-pointer"
+            >
+              Enrol Now
             </button>
           </div>
         </div>
-      </section>
+      </nav>
 
-      {/* Role-Based Portals Showcase */}
-      <section id="portals" className="py-20 bg-slate-100 border-t border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-2xl mx-auto mb-12">
-            <h2 className="text-xs font-bold uppercase tracking-widest text-[#7a1228] mb-2">Role-Based Access Control</h2>
-            <h3 className="text-3xl font-extrabold text-slate-900">Tailored Workspaces for Every Role</h3>
-            <p className="mt-2 text-sm text-slate-600">
-              Each user account is securely restricted to the specific tools, workflows, and data their role permits.
-            </p>
-          </div>
-
-          {/* Role Tab Selector */}
-          <div className="flex justify-center mb-10">
-            <div className="inline-flex p-1.5 rounded-2xl bg-white border border-slate-200 shadow-xs gap-1.5">
-              {(['admin', 'teacher', 'finance', 'parent'] as const).map((key) => {
-                const isActive = activePortalTab === key;
-                return (
-                  <button
-                    key={key}
-                    onClick={() => setActivePortalTab(key)}
-                    className={`px-4 sm:px-6 py-2.5 rounded-xl font-semibold text-xs sm:text-sm transition-all cursor-pointer flex items-center gap-2 ${
-                      isActive
-                        ? 'bg-[#7a1228] text-white shadow-md'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                    }`}
-                  >
-                    <span className="material-symbols-outlined text-[18px]">{portals[key].icon}</span>
-                    <span className="capitalize">{key === 'admin' ? 'Administrator' : key === 'finance' ? 'Finance Officer' : key}</span>
-                  </button>
-                );
-              })}
+      {currentPage === 'programmes' ? (
+        <ProgrammesPage
+          onNavigateHome={() => {
+            setCurrentPage('home')
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+          }}
+          onOpenApplyModal={() => setShowEnrolModal(true)}
+        />
+      ) : currentPage === 'admissions' ? (
+        <AdmissionsPage
+          onNavigateHome={() => {
+            setCurrentPage('home')
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+          }}
+          onNavigateProgrammes={() => {
+            setCurrentPage('programmes')
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+          }}
+          onNavigateOnboarding={() => {
+            setCurrentPage('onboarding')
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+          }}
+        />
+      ) : currentPage === 'onboarding' ? (
+        <LearnerOnboardingPage
+          onNavigateHome={() => {
+            setCurrentPage('home')
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+          }}
+          onNavigateLogin={onNavigateLogin}
+        />
+      ) : (
+        <>
+          <section className="relative min-h-[92vh] flex items-center overflow-hidden bg-[#5a1226]">
+            <div className="absolute inset-0">
+              <img
+                src={logo}
+                alt="Happy Grace Seeds School children smiling together"
+                className="w-full h-full object-cover opacity-30"
+              />
             </div>
-          </div>
 
-          {/* Role Detail Card */}
-          <div className="max-w-4xl mx-auto bg-white rounded-3xl p-8 sm:p-10 border border-slate-200 shadow-lg flex flex-col md:flex-row gap-8 items-center">
-            <div className="flex-1 space-y-4">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-rose-50 text-[#7a1228] font-bold text-xs uppercase tracking-wider">
-                <span className="material-symbols-outlined text-[16px]">{selectedPortal.icon}</span>
-                <span>{selectedPortal.badge}</span>
+            <div className="absolute top-10 right-10 w-64 h-64 rounded-full bg-[#e8a92a]/10 blur-3xl" />
+            <div className="absolute bottom-20 left-0 w-80 h-80 rounded-full bg-white/5 blur-3xl" />
+
+            <div className="relative max-w-7xl mx-auto px-6 lg:px-12 py-20 grid lg:grid-cols-2 gap-12 items-center w-full">
+              <div>
+                <h1 style={{ fontFamily: 'Fraunces, serif' }} className="text-5xl lg:text-6xl font-bold text-white leading-[1.08] mb-5">
+                  The Future<br />
+                  <em className="text-[#f5c84a] not-italic">Begins Here</em>
+                </h1>
+                <p className="text-white/75 text-lg leading-relaxed max-w-md mb-8">
+                  Grace Seeds School is a caring school where every child is celebrated, challenged, and equipped to grow — academically, morally, and joyfully.
+                </p>
+                <div className="flex flex-wrap gap-4">
+                  <button
+                    onClick={() => {
+                      setCurrentPage('admissions')
+                      window.scrollTo({ top: 0, behavior: 'smooth' })
+                    }}
+                    className="bg-[#e8a92a] hover:bg-[#f5c84a] text-[#5a1226] font-bold px-8 py-3.5 rounded-full transition-all duration-200 text-sm shadow-lg hover:scale-105 cursor-pointer"
+                  >
+                    Apply for Admission
+                  </button>
+                  <button
+                    onClick={() => {
+                      setCurrentPage('programmes')
+                      window.scrollTo({ top: 0, behavior: 'smooth' })
+                    }}
+                    className="border border-white/40 hover:border-white/70 text-white font-semibold px-8 py-3.5 rounded-full transition-colors duration-200 text-sm cursor-pointer"
+                  >
+                    Explore Programmes →
+                  </button>
+                  {onNavigateLogin && (
+                    <button
+                      onClick={isAuthenticated && onNavigatePortal ? onNavigatePortal : onNavigateLogin}
+                      className="bg-white/15 hover:bg-white/25 border border-white/30 text-white font-semibold px-8 py-3.5 rounded-full transition-colors duration-200 text-sm cursor-pointer flex items-center gap-2"
+                    >
+                      <span>{isAuthenticated ? 'Return to Dashboard' : 'School Portal Login'}</span>
+                    </button>
+                  )}
+                </div>
               </div>
-              <h4 className="text-2xl font-bold text-slate-900 leading-tight">{selectedPortal.title}</h4>
-              <p className="text-xs font-semibold text-[#006a63]">{selectedPortal.subtitle}</p>
-              <p className="text-sm text-slate-600 leading-relaxed">{selectedPortal.description}</p>
 
-              <div className="pt-2 space-y-2">
-                {selectedPortal.features.map((f, i) => (
-                  <div key={i} className="flex items-start gap-2.5 text-xs text-slate-700">
-                    <span className="material-symbols-outlined text-emerald-600 text-[18px] shrink-0">check_circle</span>
-                    <span>{f}</span>
+              <div className="flex justify-center lg:justify-end">
+                <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-8 text-center max-w-xs shadow-2xl">
+                  <img src={logo} alt="Grace Seeds School crest" className="w-40 h-40 mx-auto object-contain mb-4" />
+                  <p style={{ fontFamily: 'Fraunces, serif' }} className="text-white text-xl font-semibold mb-1">Grace Seeds School</p>
+                  <p className="text-[#f5c84a] text-xs tracking-widest uppercase font-bold mb-4">G.S.S — School</p>
+                  <div className="border-t border-white/20 pt-4">
+                    <p className="text-white/60 text-xs italic">"The Future Begins Here"</p>
                   </div>
-                ))}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="bg-[#7b1c35] py-10">
+            <div className="max-w-5xl mx-auto px-6 grid grid-cols-2 lg:grid-cols-4 gap-6">
+              {STATS.map(s => (
+                <div key={s.label} className="text-center">
+                  <p style={{ fontFamily: 'Fraunces, serif' }} className="text-4xl font-bold text-[#f5c84a] mb-1">{s.value}</p>
+                  <p className="text-white/70 text-xs font-semibold tracking-wide">{s.label}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section id="about" className="py-20 bg-[#fdfaf6]">
+            <div className="max-w-7xl mx-auto px-6 lg:px-12 grid lg:grid-cols-2 gap-16 items-center">
+              <div className="relative">
+                <div className="rounded-3xl overflow-hidden aspect-[4/3] bg-[#f9eef1] shadow-lg">
+                  <img
+                    src={whatsappImg}
+                    alt="Grace Seeds pupils in school uniform drawing together"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
               </div>
 
-              <div className="pt-4">
+              <div>
+                <p className="text-[#7b1c35] text-xs font-bold tracking-widest uppercase mb-3">About Grace Seeds</p>
+                <h2 style={{ fontFamily: 'Fraunces, serif' }} className="text-4xl lg:text-5xl font-bold text-[#5a1226] leading-tight mb-5">
+                  A school where every<br />
+                  <em className="text-[#e8a92a] not-italic">seed flourishes</em>
+                </h2>
+                <p className="text-[#8a6470] text-base leading-relaxed mb-4">
+                  Our school is a smooth introduction to real school life for all learners that join us, we set a firm foundation for the rest of the child's education.
+                </p>
+                <p className="text-[#8a6470] text-base leading-relaxed mb-8">
+                  At Grace Seeds School, we endeavor to give opportunity to each child to learn and practice the essential, social, emotional and study skills that they will use throughout their school life.
+                </p>
                 <button
-                  onClick={onNavigateLogin}
-                  className="px-6 py-2.5 bg-[#7a1228] hover:bg-[#5c0a1a] text-white font-semibold rounded-xl text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer"
+                  onClick={() => {
+                    setCurrentPage('programmes')
+                    window.scrollTo({ top: 0, behavior: 'smooth' })
+                  }}
+                  className="inline-flex items-center gap-2 bg-[#7b1c35] hover:bg-[#5a1226] text-white font-bold px-8 py-3.5 rounded-full transition-colors duration-200 text-sm cursor-pointer"
                 >
-                  <span>Sign In as {selectedPortal.title.split(' ')[0]}</span>
-                  <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                  View Academic Programmes →
                 </button>
               </div>
             </div>
+          </section>
 
-            <div className="w-full md:w-72 bg-gradient-to-br from-[#3b050e] to-[#7a1228] rounded-2xl p-6 text-white text-center flex flex-col items-center justify-center space-y-4 shadow-xl shrink-0">
-              <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center">
-                <span className="material-symbols-outlined text-[36px]">{selectedPortal.icon}</span>
+          <section id="programmes" className="py-20 bg-[#f9eef1]">
+            <div className="max-w-7xl mx-auto px-6 lg:px-12">
+              <div className="text-center mb-14">
+                <p className="text-[#7b1c35] text-xs font-bold tracking-widest uppercase mb-3">Academic Programmes</p>
+                <h2 style={{ fontFamily: 'Fraunces, serif' }} className="text-4xl lg:text-5xl font-bold text-[#5a1226] leading-tight">
+                  Growing together at<br />every stage
+                </h2>
               </div>
+
+              <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                {PROGRAMMES.map(p => (
+                  <div
+                    key={p.level}
+                    onClick={() => {
+                      setCurrentPage('programmes')
+                      window.scrollTo({ top: 0, behavior: 'smooth' })
+                    }}
+                    className="group bg-white hover:bg-[#7b1c35] border border-[#f0d8df] hover:border-[#7b1c35] rounded-2xl p-6 transition-all duration-300 cursor-pointer shadow-sm hover:shadow-xl flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="text-3xl mb-4">{p.emoji}</div>
+                      <p className="text-[#e8a92a] text-xs font-bold tracking-widest uppercase mb-1 group-hover:text-[#f5c84a] transition-colors">{p.age}</p>
+                      <h3 style={{ fontFamily: 'Fraunces, serif' }} className="text-xl font-bold text-[#5a1226] group-hover:text-white transition-colors mb-3">{p.level}</h3>
+                      <p className="text-[#8a6470] group-hover:text-white/75 text-sm leading-relaxed transition-colors">{p.desc}</p>
+                    </div>
+                    <div className="mt-5 text-[#7b1c35] group-hover:text-[#f5c84a] text-sm font-bold transition-colors">Find out more →</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          <section className="py-20 bg-[#5a1226] relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-96 h-96 rounded-full bg-[#f5c84a]/5 blur-3xl pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-96 h-96 rounded-full bg-white/5 blur-3xl pointer-events-none" />
+
+            <div className="relative max-w-7xl mx-auto px-6 lg:px-12">
+              <div className="text-center mb-16">
+                <span className="inline-block px-4 py-1.5 rounded-full bg-white/10 text-[#f5c84a] text-xs font-bold tracking-widest uppercase mb-3 border border-[#f5c84a]/30">
+                  Our Purpose & Commitments
+                </span>
+                <h2 style={{ fontFamily: 'Fraunces, serif' }} className="text-4xl lg:text-5xl font-bold text-white leading-tight mb-2">
+                  What we stand for
+                </h2>
+                <p style={{ fontFamily: 'Fraunces, serif' }} className="text-[#f5c84a] text-lg italic tracking-wide">
+                  "The Future Begins Here"
+                </p>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-8 mb-14">
+                <div className="bg-gradient-to-br from-white/12 to-white/5 hover:from-white/16 hover:to-white/8 border border-white/20 hover:border-[#f5c84a]/50 rounded-3xl p-8 lg:p-10 transition-all duration-300 shadow-xl backdrop-blur-sm relative group">
+                  <div className="flex items-center gap-4 mb-5">
+                    <span className="text-3xl p-3 rounded-2xl bg-[#f5c84a]/15 text-[#f5c84a] border border-[#f5c84a]/30">
+                      🌟
+                    </span>
+                    <div>
+                      <p className="text-[#f5c84a] text-xs font-bold uppercase tracking-wider">Our North Star</p>
+                      <h3 style={{ fontFamily: 'Fraunces, serif' }} className="text-3xl font-bold text-white">
+                        Vision
+                      </h3>
+                    </div>
+                  </div>
+                  <blockquote className="text-white/90 text-lg sm:text-xl leading-relaxed italic border-l-2 border-[#f5c84a] pl-4">
+                    "To develop well-rounded, confident and responsible individuals who aspire to achieve their full potential."
+                  </blockquote>
+                </div>
+
+                <div className="bg-gradient-to-br from-white/12 to-white/5 hover:from-white/16 hover:to-white/8 border border-white/20 hover:border-[#f5c84a]/50 rounded-3xl p-8 lg:p-10 transition-all duration-300 shadow-xl backdrop-blur-sm relative group">
+                  <div className="flex items-center gap-4 mb-5">
+                    <span className="text-3xl p-3 rounded-2xl bg-[#f5c84a]/15 text-[#f5c84a] border border-[#f5c84a]/30">
+                      🎯
+                    </span>
+                    <div>
+                      <p className="text-[#f5c84a] text-xs font-bold uppercase tracking-wider">Our Daily Commitment</p>
+                      <h3 style={{ fontFamily: 'Fraunces, serif' }} className="text-3xl font-bold text-white">
+                        Mission
+                      </h3>
+                    </div>
+                  </div>
+                  <blockquote className="text-white/90 text-lg sm:text-xl leading-relaxed italic border-l-2 border-[#f5c84a] pl-4">
+                    "To provide high quality education and child care in a safe, Respectful and inclusive environment that build a foundation for lifelong learning."
+                  </blockquote>
+                </div>
+              </div>
+
+              <div className="bg-white/5 border border-white/15 rounded-3xl p-8 lg:p-10 mb-14 shadow-2xl backdrop-blur-sm">
+                <div className="text-center max-w-2xl mx-auto mb-10">
+                  <span className="text-[#f5c84a] text-xs font-bold uppercase tracking-widest block mb-1">
+                    Cornerstones of Growth
+                  </span>
+                  <h3 style={{ fontFamily: 'Fraunces, serif' }} className="text-3xl font-bold text-white">
+                    Key Objectives
+                  </h3>
+                  <p className="text-white/70 text-sm mt-2">
+                    Our concrete aims designed to nurture, inspire, and elevate every child every day.
+                  </p>
+                </div>
+
+                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {KEY_OBJECTIVES.map(obj => (
+                    <div
+                      key={obj.key}
+                      className="bg-white/10 hover:bg-white/15 border border-white/15 hover:border-[#f5c84a]/50 rounded-2xl p-6 transition-all duration-300 flex flex-col justify-between group"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-4">
+                          <span className="w-8 h-8 rounded-full bg-[#f5c84a] text-[#5a1226] font-bold text-sm flex items-center justify-center font-mono shadow-md">
+                            {obj.key})
+                          </span>
+                          <span className="text-2xl group-hover:scale-110 transition-transform">{obj.icon}</span>
+                        </div>
+                        <h4 style={{ fontFamily: 'Fraunces, serif' }} className="text-lg font-bold text-[#f5c84a] mb-2">
+                          {obj.title}
+                        </h4>
+                        <p className="text-white/85 text-sm leading-relaxed">
+                          {obj.desc}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               <div>
-                <div className="font-bold text-base">{selectedPortal.badge}</div>
-                <div className="text-xs text-rose-200 mt-0.5">Role Protected Workspace</div>
-              </div>
-              <div className="w-full pt-4 border-t border-white/10 text-[11px] text-rose-100 flex items-center justify-center gap-1">
-                <span className="material-symbols-outlined text-[14px]">lock</span>
-                <span>Requires Authorized Credentials</span>
+                <div className="text-center mb-8">
+                  <span className="text-[#f5c84a] text-xs font-bold uppercase tracking-widest block mb-1">
+                    Moral Foundation
+                  </span>
+                  <h3 style={{ fontFamily: 'Fraunces, serif' }} className="text-2xl font-bold text-white/90">
+                    Our Core Values
+                  </h3>
+                </div>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                  {VALUES.map(v => (
+                    <div key={v.title} className="bg-white/5 hover:bg-white/10 border border-white/15 rounded-2xl p-5 transition-all duration-300">
+                      <div className="text-3xl mb-3">{v.icon}</div>
+                      <h4 style={{ fontFamily: 'Fraunces, serif' }} className="text-base font-bold text-[#f5c84a] mb-2">{v.title}</h4>
+                      <p className="text-white/70 text-xs leading-relaxed">{v.desc}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-      </section>
+          </section>
 
-      {/* Call to Action Banner */}
-      <section className="py-20 bg-[#7a1228] text-white relative overflow-hidden">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
-            Ready to Transition to Modern CBC Administration?
-          </h2>
-          <p className="mt-4 text-base text-rose-100 max-w-2xl mx-auto">
-            Experience automated competency grading, real-time Safaricom M-Pesa collections, and synchronized Ministry of Education compliance.
-          </p>
-          <div className="mt-8 flex justify-center">
-            <button
-              onClick={isAuthenticated && onNavigatePortal ? onNavigatePortal : onNavigateLogin}
-              className="px-8 py-4 bg-white hover:bg-slate-100 text-[#7a1228] font-bold rounded-2xl shadow-2xl transition-all flex items-center gap-2.5 text-base cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[20px]">
-                {isAuthenticated ? 'dashboard' : 'login'}
-              </span>
-              <span>{isAuthenticated ? 'Go to School Dashboard' : 'Sign In to School Portal'}</span>
-            </button>
-          </div>
-        </div>
-      </section>
+          <section className="py-16 bg-[#fdfaf6]">
+            <div className="max-w-7xl mx-auto px-6 lg:px-12">
+              <div className="text-center mb-8">
+                <p className="text-[#7b1c35] text-xs font-bold tracking-widest uppercase mb-2">Interactive Experience</p>
+                <h2 style={{ fontFamily: 'Fraunces, serif' }} className="text-3xl font-bold text-[#5a1226]">
+                  Grace Seeds Sky & Environment
+                </h2>
+                <p className="text-[#8a6470] text-sm mt-1">Let's fly</p>
+              </div>
 
-      {/* Footer & Vellox Tech Watermark: Pure Maroon (#800000) */}
-      <footer className="bg-[#800000] text-rose-100 text-xs py-10 border-t border-[#660000] space-y-6">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center text-white border border-white/20">
-              <span className="material-symbols-outlined text-[16px]">school</span>
+              <div className="rounded-3xl overflow-hidden shadow-xl border border-[#f0d8df] relative h-72 lg:h-96">
+                <CloudSky style={{ minWidth: 0, minHeight: 0, width: '100%', height: '100%' }} />
+              </div>
             </div>
-            <span className="font-bold text-white">Grace Seeds School</span>
-            <span className="text-white/40">·</span>
-            <span>&quot;The future Begins Here&quot;</span>
+          </section>
+
+          <section className="py-20 bg-[#7b1c35] relative overflow-hidden">
+            <div className="absolute inset-0 opacity-10 pointer-events-none">
+              <div className="absolute -top-20 -left-20 w-96 h-96 rounded-full bg-[#e8a92a]" />
+              <div className="absolute -bottom-20 -right-20 w-80 h-80 rounded-full bg-white" />
+            </div>
+            <div className="relative max-w-3xl mx-auto px-6 text-center">
+              <img src={logo} alt="Grace Seeds School crest" className="w-20 h-20 mx-auto object-contain mb-6" />
+              <p className="text-[#f5c84a] text-xs font-bold tracking-widest uppercase mb-4">Admissions 2027</p>
+              <h2 style={{ fontFamily: 'Fraunces, serif' }} className="text-4xl lg:text-5xl font-bold text-white leading-tight mb-5">
+                Enrol your child at<br />Grace Seeds today
+              </h2>
+              <p className="text-white/75 text-base leading-relaxed max-w-xl mx-auto mb-8">
+                Spaces are filling fast for the new academic year. Join our family of learners and give your child the best possible start.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <button
+                  onClick={() => {
+                    setCurrentPage('admissions')
+                    window.scrollTo({ top: 0, behavior: 'smooth' })
+                  }}
+                  className="bg-[#e8a92a] hover:bg-[#f5c84a] text-[#5a1226] font-bold px-8 py-4 rounded-full transition-colors duration-200 text-sm shadow-lg cursor-pointer"
+                >
+                  Begin Application
+                </button>
+                <a href="tel:0745436312" className="bg-white/15 hover:bg-white/25 border border-white/30 text-white font-bold px-8 py-4 rounded-full transition-colors duration-200 text-sm inline-flex items-center justify-center">
+                  Call Us Today →
+                </a>
+              </div>
+            </div>
+          </section>
+
+          <section id="contact" className="py-16 bg-[#5a1226] text-white border-t border-white/10">
+            <div className="max-w-7xl mx-auto px-6 lg:px-12 grid md:grid-cols-3 gap-8 text-center md:text-left">
+              <div className="bg-white/5 p-6 rounded-2xl border border-white/10">
+                <div className="text-3xl mb-2">📍</div>
+                <h4 style={{ fontFamily: 'Fraunces, serif' }} className="text-lg font-bold text-[#f5c84a] mb-1">Our Location</h4>
+                <p className="text-white/75 text-sm">Kisumu, Kisian, KEMRI Road</p>
+              </div>
+
+              <div className="bg-white/5 p-6 rounded-2xl border border-white/10">
+                <div className="text-3xl mb-2">📞</div>
+                <h4 style={{ fontFamily: 'Fraunces, serif' }} className="text-lg font-bold text-[#f5c84a] mb-1">Call Admissions</h4>
+                <p className="text-white/75 text-sm font-semibold">0745 436312</p>
+                <p className="text-white/50 text-xs mt-1">Mon – Fri: 7:30 am – 3:30 pm</p>
+              </div>
+
+              <div className="bg-white/5 p-6 rounded-2xl border border-white/10">
+                <div className="text-3xl mb-2">✉️</div>
+                <h4 style={{ fontFamily: 'Fraunces, serif' }} className="text-lg font-bold text-[#f5c84a] mb-1">Email Us</h4>
+                <p className="text-white/75 text-sm">schoolgraceseeds@gmail.com</p>
+              </div>
+            </div>
+          </section>
+        </>
+      )}
+
+      <footer className="bg-[#3d0c1a] py-12">
+        <div className="max-w-7xl mx-auto px-6 lg:px-12">
+          <div className="grid md:grid-cols-3 gap-8 mb-10">
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <img src={logo} alt="Grace Seeds School crest" className="h-10 w-10 rounded-full object-contain bg-white/10 p-1" />
+                <div>
+                  <p style={{ fontFamily: 'Fraunces, serif' }} className="text-white font-bold text-base leading-tight">Grace Seeds School</p>
+                  <p className="text-white/50 text-[10px] tracking-widest uppercase">School</p>
+                </div>
+              </div>
+              <p className="text-white/50 text-sm leading-relaxed">"The Future Begins Here"</p>
+            </div>
+            <div>
+              <p className="text-white text-xs font-bold tracking-widest uppercase mb-4">Quick Links</p>
+              <ul className="space-y-2">
+                {NAV_LINKS.map(l => (
+                  <li key={l.name}>
+                    <button
+                      onClick={() => handleNavClick(l)}
+                      className="text-white/50 hover:text-[#f5c84a] text-sm transition-colors cursor-pointer"
+                    >
+                      {l.name}
+                    </button>
+                  </li>
+                ))}
+                <li>
+                  <button
+                    onClick={() => {
+                      setCurrentPage('onboarding')
+                      window.scrollTo({ top: 0, behavior: 'smooth' })
+                    }}
+                    className="text-white/40 hover:text-[#f5c84a] text-xs transition-colors cursor-pointer pt-1 block"
+                  >
+                    Admitted Pupil Onboarding →
+                  </button>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <p className="text-white text-xs font-bold tracking-widest uppercase mb-4">Contact</p>
+              <ul className="space-y-2 text-white/50 text-sm">
+                <li>📍 Kisumu, Kisian, KEMRI Road</li>
+                <li>📞 0745 436312</li>
+                <li>✉️ schoolgraceseeds@gmail.com</li>
+                <li>🕗 Mon – Fri: 7:30 am – 3:30 pm</li>
+              </ul>
+            </div>
           </div>
-          <div className="text-rose-200/90 text-center text-xs">
-            KEMRI Street, Kisian, Kisumu · Tel: 0745436312 · Email: schoolgraceseeds@gmail.com
-          </div>
-          <div className="flex items-center gap-2 text-rose-200">
-            <span>© {new Date().getFullYear()} SmartShule.</span>
-            <span>•</span>
-            <span className="text-white font-semibold flex items-center gap-1">
-              Powered by <strong className="text-emerald-300 font-bold tracking-wide">Vellox Tech</strong>
-            </span>
-          </div>
-        </div>
-
-        {/* Legal & Regulatory Compliance Row */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 border-t border-rose-900/60 flex flex-col md:flex-row items-center justify-between gap-3 text-[11px] text-rose-200/80">
-          <div className="flex items-center flex-wrap justify-center gap-x-5 gap-y-2">
-            <button
-              onClick={() => onOpenLegalModal?.('terms')}
-              className="hover:text-white transition-colors cursor-pointer flex items-center gap-1 underline underline-offset-2"
-            >
-              <span className="material-symbols-outlined text-[13px]">description</span>
-              <span>Terms & Conditions</span>
-            </button>
-
-            <button
-              onClick={() => onOpenLegalModal?.('privacy')}
-              className="hover:text-white transition-colors cursor-pointer flex items-center gap-1 underline underline-offset-2"
-            >
-              <span className="material-symbols-outlined text-[13px]">shield</span>
-              <span>Privacy Policy (KDPA 2019)</span>
-            </button>
-
-            <button
-              onClick={() => onOpenLegalModal?.('cookies')}
-              className="hover:text-white transition-colors cursor-pointer flex items-center gap-1 underline underline-offset-2"
-            >
-              <span className="material-symbols-outlined text-[13px]">cookie</span>
-              <span>Cookie Settings & Policy</span>
-            </button>
-
-            <button
-              onClick={() => onOpenLegalModal?.('child_protection')}
-              className="hover:text-white transition-colors cursor-pointer flex items-center gap-1 underline underline-offset-2"
-            >
-              <span className="material-symbols-outlined text-[13px]">child_care</span>
-              <span>Minor Data Protection</span>
-            </button>
-          </div>
-
-          <div className="flex items-center gap-2 text-[10px] text-rose-200/60">
-            <span className="material-symbols-outlined text-[14px] text-emerald-400">verified_user</span>
-            <span>ODPC Registered · Article 31 Compliant · 256-Bit SSL</span>
+          <div className="border-t border-white/10 pt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <p className="text-white/30 text-xs">© 2026 Grace Seeds School. All rights reserved.</p>
+            <div className="flex gap-6">
+              <button
+                onClick={() => onOpenLegalModal ? onOpenLegalModal('privacy') : undefined}
+                className="text-white/30 hover:text-white/60 text-xs transition-colors cursor-pointer"
+              >
+                Privacy Policy
+              </button>
+              <button
+                onClick={() => onOpenLegalModal ? onOpenLegalModal('child_protection') : undefined}
+                className="text-white/30 hover:text-white/60 text-xs transition-colors cursor-pointer"
+              >
+                Safeguarding
+              </button>
+              <button
+                onClick={() => onOpenLegalModal ? onOpenLegalModal('terms') : undefined}
+                className="text-white/30 hover:text-white/60 text-xs transition-colors cursor-pointer"
+              >
+                Terms of Use
+              </button>
+            </div>
           </div>
         </div>
       </footer>
+
+      {showEnrolModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white rounded-3xl p-8 max-w-lg w-full border border-[#f0d8df] shadow-2xl relative">
+            <button
+              onClick={() => setShowEnrolModal(false)}
+              className="absolute top-6 right-6 text-gray-400 hover:text-gray-700 font-bold text-xl cursor-pointer"
+            >
+              ✕
+            </button>
+
+            <div className="text-center mb-6">
+              <img src={logo} alt="Grace Seeds Logo" className="w-16 h-16 mx-auto mb-2" />
+              <h3 style={{ fontFamily: 'Fraunces, serif' }} className="text-2xl font-bold text-[#5a1226]">
+                Enrol at Grace Seeds
+              </h3>
+              <p className="text-[#8a6470] text-xs mt-1">Fill out this quick form and our admissions office will reach out to schedule an interview.</p>
+            </div>
+
+            {modalSubmitted ? (
+              <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-6 rounded-2xl text-center">
+                <div className="text-4xl mb-2">🎉</div>
+                <h4 className="font-bold text-base mb-1">Application Submitted!</h4>
+                <p className="text-xs text-emerald-700">We have received your application request. We will call you shortly on the provided phone number.</p>
+              </div>
+            ) : (
+              <form onSubmit={handleModalSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-[#5a1226] mb-1 uppercase tracking-wider">Parent Full Name *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Jane Doe"
+                    value={enrolForm.parentName}
+                    onChange={e => setEnrolForm({ ...enrolForm, parentName: e.target.value })}
+                    className="w-full bg-[#fdfaf6] border border-[#f0d8df] rounded-xl px-4 py-2.5 text-sm text-[#1f0a10] focus:outline-none focus:border-[#7b1c35]"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-[#5a1226] mb-1 uppercase tracking-wider">Phone Number *</label>
+                    <input
+                      type="tel"
+                      required
+                      placeholder="0712345678"
+                      value={enrolForm.phone}
+                      onChange={e => setEnrolForm({ ...enrolForm, phone: e.target.value })}
+                      className="w-full bg-[#fdfaf6] border border-[#f0d8df] rounded-xl px-4 py-2.5 text-sm text-[#1f0a10] focus:outline-none focus:border-[#7b1c35]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-[#5a1226] mb-1 uppercase tracking-wider">Email Address</label>
+                    <input
+                      type="email"
+                      placeholder="parent@example.com"
+                      value={enrolForm.email}
+                      onChange={e => setEnrolForm({ ...enrolForm, email: e.target.value })}
+                      className="w-full bg-[#fdfaf6] border border-[#f0d8df] rounded-xl px-4 py-2.5 text-sm text-[#1f0a10] focus:outline-none focus:border-[#7b1c35]"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-[#5a1226] mb-1 uppercase tracking-wider">Child's Name *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Child's full name"
+                      value={enrolForm.childName}
+                      onChange={e => setEnrolForm({ ...enrolForm, childName: e.target.value })}
+                      className="w-full bg-[#fdfaf6] border border-[#f0d8df] rounded-xl px-4 py-2.5 text-sm text-[#1f0a10] focus:outline-none focus:border-[#7b1c35]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-[#5a1226] mb-1 uppercase tracking-wider">Level / Grade *</label>
+                    <select
+                      value={enrolForm.programme}
+                      onChange={e => setEnrolForm({ ...enrolForm, programme: e.target.value })}
+                      className="w-full bg-[#fdfaf6] border border-[#f0d8df] rounded-xl px-4 py-2.5 text-sm text-[#1f0a10] focus:outline-none focus:border-[#7b1c35]"
+                    >
+                      <option value="Playgroup">Playgroup (Ages 2-3)</option>
+                      <option value="PP1">PP1 (Age 4)</option>
+                      <option value="PP2">PP2 (Age 5)</option>
+                      <option value="Lower Primary">Lower Primary (Grades 1-3)</option>
+                      <option value="Upper Primary">Upper Primary (Grades 4-6)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full bg-[#7b1c35] hover:bg-[#5a1226] text-white font-bold py-3.5 rounded-xl shadow-lg transition-colors text-sm cursor-pointer mt-2"
+                >
+                  Submit Enrolment Request →
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
     </div>
-  );
-};
+  )
+}
+
+export default LandingPage;

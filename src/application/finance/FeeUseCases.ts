@@ -124,6 +124,20 @@ export interface KcbBuniStkDTO {
   callbackUrl?: string;
 }
 
+export interface ForwardPaymentTransactionDTO {
+  studentId: string;
+  amount: number;
+  paymentMethod: PaymentMethod;
+  transactionReference: string;
+  paymentDate?: string;
+  mpesaPhoneNumber?: string;
+  senderName?: string;
+  smsMessage?: string;
+  notes?: string;
+  schoolId?: string;
+  invoiceId?: string;
+}
+
 export interface UserContext {
   userId: string;
   role: UserRole;
@@ -945,12 +959,37 @@ export class FeeUseCases {
       IdGenerator.generate()
     );
 
-    // Update invoice balance and status
-    invoice.recordPayment(dto.amount);
+    // Update target invoice balance and status
+    const previousBalance = invoice.balance;
+    const paymentAmount = Number(dto.amount);
+    invoice.recordPayment(paymentAmount);
     await this.feeRepository.updateInvoice(invoice);
     await this.feeRepository.savePayment(payment);
 
-    // Send SMS receipt confirmation to guardian
+    // If payment amount exceeded this invoice's prior balance, cascade excess to other active unpaid invoices
+    if (paymentAmount > previousBalance) {
+      let excess = paymentAmount - previousBalance;
+      const allStudentInvoices = await this.feeRepository.findInvoices({ studentId: invoice.studentId });
+      const otherUnpaidInvoices = allStudentInvoices.filter(
+        i => i.id !== invoice.id && (i.status as any) !== 'CARRIED_FORWARD' && (i.status as any) !== InvoiceStatus.CARRIED_FORWARD && i.balance > 0
+      );
+      for (const otherInv of otherUnpaidInvoices) {
+        const portion = Math.min(excess, otherInv.balance);
+        otherInv.recordPayment(portion);
+        await this.feeRepository.updateInvoice(otherInv);
+        excess -= portion;
+        if (excess <= 0) break;
+      }
+    }
+
+    // Compute student's true overall remaining balance across all active invoices
+    const allStudentInvoices = await this.feeRepository.findInvoices({ studentId: invoice.studentId });
+    const activeStudentInvoices = allStudentInvoices.filter(
+      i => (i.status as any) !== 'CARRIED_FORWARD' && (i.status as any) !== InvoiceStatus.CARRIED_FORWARD
+    );
+    const studentTotalBalance = activeStudentInvoices.reduce((sum, i) => sum + (Number(i.balance) || 0), 0);
+
+    // Send SMS receipt confirmation to guardian reporting the true total remaining balance
     if (student) {
       const guardians = await this.guardianRepository.findByStudentId(student.id);
       const channelLabel = dto.paymentMethod === PaymentMethod.CASH
@@ -961,12 +1000,16 @@ export class FeeUseCases {
         ? 'Cheque'
         : dto.paymentMethod;
 
+      const balanceMessage = studentTotalBalance > 0
+        ? `New balance: KES ${studentTotalBalance}.`
+        : `Fees fully settled. New balance: KES 0.`;
+
       for (const g of guardians) {
         const u = await this.userRepository.findById(g.userId);
         if (u && u.phone) {
           await this.notificationService.sendSms(
             u.phone,
-            `SmartShule Receipt: Received KES ${dto.amount} via ${channelLabel} (Ref: ${txRef}) for ${student.fullName} (Adm: ${student.admissionNumber}). Receipt #${receiptNumber}. New balance: KES ${invoice.balance}.`
+            `SmartShule Receipt: Received KES ${paymentAmount} via ${channelLabel} (Ref: ${txRef}) for ${student.fullName} (Adm: ${student.admissionNumber}). Receipt #${receiptNumber}. ${balanceMessage}`
           );
         }
       }
@@ -974,7 +1017,9 @@ export class FeeUseCases {
 
     return {
       payment: payment.toJSON(),
-      updatedInvoice: invoice.toJSON()
+      updatedInvoice: invoice.toJSON(),
+      studentTotalBalance,
+      hasArrears: studentTotalBalance > 0
     };
   }
 
@@ -1620,20 +1665,30 @@ export class FeeUseCases {
     const invoices = await this.feeRepository.findInvoices({ studentId });
     const payments = await this.feeRepository.findPayments({ studentId });
 
-    // Deduct carried-forward items only if prior carried invoices actually exist in the DB to avoid double counting
-    const hasPriorCarriedInvoice = invoices.some(i => i.status === InvoiceStatus.CARRIED_FORWARD);
-    const totalBilled = invoices.reduce((sum, inv) => {
-      const arrearsAmount = (inv.items && hasPriorCarriedInvoice)
-        ? inv.items
-            .filter(item => item.name.toLowerCase().includes('carried forward') || item.name.toLowerCase().includes('arrears'))
-            .reduce((s, it) => s + it.amount, 0)
-        : 0;
-      return sum + (inv.amountPayable - arrearsAmount);
-    }, 0);
+    const activeInvoices = invoices.filter(
+      i => (i.status as any) !== 'CARRIED_FORWARD' && (i.status as any) !== InvoiceStatus.CARRIED_FORWARD
+    );
     const totalPaid = payments
-      .filter(p => p.status === PaymentStatus.COMPLETED)
-      .reduce((sum, p) => sum + p.amount, 0);
-    const currentBalance = totalBilled - totalPaid;
+      .filter(p => p.status === PaymentStatus.COMPLETED || (p.status as any) === 'COMPLETED')
+      .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+    const currentBalance = activeInvoices.reduce((sum, inv) => sum + (Number(inv.balance) || 0), 0);
+    const totalBilled = totalPaid + currentBalance;
+
+    // Identify arrears explicitly from active invoices
+    let arrearsAmount = 0;
+    for (const inv of activeInvoices) {
+      if (Array.isArray(inv.items)) {
+        for (const it of inv.items) {
+          if (it.name.toLowerCase().includes('arrear') || it.name.toLowerCase().includes('carried forward')) {
+            arrearsAmount += Number(it.amount) || 0;
+          }
+        }
+      }
+      if (inv.feeStructureId === 'MANUAL_ARREARS' || inv.invoiceNumber.includes('ARR')) {
+        arrearsAmount += Number(inv.balance) || 0;
+      }
+    }
+    const arrearsBalance = Math.min(arrearsAmount, currentBalance);
 
     const yearCache = new Map<string, any>();
     const termCache = new Map<string, any>();
@@ -1706,6 +1761,8 @@ export class FeeUseCases {
         totalBilled,
         totalPaid,
         currentBalance,
+        arrearsBalance,
+        hasArrears: currentBalance > 0,
         status: currentBalance <= 0 ? 'CLEARED' : 'PENDING_BALANCE'
       },
       invoices: enrichedInvoices,
@@ -1818,9 +1875,12 @@ export class FeeUseCases {
       const invoices = await this.feeRepository.findInvoices({ studentIds: childIds });
       const payments = await this.feeRepository.findPayments({ studentIds: childIds });
 
-      const totalInvoiced = invoices.reduce((acc, i) => acc + i.amountPayable, 0);
-      const totalCollected = payments.filter(p => p.status === PaymentStatus.COMPLETED).reduce((acc, p) => acc + p.amount, 0);
-      const totalBalance = Math.max(0, totalInvoiced - totalCollected);
+      const activeInvoices = invoices.filter(
+        i => (i.status as any) !== 'CARRIED_FORWARD' && (i.status as any) !== InvoiceStatus.CARRIED_FORWARD
+      );
+      const totalCollected = payments.filter(p => p.status === PaymentStatus.COMPLETED || (p.status as any) === 'COMPLETED').reduce((acc, p) => acc + (Number(p.amount) || 0), 0);
+      const totalBalance = activeInvoices.reduce((acc, i) => acc + (Number(i.balance) || 0), 0);
+      const totalInvoiced = totalCollected + totalBalance;
 
       return {
         isParentView: true,
@@ -1838,9 +1898,12 @@ export class FeeUseCases {
     const invoices = await this.feeRepository.findInvoices({ schoolId });
     const payments = await this.feeRepository.findPayments({ schoolId });
 
-    const totalInvoiced = invoices.reduce((acc, i) => acc + i.amountPayable, 0);
-    const totalCollected = payments.filter(p => p.status === PaymentStatus.COMPLETED).reduce((acc, p) => acc + p.amount, 0);
-    const totalBalance = invoices.reduce((acc, i) => acc + i.balance, 0);
+    const activeInvoices = invoices.filter(
+      i => (i.status as any) !== 'CARRIED_FORWARD' && (i.status as any) !== InvoiceStatus.CARRIED_FORWARD
+    );
+    const totalCollected = payments.filter(p => p.status === PaymentStatus.COMPLETED || (p.status as any) === 'COMPLETED').reduce((acc, p) => acc + (Number(p.amount) || 0), 0);
+    const totalBalance = activeInvoices.reduce((acc, i) => acc + (Number(i.balance) || 0), 0);
+    const totalInvoiced = totalCollected + totalBalance;
     const collectionRate = totalInvoiced > 0 ? Math.round((totalCollected / totalInvoiced) * 100) : 0;
 
     const methodMap: Record<string, number> = {};
@@ -2515,6 +2578,225 @@ export class FeeUseCases {
       averageArrear,
       maxSingleArrear,
       learners: learnersWithArrearsList,
+    };
+  }
+
+  // 18. Parent Forwarded Payment Transactions
+  public async forwardPaymentTransaction(dto: ForwardPaymentTransactionDTO, requestingUser?: UserContext) {
+    const student = await this.studentRepository.findById(dto.studentId);
+    if (!student) throw new NotFoundError('Student', dto.studentId);
+
+    // If guardian is requesting, ensure they are linked to this student
+    if (requestingUser && (requestingUser.role === UserRole.GUARDIAN || requestingUser.role === UserRole.PARENT)) {
+      const childIds = await this.getLinkedStudentIdsForUser(requestingUser.userId);
+      if (!childIds.includes(student.id)) {
+        throw new ForbiddenError('You are only authorized to forward payment messages for your linked children.');
+      }
+    }
+
+    const ref = dto.transactionReference?.trim().toUpperCase();
+    if (!ref) {
+      throw new ValidationError('Transaction reference or confirmation code is required.');
+    }
+
+    // Check if reference already exists in payments
+    const existingPayment = await this.feeRepository.findPaymentByReference(ref);
+    if (existingPayment) {
+      throw new ConflictError(`A payment record or notice with reference '${ref}' has already been registered.`);
+    }
+
+    const schoolId = dto.schoolId || student.schoolId || 'school-001';
+    const amount = Number(dto.amount);
+    if (!amount || amount <= 0) {
+      throw new ValidationError('Payment amount must be greater than zero.');
+    }
+
+    // Find student's active invoice to link
+    const invoices = await this.feeRepository.findInvoices({ studentId: student.id });
+    const targetInvoice = invoices.find(i => i.balance > 0 && (i.status as any) !== 'CARRIED_FORWARD') || invoices[0];
+    const invoiceId = dto.invoiceId || (targetInvoice ? targetInvoice.id : 'INV-PENDING');
+
+    const receiptNumber = `FWD-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
+
+    const notesParts: string[] = [];
+    if (dto.senderName) notesParts.push(`Sender: ${dto.senderName.trim()}`);
+    if (dto.mpesaPhoneNumber) notesParts.push(`Phone: ${dto.mpesaPhoneNumber.trim()}`);
+    if (dto.smsMessage) notesParts.push(`Forwarded SMS: "${dto.smsMessage.trim()}"`);
+    if (dto.notes) notesParts.push(`Notes: ${dto.notes.trim()}`);
+    const notes = notesParts.length > 0 ? notesParts.join(' | ') : 'Forwarded by parent via Parent Portal';
+
+    const payment = Payment.create(
+      {
+        schoolId,
+        invoiceId,
+        studentId: student.id,
+        receiptNumber,
+        amount,
+        paymentMethod: dto.paymentMethod || PaymentMethod.MPESA,
+        transactionReference: ref,
+        mpesaPhoneNumber: dto.mpesaPhoneNumber,
+        paymentDate: dto.paymentDate || new Date().toISOString().split('T')[0],
+        recordedByUserId: requestingUser?.userId || 'usr-guardian-portal',
+        status: PaymentStatus.PENDING,
+        notes
+      },
+      IdGenerator.generate()
+    );
+
+    await this.feeRepository.savePayment(payment);
+
+    // Send SMS confirmation to guardian that details have been forwarded to the bursar
+    if (student) {
+      const guardians = await this.guardianRepository.findByStudentId(student.id);
+      for (const g of guardians) {
+        const u = await this.userRepository.findById(g.userId);
+        if (u && u.phone) {
+          await this.notificationService.sendSms(
+            u.phone,
+            `SmartShule: Payment of KES ${amount.toLocaleString()} (Ref: ${ref}) for ${student.fullName} has been forwarded to the school accounts office. Your ledger will update once verified.`
+          );
+        }
+      }
+    }
+
+    return {
+      success: true,
+      message: `Payment confirmation (Ref: ${ref}) forwarded to the accounts office. Ledger will be credited upon bursar verification.`,
+      payment: payment.toJSON()
+    };
+  }
+
+  public async getForwardedTransactions(schoolId?: string, requestingUser?: UserContext) {
+    let studentIds: string[] | undefined = undefined;
+    if (requestingUser && (requestingUser.role === UserRole.GUARDIAN || requestingUser.role === UserRole.PARENT)) {
+      studentIds = await this.getLinkedStudentIdsForUser(requestingUser.userId);
+      if (studentIds.length === 0) return [];
+    }
+
+    const allPayments = await this.feeRepository.findPayments({
+      schoolId: studentIds ? undefined : schoolId,
+      studentIds
+    });
+
+    const pendingPayments = allPayments.filter(
+      p => p.status === PaymentStatus.PENDING || p.receiptNumber.startsWith('FWD-')
+    );
+
+    // Enrich with student details
+    const studentCache = new Map<string, any>();
+    const enriched = await Promise.all(
+      pendingPayments.map(async p => {
+        let student = studentCache.get(p.studentId);
+        if (!student) {
+          student = await this.studentRepository.findById(p.studentId);
+          if (student) studentCache.set(p.studentId, student);
+        }
+        return {
+          ...p.toJSON(),
+          studentName: student ? student.fullName : 'Learner',
+          admissionNumber: student ? student.admissionNumber : 'Unknown',
+          gradeLevel: student ? student.gradeLevel : 'Unknown',
+        };
+      })
+    );
+
+    return enriched;
+  }
+
+  public async verifyForwardedTransaction(paymentId: string, action: 'APPROVE' | 'REJECT', rejectionReason?: string, requestingUser?: UserContext) {
+    if (requestingUser && !isBillingAuthorizedRole(requestingUser.role)) {
+      throw new ForbiddenError('Only billing-authorized administrators can verify forwarded payment transactions.');
+    }
+
+    const payment = await this.feeRepository.findPaymentById(paymentId);
+    if (!payment) throw new NotFoundError('Payment Record', paymentId);
+
+    if (payment.status === PaymentStatus.COMPLETED) {
+      throw new ConflictError('This transaction has already been approved and credited to the student fee ledger.');
+    }
+
+    const student = await this.studentRepository.findById(payment.studentId);
+    if (!student) throw new NotFoundError('Student', payment.studentId);
+
+    if (action === 'REJECT') {
+      payment.setStatus(PaymentStatus.FAILED);
+      const updatedNotes = `${payment.notes || ''} | REJECTED: ${rejectionReason || 'Invalid payment confirmation reference'}`;
+      (payment as any)._props.notes = updatedNotes;
+      await this.feeRepository.updatePayment(payment);
+
+      return {
+        success: true,
+        message: `Forwarded transaction ${payment.transactionReference} has been rejected.`,
+        payment: payment.toJSON()
+      };
+    }
+
+    // action === 'APPROVE'
+    const officialReceiptNumber = `REC-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
+
+    // Resolve target invoice
+    let invoice = await this.feeRepository.findInvoiceById(payment.invoiceId);
+    if (!invoice || invoice.balance <= 0) {
+      const studentInvs = await this.feeRepository.findInvoices({ studentId: payment.studentId });
+      invoice = studentInvs.find(i => i.balance > 0 && (i.status as any) !== 'CARRIED_FORWARD') || studentInvs[0];
+    }
+
+    let remainingToCredit = payment.amount;
+
+    if (invoice) {
+      const payableOnThis = Math.min(remainingToCredit, invoice.balance);
+      invoice.recordPayment(payableOnThis);
+      await this.feeRepository.updateInvoice(invoice);
+      remainingToCredit -= payableOnThis;
+
+      // Cascade excess to any other unpaid active invoices
+      if (remainingToCredit > 0) {
+        const otherInvs = (await this.feeRepository.findInvoices({ studentId: payment.studentId }))
+          .filter(i => i.id !== invoice?.id && (i.status as any) !== 'CARRIED_FORWARD' && i.balance > 0);
+        for (const other of otherInvs) {
+          const portion = Math.min(remainingToCredit, other.balance);
+          other.recordPayment(portion);
+          await this.feeRepository.updateInvoice(other);
+          remainingToCredit -= portion;
+          if (remainingToCredit <= 0) break;
+        }
+      }
+    }
+
+    // Update payment record to COMPLETED with official receipt number
+    payment.setStatus(PaymentStatus.COMPLETED);
+    (payment as any)._props.receiptNumber = officialReceiptNumber;
+    (payment as any)._props.invoiceId = invoice ? invoice.id : payment.invoiceId;
+    (payment as any)._props.notes = `${payment.notes || ''} | Verified & Approved by ${requestingUser?.userId || 'Admin'}`;
+    await this.feeRepository.updatePayment(payment);
+
+    // Compute student's true remaining balance across all active invoices
+    const allInvs = await this.feeRepository.findInvoices({ studentId: payment.studentId });
+    const remainingBalance = allInvs
+      .filter(i => (i.status as any) !== 'CARRIED_FORWARD' && (i.status as any) !== InvoiceStatus.CARRIED_FORWARD)
+      .reduce((sum, i) => sum + (Number(i.balance) || 0), 0);
+
+    // Send official receipt SMS to guardian
+    const guardians = await this.guardianRepository.findByStudentId(student.id);
+    for (const g of guardians) {
+      const u = await this.userRepository.findById(g.userId);
+      if (u && u.phone) {
+        const balNote = remainingBalance > 0
+          ? `Outstanding balance: KES ${remainingBalance.toLocaleString()}.`
+          : `Fees fully settled. Balance: KES 0.`;
+        await this.notificationService.sendSms(
+          u.phone,
+          `SmartShule Receipt: Payment of KES ${payment.amount.toLocaleString()} (Ref: ${payment.transactionReference}) for ${student.fullName} has been VERIFIED. Official Receipt #${officialReceiptNumber}. ${balNote}`
+        );
+      }
+    }
+
+    return {
+      success: true,
+      message: `Transaction verified and credited to fee ledger. Official Receipt #${officialReceiptNumber} generated.`,
+      receiptNumber: officialReceiptNumber,
+      remainingBalance,
+      payment: payment.toJSON()
     };
   }
 }

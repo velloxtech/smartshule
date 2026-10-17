@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Student, CBCRubric, UserRole } from '../../types';
 import { EditStudentModal } from '../modals/EditStudentModal';
 import { LearnerProfileModal } from '../modals/LearnerProfileModal';
 import { PromoteStudentModal } from '../modals/PromoteStudentModal';
 import { ArchivedStudentsModal } from '../modals/ArchivedStudentsModal';
+import { OnboardingApprovalsModal } from '../modals/OnboardingApprovalsModal';
+import { onboardingService } from '../../services/onboardingService';
 import { useAuth } from '../../context/AuthContext';
 import { apiService } from '../../services/api';
 
@@ -17,6 +19,7 @@ interface StudentsViewProps {
   onDeleteStudent?: (studentId: string) => void;
   onRefreshStudents?: () => void | Promise<void>;
   onNavigateStandaloneArchive?: () => void;
+  onAdmitLearner?: (newLearner: any, rawBackendData?: any) => void | Promise<void>;
 }
 
 export const StudentsView: React.FC<StudentsViewProps> = ({
@@ -29,6 +32,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
   onDeleteStudent,
   onRefreshStudents,
   onNavigateStandaloneArchive,
+  onAdmitLearner,
 }) => {
   const { user } = useAuth();
   const isTeacher = user?.role === UserRole.TEACHER;
@@ -51,6 +55,19 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
   const [isSyncingFees, setIsSyncingFees] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  const canApproveOnboarding = [
+    UserRole.SUPER_ADMIN,
+    UserRole.ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.HEAD_TEACHER,
+  ].includes(user?.role as UserRole);
+  const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState(false);
+  const [pendingOnboardingsCount, setPendingOnboardingsCount] = useState(0);
+
+  useEffect(() => {
+    setPendingOnboardingsCount(onboardingService.getPendingCount());
+  }, []);
 
   // Deleted Students Archive & Modal States
   const [isArchivedModalOpen, setIsArchivedModalOpen] = useState(false);
@@ -232,6 +249,26 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
               <span className="material-symbols-outlined text-[18px] text-rose-800">inventory_2</span>
               <span>Archived Learners</span>
             </button>
+
+            {canApproveOnboarding && (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsOnboardingModalOpen(true);
+                  setPendingOnboardingsCount(onboardingService.getPendingCount());
+                }}
+                title="Review and approve learner onboarding dossiers submitted by admitted parents"
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-amber-50 text-amber-950 hover:bg-amber-100 border border-amber-300 rounded-lg text-sm font-semibold shadow-xs transition-all cursor-pointer relative"
+              >
+                <span className="material-symbols-outlined text-[18px] text-amber-700">how_to_reg</span>
+                <span>Onboarding Queue</span>
+                {pendingOnboardingsCount > 0 && (
+                  <span className="px-2 py-0.5 rounded-full bg-amber-600 text-white text-[11px] font-bold">
+                    {pendingOnboardingsCount}
+                  </span>
+                )}
+              </button>
+            )}
 
             <button
               type="button"
@@ -529,7 +566,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                       {!isTeacher && s.feeBalance > 0 && (
                         <button
                           onClick={() => onOpenMpesaWithStudent(s)}
-                          title="Trigger M-Pesa STK Push"
+                          title="Record Fee Payment"
                           className="p-1.5 rounded-lg text-secondary hover:bg-surface-container transition-colors cursor-pointer"
                         >
                           <span className="material-symbols-outlined text-[18px]">point_of_sale</span>
@@ -708,6 +745,16 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
           </div>
         </div>
       )}
+
+      <OnboardingApprovalsModal
+        isOpen={isOnboardingModalOpen}
+        onClose={() => {
+          setIsOnboardingModalOpen(false);
+          setPendingOnboardingsCount(onboardingService.getPendingCount());
+        }}
+        onAdmitLearner={onAdmitLearner}
+        onRefreshStudents={onRefreshStudents}
+      />
     </div>
   );
 };

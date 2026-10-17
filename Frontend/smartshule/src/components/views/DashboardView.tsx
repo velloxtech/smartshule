@@ -281,7 +281,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <span className="material-symbols-outlined text-primary text-[18px]">
                     point_of_sale
                   </span>
-                  <span className="font-body-md text-body-md">M-Pesa STK Fee Request</span>
+                  <span className="font-body-md text-body-md">Record Fee Payment</span>
                 </button>
 
                 <button
@@ -825,7 +825,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </h2>
               </div>
               <p className="font-label-md text-label-md text-on-surface-variant mt-0.5">
-                Automated KCB Buni M-Pesa Express & Bank Rail (Paybill 522533)
+                Direct M-Pesa (Paybill 522533) & KCB Bank Fee Settlements
               </p>
             </div>
             <div className="flex items-center gap-xs">

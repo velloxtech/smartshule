@@ -138,6 +138,26 @@ export const KcbBuniConfirmationSchema = z.object({
   channel: z.enum(['MPESA', 'KCB_APP', 'VOOMA', 'BANK_BRANCH', 'AGENT']).optional()
 }).passthrough();
 
+export const ForwardPaymentTransactionSchema = z.object({
+  studentId: z.string().min(1, 'Student ID is required'),
+  amount: z.number().positive('Amount must be greater than zero'),
+  paymentMethod: z.nativeEnum(PaymentMethod).optional().default(PaymentMethod.MPESA),
+  transactionReference: z.string().min(1, 'Transaction reference code or slip number is required'),
+  paymentDate: z.string().optional(),
+  mpesaPhoneNumber: z.string().optional(),
+  senderName: z.string().optional(),
+  smsMessage: z.string().optional(),
+  notes: z.string().optional(),
+  schoolId: z.string().optional(),
+  invoiceId: z.string().optional()
+}).passthrough();
+
+export const VerifyForwardedPaymentSchema = z.object({
+  action: z.enum(['APPROVE', 'REJECT']),
+  rejectionReason: z.string().optional(),
+  invoiceId: z.string().optional()
+}).passthrough();
+
 export const RecordExpenseSchema = z.object({
   schoolId: z.string().optional(),
   voucherNumber: z.string().optional(),
@@ -324,6 +344,67 @@ export class FinanceController {
         requestingUser: req.user
       });
       return res.status(200).json({ success: true, count: payments.length, data: payments });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public forwardPaymentTransaction = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const requestingUser = (req as any).user;
+      const result = await this.feeUseCases.forwardPaymentTransaction(req.body, requestingUser);
+
+      this.systemLogUseCases?.log({
+        schoolId: req.body.schoolId || requestingUser?.schoolId,
+        level: 'AUDIT',
+        category: 'FINANCE',
+        action: 'PAYMENT_FORWARDED',
+        actorEmail: requestingUser?.email,
+        actorUserId: requestingUser?.userId,
+        actorRole: requestingUser?.role,
+        ipAddress: req.ip || (req.socket?.remoteAddress as string),
+        details: `Forwarded payment confirmation of KES ${req.body.amount} (Ref: ${req.body.transactionReference}) for student ${req.body.studentId}`,
+        metadata: { studentId: req.body.studentId, ref: req.body.transactionReference }
+      }).catch(() => {});
+
+      return res.status(201).json(result);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public getForwardedTransactions = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const requestingUser = (req as any).user;
+      const schoolId = (req.query.schoolId as string) || requestingUser?.schoolId;
+      const result = await this.feeUseCases.getForwardedTransactions(schoolId, requestingUser);
+      return res.status(200).json({ success: true, count: result.length, data: result });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public verifyForwardedTransaction = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const requestingUser = (req as any).user;
+      const paymentId = req.params.id as string;
+      const { action, rejectionReason } = req.body;
+      const result = await this.feeUseCases.verifyForwardedTransaction(paymentId, action, rejectionReason, requestingUser);
+
+      this.systemLogUseCases?.log({
+        schoolId: requestingUser?.schoolId,
+        level: 'AUDIT',
+        category: 'FINANCE',
+        action: action === 'APPROVE' ? 'PAYMENT_VERIFIED' : 'PAYMENT_REJECTED',
+        actorEmail: requestingUser?.email,
+        actorUserId: requestingUser?.userId,
+        actorRole: requestingUser?.role,
+        ipAddress: req.ip || (req.socket?.remoteAddress as string),
+        details: `${action === 'APPROVE' ? 'Verified' : 'Rejected'} forwarded payment ${paymentId}`,
+        metadata: { paymentId, action }
+      }).catch(() => {});
+
+      return res.status(200).json(result);
     } catch (err) {
       next(err);
     }

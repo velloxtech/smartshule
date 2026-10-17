@@ -805,17 +805,6 @@ export const ArrearsView: React.FC<ArrearsViewProps> = ({
                             >
                               <span className="material-symbols-outlined text-[17px]">payments</span>
                             </button>
-
-                            {/* M-Pesa STK Prompt */}
-                            {onOpenMpesaWithStudent && hasArrears && (
-                              <button
-                                onClick={() => onOpenMpesaWithStudent(student)}
-                                className="p-1.5 rounded-lg hover:bg-emerald-50 text-emerald-600 hover:text-emerald-700 transition-colors cursor-pointer"
-                                title="Trigger Instant M-Pesa STK Push"
-                              >
-                                <span className="material-symbols-outlined text-[17px]">send_to_mobile</span>
-                              </button>
-                            )}
                           </div>
                         </td>
                       </tr>

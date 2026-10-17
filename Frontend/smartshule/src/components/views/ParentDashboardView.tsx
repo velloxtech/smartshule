@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { EditStudentModal } from '../modals/EditStudentModal';
+import { ForwardPaymentModal } from '../modals/ForwardPaymentModal';
 import { resolveStreamName, resolveGradeName, resolveLearningAreaName } from '../../utils/formatters';
 
 interface ParentDashboardViewProps {
@@ -23,6 +24,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
   const [selectedChildIndex, setSelectedChildIndex] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isForwardPaymentModalOpen, setIsForwardPaymentModalOpen] = useState(false);
 
   const loadPortalData = async () => {
     setLoading(true);
@@ -58,6 +60,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
 
   const currentChildFee = currentChild?.fee;
   const feeBalance = currentChildFee?.balance || 0;
+  const arrearsAmount = currentChildFee?.arrearsAmount || 0;
   const rawDueDate = currentChildFee?.dueDate || currentChildFee?.invoices?.[0]?.dueDate || null;
 
   const formatDueDate = (dateStr: string | null) => {
@@ -242,37 +245,16 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
               )}
 
               <button
-                onClick={() => {
-                  const studentObj = {
-                    id: currentChild.id,
-                    name: currentChild.fullName || `${currentChild.firstName} ${currentChild.lastName}`,
-                    admNo: currentChild.admissionNumber,
-                    upi: currentChild.upiNumber || 'NEMIS-K9281A',
-                    grade: resolveGradeName(currentChild.gradeLevel),
-                    stream: resolveStreamName(currentChild.streamId, currentChild.streamName || currentChild.stream?.name, currentChild.gradeLevel) || 'Main Stream',
-                    guardianName: `${guardianUser?.firstName} ${guardianUser?.lastName}`,
-                    guardianPhone: guardianUser?.phone || '',
-                    feeBalance: currentChild.fee?.balance || 0,
-                    totalFee: currentChild.fee?.totalBilled || 0,
-                    attendanceRate: currentChild.attendance?.attendanceRate || 100,
-                    cbcRating: 'ME',
-                    status: currentChild.status || 'Active'
-                  };
-                  if (onOpenKcbBuniWithStudent) {
-                    onOpenKcbBuniWithStudent(studentObj);
-                  } else if (onOpenMpesaWithStudent) {
-                    onOpenMpesaWithStudent(studentObj);
-                  }
-                }}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-[#005a36] to-[#006a40] text-white rounded-lg hover:shadow-xs text-xs font-bold transition-all cursor-pointer"
+                onClick={() => setIsForwardPaymentModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-primary to-[#500b1a] text-white rounded-lg hover:shadow-xs text-xs font-bold transition-all cursor-pointer shadow-sm"
               >
-                <span className="material-symbols-outlined text-[16px]">account_balance</span>
-                <span>Pay via KCB Buni (M-Pesa / Paybill 522533)</span>
+                <span className="material-symbols-outlined text-[16px]">forward_to_inbox</span>
+                <span>Forward Payment Message</span>
               </button>
             </div>
           </div>
 
-          {/* Prominent Fee Payment Due Date Banner */}
+          {/* Prominent Fee Payment Notice & Remittance Instructions */}
           {feeBalance > 0 ? (
             <div className="bg-gradient-to-r from-amber-500/15 via-rose-500/10 to-amber-500/15 border-2 border-amber-500/50 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 animate-fade-in">
               <div className="flex items-start sm:items-center gap-3.5">
@@ -282,11 +264,16 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="text-sm sm:text-base font-extrabold text-amber-950 tracking-tight">
-                      School Fee Payment Due Date Notice
+                      School Fee Payment Notice
                     </h3>
                     <span className="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-[#7a1228] text-white shadow-2xs">
                       Due: {formattedDueDate}
                     </span>
+                    {arrearsAmount > 0 && (
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-200 text-amber-950 border border-amber-400">
+                        Includes KES {arrearsAmount.toLocaleString()} Prior Arrears
+                      </span>
+                    )}
                     {daysRemaining !== null && (
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                         daysRemaining <= 0
@@ -304,41 +291,23 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                     )}
                   </div>
                   <p className="text-xs text-amber-900/90 mt-1 leading-relaxed">
-                    The outstanding school fee balance of <strong className="font-bold text-[#7a1228] font-data-mono">KES {feeBalance.toLocaleString()}</strong> for{' '}
+                    The outstanding school fee balance of <strong className="font-bold text-[#7a1228] font-data-mono">KES {feeBalance.toLocaleString()}</strong>
+                    {arrearsAmount > 0 ? (
+                      <span> (including <strong className="text-rose-950 font-bold">KES {arrearsAmount.toLocaleString()}</strong> in prior fee arrears)</span>
+                    ) : ''} for{' '}
                     <strong>{currentChild.firstName} {currentChild.lastName}</strong> is due on or before{' '}
-                    <strong className="text-slate-900">{formattedDueDate}</strong>. Prompt settlement ensures uninterrupted academic learning and timely report card release.
+                    <strong className="text-slate-900">{formattedDueDate}</strong>. Pay via Lipa na M-Pesa Paybill <strong className="font-data-mono text-emerald-800">522533</strong> (Account: <strong className="font-data-mono text-[#7a1228]">8048859#{currentChild.admissionNumber || currentChild.firstName}</strong>) or KCB Bank (A/C: 1234567890), then forward your confirmation message.
                   </p>
                 </div>
               </div>
 
               <div className="flex items-center gap-2 shrink-0 self-end md:self-center">
                 <button
-                  onClick={() => {
-                    const studentObj = {
-                      id: currentChild.id,
-                      name: currentChild.fullName || `${currentChild.firstName} ${currentChild.lastName}`,
-                      admNo: currentChild.admissionNumber,
-                      upi: currentChild.upiNumber || 'NEMIS-K9281A',
-                      grade: resolveGradeName(currentChild.gradeLevel),
-                      stream: resolveStreamName(currentChild.streamId, currentChild.streamName || currentChild.stream?.name, currentChild.gradeLevel) || 'Main Stream',
-                      guardianName: `${guardianUser?.firstName} ${guardianUser?.lastName}`,
-                      guardianPhone: guardianUser?.phone || '',
-                      feeBalance: currentChild.fee?.balance || 0,
-                      totalFee: currentChild.fee?.totalBilled || 0,
-                      attendanceRate: currentChild.attendance?.attendanceRate || 100,
-                      cbcRating: 'ME',
-                      status: currentChild.status || 'Active'
-                    };
-                    if (onOpenKcbBuniWithStudent) {
-                      onOpenKcbBuniWithStudent(studentObj);
-                    } else if (onOpenMpesaWithStudent) {
-                      onOpenMpesaWithStudent(studentObj);
-                    }
-                  }}
-                  className="px-4 py-2.5 bg-gradient-to-r from-[#005a36] to-[#006a40] hover:from-[#00472b] hover:to-[#005a36] text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+                  onClick={() => setIsForwardPaymentModalOpen(true)}
+                  className="px-4 py-2.5 bg-gradient-to-r from-primary to-[#500b1a] hover:from-[#600e20] hover:to-[#400914] text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
                 >
-                  <span className="material-symbols-outlined text-[18px]">payments</span>
-                  <span>Pay Now (KCB / M-Pesa)</span>
+                  <span className="material-symbols-outlined text-[18px]">forward_to_inbox</span>
+                  <span>Forward Payment Confirmation</span>
                 </button>
               </div>
             </div>
@@ -446,8 +415,14 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
               <div className="text-2xl font-bold font-data-mono text-error mt-1">
                 KES {(currentChild.fee?.balance || 0).toLocaleString()}
               </div>
+              {arrearsAmount > 0 && (
+                <div className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-950 text-[10px] font-bold border border-amber-300">
+                  <span className="material-symbols-outlined text-[12px] text-amber-800">warning</span>
+                  <span>Includes KES {arrearsAmount.toLocaleString()} Prior Arrears</span>
+                </div>
+              )}
               <span className="text-[11px] text-on-surface-variant mt-1 block">
-                Term Total: KES {(currentChild.fee?.totalBilled || 0).toLocaleString()}
+                Total Invoiced: KES {(currentChild.fee?.totalBilled || 0).toLocaleString()}
               </span>
             </div>
 
@@ -473,48 +448,89 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                   <span className="material-symbols-outlined text-primary text-[20px]">account_balance_wallet</span>
                   <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider">Fee Statement Ledger</h3>
                 </div>
-                <span className="text-xs font-bold text-primary font-data-mono">
-                  Balance: KES {(currentChild.fee?.balance || 0).toLocaleString()}
-                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setIsForwardPaymentModalOpen(true)}
+                    className="px-2.5 py-1 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[14px]">forward_to_inbox</span>
+                    <span>Forward Payment</span>
+                  </button>
+                  <span className="text-xs font-bold text-primary font-data-mono">
+                    Balance: KES {(currentChild.fee?.balance || 0).toLocaleString()}
+                  </span>
+                </div>
               </div>
 
               {currentChild.fee?.invoices?.length > 0 ? (
                 <div className="space-y-3">
                   <div className="text-xs font-semibold text-on-surface">Term Invoices:</div>
-                  {currentChild.fee.invoices.map((inv: any) => (
-                    <div key={inv.id} className="p-3 rounded-lg bg-surface-container-low text-xs space-y-1">
-                      <div className="flex justify-between font-bold text-on-surface">
-                        <span>Invoice #{inv.invoiceNumber}</span>
-                        <span className="font-data-mono text-primary">KES {inv.amountPayable?.toLocaleString()}</span>
+                  {currentChild.fee.invoices.map((inv: any) => {
+                    const isArrearInvoice = inv.feeStructureId === 'MANUAL_ARREARS' || inv.invoiceNumber?.includes('ARR');
+                    const arrearItem = Array.isArray(inv.items) ? inv.items.find((it: any) => it.name?.toLowerCase().includes('arrear') || it.name?.toLowerCase().includes('carried forward')) : null;
+                    return (
+                      <div key={inv.id} className="p-3 rounded-lg bg-surface-container-low text-xs space-y-1">
+                        <div className="flex justify-between font-bold text-on-surface">
+                          <span className="flex items-center gap-1.5">
+                            <span>Invoice #{inv.invoiceNumber}</span>
+                            {isArrearInvoice && (
+                              <span className="px-1.5 py-0.2 rounded bg-amber-200 text-amber-950 text-[10px] font-bold border border-amber-300">
+                                Arrears Invoice
+                              </span>
+                            )}
+                          </span>
+                          <span className="font-data-mono text-primary">KES {inv.amountPayable?.toLocaleString()}</span>
+                        </div>
+                        {arrearItem && !isArrearInvoice && (
+                          <div className="text-[11px] text-amber-900 font-medium">
+                            ↳ Includes KES {Number(arrearItem.amount || 0).toLocaleString()} prior arrears
+                          </div>
+                        )}
+                        <div className="flex justify-between text-on-surface-variant text-[11px]">
+                          <span>Paid: KES {inv.amountPaid?.toLocaleString()}</span>
+                          <span className={`font-semibold ${inv.balance > 0 ? 'text-error font-bold' : 'text-emerald-700'}`}>
+                            Bal: KES {inv.balance?.toLocaleString()} {inv.balance === 0 && '✓ Cleared'}
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex justify-between text-on-surface-variant text-[11px]">
-                        <span>Paid: KES {inv.amountPaid?.toLocaleString()}</span>
-                        <span className="font-semibold text-error">Bal: KES {inv.balance?.toLocaleString()}</span>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
 
                   {currentChild.fee.payments?.length > 0 && (
                     <div className="pt-2 space-y-2">
                       <div className="text-xs font-semibold text-on-surface">Payment Receipts:</div>
-                      {currentChild.fee.payments.map((pay: any) => (
-                        <div key={pay.id} className="p-2.5 rounded-lg bg-secondary/5 border border-secondary/20 flex items-center justify-between text-xs">
-                          <div>
-                            <div className="font-bold text-primary font-data-mono">{pay.receiptNumber}</div>
-                            <div className="text-[11px] text-on-surface-variant">
-                              Ref: {pay.transactionReference} · {pay.paymentMethod}
+                      {currentChild.fee.payments.map((pay: any) => {
+                        const isPending = pay.status === 'PENDING' || pay.receiptNumber?.startsWith('FWD-');
+                        return (
+                          <div key={pay.id} className={`p-2.5 rounded-lg border flex items-center justify-between text-xs ${
+                            isPending ? 'bg-amber-50/70 border-amber-300' : 'bg-secondary/5 border-secondary/20'
+                          }`}>
+                            <div>
+                              <div className="font-bold text-primary font-data-mono flex items-center gap-1.5">
+                                <span>{pay.receiptNumber}</span>
+                                {isPending && (
+                                  <span className="px-1.5 py-0.2 rounded bg-amber-200 text-amber-950 text-[10px] font-bold">
+                                    Pending Verification
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-[11px] text-on-surface-variant">
+                                Ref: {pay.transactionReference} · {pay.paymentMethod} {pay.paymentDate ? `· ${pay.paymentDate}` : ''}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className={`font-bold font-data-mono ${isPending ? 'text-amber-900' : 'text-secondary'}`}>
+                                +KES {pay.amount?.toLocaleString()}
+                              </div>
+                              <span className={`text-[10px] px-1.5 py-0.2 rounded font-semibold ${
+                                isPending ? 'bg-amber-100 text-amber-950 border border-amber-300' : 'bg-secondary-container text-on-secondary-container'
+                              }`}>
+                                {isPending ? 'Under Review' : pay.status}
+                              </span>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <div className="font-bold font-data-mono text-secondary">
-                              +KES {pay.amount?.toLocaleString()}
-                            </div>
-                            <span className="text-[10px] px-1.5 py-0.2 rounded bg-secondary-container text-on-secondary-container font-semibold">
-                              {pay.status}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -699,6 +715,18 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
             await loadPortalData();
           }}
           isParentView={true}
+        />
+      )}
+
+      {isForwardPaymentModalOpen && (
+        <ForwardPaymentModal
+          isOpen={isForwardPaymentModalOpen}
+          onClose={() => setIsForwardPaymentModalOpen(false)}
+          students={children}
+          initialStudent={currentChild}
+          onSuccess={() => {
+            loadPortalData();
+          }}
         />
       )}
     </div>

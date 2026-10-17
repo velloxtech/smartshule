@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FeeTransaction, Student, StudentInvoice, FinanceSummaryData, UserRole } from '../../types';
 import { GenerateInvoicesModal } from '../modals/GenerateInvoicesModal';
 import { RecordPaymentModal } from '../modals/RecordPaymentModal';
-import { KcbBuniPaymentModal } from '../modals/KcbBuniPaymentModal';
+import { ForwardPaymentModal } from '../modals/ForwardPaymentModal';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
@@ -28,7 +28,11 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
   const [invoices, setInvoices] = useState<StudentInvoice[]>([]);
   const [financeSummary, setFinanceSummary] = useState<FinanceSummaryData | null>(null);
   const [school, setSchool] = useState<any>(null);
-  const [activeSubTab, setActiveSubTab] = useState<'invoices' | 'transactions'>('invoices');
+  const [activeSubTab, setActiveSubTab] = useState<'invoices' | 'transactions' | 'forwarded'>('invoices');
+  const [forwardedTxs, setForwardedTxs] = useState<any[]>([]);
+  const [isForwardPaymentOpen, setIsForwardPaymentOpen] = useState(false);
+  const [isVerifyingId, setIsVerifyingId] = useState<string | null>(null);
+  const [verifyMsg, setVerifyMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [channelFilter, setChannelFilter] = useState<'ALL' | 'CASH' | 'BANK_DEPOSIT' | 'MPESA' | 'CHEQUE'>('ALL');
   const [loading, setLoading] = useState(true);
 
@@ -70,7 +74,6 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
   // Modals
   const [isGenInvoicesOpen, setIsGenInvoicesOpen] = useState(false);
   const [isRecordPayOpen, setIsRecordPayOpen] = useState(false);
-  const [isKcbBuniOpen, setIsKcbBuniOpen] = useState(false);
   const [selectedInvoiceForPay, setSelectedInvoiceForPay] = useState<StudentInvoice | undefined>(undefined);
   const [selectedStudentForPay, setSelectedStudentForPay] = useState<Student | undefined>(undefined);
   const [selectedTx, setSelectedTx] = useState<any | null>(null);
@@ -78,10 +81,11 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
   const loadData = async () => {
     setLoading(true);
     try {
-      const [invRes, summaryRes, schoolRes] = await Promise.all([
+      const [invRes, summaryRes, schoolRes, fwdRes] = await Promise.all([
         apiService.getInvoices().catch(() => null),
         apiService.getFinanceSummary().catch(() => null),
         apiService.getSchool().catch(() => null),
+        apiService.getForwardedTransactions().catch(() => null),
       ]);
 
       if (invRes?.data && Array.isArray(invRes.data)) {
@@ -92,6 +96,9 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
       }
       if (schoolRes?.data) {
         setSchool(schoolRes.data);
+      }
+      if (fwdRes?.data && Array.isArray(fwdRes.data)) {
+        setForwardedTxs(fwdRes.data);
       }
     } catch (err) {
       console.error('Failed to load finance data:', err);
@@ -108,13 +115,45 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
     setSelectedInvoiceForPay(inv);
     const linkedStudent = students.find((s) => s.id === inv.studentId);
     setSelectedStudentForPay(linkedStudent);
-    setIsKcbBuniOpen(true);
+    if (isGuardian) {
+      setIsForwardPaymentOpen(true);
+    } else {
+      setIsRecordPayOpen(true);
+    }
   };
 
   const handleGeneralPayment = () => {
     setSelectedInvoiceForPay(undefined);
     setSelectedStudentForPay(students[0]);
-    setIsKcbBuniOpen(true);
+    if (isGuardian) {
+      setIsForwardPaymentOpen(true);
+    } else {
+      setIsRecordPayOpen(true);
+    }
+  };
+
+  const handleVerifyForwarded = async (paymentId: string, action: 'APPROVE' | 'REJECT') => {
+    setIsVerifyingId(paymentId);
+    setVerifyMsg(null);
+    try {
+      const res = await apiService.verifyForwardedPayment(paymentId, { action });
+      if (res.success) {
+        setVerifyMsg({
+          type: 'success',
+          text: action === 'APPROVE'
+            ? `Transaction verified and credited to fee ledger. Receipt #${res.data?.receiptNumber || res.receiptNumber || 'generated'}.`
+            : 'Forwarded transaction rejected.'
+        });
+        loadData();
+      } else {
+        setVerifyMsg({ type: 'error', text: res.message || 'Verification failed.' });
+      }
+    } catch (err: any) {
+      setVerifyMsg({ type: 'error', text: err?.message || 'Verification failed. Please try again.' });
+    } finally {
+      setIsVerifyingId(null);
+      setTimeout(() => setVerifyMsg(null), 6000);
+    }
   };
 
   const totalInvoiced = financeSummary?.totalInvoiced || invoices.reduce((acc, inv) => acc + (inv.amountPayable || 0), 0);
@@ -143,16 +182,16 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
             <span>Finance & Billing</span>
             <span>/</span>
             <span className="text-[#006a40] font-semibold">
-              {isGuardian ? 'My Child Fees & KCB Payments' : 'KCB Buni Payment Gateway & Invoicing'}
+              {isGuardian ? 'My Child Fees & Forwarded Payments' : 'Fee Invoicing & Manual Payment Reconciliation'}
             </span>
           </div>
           <h1 className="font-headline-lg text-headline-lg text-on-surface mt-1">
-            {isGuardian ? 'Parent Fee Ledger & Instant KCB Bank Settlement' : 'KCB Buni Payment Platform & Invoicing'}
+            {isGuardian ? 'Parent Fee Ledger & Forward Payment Confirmation' : 'Student Invoicing & Payment Verification Ledger'}
           </h1>
           <p className="text-xs text-on-surface-variant mt-0.5">
             {isGuardian
-              ? 'View official school invoices for your linked learners and clear balances via KCB Buni STK Push, Paybill 522533, or KCB Bank'
-              : 'Direct fee collection via KCB Bank Kenya Paybill 522533, real-time Buni STK Push APIs, and automated reconciliation'}
+              ? 'View official school invoices, pay directly via M-Pesa or Bank, and forward your payment confirmation message to the school for verification.'
+              : 'Manage fee invoices, manually record direct bank and cash payments, and verify payments forwarded by parents.'}
           </p>
         </div>
 
@@ -191,8 +230,10 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
             onClick={handleGeneralPayment}
             className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-[#005a36] to-[#006a40] text-white rounded-lg hover:shadow-md text-xs font-bold transition-all cursor-pointer"
           >
-            <span className="material-symbols-outlined text-[16px]">account_balance</span>
-            <span>Pay with KCB Buni (M-Pesa / Bank)</span>
+            <span className="material-symbols-outlined text-[16px]">
+              {isGuardian ? 'forward_to_inbox' : 'point_of_sale'}
+            </span>
+            <span>{isGuardian ? 'Forward Payment Confirmation' : 'Record Fee Payment'}</span>
           </button>
         </div>
       </div>
@@ -203,16 +244,16 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
         <div className="p-5 rounded-xl bg-surface-container-lowest border border-outline-variant/30 flex items-center justify-between shadow-xs">
           <div>
             <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
-              Settlement Bank Rail
+              Fee Collection Channels
             </span>
             <div className="flex items-center gap-2 mt-1">
-              <span className="text-base font-bold font-data-mono text-[#006a40]">KCB Bank Kenya</span>
+              <span className="text-base font-bold font-data-mono text-[#006a40]">KCB Bank & M-Pesa</span>
               <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
                 Paybill 522533
               </span>
             </div>
             <span className="text-[11px] text-emerald-700 font-semibold mt-1 block">
-              KCB Buni API Platform Active
+              Manual Verification & Ledger Crediting
             </span>
           </div>
           <div className="w-12 h-12 rounded-xl bg-emerald-50 text-[#006a40] flex items-center justify-center font-bold">
@@ -257,7 +298,7 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
         </div>
       </div>
 
-      {/* Sub-Tabs: Invoices vs Transaction Feed */}
+      {/* Sub-Tabs: Invoices vs Transaction Feed vs Forwarded Queue */}
       <div className="flex items-center gap-2 border-b border-outline-variant/30 pb-2">
         <button
           onClick={() => setActiveSubTab('invoices')}
@@ -281,6 +322,23 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
         >
           <span className="material-symbols-outlined text-[16px]">history</span>
           <span>Bank Settlements & Receipts</span>
+        </button>
+
+        <button
+          onClick={() => setActiveSubTab('forwarded')}
+          className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+            activeSubTab === 'forwarded'
+              ? 'bg-[#7a1228] text-white shadow-xs'
+              : 'bg-surface-container-low text-on-surface-variant hover:text-on-surface'
+          }`}
+        >
+          <span className="material-symbols-outlined text-[16px]">forward_to_inbox</span>
+          <span>Forwarded Payments ({forwardedTxs.length})</span>
+          {forwardedTxs.filter((tx) => tx.status === 'PENDING').length > 0 && (
+            <span className="px-1.5 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-bold">
+              {forwardedTxs.filter((tx) => tx.status === 'PENDING').length} pending
+            </span>
+          )}
         </button>
       </div>
 
@@ -426,8 +484,10 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
                                   onClick={() => handlePayInvoice(inv)}
                                   className="px-2.5 py-1.5 bg-[#006a40] hover:bg-[#005a36] text-white rounded-lg text-xs font-bold hover:shadow-xs transition-all cursor-pointer inline-flex items-center gap-1"
                                 >
-                                  <span className="material-symbols-outlined text-[13px]">credit_card</span>
-                                  <span>Pay Online</span>
+                                  <span className="material-symbols-outlined text-[13px]">
+                                    {isGuardian ? 'forward_to_inbox' : 'point_of_sale'}
+                                  </span>
+                                  <span>{isGuardian ? 'Forward Payment' : 'Record Payment'}</span>
                                 </button>
                               </>
                             ) : (
@@ -603,6 +663,180 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
         </div>
       )}
 
+      {/* FORWARDED TRANSACTIONS TABLE */}
+      {activeSubTab === 'forwarded' && (
+        <div className="bg-surface-container-lowest rounded-xl shadow-xs border border-outline-variant/30 overflow-hidden">
+          {verifyMsg && (
+            <div
+              className={`p-3 border-b text-xs flex items-center justify-between ${
+                verifyMsg.type === 'success'
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                  : 'bg-rose-50 border-rose-200 text-rose-800'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px]">
+                  {verifyMsg.type === 'success' ? 'check_circle' : 'error'}
+                </span>
+                <span>{verifyMsg.text}</span>
+              </div>
+              <button onClick={() => setVerifyMsg(null)} className="cursor-pointer">
+                <span className="material-symbols-outlined text-[16px]">close</span>
+              </button>
+            </div>
+          )}
+
+          <div className="p-4 border-b border-surface-container flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 className="font-bold text-sm text-primary uppercase tracking-wider flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px]">forward_to_inbox</span>
+                <span>{isGuardian ? 'My Forwarded Payment Messages' : 'Parent Forwarded Payments (Verification Queue)'}</span>
+              </h3>
+              <p className="text-xs text-on-surface-variant mt-0.5">
+                {isGuardian
+                  ? 'Review the status of payment confirmation SMS messages you forwarded to the bursar office.'
+                  : 'Parents pay offline or via Paybill and forward confirmation messages. Verify and credit to the student fee ledger.'}
+              </p>
+            </div>
+            {isGuardian && (
+              <button
+                onClick={() => setIsForwardPaymentOpen(true)}
+                className="px-3.5 py-2 bg-[#006a40] hover:bg-[#005a36] text-white rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 self-start sm:self-auto"
+              >
+                <span className="material-symbols-outlined text-[16px]">add_comment</span>
+                <span>Forward Payment SMS</span>
+              </button>
+            )}
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-surface-container-low text-on-surface-variant uppercase font-semibold border-b border-outline-variant/30">
+                <tr>
+                  <th className="py-3 px-4">Date</th>
+                  <th className="py-3 px-4">Student / Adm</th>
+                  <th className="py-3 px-4">Transaction Ref</th>
+                  <th className="py-3 px-4">Channel</th>
+                  <th className="py-3 px-4 text-right">Amount</th>
+                  <th className="py-3 px-4">Message / Notes</th>
+                  <th className="py-3 px-4">Status</th>
+                  {!isGuardian && <th className="py-3 px-4 text-right">Action</th>}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-surface-container">
+                {forwardedTxs.length === 0 ? (
+                  <tr>
+                    <td colSpan={isGuardian ? 7 : 8} className="py-12 text-center text-on-surface-variant">
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <span className="material-symbols-outlined text-3xl text-outline">mark_email_read</span>
+                        <p className="font-semibold text-sm">No Forwarded Payments Found</p>
+                        <p className="text-xs text-on-surface-variant">
+                          {isGuardian
+                            ? 'You have not submitted any payment confirmation messages yet. Pay your fees and forward the SMS receipt above.'
+                            : 'No pending or historical parent-forwarded payment transactions in the queue.'}
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  forwardedTxs.map((tx: any) => {
+                    const student = students.find((s) => s.id === tx.studentId);
+                    const isPending = tx.status === 'PENDING';
+                    const isCompleted = tx.status === 'COMPLETED';
+                    const isProcessing = isVerifyingId === tx.id;
+
+                    return (
+                      <tr key={tx.id} className="hover:bg-surface-container-low/50 transition-colors">
+                        <td className="py-3 px-4 text-on-surface-variant whitespace-nowrap">
+                          {new Date(tx.createdAt || tx.date || Date.now()).toLocaleDateString('en-GB', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                          })}
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="font-semibold text-on-surface">
+                            {student?.name || tx.studentName || `Student (${tx.studentId})`}
+                          </div>
+                          <div className="text-[11px] text-outline font-data-mono">
+                            {student?.admNo || tx.admNo || tx.studentId}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="font-data-mono font-bold text-primary">
+                            {tx.transactionReference || tx.receiptNumber || 'N/A'}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="px-2 py-0.5 rounded bg-surface-container font-medium text-[11px] text-on-surface">
+                            {tx.channel || 'M-Pesa'}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-right font-data-mono font-bold text-secondary">
+                          KES {Number(tx.amount || 0).toLocaleString()}
+                        </td>
+                        <td className="py-3 px-4 max-w-xs">
+                          <p className="truncate text-on-surface-variant text-[11px]" title={tx.notes || tx.rawSms}>
+                            {tx.notes || tx.rawSms || 'No SMS snippet'}
+                          </p>
+                        </td>
+                        <td className="py-3 px-4 whitespace-nowrap">
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              isCompleted
+                                ? 'bg-secondary-container text-on-secondary-container'
+                                : isPending
+                                ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                                : 'bg-rose-100 text-rose-900 border border-rose-300'
+                            }`}
+                          >
+                            {isPending ? 'Pending Verification' : isCompleted ? 'Verified & Credited' : 'Rejected'}
+                          </span>
+                        </td>
+                        {!isGuardian && (
+                          <td className="py-3 px-4 text-right whitespace-nowrap">
+                            {isPending ? (
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  onClick={() => handleVerifyForwarded(tx.id, 'APPROVE')}
+                                  disabled={isProcessing}
+                                  className="px-2.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1 disabled:opacity-50 shadow-2xs"
+                                  title="Verify and credit student fee invoice"
+                                >
+                                  {isProcessing ? (
+                                    <div className="w-3 h-3 rounded-full border-2 border-white border-t-transparent animate-spin"></div>
+                                  ) : (
+                                    <span className="material-symbols-outlined text-[14px]">check</span>
+                                  )}
+                                  <span>Verify & Credit</span>
+                                </button>
+                                <button
+                                  onClick={() => handleVerifyForwarded(tx.id, 'REJECT')}
+                                  disabled={isProcessing}
+                                  className="px-2 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 hover:text-rose-800 border border-rose-200 rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1 disabled:opacity-50"
+                                  title="Reject forwarded transaction"
+                                >
+                                  <span className="material-symbols-outlined text-[14px]">close</span>
+                                  <span>Reject</span>
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="text-[11px] font-medium text-outline">
+                                {isCompleted ? 'Credited to Ledger' : 'Rejected'}
+                              </span>
+                            )}
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* Slip Receipt Modal */}
       {selectedTx && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-xs overflow-y-auto animate-fade-in">
@@ -661,22 +895,6 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
         </div>
       )}
 
-      {/* KCB Buni Payment Modal */}
-      <KcbBuniPaymentModal
-        isOpen={isKcbBuniOpen}
-        onClose={() => {
-          setIsKcbBuniOpen(false);
-          setSelectedInvoiceForPay(undefined);
-          setSelectedStudentForPay(undefined);
-        }}
-        students={students}
-        initialStudent={selectedStudentForPay}
-        initialInvoice={selectedInvoiceForPay}
-        onPaymentSuccess={() => {
-          loadData();
-        }}
-      />
-
       {/* Modals for Admins */}
       <GenerateInvoicesModal
         isOpen={isGenInvoicesOpen}
@@ -700,6 +918,25 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
         onPaymentRecorded={() => {
           loadData();
           setIsRecordPayOpen(false);
+          setSelectedInvoiceForPay(undefined);
+          setSelectedStudentForPay(undefined);
+        }}
+      />
+
+      {/* Forward Payment Modal for Guardians */}
+      <ForwardPaymentModal
+        isOpen={isForwardPaymentOpen}
+        onClose={() => {
+          setIsForwardPaymentOpen(false);
+          setSelectedInvoiceForPay(undefined);
+          setSelectedStudentForPay(undefined);
+        }}
+        students={students}
+        initialStudent={selectedStudentForPay}
+        initialInvoice={selectedInvoiceForPay}
+        onSubmitted={() => {
+          loadData();
+          setIsForwardPaymentOpen(false);
           setSelectedInvoiceForPay(undefined);
           setSelectedStudentForPay(undefined);
         }}

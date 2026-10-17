@@ -836,8 +836,13 @@ export const ParentProfileView: React.FC<ParentProfileViewProps> = ({ onNavigate
                 <div className="text-lg font-black text-slate-900 font-mono">
                   KES {(currentChild.fee?.balance ?? 0).toLocaleString()}
                 </div>
+                {Number(currentChild.fee?.arrearsAmount || 0) > 0 && (
+                  <div className="text-[10px] text-amber-800 font-bold mt-0.5">
+                    Includes KES {Number(currentChild.fee.arrearsAmount).toLocaleString()} prior arrears
+                  </div>
+                )}
                 <div className="text-[11px] text-slate-500 mt-1">
-                  Billed: KES {(currentChild.fee?.totalBilled ?? 0).toLocaleString()}
+                  Billed: KES {(currentChild.fee?.totalBilled ?? 0).toLocaleString()} · Paid: KES {(currentChild.fee?.totalPaid ?? 0).toLocaleString()}
                 </div>
               </div>
 

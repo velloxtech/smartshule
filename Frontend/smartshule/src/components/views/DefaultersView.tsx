@@ -57,7 +57,7 @@ export const DefaultersView: React.FC<DefaultersViewProps> = ({
             Outstanding Fee Defaulters & Arrears
           </h1>
           <p className="text-xs text-on-surface-variant mt-0.5">
-            Manage fee arrears, automated M-Pesa STK prompts, fee statement debit/credit ledger, and bulk SMS broadcasts
+            Manage fee arrears, manual payment recording, fee statement debit/credit ledger, and bulk SMS broadcasts
           </p>
         </div>
 
@@ -95,7 +95,7 @@ export const DefaultersView: React.FC<DefaultersViewProps> = ({
             <div className="text-xl font-bold font-data-mono text-on-surface mt-1">
               {defaultersReport?.collectionRatePercentage ?? 0}%
             </div>
-            <span className="text-[11px] text-secondary font-medium mt-1 block">Live KCB Buni API Synchronized</span>
+            <span className="text-[11px] text-secondary font-medium mt-1 block">Live Settlement Ledger Synchronized</span>
           </div>
           <div className="w-12 h-12 rounded-xl bg-surface-container-low text-primary flex items-center justify-center font-bold">
             <span className="material-symbols-outlined text-[26px]">insights</span>
@@ -107,7 +107,7 @@ export const DefaultersView: React.FC<DefaultersViewProps> = ({
             <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
               Automated Follow-ups
             </span>
-            <div className="text-xl font-bold font-data-mono text-on-surface mt-1">SMS & STK</div>
+            <div className="text-xl font-bold font-data-mono text-on-surface mt-1">SMS Reminders</div>
             <span className="text-[11px] text-secondary font-semibold mt-1 block">Zero-Click Parent Reminders</span>
           </div>
           <div className="w-12 h-12 rounded-xl bg-surface-container-low text-secondary flex items-center justify-center font-bold">
@@ -182,9 +182,10 @@ export const DefaultersView: React.FC<DefaultersViewProps> = ({
                               cbcRating: 'ME',
                               status: 'Active',
                             })}
-                            className="px-2.5 py-1 rounded bg-secondary text-white font-bold text-xs hover:bg-secondary-container transition-colors cursor-pointer"
+                            className="px-2.5 py-1 rounded bg-[#006a40] hover:bg-[#005a36] text-white font-bold text-xs transition-colors cursor-pointer inline-flex items-center gap-1"
                           >
-                            STK Push
+                            <span className="material-symbols-outlined text-[13px]">point_of_sale</span>
+                            <span>Record Payment</span>
                           </button>
                         </div>
                       </td>
@@ -213,9 +214,10 @@ export const DefaultersView: React.FC<DefaultersViewProps> = ({
                         </button>
                         <button
                           onClick={() => onOpenMpesaWithStudent(s)}
-                          className="px-2.5 py-1 rounded bg-secondary text-white font-bold text-xs hover:bg-secondary-container transition-colors cursor-pointer"
+                          className="px-2.5 py-1 rounded bg-[#006a40] hover:bg-[#005a36] text-white font-bold text-xs transition-colors cursor-pointer inline-flex items-center gap-1"
                         >
-                          STK Push
+                          <span className="material-symbols-outlined text-[13px]">point_of_sale</span>
+                          <span>Record Payment</span>
                         </button>
                       </div>
                     </td>

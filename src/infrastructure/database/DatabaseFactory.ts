@@ -163,9 +163,41 @@ export class DatabaseFactory {
         connectionString,
         ssl: requiresSsl ? { rejectUnauthorized: false } : false,
         connectionTimeoutMillis: 10000,
-        idleTimeoutMillis: 30000,
-        max: 20
+        idleTimeoutMillis: 10000,
+        max: 15,
+        keepAlive: true,
       });
+
+      // Handle background idle client disconnections without crashing
+      pool.on('error', (err: any) => {
+        const msg = err?.message || String(err);
+        if (msg.includes('Connection terminated') || msg.includes('closed') || err?.code === 'ECONNRESET') {
+          // Normal background idle socket reap by cloud PgBouncer
+          return;
+        }
+        console.warn('⚠️ [PostgreSQL Pool Warning] Background client event:', msg);
+      });
+
+      // Wrap pool.query with transparent retry for transient socket drops from PgBouncer
+      const originalQuery = pool.query.bind(pool);
+      (pool as any).query = async function (text: any, params?: any) {
+        try {
+          return await originalQuery(text, params);
+        } catch (err: any) {
+          const isTransient =
+            err?.message?.includes('Connection terminated unexpectedly') ||
+            err?.message?.includes('closed') ||
+            err?.code === 'ECONNRESET' ||
+            err?.code === 'EPIPE' ||
+            err?.code === '57P01';
+
+          if (isTransient) {
+            // Re-attempt query immediately with a fresh socket
+            return await originalQuery(text, params);
+          }
+          throw err;
+        }
+      };
       
       try {
         // Auto-create all tables on start

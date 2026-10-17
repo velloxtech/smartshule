@@ -195,7 +195,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
                   <span className="text-[#7a1228]">3.</span> School Fees, Invoicing & Electronic Payments
                 </h3>
                 <p>
-                  All financial transactions conducted via Safaricom M-Pesa STK push, manual bank deposits, or direct cash office receipts are processed in Kenyan Shillings (KES).
+                  All financial transactions conducted via Lipa na M-Pesa Paybill, bank deposits, parent-forwarded payment verification, or direct cash office receipts are processed in Kenyan Shillings (KES).
                 </p>
                 <ul className="list-disc pl-5 space-y-1.5">
                   <li>Invoices issued for continuing pupils or new admissions are legally binding fee schedules authorized by the school administration.</li>

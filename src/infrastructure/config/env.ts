@@ -84,14 +84,14 @@ export const env = {
     },
   },
 
-  // 8. Email & SMTP API
+  // 8. Email & SMTP API (Dynamic: Zoho Mail, Gmail, Custom SMTP)
   email: {
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.SMTP_PORT || '587', 10),
-    user: process.env.SMTP_USER || 'notifications@smartshule.ac.ke',
+    host: process.env.SMTP_HOST || 'smtppro.zoho.com',
+    port: parseInt(process.env.SMTP_PORT || (process.env.SMTP_HOST?.includes('zoho') ? '465' : '587'), 10),
+    user: process.env.SMTP_USER || '',
     pass: process.env.SMTP_PASS || '',
-    secure: process.env.SMTP_SECURE === 'true',
-    from: process.env.EMAIL_FROM || 'SmartShule <notifications@smartshule.ac.ke>',
+    secure: process.env.SMTP_SECURE !== undefined ? process.env.SMTP_SECURE === 'true' : (parseInt(process.env.SMTP_PORT || '587', 10) === 465),
+    from: process.env.EMAIL_FROM || (process.env.SMTP_USER ? `"Grace Seeds School" <${process.env.SMTP_USER}>` : 'Grace Seeds School <admissions@smartshule.ac.ke>'),
   },
 
   // 9. Google Gemini AI & Vision API

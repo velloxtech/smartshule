@@ -84,7 +84,7 @@ export const BursarDashboardView: React.FC<BursarDashboardViewProps> = ({
               Bursar Financial & Liquidity Command Center
             </h1>
             <p className="mt-1 text-sm text-amber-100 max-w-xl">
-              Strictly managing school fee billing, M-Pesa STK receipts, operating expenditures, MoE capitation, and liquidity reconciliation.
+              Strictly managing school fee billing, verified fee receipts, operating expenditures, MoE capitation, and liquidity reconciliation.
             </p>
           </div>
 
@@ -101,7 +101,7 @@ export const BursarDashboardView: React.FC<BursarDashboardViewProps> = ({
               className="px-4 py-2.5 rounded-xl bg-amber-800/90 hover:bg-amber-800 text-white font-semibold text-xs border border-amber-400/30 flex items-center gap-2 transition-all cursor-pointer"
             >
               <span className="material-symbols-outlined text-[18px]">payments</span>
-              <span>Receive M-Pesa / Bank</span>
+              <span>Record Fee Payment</span>
             </button>
             <button
               onClick={() => onNavigateTab('arrears')}

@@ -64,8 +64,8 @@ import { OccurrenceBookView } from './components/views/OccurrenceBookView';
 import { CurriculumTrackerView } from './components/views/CurriculumTrackerView';
 
 // Modals
-import { MpesaStkModal } from './components/modals/MpesaStkModal';
-import { KcbBuniPaymentModal } from './components/modals/KcbBuniPaymentModal';
+import { RecordPaymentModal } from './components/modals/RecordPaymentModal';
+import { ForwardPaymentModal } from './components/modals/ForwardPaymentModal';
 import { CBCFormativeModal } from './components/modals/CBCFormativeModal';
 import { AdmitLearnerModal } from './components/modals/AdmitLearnerModal';
 import { SendSmsModal } from './components/modals/SendSmsModal';
@@ -82,6 +82,7 @@ import { CookieBanner } from './components/legal/CookieBanner';
 
 export default function App() {
   const { user, isAuthenticated, isLoading } = useAuth();
+  const isGuardian = user?.role === UserRole.GUARDIAN || user?.role === UserRole.PARENT;
   const [appView, setAppView] = useState<'landing' | 'login' | 'portal' | 'archive'>('landing');
   const [currentTab, setCurrentTab] = useState<TabType>('dashboard');
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -107,10 +108,9 @@ export default function App() {
 
   // Modal Visibility States
   const [onboardTeacherModalOpen, setOnboardTeacherModalOpen] = useState(false);
-  const [mpesaModalOpen, setMpesaModalOpen] = useState(false);
-  const [selectedStudentForMpesa, setSelectedStudentForMpesa] = useState<Student | undefined>(undefined);
-  const [kcbBuniModalOpen, setKcbBuniModalOpen] = useState(false);
-  const [selectedStudentForKcbBuni, setSelectedStudentForKcbBuni] = useState<Student | undefined>(undefined);
+  const [recordPaymentModalOpen, setRecordPaymentModalOpen] = useState(false);
+  const [forwardPaymentModalOpen, setForwardPaymentModalOpen] = useState(false);
+  const [selectedStudentForPayment, setSelectedStudentForPayment] = useState<Student | undefined>(undefined);
 
   const [cbcModalOpen, setCbcModalOpen] = useState(false);
   const [selectedStudentForCbc, setSelectedStudentForCbc] = useState<Student | undefined>(undefined);
@@ -440,14 +440,22 @@ export default function App() {
   }, [isAuthenticated]);
 
   // Quick Action / Deep Link Triggers
+  const handleOpenPayment = (student?: Student) => {
+    const targetStudent = student || (students && students.length > 0 ? students[0] : undefined);
+    setSelectedStudentForPayment(targetStudent);
+    if (isGuardian) {
+      setForwardPaymentModalOpen(true);
+    } else {
+      setRecordPaymentModalOpen(true);
+    }
+  };
+
   const handleOpenMpesa = (student?: Student) => {
-    setSelectedStudentForMpesa(student || (students && students.length > 0 ? students[0] : undefined));
-    setMpesaModalOpen(true);
+    handleOpenPayment(student);
   };
 
   const handleOpenKcbBuni = (student?: Student) => {
-    setSelectedStudentForKcbBuni(student || (students && students.length > 0 ? students[0] : undefined));
-    setKcbBuniModalOpen(true);
+    handleOpenPayment(student);
   };
 
   const handleOpenCbc = (student?: Student) => {
@@ -466,62 +474,16 @@ export default function App() {
     setCurrentTab('report-cards');
   };
 
-  // M-Pesa Payment Success Handler
-  const handleMpesaSuccess = (phone: string, amount: number, studentId: string) => {
-    const student = students.find((s) => s.id === studentId);
-    const newTx: FeeTransaction = {
-      id: `tx-${Date.now()}`,
-      ref: `SLK${Math.floor(10000000 + Math.random() * 90000000)}`,
-      studentName: student?.name || 'Enrolled Learner',
-      admNo: student?.admNo || '--',
-      grade: student?.grade || '--',
-      amount,
-      channel: 'M-Pesa Express',
-      phone,
-      timestamp: 'Just now',
-      status: 'Completed',
-    };
+  const handlePaymentRecorded = () => {
+    refreshStudentsAndFees();
+    setRecordPaymentModalOpen(false);
+    setSelectedStudentForPayment(undefined);
+  };
 
-    setTransactions([newTx, ...transactions]);
-    setTotalCollectedFee((prev) => prev + amount);
-
-    // Update student fee balance
-    if (student) {
-      setStudents((prev) =>
-        prev.map((s) =>
-          s.id === student.id
-            ? { ...s, feeBalance: Math.max(0, s.feeBalance - amount) }
-            : s
-        )
-      );
-    }
-
-    // Trigger Backend M-Pesa STK Push Endpoint
-    const cleanPhone = (phone || '').replace(/\D/g, '');
-    const formattedPhone = cleanPhone.startsWith('0')
-      ? `254${cleanPhone.slice(1)}`
-      : cleanPhone.startsWith('254')
-      ? cleanPhone
-      : `254${cleanPhone}`;
-    if (studentId) {
-      apiService.getInvoices({ studentId }).then((invRes) => {
-        const invId = invRes.data?.[0]?.id || studentId;
-        return apiService.initiateMpesaStkPush(invId, formattedPhone);
-      }).catch(() => {});
-    }
-
-    // Add activity
-    const newAct: SystemActivity = {
-      id: `act-${Date.now()}`,
-      type: 'mpesa',
-      icon: 'payments',
-      title: `M-Pesa STK Inflow: KES ${amount.toLocaleString()}`,
-      description: `${student?.name || 'Learner'} (Adm #${student?.admNo || ''}) · Paid via ${phone}`,
-      timestamp: 'Just now',
-      ref: newTx.ref,
-      badgeColor: 'bg-secondary text-white',
-    };
-    setActivities([newAct, ...activities]);
+  const handleForwardPaymentSuccess = () => {
+    refreshStudentsAndFees();
+    setForwardPaymentModalOpen(false);
+    setSelectedStudentForPayment(undefined);
   };
 
   // CBC Formative Assessment Save Handler
@@ -586,31 +548,31 @@ export default function App() {
 
   // Learner Admission Handler
   const handleAdmitStudent = async (newStudent: any, rawBackendData?: any) => {
-    const studentWithId: Student = {
+    let studentWithId: Student = {
       ...newStudent,
       id: newStudent.id || `std-${Date.now()}`,
     };
 
-    setStudents((prev) => [
-      studentWithId,
-      ...prev.filter((s) => s.id !== studentWithId.id && s.admNo !== studentWithId.admNo)
-    ]);
-
     // If for any reason it wasn't registered yet, register it
-    if (!newStudent.id || newStudent.id.startsWith('std-')) {
+    if (rawBackendData && (!newStudent.id || newStudent.id.startsWith('std-onb-') || newStudent.id.startsWith('std-temp-'))) {
       try {
-        if (rawBackendData) {
-          const res = await apiService.registerStudent(rawBackendData);
-          if (res?.success && res.data) {
-            setStudents((prev) =>
-              prev.map((s) => (s.admNo === studentWithId.admNo ? { ...s, id: res.data.id } : s))
-            );
-          }
+        const res = await apiService.registerStudent(rawBackendData);
+        if (res?.success && res.data) {
+          studentWithId = {
+            ...studentWithId,
+            id: res.data.id,
+            admNo: res.data.admissionNumber || studentWithId.admNo,
+          };
         }
       } catch (err) {
         console.error('Failed to register student on backend:', err);
       }
     }
+
+    setStudents((prev) => [
+      studentWithId,
+      ...prev.filter((s) => s.id !== studentWithId.id && s.admNo !== studentWithId.admNo)
+    ]);
 
     const newAct: SystemActivity = {
       id: `act-${Date.now()}`,
@@ -624,7 +586,7 @@ export default function App() {
     setActivities((prev) => [newAct, ...prev]);
 
     // Refresh state to ensure fee ledgers and student directories are completely up to date
-    refreshStudentsAndFees();
+    await refreshStudentsAndFees();
   };
 
   // Onboard New Teacher / Staff Handler
@@ -1033,6 +995,7 @@ export default function App() {
                   setAppView('archive');
                   window.location.hash = '/archive';
                 }}
+                onAdmitLearner={handleAdmitStudent}
                 onUpdateStudent={(updated) =>
                   setStudents((prev) =>
                     prev.map((s) => (s.id === updated.id ? { ...s, ...updated } : s))
@@ -1285,36 +1248,26 @@ export default function App() {
         existingTeachers={teachers}
       />
 
-      <KcbBuniPaymentModal
-        isOpen={kcbBuniModalOpen}
-        onClose={() => setKcbBuniModalOpen(false)}
-        students={students}
-        initialStudent={selectedStudentForKcbBuni}
-        onPaymentSuccess={(tx) => {
-          const newTx: FeeTransaction = {
-            id: `tx-${Date.now()}`,
-            ref: tx.reference || tx.receiptNumber,
-            studentName: tx.studentName,
-            admNo: tx.admNo,
-            grade: 'Grade Level',
-            amount: tx.amount,
-            channel: tx.channel || 'KCB Buni Paybill 522533',
-            phone: '+254700000000',
-            timestamp: 'Just now',
-            status: 'Completed',
-          };
-          setTransactions((prev) => [newTx, ...prev]);
-          setTotalCollectedFee((prev) => prev + tx.amount);
-          setKcbBuniModalOpen(false);
+      <RecordPaymentModal
+        isOpen={recordPaymentModalOpen}
+        onClose={() => {
+          setRecordPaymentModalOpen(false);
+          setSelectedStudentForPayment(undefined);
         }}
+        students={students}
+        initialStudent={selectedStudentForPayment}
+        onPaymentRecorded={handlePaymentRecorded}
       />
 
-      <MpesaStkModal
-        isOpen={mpesaModalOpen}
-        onClose={() => setMpesaModalOpen(false)}
+      <ForwardPaymentModal
+        isOpen={forwardPaymentModalOpen}
+        onClose={() => {
+          setForwardPaymentModalOpen(false);
+          setSelectedStudentForPayment(undefined);
+        }}
         students={students}
-        initialStudent={selectedStudentForMpesa}
-        onSuccess={handleMpesaSuccess}
+        initialStudent={selectedStudentForPayment}
+        onSubmitted={handleForwardPaymentSuccess}
       />
 
       <CBCFormativeModal

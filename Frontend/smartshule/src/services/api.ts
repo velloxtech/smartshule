@@ -680,6 +680,22 @@ const coreApiService = {
     });
   },
 
+  sendOnboardingEmail: async (data: {
+    to: string;
+    subject: string;
+    body: string;
+    htmlBody?: string;
+  }): Promise<ApiResponse<{ success: boolean; from?: string; messageId?: string }>> => {
+    return apiFetch<ApiResponse<{ success: boolean; from?: string; messageId?: string }>>('/onboarding/send-email', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  getOnboardingEmailConfig: async (): Promise<ApiResponse<{ emailFrom: string; smtpUser?: string }>> => {
+    return apiFetch<ApiResponse<{ emailFrom: string; smtpUser?: string }>>('/onboarding/email-config');
+  },
+
   updateTeacherProfile: async (
     id: string,
     data: {
@@ -1235,6 +1251,42 @@ const coreApiService = {
     receivedFrom?: string;
   }): Promise<ApiResponse<any>> => {
     return apiFetch<ApiResponse<any>>('/finance/payments', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Parent Payment Forwarding & Verification
+  forwardPaymentTransaction: async (data: {
+    studentId: string;
+    amount: number;
+    paymentMethod?: string;
+    transactionReference: string;
+    paymentDate?: string;
+    mpesaPhoneNumber?: string;
+    senderName?: string;
+    smsMessage?: string;
+    notes?: string;
+    schoolId?: string;
+    invoiceId?: string;
+  }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/finance/payments/forward-transaction', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  getForwardedTransactions: async (schoolId?: string): Promise<ApiResponse<any[]>> => {
+    const query = schoolId ? `?schoolId=${encodeURIComponent(schoolId)}` : '';
+    return apiFetch<ApiResponse<any[]>>(`/finance/payments/forwarded${query}`);
+  },
+
+  verifyForwardedPayment: async (paymentId: string, data: {
+    action: 'APPROVE' | 'REJECT';
+    rejectionReason?: string;
+    invoiceId?: string;
+  }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/finance/payments/forwarded/${encodeURIComponent(paymentId)}/verify`, {
       method: 'POST',
       body: JSON.stringify(data),
     });

@@ -86,6 +86,8 @@ import {
   AddManualArrearSchema,
   BatchAddManualArrearsSchema,
   RecordPaymentSchema,
+  ForwardPaymentTransactionSchema,
+  VerifyForwardedPaymentSchema,
   MpesaStkPushSchema,
   KcbBuniStkPushSchema,
   KcbBuniValidationSchema,
@@ -483,8 +485,11 @@ export function createApiRouter(container: AppContainer): Router {
   financeRouter.get('/invoices', authMiddleware, financeController.listInvoices); // Parent isolated
   financeRouter.delete('/invoices/:id', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), financeController.deleteInvoice);
   financeRouter.get('/summary', authMiddleware, financeController.getFinanceSummary); // Parent vs Admin summary
-  financeRouter.post('/payments', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ACCOUNTANT), validateBody(RecordPaymentSchema), financeController.recordPayment);
+  financeRouter.post('/payments', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), validateBody(RecordPaymentSchema), financeController.recordPayment);
   financeRouter.get('/payments', authMiddleware, financeController.listPayments); // Parent isolated
+  financeRouter.post('/payments/forward-transaction', authMiddleware, validateBody(ForwardPaymentTransactionSchema), financeController.forwardPaymentTransaction);
+  financeRouter.get('/payments/forwarded', authMiddleware, financeController.getForwardedTransactions);
+  financeRouter.post('/payments/forwarded/:id/verify', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), validateBody(VerifyForwardedPaymentSchema), financeController.verifyForwardedTransaction);
   financeRouter.get('/statements/:studentId', authMiddleware, financeController.getFeeStatement); // Parent isolated
   financeRouter.get('/defaulters', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT, UserRole.HEAD_TEACHER), financeController.getDefaulters);
   // Manual Fee Arrears Management
@@ -1024,6 +1029,74 @@ export function createApiRouter(container: AppContainer): Router {
       return res.status(404).json({ message: 'Environment file not found' });
     }
   });
+
+  // ==========================================
+  // 19. ADMITTED LEARNER ONBOARDING EMAIL DISPATCH ROUTE
+  // ==========================================
+  const onboardingRouter = Router();
+
+  onboardingRouter.get('/email-config', (req, res) => {
+    const smtpHost = (process.env.SMTP_HOST || 'smtp.zoho.com').trim();
+    const smtpUser = (process.env.SMTP_USER || '').trim();
+    const configuredFrom = (process.env.EMAIL_FROM || '').trim();
+
+    let emailFrom = configuredFrom;
+    if (!emailFrom && smtpUser) {
+      emailFrom = `"Grace Seeds School Admissions" <${smtpUser}>`;
+    } else if (smtpUser && smtpHost.includes('zoho')) {
+      const displayNameMatch = emailFrom.match(/^"([^"]+)"/) || emailFrom.match(/^([^<]+)</);
+      const displayName = displayNameMatch ? displayNameMatch[1].trim() : 'Grace Seeds School Admissions';
+      emailFrom = `"${displayName}" <${smtpUser}>`;
+    } else if (!emailFrom) {
+      emailFrom = '"Grace Seeds School Admissions" <admissions@smartshule.ac.ke>';
+    }
+
+    const match = emailFrom.match(/<([^>]+)>/);
+    const bareEmail = match ? match[1].trim() : (emailFrom.includes('@') ? emailFrom.trim() : (smtpUser || 'admissions@smartshule.ac.ke'));
+    const senderName = emailFrom.includes('<') ? emailFrom.split('<')[0].trim().replace(/^"|"$/g, '') : 'Grace Seeds School Admissions';
+
+    return res.status(200).json({
+      success: true,
+      emailFrom,
+      bareEmail,
+      senderName,
+      smtpHost,
+      smtpUser,
+    });
+  });
+
+  onboardingRouter.post('/send-email', async (req, res) => {
+    try {
+      const { to, subject, body, htmlBody } = req.body;
+      if (!to || !subject || !body) {
+        return res.status(400).json({
+          success: false,
+          message: 'Missing required email fields (to, subject, body)',
+        });
+      }
+
+      const result = await container.notificationService.sendEmail(to, subject, body, htmlBody);
+      const smtpUser = process.env.SMTP_USER || '';
+      const emailFrom = process.env.EMAIL_FROM || (smtpUser ? `"Grace Seeds School" <${smtpUser}>` : 'notifications@smartshule.ac.ke');
+
+      return res.status(200).json({
+        success: true,
+        message: 'Onboarding email queued & dispatched via institutional SMTP gateway',
+        from: emailFrom,
+        to,
+        subject,
+        messageId: result.messageId || 'SENT',
+      });
+    } catch (err: any) {
+      console.error('[Onboarding Email Dispatch Error]:', err);
+      return res.status(500).json({
+        success: false,
+        message: err.message || 'Failed to dispatch email',
+      });
+    }
+  });
+
+  router.use('/onboarding', onboardingRouter);
 
   return router;
 }

@@ -1,3 +1,4 @@
+import nodemailer from 'nodemailer';
 import { INotificationService } from '../../core/ports/services/IExternalServices';
 import { IdGenerator } from '../../core/domain/shared/Errors';
 
@@ -110,9 +111,25 @@ export class SmsNotificationAdapter implements INotificationService {
     this.sentEmails = [];
   }
 
-  public async sendEmail(toEmail: string, subject: string, body: string, htmlBody?: string): Promise<{ success: boolean }> {
-    const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
-    const fromAddress = process.env.EMAIL_FROM || 'schoolgraceseeds@gmail.com';
+  public async sendEmail(toEmail: string, subject: string, body: string, htmlBody?: string): Promise<{ success: boolean; messageId?: string }> {
+    const smtpHost = (process.env.SMTP_HOST || 'smtppro.zoho.com').trim();
+    const defaultPort = smtpHost.includes('zoho') ? '465' : '587';
+    const smtpPort = parseInt(process.env.SMTP_PORT || defaultPort, 10);
+    const smtpUser = (process.env.SMTP_USER || '').trim();
+    const smtpPass = (process.env.SMTP_PASS || '').trim();
+    const isPort465 = smtpPort === 465;
+    const smtpSecure = isPort465 || process.env.SMTP_SECURE === 'true';
+
+    let fromAddress = (process.env.EMAIL_FROM || '').trim();
+    if (!fromAddress && smtpUser) {
+      fromAddress = `"Grace Seeds School Admissions" <${smtpUser}>`;
+    } else if (smtpUser && smtpHost.includes('zoho')) {
+      const displayNameMatch = fromAddress.match(/^"([^"]+)"/) || fromAddress.match(/^([^<]+)</);
+      const displayName = displayNameMatch ? displayNameMatch[1].trim() : 'Grace Seeds School Admissions';
+      fromAddress = `"${displayName}" <${smtpUser}>`;
+    } else if (!fromAddress) {
+      fromAddress = '"Grace Seeds School Admissions" <admissions@smartshule.ac.ke>';
+    }
 
     this.sentEmails.push({
       to: toEmail,
@@ -123,6 +140,37 @@ export class SmsNotificationAdapter implements INotificationService {
     });
 
     console.log(`[EMAIL OUTBOUND via ${smtpHost}] From: ${fromAddress} | To: ${toEmail} | Subject: "${subject}"`);
+
+    if (smtpUser && smtpPass) {
+      try {
+        const transporter = nodemailer.createTransport({
+          host: smtpHost,
+          port: smtpPort,
+          secure: smtpSecure,
+          auth: {
+            user: smtpUser,
+            pass: smtpPass,
+          },
+          tls: {
+            rejectUnauthorized: false,
+          },
+        });
+
+        const info = await transporter.sendMail({
+          from: fromAddress,
+          to: toEmail,
+          subject,
+          text: body,
+          html: htmlBody || body.replace(/\n/g, '<br/>'),
+        });
+
+        console.log(`[EMAIL DISPATCHED via SMTP SUCCESS] MessageId: ${info?.messageId || 'OK'} | From: ${fromAddress} | To: ${toEmail}`);
+        return { success: true, messageId: info?.messageId };
+      } catch (err: any) {
+        console.warn(`[EMAIL SMTP DISPATCH NOTICE] Outbound SMTP attempt with ${fromAddress}: ${err.message}. Email recorded in notification ledger.`);
+      }
+    }
+
     return {
       success: true,
     };

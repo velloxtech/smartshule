@@ -2001,7 +2001,26 @@ export class PostgresFeeRepository implements IFeeRepository {
       p.updatedAt
     ]);
   }
-  public async updatePayment(p: Payment): Promise<void> { await this.savePayment(p); }
+  public async updatePayment(p: Payment): Promise<void> {
+    const q = `UPDATE payments
+               SET invoice_id = $1, student_id = $2, receipt_number = $3, amount = $4,
+                   payment_method = $5, transaction_reference = $6, mpesa_phone_number = $7,
+                   payment_date = $8, status = $9, notes = $10, updated_at = NOW()
+               WHERE id = $11`;
+    await this.pool.query(q, [
+      (p.invoiceId && p.invoiceId.trim() !== '') ? p.invoiceId : null,
+      p.studentId,
+      p.receiptNumber,
+      p.amount,
+      p.paymentMethod,
+      p.transactionReference,
+      p.mpesaPhoneNumber || null,
+      p.paymentDate,
+      p.status,
+      p.notes || null,
+      p.id
+    ]);
+  }
 
   // Expenses
   public async findExpenseById(id: string): Promise<Expense | null> {

@@ -16,7 +16,7 @@ import { Guardian, GuardianRelationship } from '../../core/domain/user/Guardian'
 import { User, UserRole, UserStatus, isBillingAuthorizedRole } from '../../core/domain/user/User';
 import { IdGenerator, NotFoundError, ConflictError, ValidationError, ForbiddenError } from '../../core/domain/shared/Errors';
 import { IPasswordHasher } from '../../core/ports/services/IExternalServices';
-import { StudentInvoice, InvoiceStatus, FeeStructure, FeeItem, Payment } from '../../core/domain/finance/Fee';
+import { StudentInvoice, InvoiceStatus, FeeStructure, FeeItem, Payment, PaymentStatus } from '../../core/domain/finance/Fee';
 import { ClassRoom, EducationLevel } from '../../core/domain/academic/ClassRoom';
 
 export const CBC_GRADE_PROGRESSION: Record<CbcGradeLevel, CbcGradeLevel | 'GRADUATED'> = {
@@ -1197,29 +1197,39 @@ export class StudentUseCases {
 
     const childrenDetails = await Promise.all(
       students.map(async s => {
-        let feeInfo = { totalBilled: 0, totalPaid: 0, balance: 0, dueDate: null as string | null, invoices: [] as any[], payments: [] as any[] };
+        let feeInfo = { totalBilled: 0, totalPaid: 0, balance: 0, arrearsAmount: 0, hasArrears: false, dueDate: null as string | null, invoices: [] as any[], payments: [] as any[] };
         if (this.feeRepository) {
           const invoices = await this.feeRepository.findInvoices({ studentId: s.id });
           const payments = await this.feeRepository.findPayments({ studentId: s.id });
-          const hasPriorCarried = invoices.some(i => (i.status as any) === 'CARRIED_FORWARD' || (i.status as any) === InvoiceStatus.CARRIED_FORWARD);
-          const totalBilled = invoices.reduce((acc, inv) => {
-            const arrears = (inv.items && hasPriorCarried)
-              ? inv.items
-                  .filter(it => it.name.toLowerCase().includes('carried forward') || it.name.toLowerCase().includes('arrears'))
-                  .reduce((s, it) => s + it.amount, 0)
-              : 0;
-            return acc + (inv.amountPayable - arrears);
-          }, 0);
-          const totalPaid = payments.filter(p => p.status === 'COMPLETED').reduce((acc, p) => acc + p.amount, 0);
-          const activeInvoice = invoices.find(inv => inv.balance > 0 && (inv.status as any) !== 'CARRIED_FORWARD') || invoices[0];
+          const activeInvoices = invoices.filter(inv => (inv.status as any) !== 'CARRIED_FORWARD' && (inv.status as any) !== InvoiceStatus.CARRIED_FORWARD);
+          const totalPaid = payments.filter(p => p.status === 'COMPLETED' || (p.status as any) === PaymentStatus.COMPLETED).reduce((acc, p) => acc + (Number(p.amount) || 0), 0);
+          const activeBalance = activeInvoices.reduce((sum, inv) => sum + (Number(inv.balance) || 0), 0);
+          const totalBilled = totalPaid + activeBalance;
+
+          // Identify arrears explicitly from active invoices
+          let arrearsAmount = 0;
+          for (const inv of activeInvoices) {
+            if (Array.isArray(inv.items)) {
+              for (const it of inv.items) {
+                if (it.name.toLowerCase().includes('arrear') || it.name.toLowerCase().includes('carried forward')) {
+                  arrearsAmount += Number(it.amount) || 0;
+                }
+              }
+            }
+            if (inv.feeStructureId === 'MANUAL_ARREARS' || inv.invoiceNumber.includes('ARR')) {
+              arrearsAmount += Number(inv.balance) || 0;
+            }
+          }
+          const effectiveArrears = Math.min(arrearsAmount, activeBalance);
+
+          const activeInvoice = activeInvoices.find(inv => inv.balance > 0) || activeInvoices[0] || invoices[0];
           const dueDate = activeInvoice ? activeInvoice.dueDate : null;
-          const activeBalance = invoices
-            .filter(inv => (inv.status as any) !== 'CARRIED_FORWARD' && (inv.status as any) !== InvoiceStatus.CARRIED_FORWARD)
-            .reduce((sum, inv) => sum + (Number(inv.balance) || 0), 0);
           feeInfo = {
-            totalBilled: hasPriorCarried ? totalBilled : totalPaid + activeBalance,
+            totalBilled,
             totalPaid,
             balance: activeBalance,
+            arrearsAmount: effectiveArrears,
+            hasArrears: activeBalance > 0,
             dueDate: dueDate,
             invoices: invoices.map(i => i.toJSON()),
             payments: payments.map(p => p.toJSON())

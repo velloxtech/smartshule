@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Student, StudentInvoice, UserRole } from '../../types';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import { KcbBuniPaymentModal } from '../modals/KcbBuniPaymentModal';
 import { RecordPaymentModal } from '../modals/RecordPaymentModal';
 
 interface StudentFeeCheckerViewProps {
@@ -30,7 +29,6 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
   const [activeTab, setActiveTab] = useState<'invoices' | 'payments' | 'statement'>('invoices');
 
   // Modals
-  const [isKcbModalOpen, setIsKcbModalOpen] = useState(false);
   const [isRecordPaymentOpen, setIsRecordPaymentOpen] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [expandedInvoiceId, setExpandedInvoiceId] = useState<string | null>(null);
@@ -252,7 +250,6 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
   };
 
   const handlePaymentSuccess = async () => {
-    setIsKcbModalOpen(false);
     setIsRecordPaymentOpen(false);
     if (onRefreshStudents) {
       await onRefreshStudents();
@@ -308,13 +305,6 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
         {/* Global Action Shortcut */}
         {selectedStudent && (
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setIsKcbModalOpen(true)}
-              className="px-3.5 py-2 bg-[#006a40] hover:bg-[#005a36] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[16px]">send_to_mobile</span>
-              <span>Pay via KCB Buni</span>
-            </button>
             <button
               onClick={() => setIsRecordPaymentOpen(true)}
               className="px-3.5 py-2 bg-primary hover:bg-primary-container text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
@@ -745,14 +735,6 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
 
                   {/* Immediate Action Buttons */}
                   <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setIsKcbModalOpen(true)}
-                      className="px-3.5 py-2 bg-[#006a40] hover:bg-[#005a36] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
-                    >
-                      <span className="material-symbols-outlined text-[16px]">send_to_mobile</span>
-                      <span>Push STK Prompt</span>
-                    </button>
                     <button
                       type="button"
                       onClick={() => setIsRecordPaymentOpen(true)}
@@ -1307,18 +1289,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
       </div>
 
       {/* MODALS */}
-      {/* 1. KCB Buni Modal */}
-      {isKcbModalOpen && selectedStudent && (
-        <KcbBuniPaymentModal
-          isOpen={isKcbModalOpen}
-          onClose={() => setIsKcbModalOpen(false)}
-          students={students}
-          initialStudent={selectedStudent}
-          onPaymentSuccess={handlePaymentSuccess}
-        />
-      )}
-
-      {/* 2. Manual Payment Record Modal (Cash / Bank Deposit / Slip / Cheque) */}
+      {/* Manual Payment Record Modal (Cash / Bank Deposit / Slip / Cheque) */}
       {isRecordPaymentOpen && selectedStudent && (
         <RecordPaymentModal
           isOpen={isRecordPaymentOpen}
