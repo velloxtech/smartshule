@@ -130,6 +130,30 @@ export interface UserContext {
   schoolId?: string;
 }
 
+export interface AddManualArrearDTO {
+  studentId: string;
+  amount: number;
+  reason?: string;
+  academicYearId?: string;
+  termId?: string;
+  dueDate?: string;
+  notes?: string;
+  mode?: 'SET' | 'ADD';
+}
+
+export interface BatchAddManualArrearsDTO {
+  entries: Array<{
+    studentId: string;
+    amount: number;
+    reason?: string;
+    mode?: 'SET' | 'ADD';
+    notes?: string;
+  }>;
+  academicYearId?: string;
+  termId?: string;
+  dueDate?: string;
+}
+
 export class FeeUseCases {
   private readonly kcbBuniGateway: IKcbBuniPaymentGateway;
   private readonly pendingKcbTransactions = new Map<string, {
@@ -1596,8 +1620,10 @@ export class FeeUseCases {
     const invoices = await this.feeRepository.findInvoices({ studentId });
     const payments = await this.feeRepository.findPayments({ studentId });
 
+    // Deduct carried-forward items only if prior carried invoices actually exist in the DB to avoid double counting
+    const hasPriorCarriedInvoice = invoices.some(i => i.status === InvoiceStatus.CARRIED_FORWARD);
     const totalBilled = invoices.reduce((sum, inv) => {
-      const arrearsAmount = inv.items
+      const arrearsAmount = (inv.items && hasPriorCarriedInvoice)
         ? inv.items
             .filter(item => item.name.toLowerCase().includes('carried forward') || item.name.toLowerCase().includes('arrears'))
             .reduce((s, it) => s + it.amount, 0)
@@ -2206,6 +2232,290 @@ export class FeeUseCases {
     if (!fs) throw new NotFoundError('FeeStructure', id);
     await this.feeRepository.deleteFeeStructure(id);
     return { success: true, message: `Fee structure "${fs.title}" deleted successfully.` };
+  }
+
+  // 17. Manual Fee Arrears Management
+  public async addOrUpdateManualArrear(dto: AddManualArrearDTO, requestingUser?: UserContext) {
+    if (requestingUser && !isBillingAuthorizedRole(requestingUser.role)) {
+      throw new ForbiddenError('Only billing-authorized administrators can add or adjust fee arrears.');
+    }
+
+    const student = await this.studentRepository.findById(dto.studentId);
+    if (!student) {
+      throw new NotFoundError('Student', dto.studentId);
+    }
+
+    const schoolId = student.schoolId || 'school-001';
+    const targetYear = dto.academicYearId || student.academicYearId || 'year-2026';
+    const targetTerm = dto.termId || 'term-2026-t1';
+    const mode = dto.mode || 'ADD';
+    const arrearName = dto.reason?.trim() || 'Opening Fee Arrears / Prior Balance';
+    const dueDate = dto.dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    // Find student's invoices
+    const allInvoices = await this.feeRepository.findInvoices({ studentId: student.id });
+    
+    // Look for active (non-CARRIED_FORWARD) invoice
+    let activeInvoice = allInvoices.find(
+      inv => inv.status !== InvoiceStatus.CARRIED_FORWARD &&
+             inv.academicYearId === targetYear &&
+             inv.termId === targetTerm
+    );
+
+    if (!activeInvoice) {
+      activeInvoice = allInvoices.find(inv => inv.status !== InvoiceStatus.CARRIED_FORWARD && inv.balance > 0);
+    }
+
+    if (!activeInvoice) {
+      activeInvoice = allInvoices.find(inv => inv.status !== InvoiceStatus.CARRIED_FORWARD);
+    }
+
+    let resultingInvoice: StudentInvoice;
+
+    if (activeInvoice) {
+      const items: FeeItem[] = Array.isArray(activeInvoice.items) ? [...activeInvoice.items] : [];
+      const existingArrearIdx = items.findIndex(
+        it => it.name.toLowerCase().includes('arrear') || it.name.toLowerCase().includes('carried forward')
+      );
+
+      if (mode === 'SET') {
+        if (existingArrearIdx >= 0) {
+          if (dto.amount <= 0) {
+            items.splice(existingArrearIdx, 1);
+          } else {
+            items[existingArrearIdx] = {
+              ...items[existingArrearIdx],
+              name: arrearName,
+              amount: dto.amount,
+            };
+          }
+        } else if (dto.amount > 0) {
+          items.push({
+            id: IdGenerator.generate(),
+            name: arrearName,
+            amount: dto.amount,
+            category: 'OTHER',
+            isOptional: false,
+          });
+        }
+      } else {
+        // mode === 'ADD'
+        if (dto.amount > 0) {
+          if (existingArrearIdx >= 0) {
+            items[existingArrearIdx] = {
+              ...items[existingArrearIdx],
+              amount: (Number(items[existingArrearIdx].amount) || 0) + dto.amount,
+            };
+          } else {
+            items.push({
+              id: IdGenerator.generate(),
+              name: arrearName,
+              amount: dto.amount,
+              category: 'OTHER',
+              isOptional: false,
+            });
+          }
+        }
+      }
+
+      const amountBilled = items.reduce((sum, it) => sum + (Number(it.amount) || 0), 0);
+      const discountAmount = Number(activeInvoice.discountAmount) || 0;
+      const amountPayable = Math.max(0, amountBilled - discountAmount);
+      const amountPaid = Number(activeInvoice.amountPaid) || 0;
+      const balance = Math.max(0, amountPayable - amountPaid);
+      const status = balance === 0 ? InvoiceStatus.PAID : (amountPaid > 0 ? InvoiceStatus.PARTIALLY_PAID : InvoiceStatus.UNPAID);
+
+      resultingInvoice = StudentInvoice.create(
+        {
+          schoolId: activeInvoice.schoolId,
+          studentId: activeInvoice.studentId,
+          feeStructureId: activeInvoice.feeStructureId,
+          academicYearId: activeInvoice.academicYearId,
+          termId: activeInvoice.termId,
+          invoiceNumber: activeInvoice.invoiceNumber,
+          items,
+          amountBilled,
+          discountAmount,
+          amountPayable,
+          amountPaid,
+          balance,
+          status,
+          dueDate: activeInvoice.dueDate || dueDate,
+        },
+        activeInvoice.id,
+        activeInvoice.createdAt
+      );
+
+      await this.feeRepository.updateInvoice(resultingInvoice);
+    } else {
+      // Create a new dedicated arrears invoice for this student
+      const invoiceNumber = `INV-ARR-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
+      const items: FeeItem[] = [
+        {
+          id: IdGenerator.generate(),
+          name: arrearName,
+          amount: Math.max(0, dto.amount),
+          category: 'OTHER',
+          isOptional: false,
+        },
+      ];
+
+      resultingInvoice = StudentInvoice.create(
+        {
+          schoolId,
+          studentId: student.id,
+          feeStructureId: 'MANUAL_ARREARS',
+          academicYearId: targetYear,
+          termId: targetTerm,
+          invoiceNumber,
+          items,
+          amountBilled: Math.max(0, dto.amount),
+          discountAmount: 0,
+          amountPayable: Math.max(0, dto.amount),
+          amountPaid: 0,
+          balance: Math.max(0, dto.amount),
+          status: dto.amount > 0 ? InvoiceStatus.UNPAID : InvoiceStatus.PAID,
+          dueDate,
+        },
+        IdGenerator.generate()
+      );
+
+      await this.feeRepository.saveInvoice(resultingInvoice);
+    }
+
+    return {
+      success: true,
+      message: `Fee arrears of KES ${dto.amount.toLocaleString()} ${mode === 'SET' ? 'set' : 'added'} successfully for ${student.fullName}.`,
+      studentId: student.id,
+      studentName: student.fullName,
+      admissionNumber: student.admissionNumber,
+      invoiceId: resultingInvoice.id,
+      invoiceNumber: resultingInvoice.invoiceNumber,
+      amountBilled: resultingInvoice.amountBilled,
+      newBalance: resultingInvoice.balance,
+      invoice: resultingInvoice.toJSON(),
+    };
+  }
+
+  public async batchAddManualArrears(dto: BatchAddManualArrearsDTO, requestingUser?: UserContext) {
+    if (requestingUser && !isBillingAuthorizedRole(requestingUser.role)) {
+      throw new ForbiddenError('Only billing-authorized administrators can add or adjust fee arrears in bulk.');
+    }
+
+    const results: any[] = [];
+    let updatedCount = 0;
+    let failedCount = 0;
+
+    for (const entry of dto.entries) {
+      try {
+        const res = await this.addOrUpdateManualArrear(
+          {
+            studentId: entry.studentId,
+            amount: entry.amount,
+            reason: entry.reason,
+            mode: entry.mode || 'SET',
+            notes: entry.notes,
+            academicYearId: dto.academicYearId,
+            termId: dto.termId,
+            dueDate: dto.dueDate,
+          },
+          requestingUser
+        );
+        results.push(res);
+        updatedCount++;
+      } catch (err: any) {
+        failedCount++;
+        results.push({
+          studentId: entry.studentId,
+          success: false,
+          error: err.message,
+        });
+      }
+    }
+
+    return {
+      success: true,
+      updatedCount,
+      failedCount,
+      totalEntries: dto.entries.length,
+      results,
+    };
+  }
+
+  public async getArrearsSummary(schoolId?: string, requestingUser?: UserContext) {
+    if (requestingUser && [UserRole.PARENT, UserRole.GUARDIAN, UserRole.STUDENT].includes(requestingUser.role)) {
+      throw new ForbiddenError('Parents and students are not authorized to view school-wide arrears summaries.');
+    }
+
+    const students = await this.studentRepository.findAll(schoolId ? { schoolId } : undefined);
+    const invoices = await this.feeRepository.findInvoices({ schoolId });
+
+    // Group invoices by studentId
+    const studentInvoicesMap = new Map<string, StudentInvoice[]>();
+    for (const inv of invoices) {
+      const list = studentInvoicesMap.get(inv.studentId) || [];
+      list.push(inv);
+      studentInvoicesMap.set(inv.studentId, list);
+    }
+
+    let totalOutstandingArrears = 0;
+    let totalLearnersWithArrears = 0;
+    let maxSingleArrear = 0;
+
+    const learnersWithArrearsList = students.map(s => {
+      const studentInvs = studentInvoicesMap.get(s.id) || [];
+      const activeInvs = studentInvs.filter(i => i.status !== InvoiceStatus.CARRIED_FORWARD);
+      
+      const balance = activeInvs.reduce((sum, i) => sum + (Number(i.balance) || 0), 0);
+      const totalBilled = activeInvs.reduce((sum, i) => sum + (Number(i.amountPayable) || 0), 0);
+      const totalPaid = activeInvs.reduce((sum, i) => sum + (Number(i.amountPaid) || 0), 0);
+
+      const arrearsItems: FeeItem[] = [];
+      for (const inv of activeInvs) {
+        if (Array.isArray(inv.items)) {
+          for (const item of inv.items) {
+            if (item.name.toLowerCase().includes('arrear') || item.name.toLowerCase().includes('carried forward')) {
+              arrearsItems.push(item);
+            }
+          }
+        }
+      }
+      const arrearsAmount = arrearsItems.reduce((sum, it) => sum + (Number(it.amount) || 0), 0);
+
+      if (balance > 0) {
+        totalOutstandingArrears += balance;
+        totalLearnersWithArrears++;
+        if (balance > maxSingleArrear) {
+          maxSingleArrear = balance;
+        }
+      }
+
+      return {
+        id: s.id,
+        admNo: s.admissionNumber,
+        name: s.fullName,
+        gradeLevel: s.gradeLevel,
+        streamId: s.streamId,
+        feeBalance: balance,
+        totalFee: totalBilled,
+        totalPaid,
+        arrearsAmount,
+        arrearsItems,
+        hasArrears: balance > 0,
+        invoicesCount: studentInvs.length,
+      };
+    });
+
+    const averageArrear = totalLearnersWithArrears > 0 ? Math.round(totalOutstandingArrears / totalLearnersWithArrears) : 0;
+
+    return {
+      totalOutstandingArrears,
+      totalLearnersWithArrears,
+      totalLearners: students.length,
+      averageArrear,
+      maxSingleArrear,
+      learners: learnersWithArrearsList,
+    };
   }
 }
 

@@ -17,6 +17,7 @@ export type TabType =
   | 'attendance-register'
   | 'fee-structure'
   | 'invoices-mpesa'
+  | 'arrears'
   | 'defaulters-receipts'
   | 'cashflow-ledger'
   | 'expenses-management'
@@ -938,6 +939,48 @@ export interface FinanceSummaryData {
   paymentCount: number;
   recentPayments: FeePaymentReceipt[];
   isGuardian?: boolean;
+}
+
+export interface ManualArrearEntry {
+  id?: string;
+  studentId: string;
+  admissionNumber?: string;
+  studentName?: string;
+  gradeLevel?: string;
+  stream?: string;
+  amount: number;
+  reason?: string;
+  academicYearId?: string;
+  termId?: string;
+  dueDate?: string;
+  notes?: string;
+  mode?: 'SET' | 'ADD';
+  createdAt?: string;
+  recordedBy?: string;
+}
+
+export interface ArrearsSummaryLearner {
+  id: string;
+  admNo: string;
+  name: string;
+  gradeLevel: string;
+  streamId?: string;
+  feeBalance: number;
+  totalFee: number;
+  totalPaid: number;
+  arrearsAmount: number;
+  arrearsItems: any[];
+  hasArrears: boolean;
+  invoicesCount: number;
+}
+
+export interface ArrearsSummaryData {
+  totalOutstandingArrears: number;
+  totalLearnersWithArrears: number;
+  totalLearners: number;
+  averageArrear: number;
+  maxSingleArrear: number;
+  learners: ArrearsSummaryLearner[];
 }
 
 export type ExpenseCategoryType =

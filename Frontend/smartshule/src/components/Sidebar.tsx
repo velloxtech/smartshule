@@ -31,6 +31,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
     UserRole.HEAD_TEACHER,
   ].includes(user.role);
 
+  const isFinanceAdmin = user?.role && [
+    UserRole.SUPER_ADMIN,
+    UserRole.ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.HEAD_TEACHER,
+    UserRole.DEPUTY_HEAD_TEACHER,
+    UserRole.BURSAR,
+    UserRole.ACCOUNTANT,
+  ].includes(user.role);
+
   return (
     <>
       {/* Mobile Backdrop */}
@@ -124,6 +134,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </span>
                 </button>
               )}
+              {isFinanceAdmin && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onSelectTab('arrears');
+                    onCloseMobile();
+                  }}
+                  className="w-full mt-1.5 py-1.5 px-2.5 rounded-lg bg-[#7a1228]/10 hover:bg-[#7a1228]/20 border border-[#7a1228]/20 text-[#7a1228] text-xs font-bold flex items-center justify-between transition-all cursor-pointer shadow-2xs"
+                  title="Open Dedicated Standalone Fee Arrears Management Page"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[16px] text-[#7a1228]">assignment_late</span>
+                    <span>Fee Arrears Ledger</span>
+                  </div>
+                  <span className="text-[9px] font-mono uppercase bg-[#7a1228] text-white px-1.5 py-0.2 rounded-full font-bold">
+                    Arrears
+                  </span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -165,6 +194,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           isActive ? 'bg-white/20 text-white' : 'bg-[#7a1228]/15 text-[#7a1228]'
                         }`}>
                           Vault
+                        </span>
+                      )}
+                      {item.id === 'arrears' && (
+                        <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full uppercase shrink-0 ${
+                          isActive ? 'bg-white/20 text-white' : 'bg-[#7a1228]/15 text-[#7a1228]'
+                        }`}>
+                          Arrears
                         </span>
                       )}
                     </button>

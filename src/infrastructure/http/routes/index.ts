@@ -83,6 +83,8 @@ import {
   CreateFeeStructureSchema,
   GenerateInvoicesSchema,
   SyncFeesSchema,
+  AddManualArrearSchema,
+  BatchAddManualArrearsSchema,
   RecordPaymentSchema,
   MpesaStkPushSchema,
   KcbBuniStkPushSchema,
@@ -485,6 +487,10 @@ export function createApiRouter(container: AppContainer): Router {
   financeRouter.get('/payments', authMiddleware, financeController.listPayments); // Parent isolated
   financeRouter.get('/statements/:studentId', authMiddleware, financeController.getFeeStatement); // Parent isolated
   financeRouter.get('/defaulters', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT, UserRole.HEAD_TEACHER), financeController.getDefaulters);
+  // Manual Fee Arrears Management
+  financeRouter.post('/arrears', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), validateBody(AddManualArrearSchema), financeController.addManualArrear);
+  financeRouter.post('/arrears/batch', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), validateBody(BatchAddManualArrearsSchema), financeController.batchAddManualArrears);
+  financeRouter.get('/arrears/summary', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), financeController.getArrearsSummary);
   // KCB Buni Developer API Platform Integration
   financeRouter.post('/kcb-buni/stk-push', authMiddleware, validateBody(KcbBuniStkPushSchema), financeController.initiateKcbBuniStk);
   financeRouter.post('/kcb-buni/callback', financeController.kcbBuniCallback);

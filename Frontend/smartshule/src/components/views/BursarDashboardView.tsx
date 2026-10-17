@@ -104,6 +104,13 @@ export const BursarDashboardView: React.FC<BursarDashboardViewProps> = ({
               <span>Receive M-Pesa / Bank</span>
             </button>
             <button
+              onClick={() => onNavigateTab('arrears')}
+              className="px-4 py-2.5 rounded-xl bg-amber-700/80 hover:bg-amber-700 text-white font-semibold text-xs border border-amber-300/40 flex items-center gap-2 transition-all cursor-pointer shadow-xs"
+            >
+              <span className="material-symbols-outlined text-[18px]">assignment_late</span>
+              <span>Fee Arrears Ledger</span>
+            </button>
+            <button
               onClick={() => onNavigateTab('defaulters-receipts')}
               className="px-4 py-2.5 rounded-xl bg-amber-800/60 hover:bg-amber-800 text-white font-semibold text-xs border border-amber-400/30 flex items-center gap-2 transition-all cursor-pointer"
             >

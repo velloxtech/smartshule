@@ -66,6 +66,30 @@ export const SyncFeesSchema = z.object({
   gradeLevel: z.nativeEnum(CbcGradeLevel).optional()
 }).passthrough();
 
+export const AddManualArrearSchema = z.object({
+  studentId: z.string().min(1, 'Student ID is required'),
+  amount: z.number().nonnegative('Arrears amount cannot be negative'),
+  reason: z.string().optional(),
+  academicYearId: z.string().optional(),
+  termId: z.string().optional(),
+  dueDate: z.string().optional(),
+  notes: z.string().optional(),
+  mode: z.enum(['SET', 'ADD']).optional().default('ADD')
+}).passthrough();
+
+export const BatchAddManualArrearsSchema = z.object({
+  entries: z.array(z.object({
+    studentId: z.string().min(1, 'Student ID is required'),
+    amount: z.number().nonnegative('Amount cannot be negative'),
+    reason: z.string().optional(),
+    mode: z.enum(['SET', 'ADD']).optional().default('SET'),
+    notes: z.string().optional()
+  })).min(1, 'At least one student arrears entry is required'),
+  academicYearId: z.string().optional(),
+  termId: z.string().optional(),
+  dueDate: z.string().optional()
+}).passthrough();
+
 export const RecordPaymentSchema = z.object({
   schoolId: z.string().min(1),
   invoiceId: z.string().min(1),
@@ -339,6 +363,80 @@ export class FinanceController {
         req.user
       );
       return res.status(200).json({ success: true, data: summary });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public addManualArrear = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const userContext: any = req.user ? {
+        userId: req.user.userId,
+        role: req.user.role,
+        schoolId: req.user.schoolId
+      } : undefined;
+      const result = await this.feeUseCases.addOrUpdateManualArrear(req.body, userContext);
+      if (this.systemLogUseCases && req.user) {
+        await this.systemLogUseCases.log({
+          category: 'FINANCE',
+          action: 'MANUAL_ARREAR_RECORDED',
+          details: result.message,
+          actorUserId: req.user.userId,
+          schoolId: req.user.schoolId,
+          metadata: { ...req.body, result }
+        }).catch(() => null);
+      }
+      return res.status(200).json({
+        success: true,
+        message: result.message,
+        data: result
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public batchAddManualArrears = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const userContext: any = req.user ? {
+        userId: req.user.userId,
+        role: req.user.role,
+        schoolId: req.user.schoolId
+      } : undefined;
+      const result = await this.feeUseCases.batchAddManualArrears(req.body, userContext);
+      if (this.systemLogUseCases && req.user) {
+        await this.systemLogUseCases.log({
+          category: 'FINANCE',
+          action: 'BATCH_MANUAL_ARREARS_RECORDED',
+          details: `Batch fee arrears recorded for ${result.updatedCount} learners.`,
+          actorUserId: req.user.userId,
+          schoolId: req.user.schoolId,
+          metadata: { count: result.updatedCount }
+        }).catch(() => null);
+      }
+      return res.status(200).json({
+        success: true,
+        message: `Successfully processed fee arrears for ${result.updatedCount} learners.`,
+        data: result
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public getArrearsSummary = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const userContext: any = req.user ? {
+        userId: req.user.userId,
+        role: req.user.role,
+        schoolId: req.user.schoolId
+      } : undefined;
+      const schoolId = (req.query.schoolId as string) || req.user?.schoolId;
+      const data = await this.feeUseCases.getArrearsSummary(schoolId, userContext);
+      return res.status(200).json({
+        success: true,
+        data
+      });
     } catch (err) {
       next(err);
     }

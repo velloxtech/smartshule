@@ -33,6 +33,8 @@ import {
   TimetableSlot,
   FeePaymentReceipt,
   FinanceSummaryData,
+  ManualArrearEntry,
+  ArrearsSummaryData,
   ParentHelpRequest,
   StudentProgressPhoto,
   EDiaryEntry,
@@ -1306,6 +1308,46 @@ const coreApiService = {
     const qs = params.toString();
     return apiFetch<ApiResponse<DefaultersReport>>(
       `/finance/defaulters${qs ? `?${qs}` : ''}`
+    );
+  },
+
+  addManualArrear: async (data: {
+    studentId: string;
+    amount: number;
+    reason?: string;
+    academicYearId?: string;
+    termId?: string;
+    dueDate?: string;
+    notes?: string;
+    mode?: 'SET' | 'ADD';
+  }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/finance/arrears', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  batchAddManualArrears: async (data: {
+    entries: Array<{
+      studentId: string;
+      amount: number;
+      reason?: string;
+      mode?: 'SET' | 'ADD';
+      notes?: string;
+    }>;
+    academicYearId?: string;
+    termId?: string;
+    dueDate?: string;
+  }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/finance/arrears/batch', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  getArrearsSummary: async (schoolId?: string): Promise<ApiResponse<ArrearsSummaryData>> => {
+    return apiFetch<ApiResponse<ArrearsSummaryData>>(
+      `/finance/arrears/summary${schoolId ? `?schoolId=${schoolId}` : ''}`
     );
   },
 

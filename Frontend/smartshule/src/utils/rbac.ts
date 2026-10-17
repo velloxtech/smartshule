@@ -408,6 +408,20 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
         ],
       },
       {
+        id: 'arrears',
+        label: 'Fee Arrears',
+        icon: 'assignment_late',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.HEAD_TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
+          UserRole.BURSAR,
+          UserRole.ACCOUNTANT,
+        ],
+      },
+      {
         id: 'defaulters-receipts',
         label: 'Defaulters & SMS Alerts',
         icon: 'point_of_sale',

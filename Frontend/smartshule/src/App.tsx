@@ -50,6 +50,7 @@ import { ConcernsView } from './components/views/ConcernsView';
 import { LunchFeeManagementView } from './components/views/LunchFeeManagementView';
 import { ParentProfileView } from './components/views/ParentProfileView';
 import { StudentFeeCheckerView } from './components/views/StudentFeeCheckerView';
+import { ArrearsView } from './components/views/ArrearsView';
 import { ArchivedRecordsView } from './components/views/ArchivedRecordsView';
 import { StandaloneArchivedRecordsPage } from './components/views/StandaloneArchivedRecordsPage';
 import { LibraryView } from './components/views/LibraryView';
@@ -717,6 +718,11 @@ export default function App() {
             setAppView('portal');
           }
         }
+      } else if (hash === '#/arrears' || hash === '#/fee-arrears' || search.includes('view=arrears')) {
+        if (isAuthenticated) {
+          setCurrentTab('arrears');
+          if (appView !== 'portal') setAppView('portal');
+        }
       } else if (appView === 'archive' && !hash && !search.includes('view=archive')) {
         setAppView('portal');
       }
@@ -827,6 +833,11 @@ export default function App() {
             window.location.hash = '/archive';
             setMobileSidebarOpen(false);
             return;
+          }
+          if (tab === 'arrears') {
+            window.location.hash = '/arrears';
+          } else if (window.location.hash === '#/arrears' || window.location.hash === '#/fee-arrears') {
+            window.history.pushState(null, '', window.location.pathname + window.location.search);
           }
           setCurrentTab(tab);
           setMobileSidebarOpen(false);
@@ -1122,6 +1133,15 @@ export default function App() {
               students={students}
               onOpenMpesaModal={() => handleOpenMpesa()}
               onNavigateTab={(tab) => setCurrentTab(tab as any)}
+            />
+          )}
+
+          {currentTab === 'arrears' && (
+            <ArrearsView
+              students={students}
+              onRefreshStudents={refreshStudentsAndFees}
+              onOpenMpesaWithStudent={handleOpenMpesa}
+              onOpenSmsModal={handleOpenSms}
             />
           )}
 

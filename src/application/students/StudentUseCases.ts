@@ -1201,8 +1201,9 @@ export class StudentUseCases {
         if (this.feeRepository) {
           const invoices = await this.feeRepository.findInvoices({ studentId: s.id });
           const payments = await this.feeRepository.findPayments({ studentId: s.id });
+          const hasPriorCarried = invoices.some(i => (i.status as any) === 'CARRIED_FORWARD' || (i.status as any) === InvoiceStatus.CARRIED_FORWARD);
           const totalBilled = invoices.reduce((acc, inv) => {
-            const arrears = inv.items
+            const arrears = (inv.items && hasPriorCarried)
               ? inv.items
                   .filter(it => it.name.toLowerCase().includes('carried forward') || it.name.toLowerCase().includes('arrears'))
                   .reduce((s, it) => s + it.amount, 0)
@@ -1210,12 +1211,15 @@ export class StudentUseCases {
             return acc + (inv.amountPayable - arrears);
           }, 0);
           const totalPaid = payments.filter(p => p.status === 'COMPLETED').reduce((acc, p) => acc + p.amount, 0);
-          const activeInvoice = invoices.find(inv => inv.balance > 0 && inv.status !== 'CARRIED_FORWARD') || invoices[0];
+          const activeInvoice = invoices.find(inv => inv.balance > 0 && (inv.status as any) !== 'CARRIED_FORWARD') || invoices[0];
           const dueDate = activeInvoice ? activeInvoice.dueDate : null;
+          const activeBalance = invoices
+            .filter(inv => (inv.status as any) !== 'CARRIED_FORWARD' && (inv.status as any) !== InvoiceStatus.CARRIED_FORWARD)
+            .reduce((sum, inv) => sum + (Number(inv.balance) || 0), 0);
           feeInfo = {
-            totalBilled,
+            totalBilled: hasPriorCarried ? totalBilled : totalPaid + activeBalance,
             totalPaid,
-            balance: totalBilled - totalPaid,
+            balance: activeBalance,
             dueDate: dueDate,
             invoices: invoices.map(i => i.toJSON()),
             payments: payments.map(p => p.toJSON())
