@@ -1375,8 +1375,30 @@ export class PostgresCbcAssessmentRepository implements ICbcAssessmentRepository
     return CbcReportCard.create({ studentId: r.student_id, termId: r.term_id, academicYearId: r.academic_year_id, gradeLevel: r.grade_level, streamId: r.stream_id, learningAreaAssessments: typeof r.learning_area_assessments === 'string' ? JSON.parse(r.learning_area_assessments) : r.learning_area_assessments, coreCompetencyAssessments: typeof r.core_competency_assessments === 'string' ? JSON.parse(r.core_competency_assessments) : r.core_competency_assessments, valueAssessments: typeof r.value_assessments === 'string' ? JSON.parse(r.value_assessments) : r.value_assessments, attendanceDaysPresent: Number(r.attendance_days_present), attendanceDaysTotal: Number(r.attendance_days_total), classTeacherRemarks: r.class_teacher_remarks, headTeacherRemarks: r.head_teacher_remarks, overallAverageScore: Number(r.overall_average_score), overallPerformanceLevel: r.overall_performance_level }, r.id, r.created_at, r.updated_at);
   }
   public async findReportCard(studentId: string, termId: string, academicYearId: string): Promise<CbcReportCard | null> {
-    const res = await this.pool.query('SELECT * FROM cbc_report_cards WHERE student_id = $1 AND term_id = $2 AND academic_year_id = $3', [studentId, termId, academicYearId]);
-    if (!res.rows.length) return null;
+    const termCandidates = [termId];
+    if (termId.includes('-t')) termCandidates.push(termId.replace('-t', '-'));
+    else if (/-\d+$/.test(termId)) termCandidates.push(termId.replace(/-(\d+)$/, '-t$1'));
+    if (termId.toLowerCase().includes('term-3') || termId.toLowerCase().includes('term-2026-3')) termCandidates.push('term-2026-t3', 'term-2026-3');
+    if (termId.toLowerCase().includes('term-2') || termId.toLowerCase().includes('term-2026-2')) termCandidates.push('term-2026-t2', 'term-2026-2');
+    if (termId.toLowerCase().includes('term-1') || termId.toLowerCase().includes('term-2026-1')) termCandidates.push('term-2026-t1', 'term-2026-1');
+
+    const yearCandidates = [academicYearId];
+    if (academicYearId.startsWith('year-')) yearCandidates.push(academicYearId.replace('year-', ''));
+    else yearCandidates.push(`year-${academicYearId}`);
+
+    const res = await this.pool.query(
+      'SELECT * FROM cbc_report_cards WHERE student_id = $1 AND term_id = ANY($2) AND academic_year_id = ANY($3) ORDER BY created_at DESC LIMIT 1',
+      [studentId, Array.from(new Set(termCandidates)), Array.from(new Set(yearCandidates))]
+    );
+    if (!res.rows.length) {
+      const fallbackRes = await this.pool.query(
+        'SELECT * FROM cbc_report_cards WHERE student_id = $1 AND term_id = ANY($2) ORDER BY created_at DESC LIMIT 1',
+        [studentId, Array.from(new Set(termCandidates))]
+      );
+      if (!fallbackRes.rows.length) return null;
+      const r = fallbackRes.rows[0];
+      return CbcReportCard.create({ studentId: r.student_id, termId: r.term_id, academicYearId: r.academic_year_id, gradeLevel: r.grade_level, streamId: r.stream_id, learningAreaAssessments: typeof r.learning_area_assessments === 'string' ? JSON.parse(r.learning_area_assessments) : r.learning_area_assessments, coreCompetencyAssessments: typeof r.core_competency_assessments === 'string' ? JSON.parse(r.core_competency_assessments) : r.core_competency_assessments, valueAssessments: typeof r.value_assessments === 'string' ? JSON.parse(r.value_assessments) : r.value_assessments, attendanceDaysPresent: Number(r.attendance_days_present), attendanceDaysTotal: Number(r.attendance_days_total), classTeacherRemarks: r.class_teacher_remarks, headTeacherRemarks: r.head_teacher_remarks, overallAverageScore: Number(r.overall_average_score), overallPerformanceLevel: r.overall_performance_level }, r.id, r.created_at, r.updated_at);
+    }
     const r = res.rows[0];
     return CbcReportCard.create({ studentId: r.student_id, termId: r.term_id, academicYearId: r.academic_year_id, gradeLevel: r.grade_level, streamId: r.stream_id, learningAreaAssessments: typeof r.learning_area_assessments === 'string' ? JSON.parse(r.learning_area_assessments) : r.learning_area_assessments, coreCompetencyAssessments: typeof r.core_competency_assessments === 'string' ? JSON.parse(r.core_competency_assessments) : r.core_competency_assessments, valueAssessments: typeof r.value_assessments === 'string' ? JSON.parse(r.value_assessments) : r.value_assessments, attendanceDaysPresent: Number(r.attendance_days_present), attendanceDaysTotal: Number(r.attendance_days_total), classTeacherRemarks: r.class_teacher_remarks, headTeacherRemarks: r.head_teacher_remarks, overallAverageScore: Number(r.overall_average_score), overallPerformanceLevel: r.overall_performance_level }, r.id, r.created_at, r.updated_at);
   }
@@ -1385,7 +1407,20 @@ export class PostgresCbcAssessmentRepository implements ICbcAssessmentRepository
     return res.rows.map(r => CbcReportCard.create({ studentId: r.student_id, termId: r.term_id, academicYearId: r.academic_year_id, gradeLevel: r.grade_level, streamId: r.stream_id, learningAreaAssessments: typeof r.learning_area_assessments === 'string' ? JSON.parse(r.learning_area_assessments) : r.learning_area_assessments, coreCompetencyAssessments: typeof r.core_competency_assessments === 'string' ? JSON.parse(r.core_competency_assessments) : r.core_competency_assessments, valueAssessments: typeof r.value_assessments === 'string' ? JSON.parse(r.value_assessments) : r.value_assessments, attendanceDaysPresent: Number(r.attendance_days_present), attendanceDaysTotal: Number(r.attendance_days_total), classTeacherRemarks: r.class_teacher_remarks, headTeacherRemarks: r.head_teacher_remarks, overallAverageScore: Number(r.overall_average_score), overallPerformanceLevel: r.overall_performance_level }, r.id, r.created_at, r.updated_at));
   }
   public async findReportCardsByTerm(termId: string, streamId?: string): Promise<CbcReportCard[]> {
-    const res = await this.pool.query('SELECT * FROM cbc_report_cards WHERE term_id = $1', [termId]);
+    const termCandidates = [termId];
+    if (termId.includes('-t')) termCandidates.push(termId.replace('-t', '-'));
+    else if (/-\d+$/.test(termId)) termCandidates.push(termId.replace(/-(\d+)$/, '-t$1'));
+    if (termId.toLowerCase().includes('term-3') || termId.toLowerCase().includes('term-2026-3')) termCandidates.push('term-2026-t3', 'term-2026-3');
+    if (termId.toLowerCase().includes('term-2') || termId.toLowerCase().includes('term-2026-2')) termCandidates.push('term-2026-t2', 'term-2026-2');
+    if (termId.toLowerCase().includes('term-1') || termId.toLowerCase().includes('term-2026-1')) termCandidates.push('term-2026-t1', 'term-2026-1');
+
+    let q = 'SELECT * FROM cbc_report_cards WHERE term_id = ANY($1)';
+    const params: any[] = [Array.from(new Set(termCandidates))];
+    if (streamId) {
+      q += ' AND stream_id = $2';
+      params.push(streamId);
+    }
+    const res = await this.pool.query(q, params);
     return res.rows.map(r => CbcReportCard.create({ studentId: r.student_id, termId: r.term_id, academicYearId: r.academic_year_id, gradeLevel: r.grade_level, streamId: r.stream_id, learningAreaAssessments: typeof r.learning_area_assessments === 'string' ? JSON.parse(r.learning_area_assessments) : r.learning_area_assessments, coreCompetencyAssessments: typeof r.core_competency_assessments === 'string' ? JSON.parse(r.core_competency_assessments) : r.core_competency_assessments, valueAssessments: typeof r.value_assessments === 'string' ? JSON.parse(r.value_assessments) : r.value_assessments, attendanceDaysPresent: Number(r.attendance_days_present), attendanceDaysTotal: Number(r.attendance_days_total), classTeacherRemarks: r.class_teacher_remarks, headTeacherRemarks: r.head_teacher_remarks, overallAverageScore: Number(r.overall_average_score), overallPerformanceLevel: r.overall_performance_level }, r.id, r.created_at, r.updated_at));
   }
   public async saveReportCard(rc: CbcReportCard): Promise<void> {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import { resolveAcademicYearName, resolveStreamName, resolveClassName } from '../../utils/formatters';
+import { resolveAcademicYearName, resolveStreamName, resolveClassName, resolveGradeName } from '../../utils/formatters';
 
 interface ParentProfileViewProps {
   onNavigateTab?: (tab: string) => void;
@@ -553,7 +553,7 @@ export const ParentProfileView: React.FC<ParentProfileViewProps> = ({ onNavigate
                 }`}
               >
                 <span className="material-symbols-outlined text-[14px]">child_care</span>
-                <span>{c.firstName} {c.lastName} ({c.gradeLevel})</span>
+                <span>{c.firstName} {c.lastName} ({resolveGradeName(c.gradeLevel)})</span>
               </button>
             ))}
           </div>
@@ -723,11 +723,11 @@ export const ParentProfileView: React.FC<ParentProfileViewProps> = ({ onNavigate
                       {currentChild.firstName} {currentChild.middleName ? `${currentChild.middleName} ` : ''}{currentChild.lastName}
                     </h3>
                     <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 text-xs font-bold">
-                      {currentChild.gradeLevel}
+                      {resolveGradeName(currentChild.gradeLevel)}
                     </span>
                     {(currentChild.streamName || currentChild.streamId) && (
                       <span className="px-2 py-0.5 rounded bg-slate-200 text-slate-800 text-xs font-medium">
-                        Stream: {resolveStreamName(currentChild.streamId, currentChild.streamName || currentChild.stream?.name)}
+                        Stream: {resolveStreamName(currentChild.streamId, currentChild.streamName || currentChild.stream?.name, currentChild.gradeLevel)}
                       </span>
                     )}
                   </div>
@@ -772,7 +772,7 @@ export const ParentProfileView: React.FC<ParentProfileViewProps> = ({ onNavigate
                   Enrolled Grade & Stage
                 </span>
                 <span className="text-sm font-semibold text-slate-900">
-                  {currentChild.gradeLevel || 'Grade 1'}
+                  {resolveGradeName(currentChild.gradeLevel)}
                 </span>
               </div>
 

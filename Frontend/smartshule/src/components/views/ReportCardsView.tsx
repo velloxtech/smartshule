@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Student, CbcReportCardData } from '../../types';
 import { apiService } from '../../services/api';
-import { resolveStreamName, resolveGradeName, resolveAcademicYearName } from '../../utils/formatters';
+import { resolveStreamName, resolveGradeName, resolveAcademicYearName, resolveLearningAreaName, resolveLearningAreaCode } from '../../utils/formatters';
 
 interface ReportCardsViewProps {
   students?: Student[];
@@ -75,7 +75,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
             name: `${c.firstName} ${c.lastName}`,
             admNo: c.admissionNumber,
             grade: resolveGradeName(c.gradeLevel),
-            stream: resolveStreamName(c.streamId, c.streamName || c.stream?.name) || 'Stream A',
+            stream: resolveStreamName(c.streamId, c.streamName || c.stream?.name, c.gradeLevel) || 'Main Stream',
           }));
           setStudents(mapped);
           if (!selectedId) setSelectedId(mapped[0].id);
@@ -243,9 +243,10 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
         const term1Score = ev.term1Score !== undefined && ev.term1Score !== null ? Number(ev.term1Score) : (isTerm1 ? score : undefined);
         const term2Score = ev.term2Score !== undefined && ev.term2Score !== null ? Number(ev.term2Score) : (isTerm2 ? score : undefined);
         const term3Score = ev.term3Score !== undefined && ev.term3Score !== null ? Number(ev.term3Score) : (isTerm3 ? score : undefined);
-        const name = ev.learningAreaName || ev.name || `Subject ${index + 1}`;
-        const code = ev.code || ev.shortName || (name.length <= 6 ? name : name.split(' ')[0].toUpperCase());
-        const short = ev.shortName || ev.code || name.split(' ')[0];
+        const rawName = ev.learningAreaName || ev.name || '';
+        const name = resolveLearningAreaName(ev.learningAreaId || rawName, rawName) || `Subject ${index + 1}`;
+        const code = ev.code || resolveLearningAreaCode(ev.learningAreaId || name);
+        const short = ev.shortName || (ev.code && ev.code.length <= 4 ? ev.code : resolveLearningAreaCode(name));
 
         return {
           id: ev.learningAreaId || ev.id || `subj-${index}`,
@@ -267,23 +268,37 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
 
     // Fallback: If no evaluations recorded yet, determine expected curriculum subjects by student grade level
     const gradeStr = (student?.grade || (student as any)?.gradeLevel || '').toUpperCase();
-    const isLowerPrimary = gradeStr.includes('GRADE 1') || gradeStr.includes('GRADE 2') || gradeStr.includes('GRADE 3') || gradeStr.includes('GRADE_1') || gradeStr.includes('GRADE_2') || gradeStr.includes('GRADE_3') || gradeStr.includes('PP');
-    
-    // Filter DB learning areas matching student's grade if available
+    const gMatch = gradeStr.match(/GRADE_?(\d+)/) || gradeStr.match(/\b([1-9])\b/);
+    const specificGradeNum = gMatch ? gMatch[1] : null;
+
+    // Filter DB learning areas matching student's specific grade if available
     const dbGradeAreas = (learningAreas || []).filter(la => {
       const laGrade = (la.gradeLevel || '').toUpperCase();
-      if (isLowerPrimary) return laGrade.includes('GRADE_3') || laGrade.includes('GRADE_1') || laGrade.includes('GRADE_2');
-      return !laGrade.includes('GRADE_3') && !laGrade.includes('GRADE_1') && !laGrade.includes('GRADE_2');
+      if (specificGradeNum) {
+        return laGrade === `GRADE_${specificGradeNum}` || laGrade === `GRADE ${specificGradeNum}` || laGrade === specificGradeNum;
+      }
+      return false;
     });
+
+    const isLowerPrimary = specificGradeNum ? ['1', '2', '3'].includes(specificGradeNum) : (gradeStr.includes('PP') || gradeStr.includes('GRADE 1') || gradeStr.includes('GRADE 2') || gradeStr.includes('GRADE 3') || gradeStr.includes('GRADE_1') || gradeStr.includes('GRADE_2') || gradeStr.includes('GRADE_3'));
 
     let templateList: { name: string; short: string; code: string; id?: string }[] = [];
     if (dbGradeAreas.length > 0) {
-      templateList = dbGradeAreas.map(a => ({
-        name: a.name,
-        short: a.code || a.name.split(' ')[0],
-        code: a.code || 'SUBJ',
-        id: a.id
-      }));
+      const seen = new Set<string>();
+      templateList = [];
+      for (const a of dbGradeAreas) {
+        const canonicalName = resolveLearningAreaName(a.id, a.name);
+        if (!seen.has(canonicalName)) {
+          seen.add(canonicalName);
+          const cCode = a.code || resolveLearningAreaCode(canonicalName);
+          templateList.push({
+            name: canonicalName,
+            short: cCode,
+            code: cCode,
+            id: a.id
+          });
+        }
+      }
     } else if (isLowerPrimary) {
       templateList = LOWER_PRIMARY_CBC_SUBJECTS;
     } else {
@@ -934,7 +949,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
     <div class="demographics">
       <div class="demo-item"><strong>Learner Name:</strong> <span>${student.name}</span></div>
       <div class="demo-item"><strong>Admission / UPI:</strong> <span>${student.admNo}${student.upi ? ` / ${student.upi}` : ''}</span></div>
-      <div class="demo-item"><strong>Grade &amp; Cohort:</strong> <span>${student.grade}${student.stream ? ` - ${student.stream}` : ' (Main Cohort)'}</span></div>
+      <div class="demo-item"><strong>Grade &amp; Cohort:</strong> <span>${student.grade}${student.stream && student.stream !== student.grade && student.stream !== 'Main Stream' && student.stream !== 'Main Cohort' ? ` - ${student.stream}` : ' (Main Cohort)'}</span></div>
       <div class="demo-item"><strong>Grade Manager:</strong> <span>${(student as any).classTeacherName || 'Tr. In Charge'}</span></div>
       <div class="demo-item"><strong>Term Attendance:</strong> <span>${attendanceRate}% (${daysPresent} / ${daysTotal} Days)</span></div>
     </div>
@@ -962,9 +977,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
           <tr>
             <td><strong>${s.name}</strong></td>
             <td class="center font-mono"><strong>${s.score}</strong></td>
-            <td class="center">
-              <span class="rubric-pill rubric-${s.rubricCode.toLowerCase()}">${s.rubricCode} (${s.rubricScore})</span>
-            </td>
+            <td class="center font-mono" style="font-weight: 700; font-size: 10px;">${s.rubricScore}</td>
             <td>
               <span style="color: #222; font-weight: 600;">${s.performanceLevel.replace(/_/g, ' ')}:</span>
               <span style="margin-left: 4px; color: #444;">${s.teacherRemarks}</span>
@@ -978,8 +991,8 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
           <td class="center" style="font-size: 9.5px; font-weight: 900; color: #800000;">
             ${totalMarks}
           </td>
-          <td class="center" style="font-weight: bold;">
-            Out of ${totalPossible}
+          <td class="center font-mono" style="font-weight: bold;">
+            -
           </td>
           <td>
             <strong style="color: #047857;">Overall Average:</strong> ${overallAverage}% · ${overallPerformanceLevel}
@@ -1443,7 +1456,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
           </div>
           <div>
             <span className="text-gray-500 font-semibold block uppercase text-[10px] print:text-[7px]">Grade &amp; Cohort</span>
-            <span className="font-bold text-gray-900 print:text-[9px]">{student.grade}{student.stream ? ` - ${student.stream}` : ' (Main Cohort)'}</span>
+            <span className="font-bold text-gray-900 print:text-[9px]">{student.grade}{student.stream && student.stream !== student.grade && student.stream !== 'Main Stream' && student.stream !== 'Main Cohort' ? ` - ${student.stream}` : ' (Main Cohort)'}</span>
           </div>
           <div>
             <span className="text-gray-500 font-semibold block uppercase text-[10px] print:text-[7px]">Grade Manager</span>
@@ -1486,11 +1499,8 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
                   <td className="py-1.5 print:py-0.5 px-2 print:px-1 text-center font-mono font-bold text-gray-900">
                     {s.score}
                   </td>
-                  <td className="py-1.5 print:py-0.5 px-2.5 print:px-1.5 text-center font-bold">
-                    <span className="font-mono text-gray-700 mr-1.5 text-[11px] print:text-[7.5px]">
-                      {s.rubricScore}
-                    </span>
-                    {getRubricBadge(s.rubricCode)}
+                  <td className="py-1.5 print:py-0.5 px-2.5 print:px-1.5 text-center font-mono font-bold text-gray-900 text-xs print:text-[8px]">
+                    {s.rubricScore}
                   </td>
                   <td className="py-1.5 print:py-0.5 px-3 print:px-2 text-gray-700 text-[11px] print:text-[7.5px] leading-snug print:leading-tight">
                     <span className="font-semibold text-gray-900 mr-1.5">
@@ -1509,7 +1519,10 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
                 <td className="py-1.5 px-2 text-center font-mono text-[#800000] font-black">
                   {totalMarks} / {totalPossible}
                 </td>
-                <td colSpan={2} className="py-1.5 px-3 text-emerald-800 font-bold">
+                <td className="py-1.5 px-2 text-center font-mono text-gray-500 font-bold">
+                  -
+                </td>
+                <td className="py-1.5 px-3 text-emerald-800 font-bold">
                   Overall Average: {overallAverage}% · Summary: {overallPerformanceLevel}
                 </td>
               </tr>

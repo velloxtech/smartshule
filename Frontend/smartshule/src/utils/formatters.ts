@@ -92,16 +92,26 @@ export function resolveGradeName(gradeLevel?: string | null): string {
 
 /**
  * Resolves a human-readable stream name.
- * Prevents 'Stream b4c29a', 'stream-grade1-east', or raw UUIDs.
- * Returns clean names like 'East Stream', 'West', 'Stream A', etc.
+ * Prevents 'Stream b4c29a', 'stream-grade1-east', raw UUIDs, or duplicate grade names (e.g. 'Stream: Grade 3').
+ * Returns clean names like 'East Stream', 'West', 'Stream A', 'Main Stream', etc.
  */
 export function resolveStreamName(
   streamIdOrName?: string | null,
-  streamName?: string | null
+  streamName?: string | null,
+  gradeLevel?: string | null
 ): string {
+  const normGrade = gradeLevel ? resolveGradeName(gradeLevel).toLowerCase() : '';
+
   // If explicit streamName provided and human-readable, use it
   if (streamName && typeof streamName === 'string' && streamName.trim() !== '') {
     const sName = streamName.trim();
+    // If stream name is identical to grade (e.g. 'Grade 3' or 'Grade 3 East')
+    if (normGrade && sName.toLowerCase() === normGrade) {
+      return 'Main Stream';
+    }
+    if (/^grade\s*\d+$/i.test(sName)) {
+      return 'Main Stream';
+    }
     if (!/^[0-9a-f-]{10,}$/i.test(sName) && !/^stream-[0-9a-f]+/i.test(sName)) {
       return sName;
     }
@@ -110,6 +120,14 @@ export function resolveStreamName(
   if (!streamIdOrName) return '';
   const raw = String(streamIdOrName).trim();
   if (!raw) return '';
+
+  // If identical to grade
+  if (normGrade && raw.toLowerCase() === normGrade) {
+    return 'Main Stream';
+  }
+  if (/^grade\s*\d+$/i.test(raw)) {
+    return 'Main Stream';
+  }
 
   // Already formatted nicely e.g. 'East', 'Stream A'
   if (/^(East|West|North|South|Red|Blue|Green|Yellow|Central|Main|Alpha|Beta|Stream [A-Z])$/i.test(raw)) {
@@ -145,6 +163,148 @@ export function resolveStreamName(
   }
 
   return raw.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/**
+ * Resolves a human-readable CBC Learning Area / Subject Name.
+ * Prevents raw IDs ('la-g3-eng', 'la-g3-mat', 'la-g3-kis') or UUIDs from leaking into the UI.
+ * Returns clean standard names like 'English Language Activities', 'Mathematical Activities', etc.
+ */
+export function resolveLearningAreaName(
+  learningAreaIdOrName?: string | null,
+  fallbackName?: string | null
+): string {
+  // If fallbackName is already a clean human-readable name (not a UUID, not starting with la-), use it
+  if (fallbackName && typeof fallbackName === 'string') {
+    const fClean = fallbackName.trim();
+    if (fClean && !/^la-[a-z0-9-_]+/i.test(fClean) && !/^[0-9a-f-]{10,}$/i.test(fClean)) {
+      return fClean;
+    }
+  }
+
+  if (!learningAreaIdOrName) return fallbackName || 'Learning Area';
+  const raw = String(learningAreaIdOrName).trim();
+  if (!raw) return fallbackName || 'Learning Area';
+
+  const clean = raw.toUpperCase();
+
+  // 1. Creative Arts (MUST come before CRE so 'CREA' / 'la-g3-crea' is never confused with CRE)
+  if (
+    clean.includes('CREATIVE') ||
+    clean.includes('CREA') ||
+    clean.includes('CRA') ||
+    (clean.includes('ART') && !clean.includes('SMART'))
+  ) {
+    return 'Creative Arts Activities';
+  }
+
+  // 2. English Reading / Literacy
+  if (
+    clean.includes('READING') ||
+    clean.includes('-REA') ||
+    clean.endsWith('_REA') ||
+    clean === 'REA' ||
+    clean.includes('LITERACY')
+  ) {
+    return 'English Reading Activities';
+  }
+
+  // 3. Kusoma Activities (WKU / Kusoma / Lower primary literacy)
+  if (
+    clean.includes('KUSOMA') ||
+    clean.includes('KUSO') ||
+    clean.includes('-WKU') ||
+    clean.includes('_WKU') ||
+    clean === 'WKU'
+  ) {
+    return 'Kusoma Activities';
+  }
+
+  // 4. Environmental Activities (SENV / ENVI / ENV)
+  if (
+    clean.includes('ENVIRONMENT') ||
+    clean.includes('ENVI') ||
+    clean.includes('SENV') ||
+    clean.includes('-ENV') ||
+    clean === 'ENV'
+  ) {
+    return 'Environmental Activities';
+  }
+
+  // 5. English Language
+  if (clean.includes('ENG') || clean.includes('ENGLISH')) {
+    return 'English Language Activities';
+  }
+
+  // 6. Kiswahili Language
+  if (clean.includes('KISW') || clean.includes('SWAHILI') || clean.includes('KIS')) {
+    return 'Kiswahili Language Activities';
+  }
+
+  // 7. Mathematics
+  if (clean.includes('MATH') || clean.includes('MAT')) {
+    return 'Mathematical Activities';
+  }
+
+  // 8. Christian / Islamic Religious Education
+  if (clean.includes('RELIGIOUS') || clean.includes('CRE') || clean.includes('IRE') || clean.includes('HRE')) {
+    return 'Christian Religious Education';
+  }
+
+  // 9. Upper Primary & Junior Secondary Subjects
+  if (
+    clean.includes('INTEGRATED SCIENCE') ||
+    clean.includes('INTSCI') ||
+    clean.includes('SCI_TECH') ||
+    clean.includes('SCIENCE') ||
+    clean.includes('-SCI')
+  ) {
+    return 'Science and Technology';
+  }
+  if (clean.includes('HEALTH') || clean.includes('HLTH')) return 'Health Education';
+  if (clean.includes('SOCIAL') || clean.includes('SST') || clean.includes('SOC')) return 'Social Studies';
+  if (clean.includes('AGRI') || clean.includes('NUTRITION') || clean.includes('AGR')) return 'Agriculture & Nutrition';
+  if (clean.includes('PRE-TECH') || clean.includes('PRETECH') || clean.includes('TECHNICAL') || clean.includes('PTECH') || clean.includes('PRET')) return 'Pre-Technical Studies';
+  if (clean.includes('BUSINESS') || clean.includes('BUS')) return 'Business Studies';
+  if (clean.includes('COMPUTER') || clean.includes('COMP')) return 'Computer Science';
+  if (clean.includes('FRENCH') || clean.includes('FRE')) return 'French';
+  if (clean.includes('GERMAN') || clean.includes('GER')) return 'German';
+  if (clean.includes('ARABIC') || clean.includes('ARA')) return 'Arabic';
+  if (clean.includes('INDIGENOUS') || clean.includes('IND')) return 'Indigenous Language Activities';
+  if (clean.includes('MUSIC') || clean.includes('MUS')) return 'Music Activities';
+  if (clean.includes('PSYCHOMOTOR') || clean.includes('PSY')) return 'Psychomotor and Creative Activities';
+
+  // If it's a raw ID like 'la-g3-something' or UUID, provide fallback
+  if (/^la-[a-z0-9-_]+/i.test(raw) || /^[0-9a-f-]{10,}$/i.test(raw)) {
+    return fallbackName || 'Core Learning Area';
+  }
+
+  // Capitalize neatly
+  return raw.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/**
+ * Resolves standard 3-to-4 letter abbreviation code for CBC Learning Areas.
+ */
+export function resolveLearningAreaCode(nameOrCodeOrId: string): string {
+  if (!nameOrCodeOrId) return 'SUBJ';
+  const clean = nameOrCodeOrId.toUpperCase();
+  if (clean.includes('CREATIVE') || clean.includes('CREA')) return 'CREA';
+  if (clean.includes('READING') || clean.includes('REA')) return 'REA';
+  if (clean.includes('KUSOMA') || clean.includes('WKU') || clean.includes('KUSO')) return 'KUSO';
+  if (clean.includes('ENVIRONMENT') || clean.includes('SENV') || clean.includes('ENVI')) return 'ENVI';
+  if (clean.includes('ENG')) return 'ENG';
+  if (clean.includes('KIS')) return 'KIS';
+  if (clean.includes('MAT')) return 'MAT';
+  if (clean.includes('CRE')) return 'CRE';
+  if (clean.includes('SCI')) return 'SCI';
+  if (clean.includes('SST') || clean.includes('SOC')) return 'SST';
+  if (clean.includes('AGR')) return 'AGR';
+  if (clean.includes('HLTH')) return 'HLTH';
+  if (clean.includes('PRET')) return 'PRET';
+  if (clean.includes('BUS')) return 'BUS';
+  if (clean.includes('COMP')) return 'COMP';
+  return clean.slice(0, 4);
 }
 
 /**

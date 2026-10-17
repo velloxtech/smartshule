@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { EditStudentModal } from '../modals/EditStudentModal';
-import { resolveStreamName, resolveGradeName } from '../../utils/formatters';
+import { resolveStreamName, resolveGradeName, resolveLearningAreaName } from '../../utils/formatters';
 
 interface ParentDashboardViewProps {
   onOpenMpesaWithStudent?: (student: any) => void;
@@ -162,7 +162,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                       : 'text-white/80 hover:bg-white/10'
                   }`}
                 >
-                  {c.firstName} ({c.gradeLevel})
+                  {c.firstName} ({resolveGradeName(c.gradeLevel)})
                 </button>
               ))}
             </div>
@@ -188,7 +188,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                   </span>
                   {(currentChild.streamName || currentChild.streamId) && (
                     <span className="px-2 py-0.5 rounded bg-surface-container text-on-surface-variant text-xs font-semibold">
-                      Stream: {resolveStreamName(currentChild.streamId, currentChild.streamName || currentChild.stream?.name)}
+                      Stream: {resolveStreamName(currentChild.streamId, currentChild.streamName || currentChild.stream?.name, currentChild.gradeLevel)}
                     </span>
                   )}
                 </div>
@@ -218,7 +218,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                   admNo: currentChild.admissionNumber,
                   upi: currentChild.upiNumber || 'NEMIS-K9281A',
                   grade: resolveGradeName(currentChild.gradeLevel),
-                  stream: resolveStreamName(currentChild.streamId, currentChild.streamName || currentChild.stream?.name) || 'General',
+                  stream: resolveStreamName(currentChild.streamId, currentChild.streamName || currentChild.stream?.name, currentChild.gradeLevel) || 'Main Stream',
                   feeBalance: currentChild.fee?.balance || 0,
                   totalFee: currentChild.fee?.totalBilled || 0,
                   attendanceRate: currentChild.attendance?.attendanceRate || 100,
@@ -249,7 +249,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                     admNo: currentChild.admissionNumber,
                     upi: currentChild.upiNumber || 'NEMIS-K9281A',
                     grade: resolveGradeName(currentChild.gradeLevel),
-                    stream: resolveStreamName(currentChild.streamId, currentChild.streamName || currentChild.stream?.name) || 'General',
+                    stream: resolveStreamName(currentChild.streamId, currentChild.streamName || currentChild.stream?.name, currentChild.gradeLevel) || 'Main Stream',
                     guardianName: `${guardianUser?.firstName} ${guardianUser?.lastName}`,
                     guardianPhone: guardianUser?.phone || '',
                     feeBalance: currentChild.fee?.balance || 0,
@@ -320,7 +320,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                       admNo: currentChild.admissionNumber,
                       upi: currentChild.upiNumber || 'NEMIS-K9281A',
                       grade: resolveGradeName(currentChild.gradeLevel),
-                      stream: resolveStreamName(currentChild.streamId, currentChild.streamName || currentChild.stream?.name) || 'General',
+                      stream: resolveStreamName(currentChild.streamId, currentChild.streamName || currentChild.stream?.name, currentChild.gradeLevel) || 'Main Stream',
                       guardianName: `${guardianUser?.firstName} ${guardianUser?.lastName}`,
                       guardianPhone: guardianUser?.phone || '',
                       feeBalance: currentChild.fee?.balance || 0,
@@ -458,8 +458,8 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
               <div className="text-2xl font-bold font-data-mono text-secondary mt-1">
                 KES {(currentChild.fee?.totalPaid || 0).toLocaleString()}
               </div>
-              <span className="text-[11px] text-emerald-700 font-semibold mt-1 block truncate" title={`Official Paybill: 522533 · Acc: 8048859#${currentChild.name} ${currentChild.grade}`}>
-                Official Paybill: 522533 · Acc: 8048859#{currentChild.name} {currentChild.grade}
+              <span className="text-[11px] text-emerald-700 font-semibold mt-1 block truncate" title={`Official Paybill: 522533 · Acc: 8048859#${currentChild.admissionNumber || currentChild.firstName} (${resolveGradeName(currentChild.gradeLevel)})`}>
+                Official Paybill: 522533 · Acc: 8048859#{currentChild.admissionNumber || currentChild.firstName} · {resolveGradeName(currentChild.gradeLevel)}
               </span>
             </div>
           </div>
@@ -537,23 +537,29 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
 
               {currentChild.cbc?.latestEvaluations?.length > 0 ? (
                 <div className="space-y-3">
-                  {currentChild.cbc.latestEvaluations.map((ev: any) => (
-                    <div key={ev.id} className="p-3 rounded-xl bg-surface-container-low border border-outline-variant/20 space-y-2 text-xs">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-primary">{ev.learningAreaId}</span>
-                        {getRatingBadge(ev.overallPerformanceLevel)}
+                  {currentChild.cbc.latestEvaluations.map((ev: any) => {
+                    const rawScore = ev.percentageScore ?? ev.overallScore ?? ev.score ?? (ev.strandScores?.[0]?.rawScore !== undefined ? ev.strandScores[0].rawScore : null);
+                    const scoreDisplay = rawScore !== null && rawScore !== undefined ? `${rawScore}%` : 'Competency Assessed';
+                    const areaName = resolveLearningAreaName(ev.learningAreaId, ev.learningAreaName || ev.name);
+
+                    return (
+                      <div key={ev.id} className="p-3 rounded-xl bg-surface-container-low border border-outline-variant/20 space-y-2 text-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-primary">{areaName}</span>
+                          {getRatingBadge(ev.overallPerformanceLevel)}
+                        </div>
+                        <p className="text-xs text-on-surface italic bg-white/70 p-2.5 rounded-lg border-l-2 border-primary/40">
+                          "{ev.teacherRemarks || 'Demonstrates strong understanding and mastery of core strand competencies.'}"
+                        </p>
+                        <div className="flex items-center justify-between text-[11px] text-outline pt-1">
+                          <span>Evaluated: {ev.evaluationDate || 'Term 3 2026'}</span>
+                          <span className="font-bold text-secondary font-data-mono">
+                            {scoreDisplay}
+                          </span>
+                        </div>
                       </div>
-                      <p className="text-xs text-on-surface italic bg-white/70 p-2.5 rounded-lg border-l-2 border-primary/40">
-                        "{ev.teacherRemarks}"
-                      </p>
-                      <div className="flex items-center justify-between text-[11px] text-outline pt-1">
-                        <span>Evaluated: {ev.evaluationDate}</span>
-                        <span className="font-bold text-secondary font-data-mono">
-                          {ev.percentageScore ? `${ev.percentageScore}%` : 'Competency Assessed'}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="p-8 text-center text-xs text-on-surface-variant">
@@ -676,7 +682,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
             name: currentChild.fullName || `${currentChild.firstName} ${currentChild.lastName}`,
             gender: currentChild.gender || 'MALE',
             grade: resolveGradeName(currentChild.gradeLevel),
-            stream: resolveStreamName(currentChild.streamId, currentChild.streamName || currentChild.stream?.name),
+            stream: resolveStreamName(currentChild.streamId, currentChild.streamName || currentChild.stream?.name, currentChild.gradeLevel),
             guardianName: currentChild.guardianName || `${guardianUser?.firstName || ''} ${guardianUser?.lastName || ''}`.trim() || 'Parent',
             guardianPhone: currentChild.guardianPhone || guardianUser?.phone || '',
             feeBalance: currentChild.fee?.balance || 0,

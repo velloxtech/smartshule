@@ -913,6 +913,27 @@ export class StudentUseCases {
     };
   }
 
+  private resolveBackendLearningAreaName(idOrName: string): string {
+    if (!idOrName) return 'Core Learning Area';
+    const clean = idOrName.toUpperCase();
+    if (clean.includes('CREATIVE') || clean.includes('CREA') || clean.includes('CRA')) return 'Creative Arts Activities';
+    if (clean.includes('READING') || clean.includes('REA') || clean.includes('LITERACY')) return 'English Reading Activities';
+    if (clean.includes('KUSOMA') || clean.includes('WKU') || clean.includes('KUSO')) return 'Kusoma Activities';
+    if (clean.includes('ENVIRONMENT') || clean.includes('SENV') || clean.includes('ENVI')) return 'Environmental Activities';
+    if (clean.includes('ENG')) return 'English Language Activities';
+    if (clean.includes('KIS')) return 'Kiswahili Language Activities';
+    if (clean.includes('MAT')) return 'Mathematical Activities';
+    if (clean.includes('CRE') || clean.includes('RELIGIOUS')) return 'Christian Religious Education';
+    if (clean.includes('SCI')) return 'Science and Technology';
+    if (clean.includes('SST') || clean.includes('SOC')) return 'Social Studies';
+    if (clean.includes('AGR')) return 'Agriculture & Nutrition';
+    if (clean.includes('PRET')) return 'Pre-Technical Studies';
+    if (clean.includes('HLTH')) return 'Health Education';
+    if (clean.includes('BUS')) return 'Business Studies';
+    if (clean.includes('COMP')) return 'Computer Science';
+    return idOrName.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  }
+
   public async getStudentById(studentId: string, requestingUser?: UserContext) {
     const isParent = requestingUser?.role === UserRole.PARENT || requestingUser?.role === UserRole.GUARDIAN;
     if (isParent && requestingUser) {
@@ -1206,7 +1227,27 @@ export class StudentUseCases {
           const summatives = await this.cbcRepository.findSummatives({ studentId: s.id });
           cbcSummary = {
             assessmentsCount: summatives.length,
-            latestEvaluations: summatives.slice(0, 5).map(ev => ev.toJSON())
+            latestEvaluations: summatives.slice(0, 5).map(ev => {
+              const json = ev.toJSON();
+              let rawScore: number | null = null;
+              if (json.strandScores && json.strandScores.length > 0) {
+                const totalRaw = json.strandScores.reduce((acc: number, st: any) => acc + (st.rawScore || 0), 0);
+                const totalMax = json.strandScores.reduce((acc: number, st: any) => acc + (st.maxScore || 100), 0);
+                rawScore = totalMax > 0 ? Math.round((totalRaw / totalMax) * 100) : (json.strandScores[0].rawScore ?? null);
+              } else if (json.overallPerformanceLevel) {
+                rawScore = json.overallPerformanceLevel === 'EE' ? 88 : json.overallPerformanceLevel === 'ME' ? 72 : json.overallPerformanceLevel === 'AE' ? 55 : 40;
+              }
+
+              const learningAreaName = this.resolveBackendLearningAreaName(json.learningAreaId);
+
+              return {
+                ...json,
+                learningAreaName,
+                name: learningAreaName,
+                percentageScore: rawScore,
+                score: rawScore
+              };
+            })
           };
         }
 

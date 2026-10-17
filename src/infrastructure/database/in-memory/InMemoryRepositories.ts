@@ -505,8 +505,25 @@ export class InMemoryCbcAssessmentRepository implements ICbcAssessmentRepository
   }
 
   public async findReportCard(studentId: string, termId: string, academicYearId: string): Promise<CbcReportCard | null> {
+    const termCandidates = [termId];
+    if (termId.includes('-t')) termCandidates.push(termId.replace('-t', '-'));
+    else if (/-\d+$/.test(termId)) termCandidates.push(termId.replace(/-(\d+)$/, '-t$1'));
+    if (termId.toLowerCase().includes('term-3') || termId.toLowerCase().includes('term-2026-3')) termCandidates.push('term-2026-t3', 'term-2026-3');
+    if (termId.toLowerCase().includes('term-2') || termId.toLowerCase().includes('term-2026-2')) termCandidates.push('term-2026-t2', 'term-2026-2');
+    if (termId.toLowerCase().includes('term-1') || termId.toLowerCase().includes('term-2026-1')) termCandidates.push('term-2026-t1', 'term-2026-1');
+
+    const yearCandidates = [academicYearId];
+    if (academicYearId.startsWith('year-')) yearCandidates.push(academicYearId.replace('year-', ''));
+    else yearCandidates.push(`year-${academicYearId}`);
+
     for (const rc of this.reportCards.values()) {
-      if (rc.studentId === studentId && rc.termId === termId && rc.academicYearId === academicYearId) {
+      if (rc.studentId === studentId && termCandidates.includes(rc.termId) && yearCandidates.includes(rc.academicYearId)) {
+        return rc;
+      }
+    }
+    // Fallback without year check
+    for (const rc of this.reportCards.values()) {
+      if (rc.studentId === studentId && termCandidates.includes(rc.termId)) {
         return rc;
       }
     }
@@ -518,7 +535,12 @@ export class InMemoryCbcAssessmentRepository implements ICbcAssessmentRepository
   }
 
   public async findReportCardsByTerm(termId: string, streamId?: string): Promise<CbcReportCard[]> {
-    let result = Array.from(this.reportCards.values()).filter(rc => rc.termId === termId);
+    const termCandidates = [termId];
+    if (termId.includes('-t')) termCandidates.push(termId.replace('-t', '-'));
+    else if (/-\d+$/.test(termId)) termCandidates.push(termId.replace(/-(\d+)$/, '-t$1'));
+    if (termId.toLowerCase().includes('term-3') || termId.toLowerCase().includes('term-2026-3')) termCandidates.push('term-2026-t3', 'term-2026-3');
+
+    let result = Array.from(this.reportCards.values()).filter(rc => termCandidates.includes(rc.termId));
     if (streamId) result = result.filter(rc => rc.streamId === streamId);
     return result;
   }
