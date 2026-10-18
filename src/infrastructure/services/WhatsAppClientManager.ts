@@ -294,7 +294,7 @@ export class WhatsAppClientManager {
         contactName,
       };
       this.savePersistedConfig();
-      console.log(`[WhatsApp Free Tier] 🟢 New 24-hr service conversation started for ${cleanDigits}. Used: ${this.freeTierUsage.usedConversations}/1000 free this month.`);
+      console.log(`[WhatsApp Free Tier] New 24-hr service conversation started for ${cleanDigits}. Used: ${this.freeTierUsage.usedConversations}/1000 free this month.`);
       return { isNewConversation: true, expiresAt };
     } else {
       // Refresh 24-hour customer service window for reply freedom
@@ -392,7 +392,7 @@ export class WhatsAppClientManager {
         this.lastConnectedAt = new Date().toISOString();
         this.savePersistedConfig();
 
-        console.log(`[Meta Cloud API] ✅ Verified Official WhatsApp Account: ${this.connectedName} (${this.connectedPhone}) | Quality: ${this.metaProfile.qualityRating}`);
+        console.log(`[Meta Cloud API] Verified Official WhatsApp Account: ${this.connectedName} (${this.connectedPhone}) | Quality: ${this.metaProfile.qualityRating}`);
         return { success: true, profile: data };
       } else {
         const errorMsg = data.error?.message || `Meta Graph API returned status ${res.status}`;
@@ -499,7 +499,7 @@ export class WhatsAppClientManager {
           };
           this.recordMessage(outLog);
 
-          console.log(`[WhatsApp Outbound (Meta Official Cloud)] ✅ Delivered to ${displayPhone} | WAMID: ${msgId}`);
+          console.log(`[WhatsApp Outbound (Meta Official Cloud)] Delivered to ${displayPhone} | WAMID: ${msgId}`);
           return { success: true, messageId: msgId, isOfficialMeta: true };
         } else {
           const errMsg = data.error?.message || 'Meta Cloud API rejected the message';
@@ -518,7 +518,7 @@ export class WhatsAppClientManager {
 
     // 2. FALLBACK 2: Baileys connected socket (with Ban Warning)
     if (this.sock && this.status === 'CONNECTED') {
-      console.warn('[WhatsApp Outbound] ⚠️ Warning: Transmitting via unofficial Baileys socket. We strongly recommend configuring Meta Cloud API to avoid number bans.');
+      console.warn('[WhatsApp Outbound] Warning: Transmitting via unofficial Baileys socket. We strongly recommend configuring Meta Cloud API to avoid number bans.');
       try {
         let targetJid = preferredJid || `${cleanDigits}@s.whatsapp.net`;
         const result = await this.sock.sendMessage(targetJid, { text });
@@ -732,7 +732,7 @@ export class WhatsAppClientManager {
       return this.getStatus();
     }
 
-    console.warn('[WhatsApp Account] ⚠️ Initiating Baileys QR code pairing. Note: Unofficial WhatsApp Web libraries carry a high risk of permanent account bans. Switch to Meta Cloud API for ban immunity.');
+    console.warn('[WhatsApp Account] Initiating Baileys QR code pairing. Note: Unofficial WhatsApp Web libraries carry a high risk of permanent account bans. Switch to Meta Cloud API for ban immunity.');
 
     if (this.sock && this.status === 'CONNECTED') {
       return this.getStatus();

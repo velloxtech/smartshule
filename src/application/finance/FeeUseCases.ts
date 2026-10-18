@@ -37,7 +37,7 @@ import {
   ExpenseStatus,
   IncomeSource
 } from '../../core/domain/finance/Fee';
-import { CbcGradeLevel } from '../../core/domain/user/Student';
+import { CBCGradeLevel } from '../../core/domain/user/Student';
 import { UserRole, isBillingAuthorizedRole } from '../../core/domain/user/User';
 import {
   IdGenerator,
@@ -79,7 +79,7 @@ export interface CreateFeeStructureDTO {
   schoolId: string;
   academicYearId: string;
   termId?: string; // Optional, defaults to 'ALL' for whole year
-  gradeLevel: CbcGradeLevel;
+  gradeLevel: CBCGradeLevel;
   title: string;
   items: Omit<FeeItem, 'id'>[];
   dueDate: string;
@@ -89,7 +89,7 @@ export interface GenerateInvoicesDTO {
   schoolId: string;
   academicYearId: string;
   termId: string;
-  gradeLevel?: CbcGradeLevel;
+  gradeLevel?: CBCGradeLevel;
   studentId?: string;
 }
 
@@ -305,10 +305,10 @@ export class FeeUseCases {
     return feeStructure.toJSON();
   }
 
-  public getGraceSeedsTermItemsForGrade(gradeLevel: CbcGradeLevel, termNumber: number): FeeItem[] {
-    const isUpperPrimary = [CbcGradeLevel.GRADE_4, CbcGradeLevel.GRADE_5, CbcGradeLevel.GRADE_6].includes(gradeLevel);
-    const isLowerPrimary = [CbcGradeLevel.GRADE_1, CbcGradeLevel.GRADE_2, CbcGradeLevel.GRADE_3].includes(gradeLevel);
-    const isPrePrimary = [CbcGradeLevel.PLAYGROUP, CbcGradeLevel.PP1, CbcGradeLevel.PP2].includes(gradeLevel);
+  public getGraceSeedsTermItemsForGrade(gradeLevel: CBCGradeLevel, termNumber: number): FeeItem[] {
+    const isUpperPrimary = [CBCGradeLevel.GRADE_4, CBCGradeLevel.GRADE_5, CBCGradeLevel.GRADE_6].includes(gradeLevel);
+    const isLowerPrimary = [CBCGradeLevel.GRADE_1, CBCGradeLevel.GRADE_2, CBCGradeLevel.GRADE_3].includes(gradeLevel);
+    const isPrePrimary = [CBCGradeLevel.PLAYGROUP, CBCGradeLevel.PP1, CBCGradeLevel.PP2].includes(gradeLevel);
 
     const tuitionTerm = isUpperPrimary ? 5700 : (isLowerPrimary ? 5000 : (isPrePrimary ? 4500 : 5000));
     const activityTerm = (isUpperPrimary || isLowerPrimary) ? 500 : (isPrePrimary ? 300 : 500);
@@ -346,10 +346,10 @@ export class FeeUseCases {
     return items;
   }
 
-  public getGraceSeedsDefaultItemsForGrade(gradeLevel: CbcGradeLevel): FeeItem[] {
-    const isUpperPrimary = [CbcGradeLevel.GRADE_4, CbcGradeLevel.GRADE_5, CbcGradeLevel.GRADE_6].includes(gradeLevel);
-    const isLowerPrimary = [CbcGradeLevel.GRADE_1, CbcGradeLevel.GRADE_2, CbcGradeLevel.GRADE_3].includes(gradeLevel);
-    const isPrePrimary = [CbcGradeLevel.PLAYGROUP, CbcGradeLevel.PP1, CbcGradeLevel.PP2].includes(gradeLevel);
+  public getGraceSeedsDefaultItemsForGrade(gradeLevel: CBCGradeLevel): FeeItem[] {
+    const isUpperPrimary = [CBCGradeLevel.GRADE_4, CBCGradeLevel.GRADE_5, CBCGradeLevel.GRADE_6].includes(gradeLevel);
+    const isLowerPrimary = [CBCGradeLevel.GRADE_1, CBCGradeLevel.GRADE_2, CBCGradeLevel.GRADE_3].includes(gradeLevel);
+    const isPrePrimary = [CBCGradeLevel.PLAYGROUP, CBCGradeLevel.PP1, CBCGradeLevel.PP2].includes(gradeLevel);
 
     // Official Grace Seeds School Termly Rate Baseline:
     // Pre-Primary (Playgroup, PP1, PP2): T1: 5100, T2: 5100, T3: 4800 (Tuition 4500, Activity 300 in T1/T2, Assessment 300)
@@ -436,16 +436,16 @@ export class FeeUseCases {
     const targetYearId = academicYearId || 'year-2026';
     const dueDate = `${new Date().getFullYear()}-12-31`;
 
-    const grades: { grade: CbcGradeLevel; label: string }[] = [
-      { grade: CbcGradeLevel.PLAYGROUP, label: 'Playgroup' },
-      { grade: CbcGradeLevel.PP1, label: 'PP1' },
-      { grade: CbcGradeLevel.PP2, label: 'PP2' },
-      { grade: CbcGradeLevel.GRADE_1, label: 'Grade 1' },
-      { grade: CbcGradeLevel.GRADE_2, label: 'Grade 2' },
-      { grade: CbcGradeLevel.GRADE_3, label: 'Grade 3' },
-      { grade: CbcGradeLevel.GRADE_4, label: 'Grade 4' },
-      { grade: CbcGradeLevel.GRADE_5, label: 'Grade 5' },
-      { grade: CbcGradeLevel.GRADE_6, label: 'Grade 6' },
+    const grades: { grade: CBCGradeLevel; label: string }[] = [
+      { grade: CBCGradeLevel.PLAYGROUP, label: 'Playgroup' },
+      { grade: CBCGradeLevel.PP1, label: 'PP1' },
+      { grade: CBCGradeLevel.PP2, label: 'PP2' },
+      { grade: CBCGradeLevel.GRADE_1, label: 'Grade 1' },
+      { grade: CBCGradeLevel.GRADE_2, label: 'Grade 2' },
+      { grade: CBCGradeLevel.GRADE_3, label: 'Grade 3' },
+      { grade: CBCGradeLevel.GRADE_4, label: 'Grade 4' },
+      { grade: CBCGradeLevel.GRADE_5, label: 'Grade 5' },
+      { grade: CBCGradeLevel.GRADE_6, label: 'Grade 6' },
     ];
 
     const terms = [
@@ -713,7 +713,7 @@ export class FeeUseCases {
     schoolId?: string;
     academicYearId?: string;
     termId?: string;
-    gradeLevel?: CbcGradeLevel;
+    gradeLevel?: CBCGradeLevel;
   }, requestingUser?: UserContext) {
     this.verifyBillingAuthorization(requestingUser);
     const schoolId = dto.schoolId || 'school-001';
@@ -960,34 +960,48 @@ export class FeeUseCases {
     );
 
     // Update target invoice balance and status
-    const previousBalance = invoice.balance;
-    const paymentAmount = Number(dto.amount);
-    invoice.recordPayment(paymentAmount);
-    await this.feeRepository.updateInvoice(invoice);
-    await this.feeRepository.savePayment(payment);
+    const paymentAmount = Math.round((Number(dto.amount) || 0) * 100) / 100;
+    let remainingToAllocate = paymentAmount;
 
-    // If payment amount exceeded this invoice's prior balance, cascade excess to other active unpaid invoices
-    if (paymentAmount > previousBalance) {
-      let excess = paymentAmount - previousBalance;
+    // Apply to target invoice first (up to its balance, or whatever portion fits)
+    const payableOnTarget = Math.min(remainingToAllocate, invoice.balance);
+    const targetAllocation = invoice.balance > 0 ? payableOnTarget : 0;
+    if (targetAllocation > 0) {
+      invoice.recordPayment(targetAllocation);
+      await this.feeRepository.updateInvoice(invoice);
+      remainingToAllocate = Math.round((remainingToAllocate - targetAllocation) * 100) / 100;
+    }
+
+    // Cascade excess to any other unpaid active invoices
+    if (remainingToAllocate > 0) {
       const allStudentInvoices = await this.feeRepository.findInvoices({ studentId: invoice.studentId });
       const otherUnpaidInvoices = allStudentInvoices.filter(
         i => i.id !== invoice.id && (i.status as any) !== 'CARRIED_FORWARD' && (i.status as any) !== InvoiceStatus.CARRIED_FORWARD && i.balance > 0
       );
       for (const otherInv of otherUnpaidInvoices) {
-        const portion = Math.min(excess, otherInv.balance);
+        const portion = Math.min(remainingToAllocate, otherInv.balance);
         otherInv.recordPayment(portion);
         await this.feeRepository.updateInvoice(otherInv);
-        excess -= portion;
-        if (excess <= 0) break;
+        remainingToAllocate = Math.round((remainingToAllocate - portion) * 100) / 100;
+        if (remainingToAllocate <= 0) break;
       }
     }
+
+    // If remainingToAllocate is still > 0 (advance overpayment beyond all invoices),
+    // record the remaining credit on the target invoice
+    if (remainingToAllocate > 0) {
+      invoice.recordPayment(remainingToAllocate);
+      await this.feeRepository.updateInvoice(invoice);
+    }
+
+    await this.feeRepository.savePayment(payment);
 
     // Compute student's true overall remaining balance across all active invoices
     const allStudentInvoices = await this.feeRepository.findInvoices({ studentId: invoice.studentId });
     const activeStudentInvoices = allStudentInvoices.filter(
       i => (i.status as any) !== 'CARRIED_FORWARD' && (i.status as any) !== InvoiceStatus.CARRIED_FORWARD
     );
-    const studentTotalBalance = activeStudentInvoices.reduce((sum, i) => sum + (Number(i.balance) || 0), 0);
+    const studentTotalBalance = Math.round(activeStudentInvoices.reduce((sum, i) => sum + (Number(i.balance) || 0), 0) * 100) / 100;
 
     // Send SMS receipt confirmation to guardian reporting the true total remaining balance
     if (student) {
@@ -1167,16 +1181,41 @@ export class FeeUseCases {
         IdGenerator.generate()
       );
 
-      // 1. UPDATE INVOICE BALANCE IN DATABASE
+      // 1. UPDATE INVOICE BALANCE IN DATABASE WITH PROPER ALLOCATION
       if (invoice) {
-        invoice.recordPayment(paidAmount);
-        await this.feeRepository.updateInvoice(invoice);
-        console.log(`[KCB Buni Webhook] ✅ Updated invoice ${invoice.invoiceNumber}. New balance: KES ${invoice.balance}`);
+        let remainingToApply = paidAmount;
+        const payableOnTarget = Math.min(remainingToApply, invoice.balance);
+        const targetAllocation = invoice.balance > 0 ? payableOnTarget : 0;
+        if (targetAllocation > 0) {
+          invoice.recordPayment(targetAllocation);
+          await this.feeRepository.updateInvoice(invoice);
+          remainingToApply = Math.round((remainingToApply - targetAllocation) * 100) / 100;
+        }
+
+        if (remainingToApply > 0) {
+          const studentInvoices = await this.feeRepository.findInvoices({ studentId: invoice.studentId });
+          const otherUnpaid = studentInvoices.filter(
+            i => i.id !== invoice.id && (i.status as any) !== 'CARRIED_FORWARD' && (i.status as any) !== InvoiceStatus.CARRIED_FORWARD && i.balance > 0
+          );
+          for (const other of otherUnpaid) {
+            const portion = Math.min(remainingToApply, other.balance);
+            other.recordPayment(portion);
+            await this.feeRepository.updateInvoice(other);
+            remainingToApply = Math.round((remainingToApply - portion) * 100) / 100;
+            if (remainingToApply <= 0) break;
+          }
+        }
+
+        if (remainingToApply > 0) {
+          invoice.recordPayment(remainingToApply);
+          await this.feeRepository.updateInvoice(invoice);
+        }
+        console.log(`[KCB Buni Webhook] Updated invoice ${invoice.invoiceNumber}. New balance: KES ${invoice.balance}`);
       }
 
       // 2. STORE TRANSACTION RECORD IN DATABASE
       await this.feeRepository.savePayment(payment);
-      console.log(`[KCB Buni Webhook] ✅ Stored transaction code '${transactionCode}' in database with Receipt #${receiptNumber}`);
+      console.log(`[KCB Buni Webhook] Stored transaction code '${transactionCode}' in database with Receipt #${receiptNumber}`);
 
       this.pendingKcbTransactions.delete(callbackData.checkoutRequestId);
 
@@ -1668,27 +1707,32 @@ export class FeeUseCases {
     const activeInvoices = invoices.filter(
       i => (i.status as any) !== 'CARRIED_FORWARD' && (i.status as any) !== InvoiceStatus.CARRIED_FORWARD
     );
-    const totalPaid = payments
-      .filter(p => p.status === PaymentStatus.COMPLETED || (p.status as any) === 'COMPLETED')
-      .reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
-    const currentBalance = activeInvoices.reduce((sum, inv) => sum + (Number(inv.balance) || 0), 0);
-    const totalBilled = totalPaid + currentBalance;
+    const totalPaid = Math.round(
+      payments
+        .filter(p => p.status === PaymentStatus.COMPLETED || (p.status as any) === 'COMPLETED')
+        .reduce((sum, p) => sum + (Number(p.amount) || 0), 0) * 100
+    ) / 100;
+    const currentBalance = Math.round(
+      activeInvoices.reduce((sum, inv) => sum + (Number(inv.balance) || 0), 0) * 100
+    ) / 100;
+    const totalBilled = Math.round((totalPaid + currentBalance) * 100) / 100;
 
-    // Identify arrears explicitly from active invoices
+    // Identify arrears explicitly from active invoices without duplicate counting
     let arrearsAmount = 0;
     for (const inv of activeInvoices) {
-      if (Array.isArray(inv.items)) {
-        for (const it of inv.items) {
-          if (it.name.toLowerCase().includes('arrear') || it.name.toLowerCase().includes('carried forward')) {
-            arrearsAmount += Number(it.amount) || 0;
-          }
-        }
-      }
       if (inv.feeStructureId === 'MANUAL_ARREARS' || inv.invoiceNumber.includes('ARR')) {
         arrearsAmount += Number(inv.balance) || 0;
+      } else if (Array.isArray(inv.items)) {
+        let invArrearItems = 0;
+        for (const it of inv.items) {
+          if (it.name && (it.name.toLowerCase().includes('arrear') || it.name.toLowerCase().includes('carried forward'))) {
+            invArrearItems += Number(it.amount) || 0;
+          }
+        }
+        arrearsAmount += Math.min(invArrearItems, Number(inv.balance) || 0);
       }
     }
-    const arrearsBalance = Math.min(arrearsAmount, currentBalance);
+    const arrearsBalance = Math.round(Math.min(arrearsAmount, currentBalance) * 100) / 100;
 
     const yearCache = new Map<string, any>();
     const termCache = new Map<string, any>();
@@ -2529,24 +2573,33 @@ export class FeeUseCases {
       const studentInvs = studentInvoicesMap.get(s.id) || [];
       const activeInvs = studentInvs.filter(i => i.status !== InvoiceStatus.CARRIED_FORWARD);
       
-      const balance = activeInvs.reduce((sum, i) => sum + (Number(i.balance) || 0), 0);
-      const totalBilled = activeInvs.reduce((sum, i) => sum + (Number(i.amountPayable) || 0), 0);
-      const totalPaid = activeInvs.reduce((sum, i) => sum + (Number(i.amountPaid) || 0), 0);
+      const balance = Math.round(activeInvs.reduce((sum, i) => sum + (Number(i.balance) || 0), 0) * 100) / 100;
+      const totalBilled = Math.round(activeInvs.reduce((sum, i) => sum + (Number(i.amountPayable) || 0), 0) * 100) / 100;
+      const totalPaid = Math.round(activeInvs.reduce((sum, i) => sum + (Number(i.amountPaid) || 0), 0) * 100) / 100;
 
+      let learnerArrears = 0;
       const arrearsItems: FeeItem[] = [];
       for (const inv of activeInvs) {
-        if (Array.isArray(inv.items)) {
+        if (inv.feeStructureId === 'MANUAL_ARREARS' || inv.invoiceNumber.includes('ARR')) {
+          learnerArrears += Number(inv.balance) || 0;
+          if (Array.isArray(inv.items)) {
+            arrearsItems.push(...inv.items);
+          }
+        } else if (Array.isArray(inv.items)) {
+          let invArrear = 0;
           for (const item of inv.items) {
-            if (item.name.toLowerCase().includes('arrear') || item.name.toLowerCase().includes('carried forward')) {
+            if (item.name && (item.name.toLowerCase().includes('arrear') || item.name.toLowerCase().includes('carried forward'))) {
+              invArrear += Number(item.amount) || 0;
               arrearsItems.push(item);
             }
           }
+          learnerArrears += Math.min(invArrear, Number(inv.balance) || 0);
         }
       }
-      const arrearsAmount = arrearsItems.reduce((sum, it) => sum + (Number(it.amount) || 0), 0);
+      const effectiveArrears = Math.round(Math.min(learnerArrears, balance) * 100) / 100;
 
       if (balance > 0) {
-        totalOutstandingArrears += balance;
+        totalOutstandingArrears = Math.round((totalOutstandingArrears + balance) * 100) / 100;
         totalLearnersWithArrears++;
         if (balance > maxSingleArrear) {
           maxSingleArrear = balance;
@@ -2562,7 +2615,7 @@ export class FeeUseCases {
         feeBalance: balance,
         totalFee: totalBilled,
         totalPaid,
-        arrearsAmount,
+        arrearsAmount: effectiveArrears,
         arrearsItems,
         hasArrears: balance > 0,
         invoicesCount: studentInvs.length,
@@ -2757,9 +2810,14 @@ export class FeeUseCases {
           const portion = Math.min(remainingToCredit, other.balance);
           other.recordPayment(portion);
           await this.feeRepository.updateInvoice(other);
-          remainingToCredit -= portion;
+          remainingToCredit = Math.round((remainingToCredit - portion) * 100) / 100;
           if (remainingToCredit <= 0) break;
         }
+      }
+
+      if (remainingToCredit > 0) {
+        invoice.recordPayment(remainingToCredit);
+        await this.feeRepository.updateInvoice(invoice);
       }
     }
 
@@ -2772,9 +2830,11 @@ export class FeeUseCases {
 
     // Compute student's true remaining balance across all active invoices
     const allInvs = await this.feeRepository.findInvoices({ studentId: payment.studentId });
-    const remainingBalance = allInvs
-      .filter(i => (i.status as any) !== 'CARRIED_FORWARD' && (i.status as any) !== InvoiceStatus.CARRIED_FORWARD)
-      .reduce((sum, i) => sum + (Number(i.balance) || 0), 0);
+    const remainingBalance = Math.round(
+      allInvs
+        .filter(i => (i.status as any) !== 'CARRIED_FORWARD' && (i.status as any) !== InvoiceStatus.CARRIED_FORWARD)
+        .reduce((sum, i) => sum + (Number(i.balance) || 0), 0) * 100
+    ) / 100;
 
     // Send official receipt SMS to guardian
     const guardians = await this.guardianRepository.findByStudentId(student.id);

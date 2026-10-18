@@ -45,7 +45,14 @@ export class InMemoryCurriculumTrackerRepository implements ICurriculumTrackerRe
           t.subjectName.toLowerCase().includes(q) ||
           t.className.toLowerCase().includes(q) ||
           t.teacherName.toLowerCase().includes(q) ||
-          t.items.some(i => i.strand.toLowerCase().includes(q) || i.subStrand.toLowerCase().includes(q))
+          t.items.some(i => i.strand.toLowerCase().includes(q) || i.subStrand.toLowerCase().includes(q)) ||
+          t.dailyLogs.some(
+            l =>
+              l.strand.toLowerCase().includes(q) ||
+              l.subStrand.toLowerCase().includes(q) ||
+              l.learningOutcomesTaught.toLowerCase().includes(q) ||
+              (l.reflection && l.reflection.whatWentWell.toLowerCase().includes(q))
+          )
       );
     }
 

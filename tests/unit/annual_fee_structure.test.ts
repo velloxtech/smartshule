@@ -1,5 +1,5 @@
 import { FeeStructure, FeeItem } from '../../src/core/domain/finance/Fee';
-import { CbcGradeLevel, Student, StudentGender, StudentStatus } from '../../src/core/domain/user/Student';
+import { CBCGradeLevel, Student, StudentGender, StudentStatus } from '../../src/core/domain/user/Student';
 import { FeeUseCases } from '../../src/application/finance/FeeUseCases';
 import { InMemoryFeeRepository, InMemoryStudentRepository, InMemoryGuardianRepository, InMemoryUserRepository, InMemoryAcademicRepository } from '../../src/infrastructure/database/in-memory/InMemoryRepositories';
 import { AcademicTerm } from '../../src/core/domain/academic/AcademicYear';
@@ -63,7 +63,7 @@ describe('Annual Fee Structure & Term Divisions Tests', () => {
           schoolId: 'school-1',
           academicYearId: 'year-2026',
           termId: 'ALL',
-          gradeLevel: CbcGradeLevel.GRADE_7,
+          gradeLevel: CBCGradeLevel.GRADE_7,
           title: 'Grade 7 CBC Junior Secondary Annual Fee Schedule 2026',
           items,
           dueDate: '2026-01-15'
@@ -109,7 +109,7 @@ describe('Annual Fee Structure & Term Divisions Tests', () => {
           schoolId: 'school-1',
           academicYearId: 'year-2026',
           termId: 'ALL',
-          gradeLevel: CbcGradeLevel.GRADE_8,
+          gradeLevel: CBCGradeLevel.GRADE_8,
           title: 'Grade 8 Fee Schedule',
           items,
           dueDate: '2026-01-15'
@@ -157,7 +157,7 @@ describe('Annual Fee Structure & Term Divisions Tests', () => {
           schoolId: 'school-1',
           academicYearId: 'year-2026',
           termId: 'ALL',
-          gradeLevel: CbcGradeLevel.GRADE_7,
+          gradeLevel: CBCGradeLevel.GRADE_7,
           title: 'Grade 7 Annual Percentage Schedule 2026',
           items,
           termPercentages: {
@@ -240,7 +240,7 @@ describe('Annual Fee Structure & Term Divisions Tests', () => {
           schoolId: 'school-1',
           academicYearId: 'year-2026',
           termId: 'ALL',
-          gradeLevel: CbcGradeLevel.PLAYGROUP,
+          gradeLevel: CBCGradeLevel.PLAYGROUP,
           title: 'Playgroup 2026 Schedule',
           items,
           dueDate: '2026-01-15'
@@ -320,7 +320,7 @@ describe('Annual Fee Structure & Term Divisions Tests', () => {
           lastName: 'Otieno',
           dateOfBirth: '2012-05-10',
           gender: StudentGender.MALE,
-          gradeLevel: CbcGradeLevel.GRADE_7,
+          gradeLevel: CBCGradeLevel.GRADE_7,
           streamId: 'stream-1',
           schoolId: 'school-1',
           academicYearId: 'year-2026',
@@ -336,7 +336,7 @@ describe('Annual Fee Structure & Term Divisions Tests', () => {
         schoolId: 'school-1',
         academicYearId: 'year-2026',
         termId: 'ALL',
-        gradeLevel: CbcGradeLevel.GRADE_7,
+        gradeLevel: CBCGradeLevel.GRADE_7,
         title: 'Grade 7 Annual Fee Schedule 2026',
         dueDate: '2026-01-15',
         items: [
@@ -422,7 +422,7 @@ describe('Annual Fee Structure & Term Divisions Tests', () => {
         lastName: 'Kip',
         dateOfBirth: '2012-05-10',
         gender: StudentGender.MALE,
-        gradeLevel: CbcGradeLevel.GRADE_7,
+        gradeLevel: CBCGradeLevel.GRADE_7,
         streamId: 'stream-1',
         schoolId: 'school-1',
         academicYearId: 'year-2026',
@@ -437,7 +437,7 @@ describe('Annual Fee Structure & Term Divisions Tests', () => {
         lastName: 'Atieno',
         dateOfBirth: '2012-05-10',
         gender: StudentGender.FEMALE,
-        gradeLevel: CbcGradeLevel.GRADE_7,
+        gradeLevel: CBCGradeLevel.GRADE_7,
         streamId: 'stream-1',
         schoolId: 'school-1',
         academicYearId: 'year-2026',
@@ -485,7 +485,7 @@ describe('Annual Fee Structure & Term Divisions Tests', () => {
         schoolId: 'school-1',
         academicYearId: 'year-2026',
         termId: 'ALL',
-        gradeLevel: CbcGradeLevel.GRADE_8,
+        gradeLevel: CBCGradeLevel.GRADE_8,
         title: 'Grade 8 Annual Fee 2026 (50/30/20)',
         items: [
           {
@@ -518,7 +518,7 @@ describe('Annual Fee Structure & Term Divisions Tests', () => {
         lastName: 'Omondi',
         dateOfBirth: '2011-04-12',
         gender: StudentGender.MALE,
-        gradeLevel: CbcGradeLevel.GRADE_8,
+        gradeLevel: CBCGradeLevel.GRADE_8,
         streamId: 'stream-1',
         schoolId: 'school-1',
         academicYearId: 'year-2026',
@@ -533,7 +533,7 @@ describe('Annual Fee Structure & Term Divisions Tests', () => {
         lastName: 'Achieng',
         dateOfBirth: '2011-06-18',
         gender: StudentGender.FEMALE,
-        gradeLevel: CbcGradeLevel.GRADE_8,
+        gradeLevel: CBCGradeLevel.GRADE_8,
         streamId: 'stream-1',
         schoolId: 'school-1',
         academicYearId: 'year-2026',
@@ -548,7 +548,7 @@ describe('Annual Fee Structure & Term Divisions Tests', () => {
         lastName: 'Kamau',
         dateOfBirth: '2011-09-02',
         gender: StudentGender.MALE,
-        gradeLevel: CbcGradeLevel.GRADE_8,
+        gradeLevel: CBCGradeLevel.GRADE_8,
         streamId: 'stream-1',
         schoolId: 'school-1',
         academicYearId: 'year-2026',

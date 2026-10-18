@@ -2,7 +2,7 @@ import request from 'supertest';
 import { createExpressApp } from '../../src/infrastructure/http/app';
 import { AppContainer } from '../../src/infrastructure/container';
 import { UserRole } from '../../src/core/domain/user/User';
-import { Student, StudentGender, CbcGradeLevel, StudentStatus } from '../../src/core/domain/user/Student';
+import { Student, StudentGender, CBCGradeLevel, StudentStatus } from '../../src/core/domain/user/Student';
 import { setupTestFixtures, setupTestRoleAccounts } from '../helpers/testFixtures';
 
 describe('Access Controls, 8 Role Accounts & Lesson Plan Approvals', () => {
@@ -697,7 +697,7 @@ describe('Access Controls, 8 Role Accounts & Lesson Plan Approvals', () => {
           lastName: 'Oduor',
           dateOfBirth: '2013-08-10',
           gender: StudentGender.MALE,
-          gradeLevel: CbcGradeLevel.GRADE_7,
+          gradeLevel: CBCGradeLevel.GRADE_7,
           streamId: 'stream-g7-east',
           schoolId: 'school-001',
           academicYearId: 'year-2026',
@@ -751,16 +751,16 @@ describe('Access Controls, 8 Role Accounts & Lesson Plan Approvals', () => {
       expect(res.status).toBe(403);
     });
 
-    it('denies parent from accessing school-wide CBC analytics via GET /cbc/analytics (403 Forbidden)', async () => {
+    it('denies parent from accessing school-wide CBC analytics via GET /CBC/analytics (403 Forbidden)', async () => {
       const res = await request(app)
-        .get('/api/v1/cbc/analytics?termId=term-2026-3&academicYearId=year-2026')
+        .get('/api/v1/CBC/analytics?termId=term-2026-3&academicYearId=year-2026')
         .set('Authorization', `Bearer ${parentToken}`);
       expect(res.status).toBe(403);
     });
 
-    it('denies parent from viewing an unlinked learner’s report card via GET /cbc/report-cards (403 Forbidden)', async () => {
+    it('denies parent from viewing an unlinked learner’s report card via GET /CBC/report-cards (403 Forbidden)', async () => {
       const res = await request(app)
-        .get(`/api/v1/cbc/report-cards?studentId=${unlinkedStudentId}&termId=term-2026-3&academicYearId=year-2026`)
+        .get(`/api/v1/CBC/report-cards?studentId=${unlinkedStudentId}&termId=term-2026-3&academicYearId=year-2026`)
         .set('Authorization', `Bearer ${parentToken}`);
       expect(res.status).toBe(403);
     });

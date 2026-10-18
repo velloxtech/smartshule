@@ -151,8 +151,10 @@ export class LunchEnrollment extends Entity<LunchEnrollmentProps> {
       this._props.payments = [];
     }
     this._props.payments.push(payment);
-    this._props.amountPaid += payment.amount;
-    this._props.balance = Math.max(0, this._props.amount - this._props.amountPaid);
+    const cleanPay = Math.round((Number(payment.amount) || 0) * 100) / 100;
+    this._props.amountPaid = Math.round((this._props.amountPaid + cleanPay) * 100) / 100;
+    const rawBalance = this._props.amount - this._props.amountPaid;
+    this._props.balance = rawBalance <= 0.001 ? 0 : Math.round(rawBalance * 100) / 100;
 
     if (this._props.balance === 0 && this._props.amount > 0) {
       this._props.paymentStatus = LunchPaymentStatus.PAID;

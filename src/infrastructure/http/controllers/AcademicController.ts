@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { AcademicUseCases } from '../../../application/academics/AcademicUseCases';
-import { CbcGradeLevel } from '../../../core/domain/user/Student';
+import { CBCGradeLevel } from '../../../core/domain/user/Student';
 import { EducationLevel } from '../../../core/domain/academic/ClassRoom';
 
 export const SetupSchoolSchema = z.object({
@@ -44,7 +44,7 @@ export const UpdateTermSchema = z.object({
 
 export const CreateClassRoomSchema = z.object({
   name: z.string().min(1),
-  gradeLevel: z.nativeEnum(CbcGradeLevel),
+  gradeLevel: z.nativeEnum(CBCGradeLevel),
   educationLevel: z.nativeEnum(EducationLevel),
   schoolId: z.string().min(1)
 });
@@ -59,7 +59,7 @@ export const CreateStreamSchema = z.object({
 export const CreateLearningAreaSchema = z.object({
   name: z.string().min(1),
   code: z.string().min(1),
-  gradeLevel: z.nativeEnum(CbcGradeLevel),
+  gradeLevel: z.nativeEnum(CBCGradeLevel),
   educationLevel: z.nativeEnum(EducationLevel),
   isElective: z.boolean().default(false),
   schoolId: z.string().optional().default('school-001'),
@@ -220,7 +220,7 @@ export class AcademicController {
     try {
       const { gradeLevel, schoolId } = req.query;
       const areas = await this.academicUseCases.listLearningAreas({
-        gradeLevel: gradeLevel as CbcGradeLevel,
+        gradeLevel: gradeLevel as CBCGradeLevel,
         schoolId: schoolId as string
       });
       return res.status(200).json({ success: true, data: areas });

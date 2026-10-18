@@ -14,7 +14,7 @@ src/
 │   ├── domain/                  # 1. Enterprise Business Rules (Entities, Value Objects)
 │   │   ├── academic/            #    - School, AcademicYear, AcademicTerm, ClassRoom, Stream, LearningArea
 │   │   ├── user/                #    - User, Role, Student, Teacher, Guardian
-│   │   ├── cbc/                 #    - Strand, SubStrand, Formative/Summative Assessment, CBC Report Card
+│   │   ├── CBC/                 #    - Strand, SubStrand, Formative/Summative Assessment, CBC Report Card
 │   │   ├── curriculum-plan/     #    - SchemeOfWork, LessonPlan
 │   │   ├── timetable/           #    - Timetable, Period, TimetableSlot
 │   │   ├── attendance/          #    - AttendanceRegister, StudentAttendanceEntry
@@ -22,7 +22,7 @@ src/
 │   │   └── shared/              #    - Base Entity, Result Monad, Errors, IdGenerator
 │   │
 │   └── ports/                   # 2. Hexagonal Contracts / Interfaces (The Hexagon's Ports)
-│       ├── repositories/        #    - Output Ports for persistence (IStudentRepo, ICbcAssessmentRepo, etc.)
+│       ├── repositories/        #    - Output Ports for persistence (IStudentRepo, ICBCAssessmentRepo, etc.)
 │       └── services/            #    - Output Ports for services (IAuthToken, IPaymentGateway, INotification)
 │
 ├── application/                 # 3. Application Use Cases (Input Ports orchestration)
@@ -30,7 +30,7 @@ src/
 │   ├── students/                #    - Student Enrollment, Bio update, Guardian linking
 │   ├── teachers/                #    - Teacher profiles, Stream assignments
 │   ├── academics/               #    - School, Years, Terms, Classes, Learning areas
-│   ├── cbc/                     #    - Strands, Formative/Summative grading, CBC Report Card compiler
+│   ├── CBC/                     #    - Strands, Formative/Summative grading, CBC Report Card compiler
 │   ├── curriculum-plans/        #    - Schemes of work & CBC 40-min lesson plans
 │   ├── timetables/              #    - Timetables & double-booking conflict prevention
 │   ├── attendance/              #    - Daily & lesson registers with SMS parent alerts
@@ -143,7 +143,7 @@ All subsequent schools, academic structures, teachers, learners, assessments, an
 - `GET /:id` — Get teacher profile
 - `POST /assign-stream` — Assign teacher to class streams
 
-### 5. CBC Competency Assessment & Report Cards (`/api/v1/cbc`)
+### 5. CBC Competency Assessment & Report Cards (`/api/v1/CBC`)
 - `POST /strands` & `GET /strands/by-learning-area/:learningAreaId` — Curriculum strands
 - `POST /sub-strands` & `GET /sub-strands/by-strand/:strandId` — Sub-strands with Specific Learning Outcomes
 - `POST /formative` & `GET /formative` — Record continuous formative assessment:

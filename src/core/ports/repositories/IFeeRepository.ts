@@ -9,7 +9,7 @@ import {
   ExpenseStatus,
   IncomeSource
 } from '../../domain/finance/Fee';
-import { CbcGradeLevel } from '../../domain/user/Student';
+import { CBCGradeLevel } from '../../domain/user/Student';
 
 export interface InvoiceFilterCriteria {
   schoolId?: string;
@@ -48,7 +48,7 @@ export interface OtherIncomeFilterCriteria {
 export interface IFeeRepository {
   // Fee Structure
   findFeeStructureById(id: string): Promise<FeeStructure | null>;
-  findFeeStructure(gradeLevel: CbcGradeLevel, termId: string, academicYearId: string): Promise<FeeStructure | null>;
+  findFeeStructure(gradeLevel: CBCGradeLevel, termId: string, academicYearId: string): Promise<FeeStructure | null>;
   findAllFeeStructures(schoolId?: string): Promise<FeeStructure[]>;
   saveFeeStructure(feeStructure: FeeStructure): Promise<void>;
   updateFeeStructure(feeStructure: FeeStructure): Promise<void>;

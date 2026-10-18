@@ -514,7 +514,7 @@ describe('SmartShule Security Hardening & Vulnerability Remediation Integration 
 
     it('denies Teacher 2 from deleting Teacher 1’s formative assessment (403 Forbidden)', async () => {
       const createRes = await request(app)
-        .post('/api/v1/cbc/formative')
+        .post('/api/v1/CBC/formative')
         .set('Authorization', `Bearer ${teacher1Token}`)
         .send({
           studentId: 'student-001',
@@ -534,7 +534,7 @@ describe('SmartShule Security Hardening & Vulnerability Remediation Integration 
 
       // Teacher 2 attempts deletion
       const delRes = await request(app)
-        .delete(`/api/v1/cbc/formative/${formativeId}`)
+        .delete(`/api/v1/CBC/formative/${formativeId}`)
         .set('Authorization', `Bearer ${teacher2Token}`);
 
       expect(delRes.status).toBe(403);
@@ -542,7 +542,7 @@ describe('SmartShule Security Hardening & Vulnerability Remediation Integration 
 
       // Teacher 1 can delete it
       const t1DelRes = await request(app)
-        .delete(`/api/v1/cbc/formative/${formativeId}`)
+        .delete(`/api/v1/CBC/formative/${formativeId}`)
         .set('Authorization', `Bearer ${teacher1Token}`);
 
       expect(t1DelRes.status).toBe(200);

@@ -8,7 +8,7 @@ import {
   InMemoryTeacherRepository,
   InMemoryGuardianRepository,
   InMemoryAcademicRepository,
-  InMemoryCbcAssessmentRepository,
+  InMemoryCBCAssessmentRepository,
   InMemorySchemeOfWorkRepository,
   InMemoryLessonPlanRepository,
   InMemoryTimetableRepository,
@@ -25,7 +25,7 @@ import {
   MongoTeacherRepository,
   MongoGuardianRepository,
   MongoAcademicRepository,
-  MongoCbcAssessmentRepository,
+  MongoCBCAssessmentRepository,
   MongoSchemeOfWorkRepository,
   MongoLessonPlanRepository,
   MongoTimetableRepository,
@@ -41,7 +41,7 @@ import {
   PostgresTeacherRepository,
   PostgresGuardianRepository,
   PostgresAcademicRepository,
-  PostgresCbcAssessmentRepository,
+  PostgresCBCAssessmentRepository,
   PostgresSchemeOfWorkRepository,
   PostgresLessonPlanRepository,
   PostgresTimetableRepository,
@@ -55,7 +55,7 @@ import { IStudentRepository } from '../../core/ports/repositories/IStudentReposi
 import { IDeletedStudentRepository } from '../../core/ports/repositories/IDeletedStudentRepository';
 import { ITeacherRepository, IGuardianRepository } from '../../core/ports/repositories/ITeacherRepository';
 import { IAcademicRepository } from '../../core/ports/repositories/IAcademicRepository';
-import { ICbcAssessmentRepository } from '../../core/ports/repositories/ICbcAssessmentRepository';
+import { ICBCAssessmentRepository } from '../../core/ports/repositories/ICbcAssessmentRepository';
 import { ISchemeOfWorkRepository, ILessonPlanRepository } from '../../core/ports/repositories/ISchemeOfWorkRepository';
 import { ITimetableRepository, IAttendanceRepository } from '../../core/ports/repositories/ITimetableRepository';
 import { IFeeRepository } from '../../core/ports/repositories/IFeeRepository';
@@ -98,7 +98,7 @@ export interface RepositoryBundle {
   teacherRepository: ITeacherRepository;
   guardianRepository: IGuardianRepository;
   academicRepository: IAcademicRepository;
-  cbcAssessmentRepository: ICbcAssessmentRepository;
+  CBCAssessmentRepository: ICBCAssessmentRepository;
   schemeOfWorkRepository: ISchemeOfWorkRepository;
   lessonPlanRepository: ILessonPlanRepository;
   timetableRepository: ITimetableRepository;
@@ -135,7 +135,7 @@ export class DatabaseFactory {
         teacherRepository: new MongoTeacherRepository(),
         guardianRepository: new MongoGuardianRepository(),
         academicRepository: new MongoAcademicRepository(),
-        cbcAssessmentRepository: new MongoCbcAssessmentRepository(),
+        CBCAssessmentRepository: new MongoCBCAssessmentRepository(),
         schemeOfWorkRepository: new MongoSchemeOfWorkRepository(),
         lessonPlanRepository: new MongoLessonPlanRepository(),
         timetableRepository: new MongoTimetableRepository(),
@@ -152,7 +152,7 @@ export class DatabaseFactory {
       const connectionString = dbConfig.databaseUrl;
 
       if (connectionString.includes('[') || connectionString.includes(']') || connectionString.includes('YOUR-PASSWORD')) {
-        console.warn('⚠️ [Database Warning] Your DATABASE_URL contains brackets "[" or "]" or "YOUR-PASSWORD". Ensure your real database password is substituted without brackets!');
+        console.warn('[Database Warning] Your DATABASE_URL contains brackets "[" or "]" or "YOUR-PASSWORD". Ensure your real database password is substituted without brackets!');
       }
 
       console.log(`[Database] Target: ${dbConfig.target.toUpperCase()} | Host: ${dbConfig.host}:${dbConfig.port} | Database: ${dbConfig.databaseName}`);
@@ -175,7 +175,7 @@ export class DatabaseFactory {
           // Normal background idle socket reap by cloud PgBouncer
           return;
         }
-        console.warn('⚠️ [PostgreSQL Pool Warning] Background client event:', msg);
+        console.warn('[PostgreSQL Pool Warning] Background client event:', msg);
       });
 
       // Wrap pool.query with transparent retry for transient socket drops from PgBouncer
@@ -206,7 +206,7 @@ export class DatabaseFactory {
       } catch (err: any) {
         if (err?.code === '28P01') {
           console.error('========================================================================');
-          console.error('❌ [DATABASE AUTHENTICATION FAILED - Code 28P01]');
+          console.error('[DATABASE AUTHENTICATION FAILED - Code 28P01]');
           console.error('PostgreSQL rejected the password in DATABASE_URL.');
           console.error('Common causes:');
           console.error('1. Special characters in password: If your password has @, #, $, %, &, :, etc., they must be URL-encoded (e.g. @ -> %40, # -> %23).');
@@ -224,7 +224,7 @@ export class DatabaseFactory {
         teacherRepository: new PostgresTeacherRepository(pool),
         guardianRepository: new PostgresGuardianRepository(pool),
         academicRepository: new PostgresAcademicRepository(pool),
-        cbcAssessmentRepository: new PostgresCbcAssessmentRepository(pool),
+        CBCAssessmentRepository: new PostgresCBCAssessmentRepository(pool),
         schemeOfWorkRepository: new PostgresSchemeOfWorkRepository(pool),
         lessonPlanRepository: new PostgresLessonPlanRepository(pool),
         timetableRepository: new PostgresTimetableRepository(pool),
@@ -251,7 +251,7 @@ export class DatabaseFactory {
       teacherRepository: new InMemoryTeacherRepository(),
       guardianRepository: new InMemoryGuardianRepository(),
       academicRepository: new InMemoryAcademicRepository(),
-      cbcAssessmentRepository: new InMemoryCbcAssessmentRepository(),
+      CBCAssessmentRepository: new InMemoryCBCAssessmentRepository(),
       schemeOfWorkRepository: new InMemorySchemeOfWorkRepository(),
       lessonPlanRepository: new InMemoryLessonPlanRepository(),
       timetableRepository: new InMemoryTimetableRepository(),

@@ -14,7 +14,7 @@ export interface LogDisciplineIncidentDTO {
   schoolId: string;
   studentId: string;
   incidentType: 'MERIT_COMMENDATION' | 'INFRACTION_WARNING' | 'COUNSELING_REFERRAL';
-  cbcCoreValue: 'LOVE' | 'RESPECT' | 'RESPONSIBILITY' | 'INTEGRITY' | 'PEACE' | 'PATRIOTISM' | 'UNITY';
+  CBCCoreValue: 'LOVE' | 'RESPECT' | 'RESPONSIBILITY' | 'INTEGRITY' | 'PEACE' | 'PATRIOTISM' | 'UNITY';
   title: string;
   description: string;
   actionTaken: string;
@@ -122,7 +122,7 @@ export class DisciplineUseCases {
               ? 'Disciplinary Notice'
               : 'Counseling & Guidance Notice';
 
-          const msg = `SmartShule Update: ${typeLabel} recorded for ${student.fullName}. ${dto.title}. Action: ${dto.actionTaken}. CBC Core Value: ${dto.cbcCoreValue}.`;
+          const msg = `SmartShule Update: ${typeLabel} recorded for ${student.fullName}. ${dto.title}. Action: ${dto.actionTaken}. CBC Core Value: ${dto.CBCCoreValue}.`;
           await this.notificationService.sendSms(phone, msg);
           parentInformed = true;
         }
@@ -139,7 +139,7 @@ export class DisciplineUseCases {
         gradeLevel: String(student.gradeLevel),
         date,
         incidentType: dto.incidentType,
-        cbcCoreValue: dto.cbcCoreValue,
+        CBCCoreValue: dto.CBCCoreValue,
         title: dto.title,
         description: dto.description,
         actionTaken: dto.actionTaken,

@@ -1,5 +1,5 @@
 import { Entity } from '../shared/Entity';
-import { CbcGradeLevel } from '../user/Student';
+import { CBCGradeLevel } from '../user/Student';
 
 export enum PerformanceLevel {
   EXCEEDING_EXPECTATIONS = 'EE',    // 4
@@ -48,7 +48,7 @@ export enum CoreValue {
 // 1. Strand Entity
 export interface StrandProps {
   learningAreaId: string;
-  gradeLevel: CbcGradeLevel;
+  gradeLevel: CBCGradeLevel;
   code: string; // e.g. "STR-1"
   title: string; // e.g. "Numbers & Operations"
   description?: string;
@@ -63,7 +63,7 @@ export class Strand extends Entity<StrandProps> {
     return this._props.learningAreaId;
   }
 
-  public get gradeLevel(): CbcGradeLevel {
+  public get gradeLevel(): CBCGradeLevel {
     return this._props.gradeLevel;
   }
 
@@ -363,11 +363,11 @@ export interface ValueAssessmentEntry {
   remarks?: string;
 }
 
-export interface CbcReportCardProps {
+export interface CBCReportCardProps {
   studentId: string;
   termId: string;
   academicYearId: string;
-  gradeLevel: CbcGradeLevel;
+  gradeLevel: CBCGradeLevel;
   streamId?: string;
   learningAreaAssessments: LearningAreaReportEntry[];
   coreCompetencyAssessments: CoreCompetencyAssessmentEntry[];
@@ -383,9 +383,9 @@ export interface CbcReportCardProps {
   nextTermOpeningDate?: string;
 }
 
-export class CbcReportCard extends Entity<CbcReportCardProps> {
-  public static create(props: CbcReportCardProps, id: string, createdAt?: Date, updatedAt?: Date): CbcReportCard {
-    return new CbcReportCard(props, id, createdAt, updatedAt);
+export class CBCReportCard extends Entity<CBCReportCardProps> {
+  public static create(props: CBCReportCardProps, id: string, createdAt?: Date, updatedAt?: Date): CBCReportCard {
+    return new CBCReportCard(props, id, createdAt, updatedAt);
   }
 
   public get studentId(): string {
@@ -400,7 +400,7 @@ export class CbcReportCard extends Entity<CbcReportCardProps> {
     return this._props.academicYearId;
   }
 
-  public get gradeLevel(): CbcGradeLevel {
+  public get gradeLevel(): CBCGradeLevel {
     return this._props.gradeLevel;
   }
 

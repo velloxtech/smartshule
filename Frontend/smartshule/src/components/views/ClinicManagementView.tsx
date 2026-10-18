@@ -594,7 +594,7 @@ export const ClinicManagementView: React.FC = () => {
  {searchedProfile.emergencyContactName || 'N/A'} ({searchedProfile.emergencyContactPhone || 'No Phone'})
  </p>
  <p className="text-[11px] text-slate-400 mt-1">
- Immunizations: {searchedProfile.immunizationUpToDate ? '✓ Up to Date' : '⚠ Pending'}
+                  Immunizations: {searchedProfile.immunizationUpToDate ? 'Up to Date' : 'Pending'}
  </p>
  </div>
  </div>

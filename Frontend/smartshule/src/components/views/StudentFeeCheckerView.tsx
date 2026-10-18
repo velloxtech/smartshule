@@ -371,7 +371,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by learner name, admission no (e.g. ADM-2026-001), UPI, grade, stream, or guardian phone..."
+              placeholder="Search by learner name, admission no (e.g. 01, 02), UPI, grade, stream, or guardian phone..."
               className="w-full pl-11 pr-10 py-2.5 bg-surface-container-low border border-outline-variant/40 rounded-xl text-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-primary focus:ring-1 focus:ring-primary shadow-xs"
               autoFocus
             />

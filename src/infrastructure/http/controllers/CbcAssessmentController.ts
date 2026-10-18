@@ -1,19 +1,19 @@
 import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { CbcAssessmentUseCases } from '../../../application/cbc/CbcAssessmentUseCases';
+import { CBCAssessmentUseCases } from '../../../application/cbc/CbcAssessmentUseCases';
 import {
   PerformanceLevel,
   AssessmentMethod,
   CoreCompetency,
   CoreValue
 } from '../../../core/domain/cbc/CbcAssessment';
-import { CbcGradeLevel } from '../../../core/domain/user/Student';
+import { CBCGradeLevel } from '../../../core/domain/user/Student';
 import { UserRole } from '../../../core/domain/user/User';
 import { SystemLogUseCases } from '../../../application/system-logs/SystemLogUseCases';
 
 export const CreateStrandSchema = z.object({
   learningAreaId: z.string().min(1),
-  gradeLevel: z.nativeEnum(CbcGradeLevel),
+  gradeLevel: z.nativeEnum(CBCGradeLevel),
   code: z.string().min(1),
   title: z.string().min(1),
   description: z.string().optional()
@@ -77,15 +77,15 @@ export const GenerateReportCardSchema = z.object({
   nextTermOpeningDate: z.string().optional()
 });
 
-export class CbcAssessmentController {
+export class CBCAssessmentController {
   constructor(
-    private readonly cbcUseCases: CbcAssessmentUseCases,
+    private readonly CBCUseCases: CBCAssessmentUseCases,
     private readonly systemLogUseCases?: SystemLogUseCases
   ) {}
 
   public createStrand = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const strand = await this.cbcUseCases.createStrand(req.body);
+      const strand = await this.CBCUseCases.createStrand(req.body);
       return res.status(201).json({ success: true, data: strand });
     } catch (err) {
       next(err);
@@ -96,9 +96,9 @@ export class CbcAssessmentController {
     try {
       const learningAreaId = req.params.learningAreaId as string;
       const { gradeLevel } = req.query;
-      const strands = await this.cbcUseCases.getStrandsByLearningArea(
+      const strands = await this.CBCUseCases.getStrandsByLearningArea(
         learningAreaId,
-        gradeLevel as CbcGradeLevel
+        gradeLevel as CBCGradeLevel
       );
       return res.status(200).json({ success: true, count: strands.length, data: strands });
     } catch (err) {
@@ -108,7 +108,7 @@ export class CbcAssessmentController {
 
   public createSubStrand = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const subStrand = await this.cbcUseCases.createSubStrand(req.body);
+      const subStrand = await this.CBCUseCases.createSubStrand(req.body);
       return res.status(201).json({ success: true, data: subStrand });
     } catch (err) {
       next(err);
@@ -117,7 +117,7 @@ export class CbcAssessmentController {
 
   public getSubStrandsByStrand = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const subStrands = await this.cbcUseCases.getSubStrandsByStrand(req.params.strandId as string);
+      const subStrands = await this.CBCUseCases.getSubStrandsByStrand(req.params.strandId as string);
       return res.status(200).json({ success: true, count: subStrands.length, data: subStrands });
     } catch (err) {
       next(err);
@@ -133,7 +133,7 @@ export class CbcAssessmentController {
       if (user?.role === UserRole.TEACHER && user?.userId) {
         teacherId = user.userId;
       }
-      const assessment = await this.cbcUseCases.recordFormativeAssessment({
+      const assessment = await this.CBCUseCases.recordFormativeAssessment({
         ...req.body,
         teacherId
       });
@@ -185,7 +185,7 @@ export class CbcAssessmentController {
   public listFormatives = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { studentId, learningAreaId, termId, academicYearId, subStrandId } = req.query;
-      const list = await this.cbcUseCases.listFormativeAssessments({
+      const list = await this.CBCUseCases.listFormativeAssessments({
         studentId: studentId as string,
         learningAreaId: learningAreaId as string,
         termId: termId as string,
@@ -208,7 +208,7 @@ export class CbcAssessmentController {
       if (user?.role === UserRole.TEACHER && user?.userId) {
         teacherId = user.userId;
       }
-      const assessment = await this.cbcUseCases.recordSummativeAssessment({
+      const assessment = await this.CBCUseCases.recordSummativeAssessment({
         ...req.body,
         teacherId
       });
@@ -267,7 +267,7 @@ export class CbcAssessmentController {
     try {
       const user = (req as any).user;
       const assessments = req.body.assessments;
-      const results = await this.cbcUseCases.recordSummativeBatch(assessments);
+      const results = await this.CBCUseCases.recordSummativeBatch(assessments);
 
       this.systemLogUseCases?.log({
         schoolId: (req as any).user?.schoolId || 'school-001',
@@ -296,7 +296,7 @@ export class CbcAssessmentController {
   public listSummatives = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { studentId, learningAreaId, termId, academicYearId } = req.query;
-      const list = await this.cbcUseCases.listSummativeAssessments({
+      const list = await this.CBCUseCases.listSummativeAssessments({
         studentId: studentId as string,
         learningAreaId: learningAreaId as string,
         termId: termId as string,
@@ -311,7 +311,7 @@ export class CbcAssessmentController {
 
   public generateReportCard = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const reportCard = await this.cbcUseCases.generateStudentReportCard(req.body);
+      const reportCard = await this.CBCUseCases.generateStudentReportCard(req.body);
 
       this.systemLogUseCases?.log({
         schoolId: (req as any).user?.schoolId || 'school-001',
@@ -358,7 +358,7 @@ export class CbcAssessmentController {
   public getReportCard = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { studentId, termId, academicYearId } = req.query;
-      const report = await this.cbcUseCases.getReportCard(
+      const report = await this.CBCUseCases.getReportCard(
         studentId as string,
         termId as string,
         academicYearId as string,
@@ -373,8 +373,8 @@ export class CbcAssessmentController {
   public getAnalytics = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { gradeLevel, learningAreaId, termId, academicYearId } = req.query;
-      const analytics = await this.cbcUseCases.getCbcAnalytics({
-        gradeLevel: gradeLevel as CbcGradeLevel,
+      const analytics = await this.CBCUseCases.getCBCAnalytics({
+        gradeLevel: gradeLevel as CBCGradeLevel,
         learningAreaId: learningAreaId as string,
         termId: termId as string,
         academicYearId: academicYearId as string,
@@ -388,7 +388,7 @@ export class CbcAssessmentController {
 
   public deleteStrand = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await this.cbcUseCases.deleteStrand(req.params.id as string);
+      await this.CBCUseCases.deleteStrand(req.params.id as string);
       return res.status(200).json({ success: true, message: 'Strand deleted successfully' });
     } catch (err) {
       next(err);
@@ -397,7 +397,7 @@ export class CbcAssessmentController {
 
   public deleteSubStrand = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await this.cbcUseCases.deleteSubStrand(req.params.id as string);
+      await this.CBCUseCases.deleteSubStrand(req.params.id as string);
       return res.status(200).json({ success: true, message: 'Sub-strand deleted successfully' });
     } catch (err) {
       next(err);
@@ -406,7 +406,7 @@ export class CbcAssessmentController {
 
   public deleteFormative = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await this.cbcUseCases.deleteFormative(req.params.id as string, (req as any).user);
+      await this.CBCUseCases.deleteFormative(req.params.id as string, (req as any).user);
 
       this.systemLogUseCases?.log({
         schoolId: (req as any).user?.schoolId || 'school-001',
@@ -430,7 +430,7 @@ export class CbcAssessmentController {
 
   public deleteSummative = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await this.cbcUseCases.deleteSummative(req.params.id as string, (req as any).user);
+      await this.CBCUseCases.deleteSummative(req.params.id as string, (req as any).user);
 
       this.systemLogUseCases?.log({
         schoolId: (req as any).user?.schoolId || 'school-001',

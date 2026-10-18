@@ -1,9 +1,9 @@
 import { IAcademicRepository } from '../../core/ports/repositories/IAcademicRepository';
 import { IStudentRepository } from '../../core/ports/repositories/IStudentRepository';
-import { ICbcAssessmentRepository } from '../../core/ports/repositories/ICbcAssessmentRepository';
+import { ICBCAssessmentRepository } from '../../core/ports/repositories/ICbcAssessmentRepository';
 import { Stream } from '../../core/domain/academic/ClassRoom';
 import { PerformanceLevel } from '../../core/domain/cbc/CbcAssessment';
-import { CbcGradeLevel } from '../../core/domain/user/Student';
+import { CBCGradeLevel } from '../../core/domain/user/Student';
 import { NotFoundError, ValidationError } from '../../core/domain/shared/Errors';
 
 export interface BroadsheetQueryDTO {
@@ -167,7 +167,7 @@ export class BroadsheetUseCases {
   constructor(
     private readonly academicRepository: IAcademicRepository,
     private readonly studentRepository: IStudentRepository,
-    private readonly cbcAssessmentRepository: ICbcAssessmentRepository
+    private readonly CBCAssessmentRepository: ICBCAssessmentRepository
   ) {}
 
   public async getStreamBroadsheet(query: BroadsheetQueryDTO): Promise<BroadsheetResult> {
@@ -243,7 +243,7 @@ export class BroadsheetUseCases {
       }
     }
 
-    const gradeLevel = classRoom?.gradeLevel || CbcGradeLevel.GRADE_4;
+    const gradeLevel = classRoom?.gradeLevel || CBCGradeLevel.GRADE_4;
     const examType = query.examType || 'End of Term';
 
     // 1. Robust Academic Year Resolution (by ID, by name e.g. '2026', or current)
@@ -598,38 +598,38 @@ export class BroadsheetUseCases {
 
     const altTermId = termId.includes('-t') ? termId.replace('-t', '-') : termId.replace(/-(\d)$/, '-t$1');
 
-    let summatives = await this.cbcAssessmentRepository.findSummatives({
+    let summatives = await this.CBCAssessmentRepository.findSummatives({
       termId,
       academicYearId
     });
     if (!summatives || summatives.length === 0) {
-      summatives = await this.cbcAssessmentRepository.findSummatives({ termId });
+      summatives = await this.CBCAssessmentRepository.findSummatives({ termId });
     }
     if (!summatives || summatives.length === 0) {
-      summatives = await this.cbcAssessmentRepository.findSummatives({ termId: altTermId });
+      summatives = await this.CBCAssessmentRepository.findSummatives({ termId: altTermId });
     }
     if (!summatives || summatives.length === 0) {
-      summatives = await this.cbcAssessmentRepository.findSummatives({ termId: 'term-2026-t3' });
+      summatives = await this.CBCAssessmentRepository.findSummatives({ termId: 'term-2026-t3' });
     }
     if (!summatives || summatives.length === 0) {
-      summatives = await this.cbcAssessmentRepository.findSummatives({ termId: 'term-2026-3' });
+      summatives = await this.CBCAssessmentRepository.findSummatives({ termId: 'term-2026-3' });
     }
 
-    let reportCards = await this.cbcAssessmentRepository.findReportCardsByTerm(termId, stream.id);
+    let reportCards = await this.CBCAssessmentRepository.findReportCardsByTerm(termId, stream.id);
     if (!reportCards || reportCards.length === 0) {
-      reportCards = await this.cbcAssessmentRepository.findReportCardsByTerm(termId);
+      reportCards = await this.CBCAssessmentRepository.findReportCardsByTerm(termId);
     }
     if (!reportCards || reportCards.length === 0) {
-      reportCards = await this.cbcAssessmentRepository.findReportCardsByTerm(altTermId, stream.id);
+      reportCards = await this.CBCAssessmentRepository.findReportCardsByTerm(altTermId, stream.id);
     }
     if (!reportCards || reportCards.length === 0) {
-      reportCards = await this.cbcAssessmentRepository.findReportCardsByTerm(altTermId);
+      reportCards = await this.CBCAssessmentRepository.findReportCardsByTerm(altTermId);
     }
     if (!reportCards || reportCards.length === 0) {
-      reportCards = await this.cbcAssessmentRepository.findReportCardsByTerm('term-2026-t3', stream.id);
+      reportCards = await this.CBCAssessmentRepository.findReportCardsByTerm('term-2026-t3', stream.id);
     }
     if (!reportCards || reportCards.length === 0) {
-      reportCards = await this.cbcAssessmentRepository.findReportCardsByTerm('term-2026-3', stream.id);
+      reportCards = await this.CBCAssessmentRepository.findReportCardsByTerm('term-2026-3', stream.id);
     }
     const reportCardsByStudent = new Map(reportCards.map(rc => [rc.studentId, rc]));
 
@@ -651,7 +651,7 @@ export class BroadsheetUseCases {
 
       for (const la of learningAreas) {
         const s = summativeMap.get(`${student.id}_${la.id}`) || summativeMap.get(`${student.id}_${la.id.toLowerCase()}`);
-        const rcScore = rc?.props.learningAreaAssessments?.find(e => 
+        const rcScore = rc?.props.learningAreaAssessments?.find((e: any) => 
           e.learningAreaId === la.id || 
           e.learningAreaId?.toLowerCase() === la.id.toLowerCase() ||
           e.learningAreaName?.trim().toLowerCase() === la.name.trim().toLowerCase()

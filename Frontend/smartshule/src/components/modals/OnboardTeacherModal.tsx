@@ -56,7 +56,7 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
   const [specializations, setSpecializations] = useState('');
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [customSubject, setCustomSubject] = useState('');
-  const [cbcCertified, setCbcCertified] = useState(true);
+  const [CBCCertified, setCBCCertified] = useState(true);
 
   // Dynamic DB Data: Learning areas, Classes & Streams
   const [dbLearningAreas, setDbLearningAreas] = useState<BackendLearningArea[]>([]);
@@ -281,7 +281,7 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
           nationalId: nationalId.trim(),
           county: selectedCounty,
           subCounty: selectedSubCounty,
-          cbcCertified,
+          CBCCertified,
           chapterSixPledged: true,
           dciClearance: dciClearanceNumber || 'VERIFIED',
           assignedStreamId: selectedStreamId,
@@ -376,7 +376,7 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
                           : 'bg-white/20 text-white'
                       }`}
                     >
-                      {isPast ? '✓' : s.num}
+                      {isPast ? <span className="material-symbols-outlined text-[13px] font-bold">check</span> : s.num}
                     </span>
                     <span className="text-xs font-semibold truncate">{s.title}</span>
                   </div>
@@ -635,8 +635,8 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
                   <label className="flex items-center gap-2 p-2.5 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={cbcCertified}
-                      onChange={(e) => setCbcCertified(e.target.checked)}
+                      checked={CBCCertified}
+                      onChange={(e) => setCBCCertified(e.target.checked)}
                       className="w-4 h-4 rounded text-[#7a1228] focus:ring-[#7a1228]"
                     />
                     <span className="text-xs font-medium text-slate-800">

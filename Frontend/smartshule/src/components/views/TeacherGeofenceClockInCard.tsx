@@ -313,24 +313,26 @@ export const TeacherGeofenceClockInCard: React.FC<TeacherGeofenceClockInCardProp
 
               {/* Coordinates Info Chips */}
               <div className="mt-2.5 flex items-center gap-2 flex-wrap text-[11px] font-data-mono">
-                <span className="px-2 py-1 rounded bg-white/70 border border-current/15">
-                  🏫 Center: {targetLat.toFixed(5)}, {targetLon.toFixed(5)} (±{radiusMeters}m)
+                <span className="px-2 py-1 rounded bg-white/70 border border-current/15 inline-flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[13px]">school</span>
+                  <span>Center: {targetLat.toFixed(5)}, {targetLon.toFixed(5)} (±{radiusMeters}m)</span>
                 </span>
                 {userCoords && (
-                  <span className="px-2 py-1 rounded bg-white/70 border border-current/15">
-                    📍 My GPS: {userCoords.latitude.toFixed(5)}, {userCoords.longitude.toFixed(5)}
-                    {userCoords.accuracy ? ` (±${Math.round(userCoords.accuracy)}m)` : ''}
+                  <span className="px-2 py-1 rounded bg-white/70 border border-current/15 inline-flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[13px]">my_location</span>
+                    <span>My GPS: {userCoords.latitude.toFixed(5)}, {userCoords.longitude.toFixed(5)}{userCoords.accuracy ? ` (±${Math.round(userCoords.accuracy)}m)` : ''}</span>
                   </span>
                 )}
                 {distance != null && (
                   <span
-                    className={`px-2 py-1 rounded font-bold ${
+                    className={`px-2 py-1 rounded font-bold inline-flex items-center gap-1 ${
                       isInsideCompound
                         ? 'bg-teal-200 text-teal-900'
                         : 'bg-rose-200 text-rose-900'
                     }`}
                   >
-                    📏 Distance: {distance} meters
+                    <span className="material-symbols-outlined text-[13px]">straighten</span>
+                    <span>Distance: {distance} meters</span>
                   </span>
                 )}
               </div>

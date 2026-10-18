@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { AssessmentRecord, CBCRubric, Student, BackendLearningArea } from '../../types';
 import { apiService } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 
 interface FormativeAssessmentsViewProps {
   assessments: AssessmentRecord[];
@@ -19,6 +20,8 @@ export const FormativeAssessmentsView: React.FC<FormativeAssessmentsViewProps> =
   onDeleteAssessment,
   onNavigateTab,
 }) => {
+  const { user } = useAuth();
+  const isParent = user?.role === 'PARENT' || user?.role === 'GUARDIAN';
   const [selectedRating, setSelectedRating] = useState<string>('All');
   const [selectedSubject, setSelectedSubject] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -130,7 +133,9 @@ export const FormativeAssessmentsView: React.FC<FormativeAssessmentsViewProps> =
             <span>Formative Assessments (Continuous CATs & SBAs)</span>
           </h1>
           <p className="text-xs text-on-surface-variant mt-1 max-w-2xl leading-relaxed">
-            Continuous Assessment Tests (CATs), classroom observation rubrics, practical tasks, and competency evaluations recorded against KICD sub-strands.
+            {isParent
+              ? 'Continuous classroom observation rubrics, CAT scores, and core competencies recorded by teachers for your child against KICD sub-strands.'
+              : 'Continuous Assessment Tests (CATs), classroom observation rubrics, practical tasks, and competency evaluations recorded against KICD sub-strands.'}
           </p>
         </div>
 
@@ -145,13 +150,15 @@ export const FormativeAssessmentsView: React.FC<FormativeAssessmentsViewProps> =
             </button>
           )}
 
-          <button
-            onClick={onOpenNewAssessment}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#7a1228] hover:bg-[#5f0d1e] text-white text-xs font-bold rounded-xl shadow-md transition-all cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[18px]">add_circle</span>
-            <span>Record Formative Rubric (CAT)</span>
-          </button>
+          {!isParent && (
+            <button
+              onClick={onOpenNewAssessment}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#7a1228] hover:bg-[#5f0d1e] text-white text-xs font-bold rounded-xl shadow-md transition-all cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[18px]">add_circle</span>
+              <span>Record Formative Rubric (CAT)</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -320,16 +327,18 @@ export const FormativeAssessmentsView: React.FC<FormativeAssessmentsViewProps> =
               <div className="shrink-0 flex flex-col md:items-end gap-2.5 border-t md:border-t-0 pt-3 md:pt-0 border-outline-variant/20">
                 <div className="flex items-center gap-2">
                   {getRatingBadge(item.rating)}
-                  <button
-                    onClick={() => handleDeleteAssessment(item.id)}
-                    disabled={deletingId === item.id}
-                    title="Delete Formative Assessment Record"
-                    className="p-1.5 rounded-lg text-outline hover:text-error hover:bg-error/10 transition-colors cursor-pointer disabled:opacity-50"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">
-                      {deletingId === item.id ? 'sync' : 'delete'}
-                    </span>
-                  </button>
+                  {!isParent && (
+                    <button
+                      onClick={() => handleDeleteAssessment(item.id)}
+                      disabled={deletingId === item.id}
+                      title="Delete Formative Assessment Record"
+                      className="p-1.5 rounded-lg text-outline hover:text-error hover:bg-error/10 transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">
+                        {deletingId === item.id ? 'sync' : 'delete'}
+                      </span>
+                    </button>
+                  )}
                 </div>
                 <span className="text-[11px] text-secondary font-medium flex items-center gap-1">
                   <span className="material-symbols-outlined text-[14px]">cloud_done</span> KNEC CBA Ready
@@ -347,16 +356,20 @@ export const FormativeAssessmentsView: React.FC<FormativeAssessmentsViewProps> =
             </h3>
             <p className="text-xs text-on-surface-variant max-w-md mx-auto mb-4 leading-relaxed">
               {assessments.length === 0
-                ? 'No continuous formative CAT rubrics have been recorded yet. Click "Record Formative Rubric (CAT)" to evaluate student mastery against KICD sub-strands.'
+                ? isParent
+                  ? 'No continuous formative CAT rubrics have been recorded for your child yet. Continuous evaluations will appear here as teachers log classroom observations.'
+                  : 'No continuous formative CAT rubrics have been recorded yet. Click "Record Formative Rubric (CAT)" to evaluate student mastery against KICD sub-strands.'
                 : 'No formative assessment logs match the selected filter criteria.'}
             </p>
-            <button
-              onClick={onOpenNewAssessment}
-              className="px-4 py-2 bg-[#7a1228] text-white rounded-lg text-xs font-bold hover:bg-[#5f0d1e] inline-flex items-center gap-2 cursor-pointer shadow-sm"
-            >
-              <span className="material-symbols-outlined text-base">add</span>
-              <span>Record First Formative Rubric</span>
-            </button>
+            {!isParent && (
+              <button
+                onClick={onOpenNewAssessment}
+                className="px-4 py-2 bg-[#7a1228] text-white rounded-lg text-xs font-bold hover:bg-[#5f0d1e] inline-flex items-center gap-2 cursor-pointer shadow-sm"
+              >
+                <span className="material-symbols-outlined text-base">add</span>
+                <span>Record First Formative Rubric</span>
+              </button>
+            )}
           </div>
         )}
       </div>

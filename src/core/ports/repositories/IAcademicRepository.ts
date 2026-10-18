@@ -1,7 +1,7 @@
 import { School } from '../../domain/academic/School';
 import { AcademicYear, AcademicTerm } from '../../domain/academic/AcademicYear';
 import { ClassRoom, Stream, LearningArea } from '../../domain/academic/ClassRoom';
-import { CbcGradeLevel } from '../../domain/user/Student';
+import { CBCGradeLevel } from '../../domain/user/Student';
 
 export interface IAcademicRepository {
   // School
@@ -39,7 +39,7 @@ export interface IAcademicRepository {
 
   // Learning Areas
   findLearningAreaById(id: string): Promise<LearningArea | null>;
-  findAllLearningAreas(filters?: { gradeLevel?: CbcGradeLevel; schoolId?: string }): Promise<LearningArea[]>;
+  findAllLearningAreas(filters?: { gradeLevel?: CBCGradeLevel; schoolId?: string }): Promise<LearningArea[]>;
   saveLearningArea(area: LearningArea): Promise<void>;
   deleteLearningArea(id: string): Promise<void>;
 }

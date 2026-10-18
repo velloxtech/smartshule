@@ -129,7 +129,7 @@ export function getClassRankAndCategory(c: any): { rank: number; category: strin
 /**
  * Sorts classes in sequential CBC progression order.
  */
-export function sortClassesInCbcSequence(classes: any[]): any[] {
+export function sortClassesInCBCSequence(classes: any[]): any[] {
   if (!classes || classes.length === 0) return [];
   return [...classes].sort((a, b) => {
     const rankA = getClassRankAndCategory(a);
@@ -145,7 +145,7 @@ export function sortClassesInCbcSequence(classes: any[]): any[] {
 export function sortAndGroupClasses(classes: any[]): GroupedClasses[] {
   if (!classes || classes.length === 0) return [];
 
-  const sorted = sortClassesInCbcSequence(classes);
+  const sorted = sortClassesInCBCSequence(classes);
 
   const categoryOrder = [
     'Pre-Primary (Pre-School)',

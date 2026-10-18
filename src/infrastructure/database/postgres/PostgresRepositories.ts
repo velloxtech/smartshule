@@ -5,7 +5,7 @@ import { IStudentRepository, StudentFilterCriteria } from '../../../core/ports/r
 import { ITeacherRepository, IGuardianRepository } from '../../../core/ports/repositories/ITeacherRepository';
 import { IAcademicRepository } from '../../../core/ports/repositories/IAcademicRepository';
 import {
-  ICbcAssessmentRepository,
+  ICBCAssessmentRepository,
   FormativeFilterCriteria,
   SummativeFilterCriteria
 } from '../../../core/ports/repositories/ICbcAssessmentRepository';
@@ -33,7 +33,7 @@ import {
 } from '../../../core/ports/repositories/IDeletedStudentRepository';
 
 import { User, UserRole, UserStatus } from '../../../core/domain/user/User';
-import { Student, StudentGender, CbcGradeLevel, StudentStatus } from '../../../core/domain/user/Student';
+import { Student, StudentGender, CBCGradeLevel, StudentStatus } from '../../../core/domain/user/Student';
 import { DeletedStudent } from '../../../core/domain/user/DeletedStudent';
 import { Teacher } from '../../../core/domain/user/Teacher';
 import { Guardian, GuardianRelationship } from '../../../core/domain/user/Guardian';
@@ -45,7 +45,7 @@ import {
   SubStrand,
   FormativeAssessment,
   SummativeAssessment,
-  CbcReportCard,
+  CBCReportCard,
   PerformanceLevel,
   AssessmentMethod
 } from '../../../core/domain/cbc/CbcAssessment';
@@ -278,7 +278,7 @@ export class PostgresDatabaseInitializer {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
-      CREATE TABLE IF NOT EXISTS cbc_report_cards (
+      CREATE TABLE IF NOT EXISTS CBC_report_cards (
         id VARCHAR(100) PRIMARY KEY,
         student_id VARCHAR(100) NOT NULL,
         term_id VARCHAR(100) NOT NULL,
@@ -731,10 +731,13 @@ export class PostgresDatabaseInitializer {
         term VARCHAR(32) NOT NULL,
         total_weeks INT NOT NULL DEFAULT 12,
         items JSONB NOT NULL DEFAULT '[]',
+        daily_logs JSONB NOT NULL DEFAULT '[]',
         status VARCHAR(32) NOT NULL DEFAULT 'ACTIVE',
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
+
+      ALTER TABLE curriculum_trackers ADD COLUMN IF NOT EXISTS daily_logs JSONB NOT NULL DEFAULT '[]';
 
       CREATE INDEX IF NOT EXISTS idx_curr_tracker_school ON curriculum_trackers(school_id);
       CREATE INDEX IF NOT EXISTS idx_curr_tracker_teacher ON curriculum_trackers(teacher_id);
@@ -770,14 +773,14 @@ export class PostgresDatabaseInitializer {
         END IF; 
       END $$;
 
-      ALTER TABLE cbc_report_cards ALTER COLUMN stream_id DROP NOT NULL;
+      ALTER TABLE CBC_report_cards ALTER COLUMN stream_id DROP NOT NULL;
       ALTER TABLE timetables ALTER COLUMN stream_id DROP NOT NULL;
       ALTER TABLE attendance_registers ALTER COLUMN stream_id DROP NOT NULL;
       ALTER TABLE students ALTER COLUMN stream_id DROP NOT NULL;
       ALTER TABLE payments ALTER COLUMN invoice_id DROP NOT NULL;
 
       UPDATE students SET stream_id = NULL WHERE stream_id = '' OR TRIM(stream_id) = '';
-      UPDATE cbc_report_cards SET stream_id = NULL WHERE stream_id = '' OR TRIM(stream_id) = '';
+      UPDATE CBC_report_cards SET stream_id = NULL WHERE stream_id = '' OR TRIM(stream_id) = '';
       UPDATE timetables SET stream_id = NULL WHERE stream_id = '' OR TRIM(stream_id) = '';
       UPDATE attendance_registers SET stream_id = NULL WHERE stream_id = '' OR TRIM(stream_id) = '';
       UPDATE schemes_of_work SET stream_id = NULL WHERE stream_id = '' OR TRIM(stream_id) = '';
@@ -1181,7 +1184,7 @@ export class PostgresAcademicRepository implements IAcademicRepository {
     const r = res.rows[0];
     return LearningArea.create({ name: r.name, code: r.code, gradeLevel: r.grade_level, educationLevel: r.education_level, isElective: r.is_elective, schoolId: r.school_id }, r.id, r.created_at, r.updated_at);
   }
-  public async findAllLearningAreas(filters?: { gradeLevel?: CbcGradeLevel; schoolId?: string }): Promise<LearningArea[]> {
+  public async findAllLearningAreas(filters?: { gradeLevel?: CBCGradeLevel; schoolId?: string }): Promise<LearningArea[]> {
     let q = 'SELECT * FROM learning_areas';
     const params: any[] = [];
     const conditions: string[] = [];
@@ -1232,7 +1235,7 @@ export class PostgresAcademicRepository implements IAcademicRepository {
   }
 }
 
-export class PostgresCbcAssessmentRepository implements ICbcAssessmentRepository {
+export class PostgresCBCAssessmentRepository implements ICBCAssessmentRepository {
   constructor(private pool: Pool) {}
   public async findStrandById(id: string): Promise<Strand | null> {
     const res = await this.pool.query('SELECT * FROM strands WHERE id = $1', [id]);
@@ -1240,7 +1243,7 @@ export class PostgresCbcAssessmentRepository implements ICbcAssessmentRepository
     const r = res.rows[0];
     return Strand.create({ learningAreaId: r.learning_area_id, gradeLevel: r.grade_level, code: r.code, title: r.title, description: r.description }, r.id, r.created_at, r.updated_at);
   }
-  public async findStrandsByLearningArea(learningAreaId: string, gradeLevel?: CbcGradeLevel): Promise<Strand[]> {
+  public async findStrandsByLearningArea(learningAreaId: string, gradeLevel?: CBCGradeLevel): Promise<Strand[]> {
     const res = await this.pool.query('SELECT * FROM strands WHERE learning_area_id = $1', [learningAreaId]);
     return res.rows.map(r => Strand.create({ learningAreaId: r.learning_area_id, gradeLevel: r.grade_level, code: r.code, title: r.title, description: r.description }, r.id, r.created_at, r.updated_at));
   }
@@ -1287,7 +1290,22 @@ export class PostgresCbcAssessmentRepository implements ICbcAssessmentRepository
     if (filters.termId) { params.push(filters.termId); q += ` AND term_id = $${params.length}`; }
     if (filters.academicYearId) { params.push(filters.academicYearId); q += ` AND academic_year_id = $${params.length}`; }
     const res = await this.pool.query(q, params);
-    return res.rows.map(r => FormativeAssessment.create({ studentId: r.student_id, teacherId: r.teacher_id, learningAreaId: r.learning_area_id, subStrandId: r.sub_strand_id, termId: r.term_id, academicYearId: r.academic_year_id, assessmentDate: r.assessment_date, assessmentMethod: r.assessment_method, performanceLevel: r.performance_level, specificOutcomeTested: r.specific_outcome_tested, teacherRemarks: r.teacher_remarks, evidenceNotes: r.evidence_notes }, r.id, r.created_at, r.updated_at));
+    return res.rows.map(r => FormativeAssessment.create({
+      studentId: r.student_id,
+      teacherId: r.teacher_id,
+      learningAreaId: r.learning_area_id,
+      subStrandId: r.sub_strand_id,
+      termId: r.term_id,
+      academicYearId: r.academic_year_id,
+      assessmentDate: r.assessment_date,
+      assessmentMethod: r.assessment_method,
+      performanceLevel: r.performance_level,
+      specificOutcomeTested: r.specific_outcome_tested,
+      teacherRemarks: r.teacher_remarks,
+      evidenceNotes: r.evidence_notes,
+      targetedCompetencies: typeof r.targeted_competencies === 'string' ? JSON.parse(r.targeted_competencies) : r.targeted_competencies,
+      valuesObserved: typeof r.values_observed === 'string' ? JSON.parse(r.values_observed) : r.values_observed
+    }, r.id, r.created_at, r.updated_at));
   }
   public async saveFormative(f: FormativeAssessment): Promise<void> {
     const q = `INSERT INTO formative_assessments (id, student_id, teacher_id, learning_area_id, sub_strand_id, term_id, academic_year_id, assessment_date, assessment_method, performance_level, specific_outcome_tested, teacher_remarks, evidence_notes, targeted_competencies, values_observed, created_at, updated_at)
@@ -1368,13 +1386,13 @@ export class PostgresCbcAssessmentRepository implements ICbcAssessmentRepository
   public async deleteSummativesByStudent(studentId: string): Promise<void> {
     await this.pool.query('DELETE FROM summative_assessments WHERE student_id = $1', [studentId]);
   }
-  public async findReportCardById(id: string): Promise<CbcReportCard | null> {
-    const res = await this.pool.query('SELECT * FROM cbc_report_cards WHERE id = $1', [id]);
+  public async findReportCardById(id: string): Promise<CBCReportCard | null> {
+    const res = await this.pool.query('SELECT * FROM CBC_report_cards WHERE id = $1', [id]);
     if (!res.rows.length) return null;
     const r = res.rows[0];
-    return CbcReportCard.create({ studentId: r.student_id, termId: r.term_id, academicYearId: r.academic_year_id, gradeLevel: r.grade_level, streamId: r.stream_id, learningAreaAssessments: typeof r.learning_area_assessments === 'string' ? JSON.parse(r.learning_area_assessments) : r.learning_area_assessments, coreCompetencyAssessments: typeof r.core_competency_assessments === 'string' ? JSON.parse(r.core_competency_assessments) : r.core_competency_assessments, valueAssessments: typeof r.value_assessments === 'string' ? JSON.parse(r.value_assessments) : r.value_assessments, attendanceDaysPresent: Number(r.attendance_days_present), attendanceDaysTotal: Number(r.attendance_days_total), classTeacherRemarks: r.class_teacher_remarks, headTeacherRemarks: r.head_teacher_remarks, overallAverageScore: Number(r.overall_average_score), overallPerformanceLevel: r.overall_performance_level }, r.id, r.created_at, r.updated_at);
+    return CBCReportCard.create({ studentId: r.student_id, termId: r.term_id, academicYearId: r.academic_year_id, gradeLevel: r.grade_level, streamId: r.stream_id, learningAreaAssessments: typeof r.learning_area_assessments === 'string' ? JSON.parse(r.learning_area_assessments) : r.learning_area_assessments, coreCompetencyAssessments: typeof r.core_competency_assessments === 'string' ? JSON.parse(r.core_competency_assessments) : r.core_competency_assessments, valueAssessments: typeof r.value_assessments === 'string' ? JSON.parse(r.value_assessments) : r.value_assessments, attendanceDaysPresent: Number(r.attendance_days_present), attendanceDaysTotal: Number(r.attendance_days_total), classTeacherRemarks: r.class_teacher_remarks, headTeacherRemarks: r.head_teacher_remarks, overallAverageScore: Number(r.overall_average_score), overallPerformanceLevel: r.overall_performance_level }, r.id, r.created_at, r.updated_at);
   }
-  public async findReportCard(studentId: string, termId: string, academicYearId: string): Promise<CbcReportCard | null> {
+  public async findReportCard(studentId: string, termId: string, academicYearId: string): Promise<CBCReportCard | null> {
     const termCandidates = [termId];
     if (termId.includes('-t')) termCandidates.push(termId.replace('-t', '-'));
     else if (/-\d+$/.test(termId)) termCandidates.push(termId.replace(/-(\d+)$/, '-t$1'));
@@ -1387,26 +1405,26 @@ export class PostgresCbcAssessmentRepository implements ICbcAssessmentRepository
     else yearCandidates.push(`year-${academicYearId}`);
 
     const res = await this.pool.query(
-      'SELECT * FROM cbc_report_cards WHERE student_id = $1 AND term_id = ANY($2) AND academic_year_id = ANY($3) ORDER BY created_at DESC LIMIT 1',
+      'SELECT * FROM CBC_report_cards WHERE student_id = $1 AND term_id = ANY($2) AND academic_year_id = ANY($3) ORDER BY created_at DESC LIMIT 1',
       [studentId, Array.from(new Set(termCandidates)), Array.from(new Set(yearCandidates))]
     );
     if (!res.rows.length) {
       const fallbackRes = await this.pool.query(
-        'SELECT * FROM cbc_report_cards WHERE student_id = $1 AND term_id = ANY($2) ORDER BY created_at DESC LIMIT 1',
+        'SELECT * FROM CBC_report_cards WHERE student_id = $1 AND term_id = ANY($2) ORDER BY created_at DESC LIMIT 1',
         [studentId, Array.from(new Set(termCandidates))]
       );
       if (!fallbackRes.rows.length) return null;
       const r = fallbackRes.rows[0];
-      return CbcReportCard.create({ studentId: r.student_id, termId: r.term_id, academicYearId: r.academic_year_id, gradeLevel: r.grade_level, streamId: r.stream_id, learningAreaAssessments: typeof r.learning_area_assessments === 'string' ? JSON.parse(r.learning_area_assessments) : r.learning_area_assessments, coreCompetencyAssessments: typeof r.core_competency_assessments === 'string' ? JSON.parse(r.core_competency_assessments) : r.core_competency_assessments, valueAssessments: typeof r.value_assessments === 'string' ? JSON.parse(r.value_assessments) : r.value_assessments, attendanceDaysPresent: Number(r.attendance_days_present), attendanceDaysTotal: Number(r.attendance_days_total), classTeacherRemarks: r.class_teacher_remarks, headTeacherRemarks: r.head_teacher_remarks, overallAverageScore: Number(r.overall_average_score), overallPerformanceLevel: r.overall_performance_level }, r.id, r.created_at, r.updated_at);
+      return CBCReportCard.create({ studentId: r.student_id, termId: r.term_id, academicYearId: r.academic_year_id, gradeLevel: r.grade_level, streamId: r.stream_id, learningAreaAssessments: typeof r.learning_area_assessments === 'string' ? JSON.parse(r.learning_area_assessments) : r.learning_area_assessments, coreCompetencyAssessments: typeof r.core_competency_assessments === 'string' ? JSON.parse(r.core_competency_assessments) : r.core_competency_assessments, valueAssessments: typeof r.value_assessments === 'string' ? JSON.parse(r.value_assessments) : r.value_assessments, attendanceDaysPresent: Number(r.attendance_days_present), attendanceDaysTotal: Number(r.attendance_days_total), classTeacherRemarks: r.class_teacher_remarks, headTeacherRemarks: r.head_teacher_remarks, overallAverageScore: Number(r.overall_average_score), overallPerformanceLevel: r.overall_performance_level }, r.id, r.created_at, r.updated_at);
     }
     const r = res.rows[0];
-    return CbcReportCard.create({ studentId: r.student_id, termId: r.term_id, academicYearId: r.academic_year_id, gradeLevel: r.grade_level, streamId: r.stream_id, learningAreaAssessments: typeof r.learning_area_assessments === 'string' ? JSON.parse(r.learning_area_assessments) : r.learning_area_assessments, coreCompetencyAssessments: typeof r.core_competency_assessments === 'string' ? JSON.parse(r.core_competency_assessments) : r.core_competency_assessments, valueAssessments: typeof r.value_assessments === 'string' ? JSON.parse(r.value_assessments) : r.value_assessments, attendanceDaysPresent: Number(r.attendance_days_present), attendanceDaysTotal: Number(r.attendance_days_total), classTeacherRemarks: r.class_teacher_remarks, headTeacherRemarks: r.head_teacher_remarks, overallAverageScore: Number(r.overall_average_score), overallPerformanceLevel: r.overall_performance_level }, r.id, r.created_at, r.updated_at);
+    return CBCReportCard.create({ studentId: r.student_id, termId: r.term_id, academicYearId: r.academic_year_id, gradeLevel: r.grade_level, streamId: r.stream_id, learningAreaAssessments: typeof r.learning_area_assessments === 'string' ? JSON.parse(r.learning_area_assessments) : r.learning_area_assessments, coreCompetencyAssessments: typeof r.core_competency_assessments === 'string' ? JSON.parse(r.core_competency_assessments) : r.core_competency_assessments, valueAssessments: typeof r.value_assessments === 'string' ? JSON.parse(r.value_assessments) : r.value_assessments, attendanceDaysPresent: Number(r.attendance_days_present), attendanceDaysTotal: Number(r.attendance_days_total), classTeacherRemarks: r.class_teacher_remarks, headTeacherRemarks: r.head_teacher_remarks, overallAverageScore: Number(r.overall_average_score), overallPerformanceLevel: r.overall_performance_level }, r.id, r.created_at, r.updated_at);
   }
-  public async findReportCardsByStudent(studentId: string): Promise<CbcReportCard[]> {
-    const res = await this.pool.query('SELECT * FROM cbc_report_cards WHERE student_id = $1', [studentId]);
-    return res.rows.map(r => CbcReportCard.create({ studentId: r.student_id, termId: r.term_id, academicYearId: r.academic_year_id, gradeLevel: r.grade_level, streamId: r.stream_id, learningAreaAssessments: typeof r.learning_area_assessments === 'string' ? JSON.parse(r.learning_area_assessments) : r.learning_area_assessments, coreCompetencyAssessments: typeof r.core_competency_assessments === 'string' ? JSON.parse(r.core_competency_assessments) : r.core_competency_assessments, valueAssessments: typeof r.value_assessments === 'string' ? JSON.parse(r.value_assessments) : r.value_assessments, attendanceDaysPresent: Number(r.attendance_days_present), attendanceDaysTotal: Number(r.attendance_days_total), classTeacherRemarks: r.class_teacher_remarks, headTeacherRemarks: r.head_teacher_remarks, overallAverageScore: Number(r.overall_average_score), overallPerformanceLevel: r.overall_performance_level }, r.id, r.created_at, r.updated_at));
+  public async findReportCardsByStudent(studentId: string): Promise<CBCReportCard[]> {
+    const res = await this.pool.query('SELECT * FROM CBC_report_cards WHERE student_id = $1', [studentId]);
+    return res.rows.map(r => CBCReportCard.create({ studentId: r.student_id, termId: r.term_id, academicYearId: r.academic_year_id, gradeLevel: r.grade_level, streamId: r.stream_id, learningAreaAssessments: typeof r.learning_area_assessments === 'string' ? JSON.parse(r.learning_area_assessments) : r.learning_area_assessments, coreCompetencyAssessments: typeof r.core_competency_assessments === 'string' ? JSON.parse(r.core_competency_assessments) : r.core_competency_assessments, valueAssessments: typeof r.value_assessments === 'string' ? JSON.parse(r.value_assessments) : r.value_assessments, attendanceDaysPresent: Number(r.attendance_days_present), attendanceDaysTotal: Number(r.attendance_days_total), classTeacherRemarks: r.class_teacher_remarks, headTeacherRemarks: r.head_teacher_remarks, overallAverageScore: Number(r.overall_average_score), overallPerformanceLevel: r.overall_performance_level }, r.id, r.created_at, r.updated_at));
   }
-  public async findReportCardsByTerm(termId: string, streamId?: string): Promise<CbcReportCard[]> {
+  public async findReportCardsByTerm(termId: string, streamId?: string): Promise<CBCReportCard[]> {
     const termCandidates = [termId];
     if (termId.includes('-t')) termCandidates.push(termId.replace('-t', '-'));
     else if (/-\d+$/.test(termId)) termCandidates.push(termId.replace(/-(\d+)$/, '-t$1'));
@@ -1414,17 +1432,17 @@ export class PostgresCbcAssessmentRepository implements ICbcAssessmentRepository
     if (termId.toLowerCase().includes('term-2') || termId.toLowerCase().includes('term-2026-2')) termCandidates.push('term-2026-t2', 'term-2026-2');
     if (termId.toLowerCase().includes('term-1') || termId.toLowerCase().includes('term-2026-1')) termCandidates.push('term-2026-t1', 'term-2026-1');
 
-    let q = 'SELECT * FROM cbc_report_cards WHERE term_id = ANY($1)';
+    let q = 'SELECT * FROM CBC_report_cards WHERE term_id = ANY($1)';
     const params: any[] = [Array.from(new Set(termCandidates))];
     if (streamId) {
       q += ' AND stream_id = $2';
       params.push(streamId);
     }
     const res = await this.pool.query(q, params);
-    return res.rows.map(r => CbcReportCard.create({ studentId: r.student_id, termId: r.term_id, academicYearId: r.academic_year_id, gradeLevel: r.grade_level, streamId: r.stream_id, learningAreaAssessments: typeof r.learning_area_assessments === 'string' ? JSON.parse(r.learning_area_assessments) : r.learning_area_assessments, coreCompetencyAssessments: typeof r.core_competency_assessments === 'string' ? JSON.parse(r.core_competency_assessments) : r.core_competency_assessments, valueAssessments: typeof r.value_assessments === 'string' ? JSON.parse(r.value_assessments) : r.value_assessments, attendanceDaysPresent: Number(r.attendance_days_present), attendanceDaysTotal: Number(r.attendance_days_total), classTeacherRemarks: r.class_teacher_remarks, headTeacherRemarks: r.head_teacher_remarks, overallAverageScore: Number(r.overall_average_score), overallPerformanceLevel: r.overall_performance_level }, r.id, r.created_at, r.updated_at));
+    return res.rows.map(r => CBCReportCard.create({ studentId: r.student_id, termId: r.term_id, academicYearId: r.academic_year_id, gradeLevel: r.grade_level, streamId: r.stream_id, learningAreaAssessments: typeof r.learning_area_assessments === 'string' ? JSON.parse(r.learning_area_assessments) : r.learning_area_assessments, coreCompetencyAssessments: typeof r.core_competency_assessments === 'string' ? JSON.parse(r.core_competency_assessments) : r.core_competency_assessments, valueAssessments: typeof r.value_assessments === 'string' ? JSON.parse(r.value_assessments) : r.value_assessments, attendanceDaysPresent: Number(r.attendance_days_present), attendanceDaysTotal: Number(r.attendance_days_total), classTeacherRemarks: r.class_teacher_remarks, headTeacherRemarks: r.head_teacher_remarks, overallAverageScore: Number(r.overall_average_score), overallPerformanceLevel: r.overall_performance_level }, r.id, r.created_at, r.updated_at));
   }
-  public async saveReportCard(rc: CbcReportCard): Promise<void> {
-    const q = `INSERT INTO cbc_report_cards (id, student_id, term_id, academic_year_id, grade_level, stream_id, learning_area_assessments, core_competency_assessments, value_assessments, attendance_days_present, attendance_days_total, class_teacher_remarks, head_teacher_remarks, overall_average_score, overall_performance_level, created_at, updated_at)
+  public async saveReportCard(rc: CBCReportCard): Promise<void> {
+    const q = `INSERT INTO CBC_report_cards (id, student_id, term_id, academic_year_id, grade_level, stream_id, learning_area_assessments, core_competency_assessments, value_assessments, attendance_days_present, attendance_days_total, class_teacher_remarks, head_teacher_remarks, overall_average_score, overall_performance_level, created_at, updated_at)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
                ON CONFLICT (id) DO UPDATE SET overall_average_score = EXCLUDED.overall_average_score, updated_at = NOW()`;
     await this.pool.query(q, [
@@ -1447,9 +1465,9 @@ export class PostgresCbcAssessmentRepository implements ICbcAssessmentRepository
       rc.updatedAt
     ]);
   }
-  public async updateReportCard(rc: CbcReportCard): Promise<void> { await this.saveReportCard(rc); }
+  public async updateReportCard(rc: CBCReportCard): Promise<void> { await this.saveReportCard(rc); }
   public async deleteReportCardsByStudent(studentId: string): Promise<void> {
-    await this.pool.query('DELETE FROM cbc_report_cards WHERE student_id = $1', [studentId]);
+    await this.pool.query('DELETE FROM CBC_report_cards WHERE student_id = $1', [studentId]);
   }
 }
 
@@ -1855,7 +1873,7 @@ export class PostgresFeeRepository implements IFeeRepository {
     const r = res.rows[0];
     return FeeStructure.create({ schoolId: r.school_id, academicYearId: r.academic_year_id, termId: r.term_id || 'ALL', gradeLevel: r.grade_level, title: r.title, items: typeof r.items === 'string' ? JSON.parse(r.items) : r.items, dueDate: r.due_date }, r.id, r.created_at, r.updated_at);
   }
-  public async findFeeStructure(gradeLevel: CbcGradeLevel, termId: string, academicYearId: string): Promise<FeeStructure | null> {
+  public async findFeeStructure(gradeLevel: CBCGradeLevel, termId: string, academicYearId: string): Promise<FeeStructure | null> {
     const res = await this.pool.query(
       `SELECT * FROM fee_structures 
        WHERE grade_level = $1 AND academic_year_id = $2 

@@ -46,7 +46,7 @@ import {
 } from '../controllers/AcademicController';
 
 import {
-  CbcAssessmentController,
+  CBCAssessmentController,
   CreateStrandSchema,
   CreateSubStrandSchema,
   RecordFormativeSchema,
@@ -193,7 +193,10 @@ import {
   UpdateWeekPlanSchema,
   ConfirmWeekCoveredSchema,
   UpdateWeekCommentSchema,
-  BatchUpdateWeeksSchema
+  BatchUpdateWeeksSchema,
+  AddDailyLogSchema,
+  UpdateDailyLogSchema,
+  EndorseDailyLogSchema
 } from '../controllers/CurriculumTrackerController';
 
 export function createApiRouter(container: AppContainer): Router {
@@ -205,7 +208,7 @@ export function createApiRouter(container: AppContainer): Router {
   const studentController = new StudentController(container.studentUseCases, container.systemLogUseCases);
   const teacherController = new TeacherController(container.teacherUseCases);
   const academicController = new AcademicController(container.academicUseCases);
-  const cbcController = new CbcAssessmentController(container.cbcUseCases, container.systemLogUseCases);
+  const CBCController = new CBCAssessmentController(container.CBCUseCases, container.systemLogUseCases);
   const curriculumController = new CurriculumPlanController(container.curriculumUseCases);
   const recordOfWorkController = new RecordOfWorkController(container.recordOfWorkUseCases);
   const timetableController = new TimetableController(container.timetableUseCases);
@@ -347,24 +350,24 @@ export function createApiRouter(container: AppContainer): Router {
   // ==========================================
   // 5. CBC CURRICULUM & ASSESSMENT ROUTES
   // ==========================================
-  const cbcRouter = Router();
-  cbcRouter.post('/strands', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), validateBody(CreateStrandSchema), cbcController.createStrand);
-  cbcRouter.get('/strands/by-learning-area/:learningAreaId', authMiddleware, cbcController.getStrandsByLearningArea);
-  cbcRouter.delete('/strands/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), cbcController.deleteStrand);
-  cbcRouter.post('/sub-strands', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), validateBody(CreateSubStrandSchema), cbcController.createSubStrand);
-  cbcRouter.get('/sub-strands/by-strand/:strandId', authMiddleware, cbcController.getSubStrandsByStrand);
-  cbcRouter.delete('/sub-strands/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), cbcController.deleteSubStrand);
-  cbcRouter.post('/formative', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), validateBody(RecordFormativeSchema), cbcController.recordFormative);
-  cbcRouter.get('/formative', authMiddleware, cbcController.listFormatives);
-  cbcRouter.delete('/formative/:id', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), cbcController.deleteFormative);
-  cbcRouter.post('/summative', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), validateBody(RecordSummativeSchema), cbcController.recordSummative);
-  cbcRouter.post('/summative/batch', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), validateBody(RecordSummativeBatchSchema), cbcController.recordSummativeBatch);
-  cbcRouter.get('/summative', authMiddleware, cbcController.listSummatives);
-  cbcRouter.delete('/summative/:id', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), cbcController.deleteSummative);
-  cbcRouter.post('/report-cards/generate', authMiddleware, requireRoles(UserRole.HEAD_TEACHER, UserRole.TEACHER, UserRole.SUPER_ADMIN), validateBody(GenerateReportCardSchema), cbcController.generateReportCard);
-  cbcRouter.get('/report-cards', authMiddleware, cbcController.getReportCard);
-  cbcRouter.get('/analytics', authMiddleware, cbcController.getAnalytics);
-  router.use('/cbc', cbcRouter);
+  const CBCRouter = Router();
+  CBCRouter.post('/strands', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), validateBody(CreateStrandSchema), CBCController.createStrand);
+  CBCRouter.get('/strands/by-learning-area/:learningAreaId', authMiddleware, CBCController.getStrandsByLearningArea);
+  CBCRouter.delete('/strands/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), CBCController.deleteStrand);
+  CBCRouter.post('/sub-strands', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), validateBody(CreateSubStrandSchema), CBCController.createSubStrand);
+  CBCRouter.get('/sub-strands/by-strand/:strandId', authMiddleware, CBCController.getSubStrandsByStrand);
+  CBCRouter.delete('/sub-strands/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), CBCController.deleteSubStrand);
+  CBCRouter.post('/formative', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), validateBody(RecordFormativeSchema), CBCController.recordFormative);
+  CBCRouter.get('/formative', authMiddleware, CBCController.listFormatives);
+  CBCRouter.delete('/formative/:id', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), CBCController.deleteFormative);
+  CBCRouter.post('/summative', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), validateBody(RecordSummativeSchema), CBCController.recordSummative);
+  CBCRouter.post('/summative/batch', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), validateBody(RecordSummativeBatchSchema), CBCController.recordSummativeBatch);
+  CBCRouter.get('/summative', authMiddleware, CBCController.listSummatives);
+  CBCRouter.delete('/summative/:id', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), CBCController.deleteSummative);
+  CBCRouter.post('/report-cards/generate', authMiddleware, requireRoles(UserRole.HEAD_TEACHER, UserRole.TEACHER, UserRole.SUPER_ADMIN), validateBody(GenerateReportCardSchema), CBCController.generateReportCard);
+  CBCRouter.get('/report-cards', authMiddleware, CBCController.getReportCard);
+  CBCRouter.get('/analytics', authMiddleware, CBCController.getAnalytics);
+  router.use('/CBC', CBCRouter);
 
   // ==========================================
   // 6. SCHEMES OF WORK & LESSON PLANS ROUTES
@@ -962,6 +965,7 @@ export function createApiRouter(container: AppContainer): Router {
   // ==========================================
   const curriculumTrackerRouter = Router();
   curriculumTrackerRouter.get('/summary', authMiddleware, curriculumTrackerController.getSummary);
+  curriculumTrackerRouter.get('/daily-logs', authMiddleware, curriculumTrackerController.listDailyLogs);
   curriculumTrackerRouter.get('/', authMiddleware, curriculumTrackerController.list);
   curriculumTrackerRouter.get('/:id', authMiddleware, curriculumTrackerController.getById);
   curriculumTrackerRouter.post(
@@ -970,6 +974,33 @@ export function createApiRouter(container: AppContainer): Router {
     requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.SUPER_ADMIN),
     validateBody(CreateCurriculumTrackerSchema),
     curriculumTrackerController.create
+  );
+  curriculumTrackerRouter.post(
+    '/:id/daily-logs',
+    authMiddleware,
+    requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.SUPER_ADMIN),
+    validateBody(AddDailyLogSchema),
+    curriculumTrackerController.addDailyLog
+  );
+  curriculumTrackerRouter.put(
+    '/:id/daily-logs/:logId',
+    authMiddleware,
+    requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.SUPER_ADMIN),
+    validateBody(UpdateDailyLogSchema),
+    curriculumTrackerController.updateDailyLog
+  );
+  curriculumTrackerRouter.delete(
+    '/:id/daily-logs/:logId',
+    authMiddleware,
+    requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.SUPER_ADMIN),
+    curriculumTrackerController.deleteDailyLog
+  );
+  curriculumTrackerRouter.post(
+    '/:id/daily-logs/:logId/endorse',
+    authMiddleware,
+    requireRoles(UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.SUPER_ADMIN),
+    validateBody(EndorseDailyLogSchema),
+    curriculumTrackerController.endorseDailyLog
   );
   curriculumTrackerRouter.put(
     '/:id/weeks/:weekNumber',

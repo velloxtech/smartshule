@@ -167,7 +167,7 @@ async function seed() {
     // Clean up previous seeded students to ensure EXACTLY 10 students per class
     console.log('🧹 Cleaning previous seed students to ensure exact 10 records per class...');
     await client.query(`DELETE FROM summative_assessments WHERE student_id LIKE 'std-adm-2026-%'`);
-    await client.query(`DELETE FROM cbc_report_cards WHERE student_id LIKE 'std-adm-2026-%'`);
+    await client.query(`DELETE FROM CBC_report_cards WHERE student_id LIKE 'std-adm-2026-%'`);
     await client.query(`DELETE FROM students WHERE id LIKE 'std-adm-2026-%'`);
 
     // 8. 10 Students in each of the 3 classes
@@ -386,7 +386,7 @@ async function seed() {
 
         const reportCardId = `rc-${studentId}-t3-2026`;
         await client.query(`
-          INSERT INTO cbc_report_cards (
+          INSERT INTO CBC_report_cards (
             id, student_id, term_id, academic_year_id, grade_level, stream_id,
             learning_area_assessments, core_competency_assessments, value_assessments,
             attendance_days_present, attendance_days_total,

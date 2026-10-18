@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { Check, CheckCircle2, Mail, Search, X, Copy } from 'lucide-react'
 import { onboardingService, AdmittedLearnerOnboarding, OnboardingEmailLog } from '../../services/onboardingService'
 
 const logo = '/logo.jpg'
@@ -6,6 +7,7 @@ const logo = '/logo.jpg'
 export interface LearnerOnboardingPageProps {
   onNavigateHome: () => void
   onNavigateLogin?: () => void
+  onNavigateApplySlot?: () => void
 }
 
 const GRADE_OPTIONS = [
@@ -32,7 +34,10 @@ const CLUB_OPTIONS = [
   'Environmental & Gardening',
 ]
 
-export default function LearnerOnboardingPage({ onNavigateHome }: LearnerOnboardingPageProps) {
+export default function LearnerOnboardingPage({
+  onNavigateHome,
+  onNavigateApplySlot,
+}: LearnerOnboardingPageProps) {
   const [activeView, setActiveView] = useState<'form' | 'track'>('form')
 
   useEffect(() => {
@@ -197,8 +202,19 @@ export default function LearnerOnboardingPage({ onNavigateHome }: LearnerOnboard
             >
               ← Back to Main Website
             </button>
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#f5c84a]/15 border border-[#f5c84a]/30 text-[#f5c84a] text-xs font-bold">
-              <span>Official Institutional Onboarding Registry</span>
+            <div className="flex items-center gap-2">
+              {onNavigateApplySlot && (
+                <button
+                  type="button"
+                  onClick={onNavigateApplySlot}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-[#5a1226] bg-[#e8a92a] hover:bg-[#f5c84a] px-3.5 py-1.5 rounded-full shadow transition-all cursor-pointer"
+                >
+                  New Applicant? Apply for Slot →
+                </button>
+              )}
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#f5c84a]/15 border border-[#f5c84a]/30 text-[#f5c84a] text-xs font-bold">
+                <span>Official Institutional Onboarding Registry</span>
+              </div>
             </div>
           </div>
 
@@ -253,8 +269,8 @@ export default function LearnerOnboardingPage({ onNavigateHome }: LearnerOnboard
         {submittedRecord && (
           <div className="bg-white rounded-3xl p-8 lg:p-10 shadow-2xl border border-emerald-200 mb-8 animate-fadeIn">
             <div className="flex items-center gap-4 pb-6 border-b border-[#f0d8df]">
-              <div className="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center text-3xl font-bold">
-                ✓
+              <div className="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
+                <CheckCircle2 className="w-8 h-8" />
               </div>
               <div>
                 <span className="text-xs font-bold uppercase tracking-widest text-emerald-800 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 inline-block mb-1">
@@ -282,7 +298,7 @@ export default function LearnerOnboardingPage({ onNavigateHome }: LearnerOnboard
                     onClick={() => handleCopyCode(submittedRecord.trackingCode)}
                     className="px-4 py-2 rounded-xl bg-[#7b1c35] text-white text-xs font-bold hover:bg-[#5a1226] transition-colors cursor-pointer"
                   >
-                    {copiedTracking ? '✓ Copied to Clipboard!' : 'Copy Tracking Number'}
+                    {copiedTracking ? 'Copied to Clipboard!' : 'Copy Tracking Number'}
                   </button>
                   <button
                     onClick={() => handleTrackDirectly(submittedRecord.trackingCode)}
@@ -298,7 +314,7 @@ export default function LearnerOnboardingPage({ onNavigateHome }: LearnerOnboard
 
               <div className="bg-emerald-50 p-6 rounded-2xl border border-emerald-200">
                 <div className="flex items-center gap-2 mb-2 text-emerald-900 font-bold text-sm">
-                  <span className="text-lg">✉</span>
+                  <Mail className="w-5 h-5 text-emerald-800 shrink-0" />
                   <span>Confirmation Email Dispatched</span>
                 </div>
                 <p className="text-xs text-emerald-950 mb-3 leading-relaxed">
@@ -486,7 +502,9 @@ export default function LearnerOnboardingPage({ onNavigateHome }: LearnerOnboard
                   </div>
                 ) : (
                   <div className="text-center py-12 text-[#8a6470]">
-                    <div className="text-4xl mb-2">🔍</div>
+                    <div className="w-16 h-16 rounded-full bg-[#f9eef1] text-[#7b1c35] flex items-center justify-center mx-auto mb-3">
+                      <Search className="w-8 h-8" />
+                    </div>
                     <p className="font-bold text-sm">No onboarding application found</p>
                     <p className="text-xs mt-1">Please double check your Tracking Number or Phone Number and try again.</p>
                   </div>
@@ -885,13 +903,14 @@ export default function LearnerOnboardingPage({ onNavigateHome }: LearnerOnboard
                           type="button"
                           key={club}
                           onClick={() => handleClubToggle(club)}
-                          className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                          className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer inline-flex items-center gap-1.5 ${
                             isSelected
                               ? 'bg-[#7b1c35] text-white shadow-sm'
                               : 'bg-white text-[#5a1226] border border-[#f0d8df] hover:border-[#7b1c35]'
                           }`}
                         >
-                          {isSelected ? '✓ ' : '+ '} {club}
+                          {isSelected ? <Check className="w-3.5 h-3.5" /> : <span>+</span>}
+                          <span>{club}</span>
                         </button>
                       )
                     })}
@@ -937,7 +956,7 @@ export default function LearnerOnboardingPage({ onNavigateHome }: LearnerOnboard
           <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl border border-[#f0d8df] overflow-hidden">
             <div className="p-5 border-b border-[#f0d8df] flex items-center justify-between bg-[#fdfaf6]">
               <div className="flex items-center gap-2">
-                <span className="text-xl">✉</span>
+                <Mail className="w-5 h-5 text-[#7b1c35]" />
                 <div>
                   <h4 className="font-bold text-sm text-[#5a1226]">Institutional Email Dispatch Preview</h4>
                   <p className="text-[11px] text-[#8a6470]">Sent by Grace Seeds School Admissions Directorate</p>
@@ -945,9 +964,9 @@ export default function LearnerOnboardingPage({ onNavigateHome }: LearnerOnboard
               </div>
               <button
                 onClick={() => setShowEmailModal(false)}
-                className="w-8 h-8 rounded-full bg-[#f0d8df]/50 hover:bg-[#f0d8df] flex items-center justify-center text-xs font-bold text-[#5a1226] cursor-pointer"
+                className="w-8 h-8 rounded-full bg-[#f0d8df]/50 hover:bg-[#f0d8df] flex items-center justify-center text-[#5a1226] cursor-pointer"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
             <div className="p-5 bg-[#faf5f6] border-b border-[#f0d8df] text-xs space-y-1">

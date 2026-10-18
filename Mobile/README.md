@@ -23,7 +23,7 @@ The app uniformly uses the school's official **Maroon** identity (`#7A1228` and 
   - `/announcements` — School notices and broadcast circulars
   - `/students` — Learner rosters and guardian linkage
   - `/attendance` — Roll-call registers and geofence tracking
-  - `/cbc/formative` — Kenyan CBC competency scoring
+  - `/CBC/formative` — Kenyan CBC competency scoring
   - `/finance/invoices` — Fee statements and M-Pesa tracking
 - Configurable directly from the **Account & Settings** screen at runtime.
 

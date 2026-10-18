@@ -81,9 +81,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const totalTeachersCount = summaryData?.counts?.totalTeachers ?? teachers.length;
   const totalNonTeachingStaffCount = summaryData?.counts?.totalNonTeachingStaff ?? 5;
 
-  const totalAssessments = summaryData?.cbcProficiency?.totalAssessments || 0;
-  const cbcBenchmarkPct = totalAssessments > 0
-    ? (((summaryData!.cbcProficiency.exceeding + summaryData!.cbcProficiency.meeting) / totalAssessments) * 100).toFixed(1)
+  const totalAssessments = summaryData?.CBCProficiency?.totalAssessments || 0;
+  const CBCBenchmarkPct = totalAssessments > 0
+    ? (((summaryData!.CBCProficiency.exceeding + summaryData!.CBCProficiency.meeting) / totalAssessments) * 100).toFixed(1)
     : '0.0';
 
   const academicPeriodLabel = summaryData?.academicPeriod?.term && summaryData?.academicPeriod?.year && summaryData.academicPeriod.term !== 'N/A'
@@ -158,11 +158,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     ];
   }, [currentTotalFee, targetFee]);
 
-  const cbcProf = summaryData?.cbcProficiency;
-  const eeAssessments = cbcProf?.exceeding || 0;
-  const meAssessments = cbcProf?.meeting || 0;
-  const aeAssessments = cbcProf?.approaching || 0;
-  const beAssessments = cbcProf?.below || 0;
+  const CBCProf = summaryData?.CBCProficiency;
+  const eeAssessments = CBCProf?.exceeding || 0;
+  const meAssessments = CBCProf?.meeting || 0;
+  const aeAssessments = CBCProf?.approaching || 0;
+  const beAssessments = CBCProf?.below || 0;
   const eePct = totalAssessments > 0 ? ((eeAssessments / totalAssessments) * 100).toFixed(1) : '0.0';
   const mePct = totalAssessments > 0 ? ((meAssessments / totalAssessments) * 100).toFixed(1) : '0.0';
   const aePct = totalAssessments > 0 ? ((aeAssessments / totalAssessments) * 100).toFixed(1) : '0.0';

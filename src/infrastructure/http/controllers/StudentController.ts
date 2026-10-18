@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { StudentUseCases } from '../../../application/students/StudentUseCases';
-import { StudentGender, CbcGradeLevel, StudentStatus } from '../../../core/domain/user/Student';
+import { StudentGender, CBCGradeLevel, StudentStatus } from '../../../core/domain/user/Student';
 import { GuardianRelationship } from '../../../core/domain/user/Guardian';
 
 export const RegisterStudentSchema = z.object({
@@ -12,7 +12,7 @@ export const RegisterStudentSchema = z.object({
   lastName: z.string().min(1),
   dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Format must be YYYY-MM-DD'),
   gender: z.nativeEnum(StudentGender),
-  gradeLevel: z.nativeEnum(CbcGradeLevel),
+  gradeLevel: z.nativeEnum(CBCGradeLevel),
   classroomId: z.string().optional(),
   streamId: z.string().optional(),
   schoolId: z.string().optional().default('school-001'),
@@ -47,7 +47,7 @@ export const UpdateStudentSchema = z.object({
   dateOfBirth: z.string().optional(),
   medicalConditions: z.string().optional(),
   specialNeeds: z.string().optional(),
-  gradeLevel: z.nativeEnum(CbcGradeLevel).optional(),
+  gradeLevel: z.nativeEnum(CBCGradeLevel).optional(),
   classroomId: z.string().optional(),
   streamId: z.string().optional(),
   academicYearId: z.string().optional(),
@@ -84,7 +84,7 @@ export const UpdateGuardianProfileSchema = z.object({
 }).passthrough();
 
 export const PromoteStudentSchema = z.object({
-  targetGradeLevel: z.nativeEnum(CbcGradeLevel).optional(),
+  targetGradeLevel: z.nativeEnum(CBCGradeLevel).optional(),
   targetAcademicYearId: z.string().optional(),
   targetTermId: z.string().optional(),
   targetClassroomId: z.string().optional(),
@@ -94,7 +94,7 @@ export const PromoteStudentSchema = z.object({
 
 export const BulkPromoteStudentsSchema = z.object({
   studentIds: z.array(z.string().min(1)).min(1),
-  targetGradeLevel: z.nativeEnum(CbcGradeLevel).optional(),
+  targetGradeLevel: z.nativeEnum(CBCGradeLevel).optional(),
   targetAcademicYearId: z.string().optional(),
   targetTermId: z.string().optional(),
   targetClassroomId: z.string().optional(),
@@ -183,7 +183,7 @@ export class StudentController {
       const { schoolId, gradeLevel, classroomId, streamId, academicYearId, search } = req.query;
       const students = await this.studentUseCases.listStudents({
         schoolId: schoolId as string,
-        gradeLevel: gradeLevel as CbcGradeLevel,
+        gradeLevel: gradeLevel as CBCGradeLevel,
         classroomId: classroomId as string,
         streamId: streamId as string,
         academicYearId: academicYearId as string,

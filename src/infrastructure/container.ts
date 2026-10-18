@@ -2,7 +2,7 @@ import { IUserRepository } from '../core/ports/repositories/IUserRepository';
 import { IStudentRepository } from '../core/ports/repositories/IStudentRepository';
 import { ITeacherRepository, IGuardianRepository } from '../core/ports/repositories/ITeacherRepository';
 import { IAcademicRepository } from '../core/ports/repositories/IAcademicRepository';
-import { ICbcAssessmentRepository } from '../core/ports/repositories/ICbcAssessmentRepository';
+import { ICBCAssessmentRepository } from '../core/ports/repositories/ICbcAssessmentRepository';
 import { ISchemeOfWorkRepository, ILessonPlanRepository } from '../core/ports/repositories/ISchemeOfWorkRepository';
 import { ITimetableRepository, IAttendanceRepository } from '../core/ports/repositories/ITimetableRepository';
 import { IFeeRepository } from '../core/ports/repositories/IFeeRepository';
@@ -56,7 +56,7 @@ import {
   InMemoryTeacherRepository,
   InMemoryGuardianRepository,
   InMemoryAcademicRepository,
-  InMemoryCbcAssessmentRepository,
+  InMemoryCBCAssessmentRepository,
   InMemorySchemeOfWorkRepository,
   InMemoryLessonPlanRepository,
   InMemoryTimetableRepository,
@@ -80,7 +80,7 @@ import { AuthUseCases } from '../application/auth/AuthUseCases';
 import { StudentUseCases } from '../application/students/StudentUseCases';
 import { TeacherUseCases } from '../application/teachers/TeacherUseCases';
 import { AcademicUseCases } from '../application/academics/AcademicUseCases';
-import { CbcAssessmentUseCases } from '../application/cbc/CbcAssessmentUseCases';
+import { CBCAssessmentUseCases } from '../application/cbc/CbcAssessmentUseCases';
 import { CurriculumPlanUseCases } from '../application/curriculum-plans/CurriculumPlanUseCases';
 import { TimetableUseCases } from '../application/timetables/TimetableUseCases';
 import { AttendanceUseCases } from '../application/attendance/AttendanceUseCases';
@@ -101,7 +101,7 @@ export class AppContainer {
   public teacherRepository: ITeacherRepository;
   public guardianRepository: IGuardianRepository;
   public academicRepository: IAcademicRepository;
-  public cbcAssessmentRepository: ICbcAssessmentRepository;
+  public CBCAssessmentRepository: ICBCAssessmentRepository;
   public schemeOfWorkRepository: ISchemeOfWorkRepository;
   public lessonPlanRepository: ILessonPlanRepository;
   public timetableRepository: ITimetableRepository;
@@ -138,7 +138,7 @@ export class AppContainer {
   public studentUseCases!: StudentUseCases;
   public teacherUseCases!: TeacherUseCases;
   public academicUseCases!: AcademicUseCases;
-  public cbcUseCases!: CbcAssessmentUseCases;
+  public CBCUseCases!: CBCAssessmentUseCases;
   public curriculumUseCases!: CurriculumPlanUseCases;
   public timetableUseCases!: TimetableUseCases;
   public attendanceUseCases!: AttendanceUseCases;
@@ -168,7 +168,7 @@ export class AppContainer {
     this.teacherRepository = customRepositories?.teacherRepository || new InMemoryTeacherRepository();
     this.guardianRepository = customRepositories?.guardianRepository || new InMemoryGuardianRepository();
     this.academicRepository = customRepositories?.academicRepository || new InMemoryAcademicRepository();
-    this.cbcAssessmentRepository = customRepositories?.cbcAssessmentRepository || new InMemoryCbcAssessmentRepository();
+    this.CBCAssessmentRepository = customRepositories?.CBCAssessmentRepository || new InMemoryCBCAssessmentRepository();
     this.schemeOfWorkRepository = customRepositories?.schemeOfWorkRepository || new InMemorySchemeOfWorkRepository();
     this.lessonPlanRepository = customRepositories?.lessonPlanRepository || new InMemoryLessonPlanRepository();
     this.timetableRepository = customRepositories?.timetableRepository || new InMemoryTimetableRepository();
@@ -224,7 +224,7 @@ export class AppContainer {
       this.passwordHasher,
       this.academicRepository,
       this.feeRepository,
-      this.cbcAssessmentRepository,
+      this.CBCAssessmentRepository,
       this.attendanceRepository,
       this.lunchFeeRepository,
       this.deletedStudentRepository,
@@ -234,8 +234,8 @@ export class AppContainer {
     );
     this.teacherUseCases = new TeacherUseCases(this.teacherRepository, this.userRepository, this.passwordHasher);
     this.academicUseCases = new AcademicUseCases(this.academicRepository);
-    this.cbcUseCases = new CbcAssessmentUseCases(
-      this.cbcAssessmentRepository,
+    this.CBCUseCases = new CBCAssessmentUseCases(
+      this.CBCAssessmentRepository,
       this.studentRepository,
       this.academicRepository,
       this.attendanceRepository,
@@ -298,7 +298,7 @@ export class AppContainer {
       this.studentRepository,
       this.teacherRepository,
       this.academicRepository,
-      this.cbcAssessmentRepository,
+      this.CBCAssessmentRepository,
       this.attendanceRepository,
       this.feeRepository,
       this.userRepository
@@ -324,7 +324,7 @@ export class AppContainer {
       this.feeRepository,
       this.ediaryRepository,
       this.attendanceRepository,
-      this.cbcAssessmentRepository,
+      this.CBCAssessmentRepository,
       this.academicRepository,
       this.timetableRepository
     );
@@ -356,7 +356,7 @@ export class AppContainer {
     this.broadsheetUseCases = new BroadsheetUseCases(
       this.academicRepository,
       this.studentRepository,
-      this.cbcAssessmentRepository
+      this.CBCAssessmentRepository
     );
     this.occurrenceUseCases = new OccurrenceUseCases(
       this.occurrenceRepository,

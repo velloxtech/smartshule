@@ -2,7 +2,7 @@ import { IAcademicRepository } from '../../core/ports/repositories/IAcademicRepo
 import { School, SchoolProps } from '../../core/domain/academic/School';
 import { AcademicYear, AcademicTerm } from '../../core/domain/academic/AcademicYear';
 import { ClassRoom, Stream, LearningArea, EducationLevel } from '../../core/domain/academic/ClassRoom';
-import { CbcGradeLevel } from '../../core/domain/user/Student';
+import { CBCGradeLevel } from '../../core/domain/user/Student';
 import { UserRole } from '../../core/domain/user/User';
 import { IdGenerator, NotFoundError, ForbiddenError } from '../../core/domain/shared/Errors';
 
@@ -389,7 +389,7 @@ export class AcademicUseCases {
 
 
   // Classrooms & Streams
-  public async createClassRoom(dto: { name: string; gradeLevel: CbcGradeLevel; educationLevel: EducationLevel; schoolId: string }) {
+  public async createClassRoom(dto: { name: string; gradeLevel: CBCGradeLevel; educationLevel: EducationLevel; schoolId: string }) {
     const classRoom = ClassRoom.create(dto, IdGenerator.generate());
     await this.academicRepository.saveClass(classRoom);
     return classRoom.toJSON();
@@ -398,19 +398,19 @@ export class AcademicUseCases {
   public async listClassRooms(schoolId?: string) {
     let classes = await this.academicRepository.findAllClasses(schoolId);
     if (classes.length === 0) {
-      const defaultGrades: Array<{ name: string; gradeLevel: CbcGradeLevel; educationLevel: EducationLevel }> = [
-        { name: 'Playgroup', gradeLevel: CbcGradeLevel.PLAYGROUP, educationLevel: EducationLevel.PRE_PRIMARY },
-        { name: 'PP1', gradeLevel: CbcGradeLevel.PP1, educationLevel: EducationLevel.PRE_PRIMARY },
-        { name: 'PP2', gradeLevel: CbcGradeLevel.PP2, educationLevel: EducationLevel.PRE_PRIMARY },
-        { name: 'Grade 1', gradeLevel: CbcGradeLevel.GRADE_1, educationLevel: EducationLevel.LOWER_PRIMARY },
-        { name: 'Grade 2', gradeLevel: CbcGradeLevel.GRADE_2, educationLevel: EducationLevel.LOWER_PRIMARY },
-        { name: 'Grade 3', gradeLevel: CbcGradeLevel.GRADE_3, educationLevel: EducationLevel.LOWER_PRIMARY },
-        { name: 'Grade 4', gradeLevel: CbcGradeLevel.GRADE_4, educationLevel: EducationLevel.UPPER_PRIMARY },
-        { name: 'Grade 5', gradeLevel: CbcGradeLevel.GRADE_5, educationLevel: EducationLevel.UPPER_PRIMARY },
-        { name: 'Grade 6', gradeLevel: CbcGradeLevel.GRADE_6, educationLevel: EducationLevel.UPPER_PRIMARY },
-        { name: 'Grade 7', gradeLevel: CbcGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL },
-        { name: 'Grade 8', gradeLevel: CbcGradeLevel.GRADE_8, educationLevel: EducationLevel.JUNIOR_SCHOOL },
-        { name: 'Grade 9', gradeLevel: CbcGradeLevel.GRADE_9, educationLevel: EducationLevel.JUNIOR_SCHOOL }
+      const defaultGrades: Array<{ name: string; gradeLevel: CBCGradeLevel; educationLevel: EducationLevel }> = [
+        { name: 'Playgroup', gradeLevel: CBCGradeLevel.PLAYGROUP, educationLevel: EducationLevel.PRE_PRIMARY },
+        { name: 'PP1', gradeLevel: CBCGradeLevel.PP1, educationLevel: EducationLevel.PRE_PRIMARY },
+        { name: 'PP2', gradeLevel: CBCGradeLevel.PP2, educationLevel: EducationLevel.PRE_PRIMARY },
+        { name: 'Grade 1', gradeLevel: CBCGradeLevel.GRADE_1, educationLevel: EducationLevel.LOWER_PRIMARY },
+        { name: 'Grade 2', gradeLevel: CBCGradeLevel.GRADE_2, educationLevel: EducationLevel.LOWER_PRIMARY },
+        { name: 'Grade 3', gradeLevel: CBCGradeLevel.GRADE_3, educationLevel: EducationLevel.LOWER_PRIMARY },
+        { name: 'Grade 4', gradeLevel: CBCGradeLevel.GRADE_4, educationLevel: EducationLevel.UPPER_PRIMARY },
+        { name: 'Grade 5', gradeLevel: CBCGradeLevel.GRADE_5, educationLevel: EducationLevel.UPPER_PRIMARY },
+        { name: 'Grade 6', gradeLevel: CBCGradeLevel.GRADE_6, educationLevel: EducationLevel.UPPER_PRIMARY },
+        { name: 'Grade 7', gradeLevel: CBCGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL },
+        { name: 'Grade 8', gradeLevel: CBCGradeLevel.GRADE_8, educationLevel: EducationLevel.JUNIOR_SCHOOL },
+        { name: 'Grade 9', gradeLevel: CBCGradeLevel.GRADE_9, educationLevel: EducationLevel.JUNIOR_SCHOOL }
       ];
 
       for (const dg of defaultGrades) {
@@ -429,21 +429,21 @@ export class AcademicUseCases {
     }
 
     const gradeHierarchy: Record<string, number> = {
-      [CbcGradeLevel.PLAYGROUP]: 0,
-      [CbcGradeLevel.PP1]: 1,
-      [CbcGradeLevel.PP2]: 2,
-      [CbcGradeLevel.GRADE_1]: 3,
-      [CbcGradeLevel.GRADE_2]: 4,
-      [CbcGradeLevel.GRADE_3]: 5,
-      [CbcGradeLevel.GRADE_4]: 6,
-      [CbcGradeLevel.GRADE_5]: 7,
-      [CbcGradeLevel.GRADE_6]: 8,
-      [CbcGradeLevel.GRADE_7]: 9,
-      [CbcGradeLevel.GRADE_8]: 10,
-      [CbcGradeLevel.GRADE_9]: 11,
-      [CbcGradeLevel.SENIOR_1]: 12,
-      [CbcGradeLevel.SENIOR_2]: 13,
-      [CbcGradeLevel.SENIOR_3]: 14,
+      [CBCGradeLevel.PLAYGROUP]: 0,
+      [CBCGradeLevel.PP1]: 1,
+      [CBCGradeLevel.PP2]: 2,
+      [CBCGradeLevel.GRADE_1]: 3,
+      [CBCGradeLevel.GRADE_2]: 4,
+      [CBCGradeLevel.GRADE_3]: 5,
+      [CBCGradeLevel.GRADE_4]: 6,
+      [CBCGradeLevel.GRADE_5]: 7,
+      [CBCGradeLevel.GRADE_6]: 8,
+      [CBCGradeLevel.GRADE_7]: 9,
+      [CBCGradeLevel.GRADE_8]: 10,
+      [CBCGradeLevel.GRADE_9]: 11,
+      [CBCGradeLevel.SENIOR_1]: 12,
+      [CBCGradeLevel.SENIOR_2]: 13,
+      [CBCGradeLevel.SENIOR_3]: 14,
     };
 
     return classes
@@ -463,19 +463,19 @@ export class AcademicUseCases {
   }
 
   // Learning Areas (Subjects)
-  public async createLearningArea(dto: { name: string; code: string; gradeLevel: CbcGradeLevel; educationLevel: EducationLevel; isElective: boolean; schoolId: string; teacherId?: string }) {
+  public async createLearningArea(dto: { name: string; code: string; gradeLevel: CBCGradeLevel; educationLevel: EducationLevel; isElective: boolean; schoolId: string; teacherId?: string }) {
     const learningArea = LearningArea.create(dto, IdGenerator.generate());
     await this.academicRepository.saveLearningArea(learningArea);
     return learningArea.toJSON();
   }
 
-  public async listLearningAreas(filters?: { gradeLevel?: CbcGradeLevel; schoolId?: string }) {
+  public async listLearningAreas(filters?: { gradeLevel?: CBCGradeLevel; schoolId?: string }) {
     let areas = await this.academicRepository.findAllLearningAreas(filters);
     if (areas.length === 0) {
       const schoolId = filters?.schoolId || 'school-001';
-      const defaultSubjects: { name: string; code: string; gradeLevel: CbcGradeLevel; educationLevel: EducationLevel; isElective: boolean }[] = [
+      const defaultSubjects: { name: string; code: string; gradeLevel: CBCGradeLevel; educationLevel: EducationLevel; isElective: boolean }[] = [
         // 1. Grace Seeds Pre-Primary (Playgroup, PP1, PP2)
-        ...[CbcGradeLevel.PLAYGROUP, CbcGradeLevel.PP1, CbcGradeLevel.PP2].flatMap(g => [
+        ...[CBCGradeLevel.PLAYGROUP, CBCGradeLevel.PP1, CBCGradeLevel.PP2].flatMap(g => [
           { name: 'Language Activities', code: 'LANG_ACT', gradeLevel: g, educationLevel: EducationLevel.PRE_PRIMARY, isElective: false },
           { name: 'Mathematical Activities', code: 'MATH_ACT', gradeLevel: g, educationLevel: EducationLevel.PRE_PRIMARY, isElective: false },
           { name: 'Creative Activities', code: 'CREAT_ACT', gradeLevel: g, educationLevel: EducationLevel.PRE_PRIMARY, isElective: false },
@@ -484,7 +484,7 @@ export class AcademicUseCases {
         ]),
 
         // 2. Grace Seeds Lower Primary (Grade 1 - 3)
-        ...[CbcGradeLevel.GRADE_1, CbcGradeLevel.GRADE_2, CbcGradeLevel.GRADE_3].flatMap(g => [
+        ...[CBCGradeLevel.GRADE_1, CBCGradeLevel.GRADE_2, CBCGradeLevel.GRADE_3].flatMap(g => [
           { name: 'English', code: 'ENG', gradeLevel: g, educationLevel: EducationLevel.LOWER_PRIMARY, isElective: false },
           { name: 'Mathematics', code: 'MATH', gradeLevel: g, educationLevel: EducationLevel.LOWER_PRIMARY, isElective: false },
           { name: 'Kiswahili', code: 'KISW', gradeLevel: g, educationLevel: EducationLevel.LOWER_PRIMARY, isElective: false },
@@ -495,7 +495,7 @@ export class AcademicUseCases {
         ]),
 
         // 3. Grace Seeds Upper Primary (Grade 4 - 6)
-        ...[CbcGradeLevel.GRADE_4, CbcGradeLevel.GRADE_5, CbcGradeLevel.GRADE_6].flatMap(g => [
+        ...[CBCGradeLevel.GRADE_4, CBCGradeLevel.GRADE_5, CBCGradeLevel.GRADE_6].flatMap(g => [
           { name: 'Mathematics', code: 'MATH', gradeLevel: g, educationLevel: EducationLevel.UPPER_PRIMARY, isElective: false },
           { name: 'English', code: 'ENG', gradeLevel: g, educationLevel: EducationLevel.UPPER_PRIMARY, isElective: false },
           { name: 'Kiswahili', code: 'KISW', gradeLevel: g, educationLevel: EducationLevel.UPPER_PRIMARY, isElective: false },
@@ -507,18 +507,18 @@ export class AcademicUseCases {
         ]),
 
         // 4. Junior School (Grade 7 - 12 Standard CBC Learning Areas)
-        { name: 'Mathematics', code: 'MATH', gradeLevel: CbcGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
-        { name: 'English Language', code: 'ENG', gradeLevel: CbcGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
-        { name: 'Kiswahili Language', code: 'KISW', gradeLevel: CbcGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
-        { name: 'Integrated Science', code: 'INTSCI', gradeLevel: CbcGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
-        { name: 'Health Education', code: 'HLTH', gradeLevel: CbcGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
-        { name: 'Social Studies', code: 'SST', gradeLevel: CbcGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
-        { name: 'Christian Religious Education', code: 'CRE', gradeLevel: CbcGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
-        { name: 'Agriculture & Nutrition', code: 'AGRI', gradeLevel: CbcGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
-        { name: 'Pre-Technical Studies', code: 'PRETECH', gradeLevel: CbcGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
-        { name: 'Creative Arts & Sports', code: 'ARTS', gradeLevel: CbcGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
-        { name: 'Business Studies', code: 'BUS', gradeLevel: CbcGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
-        { name: 'Computer Science', code: 'COMP', gradeLevel: CbcGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
+        { name: 'Mathematics', code: 'MATH', gradeLevel: CBCGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
+        { name: 'English Language', code: 'ENG', gradeLevel: CBCGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
+        { name: 'Kiswahili Language', code: 'KISW', gradeLevel: CBCGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
+        { name: 'Integrated Science', code: 'INTSCI', gradeLevel: CBCGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
+        { name: 'Health Education', code: 'HLTH', gradeLevel: CBCGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
+        { name: 'Social Studies', code: 'SST', gradeLevel: CBCGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
+        { name: 'Christian Religious Education', code: 'CRE', gradeLevel: CBCGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
+        { name: 'Agriculture & Nutrition', code: 'AGRI', gradeLevel: CBCGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
+        { name: 'Pre-Technical Studies', code: 'PRETECH', gradeLevel: CBCGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
+        { name: 'Creative Arts & Sports', code: 'ARTS', gradeLevel: CBCGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
+        { name: 'Business Studies', code: 'BUS', gradeLevel: CBCGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
+        { name: 'Computer Science', code: 'COMP', gradeLevel: CBCGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
       ];
 
       for (const subj of defaultSubjects) {

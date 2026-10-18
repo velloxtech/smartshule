@@ -52,9 +52,9 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({ isOpen, on
   const totalInvoiced = analytics?.finance?.totalInvoiced || 0;
   const collectionRate = analytics?.finance?.collectionRatePercentage || 0;
 
-  const totalAssessments = analytics?.cbcProficiency?.totalAssessments || 0;
-  const meetingOrExceeding = (analytics?.cbcProficiency?.exceeding || 0) + (analytics?.cbcProficiency?.meeting || 0);
-  const cbcMasteryPct = totalAssessments > 0 ? Math.round((meetingOrExceeding / totalAssessments) * 100) : 0;
+  const totalAssessments = analytics?.CBCProficiency?.totalAssessments || 0;
+  const meetingOrExceeding = (analytics?.CBCProficiency?.exceeding || 0) + (analytics?.CBCProficiency?.meeting || 0);
+  const CBCMasteryPct = totalAssessments > 0 ? Math.round((meetingOrExceeding / totalAssessments) * 100) : 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-150">
@@ -118,7 +118,7 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({ isOpen, on
                 </div>
                 <div className="p-3 bg-surface-container-low rounded-xl text-center">
                   <span className="text-[11px] text-on-surface-variant uppercase font-medium">CBC Mastery</span>
-                  <div className="text-xl font-bold text-primary">{cbcMasteryPct}%</div>
+                  <div className="text-xl font-bold text-primary">{CBCMasteryPct}%</div>
                   <span className="text-[11px] text-secondary font-medium">EE + ME Tier</span>
                 </div>
               </div>

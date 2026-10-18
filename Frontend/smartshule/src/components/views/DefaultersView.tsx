@@ -179,7 +179,7 @@ export const DefaultersView: React.FC<DefaultersViewProps> = ({
                               feeBalance: d.balance,
                               totalFee: d.amountPayable,
                               attendanceRate: 100,
-                              cbcRating: 'ME',
+                              CBCRating: 'ME',
                               status: 'Active',
                             })}
                             className="px-2.5 py-1 rounded bg-[#006a40] hover:bg-[#005a36] text-white font-bold text-xs transition-colors cursor-pointer inline-flex items-center gap-1"

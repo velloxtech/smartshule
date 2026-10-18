@@ -8,7 +8,7 @@ import {
   CurriculumTrackerWeekItem
 } from '../../../core/domain/curriculum-tracker/CurriculumTracker';
 
-function parseJsonItems(val: any): CurriculumTrackerWeekItem[] {
+function parseJsonItems<T = any>(val: any): T[] {
   if (!val) return [];
   if (Array.isArray(val)) return val;
   try {
@@ -35,6 +35,7 @@ function mapRowToTracker(row: any): CurriculumTracker {
       term: row.term,
       totalWeeks: row.total_weeks || 12,
       items: parseJsonItems(row.items),
+      dailyLogs: parseJsonItems(row.daily_logs || row.dailyLogs || []),
       status: row.status || 'ACTIVE'
     },
     row.id,
@@ -106,8 +107,8 @@ export class PostgresCurriculumTrackerRepository implements ICurriculumTrackerRe
       INSERT INTO curriculum_trackers (
         id, school_id, teacher_id, teacher_name, learning_area_id, subject_name,
         classroom_id, class_name, stream_id, stream_name, academic_year, term,
-        total_weeks, items, status, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+        total_weeks, items, daily_logs, status, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
       ON CONFLICT (id) DO UPDATE SET
         teacher_id = EXCLUDED.teacher_id,
         teacher_name = EXCLUDED.teacher_name,
@@ -121,6 +122,7 @@ export class PostgresCurriculumTrackerRepository implements ICurriculumTrackerRe
         term = EXCLUDED.term,
         total_weeks = EXCLUDED.total_weeks,
         items = EXCLUDED.items,
+        daily_logs = EXCLUDED.daily_logs,
         status = EXCLUDED.status,
         updated_at = EXCLUDED.updated_at
     `;
@@ -140,6 +142,7 @@ export class PostgresCurriculumTrackerRepository implements ICurriculumTrackerRe
       tracker.term,
       tracker.totalWeeks,
       JSON.stringify(tracker.items),
+      JSON.stringify(tracker.dailyLogs),
       tracker.status,
       tracker.createdAt,
       tracker.updatedAt

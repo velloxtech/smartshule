@@ -1,5 +1,7 @@
 export type TabType =
   | 'dashboard'
+  | 'slot-applications'
+  | 'onboard-queue'
   | 'students-guardians'
   | 'teachers-staff'
   | 'geofencing'
@@ -10,7 +12,7 @@ export type TabType =
   | 'summative-assessments'
   | 'competencies-strands'
   | 'report-cards'
-  | 'cbc-analytics'
+  | 'CBC-analytics'
   | 'schemes-lesson-plans'
   | 'records-of-work'
   | 'timetable'
@@ -24,7 +26,7 @@ export type TabType =
   | 'capitation-income'
   | 'financial-reports'
   | 'ediary'
-  | 'visual-cbc'
+  | 'visual-CBC'
   | 'whatsapp-bot'
   | 'user-management'
   | 'system-logs'
@@ -165,7 +167,7 @@ export interface Student {
   feeBalance: number;
   totalFee: number;
   attendanceRate: number;
-  cbcRating: CBCRubric;
+  CBCRating: CBCRubric;
   status: 'Active' | 'Transferred' | 'Suspended' | 'ACTIVE';
   dateOfBirth?: string;
   medicalConditions?: string;
@@ -552,7 +554,7 @@ export interface BackendSummativeAssessment {
   evaluationDate: string;
 }
 
-export interface CbcReportCardData {
+export interface CBCReportCardData {
   id: string;
   studentId: string;
   studentName?: string;
@@ -870,7 +872,7 @@ export interface DashboardSummary {
     totalArrears: number;
     collectionRatePercentage: number;
   };
-  cbcProficiency: {
+  CBCProficiency: {
     exceeding: number;
     meeting: number;
     approaching: number;
@@ -1698,7 +1700,7 @@ export interface DisciplineIncident {
   gradeLevel?: string;
   date: string;
   incidentType: 'MERIT_COMMENDATION' | 'INFRACTION_WARNING' | 'COUNSELING_REFERRAL';
-  cbcCoreValue: 'LOVE' | 'RESPECT' | 'RESPONSIBILITY' | 'INTEGRITY' | 'PEACE' | 'PATRIOTISM' | 'UNITY';
+  CBCCoreValue: 'LOVE' | 'RESPECT' | 'RESPONSIBILITY' | 'INTEGRITY' | 'PEACE' | 'PATRIOTISM' | 'UNITY';
   title: string;
   description: string;
   actionTaken: string;
@@ -1929,6 +1931,53 @@ export interface OccurrenceDailySummary {
 // ==========================================
 
 export type WeekCoverageStatus = 'PENDING' | 'IN_PROGRESS' | 'COVERED' | 'DELAYED';
+export type DailyLessonStatus = 'TAUGHT' | 'PARTIALLY_TAUGHT' | 'POSTPONED' | 'REMEDIAL';
+export type LearnerComprehension = 'EXCELLENT' | 'GOOD' | 'AVERAGE' | 'NEEDS_REMEDIATION';
+
+export interface DailyReflection {
+  comprehensionLevel: LearnerComprehension;
+  whatWentWell: string;
+  challengesFaced?: string;
+  remedialPlan?: string;
+  nextSteps?: string;
+}
+
+export interface AdministrativeEndorsement {
+  endorsedByUserId: string;
+  endorsedByName: string;
+  endorsedByRole: string;
+  remarks: string;
+  endorsedAt: string;
+}
+
+export interface CurriculumTrackerDailyLog {
+  id: string;
+  date: string; // YYYY-MM-DD
+  dayOfWeek?: string;
+  weekNumber?: number;
+  lessonPeriod?: string;
+  strand: string;
+  subStrand: string;
+  learningOutcomesTaught: string;
+  activitiesConducted?: string;
+  resourcesUsed?: string;
+  status: DailyLessonStatus;
+  reflection: DailyReflection;
+  endorsement?: AdministrativeEndorsement;
+  loggedByTeacherId: string;
+  loggedByTeacherName: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EnrichedDailyLog extends CurriculumTrackerDailyLog {
+  trackerId: string;
+  subjectName: string;
+  className: string;
+  streamName?: string;
+  academicYear: string;
+  term: string;
+}
 
 export interface CurriculumTrackerWeekItem {
   id: string;
@@ -1958,6 +2007,9 @@ export interface CurriculumTrackerStats {
   delayedWeeks: number;
   completionPercentage: number;
   commentsCount: number;
+  totalDailyLogs?: number;
+  totalReflections?: number;
+  totalEndorsements?: number;
 }
 
 export interface CurriculumTracker {
@@ -1975,6 +2027,7 @@ export interface CurriculumTracker {
   term: string;
   totalWeeks: number;
   items: CurriculumTrackerWeekItem[];
+  dailyLogs?: CurriculumTrackerDailyLog[];
   status: 'ACTIVE' | 'COMPLETED' | 'ARCHIVED';
   stats: CurriculumTrackerStats;
   createdAt: string;
@@ -2023,6 +2076,51 @@ export interface CurriculumSchoolSummary {
   overallPercentage: number;
   subjects: CurriculumSummarySubject[];
 }
+
+export interface AddDailyLogDTO {
+  date: string;
+  dayOfWeek?: string;
+  weekNumber?: number;
+  lessonPeriod?: string;
+  strand: string;
+  subStrand: string;
+  learningOutcomesTaught: string;
+  activitiesConducted?: string;
+  resourcesUsed?: string;
+  status?: DailyLessonStatus;
+  reflection: {
+    comprehensionLevel: LearnerComprehension;
+    whatWentWell: string;
+    challengesFaced?: string;
+    remedialPlan?: string;
+    nextSteps?: string;
+  };
+}
+
+export interface UpdateDailyLogDTO {
+  date?: string;
+  dayOfWeek?: string;
+  weekNumber?: number;
+  lessonPeriod?: string;
+  strand?: string;
+  subStrand?: string;
+  learningOutcomesTaught?: string;
+  activitiesConducted?: string;
+  resourcesUsed?: string;
+  status?: DailyLessonStatus;
+  reflection?: {
+    comprehensionLevel?: LearnerComprehension;
+    whatWentWell?: string;
+    challengesFaced?: string;
+    remedialPlan?: string;
+    nextSteps?: string;
+  };
+}
+
+export interface EndorseDailyLogDTO {
+  remarks: string;
+}
+
 
 
 

@@ -7,7 +7,7 @@ import {
 import { LunchFeeUseCases } from '../../src/application/finance/LunchFeeUseCases';
 import { InMemoryLunchFeeRepository } from '../../src/infrastructure/database/in-memory/InMemoryLunchFeeRepository';
 import { InMemoryStudentRepository, InMemoryUserRepository, InMemoryGuardianRepository } from '../../src/infrastructure/database/in-memory/InMemoryRepositories';
-import { Student, StudentGender, CbcGradeLevel, StudentStatus } from '../../src/core/domain/user/Student';
+import { Student, StudentGender, CBCGradeLevel, StudentStatus } from '../../src/core/domain/user/Student';
 import { User, UserRole, UserStatus } from '../../src/core/domain/user/User';
 import { Guardian, GuardianRelationship } from '../../src/core/domain/user/Guardian';
 import { ForbiddenError, ConflictError, ValidationError, NotFoundError } from '../../src/core/domain/shared/Errors';
@@ -172,7 +172,7 @@ describe('Lunch Fee Domain & Use Cases Unit Tests', () => {
           lastName: 'Moraa',
           dateOfBirth: '2018-05-12',
           gender: StudentGender.FEMALE,
-          gradeLevel: CbcGradeLevel.PP1,
+          gradeLevel: CBCGradeLevel.PP1,
           streamId: 'stream-east',
           schoolId: 'school-001',
           academicYearId: 'year-2026',
@@ -190,7 +190,7 @@ describe('Lunch Fee Domain & Use Cases Unit Tests', () => {
           lastName: 'Kiprono',
           dateOfBirth: '2018-08-20',
           gender: StudentGender.MALE,
-          gradeLevel: CbcGradeLevel.PP1,
+          gradeLevel: CBCGradeLevel.PP1,
           streamId: 'stream-east',
           schoolId: 'school-001',
           academicYearId: 'year-2026',

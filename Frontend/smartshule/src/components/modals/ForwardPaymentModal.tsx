@@ -271,7 +271,8 @@ export const ForwardPaymentModal: React.FC<ForwardPaymentModalProps> = ({
                 <div className="p-2 rounded-lg bg-white/70 border border-emerald-200/50">
                   <div className="font-bold text-emerald-900">1. Lipa na M-Pesa (Paybill):</div>
                   <div>Business Number: <strong className="font-data-mono text-emerald-800">522533</strong></div>
-                  <div>Account: <strong className="font-data-mono text-[#7a1228]">8048859#{admNo}</strong></div>
+                  <div>Account: <strong className="font-data-mono text-[#7a1228]">8048859#{studentName} {currentStudent?.grade || currentStudent?.gradeLevel || ''}</strong></div>
+                  <div className="text-[10px] text-emerald-900 font-semibold mt-1">Guide: Please use Child's Name &amp; Grade as account reference, not admission number.</div>
                 </div>
                 <div className="p-2 rounded-lg bg-white/70 border border-emerald-200/50">
                   <div className="font-bold text-sky-900">2. Bank Wire / Deposit:</div>

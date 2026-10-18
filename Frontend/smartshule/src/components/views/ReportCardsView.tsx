@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Student, CbcReportCardData } from '../../types';
+import { Student, CBCReportCardData } from '../../types';
 import { apiService } from '../../services/api';
 import { resolveStreamName, resolveGradeName, resolveAcademicYearName, resolveLearningAreaName, resolveLearningAreaCode } from '../../utils/formatters';
 
@@ -42,7 +42,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
   const [selectedId, setSelectedId] = useState<string>(
     initialStudent ? initialStudent.id : (propStudents && propStudents.length > 0 ? propStudents[0].id : '')
   );
-  const [reportCardData, setReportCardData] = useState<CbcReportCardData | null>(null);
+  const [reportCardData, setReportCardData] = useState<CBCReportCardData | null>(null);
   const [currentYear, setCurrentYear] = useState<any>(null);
   const [currentTerm, setCurrentTerm] = useState<any>(null);
   const [availableTerms, setAvailableTerms] = useState<any[]>([]);
@@ -514,7 +514,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
         <!-- Status Callout Footer -->
         <rect x="22" y="161" width="316" height="32" rx="4" fill="${isPass ? '#ecfdf5' : '#fffbeb'}" stroke="${isPass ? '#a7f3d0' : '#fde68a'}" stroke-width="0.8" />
         <text x="32" y="174" font-size="7" font-weight="bold" fill="${isPass ? '#047857' : '#b45309'}" font-family="system-ui, sans-serif">
-          ${term.averageScore >= 80 ? '★ EXCEEDING NATIONAL CBC BENCHMARK (>= 80%)' : isPass ? '✓ PROFICIENT LEARNER (>= 65% CURRICULUM PASS)' : '⚠ REMEDIAL INTERVENTION RECOMMENDED'}
+          ${term.averageScore >= 80 ? 'EXCEEDING NATIONAL CBC BENCHMARK (>= 80%)' : isPass ? 'PROFICIENT LEARNER (>= 65% CURRICULUM PASS)' : 'REMEDIAL INTERVENTION RECOMMENDED'}
         </text>
         <text x="32" y="185" font-size="6.5" fill="#475569" font-family="system-ui, sans-serif">
           ${eeCount + meCount} of ${totalSubj} learning areas achieve verified Meeting or Exceeding expectations.
@@ -1685,7 +1685,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
                       {/* Status Callout Footer */}
                       <rect x="22" y="161" width="316" height="32" rx="4" fill={isPass ? '#ecfdf5' : '#fffbeb'} stroke={isPass ? '#a7f3d0' : '#fde68a'} strokeWidth="0.8" />
                       <text x="32" y="174" fontSize="7" fontWeight="bold" fill={isPass ? '#047857' : '#b45309'} fontFamily="system-ui, sans-serif">
-                        {term.averageScore >= 80 ? '★ EXCEEDING NATIONAL CBC BENCHMARK (>= 80%)' : isPass ? '✓ PROFICIENT LEARNER (>= 65% CURRICULUM PASS)' : '⚠ REMEDIAL INTERVENTION RECOMMENDED'}
+                        {term.averageScore >= 80 ? 'EXCEEDING NATIONAL CBC BENCHMARK (>= 80%)' : isPass ? 'PROFICIENT LEARNER (>= 65% CURRICULUM PASS)' : 'REMEDIAL INTERVENTION RECOMMENDED'}
                       </text>
                       <text x="32" y="185" fontSize="6.5" fill="#475569" fontFamily="system-ui, sans-serif">
                         {eeCount + meCount} of ${totalSubj} learning areas achieve verified Meeting or Exceeding expectations.

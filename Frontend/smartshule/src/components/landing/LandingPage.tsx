@@ -1,8 +1,31 @@
 import React, { useState, useEffect } from 'react'
+import {
+  Sparkles,
+  Palette,
+  Sun,
+  BookOpen,
+  FlaskConical,
+  Lightbulb,
+  Shield,
+  Users,
+  HeartHandshake,
+  Heart,
+  Globe,
+  ShieldCheck,
+  Star,
+  MapPin,
+  Phone,
+  Mail,
+  Clock,
+  CheckCircle2,
+  Target,
+  X,
+} from 'lucide-react'
 import ProgrammesPage from './ProgrammesPage'
 import AdmissionsPage from './AdmissionsPage'
 import CloudSky from './CloudSky'
 import LearnerOnboardingPage from './LearnerOnboardingPage'
+import ApplyAdmissionSlotPage from './ApplyAdmissionSlotPage'
 
 const logo = '/logo.jpg'
 const whatsappImg = '/hero-school.png'
@@ -13,6 +36,7 @@ const NAV_LINKS = [
   { name: 'About Us', view: 'home', section: 'about' },
   { name: 'Programmes', view: 'programmes', section: null },
   { name: 'Admissions', view: 'admissions', section: null },
+  { name: 'Apply for Slot', view: 'apply-slot', section: null },
   { name: 'Contact', view: 'home', section: 'contact' },
 ]
 
@@ -21,31 +45,31 @@ const PROGRAMMES = [
     level: 'Playgroup',
     age: 'Ages 2 – 3',
     desc: 'Sensory exploration, socialization, music, and motor skill development in a warm, nurturing space.',
-    emoji: '🌱',
+    icon: Sparkles,
   },
   {
     level: 'PP1 (Pre-Primary 1)',
     age: 'Age 4',
     desc: 'CBC foundational areas: Language, Mathematical activities, Environmental, and Psychomotor skills.',
-    emoji: '🎨',
+    icon: Palette,
   },
   {
     level: 'PP2 (Pre-Primary 2)',
     age: 'Age 5',
     desc: 'Phonics, early numeracy, social values, and creative expression preparing learners for Lower Primary.',
-    emoji: '🌻',
+    icon: Sun,
   },
   {
     level: 'Lower Primary',
     age: 'Grade 1 – 3',
     desc: 'CBC Key Stage 1: Literacy, Kiswahili, English, Math, Hygiene & Nutrition, and Creative Arts.',
-    emoji: '📚',
+    icon: BookOpen,
   },
   {
     level: 'Upper Primary',
     age: 'Grade 4 – 6',
     desc: 'CBC Key Stage 2: Science & Tech, Social Studies, Creative Arts, and Digital Literacy.',
-    emoji: '🔬',
+    icon: FlaskConical,
   },
 ]
 
@@ -61,25 +85,25 @@ const KEY_OBJECTIVES = [
     key: 'a',
     title: 'Problem Solving',
     desc: 'To develop Skills that will help in problem solving',
-    icon: '💡',
+    icon: Lightbulb,
   },
   {
     key: 'b',
     title: 'Confidence & Resilience',
     desc: 'To bring out a confident child with ability to take up challenges',
-    icon: '🦁',
+    icon: Shield,
   },
   {
     key: 'c',
     title: 'Teamwork & Cooperation',
     desc: 'To teach a child to work, learn and get along with others',
-    icon: '🤝',
+    icon: Users,
   },
   {
     key: 'd',
     title: 'Nurturing Full Potential',
     desc: "To nurture each child's talent and bring out their full potential",
-    icon: '🌱',
+    icon: HeartHandshake,
   },
 ]
 
@@ -87,22 +111,22 @@ const VALUES = [
   {
     title: 'Faith & Character',
     desc: 'We cultivate children of strong moral character, rooted in values of honesty, kindness, and integrity.',
-    icon: '✝️',
+    icon: Heart,
   },
   {
     title: 'Holistic Learning',
     desc: 'Academics, arts, sports, and social development are woven together — we nurture the whole child.',
-    icon: '🌍',
+    icon: Globe,
   },
   {
     title: 'Safe & Nurturing',
     desc: 'Every child deserves to feel safe and seen. Our environment is warm, inclusive, and child-centred.',
-    icon: '🤝',
+    icon: ShieldCheck,
   },
   {
     title: 'Excellence',
     desc: 'We hold high aspirations for every pupil and equip them with skills to achieve their very best.',
-    icon: '⭐',
+    icon: Star,
   },
 ]
 
@@ -120,7 +144,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   onOpenLegalModal,
 }) => {
   const [menuOpen, setMenuOpen] = useState(false)
-  const [currentPage, setCurrentPage] = useState<'home' | 'programmes' | 'admissions' | 'onboarding'>('home')
+  const [currentPage, setCurrentPage] = useState<'home' | 'programmes' | 'admissions' | 'apply-slot' | 'onboarding'>('home')
+  const [preselectedGrade, setPreselectedGrade] = useState<string>('PP1')
   const [showEnrolModal, setShowEnrolModal] = useState(false)
   const [modalSubmitted, setModalSubmitted] = useState(false)
   const [enrolForm, setEnrolForm] = useState({
@@ -136,6 +161,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       const hash = window.location.hash.toLowerCase()
       if (hash === '#onboard' || hash === '#onboarding' || hash === '#admitted-onboarding') {
         setCurrentPage('onboarding')
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      } else if (hash === '#apply' || hash === '#apply-slot' || hash === '#admission-slot' || hash === '#enrol') {
+        setCurrentPage('apply-slot')
         window.scrollTo({ top: 0, behavior: 'smooth' })
       } else if (hash === '#programmes') {
         setCurrentPage('programmes')
@@ -155,6 +183,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } else if (link.view === 'admissions') {
       setCurrentPage('admissions')
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } else if (link.view === 'apply-slot') {
+      setCurrentPage('apply-slot')
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } else {
       setCurrentPage('home')
@@ -183,9 +214,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     <div className="min-h-screen bg-[#fdfaf6] text-[#1f0a10]">
 
       <div className="bg-[#5a1226] text-white text-xs py-2 px-6 text-center tracking-wide flex justify-between items-center max-w-7xl mx-auto">
-        <span className="hidden sm:inline">📍 Kisumu, Kisian, KEMRI Road</span>
-        <span className="mx-auto sm:mx-0">📞 Admissions open for 2027 — Call us: <span className="font-semibold text-[#f5c84a]">0745 436312</span></span>
-        <span className="hidden md:inline text-white/70">✉️ schoolgraceseeds@gmail.com</span>
+        <span className="hidden sm:inline-flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-[#f5c84a]" /> Kisumu, Kisian, KEMRI Road</span>
+        <span className="mx-auto sm:mx-0 inline-flex items-center gap-1.5"><Phone className="w-3.5 h-3.5 text-[#f5c84a]" /> Admissions open for 2027 — Call us: <span className="font-semibold text-[#f5c84a]">0745 436312</span></span>
+        <span className="hidden md:inline-flex items-center gap-1.5 text-white/70"><Mail className="w-3.5 h-3.5 text-[#f5c84a]" /> schoolgraceseeds@gmail.com</span>
       </div>
 
       <nav className="sticky top-0 z-50 bg-[#7b1c35] shadow-lg">
@@ -212,6 +243,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 className={`text-sm font-semibold transition-colors duration-200 cursor-pointer ${
                   (currentPage === 'programmes' && link.view === 'programmes') ||
                   (currentPage === 'admissions' && link.view === 'admissions') ||
+                  (currentPage === 'apply-slot' && link.view === 'apply-slot') ||
                   (currentPage === 'home' && link.name === 'Home')
                     ? 'text-[#f5c84a] font-bold border-b-2 border-[#f5c84a] pb-0.5'
                     : 'text-white/80 hover:text-white'
@@ -233,12 +265,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             )}
             <button
               onClick={() => {
-                setCurrentPage('admissions')
+                setCurrentPage('apply-slot')
                 window.scrollTo({ top: 0, behavior: 'smooth' })
               }}
               className="bg-[#e8a92a] hover:bg-[#f5c84a] text-[#5a1226] font-bold text-sm px-6 py-2 rounded-full transition-all duration-200 shadow hover:scale-105 cursor-pointer"
             >
-              Enrol Now
+              Apply for Slot
             </button>
           </div>
 
@@ -279,12 +311,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <button
               onClick={() => {
                 setMenuOpen(false)
-                setCurrentPage('admissions')
+                setCurrentPage('apply-slot')
                 window.scrollTo({ top: 0, behavior: 'smooth' })
               }}
               className="bg-[#e8a92a] text-[#5a1226] font-bold text-sm px-6 py-2.5 rounded-full text-center cursor-pointer"
             >
-              Enrol Now
+              Apply for Slot
             </button>
           </div>
         </div>
@@ -296,7 +328,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             setCurrentPage('home')
             window.scrollTo({ top: 0, behavior: 'smooth' })
           }}
-          onOpenApplyModal={() => setShowEnrolModal(true)}
+          onOpenApplyModal={(grade?: string) => {
+            if (grade) setPreselectedGrade(grade)
+            setCurrentPage('apply-slot')
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+          }}
         />
       ) : currentPage === 'admissions' ? (
         <AdmissionsPage
@@ -312,6 +348,30 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             setCurrentPage('onboarding')
             window.scrollTo({ top: 0, behavior: 'smooth' })
           }}
+          onNavigateApplySlot={() => {
+            setCurrentPage('apply-slot')
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+          }}
+        />
+      ) : currentPage === 'apply-slot' ? (
+        <ApplyAdmissionSlotPage
+          onNavigateHome={() => {
+            setCurrentPage('home')
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+          }}
+          onNavigateAdmissions={() => {
+            setCurrentPage('admissions')
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+          }}
+          onNavigateProgrammes={() => {
+            setCurrentPage('programmes')
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+          }}
+          onNavigateOnboarding={() => {
+            setCurrentPage('onboarding')
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+          }}
+          initialGrade={preselectedGrade}
         />
       ) : currentPage === 'onboarding' ? (
         <LearnerOnboardingPage
@@ -320,6 +380,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             window.scrollTo({ top: 0, behavior: 'smooth' })
           }}
           onNavigateLogin={onNavigateLogin}
+          onNavigateApplySlot={() => {
+            setCurrentPage('apply-slot')
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+          }}
         />
       ) : (
         <>
@@ -347,12 +411,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <div className="flex flex-wrap gap-4">
                   <button
                     onClick={() => {
-                      setCurrentPage('admissions')
+                      setCurrentPage('apply-slot')
                       window.scrollTo({ top: 0, behavior: 'smooth' })
                     }}
                     className="bg-[#e8a92a] hover:bg-[#f5c84a] text-[#5a1226] font-bold px-8 py-3.5 rounded-full transition-all duration-200 text-sm shadow-lg hover:scale-105 cursor-pointer"
                   >
-                    Apply for Admission
+                    Apply for Admission Slot
                   </button>
                   <button
                     onClick={() => {
@@ -455,7 +519,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     className="group bg-white hover:bg-[#7b1c35] border border-[#f0d8df] hover:border-[#7b1c35] rounded-2xl p-6 transition-all duration-300 cursor-pointer shadow-sm hover:shadow-xl flex flex-col justify-between"
                   >
                     <div>
-                      <div className="text-3xl mb-4">{p.emoji}</div>
+                      <div className="w-12 h-12 rounded-2xl bg-[#f9eef1] text-[#7b1c35] group-hover:bg-white/20 group-hover:text-white flex items-center justify-center mb-4 transition-colors">
+                        <p.icon className="w-6 h-6" />
+                      </div>
                       <p className="text-[#e8a92a] text-xs font-bold tracking-widest uppercase mb-1 group-hover:text-[#f5c84a] transition-colors">{p.age}</p>
                       <h3 style={{ fontFamily: 'Fraunces, serif' }} className="text-xl font-bold text-[#5a1226] group-hover:text-white transition-colors mb-3">{p.level}</h3>
                       <p className="text-[#8a6470] group-hover:text-white/75 text-sm leading-relaxed transition-colors">{p.desc}</p>
@@ -487,9 +553,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <div className="grid md:grid-cols-2 gap-8 mb-14">
                 <div className="bg-gradient-to-br from-white/12 to-white/5 hover:from-white/16 hover:to-white/8 border border-white/20 hover:border-[#f5c84a]/50 rounded-3xl p-8 lg:p-10 transition-all duration-300 shadow-xl backdrop-blur-sm relative group">
                   <div className="flex items-center gap-4 mb-5">
-                    <span className="text-3xl p-3 rounded-2xl bg-[#f5c84a]/15 text-[#f5c84a] border border-[#f5c84a]/30">
-                      🌟
-                    </span>
+                    <div className="p-3 rounded-2xl bg-[#f5c84a]/15 text-[#f5c84a] border border-[#f5c84a]/30 flex items-center justify-center">
+                      <Sparkles className="w-7 h-7" />
+                    </div>
                     <div>
                       <p className="text-[#f5c84a] text-xs font-bold uppercase tracking-wider">Our North Star</p>
                       <h3 style={{ fontFamily: 'Fraunces, serif' }} className="text-3xl font-bold text-white">
@@ -504,9 +570,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
                 <div className="bg-gradient-to-br from-white/12 to-white/5 hover:from-white/16 hover:to-white/8 border border-white/20 hover:border-[#f5c84a]/50 rounded-3xl p-8 lg:p-10 transition-all duration-300 shadow-xl backdrop-blur-sm relative group">
                   <div className="flex items-center gap-4 mb-5">
-                    <span className="text-3xl p-3 rounded-2xl bg-[#f5c84a]/15 text-[#f5c84a] border border-[#f5c84a]/30">
-                      🎯
-                    </span>
+                    <div className="p-3 rounded-2xl bg-[#f5c84a]/15 text-[#f5c84a] border border-[#f5c84a]/30 flex items-center justify-center">
+                      <Target className="w-7 h-7" />
+                    </div>
                     <div>
                       <p className="text-[#f5c84a] text-xs font-bold uppercase tracking-wider">Our Daily Commitment</p>
                       <h3 style={{ fontFamily: 'Fraunces, serif' }} className="text-3xl font-bold text-white">
@@ -544,7 +610,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                           <span className="w-8 h-8 rounded-full bg-[#f5c84a] text-[#5a1226] font-bold text-sm flex items-center justify-center font-mono shadow-md">
                             {obj.key})
                           </span>
-                          <span className="text-2xl group-hover:scale-110 transition-transform">{obj.icon}</span>
+                          <div className="w-9 h-9 rounded-xl bg-white/10 text-[#f5c84a] flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <obj.icon className="w-5 h-5" />
+                          </div>
                         </div>
                         <h4 style={{ fontFamily: 'Fraunces, serif' }} className="text-lg font-bold text-[#f5c84a] mb-2">
                           {obj.title}
@@ -570,7 +638,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
                   {VALUES.map(v => (
                     <div key={v.title} className="bg-white/5 hover:bg-white/10 border border-white/15 rounded-2xl p-5 transition-all duration-300">
-                      <div className="text-3xl mb-3">{v.icon}</div>
+                      <div className="w-10 h-10 rounded-xl bg-white/10 text-[#f5c84a] flex items-center justify-center mb-3">
+                        <v.icon className="w-5 h-5" />
+                      </div>
                       <h4 style={{ fontFamily: 'Fraunces, serif' }} className="text-base font-bold text-[#f5c84a] mb-2">{v.title}</h4>
                       <p className="text-white/70 text-xs leading-relaxed">{v.desc}</p>
                     </div>
@@ -613,12 +683,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <button
                   onClick={() => {
-                    setCurrentPage('admissions')
+                    setCurrentPage('apply-slot')
                     window.scrollTo({ top: 0, behavior: 'smooth' })
                   }}
                   className="bg-[#e8a92a] hover:bg-[#f5c84a] text-[#5a1226] font-bold px-8 py-4 rounded-full transition-colors duration-200 text-sm shadow-lg cursor-pointer"
                 >
-                  Begin Application
+                  Apply for Admission Slot
                 </button>
                 <a href="tel:0745436312" className="bg-white/15 hover:bg-white/25 border border-white/30 text-white font-bold px-8 py-4 rounded-full transition-colors duration-200 text-sm inline-flex items-center justify-center">
                   Call Us Today →
@@ -630,20 +700,26 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <section id="contact" className="py-16 bg-[#5a1226] text-white border-t border-white/10">
             <div className="max-w-7xl mx-auto px-6 lg:px-12 grid md:grid-cols-3 gap-8 text-center md:text-left">
               <div className="bg-white/5 p-6 rounded-2xl border border-white/10">
-                <div className="text-3xl mb-2">📍</div>
+                <div className="w-12 h-12 rounded-xl bg-white/10 text-[#f5c84a] flex items-center justify-center mb-3 mx-auto md:mx-0">
+                  <MapPin className="w-6 h-6" />
+                </div>
                 <h4 style={{ fontFamily: 'Fraunces, serif' }} className="text-lg font-bold text-[#f5c84a] mb-1">Our Location</h4>
                 <p className="text-white/75 text-sm">Kisumu, Kisian, KEMRI Road</p>
               </div>
 
               <div className="bg-white/5 p-6 rounded-2xl border border-white/10">
-                <div className="text-3xl mb-2">📞</div>
+                <div className="w-12 h-12 rounded-xl bg-white/10 text-[#f5c84a] flex items-center justify-center mb-3 mx-auto md:mx-0">
+                  <Phone className="w-6 h-6" />
+                </div>
                 <h4 style={{ fontFamily: 'Fraunces, serif' }} className="text-lg font-bold text-[#f5c84a] mb-1">Call Admissions</h4>
                 <p className="text-white/75 text-sm font-semibold">0745 436312</p>
                 <p className="text-white/50 text-xs mt-1">Mon – Fri: 7:30 am – 3:30 pm</p>
               </div>
 
               <div className="bg-white/5 p-6 rounded-2xl border border-white/10">
-                <div className="text-3xl mb-2">✉️</div>
+                <div className="w-12 h-12 rounded-xl bg-white/10 text-[#f5c84a] flex items-center justify-center mb-3 mx-auto md:mx-0">
+                  <Mail className="w-6 h-6" />
+                </div>
                 <h4 style={{ fontFamily: 'Fraunces, serif' }} className="text-lg font-bold text-[#f5c84a] mb-1">Email Us</h4>
                 <p className="text-white/75 text-sm">schoolgraceseeds@gmail.com</p>
               </div>
@@ -694,10 +770,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <div>
               <p className="text-white text-xs font-bold tracking-widest uppercase mb-4">Contact</p>
               <ul className="space-y-2 text-white/50 text-sm">
-                <li>📍 Kisumu, Kisian, KEMRI Road</li>
-                <li>📞 0745 436312</li>
-                <li>✉️ schoolgraceseeds@gmail.com</li>
-                <li>🕗 Mon – Fri: 7:30 am – 3:30 pm</li>
+                <li className="flex items-center gap-2"><MapPin className="w-3.5 h-3.5 text-[#f5c84a] shrink-0" /> Kisumu, Kisian, KEMRI Road</li>
+                <li className="flex items-center gap-2"><Phone className="w-3.5 h-3.5 text-[#f5c84a] shrink-0" /> 0745 436312</li>
+                <li className="flex items-center gap-2"><Mail className="w-3.5 h-3.5 text-[#f5c84a] shrink-0" /> schoolgraceseeds@gmail.com</li>
+                <li className="flex items-center gap-2"><Clock className="w-3.5 h-3.5 text-[#f5c84a] shrink-0" /> Mon – Fri: 7:30 am – 3:30 pm</li>
               </ul>
             </div>
           </div>
@@ -732,9 +808,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <div className="bg-white rounded-3xl p-8 max-w-lg w-full border border-[#f0d8df] shadow-2xl relative">
             <button
               onClick={() => setShowEnrolModal(false)}
-              className="absolute top-6 right-6 text-gray-400 hover:text-gray-700 font-bold text-xl cursor-pointer"
+              className="absolute top-6 right-6 text-gray-400 hover:text-gray-700 font-bold p-1 rounded-lg cursor-pointer"
             >
-              ✕
+              <X className="w-5 h-5" />
             </button>
 
             <div className="text-center mb-6">
@@ -747,7 +823,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
             {modalSubmitted ? (
               <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-6 rounded-2xl text-center">
-                <div className="text-4xl mb-2">🎉</div>
+                <CheckCircle2 className="w-12 h-12 text-emerald-600 mx-auto mb-2" />
                 <h4 className="font-bold text-base mb-1">Application Submitted!</h4>
                 <p className="text-xs text-emerald-700">We have received your application request. We will call you shortly on the provided phone number.</p>
               </div>

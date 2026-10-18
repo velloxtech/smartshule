@@ -17,7 +17,7 @@ import {
   BackendSubStrand,
   BackendFormativeAssessment,
   BackendSummativeAssessment,
-  CbcReportCardData,
+  CBCReportCardData,
   SchemeOfWork,
   SchemeEntry,
   LessonPlan,
@@ -86,6 +86,11 @@ import {
   CreateCurriculumTrackerDTO,
   ConfirmWeekCoveredDTO,
   CurriculumSchoolSummary,
+  AddDailyLogDTO,
+  UpdateDailyLogDTO,
+  EndorseDailyLogDTO,
+  CurriculumTrackerDailyLog,
+  EnrichedDailyLog,
 } from '../types';
 function resolveApiBaseUrl(): string {
   let url = ((import.meta as any).env?.VITE_API_URL || '').trim();
@@ -737,7 +742,7 @@ const coreApiService = {
     title: string;
     description?: string;
   }): Promise<ApiResponse<BackendStrand>> => {
-    return apiFetch<ApiResponse<BackendStrand>>('/cbc/strands', {
+    return apiFetch<ApiResponse<BackendStrand>>('/CBC/strands', {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -748,11 +753,11 @@ const coreApiService = {
     gradeLevel?: string
   ): Promise<ApiResponse<BackendStrand[]>> => {
     const q = gradeLevel ? `?gradeLevel=${gradeLevel}` : '';
-    return apiFetch<ApiResponse<BackendStrand[]>>(`/cbc/strands/by-learning-area/${learningAreaId}${q}`);
+    return apiFetch<ApiResponse<BackendStrand[]>>(`/CBC/strands/by-learning-area/${learningAreaId}${q}`);
   },
 
   deleteStrand: async (id: string): Promise<ApiResponse<any>> => {
-    return apiFetch<ApiResponse<any>>(`/cbc/strands/${id}`, {
+    return apiFetch<ApiResponse<any>>(`/CBC/strands/${id}`, {
       method: 'DELETE',
     });
   },
@@ -764,18 +769,18 @@ const coreApiService = {
     specificLearningOutcomes: string[];
     suggestedExperiences?: string[];
   }): Promise<ApiResponse<BackendSubStrand>> => {
-    return apiFetch<ApiResponse<BackendSubStrand>>('/cbc/sub-strands', {
+    return apiFetch<ApiResponse<BackendSubStrand>>('/CBC/sub-strands', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   },
 
   getSubStrandsByStrand: async (strandId: string): Promise<ApiResponse<BackendSubStrand[]>> => {
-    return apiFetch<ApiResponse<BackendSubStrand[]>>(`/cbc/sub-strands/by-strand/${strandId}`);
+    return apiFetch<ApiResponse<BackendSubStrand[]>>(`/CBC/sub-strands/by-strand/${strandId}`);
   },
 
   deleteSubStrand: async (id: string): Promise<ApiResponse<any>> => {
-    return apiFetch<ApiResponse<any>>(`/cbc/sub-strands/${id}`, {
+    return apiFetch<ApiResponse<any>>(`/CBC/sub-strands/${id}`, {
       method: 'DELETE',
     });
   },
@@ -796,7 +801,7 @@ const coreApiService = {
     targetedCompetencies?: string[];
     valuesObserved?: string[];
   }): Promise<ApiResponse<BackendFormativeAssessment>> => {
-    return apiFetch<ApiResponse<BackendFormativeAssessment>>('/cbc/formative', {
+    return apiFetch<ApiResponse<BackendFormativeAssessment>>('/CBC/formative', {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -815,11 +820,11 @@ const coreApiService = {
     if (params?.termId) q.append('termId', params.termId);
     if (params?.academicYearId) q.append('academicYearId', params.academicYearId);
     if (params?.subStrandId) q.append('subStrandId', params.subStrandId);
-    return apiFetch<ApiResponse<BackendFormativeAssessment[]>>(`/cbc/formative?${q.toString()}`);
+    return apiFetch<ApiResponse<BackendFormativeAssessment[]>>(`/CBC/formative?${q.toString()}`);
   },
 
   deleteFormative: async (id: string): Promise<ApiResponse<any>> => {
-    return apiFetch<ApiResponse<any>>(`/cbc/formative/${id}`, {
+    return apiFetch<ApiResponse<any>>(`/CBC/formative/${id}`, {
       method: 'DELETE',
     });
   },
@@ -840,14 +845,14 @@ const coreApiService = {
     teacherRemarks: string;
     evaluationDate: string;
   }): Promise<ApiResponse<BackendSummativeAssessment>> => {
-    return apiFetch<ApiResponse<BackendSummativeAssessment>>('/cbc/summative', {
+    return apiFetch<ApiResponse<BackendSummativeAssessment>>('/CBC/summative', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   },
 
   recordSummativeBatch: async (data: { assessments: any[] }): Promise<ApiResponse<BackendSummativeAssessment[]>> => {
-    return apiFetch<ApiResponse<BackendSummativeAssessment[]>>('/cbc/summative/batch', {
+    return apiFetch<ApiResponse<BackendSummativeAssessment[]>>('/CBC/summative/batch', {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -864,11 +869,11 @@ const coreApiService = {
     if (params?.learningAreaId) q.append('learningAreaId', params.learningAreaId);
     if (params?.termId) q.append('termId', params.termId);
     if (params?.academicYearId) q.append('academicYearId', params.academicYearId);
-    return apiFetch<ApiResponse<BackendSummativeAssessment[]>>(`/cbc/summative?${q.toString()}`);
+    return apiFetch<ApiResponse<BackendSummativeAssessment[]>>(`/CBC/summative?${q.toString()}`);
   },
 
   deleteSummative: async (id: string): Promise<ApiResponse<void>> => {
-    return apiFetch<ApiResponse<void>>(`/cbc/summative/${id}`, {
+    return apiFetch<ApiResponse<void>>(`/CBC/summative/${id}`, {
       method: 'DELETE',
     });
   },
@@ -881,8 +886,8 @@ const coreApiService = {
     headTeacherRemarks: string;
     closingDate?: string;
     nextTermOpeningDate?: string;
-  }): Promise<ApiResponse<CbcReportCardData>> => {
-    return apiFetch<ApiResponse<CbcReportCardData>>('/cbc/report-cards/generate', {
+  }): Promise<ApiResponse<CBCReportCardData>> => {
+    return apiFetch<ApiResponse<CBCReportCardData>>('/CBC/report-cards/generate', {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -892,13 +897,13 @@ const coreApiService = {
     studentId: string,
     termId: string,
     academicYearId: string
-  ): Promise<ApiResponse<CbcReportCardData>> => {
-    return apiFetch<ApiResponse<CbcReportCardData>>(
-      `/cbc/report-cards?studentId=${studentId}&termId=${termId}&academicYearId=${academicYearId}`
+  ): Promise<ApiResponse<CBCReportCardData>> => {
+    return apiFetch<ApiResponse<CBCReportCardData>>(
+      `/CBC/report-cards?studentId=${studentId}&termId=${termId}&academicYearId=${academicYearId}`
     );
   },
 
-  getCbcAnalytics: async (params?: {
+  getCBCAnalytics: async (params?: {
     gradeLevel?: string;
     learningAreaId?: string;
     termId?: string;
@@ -909,7 +914,7 @@ const coreApiService = {
     if (params?.learningAreaId) q.append('learningAreaId', params.learningAreaId);
     if (params?.termId) q.append('termId', params.termId);
     if (params?.academicYearId) q.append('academicYearId', params.academicYearId);
-    return apiFetch<ApiResponse<any>>(`/cbc/analytics?${q.toString()}`);
+    return apiFetch<ApiResponse<any>>(`/CBC/analytics?${q.toString()}`);
   },
 
   // 6. Schemes of Work & Lesson Plans Endpoints
@@ -2765,6 +2770,69 @@ export const libraryApi = {
       method: 'DELETE',
     });
   },
+
+  addCurriculumDailyLog: async (
+    trackerId: string,
+    data: AddDailyLogDTO
+  ): Promise<ApiResponse<{ tracker: CurriculumTracker; log: CurriculumTrackerDailyLog }>> => {
+    return apiFetch<ApiResponse<{ tracker: CurriculumTracker; log: CurriculumTrackerDailyLog }>>(`/curriculum-tracker/${trackerId}/daily-logs`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateCurriculumDailyLog: async (
+    trackerId: string,
+    logId: string,
+    data: UpdateDailyLogDTO
+  ): Promise<ApiResponse<{ tracker: CurriculumTracker; log: CurriculumTrackerDailyLog }>> => {
+    return apiFetch<ApiResponse<{ tracker: CurriculumTracker; log: CurriculumTrackerDailyLog }>>(`/curriculum-tracker/${trackerId}/daily-logs/${logId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  endorseCurriculumDailyLog: async (
+    trackerId: string,
+    logId: string,
+    data: EndorseDailyLogDTO
+  ): Promise<ApiResponse<{ tracker: CurriculumTracker; log: CurriculumTrackerDailyLog }>> => {
+    return apiFetch<ApiResponse<{ tracker: CurriculumTracker; log: CurriculumTrackerDailyLog }>>(`/curriculum-tracker/${trackerId}/daily-logs/${logId}/endorse`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  deleteCurriculumDailyLog: async (
+    trackerId: string,
+    logId: string
+  ): Promise<ApiResponse<{ message: string }>> => {
+    return apiFetch<ApiResponse<{ message: string }>>(`/curriculum-tracker/${trackerId}/daily-logs/${logId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  getCurriculumDailyLogs: async (params?: {
+    schoolId?: string;
+    teacherId?: string;
+    classRoomId?: string;
+    learningAreaId?: string;
+    date?: string;
+    startDate?: string;
+    endDate?: string;
+    search?: string;
+  }): Promise<ApiResponse<EnrichedDailyLog[]>> => {
+    const q = new URLSearchParams();
+    if (params?.schoolId) q.append('schoolId', params.schoolId);
+    if (params?.teacherId) q.append('teacherId', params.teacherId);
+    if (params?.classRoomId) q.append('classRoomId', params.classRoomId);
+    if (params?.learningAreaId) q.append('learningAreaId', params.learningAreaId);
+    if (params?.date) q.append('date', params.date);
+    if (params?.startDate) q.append('startDate', params.startDate);
+    if (params?.endDate) q.append('endDate', params.endDate);
+    if (params?.search) q.append('search', params.search);
+    return apiFetch<ApiResponse<EnrichedDailyLog[]>>(`/curriculum-tracker/daily-logs?${q.toString()}`);
+  },
 };
 
 // Unified apiService containing core and extended domain endpoints
@@ -2844,6 +2912,11 @@ export const updateTrackerWeekComment = libraryApi.updateTrackerWeekComment;
 export const batchUpdateTrackerWeeks = libraryApi.batchUpdateTrackerWeeks;
 export const getCurriculumSummary = libraryApi.getCurriculumSummary;
 export const deleteCurriculumTracker = libraryApi.deleteCurriculumTracker;
+export const addCurriculumDailyLog = libraryApi.addCurriculumDailyLog;
+export const updateCurriculumDailyLog = libraryApi.updateCurriculumDailyLog;
+export const endorseCurriculumDailyLog = libraryApi.endorseCurriculumDailyLog;
+export const deleteCurriculumDailyLog = libraryApi.deleteCurriculumDailyLog;
+export const getCurriculumDailyLogs = libraryApi.getCurriculumDailyLogs;
 
 export default apiService;
 

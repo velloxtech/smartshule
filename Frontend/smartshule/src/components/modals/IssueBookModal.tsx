@@ -332,7 +332,7 @@ const IssueBookModal: React.FC<IssueBookModalProps> = ({
                 </label>
                 <input
                   type="text"
-                  placeholder={borrowerType === 'STUDENT' ? 'e.g. ADM-2024-001' : 'e.g. TSC-54321'}
+                  placeholder={borrowerType === 'STUDENT' ? 'e.g. 01' : 'e.g. TSC-54321'}
                   value={borrowerAdmissionOrNumber}
                   onChange={e => setBorrowerAdmissionOrNumber(e.target.value)}
                   className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#800000]/20 focus:border-[#800000] outline-none"

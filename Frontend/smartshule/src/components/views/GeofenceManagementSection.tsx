@@ -29,7 +29,7 @@ export const GeofenceManagementSection: React.FC<GeofenceManagementSectionProps>
   const [longitude, setLongitude] = useState<string>('34.721234');
   const [radiusMeters, setRadiusMeters] = useState<number>(250);
   const [isEnabled, setIsEnabled] = useState<boolean>(true);
-  const [address, setAddress] = useState<string>('Grace Seeds School Main Campus, KEMRI Street, Kisian, Kisumu');
+  const [address, setAddress] = useState<string>('Grace Seeds School, KEMRI Street, Kisian, Kisumu');
 
   // GPS detection state
   const [detecting, setDetecting] = useState(false);
@@ -312,14 +312,14 @@ export const GeofenceManagementSection: React.FC<GeofenceManagementSectionProps>
               <div className="flex justify-between text-[10px] text-outline mt-0.5">
                 <span>50m (Compact School)</span>
                 <span>500m (Standard Compound)</span>
-                <span>2000m (Large Campus)</span>
+                <span>2000m (Large Perimeter)</span>
               </div>
             </div>
 
             {/* Compound Address */}
             <div>
               <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">
-                School Campus / Compound Location Description
+                School Compound Location Description
               </label>
               <input
                 type="text"

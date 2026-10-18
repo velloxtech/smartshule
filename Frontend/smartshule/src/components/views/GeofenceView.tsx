@@ -32,7 +32,7 @@ export const GeofenceView: React.FC<GeofenceViewProps> = ({ onNavigateTab }) => 
   const [radiusMeters, setRadiusMeters] = useState<number>(250);
   const [isEnabled, setIsEnabled] = useState<boolean>(true);
   const [address, setAddress] = useState<string>(
-    'Grace Seeds School Main Campus, KEMRI Street, Kisian, Kisumu'
+    'Grace Seeds School, KEMRI Street, Kisian, Kisumu'
   );
 
   // GPS detection state
@@ -283,7 +283,7 @@ export const GeofenceView: React.FC<GeofenceViewProps> = ({ onNavigateTab }) => 
 
       {/* Top 4 KPI Metrics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Metric 1: Campus Coordinates */}
+        {/* Metric 1: School Coordinates */}
         <div className="p-5 rounded-2xl bg-white border border-outline-variant/30 shadow-xs flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
@@ -298,7 +298,7 @@ export const GeofenceView: React.FC<GeofenceViewProps> = ({ onNavigateTab }) => 
               {parseFloat(latitude || '0').toFixed(5)}, {parseFloat(longitude || '0').toFixed(5)}
             </span>
             <span className="text-[11px] text-on-surface-variant mt-1 block">
-              Grace Seeds Main Campus
+              Grace Seeds School
             </span>
           </div>
         </div>
@@ -535,14 +535,14 @@ export const GeofenceView: React.FC<GeofenceViewProps> = ({ onNavigateTab }) => 
                 <span>50m (Compact School)</span>
                 <span>250m (Grace Seeds Default)</span>
                 <span>500m (Standard Compound)</span>
-                <span>2000m (Large Campus)</span>
+                <span>2000m (Large Perimeter)</span>
               </div>
             </div>
 
             {/* Compound Address */}
             <div>
               <label className="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">
-                School Campus / Compound Location Description
+                School Compound Location Description
               </label>
               <input
                 type="text"

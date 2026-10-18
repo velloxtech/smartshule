@@ -459,7 +459,7 @@ export const FacultyAttendanceRosterCard: React.FC<FacultyAttendanceRosterCardPr
                             }`}
                             title={
                               isClockedIn
-                                ? 'Currently on campus (Clocked In)'
+                                ? 'Currently in school (Clocked In)'
                                 : isClockedOut
                                 ? 'Shift concluded (Clocked Out)'
                                 : 'Pending arrival (Not Clocked In)'
@@ -478,7 +478,10 @@ export const FacultyAttendanceRosterCard: React.FC<FacultyAttendanceRosterCardPr
                               </span>
                             )}
                             {teacher.phoneNumber && (
-                              <span>📞 {teacher.phoneNumber}</span>
+                              <span className="inline-flex items-center gap-1">
+                                <span className="material-symbols-outlined text-[13px]">phone</span>
+                                <span>{teacher.phoneNumber}</span>
+                              </span>
                             )}
                           </div>
                         </div>
@@ -524,8 +527,9 @@ export const FacultyAttendanceRosterCard: React.FC<FacultyAttendanceRosterCardPr
                     {/* Distance to Center */}
                     <td className="py-3 px-3">
                       {teacher.distanceMeters != null ? (
-                        <span className="font-data-mono font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
-                          📍 {teacher.distanceMeters}m from center
+                        <span className="font-data-mono font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded border border-teal-200 inline-flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[14px]">location_on</span>
+                          <span>{teacher.distanceMeters}m from center</span>
                         </span>
                       ) : (
                         <span className="text-gray-400 text-[11px]">Pending check</span>

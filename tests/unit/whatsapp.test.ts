@@ -3,9 +3,9 @@ import path from 'path';
 import { PhoneUtils } from '../../src/infrastructure/utils/PhoneUtils';
 import { WhatsAppService } from '../../src/infrastructure/services/WhatsAppService';
 import { WhatsAppClientManager } from '../../src/infrastructure/services/WhatsAppClientManager';
-import { InMemoryUserRepository, InMemoryStudentRepository, InMemoryTeacherRepository, InMemoryGuardianRepository, InMemoryAcademicRepository, InMemoryCbcAssessmentRepository, InMemoryTimetableRepository, InMemoryAttendanceRepository, InMemoryFeeRepository, InMemoryEDiaryRepository } from '../../src/infrastructure/database/in-memory/InMemoryRepositories';
+import { InMemoryUserRepository, InMemoryStudentRepository, InMemoryTeacherRepository, InMemoryGuardianRepository, InMemoryAcademicRepository, InMemoryCBCAssessmentRepository, InMemoryTimetableRepository, InMemoryAttendanceRepository, InMemoryFeeRepository, InMemoryEDiaryRepository } from '../../src/infrastructure/database/in-memory/InMemoryRepositories';
 import { User, UserRole, UserStatus } from '../../src/core/domain/user/User';
-import { Student, StudentGender, CbcGradeLevel, StudentStatus } from '../../src/core/domain/user/Student';
+import { Student, StudentGender, CBCGradeLevel, StudentStatus } from '../../src/core/domain/user/Student';
 import { Guardian, GuardianRelationship } from '../../src/core/domain/user/Guardian';
 import { FeeStructure, StudentInvoice, Payment, PaymentMethod, PaymentStatus, InvoiceStatus } from '../../src/core/domain/finance/Fee';
 import { AttendanceRegister, AttendanceStatus, AttendanceType } from '../../src/core/domain/attendance/Attendance';
@@ -45,7 +45,7 @@ describe('WhatsApp Bot & Phone Counter-Checking Unit Tests', () => {
     let feeRepo: InMemoryFeeRepository;
     let ediaryRepo: InMemoryEDiaryRepository;
     let attendanceRepo: InMemoryAttendanceRepository;
-    let cbcRepo: InMemoryCbcAssessmentRepository;
+    let CBCRepo: InMemoryCBCAssessmentRepository;
     let academicRepo: InMemoryAcademicRepository;
     let timetableRepo: InMemoryTimetableRepository;
     let whatsAppService: WhatsAppService;
@@ -57,7 +57,7 @@ describe('WhatsApp Bot & Phone Counter-Checking Unit Tests', () => {
       feeRepo = new InMemoryFeeRepository();
       ediaryRepo = new InMemoryEDiaryRepository();
       attendanceRepo = new InMemoryAttendanceRepository();
-      cbcRepo = new InMemoryCbcAssessmentRepository();
+      CBCRepo = new InMemoryCBCAssessmentRepository();
       academicRepo = new InMemoryAcademicRepository();
       timetableRepo = new InMemoryTimetableRepository();
 
@@ -100,7 +100,7 @@ describe('WhatsApp Bot & Phone Counter-Checking Unit Tests', () => {
           lastName: 'Doe',
           dateOfBirth: '2014-05-10',
           gender: StudentGender.MALE,
-          gradeLevel: CbcGradeLevel.GRADE_7,
+          gradeLevel: CBCGradeLevel.GRADE_7,
           streamId: 'stream-g7',
           schoolId: 'sch-001',
           academicYearId: 'year-2026',
@@ -212,7 +212,7 @@ describe('WhatsApp Bot & Phone Counter-Checking Unit Tests', () => {
         },
         'form-001'
       );
-      await cbcRepo.saveFormative(formative);
+      await CBCRepo.saveFormative(formative);
 
       // Seed Timetable
       const timetable = Timetable.create(
@@ -250,7 +250,7 @@ describe('WhatsApp Bot & Phone Counter-Checking Unit Tests', () => {
         feeRepo,
         ediaryRepo,
         attendanceRepo,
-        cbcRepo,
+        CBCRepo,
         academicRepo,
         timetableRepo
       );
@@ -362,7 +362,7 @@ describe('WhatsApp Bot & Phone Counter-Checking Unit Tests', () => {
           lastName: 'Doe',
           dateOfBirth: '2016-08-12',
           gender: StudentGender.FEMALE,
-          gradeLevel: CbcGradeLevel.GRADE_4,
+          gradeLevel: CBCGradeLevel.GRADE_4,
           streamId: 'stream-g4',
           schoolId: 'sch-001',
           academicYearId: 'year-2026',

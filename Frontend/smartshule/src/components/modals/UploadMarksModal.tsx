@@ -327,7 +327,7 @@ const normalizeStudent = (s: any): Student => {
     feeBalance: s.feeBalance || 0,
     totalFee: s.totalFee || 0,
     attendanceRate: s.attendanceRate ?? 100,
-    cbcRating: s.cbcRating || 'ME',
+    CBCRating: s.CBCRating || 'ME',
     status: s.status === 'ACTIVE' || s.status === 'Active' ? 'Active' : s.status,
     profilePhotoUrl: s.profilePhotoUrl,
     classroomId: s.classroomId,
@@ -1059,31 +1059,31 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
   let performanceLevel: 'EE' | 'ME' | 'AE' | 'BE' = 'BE';
   let levelTitle = 'Below Expectations (BE)';
   let levelBadgeColor = 'bg-rose-100 text-rose-800 border-rose-300';
-  let standardCbcRemark = '';
+  let standardCBCRemark = '';
 
   if (percentage >= 80) {
     performanceLevel = 'EE';
     levelTitle = 'Exceeding Expectations (EE) - Level 4';
     levelBadgeColor = 'bg-teal-100 text-teal-900 border-teal-300';
-    standardCbcRemark = getStandardRemark('EE');
+    standardCBCRemark = getStandardRemark('EE');
   } else if (percentage >= 60) {
     performanceLevel = 'ME';
     levelTitle = 'Meeting Expectations (ME) - Level 3';
     levelBadgeColor = 'bg-[#7a1228]/15 text-[#7a1228] border-[#7a1228]/30';
-    standardCbcRemark = getStandardRemark('ME');
+    standardCBCRemark = getStandardRemark('ME');
   } else if (percentage >= 40) {
     performanceLevel = 'AE';
     levelTitle = 'Approaching Expectations (AE) - Level 2';
     levelBadgeColor = 'bg-amber-100 text-amber-900 border-amber-300';
-    standardCbcRemark = getStandardRemark('AE');
+    standardCBCRemark = getStandardRemark('AE');
   } else {
     performanceLevel = 'BE';
     levelTitle = 'Below Expectations (BE) - Level 1';
     levelBadgeColor = 'bg-rose-100 text-rose-800 border-rose-300';
-    standardCbcRemark = getStandardRemark('BE');
+    standardCBCRemark = getStandardRemark('BE');
   }
 
-  const activeRemarks = isCustomRemarkEdited ? customRemarks : standardCbcRemark;
+  const activeRemarks = isCustomRemarkEdited ? customRemarks : standardCBCRemark;
 
   const handleSubmit = async (e?: React.FormEvent, shouldAdvance: boolean = false) => {
     if (e) e.preventDefault();
@@ -1954,7 +1954,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                     <span className="font-bold text-xs">{levelTitle}</span>
                   </div>
                   <p className="text-[11px] leading-relaxed italic">
-                    "{standardCbcRemark}"
+                    "{standardCBCRemark}"
                   </p>
                 </div>
               </div>

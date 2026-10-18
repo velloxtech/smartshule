@@ -3,7 +3,7 @@ import { Express } from 'express';
 import { AppContainer } from '../../src/infrastructure/container';
 import { createExpressApp } from '../../src/infrastructure/http/app';
 import { setupTestFixtures } from '../helpers/testFixtures';
-import { CbcGradeLevel, StudentGender } from '../../src/core/domain/user/Student';
+import { CBCGradeLevel, StudentGender } from '../../src/core/domain/user/Student';
 import { EducationLevel } from '../../src/core/domain/academic/ClassRoom';
 
 describe('Playgroup Class Integration Tests', () => {
@@ -31,10 +31,10 @@ describe('Playgroup Class Integration Tests', () => {
 
     expect(classes.length).toBe(12);
     expect(classes[0].name).toBe('Playgroup');
-    expect(classes[0].gradeLevel).toBe(CbcGradeLevel.PLAYGROUP);
+    expect(classes[0].gradeLevel).toBe(CBCGradeLevel.PLAYGROUP);
     expect(classes[0].educationLevel).toBe(EducationLevel.PRE_PRIMARY);
     expect(classes[1].name).toBe('PP1');
-    expect(classes[1].gradeLevel).toBe(CbcGradeLevel.PP1);
+    expect(classes[1].gradeLevel).toBe(CBCGradeLevel.PP1);
   });
 
   it('2. POST /api/v1/academics/classes creates a Playgroup class via API', async () => {
@@ -43,7 +43,7 @@ describe('Playgroup Class Integration Tests', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .send({
         name: 'Playgroup Alpha',
-        gradeLevel: CbcGradeLevel.PLAYGROUP,
+        gradeLevel: CBCGradeLevel.PLAYGROUP,
         educationLevel: EducationLevel.PRE_PRIMARY,
         schoolId: 'school-001'
       });
@@ -64,7 +64,7 @@ describe('Playgroup Class Integration Tests', () => {
         lastName: 'Zawadi',
         gender: StudentGender.FEMALE,
         dateOfBirth: '2023-05-10',
-        gradeLevel: CbcGradeLevel.PLAYGROUP,
+        gradeLevel: CBCGradeLevel.PLAYGROUP,
         schoolId: 'school-001',
         academicYearId: 'year-2026',
         guardian: {
@@ -102,7 +102,7 @@ describe('Playgroup Class Integration Tests', () => {
         lastName: 'Amani',
         gender: StudentGender.MALE,
         dateOfBirth: '2023-01-15',
-        gradeLevel: CbcGradeLevel.PLAYGROUP,
+        gradeLevel: CBCGradeLevel.PLAYGROUP,
         schoolId: 'school-001',
         academicYearId: 'year-2026',
         guardian: {

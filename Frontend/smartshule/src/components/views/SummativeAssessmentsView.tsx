@@ -220,7 +220,7 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
           if (res?.data && Array.isArray(res.data) && res.data.length > 0) {
             const mapped: Student[] = res.data.map((st: any) => ({
               id: st.id,
-              admNo: st.admissionNumber || st.admNo || 'ADM',
+              admNo: st.admissionNumber || st.admNo || '--',
               name: st.name || st.fullName || `${st.firstName || ''} ${st.lastName || ''}`.trim() || 'Learner',
               grade: st.className || (st.gradeLevel ? st.gradeLevel.replace(/_/g, ' ') : 'Grade 3'),
               stream: st.streamName || st.stream || 'Grade 3',
@@ -239,7 +239,7 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
               feeBalance: 0,
               totalFee: 0,
               attendanceRate: 100,
-              cbcRating: 'ME' as any,
+              CBCRating: 'ME' as any,
             }));
             setInternalStudents(mapped);
           }
@@ -563,7 +563,7 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
       if (!candidateMap.has(s.studentId)) {
         candidateMap.set(s.studentId, {
           id: s.studentId,
-          admNo: (s as any).admissionNumber || 'ADM',
+          admNo: (s as any).admissionNumber || '--',
           name: (s as any).studentName || 'Learner',
           grade: (s as any).gradeLevel || 'Grade 3',
           stream: (s as any).streamName || 'Grade 3',
@@ -1120,7 +1120,7 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
                   <tr key={row.studentId} className="hover:bg-amber-50/30 transition-colors">
                     {/* Position */}
                     <td className="py-2 px-2 border text-center font-bold font-mono text-gray-900 bg-gray-50/50">
-                      {idx === 0 ? '🥇 1' : idx === 1 ? '🥈 2' : idx === 2 ? '🥉 3' : `#${idx + 1}`}
+                      {idx === 0 ? '1st' : idx === 1 ? '2nd' : idx === 2 ? '3rd' : `#${idx + 1}`}
                     </td>
 
                     {/* Adm No */}

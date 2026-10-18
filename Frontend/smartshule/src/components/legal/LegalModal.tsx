@@ -257,7 +257,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
                 <p>In adherence to Section 30 of the Kenya Data Protection Act, we process personal data under:</p>
                 <ul className="list-disc pl-5 space-y-1.5">
                   <li><strong>Contractual Necessity:</strong> Delivering core primary and junior secondary education services, report cards, and fee ledgers.</li>
-                  <li><strong>Statutory Duty:</strong> Complying with Ministry of Education regulations, the Basic Education Act 2013, and Kenya National Examinations Council (KNEC) CBE assessment records.</li>
+                  <li><strong>Statutory Duty:</strong> Complying with Ministry of Education regulations, the Basic Education Act 2013, and Kenya National Examinations Council (KNEC) CBC assessment records.</li>
                   <li><strong>Explicit Parental Consent:</strong> Processing minors’ biodata, photographs, medical requirements, and Special Needs Education (SNE) profiles.</li>
                 </ul>
               </section>

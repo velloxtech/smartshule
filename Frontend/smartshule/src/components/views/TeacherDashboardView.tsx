@@ -78,7 +78,7 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
             feeBalance: s.feeBalance || 0,
             totalFee: s.totalFee || 0,
             attendanceRate: s.attendanceRate ?? 0,
-            cbcRating: s.cbcRating || '--',
+            CBCRating: s.CBCRating || '--',
             status: s.status === 'ACTIVE' ? 'Active' : (s.status || 'Active'),
           }));
           setMyStudents(mapped);

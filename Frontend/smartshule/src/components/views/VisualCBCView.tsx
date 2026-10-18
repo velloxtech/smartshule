@@ -47,7 +47,7 @@ const normalizeStudent = (st: any): Student => {
     feeBalance: st.feeBalance || st.fee?.balance || 0,
     totalFee: st.totalFee || st.fee?.totalBilled || 0,
     attendanceRate: st.attendanceRate ?? st.attendance?.attendanceRate ?? 100,
-    cbcRating: st.cbcRating || 'ME',
+    CBCRating: st.CBCRating || 'ME',
     status: st.status === 'ACTIVE' || st.status === 'Active' ? 'Active' : (st.status || 'Active'),
     profilePhotoUrl: st.profilePhotoUrl,
     dateOfBirth: st.dateOfBirth,

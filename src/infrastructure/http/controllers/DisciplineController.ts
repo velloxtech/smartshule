@@ -19,7 +19,7 @@ export const AddClubMemberSchema = z.object({
 export const LogIncidentSchema = z.object({
   studentId: z.string().min(1),
   incidentType: z.enum(['MERIT_COMMENDATION', 'INFRACTION_WARNING', 'COUNSELING_REFERRAL']),
-  cbcCoreValue: z.enum(['LOVE', 'RESPECT', 'RESPONSIBILITY', 'INTEGRITY', 'PEACE', 'PATRIOTISM', 'UNITY']),
+  CBCCoreValue: z.enum(['LOVE', 'RESPECT', 'RESPONSIBILITY', 'INTEGRITY', 'PEACE', 'PATRIOTISM', 'UNITY']),
   title: z.string().min(1),
   description: z.string().min(1),
   actionTaken: z.string().min(1),

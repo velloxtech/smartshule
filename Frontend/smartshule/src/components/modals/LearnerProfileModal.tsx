@@ -187,7 +187,7 @@ export const LearnerProfileModal: React.FC<LearnerProfileModalProps> = ({
                 Overall CBC Rubric
               </span>
               <span className="text-lg font-bold text-primary block mt-0.5">
-                {student.cbcRating} · Meeting
+                {student.CBCRating} · Meeting
               </span>
             </div>
             <div className="p-3 rounded-xl bg-surface-container-low border border-outline-variant/30 text-center">

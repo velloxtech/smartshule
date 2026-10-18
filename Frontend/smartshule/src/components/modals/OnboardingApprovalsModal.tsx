@@ -4,8 +4,9 @@ import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { UserRole } from '../../types';
 import { formatKenyanPhone } from '../../utils/kenyanConstitution';
+import { generateNextSequentialNumber } from '../../utils/sequenceGenerator';
 
-export const normalizeToCbcGradeLevel = (gradeStr: string): string => {
+export const normalizeToCBCGradeLevel = (gradeStr: string): string => {
   const g = (gradeStr || '').trim().toUpperCase();
   if (g.includes('PLAYGROUP')) return 'PLAYGROUP';
   if (g.includes('PP1') || g.includes('PRE-PRIMARY 1')) return 'PP1';
@@ -55,6 +56,7 @@ export const OnboardingApprovalsModal: React.FC<OnboardingApprovalsModalProps> =
 
   const [streamAssignment, setStreamAssignment] = useState('East');
   const [customAdmNo, setCustomAdmNo] = useState('');
+  const [existingStudentAdmNos, setExistingStudentAdmNos] = useState<string[]>([]);
   const [approvalNotes, setApprovalNotes] = useState('Dossier verified and approved for CBC admission.');
   const [rejectReason, setRejectReason] = useState('');
   const [showRejectModal, setShowRejectModal] = useState(false);
@@ -76,12 +78,32 @@ export const OnboardingApprovalsModal: React.FC<OnboardingApprovalsModalProps> =
     setApplications(onboardingService.getOnboardings());
   };
 
+  const getNextPureAdmNo = (app?: AdmittedLearnerOnboarding | null) => {
+    if (app?.assignedAdmNo && /^\d+$/.test(app.assignedAdmNo.trim())) {
+      return app.assignedAdmNo.trim();
+    }
+    const allKnown = [
+      ...existingStudentAdmNos,
+      ...applications.map((a) => a.assignedAdmNo).filter((id): id is string => Boolean(id)),
+    ];
+    return generateNextSequentialNumber(allKnown);
+  };
+
   useEffect(() => {
     if (isOpen) {
       loadData();
       setFeedback(null);
       setSelectedApp(null);
       onboardingService.fetchEmailConfig().catch(() => {});
+
+      apiService
+        .getStudents()
+        .then((res) => {
+          if (res?.data && Array.isArray(res.data)) {
+            setExistingStudentAdmNos(res.data.map((s: any) => s.admissionNumber || s.admNo));
+          }
+        })
+        .catch(() => {});
 
       Promise.all([
         apiService.getClasses().catch(() => null),
@@ -105,10 +127,10 @@ export const OnboardingApprovalsModal: React.FC<OnboardingApprovalsModalProps> =
   const pendingCount = applications.filter((a) => a.status === 'PENDING').length;
 
   const preparePayloads = (app: AdmittedLearnerOnboarding, assignedAdmNo: string) => {
-    const cbcGrade = normalizeToCbcGradeLevel(app.targetGrade);
+    const CBCGrade = normalizeToCBCGradeLevel(app.targetGrade);
     const matchedClass =
       classes.find(
-        (c) => c.gradeLevel === cbcGrade || c.name?.toLowerCase().includes(cbcGrade.toLowerCase())
+        (c) => c.gradeLevel === CBCGrade || c.name?.toLowerCase().includes(CBCGrade.toLowerCase())
       ) || classes[0];
 
     const matchedStream = matchedClass?.streams?.find(
@@ -130,7 +152,7 @@ export const OnboardingApprovalsModal: React.FC<OnboardingApprovalsModalProps> =
       lastName: app.lastName.trim(),
       dateOfBirth: validDob,
       gender: (app.gender === 'Boy' ? 'MALE' : 'FEMALE') as any,
-      gradeLevel: cbcGrade,
+      gradeLevel: CBCGrade,
       classroomId: matchedClass?.id,
       streamId: matchedStream?.id,
       schoolId: user?.schoolId || schoolProfile?.id || matchedClass?.schoolId || 'school-001',
@@ -152,7 +174,7 @@ export const OnboardingApprovalsModal: React.FC<OnboardingApprovalsModalProps> =
       },
     };
 
-    return { rawBackend, cbcGrade, matchedClass, cleanParentPhone, cleanEmergencyPhone, guardianRel };
+    return { rawBackend, CBCGrade, matchedClass, cleanParentPhone, cleanEmergencyPhone, guardianRel };
   };
 
   const handleApprove = async (app: AdmittedLearnerOnboarding) => {
@@ -177,10 +199,10 @@ export const OnboardingApprovalsModal: React.FC<OnboardingApprovalsModalProps> =
           : 'Admissions Officer';
 
       const generatedAdmNo =
-        customAdmNo.trim() ||
-        `GSS/2027/${app.targetGrade.replace(/[^0-9A-Za-z]/g, '')}-${Math.floor(100 + Math.random() * 900)}`;
+        (customAdmNo.trim() && /^\d+$/.test(customAdmNo.trim()) ? customAdmNo.trim() : null) ||
+        getNextPureAdmNo(app);
 
-      const { rawBackend, cbcGrade, matchedClass, cleanParentPhone, cleanEmergencyPhone, guardianRel } = preparePayloads(app, generatedAdmNo);
+      const { rawBackend, CBCGrade, matchedClass, cleanParentPhone, cleanEmergencyPhone, guardianRel } = preparePayloads(app, generatedAdmNo);
 
       let savedStudent: any = null;
       try {
@@ -218,15 +240,15 @@ export const OnboardingApprovalsModal: React.FC<OnboardingApprovalsModalProps> =
           middleName: app.middleName || '',
           lastName: app.lastName,
           gender: app.gender === 'Boy' ? ('Boy' as const) : ('Girl' as const),
-          grade: matchedClass?.name || cbcGrade.replace('_', ' '),
-          gradeLevel: cbcGrade,
+          grade: matchedClass?.name || CBCGrade.replace('_', ' '),
+          gradeLevel: CBCGrade,
           stream: streamAssignment,
           guardianName: app.parentName,
           guardianPhone: cleanParentPhone,
           feeBalance: savedStudent.invoice?.balance ?? 0,
           totalFee: savedStudent.invoice?.amountPayable ?? 0,
           attendanceRate: 100,
-          cbcRating: 'ME' as const,
+          CBCRating: 'ME' as const,
           status: 'Active' as const,
           dateOfBirth: app.dob,
           medicalConditions: app.medicalConditions || undefined,
@@ -270,10 +292,10 @@ export const OnboardingApprovalsModal: React.FC<OnboardingApprovalsModalProps> =
       setFeedback(null);
 
       const targetAdmNo =
-        app.assignedAdmNo ||
-        `GSS/2027/${app.targetGrade.replace(/[^0-9A-Za-z]/g, '')}-${Math.floor(100 + Math.random() * 900)}`;
+        (app.assignedAdmNo && /^\d+$/.test(app.assignedAdmNo.trim()) ? app.assignedAdmNo.trim() : null) ||
+        getNextPureAdmNo(app);
 
-      const { rawBackend, cbcGrade, matchedClass, cleanParentPhone, cleanEmergencyPhone, guardianRel } = preparePayloads(app, targetAdmNo);
+      const { rawBackend, CBCGrade, matchedClass, cleanParentPhone, cleanEmergencyPhone, guardianRel } = preparePayloads(app, targetAdmNo);
 
       let savedStudent: any = null;
       try {
@@ -310,15 +332,15 @@ export const OnboardingApprovalsModal: React.FC<OnboardingApprovalsModalProps> =
           middleName: app.middleName || '',
           lastName: app.lastName,
           gender: app.gender === 'Boy' ? ('Boy' as const) : ('Girl' as const),
-          grade: matchedClass?.name || cbcGrade.replace('_', ' '),
-          gradeLevel: cbcGrade,
+          grade: matchedClass?.name || CBCGrade.replace('_', ' '),
+          gradeLevel: CBCGrade,
           stream: streamAssignment,
           guardianName: app.parentName,
           guardianPhone: cleanParentPhone,
           feeBalance: savedStudent.invoice?.balance ?? 0,
           totalFee: savedStudent.invoice?.amountPayable ?? 0,
           attendanceRate: 100,
-          cbcRating: 'ME' as const,
+          CBCRating: 'ME' as const,
           status: 'Active' as const,
           dateOfBirth: app.dob,
           medicalConditions: app.medicalConditions || undefined,
@@ -540,10 +562,7 @@ export const OnboardingApprovalsModal: React.FC<OnboardingApprovalsModalProps> =
                       type="button"
                       onClick={() => {
                         setSelectedApp(app);
-                        setCustomAdmNo(
-                          app.assignedAdmNo ||
-                          `GSS/2027/${app.targetGrade.replace(/[^0-9A-Za-z]/g, '')}-${Math.floor(100 + Math.random() * 900)}`
-                        );
+                        setCustomAdmNo(app.assignedAdmNo || getNextPureAdmNo(app));
                       }}
                       className="px-3.5 py-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1"
                     >
@@ -567,9 +586,7 @@ export const OnboardingApprovalsModal: React.FC<OnboardingApprovalsModalProps> =
                           type="button"
                           onClick={() => {
                             setSelectedApp(app);
-                            setCustomAdmNo(
-                              `GSS/2027/${app.targetGrade.replace(/[^0-9A-Za-z]/g, '')}-${Math.floor(100 + Math.random() * 900)}`
-                            );
+                            setCustomAdmNo(app.assignedAdmNo || getNextPureAdmNo(app));
                           }}
                           className="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer flex items-center gap-1"
                         >
@@ -674,8 +691,9 @@ export const OnboardingApprovalsModal: React.FC<OnboardingApprovalsModalProps> =
                         <div key={eml.id} className="p-3 bg-surface-container-low rounded-xl border border-outline-variant/20 flex items-center justify-between">
                           <div>
                             <div className="flex items-center gap-2">
-                              <span className="text-xs font-bold text-primary">
-                                {eml.type === 'ADMISSION_APPROVED' ? '✉ Official Admission Letter' : '✉ Onboarding Tracking Receipt'}
+                              <span className="text-xs font-bold text-primary inline-flex items-center gap-1">
+                                <span className="material-symbols-outlined text-[14px]">mail</span>
+                                <span>{eml.type === 'ADMISSION_APPROVED' ? 'Official Admission Letter' : 'Onboarding Tracking Receipt'}</span>
                               </span>
                               <span className="text-[10px] text-outline font-mono">To: {eml.to}</span>
                             </div>
@@ -707,12 +725,14 @@ export const OnboardingApprovalsModal: React.FC<OnboardingApprovalsModalProps> =
                     </p>
                     <div className="grid sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-bold text-emerald-900 mb-1">Assigned Admission Number *</label>
+                        <label className="block text-xs font-bold text-emerald-900 mb-1">Assigned Admission Number (Numbers Only) *</label>
+                        <p className="text-[10px] text-emerald-800/80 mb-1.5">Use numbers only (no words or letters) so it is easy for children to memorize.</p>
                         <input
                           type="text"
                           required
                           value={customAdmNo}
                           onChange={(e) => setCustomAdmNo(e.target.value)}
+                          placeholder="e.g. 01, 02"
                           className="w-full bg-white border border-emerald-300 rounded-lg px-3 py-2 text-xs font-mono font-bold text-emerald-950 focus:outline-none"
                         />
                       </div>
@@ -801,7 +821,7 @@ export const OnboardingApprovalsModal: React.FC<OnboardingApprovalsModalProps> =
                   onClick={() => setViewingEmail(null)}
                   className="w-7 h-7 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high cursor-pointer"
                 >
-                  ✕
+                  <span className="material-symbols-outlined text-sm">close</span>
                 </button>
               </div>
               <div className="p-4 bg-surface-container-lowest border-b border-outline-variant/20 text-xs space-y-1">

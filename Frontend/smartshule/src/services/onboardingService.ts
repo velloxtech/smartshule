@@ -1,14 +1,27 @@
 import { apiService } from './api';
+import { generateNextSequentialNumber } from '../utils/sequenceGenerator';
 
 export interface OnboardingEmailLog {
   id: string;
-  type: 'ONBOARDING_RECEIVED' | 'ADMISSION_APPROVED';
+  type: 'ONBOARDING_RECEIVED' | 'ADMISSION_APPROVED' | 'STEP_SCHEDULED';
   to: string;
   from?: string;
   recipientName: string;
   subject: string;
   sentAt: string;
   body: string;
+}
+
+export interface ScheduledStepDetails {
+  stepType: 'SCHOOL_TOUR' | 'READINESS_ASSESSMENT' | 'DOCUMENT_VERIFICATION' | 'INTERVIEW_MEETING';
+  stepTitle: string;
+  date: string;
+  time: string;
+  venue: string;
+  officerInCharge?: string;
+  notes?: string;
+  scheduledAt: string;
+  scheduledBy: string;
 }
 
 export interface AdmittedLearnerOnboarding {
@@ -30,10 +43,10 @@ export interface AdmittedLearnerOnboarding {
   lastName: string;
   gender: 'Boy' | 'Girl';
   dob: string;
-  birthCertNo: string;
+  birthCertNo?: string;
   nemisUpi?: string;
-  county: string;
-  subCounty: string;
+  county?: string;
+  subCounty?: string;
   previousSchool?: string;
 
   specialNeeds?: string;
@@ -43,18 +56,22 @@ export interface AdmittedLearnerOnboarding {
 
   parentName: string;
   parentRelationship: string;
-  parentNationalId: string;
+  parentNationalId?: string;
   parentPhone: string;
   parentEmail: string;
   parentOccupation?: string;
-  residentialAddress: string;
+  residentialAddress?: string;
 
-  emergencyContactName: string;
-  emergencyContactRelationship: string;
-  emergencyContactPhone: string;
+  emergencyContactName?: string;
+  emergencyContactRelationship?: string;
+  emergencyContactPhone?: string;
 
-  clubPreferences: string[];
+  clubPreferences?: string[];
   emailsSent: OnboardingEmailLog[];
+
+  scheduledStep?: ScheduledStepDetails;
+
+  applicationType?: 'SLOT_APPLICATION' | 'ONBOARDING_DOSSIER';
 
   admissionRefNo?: string;
   bloodGroup?: string;
@@ -64,6 +81,14 @@ export interface AdmittedLearnerOnboarding {
 }
 
 const STORAGE_KEY = 'smartshule_admitted_onboardings_v3';
+
+export const notifyOnboardingUpdated = () => {
+  if (typeof window !== 'undefined') {
+    try {
+      window.dispatchEvent(new Event('smartshule_onboarding_updated'));
+    } catch {}
+  }
+};
 
 let cachedSenderConfig: { emailFrom: string; bareEmail: string; senderName: string } | null = null;
 
@@ -266,7 +291,7 @@ WHAT HAPPENS NEXT:
 
 3. Official Admission Letter by Email:
    As soon as your application is approved by the Admissions Desk, Headteacher, or Director, you will immediately receive an official Admission Letter by email with:
-   - Your child's official school Admission Number (e.g. GSS/2027/...)
+   - Your child's official school Admission Number (e.g. 01, 02...)
    - Class stream allocation
    - Term 1 re-opening date & orientation schedule
 
@@ -297,6 +322,7 @@ Grace Seeds School — Kisumu, Kenya`,
     const updated = [newRecord, ...existing];
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      notifyOnboardingUpdated();
     } catch (e) {
       console.error('Failed to save onboarding application', e);
     }
@@ -338,8 +364,8 @@ Grace Seeds School — Kisumu, Kenya`,
 
     const current = all[index];
     const adm =
-      assignedAdmNo ||
-      `GSS/${current.targetGrade.replace(/[^0-9A-Za-z]/g, '')}/${Math.floor(100 + Math.random() * 900)}`;
+      (assignedAdmNo && assignedAdmNo.trim()) ||
+      generateNextSequentialNumber(all.map((item) => item.assignedAdmNo));
 
     const stream = streamName || 'East';
     const senderEmail = getEnvSenderEmail();
@@ -373,7 +399,7 @@ Ratified By:        ${reviewerName} (${reviewerRole})
 
 REPORTING & ORIENTATION DETAILS:
 - School Re-opening Date: Wednesday, 6th January 2027 at 07:45 AM
-- Venue: Grace Seeds School Main Campus, Kisumu
+- Venue: Grace Seeds School, Kisumu
 - Documentation: Please present this Admission Notification along with the learner's original birth certificate on reporting day.
 
 The learner has been matriculated into the active institutional registry. Welcome to the Grace Seeds School family!
@@ -411,6 +437,7 @@ Admissions Directorate: ${senderEmail}`,
     all[index] = updatedRecord;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+      notifyOnboardingUpdated();
     } catch (e) {
       console.error('Failed to update onboarding record', e);
     }
@@ -477,13 +504,124 @@ Email: ${senderEmail}`,
     all[index] = updatedRecord;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+      notifyOnboardingUpdated();
     } catch (e) {
       console.error('Failed to update onboarding record', e);
     }
     return updatedRecord;
   },
 
+  scheduleStep: (
+    id: string,
+    details: {
+      stepType: 'SCHOOL_TOUR' | 'READINESS_ASSESSMENT' | 'DOCUMENT_VERIFICATION' | 'INTERVIEW_MEETING';
+      stepTitle: string;
+      date: string;
+      time: string;
+      venue: string;
+      officerInCharge?: string;
+      notes?: string;
+      scheduledBy: string;
+    }
+  ): { record: AdmittedLearnerOnboarding; emailSent: OnboardingEmailLog } | null => {
+    const all = onboardingService.getOnboardings();
+    const index = all.findIndex((item) => item.id === id);
+    if (index === -1) return null;
+
+    const current = all[index];
+    const senderEmail = getEnvSenderEmail();
+    const senderFull = `${getEnvSenderName()} <${senderEmail}>`;
+
+    const scheduledStepData: ScheduledStepDetails = {
+      ...details,
+      scheduledAt: new Date().toISOString(),
+    };
+
+    const scheduleEmail: OnboardingEmailLog = {
+      id: `eml-${Date.now()}-sched`,
+      type: 'STEP_SCHEDULED',
+      to: current.parentEmail,
+      from: senderFull,
+      recipientName: current.parentName,
+      subject: `Grace Seeds School — Appointment Scheduled: ${details.stepTitle} [${current.trackingCode}]`,
+      sentAt: new Date().toISOString(),
+      body: `Dear ${current.parentName},
+
+We are pleased to invite you and ${current.firstName} to Grace Seeds School for the next step in your child's CBC admission journey.
+
+==============================================
+APPOINTMENT DETAILS
+==============================================
+Step:            ${details.stepTitle}
+Target Level:    ${current.targetGrade} (${current.entryTerm})
+Learner:         ${current.firstName} ${current.lastName}
+Tracking Code:   ${current.trackingCode}
+
+Date:            ${details.date}
+Time:            ${details.time}
+Venue:           ${details.venue}
+Host / Officer:  ${details.officerInCharge || 'Grace Seeds School Admissions Team'}
+
+${details.notes ? `ADDITIONAL GUIDANCE:\n${details.notes}\n` : ''}
+WHAT TO BRING:
+- Copy of the child's birth certificate or clinic immunization card
+- The child (for early learning play & readiness interaction)
+- Any previous progress reports (if transferring from another school)
+
+Fee Payment Notice:
+For fee payments and school dues, Lipa na M-Pesa Paybill is 522533, and the Account Reference MUST be the child's full name and grade (no admission numbers).
+
+Should you need to reschedule or have any inquiries, please contact our admissions desk.
+
+Warm regards,
+
+Grace Seeds School Admissions Directorate
+Email: ${senderEmail}
+Kisumu, Kenya`,
+    };
+
+    apiService
+      .sendOnboardingEmail({
+        to: current.parentEmail,
+        subject: scheduleEmail.subject,
+        body: scheduleEmail.body,
+      })
+      .catch((err) => {
+        console.warn('[Schedule Step Email SMTP Dispatch Notice]:', err?.message || err);
+      });
+
+    const emails = Array.isArray(current.emailsSent) ? current.emailsSent : [];
+    const updatedRecord: AdmittedLearnerOnboarding = {
+      ...current,
+      scheduledStep: scheduledStepData,
+      emailsSent: [scheduleEmail, ...emails],
+    };
+
+    all[index] = updatedRecord;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+      notifyOnboardingUpdated();
+    } catch (e) {
+      console.error('Failed to update scheduled step in onboarding record', e);
+    }
+
+    return { record: updatedRecord, emailSent: scheduleEmail };
+  },
+
   getPendingCount: (): number => {
     return onboardingService.getOnboardings().filter((item) => item.status === 'PENDING').length;
+  },
+
+  getSlotApplications: (): AdmittedLearnerOnboarding[] => {
+    return onboardingService.getOnboardings().filter(
+      (item) => !item.applicationType || item.applicationType === 'SLOT_APPLICATION'
+    );
+  },
+
+  getPendingSlotsCount: (): number => {
+    return onboardingService
+      .getOnboardings()
+      .filter((item) => item.status === 'PENDING' && (!item.applicationType || item.applicationType === 'SLOT_APPLICATION'))
+      .length;
   },
 };

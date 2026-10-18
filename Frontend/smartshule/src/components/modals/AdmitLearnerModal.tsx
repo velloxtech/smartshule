@@ -416,7 +416,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
           totalFee: admitted.invoice ? admitted.invoice.amountPayable : Number(totalFee),
           profilePhotoUrl: admitted.profilePhotoUrl || profilePhotoUrl || undefined,
           attendanceRate: 100,
-          cbcRating: 'ME',
+          CBCRating: 'ME',
           status: 'Active',
           dateOfBirth: dob,
           specialNeeds: specialNeedsPayload,
@@ -514,7 +514,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                           : 'bg-white/20 text-white'
                       }`}
                     >
-                      {isCompleted ? '✓' : step.num}
+                      {isCompleted ? <span className="material-symbols-outlined text-[13px] font-bold">check</span> : step.num}
                     </span>
                     <span className="text-xs font-semibold truncate">{step.title}</span>
                   </div>

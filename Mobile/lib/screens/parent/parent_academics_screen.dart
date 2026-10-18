@@ -14,7 +14,7 @@ class ParentAcademicsScreen extends StatefulWidget {
 
 class _ParentAcademicsScreenState extends State<ParentAcademicsScreen> {
   final ApiService _apiService = ApiService();
-  List<CbcAssessmentModel> _assessments = [];
+  List<CBCAssessmentModel> _assessments = [];
   bool _loading = true;
 
   @override
@@ -58,7 +58,11 @@ class _ParentAcademicsScreenState extends State<ParentAcademicsScreen> {
                 child: Image.asset(
                   'assets/images/logo.png',
                   fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => const Icon(Icons.school, size: 18, color: AppTheme.primaryMaroon),
+                  errorBuilder: (_, __, ___) => const Icon(
+                    Icons.school,
+                    size: 18,
+                    color: AppTheme.primaryMaroon,
+                  ),
                 ),
               ),
             ),
@@ -74,7 +78,9 @@ class _ParentAcademicsScreenState extends State<ParentAcademicsScreen> {
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('Downloading Term 3 Report Card for $learnerName...'),
+                  content: Text(
+                    'Downloading Term 3 Report Card for $learnerName...',
+                  ),
                   backgroundColor: AppTheme.primaryMaroon,
                 ),
               );
@@ -102,7 +108,11 @@ class _ParentAcademicsScreenState extends State<ParentAcademicsScreen> {
                         const CircleAvatar(
                           radius: 24,
                           backgroundColor: AppTheme.primaryMaroon,
-                          child: Icon(Icons.school, color: Colors.white, size: 28),
+                          child: Icon(
+                            Icons.school,
+                            color: Colors.white,
+                            size: 28,
+                          ),
                         ),
                         const SizedBox(width: 14),
                         Expanded(
@@ -119,7 +129,10 @@ class _ParentAcademicsScreenState extends State<ParentAcademicsScreen> {
                               ),
                               Text(
                                 '$grade $stream • Admission: ${widget.student?.admissionNumber ?? "ADM-2024-042"}',
-                                style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppTheme.textMuted,
+                                ),
                               ),
                               const SizedBox(height: 4),
                               const Text(
@@ -150,7 +163,10 @@ class _ParentAcademicsScreenState extends State<ParentAcademicsScreen> {
                     children: [
                       _legendChip('EE: Exceeding (4)', const Color(0xFF059669)),
                       _legendChip('ME: Meeting (3)', const Color(0xFF0284C7)),
-                      _legendChip('AE: Approaching (2)', const Color(0xFFD97706)),
+                      _legendChip(
+                        'AE: Approaching (2)',
+                        const Color(0xFFD97706),
+                      ),
                       _legendChip('BE: Below (1)', const Color(0xFFDC2626)),
                     ],
                   ),
@@ -167,7 +183,9 @@ class _ParentAcademicsScreenState extends State<ParentAcademicsScreen> {
                     final color = _getColorForRating(a.rating);
                     return Card(
                       margin: const EdgeInsets.only(bottom: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                       child: Padding(
                         padding: const EdgeInsets.all(16),
                         child: Column(
@@ -187,7 +205,10 @@ class _ParentAcademicsScreenState extends State<ParentAcademicsScreen> {
                                   ),
                                 ),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 4,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: color,
                                     borderRadius: BorderRadius.circular(20),
@@ -206,7 +227,10 @@ class _ParentAcademicsScreenState extends State<ParentAcademicsScreen> {
                             const SizedBox(height: 6),
                             Text(
                               'Strand: ${a.strand} • ${a.subStrand}',
-                              style: const TextStyle(fontSize: 13, color: AppTheme.textMuted),
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: AppTheme.textMuted,
+                              ),
                             ),
                             const SizedBox(height: 8),
                             Container(
@@ -219,12 +243,21 @@ class _ParentAcademicsScreenState extends State<ParentAcademicsScreen> {
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Icon(Icons.rate_review_outlined, size: 16, color: AppTheme.textMuted),
+                                  const Icon(
+                                    Icons.rate_review_outlined,
+                                    size: 16,
+                                    color: AppTheme.textMuted,
+                                  ),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
-                                      a.remarks ?? 'Competency demonstrated satisfactorily.',
-                                      style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: Color(0xFF334155)),
+                                      a.remarks ??
+                                          'Competency demonstrated satisfactorily.',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontStyle: FontStyle.italic,
+                                        color: Color(0xFF334155),
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -251,20 +284,24 @@ class _ParentAcademicsScreenState extends State<ParentAcademicsScreen> {
       ),
       child: Text(
         label,
-        style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold),
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }
 
-  Color _getColorForRating(CbcRating r) {
+  Color _getColorForRating(CBCRating r) {
     switch (r) {
-      case CbcRating.exceedingExpectations:
+      case CBCRating.exceedingExpectations:
         return const Color(0xFF15803D);
-      case CbcRating.meetingExpectations:
+      case CBCRating.meetingExpectations:
         return const Color(0xFF0284C7);
-      case CbcRating.approachingExpectations:
+      case CBCRating.approachingExpectations:
         return const Color(0xFFB45309);
-      case CbcRating.belowExpectations:
+      case CBCRating.belowExpectations:
         return const Color(0xFFB91C1C);
     }
   }

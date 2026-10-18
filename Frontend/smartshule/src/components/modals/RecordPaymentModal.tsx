@@ -226,7 +226,8 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
           paymentDate,
           amountPaid: numAmount,
           previousBalance: invBalance,
-          newBalance: projectedBalance,
+          newBalance: res.data.updatedInvoice?.balance !== undefined ? res.data.updatedInvoice.balance : projectedBalance,
+          studentTotalBalance: res.data.studentTotalBalance,
           invoiceNumber: currentInvoice?.invoiceNumber,
         });
         onPaymentRecorded(res.data);
@@ -312,11 +313,11 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
               <div className="flex justify-between pt-1 border-t border-outline-variant/20">
                 <span className="text-on-surface-variant">Payment Method:</span>
                 <span className="font-bold text-emerald-800">
-                  {recordedResult.channel === 'CASH' && '💵 Cash Office (Currency Tendered)'}
-                  {recordedResult.channel === 'BANK_DEPOSIT' && `🏦 Bank Deposit (${recordedResult.bankName})`}
-                  {recordedResult.channel === 'MPESA' && '📱 M-Pesa E-Money'}
-                  {recordedResult.channel === 'CHEQUE' && '📜 Banker\'s Cheque'}
-                  {recordedResult.channel === 'BANK_TRANSFER' && '💳 Bank Wire / EFT'}
+                  {recordedResult.channel === 'CASH' && 'Cash Office (Currency Tendered)'}
+                  {recordedResult.channel === 'BANK_DEPOSIT' && `Bank Deposit (${recordedResult.bankName})`}
+                  {recordedResult.channel === 'MPESA' && 'M-Pesa E-Money'}
+                  {recordedResult.channel === 'CHEQUE' && "Banker's Cheque"}
+                  {recordedResult.channel === 'BANK_TRANSFER' && 'Bank Wire / EFT'}
                 </span>
               </div>
               {recordedResult.channel === 'BANK_DEPOSIT' && recordedResult.slipNumber && (
@@ -567,7 +568,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
                 <div className="text-right">
                   <span className="text-on-surface-variant block text-[10px] uppercase font-semibold">New Balance After Pay</span>
                   <span className={`font-data-mono font-bold ${projectedBalance === 0 ? 'text-emerald-700' : 'text-on-surface'}`}>
-                    KES {projectedBalance.toLocaleString()} {projectedBalance === 0 && '✓ Cleared'}
+                    KES {projectedBalance.toLocaleString()} {projectedBalance === 0 && '(Cleared)'}
                   </span>
                 </div>
               </div>

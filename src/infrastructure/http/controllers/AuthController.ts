@@ -119,7 +119,7 @@ export class AuthController {
     try {
       console.log(`[Auth] Inbound login attempt for user: "${attemptedId}"`);
       const result = await this.authUseCases.login(req.body);
-      console.log(`[Auth] ✅ Authenticated user: "${attemptedId}" as ${result.user.role}`);
+      console.log(`[Auth] Authenticated user: "${attemptedId}" as ${result.user.role}`);
 
       const identity = resolveNetworkIdentity(req);
 
@@ -144,7 +144,7 @@ export class AuthController {
         data: result
       });
     } catch (err: any) {
-      console.warn(`[Auth] ❌ Login failed for "${attemptedId}": ${err.message}`);
+      console.warn(`[Auth] Login failed for "${attemptedId}": ${err.message}`);
 
       const identity = resolveNetworkIdentity(req);
 

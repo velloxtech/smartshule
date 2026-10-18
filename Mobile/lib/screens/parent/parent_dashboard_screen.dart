@@ -68,7 +68,11 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                 child: Image.asset(
                   'assets/images/logo.png',
                   fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => const Icon(Icons.school, size: 20, color: AppTheme.primaryMaroon),
+                  errorBuilder: (_, __, ___) => const Icon(
+                    Icons.school,
+                    size: 20,
+                    color: AppTheme.primaryMaroon,
+                  ),
                 ),
               ),
             ),
@@ -95,7 +99,10 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: AppTheme.primaryMaroonTint,
                       borderRadius: BorderRadius.circular(20),
@@ -104,7 +111,10 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        CircleAvatar(radius: 3, backgroundColor: AppTheme.primaryMaroon),
+                        CircleAvatar(
+                          radius: 3,
+                          backgroundColor: AppTheme.primaryMaroon,
+                        ),
                         SizedBox(width: 6),
                         Text(
                           'Term 3 - 2026 • Active Session',
@@ -119,7 +129,10 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                   ),
                   const Spacer(),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(20),
@@ -158,7 +171,10 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
               // Active Child Switcher (Matches Web Learner Profile Card)
               if (_myChildren.isNotEmpty)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
@@ -175,7 +191,10 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                     children: [
                       const CircleAvatar(
                         backgroundColor: AppTheme.primaryMaroonTint,
-                        child: Icon(Icons.school, color: AppTheme.primaryMaroon),
+                        child: Icon(
+                          Icons.school,
+                          color: AppTheme.primaryMaroon,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -184,7 +203,11 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                           children: [
                             const Text(
                               'Viewing Enrolled Child',
-                              style: TextStyle(fontSize: 11, color: AppTheme.textMuted, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: AppTheme.textMuted,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                             DropdownButton<StudentModel>(
                               value: _selectedChild,
@@ -195,12 +218,16 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                                   value: c,
                                   child: Text(
                                     '${c.name} (${c.grade} ${c.stream})',
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
                                   ),
                                 );
                               }).toList(),
                               onChanged: (val) {
-                                if (val != null) setState(() => _selectedChild = val);
+                                if (val != null)
+                                  setState(() => _selectedChild = val);
                               },
                             ),
                           ],
@@ -232,7 +259,11 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                                   color: AppTheme.primaryMaroonTint,
                                   shape: BoxShape.circle,
                                 ),
-                                child: const Icon(Icons.check, color: AppTheme.primaryMaroon, size: 20),
+                                child: const Icon(
+                                  Icons.check,
+                                  color: AppTheme.primaryMaroon,
+                                  size: 20,
+                                ),
                               ),
                               const SizedBox(width: 12),
                               Column(
@@ -240,24 +271,39 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                                 children: [
                                   const Text(
                                     'Today\'s Attendance',
-                                    style: TextStyle(fontSize: 12, color: AppTheme.textMuted, fontWeight: FontWeight.w600),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: AppTheme.textMuted,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                   Text(
-                                    _selectedChild?.attendanceStatus.toUpperCase() == 'PRESENT'
+                                    _selectedChild?.attendanceStatus
+                                                .toUpperCase() ==
+                                            'PRESENT'
                                         ? 'Present in Class'
                                         : 'Not Marked Yet',
-                                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppTheme.textDark,
+                                    ),
                                   ),
                                 ],
                               ),
                             ],
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
                               color: AppTheme.primaryMaroonTint,
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: AppTheme.primaryMaroonBorder),
+                              border: Border.all(
+                                color: AppTheme.primaryMaroonBorder,
+                              ),
                             ),
                             child: Text(
                               _selectedChild?.checkInTime ?? '07:42 AM',
@@ -277,7 +323,9 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                         onTap: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (_) => ParentAttendanceScreen(student: _selectedChild),
+                              builder: (_) => ParentAttendanceScreen(
+                                student: _selectedChild,
+                              ),
                             ),
                           );
                         },
@@ -286,9 +334,17 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                           children: [
                             Text(
                               'View Attendance Calendar & Logs',
-                              style: TextStyle(fontSize: 13, color: AppTheme.primaryMaroon, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: AppTheme.primaryMaroon,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                            Icon(Icons.arrow_forward_ios, size: 12, color: AppTheme.primaryMaroon),
+                            Icon(
+                              Icons.arrow_forward_ios,
+                              size: 12,
+                              color: AppTheme.primaryMaroon,
+                            ),
                           ],
                         ),
                       ),
@@ -304,7 +360,10 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [AppTheme.primaryMaroonDark, AppTheme.primaryMaroon],
+                    colors: [
+                      AppTheme.primaryMaroonDark,
+                      AppTheme.primaryMaroon,
+                    ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -325,17 +384,28 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                       children: [
                         const Text(
                           'Term 3 Fee Balance',
-                          style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500),
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: const Text(
                             'Due Oct 20',
-                            style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ],
@@ -365,7 +435,8 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                             onPressed: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute(
-                                  builder: (_) => ParentFeesScreen(student: _selectedChild),
+                                  builder: (_) =>
+                                      ParentFeesScreen(student: _selectedChild),
                                 ),
                               );
                             },
@@ -376,13 +447,17 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.white,
                             side: const BorderSide(color: Colors.white70),
-                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 12,
+                              horizontal: 16,
+                            ),
                           ),
                           child: const Text('Breakdown'),
                           onPressed: () {
                             Navigator.of(context).push(
                               MaterialPageRoute(
-                                builder: (_) => ParentFeesScreen(student: _selectedChild),
+                                builder: (_) =>
+                                    ParentFeesScreen(student: _selectedChild),
                               ),
                             );
                           },
@@ -410,31 +485,55 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                         children: [
                           const Text(
                             'CBC Academic Progress',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
                           ),
                           TextButton(
                             onPressed: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute(
-                                  builder: (_) => ParentAcademicsScreen(student: _selectedChild),
+                                  builder: (_) => ParentAcademicsScreen(
+                                    student: _selectedChild,
+                                  ),
                                 ),
                               );
                             },
                             child: const Text(
                               'Full Broadsheet >',
-                              style: TextStyle(color: AppTheme.primaryMaroon, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                color: AppTheme.primaryMaroon,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 8),
-                      _buildSubjectRow('Mathematics Activities', 'Exceeding (EE)', const Color(0xFF15803D)),
+                      _buildSubjectRow(
+                        'Mathematics Activities',
+                        'Exceeding (EE)',
+                        const Color(0xFF15803D),
+                      ),
                       const SizedBox(height: 10),
-                      _buildSubjectRow('English Language Activities', 'Meeting (ME)', const Color(0xFF0284C7)),
+                      _buildSubjectRow(
+                        'English Language Activities',
+                        'Meeting (ME)',
+                        const Color(0xFF0284C7),
+                      ),
                       const SizedBox(height: 10),
-                      _buildSubjectRow('Environmental Activities', 'Meeting (ME)', const Color(0xFF0284C7)),
+                      _buildSubjectRow(
+                        'Environmental Activities',
+                        'Meeting (ME)',
+                        const Color(0xFF0284C7),
+                      ),
                       const SizedBox(height: 10),
-                      _buildSubjectRow('Creative Arts & Sports', 'Exceeding (EE)', const Color(0xFF15803D)),
+                      _buildSubjectRow(
+                        'Creative Arts & Sports',
+                        'Exceeding (EE)',
+                        const Color(0xFF15803D),
+                      ),
                     ],
                   ),
                 ),
@@ -444,45 +543,66 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
               // School Announcements (Live Backend)
               const Text(
                 'School Circulars & Updates',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textDark,
+                ),
               ),
               const SizedBox(height: 12),
               if (_loading)
-                const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()))
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(20),
+                    child: CircularProgressIndicator(),
+                  ),
+                )
               else
-                ..._announcements.map((item) => Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        side: const BorderSide(color: Color(0xFFE2E8F0)),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  item.title,
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ..._announcements.map(
+                  (item) => Card(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: const BorderSide(color: Color(0xFFE2E8F0)),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                item.title,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
                                 ),
-                                Text(
-                                  '${item.date.day}/${item.date.month}',
-                                  style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                              ),
+                              Text(
+                                '${item.date.day}/${item.date.month}',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: AppTheme.textMuted,
                                 ),
-                              ],
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            item.content,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF475569),
+                              height: 1.4,
                             ),
-                            const SizedBox(height: 6),
-                            Text(
-                              item.content,
-                              style: const TextStyle(fontSize: 13, color: Color(0xFF475569), height: 1.4),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    )),
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
@@ -494,7 +614,10 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(subject, style: const TextStyle(fontSize: 13, color: AppTheme.textDark)),
+        Text(
+          subject,
+          style: const TextStyle(fontSize: 13, color: AppTheme.textDark),
+        ),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
           decoration: BoxDecoration(
@@ -503,7 +626,11 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
           ),
           child: Text(
             level,
-            style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              color: color,
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
       ],

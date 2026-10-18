@@ -1,5 +1,5 @@
 import {
-  ICbcAssessmentRepository,
+  ICBCAssessmentRepository,
   FormativeFilterCriteria,
   SummativeFilterCriteria
 } from '../../core/ports/repositories/ICbcAssessmentRepository';
@@ -14,7 +14,7 @@ import {
   SubStrand,
   FormativeAssessment,
   SummativeAssessment,
-  CbcReportCard,
+  CBCReportCard,
   PerformanceLevel,
   AssessmentMethod,
   CoreCompetency,
@@ -26,7 +26,7 @@ import {
   ValueAssessmentEntry,
   TermTrendEntry
 } from '../../core/domain/cbc/CbcAssessment';
-import { CbcGradeLevel } from '../../core/domain/user/Student';
+import { CBCGradeLevel } from '../../core/domain/user/Student';
 import { IdGenerator, NotFoundError, ValidationError, ForbiddenError } from '../../core/domain/shared/Errors';
 
 export interface UserContext {
@@ -38,7 +38,7 @@ export interface UserContext {
 
 export interface CreateStrandDTO {
   learningAreaId: string;
-  gradeLevel: CbcGradeLevel;
+  gradeLevel: CBCGradeLevel;
   code: string;
   title: string;
   description?: string;
@@ -91,9 +91,9 @@ export interface GenerateReportCardDTO {
   nextTermOpeningDate?: string;
 }
 
-export class CbcAssessmentUseCases {
+export class CBCAssessmentUseCases {
   constructor(
-    private readonly cbcRepository: ICbcAssessmentRepository,
+    private readonly CBCRepository: ICBCAssessmentRepository,
     private readonly studentRepository: IStudentRepository,
     private readonly academicRepository: IAcademicRepository,
     private readonly attendanceRepository: IAttendanceRepository,
@@ -156,26 +156,26 @@ export class CbcAssessmentUseCases {
   // 1. Strands and SubStrands
   public async createStrand(dto: CreateStrandDTO) {
     const strand = Strand.create(dto, IdGenerator.generate());
-    await this.cbcRepository.saveStrand(strand);
+    await this.CBCRepository.saveStrand(strand);
     return strand.toJSON();
   }
 
-  public async getStrandsByLearningArea(learningAreaId: string, gradeLevel?: CbcGradeLevel) {
-    const strands = await this.cbcRepository.findStrandsByLearningArea(learningAreaId, gradeLevel);
+  public async getStrandsByLearningArea(learningAreaId: string, gradeLevel?: CBCGradeLevel) {
+    const strands = await this.CBCRepository.findStrandsByLearningArea(learningAreaId, gradeLevel);
     return strands.map(s => s.toJSON());
   }
 
   public async createSubStrand(dto: CreateSubStrandDTO) {
-    const strand = await this.cbcRepository.findStrandById(dto.strandId);
+    const strand = await this.CBCRepository.findStrandById(dto.strandId);
     if (!strand) throw new NotFoundError('Strand', dto.strandId);
 
     const subStrand = SubStrand.create(dto, IdGenerator.generate());
-    await this.cbcRepository.saveSubStrand(subStrand);
+    await this.CBCRepository.saveSubStrand(subStrand);
     return subStrand.toJSON();
   }
 
   public async getSubStrandsByStrand(strandId: string) {
-    const subStrands = await this.cbcRepository.findSubStrandsByStrand(strandId);
+    const subStrands = await this.CBCRepository.findSubStrandsByStrand(strandId);
     return subStrands.map(s => s.toJSON());
   }
 
@@ -184,7 +184,7 @@ export class CbcAssessmentUseCases {
     const student = await this.studentRepository.findById(dto.studentId);
     if (!student) throw new NotFoundError('Student', dto.studentId);
 
-    const subStrand = await this.cbcRepository.findSubStrandById(dto.subStrandId);
+    const subStrand = await this.CBCRepository.findSubStrandById(dto.subStrandId);
     if (!subStrand) throw new NotFoundError('SubStrand', dto.subStrandId);
 
     let termId = dto.termId;
@@ -214,34 +214,97 @@ export class CbcAssessmentUseCases {
       academicYearId: academicYearId || 'year-default',
       assessmentDate: dto.assessmentDate || new Date().toISOString().split('T')[0]
     }, IdGenerator.generate());
-    await this.cbcRepository.saveFormative(assessment);
+    await this.CBCRepository.saveFormative(assessment);
     return assessment.toJSON();
   }
 
   public async listFormativeAssessments(filters: FormativeFilterCriteria & { requestingUser?: UserContext }) {
     const isParent = filters?.requestingUser?.role === UserRole.PARENT || filters?.requestingUser?.role === UserRole.GUARDIAN;
+    let targetRecords: FormativeAssessment[] = [];
+
     if (isParent && filters.requestingUser) {
       const childIds = await this.getLinkedStudentIdsForUser(filters.requestingUser.userId);
       if (filters.studentId) {
         if (!childIds.includes(filters.studentId)) {
           throw new ForbiddenError('Access denied: You are only permitted to view assessments for your registered children.');
         }
+        targetRecords = await this.CBCRepository.findFormatives(filters);
       } else {
         if (childIds.length === 0) return [];
-        const results = [];
         for (const cid of childIds) {
-          const studentFormatives = await this.cbcRepository.findFormatives({
+          const studentFormatives = await this.CBCRepository.findFormatives({
             ...filters,
             studentId: cid
           });
-          results.push(...studentFormatives);
+          targetRecords.push(...studentFormatives);
         }
-        return results.map(r => r.toJSON());
       }
+    } else {
+      targetRecords = await this.CBCRepository.findFormatives(filters);
     }
 
-    const records = await this.cbcRepository.findFormatives(filters);
-    return records.map(r => r.toJSON());
+    return Promise.all(
+      targetRecords.map(async r => {
+        const json = r.toJSON();
+        let studentName = 'Learner';
+        let admissionNumber = '';
+        let gradeLevel = '';
+        try {
+          const student = await this.studentRepository.findById(json.studentId);
+          if (student) {
+            studentName = `${student.firstName} ${student.lastName}`.trim();
+            admissionNumber = student.admissionNumber || '';
+            gradeLevel = student.gradeLevel || '';
+          }
+        } catch {
+          // fallback
+        }
+
+        let learningAreaName = json.learningAreaId;
+        try {
+          if (this.academicRepository?.findLearningAreaById) {
+            const la = await this.academicRepository.findLearningAreaById(json.learningAreaId);
+            if (la) {
+              learningAreaName = la.name;
+            }
+          }
+        } catch {
+          // fallback
+        }
+
+        let subStrandTitle = json.subStrandId;
+        try {
+          const sub = await this.CBCRepository.findSubStrandById(json.subStrandId);
+          if (sub) {
+            subStrandTitle = sub.title;
+          }
+        } catch {
+          // fallback
+        }
+
+        let teacherName = 'CBC Educator';
+        if (json.teacherId && this.userRepository) {
+          try {
+            const u = await this.userRepository.findById(json.teacherId);
+            if (u) {
+              teacherName = `${u.firstName} ${u.lastName}`.trim();
+            }
+          } catch {
+            // fallback
+          }
+        }
+
+        return {
+          ...json,
+          studentName,
+          admissionNumber,
+          gradeLevel,
+          learningAreaName,
+          subStrandTitle,
+          teacherName
+        };
+      })
+    );
   }
 
   // 3. Summative Assessment
@@ -273,7 +336,7 @@ export class CbcAssessmentUseCases {
     if (dto.strandScores && Array.isArray(dto.strandScores)) {
       for (const item of dto.strandScores) {
         if (!item || !item.strandId) continue;
-        const strand = await this.cbcRepository.findStrandById(item.strandId);
+        const strand = await this.CBCRepository.findStrandById(item.strandId);
         strandScores.push({
           strandId: item.strandId,
           strandTitle: strand ? strand.title : 'General Strand',
@@ -284,7 +347,7 @@ export class CbcAssessmentUseCases {
       }
     }
 
-    const existing = await this.cbcRepository.findSummatives({
+    const existing = await this.CBCRepository.findSummatives({
       studentId: dto.studentId,
       learningAreaId: dto.learningAreaId,
       termId: termId || 'term-default',
@@ -307,7 +370,7 @@ export class CbcAssessmentUseCases {
       assessmentId
     );
 
-    await this.cbcRepository.saveSummative(assessment);
+    await this.CBCRepository.saveSummative(assessment);
     return assessment.toJSON();
   }
 
@@ -332,7 +395,7 @@ export class CbcAssessmentUseCases {
         if (childIds.length === 0) return [];
         const results = [];
         for (const cid of childIds) {
-          const studentSummatives = await this.cbcRepository.findSummatives({
+          const studentSummatives = await this.CBCRepository.findSummatives({
             ...filters,
             studentId: cid
           });
@@ -342,7 +405,7 @@ export class CbcAssessmentUseCases {
       }
     }
 
-    const records = await this.cbcRepository.findSummatives(filters);
+    const records = await this.CBCRepository.findSummatives(filters);
     return records.map(r => r.toJSON());
   }
 
@@ -352,7 +415,7 @@ export class CbcAssessmentUseCases {
     if (!student) throw new NotFoundError('Student', dto.studentId);
 
     // Fetch all summative assessments for this student and term
-    const summatives = await this.cbcRepository.findSummatives({
+    const summatives = await this.CBCRepository.findSummatives({
       studentId: dto.studentId,
       termId: dto.termId,
       academicYearId: dto.academicYearId
@@ -365,14 +428,14 @@ export class CbcAssessmentUseCases {
     }
 
     // Fetch formative assessments to summarize competencies & values
-    const formatives = await this.cbcRepository.findFormatives({
+    const formatives = await this.CBCRepository.findFormatives({
       studentId: dto.studentId,
       termId: dto.termId,
       academicYearId: dto.academicYearId
     });
 
     // Fetch all summatives for this learner in this academic year for multi-term trends
-    const allYearSummatives = await this.cbcRepository.findSummatives({
+    const allYearSummatives = await this.CBCRepository.findSummatives({
       studentId: dto.studentId,
       academicYearId: dto.academicYearId
     }).catch(() => []);
@@ -584,9 +647,9 @@ export class CbcAssessmentUseCases {
       daysPresent = 58;
     }
 
-    let reportCard = await this.cbcRepository.findReportCard(dto.studentId, dto.termId, dto.academicYearId);
+    let reportCard = await this.CBCRepository.findReportCard(dto.studentId, dto.termId, dto.academicYearId);
     if (reportCard) {
-      reportCard = CbcReportCard.create(
+      reportCard = CBCReportCard.create(
         {
           studentId: dto.studentId,
           termId: dto.termId,
@@ -608,9 +671,9 @@ export class CbcAssessmentUseCases {
         },
         reportCard.id
       );
-      await this.cbcRepository.updateReportCard(reportCard);
+      await this.CBCRepository.updateReportCard(reportCard);
     } else {
-      reportCard = CbcReportCard.create(
+      reportCard = CBCReportCard.create(
         {
           studentId: dto.studentId,
           termId: dto.termId,
@@ -632,7 +695,7 @@ export class CbcAssessmentUseCases {
         },
         IdGenerator.generate()
       );
-      await this.cbcRepository.saveReportCard(reportCard);
+      await this.CBCRepository.saveReportCard(reportCard);
     }
 
     return {
@@ -650,7 +713,7 @@ export class CbcAssessmentUseCases {
       }
     }
 
-    const reportCard = await this.cbcRepository.findReportCard(studentId, termId, academicYearId);
+    const reportCard = await this.CBCRepository.findReportCard(studentId, termId, academicYearId);
     if (!reportCard) throw new NotFoundError('CBC Report Card for the given term');
 
     const student = await this.studentRepository.findById(studentId);
@@ -665,7 +728,7 @@ export class CbcAssessmentUseCases {
       const currentTermNumber = termId?.includes('1') ? 1 : termId?.includes('2') ? 2 : 3;
 
       // Check if student has report cards for other terms in the database for this academic year
-      const allReports = await this.cbcRepository.findReportCardsByStudent(studentId).catch(() => []);
+      const allReports = await this.CBCRepository.findReportCardsByStudent(studentId).catch(() => []);
       const yearReports = allReports.filter(r => r.academicYearId === academicYearId);
 
       const trends: TermTrendEntry[] = [];
@@ -759,13 +822,13 @@ export class CbcAssessmentUseCases {
     };
   }
 
-  public async getCbcAnalytics(filters: { gradeLevel?: CbcGradeLevel; learningAreaId?: string; termId: string; academicYearId: string; requestingUser?: UserContext }) {
+  public async getCBCAnalytics(filters: { gradeLevel?: CBCGradeLevel; learningAreaId?: string; termId: string; academicYearId: string; requestingUser?: UserContext }) {
     const isParent = filters?.requestingUser?.role === UserRole.PARENT || filters?.requestingUser?.role === UserRole.GUARDIAN;
     if (isParent) {
       throw new ForbiddenError('Access denied: CBC Analytics is restricted to teachers and administrators.');
     }
 
-    const summatives = await this.cbcRepository.findSummatives({
+    const summatives = await this.CBCRepository.findSummatives({
       learningAreaId: filters.learningAreaId,
       termId: filters.termId,
       academicYearId: filters.academicYearId
@@ -813,15 +876,15 @@ export class CbcAssessmentUseCases {
   }
 
   public async deleteStrand(id: string): Promise<void> {
-    await this.cbcRepository.deleteStrand(id);
+    await this.CBCRepository.deleteStrand(id);
   }
 
   public async deleteSubStrand(id: string): Promise<void> {
-    await this.cbcRepository.deleteSubStrand(id);
+    await this.CBCRepository.deleteSubStrand(id);
   }
 
   public async deleteFormative(id: string, requestingUser?: UserContext): Promise<void> {
-    const assessment = await this.cbcRepository.findFormativeById(id);
+    const assessment = await this.CBCRepository.findFormativeById(id);
     if (!assessment) throw new NotFoundError('Formative assessment', id);
     if (requestingUser?.role === UserRole.TEACHER) {
       let isOwner = assessment.teacherId === requestingUser.userId;
@@ -835,11 +898,11 @@ export class CbcAssessmentUseCases {
         throw new ForbiddenError('You can only delete your own formative assessments.');
       }
     }
-    await this.cbcRepository.deleteFormative(id);
+    await this.CBCRepository.deleteFormative(id);
   }
 
   public async deleteSummative(id: string, requestingUser?: UserContext): Promise<void> {
-    const assessment = await this.cbcRepository.findSummativeById(id);
+    const assessment = await this.CBCRepository.findSummativeById(id);
     if (!assessment) throw new NotFoundError('Summative assessment', id);
     if (requestingUser?.role === UserRole.TEACHER) {
       let isOwner = assessment.teacherId === requestingUser.userId;
@@ -853,6 +916,6 @@ export class CbcAssessmentUseCases {
         throw new ForbiddenError('You can only delete your own summative assessments.');
       }
     }
-    await this.cbcRepository.deleteSummative(id);
+    await this.CBCRepository.deleteSummative(id);
   }
 }

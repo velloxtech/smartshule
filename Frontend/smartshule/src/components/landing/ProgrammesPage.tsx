@@ -1,4 +1,35 @@
 import React, { useState } from 'react'
+import {
+  Sparkles,
+  Palette,
+  Sun,
+  BookOpen,
+  FlaskConical,
+  Hand,
+  MessageCircle,
+  Users,
+  Activity,
+  Binary,
+  Leaf,
+  Smile,
+  PenTool,
+  BarChart3,
+  Heart,
+  Monitor,
+  BookText,
+  Compass,
+  Apple,
+  Globe,
+  Dumbbell,
+  Laptop,
+  Languages,
+  Waves,
+  FolderArchive,
+  HeartHandshake,
+  MessageSquare,
+  CheckCircle2,
+  Check,
+} from 'lucide-react'
 
 const logo = '/logo.jpg'
 const heroSchool = '/hero-school.png'
@@ -9,11 +40,11 @@ export interface ProgrammeDetail {
   level: string
   subtitle: string
   age: string
-  emoji: string
+  icon: React.ComponentType<{ className?: string }>
   colorTheme: string
   tagline: string
   overview: string
-  keyAreas: { title: string; desc: string; icon: string }[]
+  keyAreas: { title: string; desc: string; icon: React.ComponentType<{ className?: string }> }[]
   competencies: string[]
   dailySchedule: { time: string; activity: string }[]
   highlights: string[]
@@ -26,15 +57,15 @@ export const PROGRAMMES_DATA: ProgrammeDetail[] = [
     level: 'Playgroup',
     subtitle: 'Early Foundation & Discovery',
     age: 'Ages 2 – 3',
-    emoji: '🌱',
+    icon: Sparkles,
     colorTheme: 'from-amber-500/20 to-rose-500/20',
     tagline: 'Gentle first steps into structured learning with love, warmth, and play.',
     overview: 'Our Playgroup provides a safe, nurturing home-away-from-home environment where toddlers begin their educational journey. Through play-based and sensory learning, we build social skills, language development, emotional self-regulation, and fine motor confidence.',
     keyAreas: [
-      { title: 'Sensory Exploration', desc: 'Water, sand, playdough, and tactile stations that stimulate cognitive connections.', icon: '🖐️' },
-      { title: 'Language & Rhymes', desc: 'Storytelling, sing-alongs, and vocabulary building through interactive play.', icon: '🗣️' },
-      { title: 'Social Integration', desc: 'Learning to share, take turns, and express feelings in a supportive group.', icon: '🤗' },
-      { title: 'Motor Skills Development', desc: 'Outdoor play, stacking, threading, and rhythm-based movements.', icon: '🏃‍♂️' }
+      { title: 'Sensory Exploration', desc: 'Water, sand, playdough, and tactile stations that stimulate cognitive connections.', icon: Hand },
+      { title: 'Language & Rhymes', desc: 'Storytelling, sing-alongs, and vocabulary building through interactive play.', icon: MessageCircle },
+      { title: 'Social Integration', desc: 'Learning to share, take turns, and express feelings in a supportive group.', icon: Users },
+      { title: 'Motor Skills Development', desc: 'Outdoor play, stacking, threading, and rhythm-based movements.', icon: Activity }
     ],
     competencies: [
       'Basic self-care & independence',
@@ -62,15 +93,15 @@ export const PROGRAMMES_DATA: ProgrammeDetail[] = [
     level: 'Pre-Primary 1 (PP1)',
     subtitle: 'CBC Foundation Stage 1',
     age: 'Age 4',
-    emoji: '🎨',
+    icon: Palette,
     colorTheme: 'from-pink-500/20 to-purple-500/20',
     tagline: 'Cultivating curiosity, early phonics, and hands-on mathematical concepts.',
     overview: 'In PP1, children embrace structured CBC learning areas while keeping wonder and creativity at the core. We introduce foundational literacy, mathematical concepts, environmental awareness, and creative psychomotor skills through collaborative activities.',
     keyAreas: [
-      { title: 'Language Activities', desc: 'Phonemic awareness, letter formation, listening skills, and story re-telling.', icon: '📚' },
-      { title: 'Mathematical Activities', desc: 'Sorting, patterns, counting objects, shapes, and spatial awareness.', icon: '🔢' },
-      { title: 'Environmental Activities', desc: 'Exploring nature, family values, personal hygiene, and safety.', icon: '🌿' },
-      { title: 'Psychomotor & Creative Arts', desc: 'Coloring, clay modeling, singing, dancing, and balance games.', icon: '🎭' }
+      { title: 'Language Activities', desc: 'Phonemic awareness, letter formation, listening skills, and story re-telling.', icon: BookOpen },
+      { title: 'Mathematical Activities', desc: 'Sorting, patterns, counting objects, shapes, and spatial awareness.', icon: Binary },
+      { title: 'Environmental Activities', desc: 'Exploring nature, family values, personal hygiene, and safety.', icon: Leaf },
+      { title: 'Psychomotor & Creative Arts', desc: 'Coloring, clay modeling, singing, dancing, and balance games.', icon: Smile }
     ],
     competencies: [
       'Phonics identification (letter sounds a-z)',
@@ -99,15 +130,15 @@ export const PROGRAMMES_DATA: ProgrammeDetail[] = [
     level: 'Pre-Primary 2 (PP2)',
     subtitle: 'CBC Foundation Stage 2',
     age: 'Age 5',
-    emoji: '🌻',
+    icon: Sun,
     colorTheme: 'from-amber-400/20 to-emerald-500/20',
     tagline: 'Preparing confident, articulate learners ready for Primary Education.',
     overview: 'PP2 is the gateway to primary schooling. Learners solidify their reading fluency, early addition/subtraction, digital awareness, and moral grounding. Emphasis is placed on developing independent critical thinking and teamwork skills.',
     keyAreas: [
-      { title: 'Advanced Phonics & Reading', desc: 'Blending 3-4 letter words, reading simple sentences, and creative writing.', icon: '✏️' },
-      { title: 'Numeracy & Logic', desc: 'Basic addition, pattern completion, time awareness, and practical measurement.', icon: '📊' },
-      { title: 'Religious & Moral Education', desc: 'Character building, Christian values, respect for peers, and teamwork.', icon: '✝️' },
-      { title: 'Digital Literacy Intro', desc: 'Basic computer interaction, educational tablet learning games.', icon: '💻' }
+      { title: 'Advanced Phonics & Reading', desc: 'Blending 3-4 letter words, reading simple sentences, and creative writing.', icon: PenTool },
+      { title: 'Numeracy & Logic', desc: 'Basic addition, pattern completion, time awareness, and practical measurement.', icon: BarChart3 },
+      { title: 'Religious & Moral Education', desc: 'Character building, Christian values, respect for peers, and teamwork.', icon: Heart },
+      { title: 'Digital Literacy Intro', desc: 'Basic computer interaction, educational tablet learning games.', icon: Monitor }
     ],
     competencies: [
       'Independent reading of short stories',
@@ -136,15 +167,15 @@ export const PROGRAMMES_DATA: ProgrammeDetail[] = [
     level: 'Lower Primary',
     subtitle: 'CBC Key Stage 1 (Grades 1 – 3)',
     age: 'Grades 1 – 3 (Ages 6 – 8)',
-    emoji: '📚',
+    icon: BookOpen,
     colorTheme: 'from-blue-500/20 to-indigo-500/20',
     tagline: 'Building strong academic foundations, critical thinking, and digital skills.',
     overview: 'Lower Primary marks the beginning of official primary education under Kenya’s CBC curriculum. Pupils engage deeply with Literacy, Mathematics, Environmental Studies, Creative Arts, and Hygiene Education through project-based learning.',
     keyAreas: [
-      { title: 'Literacy & Languages', desc: 'English Activities, Kiswahili Shughuli za Lugha, and French basics.', icon: '📖' },
-      { title: 'Mathematics', desc: 'Numbers, Operations, Geometry, Measurement, and Data handling.', icon: '📐' },
-      { title: 'Hygiene & Nutrition', desc: 'Personal wellbeing, healthy eating, food safety, and community health.', icon: '🍎' },
-      { title: 'Movement & Creative Arts', desc: 'Physical Education, Skating, Swimming, Art & Craft projects, and sports.', icon: '🎨' }
+      { title: 'Literacy & Languages', desc: 'English Activities, Kiswahili Shughuli za Lugha, and French basics.', icon: BookText },
+      { title: 'Mathematics', desc: 'Numbers, Operations, Geometry, Measurement, and Data handling.', icon: Compass },
+      { title: 'Hygiene & Nutrition', desc: 'Personal wellbeing, healthy eating, food safety, and community health.', icon: Apple },
+      { title: 'Movement & Creative Arts', desc: 'Physical Education, Skating, Swimming, Art & Craft projects, and sports.', icon: Palette }
     ],
     competencies: [
       'Critical thinking & problem solving',
@@ -173,15 +204,15 @@ export const PROGRAMMES_DATA: ProgrammeDetail[] = [
     level: 'Upper Primary',
     subtitle: 'CBC Key Stage 2 (Grades 4 – 6)',
     age: 'Grades 4 – 6 (Ages 9 – 12)',
-    emoji: '🔬',
+    icon: FlaskConical,
     colorTheme: 'from-emerald-500/20 to-teal-500/20',
     tagline: 'Empowering young leaders, scientific inquiry, and global perspective.',
     overview: 'In Upper Primary, pupils delve into STEM, Computer Literacy, Social Studies, and French. They develop leadership qualities, analytical capabilities, research skills, and ethical responsibility as they prepare for Junior Secondary School.',
     keyAreas: [
-      { title: 'Science & Technology', desc: 'Practical experiments, computing, living things, and energy forms.', icon: '🧪' },
-      { title: 'Environmental & Life Skills', desc: 'Hands-on environmental care, health, food preparation, and practical life skills.', icon: '🌿' },
-      { title: 'Social Studies & Christian Religious Education', desc: 'History, geography, governance, morals, and civic duty.', icon: '🗺️' },
-      { title: 'Creative Arts & Sports', desc: 'French language, visual art exhibitions, swimming, skating, and ball games.', icon: '⚽' }
+      { title: 'Science & Technology', desc: 'Practical experiments, computing, living things, and energy forms.', icon: FlaskConical },
+      { title: 'Environmental & Life Skills', desc: 'Hands-on environmental care, health, food preparation, and practical life skills.', icon: Leaf },
+      { title: 'Social Studies & Christian Religious Education', desc: 'History, geography, governance, morals, and civic duty.', icon: Globe },
+      { title: 'Creative Arts & Sports', desc: 'French language, visual art exhibitions, swimming, skating, and ball games.', icon: Dumbbell }
     ],
     competencies: [
       'Scientific method & experiment reporting',
@@ -208,14 +239,10 @@ export const PROGRAMMES_DATA: ProgrammeDetail[] = [
 ]
 
 export const CLUBS_DATA = [
-  { name: 'Computer & ICT Club', category: 'STEM & Tech', icon: '💻', desc: 'Hands-on digital skills, computer literacy, and interactive technology tools.' },
-  { name: 'Skating Club', category: 'Sports & Fitness', icon: '🛼', desc: 'Professional roller skating training focusing on balance, coordination, and safety.' },
-  { name: 'French Language Club', category: 'Languages', icon: '🇫🇷', desc: 'Interactive French conversational practice, songs, stories, and cultural immersion.' },
-  { name: 'Swimming Club', category: 'Sports & Fitness', icon: '🏊‍♂️', desc: 'Supervised swimming lessons building water confidence, safety, and stroke techniques.' },
-  { name: 'Debate & Public Speaking', category: 'Languages', icon: '🎙️', desc: 'Honing eloquence, critical arguments, and stage confidence.' },
-  { name: 'Art, Craft & Design', category: 'Creative Arts', icon: '🎨', desc: 'Painting, pottery, origami, and recycled material innovations.' },
-  { name: 'Chess & Strategy Club', category: 'Mind Sports', icon: '♟️', desc: 'Developing patience, tactical thinking, and foresight.' },
-  { name: 'Athletics & Ball Games', category: 'Sports & Fitness', icon: '⚽', desc: 'Football, basketball, gymnastics, and athletics training.' }
+  { name: 'Computer & ICT Club', category: 'STEM & Tech', icon: Laptop, desc: 'Hands-on digital skills, computer literacy, and interactive technology tools.' },
+  { name: 'Skating Club', category: 'Sports & Fitness', icon: Activity, desc: 'Professional roller skating training focusing on balance, coordination, and safety.' },
+  { name: 'French Language Club', category: 'Languages', icon: Languages, desc: 'Interactive French conversational practice, songs, stories, and cultural immersion.' },
+  { name: 'Swimming Club', category: 'Sports & Fitness', icon: Waves, desc: 'Supervised swimming lessons building water confidence, safety, and stroke techniques.' }
 ]
 
 export const FAQS_DATA = [
@@ -240,14 +267,18 @@ export const FAQS_DATA = [
     a: 'We maintain small class sizes with an average teacher-to-pupil ratio of 1:15 (and 1:8 in Playgroup with dedicated assistants), ensuring personalized attention for every child.'
   },
   {
+    q: 'How should parents pay school fees?',
+    a: 'When paying school fees, please use your child’s full name and grade (e.g., 8048859#ChildName Grade) as the payment account reference, not an admission number. This ensures immediate identification and accurate credit to your child’s fee statement.'
+  },
+  {
     q: 'How can I apply or schedule a visit?',
-    a: 'You can apply directly online through our website, or call our admissions desk at 0745 436312 to arrange a personal guided campus tour.'
+    a: 'You can apply directly online through our website, or call our admissions desk at 0745 436312 to arrange a personal guided school tour.'
   }
 ]
 
 interface ProgrammesPageProps {
   onNavigateHome: () => void
-  onOpenApplyModal?: () => void
+  onOpenApplyModal?: (grade?: string) => void
 }
 
 export default function ProgrammesPage({ onNavigateHome, onOpenApplyModal }: ProgrammesPageProps) {
@@ -354,7 +385,9 @@ export default function ProgrammesPage({ onNavigateHome, onOpenApplyModal }: Pro
                     : 'bg-[#fdfaf6] hover:bg-[#f9eef1] text-[#5a1226]'
                 }`}
               >
-                <span className="text-2xl mb-1">{p.emoji}</span>
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-1 ${isSelected ? 'bg-white/20 text-white' : 'bg-[#f9eef1] text-[#7b1c35]'}`}>
+                  <p.icon className="w-4 h-4" />
+                </div>
                 <span style={{ fontFamily: 'Fraunces, serif' }} className="font-bold text-sm text-center line-clamp-1">
                   {p.level}
                 </span>
@@ -375,16 +408,21 @@ export default function ProgrammesPage({ onNavigateHome, onOpenApplyModal }: Pro
                 <span className="text-white/80 text-xs">Ratio: {selectedProgramme.classRatio}</span>
               </div>
               <h2 style={{ fontFamily: 'Fraunces, serif' }} className="text-3xl lg:text-4xl font-bold mb-2 flex items-center gap-3">
-                <span>{selectedProgramme.emoji}</span> {selectedProgramme.level}
+                <selectedProgramme.icon className="w-8 h-8 text-[#f5c84a] shrink-0" />
+                <span>{selectedProgramme.level}</span>
               </h2>
               <p className="text-white/80 text-sm font-semibold">{selectedProgramme.subtitle}</p>
             </div>
 
             <button
-              onClick={onOpenApplyModal || (() => {
-                const el = document.getElementById('programme-enquiry')
-                el?.scrollIntoView({ behavior: 'smooth' })
-              })}
+              onClick={() => {
+                if (onOpenApplyModal) {
+                  onOpenApplyModal(selectedProgramme.level)
+                } else {
+                  const el = document.getElementById('programme-enquiry')
+                  el?.scrollIntoView({ behavior: 'smooth' })
+                }
+              }}
               className="bg-[#e8a92a] hover:bg-[#f5c84a] text-[#5a1226] font-bold px-7 py-3 rounded-full text-sm shadow-md transition-transform hover:scale-105 shrink-0 cursor-pointer"
             >
               Enquire for {selectedProgramme.level} →
@@ -400,7 +438,7 @@ export default function ProgrammesPage({ onNavigateHome, onOpenApplyModal }: Pro
                   : 'border-transparent text-[#8a6470] hover:text-[#5a1226]'
               }`}
             >
-              🌟 Overview & Highlights
+              Overview & Highlights
             </button>
             <button
               onClick={() => setActiveTab('keyAreas')}
@@ -410,7 +448,7 @@ export default function ProgrammesPage({ onNavigateHome, onOpenApplyModal }: Pro
                   : 'border-transparent text-[#8a6470] hover:text-[#5a1226]'
               }`}
             >
-              📖 Learning & Subject Areas
+              Learning & Subject Areas
             </button>
             <button
               onClick={() => setActiveTab('competencies')}
@@ -420,7 +458,7 @@ export default function ProgrammesPage({ onNavigateHome, onOpenApplyModal }: Pro
                   : 'border-transparent text-[#8a6470] hover:text-[#5a1226]'
               }`}
             >
-              🎯 Core Competencies
+              Core Competencies
             </button>
             <button
               onClick={() => setActiveTab('schedule')}
@@ -430,7 +468,7 @@ export default function ProgrammesPage({ onNavigateHome, onOpenApplyModal }: Pro
                   : 'border-transparent text-[#8a6470] hover:text-[#5a1226]'
               }`}
             >
-              ⏰ Sample Daily Schedule
+              Sample Daily Schedule
             </button>
           </div>
 
@@ -453,7 +491,7 @@ export default function ProgrammesPage({ onNavigateHome, onOpenApplyModal }: Pro
                   <div className="grid sm:grid-cols-2 gap-4">
                     {selectedProgramme.highlights.map((h, i) => (
                       <div key={i} className="flex items-start gap-3 bg-[#f9eef1] p-4 rounded-xl border border-[#f0d8df]">
-                        <span className="text-[#e8a92a] font-bold text-lg">✓</span>
+                        <Check className="w-4 h-4 text-[#e8a92a] shrink-0 mt-0.5" />
                         <p className="text-[#5a1226] text-sm font-semibold">{h}</p>
                       </div>
                     ))}
@@ -470,8 +508,10 @@ export default function ProgrammesPage({ onNavigateHome, onOpenApplyModal }: Pro
                 <div className="grid sm:grid-cols-2 gap-6">
                   {selectedProgramme.keyAreas.map((ka, i) => (
                     <div key={i} className="bg-[#fdfaf6] border border-[#f0d8df] p-6 rounded-2xl hover:border-[#7b1c35] transition-colors">
-                      <div className="text-3xl mb-3">{ka.icon}</div>
-                      <h4 style={{ fontFamily: 'Fraunces, serif' }} className="text-lg font-bold text-[#5a1226] mb-2">
+                      <div className="w-12 h-12 rounded-2xl bg-[#f9eef1] text-[#7b1c35] flex items-center justify-center mb-3">
+                        <ka.icon className="w-6 h-6" />
+                      </div>
+                      <h4 style={{ fontFamily: 'Fraunces, serif' }} className="font-bold text-base text-[#5a1226] mb-2">
                         {ka.title}
                       </h4>
                       <p className="text-[#8a6470] text-sm leading-relaxed">{ka.desc}</p>
@@ -566,7 +606,9 @@ export default function ProgrammesPage({ onNavigateHome, onOpenApplyModal }: Pro
                 key={club.name}
                 className="bg-white border border-[#f0d8df] hover:border-[#7b1c35] p-6 rounded-2xl shadow-sm hover:shadow-lg transition-all group duration-300"
               >
-                <div className="text-4xl mb-4 group-hover:scale-110 transition-transform duration-200">{club.icon}</div>
+                <div className="w-14 h-14 rounded-2xl bg-[#f9eef1] text-[#7b1c35] flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-200">
+                  <club.icon className="w-7 h-7" />
+                </div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-[#e8a92a] bg-[#fdfaf6] px-2.5 py-1 rounded-full border border-[#f0d8df] mb-3 inline-block">
                   {club.category}
                 </span>
@@ -602,7 +644,7 @@ export default function ProgrammesPage({ onNavigateHome, onOpenApplyModal }: Pro
             <div className="space-y-6">
               <div className="flex gap-4">
                 <div className="w-10 h-10 rounded-2xl bg-[#7b1c35] text-white flex items-center justify-center font-bold text-lg shrink-0">
-                  📁
+                  <FolderArchive className="w-5 h-5 text-white" />
                 </div>
                 <div>
                   <h4 style={{ fontFamily: 'Fraunces, serif' }} className="text-lg font-bold text-[#5a1226] mb-1">
@@ -616,7 +658,7 @@ export default function ProgrammesPage({ onNavigateHome, onOpenApplyModal }: Pro
 
               <div className="flex gap-4">
                 <div className="w-10 h-10 rounded-2xl bg-[#e8a92a] text-[#5a1226] flex items-center justify-center font-bold text-lg shrink-0">
-                  🤝
+                  <HeartHandshake className="w-5 h-5 text-[#5a1226]" />
                 </div>
                 <div>
                   <h4 style={{ fontFamily: 'Fraunces, serif' }} className="text-lg font-bold text-[#5a1226] mb-1">
@@ -630,7 +672,7 @@ export default function ProgrammesPage({ onNavigateHome, onOpenApplyModal }: Pro
 
               <div className="flex gap-4">
                 <div className="w-10 h-10 rounded-2xl bg-[#5a1226] text-[#f5c84a] flex items-center justify-center font-bold text-lg shrink-0">
-                  💬
+                  <MessageSquare className="w-5 h-5 text-[#f5c84a]" />
                 </div>
                 <div>
                   <h4 style={{ fontFamily: 'Fraunces, serif' }} className="text-lg font-bold text-[#5a1226] mb-1">
@@ -703,7 +745,7 @@ export default function ProgrammesPage({ onNavigateHome, onOpenApplyModal }: Pro
 
             {enquirySuccess ? (
               <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-6 rounded-2xl text-center animate-fadeIn">
-                <div className="text-4xl mb-2">🎉</div>
+                <CheckCircle2 className="w-12 h-12 text-emerald-600 mx-auto mb-2" />
                 <h3 className="font-bold text-lg mb-1">Enquiry Received!</h3>
                 <p className="text-sm text-emerald-700">
                   Thank you for reaching out to Grace Seeds School. Our admissions officer will get in touch with you shortly.

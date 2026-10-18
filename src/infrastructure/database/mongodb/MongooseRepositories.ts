@@ -5,7 +5,7 @@ import { IStudentRepository, StudentFilterCriteria } from '../../../core/ports/r
 import { ITeacherRepository, IGuardianRepository } from '../../../core/ports/repositories/ITeacherRepository';
 import { IAcademicRepository } from '../../../core/ports/repositories/IAcademicRepository';
 import {
-  ICbcAssessmentRepository,
+  ICBCAssessmentRepository,
   FormativeFilterCriteria,
   SummativeFilterCriteria
 } from '../../../core/ports/repositories/ICbcAssessmentRepository';
@@ -33,7 +33,7 @@ import {
 } from '../../../core/ports/repositories/IDeletedStudentRepository';
 
 import { User, UserRole, UserStatus } from '../../../core/domain/user/User';
-import { Student, StudentGender, CbcGradeLevel, StudentStatus } from '../../../core/domain/user/Student';
+import { Student, StudentGender, CBCGradeLevel, StudentStatus } from '../../../core/domain/user/Student';
 import { DeletedStudent } from '../../../core/domain/user/DeletedStudent';
 import { Teacher } from '../../../core/domain/user/Teacher';
 import { Guardian, GuardianRelationship } from '../../../core/domain/user/Guardian';
@@ -45,7 +45,7 @@ import {
   SubStrand,
   FormativeAssessment,
   SummativeAssessment,
-  CbcReportCard,
+  CBCReportCard,
   PerformanceLevel,
   AssessmentMethod
 } from '../../../core/domain/cbc/CbcAssessment';
@@ -255,7 +255,7 @@ const SummativeAssessmentSchema = new Schema({
   updatedAt: { type: Date, default: Date.now }
 });
 
-const CbcReportCardSchema = new Schema({
+const CBCReportCardSchema = new Schema({
   _id: { type: String, required: true },
   studentId: { type: String, required: true },
   termId: { type: String, required: true },
@@ -460,7 +460,7 @@ const StrandModel = mongoose.models.Strand || mongoose.model('Strand', StrandSch
 const SubStrandModel = mongoose.models.SubStrand || mongoose.model('SubStrand', SubStrandSchema);
 const FormativeModel = mongoose.models.FormativeAssessment || mongoose.model('FormativeAssessment', FormativeAssessmentSchema);
 const SummativeModel = mongoose.models.SummativeAssessment || mongoose.model('SummativeAssessment', SummativeAssessmentSchema);
-const ReportCardModel = mongoose.models.CbcReportCard || mongoose.model('CbcReportCard', CbcReportCardSchema);
+const ReportCardModel = mongoose.models.CBCReportCard || mongoose.model('CBCReportCard', CBCReportCardSchema);
 const SchemeModel = mongoose.models.SchemeOfWork || mongoose.model('SchemeOfWork', SchemeOfWorkSchema);
 const LessonPlanModel = mongoose.models.LessonPlan || mongoose.model('LessonPlan', LessonPlanSchema);
 const TimetableModel = mongoose.models.Timetable || mongoose.model('Timetable', TimetableSchema);
@@ -755,7 +755,7 @@ export class MongoAcademicRepository implements IAcademicRepository {
     if (!doc) return null;
     return LearningArea.create(doc as any, doc._id, doc.createdAt, doc.updatedAt);
   }
-  public async findAllLearningAreas(filters?: { gradeLevel?: CbcGradeLevel; schoolId?: string }): Promise<LearningArea[]> {
+  public async findAllLearningAreas(filters?: { gradeLevel?: CBCGradeLevel; schoolId?: string }): Promise<LearningArea[]> {
     const query: any = {};
     if (filters?.gradeLevel) query.gradeLevel = filters.gradeLevel;
     if (filters?.schoolId) query.schoolId = filters.schoolId;
@@ -777,13 +777,13 @@ export class MongoAcademicRepository implements IAcademicRepository {
   }
 }
 
-export class MongoCbcAssessmentRepository implements ICbcAssessmentRepository {
+export class MongoCBCAssessmentRepository implements ICBCAssessmentRepository {
   public async findStrandById(id: string): Promise<Strand | null> {
     const doc = await StrandModel.findById(id).lean();
     if (!doc) return null;
     return Strand.create(doc as any, doc._id, doc.createdAt, doc.updatedAt);
   }
-  public async findStrandsByLearningArea(learningAreaId: string, gradeLevel?: CbcGradeLevel): Promise<Strand[]> {
+  public async findStrandsByLearningArea(learningAreaId: string, gradeLevel?: CBCGradeLevel): Promise<Strand[]> {
     const query: any = { learningAreaId };
     if (gradeLevel) query.gradeLevel = gradeLevel;
     const docs = await StrandModel.find(query).lean();
@@ -864,30 +864,30 @@ export class MongoCbcAssessmentRepository implements ICbcAssessmentRepository {
   public async deleteSummativesByStudent(studentId: string): Promise<void> {
     await SummativeModel.deleteMany({ studentId });
   }
-  public async findReportCardById(id: string): Promise<CbcReportCard | null> {
+  public async findReportCardById(id: string): Promise<CBCReportCard | null> {
     const doc = await ReportCardModel.findById(id).lean();
     if (!doc) return null;
-    return CbcReportCard.create(doc as any, doc._id, doc.createdAt, doc.updatedAt);
+    return CBCReportCard.create(doc as any, doc._id, doc.createdAt, doc.updatedAt);
   }
-  public async findReportCard(studentId: string, termId: string, academicYearId: string): Promise<CbcReportCard | null> {
+  public async findReportCard(studentId: string, termId: string, academicYearId: string): Promise<CBCReportCard | null> {
     const doc = await ReportCardModel.findOne({ studentId, termId, academicYearId }).lean();
     if (!doc) return null;
-    return CbcReportCard.create(doc as any, doc._id, doc.createdAt, doc.updatedAt);
+    return CBCReportCard.create(doc as any, doc._id, doc.createdAt, doc.updatedAt);
   }
-  public async findReportCardsByStudent(studentId: string): Promise<CbcReportCard[]> {
+  public async findReportCardsByStudent(studentId: string): Promise<CBCReportCard[]> {
     const docs = await ReportCardModel.find({ studentId }).lean();
-    return docs.map((d: any) => CbcReportCard.create(d, d._id, d.createdAt, d.updatedAt));
+    return docs.map((d: any) => CBCReportCard.create(d, d._id, d.createdAt, d.updatedAt));
   }
-  public async findReportCardsByTerm(termId: string, streamId?: string): Promise<CbcReportCard[]> {
+  public async findReportCardsByTerm(termId: string, streamId?: string): Promise<CBCReportCard[]> {
     const query: any = { termId };
     if (streamId) query.streamId = streamId;
     const docs = await ReportCardModel.find(query).lean();
-    return docs.map((d: any) => CbcReportCard.create(d, d._id, d.createdAt, d.updatedAt));
+    return docs.map((d: any) => CBCReportCard.create(d, d._id, d.createdAt, d.updatedAt));
   }
-  public async saveReportCard(reportCard: CbcReportCard): Promise<void> {
+  public async saveReportCard(reportCard: CBCReportCard): Promise<void> {
     await ReportCardModel.findOneAndUpdate({ _id: reportCard.id }, { ...reportCard.toJSON(), _id: reportCard.id }, { upsert: true });
   }
-  public async updateReportCard(reportCard: CbcReportCard): Promise<void> {
+  public async updateReportCard(reportCard: CBCReportCard): Promise<void> {
     await ReportCardModel.findByIdAndUpdate(reportCard.id, reportCard.toJSON());
   }
   public async deleteReportCardsByStudent(studentId: string): Promise<void> {
@@ -1061,7 +1061,7 @@ export class MongoFeeRepository implements IFeeRepository {
     if (!doc) return null;
     return FeeStructure.create(doc as any, doc._id, doc.createdAt, doc.updatedAt);
   }
-  public async findFeeStructure(gradeLevel: CbcGradeLevel, termId: string, academicYearId: string): Promise<FeeStructure | null> {
+  public async findFeeStructure(gradeLevel: CBCGradeLevel, termId: string, academicYearId: string): Promise<FeeStructure | null> {
     const doc = await FeeStructureModel.findOne({
       gradeLevel,
       academicYearId,

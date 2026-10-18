@@ -50,7 +50,7 @@ export function createAccountabilityMiddleware(systemLogUseCases?: SystemLogUseC
       if (originalUrl.includes('/auth')) category = 'AUTH';
       else if (originalUrl.includes('/finance') || originalUrl.includes('/lunch')) category = 'FINANCE';
       else if (originalUrl.includes('/students')) category = 'STUDENTS';
-      else if (originalUrl.includes('/academics') || originalUrl.includes('/cbc') || originalUrl.includes('/timetables')) category = 'ACADEMICS';
+      else if (originalUrl.includes('/academics') || originalUrl.includes('/CBC') || originalUrl.includes('/timetables')) category = 'ACADEMICS';
       else if (originalUrl.includes('/complaints')) category = 'COMPLAINTS';
       else if (originalUrl.includes('/announcements')) category = 'COMMUNICATION';
 

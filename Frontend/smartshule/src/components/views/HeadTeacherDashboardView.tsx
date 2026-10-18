@@ -235,7 +235,7 @@ export const HeadTeacherDashboardView: React.FC<HeadTeacherDashboardViewProps> =
 
             <div className="space-y-2.5">
               <button
-                onClick={() => onNavigateTab('cbc-analytics')}
+                onClick={() => onNavigateTab('CBC-analytics')}
                 className="w-full p-3 rounded-xl border border-outline-variant/30 hover:bg-purple-50/50 hover:border-purple-300 transition-all flex items-center gap-3 text-left cursor-pointer"
               >
                 <span className="material-symbols-outlined text-purple-700 text-[22px]">monitoring</span>

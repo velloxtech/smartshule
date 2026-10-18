@@ -20,55 +20,55 @@ export const EXPENSE_CATEGORIES: {
   {
     value: 'FOOD_CEREALS',
     label: 'Food & Cereals (Rice, Beans, Maize, Flour)',
-    icon: '🌾',
+    icon: 'grain',
     badgeClass: 'bg-amber-50 text-amber-900 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800'
   },
   {
     value: 'FRESH_PRODUCE',
     label: 'Fresh Produce (Vegetables, Tomatoes, Fruits, Potatoes)',
-    icon: '🥬',
+    icon: 'eco',
     badgeClass: 'bg-emerald-50 text-emerald-900 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800'
   },
   {
     value: 'MEAT_DAIRY',
     label: 'Meat, Dairy & Eggs (Beef, Chicken, Eggs, Milk)',
-    icon: '🥩',
+    icon: 'egg',
     badgeClass: 'bg-rose-50 text-rose-900 border-rose-200 dark:bg-rose-900/30 dark:text-rose-300 dark:border-rose-800'
   },
   {
     value: 'COOKING_FUEL',
     label: 'Cooking Fuel (Firewood, Gas LPG, Charcoal)',
-    icon: '🔥',
+    icon: 'local_fire_department',
     badgeClass: 'bg-orange-50 text-orange-900 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800'
   },
   {
     value: 'KITCHEN_STAFF_WAGES',
     label: 'Kitchen Staff & Cooks Wages',
-    icon: '👨‍🍳',
+    icon: 'badge',
     badgeClass: 'bg-indigo-50 text-indigo-900 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800'
   },
   {
     value: 'EQUIPMENT_UTENSILS',
     label: 'Kitchen Utensils & Equipment (Sufurias, Burners)',
-    icon: '🍳',
+    icon: 'skillet',
     badgeClass: 'bg-cyan-50 text-cyan-900 border-cyan-200 dark:bg-cyan-900/30 dark:text-cyan-300 dark:border-cyan-800'
   },
   {
     value: 'TRANSPORT_DELIVERY',
     label: 'Transport & Produce Delivery',
-    icon: '🚚',
+    icon: 'local_shipping',
     badgeClass: 'bg-blue-50 text-blue-900 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800'
   },
   {
     value: 'WATER_SANITATION',
     label: 'Water & Kitchen Sanitation / Hygiene',
-    icon: '🧼',
+    icon: 'clean_hands',
     badgeClass: 'bg-teal-50 text-teal-900 border-teal-200 dark:bg-teal-900/30 dark:text-teal-300 dark:border-teal-800'
   },
   {
     value: 'OTHER_EXPENSES',
     label: 'Other Sundry Catering Expenses',
-    icon: '📦',
+    icon: 'inventory_2',
     badgeClass: 'bg-slate-50 text-slate-900 border-slate-200 dark:bg-slate-800/40 dark:text-slate-300 dark:border-slate-700'
   }
 ];
@@ -673,7 +673,7 @@ export const LunchFeeManagementView: React.FC = () => {
                 isSurplus ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'
               }`}
             >
-              {isSurplus ? '✓ Funds in Surplus / Reserve' : '⚠ Program Running at Deficit'}
+              {isSurplus ? 'Funds in Surplus / Reserve' : 'Program Running at Deficit'}
             </span>
           </div>
           <div
@@ -1022,7 +1022,7 @@ export const LunchFeeManagementView: React.FC = () => {
                   }`}
                 >
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-base">{cat.icon}</span>
+                    <span className="material-symbols-outlined text-base text-primary">{cat.icon}</span>
                     <span className="font-data-mono font-bold text-on-surface">
                       {percent}%
                     </span>
@@ -1071,7 +1071,7 @@ export const LunchFeeManagementView: React.FC = () => {
                 <option value="ALL">All Categories</option>
                 {EXPENSE_CATEGORIES.map((c) => (
                   <option key={c.value} value={c.value}>
-                    {c.icon} {c.label}
+                    {c.label}
                   </option>
                 ))}
               </select>
@@ -1157,7 +1157,7 @@ export const LunchFeeManagementView: React.FC = () => {
                   ) : (
                     filteredExpenses.map((exp) => {
                       const catConfig = EXPENSE_CATEGORIES.find((c) => c.value === exp.category) || {
-                        icon: '📦',
+                        icon: 'inventory_2',
                         label: exp.category,
                         badgeClass: 'bg-surface-container text-on-surface'
                       };
@@ -1179,7 +1179,7 @@ export const LunchFeeManagementView: React.FC = () => {
                             <span
                               className={`px-2 py-0.5 rounded-full text-[11px] font-bold border inline-flex items-center gap-1 ${catConfig.badgeClass}`}
                             >
-                              <span>{catConfig.icon}</span>
+                              <span className="material-symbols-outlined text-[14px]">{catConfig.icon}</span>
                               <span>{catConfig.label.split('(')[0].trim()}</span>
                             </span>
                           </td>
@@ -1733,7 +1733,7 @@ export const LunchFeeManagementView: React.FC = () => {
                   >
                     {EXPENSE_CATEGORIES.map((c) => (
                       <option key={c.value} value={c.value}>
-                        {c.icon} {c.label}
+                        {c.label}
                       </option>
                     ))}
                   </select>
@@ -1899,7 +1899,7 @@ export const LunchFeeManagementView: React.FC = () => {
                   >
                     {EXPENSE_CATEGORIES.map((c) => (
                       <option key={c.value} value={c.value}>
-                        {c.icon} {c.label}
+                        {c.label}
                       </option>
                     ))}
                   </select>

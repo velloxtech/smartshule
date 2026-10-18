@@ -58,7 +58,11 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                 child: Image.asset(
                   'assets/images/logo.png',
                   fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => const Icon(Icons.school, size: 20, color: AppTheme.primaryMaroon),
+                  errorBuilder: (_, __, ___) => const Icon(
+                    Icons.school,
+                    size: 20,
+                    color: AppTheme.primaryMaroon,
+                  ),
                 ),
               ),
             ),
@@ -88,7 +92,10 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: AppTheme.primaryMaroonTint,
                       borderRadius: BorderRadius.circular(20),
@@ -97,7 +104,10 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        CircleAvatar(radius: 3, backgroundColor: AppTheme.primaryMaroon),
+                        CircleAvatar(
+                          radius: 3,
+                          backgroundColor: AppTheme.primaryMaroon,
+                        ),
                         SizedBox(width: 6),
                         Text(
                           'Term 3 - 2026 • Active Session',
@@ -112,7 +122,10 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                   ),
                   const Spacer(),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(20),
@@ -138,7 +151,10 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [AppTheme.primaryMaroonDark, AppTheme.primaryMaroon],
+                    colors: [
+                      AppTheme.primaryMaroonDark,
+                      AppTheme.primaryMaroon,
+                    ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -166,7 +182,10 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                           ),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(20),
@@ -193,19 +212,29 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                     const SizedBox(height: 16),
                     // Geofence status card
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.black.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: const Row(
                         children: [
-                          Icon(Icons.location_on, color: Colors.greenAccent, size: 18),
+                          Icon(
+                            Icons.location_on,
+                            color: Colors.greenAccent,
+                            size: 18,
+                          ),
                           SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               'Campus Geofence Verified (Attendance Active)',
-                              style: TextStyle(color: Colors.white, fontSize: 12),
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                              ),
                             ),
                           ),
                         ],
@@ -219,7 +248,11 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
               // KPI Stats Grid (Matches Web Analytics Cards)
               const Text(
                 "Today's Overview",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textDark,
+                ),
               ),
               const SizedBox(height: 12),
               Row(
@@ -274,7 +307,11 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
               // Quick Actions (Web Action Row)
               const Text(
                 'Quick Teacher Actions',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textDark,
+                ),
               ),
               const SizedBox(height: 12),
               Row(
@@ -289,7 +326,9 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                       label: const Text('Mark Roll Call'),
                       onPressed: () {
                         Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const TeacherAttendanceScreen()),
+                          MaterialPageRoute(
+                            builder: (_) => const TeacherAttendanceScreen(),
+                          ),
                         );
                       },
                     ),
@@ -307,7 +346,9 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                       label: const Text('Add CBC Rubric'),
                       onPressed: () {
                         Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const TeacherAssessmentScreen()),
+                          MaterialPageRoute(
+                            builder: (_) => const TeacherAssessmentScreen(),
+                          ),
                         );
                       },
                     ),
@@ -322,11 +363,18 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                 children: [
                   const Text(
                     'School Notices & Circulars',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textDark,
+                    ),
                   ),
                   Text(
                     '${_announcements.length} updates',
-                    style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textMuted,
+                    ),
                   ),
                 ],
               ),
@@ -340,71 +388,92 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
                   ),
                 )
               else
-                ..._announcements.map((item) => Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        side: const BorderSide(color: Color(0xFFE2E8F0)),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.primaryMaroonTint,
-                                    borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(color: AppTheme.primaryMaroonBorder),
-                                  ),
-                                  child: Text(
-                                    item.category.toUpperCase(),
-                                    style: const TextStyle(
-                                      color: AppTheme.primaryMaroon,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                ..._announcements.map(
+                  (item) => Card(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: const BorderSide(color: Color(0xFFE2E8F0)),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primaryMaroonTint,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color: AppTheme.primaryMaroonBorder,
                                   ),
                                 ),
-                                Text(
-                                  '${item.date.day}/${item.date.month}/${item.date.year}',
-                                  style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                                child: Text(
+                                  item.category.toUpperCase(),
+                                  style: const TextStyle(
+                                    color: AppTheme.primaryMaroon,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              item.title,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.textDark,
                               ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              item.content,
-                              style: const TextStyle(fontSize: 13, color: Color(0xFF475569), height: 1.4),
-                            ),
-                            const SizedBox(height: 10),
-                            Row(
-                              children: [
-                                const Icon(Icons.account_circle, size: 16, color: AppTheme.textMuted),
-                                const SizedBox(width: 6),
-                                Text(
-                                  item.authorName,
-                                  style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                              Text(
+                                '${item.date.day}/${item.date.month}/${item.date.year}',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: AppTheme.textMuted,
                                 ),
-                              ],
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            item.title,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.textDark,
                             ),
-                          ],
-                        ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            item.content,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF475569),
+                              height: 1.4,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.account_circle,
+                                size: 16,
+                                color: AppTheme.textMuted,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                item.authorName,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppTheme.textMuted,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                    )),
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
@@ -434,7 +503,11 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(fontSize: 12, color: AppTheme.textMuted, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.textMuted,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 Icon(icon, color: iconColor, size: 20),
               ],
@@ -442,7 +515,11 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
             const SizedBox(height: 10),
             Text(
               value,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppTheme.textDark),
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: AppTheme.textDark,
+              ),
             ),
             const SizedBox(height: 4),
             Text(

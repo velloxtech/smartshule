@@ -1,4 +1,4 @@
-import { Student, StudentGender, CbcGradeLevel, StudentStatus } from '../../src/core/domain/user/Student';
+import { Student, StudentGender, CBCGradeLevel, StudentStatus } from '../../src/core/domain/user/Student';
 import { PerformanceLevel, PerformanceLevelScores, CoreCompetency, CoreValue } from '../../src/core/domain/cbc/CbcAssessment';
 import { Timetable, DayOfWeek } from '../../src/core/domain/timetable/Timetable';
 import { StudentInvoice, InvoiceStatus } from '../../src/core/domain/finance/Fee';
@@ -14,7 +14,7 @@ describe('SmartShule Core Domain Unit Tests', () => {
           lastName: 'Wambui',
           dateOfBirth: '2013-01-01',
           gender: StudentGender.FEMALE,
-          gradeLevel: CbcGradeLevel.GRADE_7,
+          gradeLevel: CBCGradeLevel.GRADE_7,
           streamId: 'stream-east',
           schoolId: 'school-1',
           academicYearId: 'year-2026',
@@ -25,10 +25,10 @@ describe('SmartShule Core Domain Unit Tests', () => {
       );
 
       expect(student.fullName).toBe('Faith Wambui');
-      expect(student.gradeLevel).toBe(CbcGradeLevel.GRADE_7);
+      expect(student.gradeLevel).toBe(CBCGradeLevel.GRADE_7);
 
-      student.promoteOrTransfer(CbcGradeLevel.GRADE_8, 'stream-g8-east', 'year-2027');
-      expect(student.gradeLevel).toBe(CbcGradeLevel.GRADE_8);
+      student.promoteOrTransfer(CBCGradeLevel.GRADE_8, 'stream-g8-east', 'year-2027');
+      expect(student.gradeLevel).toBe(CBCGradeLevel.GRADE_8);
       expect(student.streamId).toBe('stream-g8-east');
     });
   });

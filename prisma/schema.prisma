@@ -195,7 +195,7 @@ model SummativeAssessment {
   updatedAt               DateTime @updatedAt
 }
 
-model CbcReportCard {
+model CBCReportCard {
   id                        String   @id @default(uuid())
   studentId                 String
   termId                    String
@@ -576,6 +576,7 @@ model CurriculumTracker {
   term           String
   totalWeeks     Int      @default(12) @map("total_weeks")
   items          Json     @default("[]")
+  dailyLogs      Json     @default("[]") @map("daily_logs")
   status         String   @default("ACTIVE")
   createdAt      DateTime @default(now()) @map("created_at")
   updatedAt      DateTime @updatedAt @map("updated_at")

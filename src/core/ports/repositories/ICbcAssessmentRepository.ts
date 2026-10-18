@@ -3,9 +3,9 @@ import {
   SubStrand,
   FormativeAssessment,
   SummativeAssessment,
-  CbcReportCard
+  CBCReportCard
 } from '../../domain/cbc/CbcAssessment';
-import { CbcGradeLevel } from '../../domain/user/Student';
+import { CBCGradeLevel } from '../../domain/user/Student';
 
 export interface FormativeFilterCriteria {
   studentId?: string;
@@ -22,10 +22,10 @@ export interface SummativeFilterCriteria {
   academicYearId?: string;
 }
 
-export interface ICbcAssessmentRepository {
+export interface ICBCAssessmentRepository {
   // Strands
   findStrandById(id: string): Promise<Strand | null>;
-  findStrandsByLearningArea(learningAreaId: string, gradeLevel?: CbcGradeLevel): Promise<Strand[]>;
+  findStrandsByLearningArea(learningAreaId: string, gradeLevel?: CBCGradeLevel): Promise<Strand[]>;
   saveStrand(strand: Strand): Promise<void>;
   deleteStrand(id: string): Promise<void>;
 
@@ -52,11 +52,11 @@ export interface ICbcAssessmentRepository {
   deleteSummativesByStudent(studentId: string): Promise<void>;
 
   // Report Cards
-  findReportCardById(id: string): Promise<CbcReportCard | null>;
-  findReportCard(studentId: string, termId: string, academicYearId: string): Promise<CbcReportCard | null>;
-  findReportCardsByStudent(studentId: string): Promise<CbcReportCard[]>;
-  findReportCardsByTerm(termId: string, streamId?: string): Promise<CbcReportCard[]>;
-  saveReportCard(reportCard: CbcReportCard): Promise<void>;
-  updateReportCard(reportCard: CbcReportCard): Promise<void>;
+  findReportCardById(id: string): Promise<CBCReportCard | null>;
+  findReportCard(studentId: string, termId: string, academicYearId: string): Promise<CBCReportCard | null>;
+  findReportCardsByStudent(studentId: string): Promise<CBCReportCard[]>;
+  findReportCardsByTerm(termId: string, streamId?: string): Promise<CBCReportCard[]>;
+  saveReportCard(reportCard: CBCReportCard): Promise<void>;
+  updateReportCard(reportCard: CBCReportCard): Promise<void>;
   deleteReportCardsByStudent(studentId: string): Promise<void>;
 }

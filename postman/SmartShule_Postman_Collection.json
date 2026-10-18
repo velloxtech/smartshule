@@ -320,7 +320,7 @@
               "mode": "raw",
               "raw": "{\n  \"learningAreaId\": \"{{learningAreaId}}\",\n  \"gradeLevel\": \"GRADE_7\",\n  \"code\": \"STR-SCIE-02\",\n  \"title\": \"Matter and Energy Transformations\",\n  \"description\": \"Study of states of matter, mixtures, and energy sources\"\n}"
             },
-            "url": { "raw": "{{baseUrl}}/cbc/strands", "host": ["{{baseUrl}}"], "path": ["cbc", "strands"] }
+            "url": { "raw": "{{baseUrl}}/CBC/strands", "host": ["{{baseUrl}}"], "path": ["CBC", "strands"] }
           }
         },
         {
@@ -328,7 +328,7 @@
           "request": {
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{teacherToken}}" }],
-            "url": { "raw": "{{baseUrl}}/cbc/strands/by-learning-area/{{learningAreaId}}", "host": ["{{baseUrl}}"], "path": ["cbc", "strands", "by-learning-area", "{{learningAreaId}}"] }
+            "url": { "raw": "{{baseUrl}}/CBC/strands/by-learning-area/{{learningAreaId}}", "host": ["{{baseUrl}}"], "path": ["CBC", "strands", "by-learning-area", "{{learningAreaId}}"] }
           }
         },
         {
@@ -343,7 +343,7 @@
               "mode": "raw",
               "raw": "{\n  \"strandId\": \"{{strandId}}\",\n  \"code\": \"SUB-SCIE-1.2\",\n  \"title\": \"Plant & Animal Cell Organelles\",\n  \"specificLearningOutcomes\": [\n    \"Identify nucleus, cytoplasm, and cell membrane under magnification\",\n    \"Distinguish plant cells from animal cells using chloroplasts and cell wall\",\n    \"Demonstrate care and safety when handling laboratory specimens\"\n  ],\n  \"suggestedExperiences\": [\n    \"Observing cheek cell smears under compound microscope\",\n    \"Creating clay models of plant cell structures\"\n  ]\n}"
             },
-            "url": { "raw": "{{baseUrl}}/cbc/sub-strands", "host": ["{{baseUrl}}"], "path": ["cbc", "sub-strands"] }
+            "url": { "raw": "{{baseUrl}}/CBC/sub-strands", "host": ["{{baseUrl}}"], "path": ["CBC", "sub-strands"] }
           }
         },
         {
@@ -358,7 +358,7 @@
               "mode": "raw",
               "raw": "{\n  \"studentId\": \"{{studentId}}\",\n  \"teacherId\": \"{{teacherId}}\",\n  \"learningAreaId\": \"{{learningAreaId}}\",\n  \"subStrandId\": \"{{subStrandId}}\",\n  \"termId\": \"{{termId}}\",\n  \"academicYearId\": \"{{academicYearId}}\",\n  \"assessmentDate\": \"2026-02-18\",\n  \"assessmentMethod\": \"PRACTICAL_WORK\",\n  \"performanceLevel\": \"EE\",\n  \"specificOutcomeTested\": \"Mounting temporary slide and focusing under 100x magnification\",\n  \"teacherRemarks\": \"Mastered optical focusing and neatly drew labeled diagram.\",\n  \"evidenceNotes\": \"Portfolio entry #4 signed off in laboratory manual.\",\n  \"targetedCompetencies\": [\n    \"CRITICAL_THINKING_AND_PROBLEM_SOLVING\",\n    \"DIGITAL_LITERACY\"\n  ],\n  \"valuesObserved\": [\"RESPONSIBILITY\", \"INTEGRITY\"]\n}"
             },
-            "url": { "raw": "{{baseUrl}}/cbc/formative", "host": ["{{baseUrl}}"], "path": ["cbc", "formative"] }
+            "url": { "raw": "{{baseUrl}}/CBC/formative", "host": ["{{baseUrl}}"], "path": ["CBC", "formative"] }
           }
         },
         {
@@ -366,7 +366,7 @@
           "request": {
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{teacherToken}}" }],
-            "url": { "raw": "{{baseUrl}}/cbc/formative?studentId={{studentId}}&termId={{termId}}", "host": ["{{baseUrl}}"], "path": ["cbc", "formative"], "query": [{ "key": "studentId", "value": "{{studentId}}" }, { "key": "termId", "value": "{{termId}}" }] }
+            "url": { "raw": "{{baseUrl}}/CBC/formative?studentId={{studentId}}&termId={{termId}}", "host": ["{{baseUrl}}"], "path": ["CBC", "formative"], "query": [{ "key": "studentId", "value": "{{studentId}}" }, { "key": "termId", "value": "{{termId}}" }] }
           }
         },
         {
@@ -381,7 +381,7 @@
               "mode": "raw",
               "raw": "{\n  \"studentId\": \"{{studentId}}\",\n  \"teacherId\": \"{{teacherId}}\",\n  \"learningAreaId\": \"{{learningAreaId}}\",\n  \"termId\": \"{{termId}}\",\n  \"academicYearId\": \"{{academicYearId}}\",\n  \"strandScores\": [\n    {\n      \"strandId\": \"{{strandId}}\",\n      \"performanceLevel\": \"EE\",\n      \"rawScore\": 92,\n      \"maxScore\": 100\n    }\n  ],\n  \"overallPerformanceLevel\": \"EE\",\n  \"teacherRemarks\": \"Outstanding grasp of scientific methods and experimental accuracy.\",\n  \"evaluationDate\": \"2026-03-30\"\n}"
             },
-            "url": { "raw": "{{baseUrl}}/cbc/summative", "host": ["{{baseUrl}}"], "path": ["cbc", "summative"] }
+            "url": { "raw": "{{baseUrl}}/CBC/summative", "host": ["{{baseUrl}}"], "path": ["CBC", "summative"] }
           }
         },
         {
@@ -396,7 +396,7 @@
               "mode": "raw",
               "raw": "{\n  \"studentId\": \"{{studentId}}\",\n  \"termId\": \"{{termId}}\",\n  \"academicYearId\": \"{{academicYearId}}\",\n  \"classTeacherRemarks\": \"Kevin is an inquisitive and disciplined student who excels in scientific inquiry.\",\n  \"headTeacherRemarks\": \"Excellent results across learning areas. Promoted to next term with distinction.\",\n  \"closingDate\": \"2026-04-03\",\n  \"nextTermOpeningDate\": \"2026-04-28\"\n}"
             },
-            "url": { "raw": "{{baseUrl}}/cbc/report-cards/generate", "host": ["{{baseUrl}}"], "path": ["cbc", "report-cards", "generate"] }
+            "url": { "raw": "{{baseUrl}}/CBC/report-cards/generate", "host": ["{{baseUrl}}"], "path": ["CBC", "report-cards", "generate"] }
           }
         },
         {
@@ -404,7 +404,7 @@
           "request": {
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{teacherToken}}" }],
-            "url": { "raw": "{{baseUrl}}/cbc/report-cards?studentId={{studentId}}&termId={{termId}}&academicYearId={{academicYearId}}", "host": ["{{baseUrl}}"], "path": ["cbc", "report-cards"], "query": [{ "key": "studentId", "value": "{{studentId}}" }, { "key": "termId", "value": "{{termId}}" }, { "key": "academicYearId", "value": "{{academicYearId}}" }] }
+            "url": { "raw": "{{baseUrl}}/CBC/report-cards?studentId={{studentId}}&termId={{termId}}&academicYearId={{academicYearId}}", "host": ["{{baseUrl}}"], "path": ["CBC", "report-cards"], "query": [{ "key": "studentId", "value": "{{studentId}}" }, { "key": "termId", "value": "{{termId}}" }, { "key": "academicYearId", "value": "{{academicYearId}}" }] }
           }
         },
         {
@@ -412,7 +412,7 @@
           "request": {
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{teacherToken}}" }],
-            "url": { "raw": "{{baseUrl}}/cbc/analytics?termId={{termId}}&academicYearId={{academicYearId}}", "host": ["{{baseUrl}}"], "path": ["cbc", "analytics"], "query": [{ "key": "termId", "value": "{{termId}}" }, { "key": "academicYearId", "value": "{{academicYearId}}" }] }
+            "url": { "raw": "{{baseUrl}}/CBC/analytics?termId={{termId}}&academicYearId={{academicYearId}}", "host": ["{{baseUrl}}"], "path": ["CBC", "analytics"], "query": [{ "key": "termId", "value": "{{termId}}" }, { "key": "academicYearId", "value": "{{academicYearId}}" }] }
           }
         }
       ]

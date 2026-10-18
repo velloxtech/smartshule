@@ -4,8 +4,6 @@ import { EditStudentModal } from '../modals/EditStudentModal';
 import { LearnerProfileModal } from '../modals/LearnerProfileModal';
 import { PromoteStudentModal } from '../modals/PromoteStudentModal';
 import { ArchivedStudentsModal } from '../modals/ArchivedStudentsModal';
-import { OnboardingApprovalsModal } from '../modals/OnboardingApprovalsModal';
-import { onboardingService } from '../../services/onboardingService';
 import { useAuth } from '../../context/AuthContext';
 import { apiService } from '../../services/api';
 
@@ -55,20 +53,6 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
   const [isSyncingFees, setIsSyncingFees] = useState(false);
   const [syncFeedback, setSyncFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-
-  const canApproveOnboarding = [
-    UserRole.SUPER_ADMIN,
-    UserRole.ADMIN,
-    UserRole.SCHOOL_ADMIN,
-    UserRole.HEAD_TEACHER,
-  ].includes(user?.role as UserRole);
-  const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState(false);
-  const [pendingOnboardingsCount, setPendingOnboardingsCount] = useState(0);
-
-  useEffect(() => {
-    setPendingOnboardingsCount(onboardingService.getPendingCount());
-  }, []);
-
   // Deleted Students Archive & Modal States
   const [isArchivedModalOpen, setIsArchivedModalOpen] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
@@ -165,7 +149,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
       selectedGrade === 'All' ||
       s.grade === selectedGrade ||
       normalizeGrade(s.grade) === normalizeGrade(selectedGrade);
-    const matchesRating = selectedRating === 'All' || s.cbcRating === selectedRating;
+    const matchesRating = selectedRating === 'All' || s.CBCRating === selectedRating;
     return matchesSearch && matchesGrade && matchesRating;
   });
 
@@ -250,25 +234,6 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
               <span>Archived Learners</span>
             </button>
 
-            {canApproveOnboarding && (
-              <button
-                type="button"
-                onClick={() => {
-                  setIsOnboardingModalOpen(true);
-                  setPendingOnboardingsCount(onboardingService.getPendingCount());
-                }}
-                title="Review and approve learner onboarding dossiers submitted by admitted parents"
-                className="inline-flex items-center gap-2 px-4 py-2.5 bg-amber-50 text-amber-950 hover:bg-amber-100 border border-amber-300 rounded-lg text-sm font-semibold shadow-xs transition-all cursor-pointer relative"
-              >
-                <span className="material-symbols-outlined text-[18px] text-amber-700">how_to_reg</span>
-                <span>Onboarding Queue</span>
-                {pendingOnboardingsCount > 0 && (
-                  <span className="px-2 py-0.5 rounded-full bg-amber-600 text-white text-[11px] font-bold">
-                    {pendingOnboardingsCount}
-                  </span>
-                )}
-              </button>
-            )}
 
             <button
               type="button"
@@ -508,7 +473,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                     <div className="font-medium text-on-surface">{s.guardianName}</div>
                     <div className="text-xs font-data-mono text-on-surface-variant">{s.guardianPhone}</div>
                   </td>
-                  <td className="py-3 px-4">{getRatingBadge(s.cbcRating)}</td>
+                  <td className="py-3 px-4">{getRatingBadge(s.CBCRating)}</td>
                   
                   {isTeacher ? (
                     <td className="py-3 px-4 text-right">
@@ -746,15 +711,6 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
         </div>
       )}
 
-      <OnboardingApprovalsModal
-        isOpen={isOnboardingModalOpen}
-        onClose={() => {
-          setIsOnboardingModalOpen(false);
-          setPendingOnboardingsCount(onboardingService.getPendingCount());
-        }}
-        onAdmitLearner={onAdmitLearner}
-        onRefreshStudents={onRefreshStudents}
-      />
     </div>
   );
 };

@@ -1,4 +1,4 @@
-enum CbcRating {
+enum CBCRating {
   exceedingExpectations('EE', 'Exceeding Expectations', 4),
   meetingExpectations('ME', 'Meeting Expectations', 3),
   approachingExpectations('AE', 'Approaching Expectations', 2),
@@ -7,36 +7,36 @@ enum CbcRating {
   final String code;
   final String label;
   final int points;
-  const CbcRating(this.code, this.label, this.points);
+  const CBCRating(this.code, this.label, this.points);
 
-  static CbcRating fromCode(String? code) {
+  static CBCRating fromCode(String? code) {
     switch (code?.toUpperCase()) {
       case 'EE':
-        return CbcRating.exceedingExpectations;
+        return CBCRating.exceedingExpectations;
       case 'ME':
-        return CbcRating.meetingExpectations;
+        return CBCRating.meetingExpectations;
       case 'AE':
-        return CbcRating.approachingExpectations;
+        return CBCRating.approachingExpectations;
       case 'BE':
-        return CbcRating.belowExpectations;
+        return CBCRating.belowExpectations;
       default:
-        return CbcRating.meetingExpectations;
+        return CBCRating.meetingExpectations;
     }
   }
 }
 
-class CbcAssessmentModel {
+class CBCAssessmentModel {
   final String id;
   final String learnerId;
   final String learnerName;
   final String learningArea; // e.g. Mathematics, Environmental, Literacy
   final String strand; // e.g. Numbers, Plants, Listening
   final String subStrand;
-  final CbcRating rating;
+  final CBCRating rating;
   final String? remarks;
   final DateTime date;
 
-  const CbcAssessmentModel({
+  const CBCAssessmentModel({
     required this.id,
     required this.learnerId,
     required this.learnerName,
@@ -48,15 +48,17 @@ class CbcAssessmentModel {
     required this.date,
   });
 
-  factory CbcAssessmentModel.fromJson(Map<String, dynamic> json) {
-    return CbcAssessmentModel(
+  factory CBCAssessmentModel.fromJson(Map<String, dynamic> json) {
+    return CBCAssessmentModel(
       id: json['id']?.toString() ?? '',
       learnerId: json['learnerId']?.toString() ?? '',
       learnerName: json['learnerName']?.toString() ?? '',
       learningArea: json['learningArea']?.toString() ?? 'Mathematics',
       strand: json['strand']?.toString() ?? 'Numbers',
       subStrand: json['subStrand']?.toString() ?? 'Addition & Subtraction',
-      rating: CbcRating.fromCode(json['rating']?.toString() ?? json['scoreCode']?.toString()),
+      rating: CBCRating.fromCode(
+        json['rating']?.toString() ?? json['scoreCode']?.toString(),
+      ),
       remarks: json['remarks']?.toString(),
       date: json['date'] != null
           ? DateTime.tryParse(json['date'].toString()) ?? DateTime.now()

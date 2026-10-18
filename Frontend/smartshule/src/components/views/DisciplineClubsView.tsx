@@ -32,7 +32,7 @@ export const DisciplineClubsView: React.FC = () => {
  studentName: '',
  gradeLevel: 'Grade 6',
  incidentType: 'MERIT_COMMENDATION' as DisciplineIncident['incidentType'],
- cbcCoreValue: 'INTEGRITY' as DisciplineIncident['cbcCoreValue'],
+ CBCCoreValue: 'INTEGRITY' as DisciplineIncident['CBCCoreValue'],
  title: '',
  description: '',
  actionTaken: '',
@@ -90,7 +90,7 @@ export const DisciplineClubsView: React.FC = () => {
  return (
  i.studentName.toLowerCase().includes(q) ||
  i.title.toLowerCase().includes(q) ||
- i.cbcCoreValue.toLowerCase().includes(q)
+ i.CBCCoreValue.toLowerCase().includes(q)
  );
  }
  return true;
@@ -138,7 +138,7 @@ export const DisciplineClubsView: React.FC = () => {
  studentName: '',
  gradeLevel: 'Grade 6',
  incidentType: 'MERIT_COMMENDATION',
- cbcCoreValue: 'INTEGRITY',
+ CBCCoreValue: 'INTEGRITY',
  title: '',
  description: '',
  actionTaken: '',
@@ -435,21 +435,21 @@ export const DisciplineClubsView: React.FC = () => {
  <td className="px-4 py-3">
  {i.incidentType === 'MERIT_COMMENDATION' ? (
  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 ">
- ★ Commendation
+ Commendation
  </span>
  ) : i.incidentType === 'INFRACTION_WARNING' ? (
  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800 ">
- ⚠ Infraction
+ Infraction
  </span>
  ) : (
  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-100 text-purple-800 ">
- ♥ Counseling
+ Counseling
  </span>
  )}
  </td>
  <td className="px-4 py-3">
  <span className="font-mono text-xs font-semibold text-slate-700 ">
- {i.cbcCoreValue}
+ {i.CBCCoreValue}
  </span>
  </td>
  <td className="px-4 py-3">
@@ -629,8 +629,8 @@ export const DisciplineClubsView: React.FC = () => {
  <div>
  <label className="block text-xs font-medium text-slate-600 mb-1">CBC Core Value</label>
  <select
- value={incidentForm.cbcCoreValue}
- onChange={(e: any) => setIncidentForm({ ...incidentForm, cbcCoreValue: e.target.value })}
+ value={incidentForm.CBCCoreValue}
+ onChange={(e: any) => setIncidentForm({ ...incidentForm, CBCCoreValue: e.target.value })}
  className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm text-slate-900 "
  >
  <option value="LOVE">Love / Compassion</option>

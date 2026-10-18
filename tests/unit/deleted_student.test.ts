@@ -1,6 +1,6 @@
 import { AppContainer } from '../../src/infrastructure/container';
 import { setupTestFixtures } from '../helpers/testFixtures';
-import { Student, StudentGender, CbcGradeLevel, StudentStatus } from '../../src/core/domain/user/Student';
+import { Student, StudentGender, CBCGradeLevel, StudentStatus } from '../../src/core/domain/user/Student';
 import { DeletedStudent } from '../../src/core/domain/user/DeletedStudent';
 
 describe('Deleted Student & Archive Table Unit & Flow Tests', () => {
@@ -20,7 +20,7 @@ describe('Deleted Student & Archive Table Unit & Flow Tests', () => {
           firstName: 'Kelvin',
           lastName: 'Kiprono',
           schoolId: 'school-001',
-          gradeLevel: CbcGradeLevel.GRADE_7,
+          gradeLevel: CBCGradeLevel.GRADE_7,
           studentData: { admissionNumber: 'ADM/2026/001', firstName: 'Kelvin', lastName: 'Kiprono' },
           linkedData: {
             invoices: [{ invoiceNumber: 'INV-1', balance: 5000 }],
@@ -161,7 +161,7 @@ describe('Deleted Student & Archive Table Unit & Flow Tests', () => {
           lastName: 'Kariuki',
           dateOfBirth: '2015-08-10',
           gender: StudentGender.MALE,
-          gradeLevel: CbcGradeLevel.GRADE_5,
+          gradeLevel: CBCGradeLevel.GRADE_5,
           streamId: 'stream-1',
           schoolId: 'school-001',
           academicYearId: 'year-2026',

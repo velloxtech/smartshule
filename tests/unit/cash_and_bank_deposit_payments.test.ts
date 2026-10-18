@@ -1,5 +1,5 @@
 import { FeeStructure, PaymentMethod, PaymentStatus, StudentInvoice } from '../../src/core/domain/finance/Fee';
-import { CbcGradeLevel, Student, StudentGender, StudentStatus } from '../../src/core/domain/user/Student';
+import { CBCGradeLevel, Student, StudentGender, StudentStatus } from '../../src/core/domain/user/Student';
 import { FeeUseCases } from '../../src/application/finance/FeeUseCases';
 import {
   InMemoryFeeRepository,
@@ -62,7 +62,7 @@ describe('Cash and Manual Bank Deposit Payments Tests', () => {
         lastName: 'Kiprono',
         dateOfBirth: '2016-04-12',
         gender: StudentGender.MALE,
-        gradeLevel: CbcGradeLevel.GRADE_4,
+        gradeLevel: CBCGradeLevel.GRADE_4,
         streamId: 'stream-4a',
         schoolId,
         academicYearId,
@@ -106,7 +106,7 @@ describe('Cash and Manual Bank Deposit Payments Tests', () => {
         schoolId,
         academicYearId,
         termId: 'ALL',
-        gradeLevel: CbcGradeLevel.GRADE_4,
+        gradeLevel: CBCGradeLevel.GRADE_4,
         title: 'Grade 4 CBC Annual Fees 2026',
         dueDate: '2026-12-31',
         items: [

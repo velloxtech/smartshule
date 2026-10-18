@@ -4,7 +4,7 @@ import { IStudentRepository } from '../../core/ports/repositories/IStudentReposi
 import { IFeeRepository } from '../../core/ports/repositories/IFeeRepository';
 import { IEDiaryRepository } from '../../core/ports/repositories/IEDiaryRepository';
 import { IAttendanceRepository, ITimetableRepository } from '../../core/ports/repositories/ITimetableRepository';
-import { ICbcAssessmentRepository } from '../../core/ports/repositories/ICbcAssessmentRepository';
+import { ICBCAssessmentRepository } from '../../core/ports/repositories/ICbcAssessmentRepository';
 import { IAcademicRepository } from '../../core/ports/repositories/IAcademicRepository';
 import { PaymentStatus } from '../../core/domain/finance/Fee';
 import { Student } from '../../core/domain/user/Student';
@@ -45,7 +45,7 @@ export class WhatsAppService {
     private readonly feeRepository: IFeeRepository,
     private readonly ediaryRepository: IEDiaryRepository,
     private readonly attendanceRepository: IAttendanceRepository,
-    private readonly cbcRepository: ICbcAssessmentRepository,
+    private readonly CBCRepository: ICBCAssessmentRepository,
     private readonly academicRepository?: IAcademicRepository,
     private readonly timetableRepository?: ITimetableRepository,
     geminiService?: GeminiService
@@ -173,7 +173,7 @@ export class WhatsAppService {
           to: senderPhone,
           senderName,
           replyText:
-            `👋 *Hello Teacher ${firstName}!*\n\n` +
+            `*Hello Teacher ${firstName}!*\n\n` +
             `Welcome to the ${school.name} Teacher Assistant on WhatsApp.\n` +
             `To access your teaching schedules, roll-call registers, and lesson plans, please log in to the educator portal at https://portal.smartshule.ac.ke.\n\n` +
             `_School Admin Desk: ${school.phone}_`,
@@ -185,7 +185,7 @@ export class WhatsAppService {
         to: senderPhone,
         senderName,
         replyText:
-          `👋 *Hello ${firstName}!*\n\n` +
+          `*Hello ${firstName}!*\n\n` +
           `Your parent profile is active, but no student records are currently linked to your phone number. ` +
           `Please contact the school admissions office to link your student admission number.`,
         intent: 'PROFILE',
@@ -307,7 +307,7 @@ export class WhatsAppService {
       commandUpper.startsWith('RESULT ') ||
       /\b(CBC|RESULTS?|PROGRESS|REPORT\s*CARD|GRADES?|MARKS?|RUBRICS?|EXAMS?|ASSESSMENTS?)\b/i.test(commandUpper)
     ) {
-      return await this.handleCbcProgressCommand(senderPhone, firstName, senderName, primaryStudent);
+      return await this.handleCBCProgressCommand(senderPhone, firstName, senderName, primaryStudent);
     } else if (
       // COMMAND 6: TIMETABLE / SCHEDULE / ROUTINE / PERIODS / CLASSES
       commandUpper === '6' ||
@@ -389,7 +389,7 @@ export class WhatsAppService {
           },
           feeSummary: dbProfile.feeSummary,
           attendanceSummary: dbProfile.attendanceSummary,
-          cbcSummary: dbProfile.cbcSummary,
+          CBCSummary: dbProfile.CBCSummary,
           ediarySummary: dbProfile.ediarySummary,
           tone: 'friendly',
         });
@@ -419,20 +419,20 @@ export class WhatsAppService {
           students.map(s => `*${s.fullName}* (${s.admissionNumber})`).join(', ');
 
     const defaultMenu =
-      `👋 *Jambo ${firstName}!*\n` +
+      `*Jambo ${firstName}!*\n` +
       `Welcome to *${school.name} CBC Portal* on WhatsApp.\n\n` +
       `${studentListHeader}\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
       `Please reply with a number or command name:\n\n` +
-      `*1* or *BALANCE* ➔ 💰 Fee Balance & Statements\n` +
-      `*2* or *PAY* ➔ 💳 Pay Fees via KCB Bank / M-Pesa\n` +
-      `*3* or *EDIARY* ➔ 📖 Today's eDiary & Homework\n` +
-      `*4* or *ATTENDANCE* ➔ 📅 Daily Attendance & Roll-Call\n` +
-      `*5* or *RESULTS* ➔ 🌟 CBC Competency Report & Grades\n` +
-      `*6* or *TIMETABLE* ➔ 🕒 Daily Timetable & Schedule\n` +
-      `*7* or *PROFILE* ➔ 👤 Learner Details & Adm No\n` +
-      `*8* or *SCHOOL* ➔ 🏫 School Contacts & Term Dates\n` +
-      `*9* or *HELP* ➔ ❓ Ask Teacher / Help Desk\n\n` +
+      `*1* or *BALANCE* - Fee Balance & Statements\n` +
+      `*2* or *PAY* - Pay Fees via KCB Bank / M-Pesa\n` +
+      `*3* or *EDIARY* - Today's eDiary & Homework\n` +
+      `*4* or *ATTENDANCE* - Daily Attendance & Roll-Call\n` +
+      `*5* or *RESULTS* - CBC Competency Report & Grades\n` +
+      `*6* or *TIMETABLE* - Daily Timetable & Schedule\n` +
+      `*7* or *PROFILE* - Learner Details & Adm No\n` +
+      `*8* or *SCHOOL* - School Contacts & Term Dates\n` +
+      `*9* or *HELP* - Ask Teacher / Help Desk\n\n` +
       `_Tip: You can check a specific learner by typing: BALANCE <AdmNo>_`;
 
     return {
@@ -484,28 +484,28 @@ export class WhatsAppService {
 
       let lastPaymentLine = '';
       if (lastPayment) {
-        lastPaymentLine = `\n💵 *Last Payment:* KES ${lastPayment.amount.toLocaleString()} on ${lastPayment.paymentDate} via ${lastPayment.paymentMethod} (Ref: ${lastPayment.transactionReference})`;
+        lastPaymentLine = `\n*Last Payment:* KES ${lastPayment.amount.toLocaleString()} on ${lastPayment.paymentDate} via ${lastPayment.paymentMethod} (Ref: ${lastPayment.transactionReference})`;
       }
 
       // Pending invoice details
       const pendingInvoice = invoices.find(i => i.balance > 0) || invoices[0];
       let invoiceLine = '';
       if (pendingInvoice) {
-        invoiceLine = `\n📄 *Latest Invoice:* ${pendingInvoice.invoiceNumber} (Due: ${pendingInvoice.dueDate})`;
+        invoiceLine = `\n*Latest Invoice:* ${pendingInvoice.invoiceNumber} (Due: ${pendingInvoice.dueDate})`;
       }
 
       const reply =
-        `💰 *FEES STATEMENT · ${school.name}*\n` +
+        `*FEES STATEMENT · ${school.name}*\n` +
         `━━━━━━━━━━━━━━━━━━━━\n` +
-        `👤 *Learner:* ${student.fullName} (Adm: ${student.admissionNumber})\n` +
-        `📚 *Grade:* ${student.gradeLevel}\n\n` +
+        `*Learner:* ${student.fullName} (Adm: ${student.admissionNumber})\n` +
+        `*Grade:* ${student.gradeLevel}\n\n` +
         `• *Total Term Billed:* KES ${totalBilled.toLocaleString()}\n` +
         `• *Total Cleared:* KES ${totalPaid.toLocaleString()}\n` +
         `• *Current Balance:* *KES ${balance.toLocaleString()}*\n` +
-        `• *Status:* ${balance <= 0 ? '✅ FULLY CLEARED' : '⚠️ PENDING PAYMENT'}` +
+        `• *Status:* ${balance <= 0 ? 'FULLY CLEARED' : 'PENDING PAYMENT'}` +
         `${invoiceLine}` +
         `${lastPaymentLine}\n\n` +
-        `💳 *To Pay Fees via Bank / M-Pesa:* Reply with *2* or *PAY* to get instant KCB Bank & M-Pesa payment details.`;
+        `*To Pay Fees via Bank / M-Pesa:* Reply with *2* or *PAY* to get instant KCB Bank & M-Pesa payment details.`;
 
       return {
         to: senderPhone,
@@ -538,23 +538,23 @@ export class WhatsAppService {
       grandBalance += bal;
 
       studentBreakdowns.push(
-        `👤 *${student.fullName}* (Adm: ${student.admissionNumber} · ${student.gradeLevel})\n` +
+        `*${student.fullName}* (Adm: ${student.admissionNumber} · ${student.gradeLevel})\n` +
         `   • Billed: KES ${billed.toLocaleString()} | Cleared: KES ${paid.toLocaleString()}\n` +
-        `   • Balance: *KES ${bal.toLocaleString()}* (${bal <= 0 ? '✅ Cleared' : '⚠️ Due'})`
+        `   • Balance: *KES ${bal.toLocaleString()}* (${bal <= 0 ? 'Cleared' : 'Due'})`
       );
     }
 
     const reply =
-      `💰 *FAMILY FEES STATEMENT · ${school.name}*\n` +
+      `*FAMILY FEES STATEMENT · ${school.name}*\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
       `Dear ${firstName}, here is the fee summary for your linked learners:\n\n` +
       studentBreakdowns.join('\n\n') +
       `\n\n────────────────────\n` +
-      `📊 *Total Family Billed:* KES ${grandBilled.toLocaleString()}\n` +
-      `💵 *Total Family Cleared:* KES ${grandPaid.toLocaleString()}\n` +
-      `💳 *TOTAL OUTSTANDING BALANCE:* *KES ${grandBalance.toLocaleString()}*\n` +
+      `*Total Family Billed:* KES ${grandBilled.toLocaleString()}\n` +
+      `*Total Family Cleared:* KES ${grandPaid.toLocaleString()}\n` +
+      `*TOTAL OUTSTANDING BALANCE:* *KES ${grandBalance.toLocaleString()}*\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
-      `💳 Reply with *2* or *PAY* to receive payment links, or reply with *BALANCE <AdmNo>* for a single student statement.`;
+      `Reply with *2* or *PAY* to receive payment links, or reply with *BALANCE <AdmNo>* for a single student statement.`;
 
     return {
       to: senderPhone,
@@ -582,20 +582,20 @@ export class WhatsAppService {
     const payLink = `https://pay.smartshule.ac.ke/pay/${admissionNo}`;
 
     const reply =
-      `💳 *PAY FEES · KCB Bank Gateway*\n` +
+      `*PAY FEES · KCB Bank Gateway*\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
-      `👤 *Learner:* ${student.fullName} (Adm: ${admissionNo})\n` +
-      `📄 *Invoice #:* ${unpaidInvoice ? unpaidInvoice.invoiceNumber : 'INV-CURRENT'}\n` +
-      `💵 *Amount Due:* *KES ${balance.toLocaleString()}*\n\n` +
-      `🏦 *Direct Bank Transfer Details:*\n` +
+      `*Learner:* ${student.fullName} (Adm: ${admissionNo})\n` +
+      `*Invoice #:* ${unpaidInvoice ? unpaidInvoice.invoiceNumber : 'INV-CURRENT'}\n` +
+      `*Amount Due:* *KES ${balance.toLocaleString()}*\n\n` +
+      `*Direct Bank Transfer Details:*\n` +
       `• *Bank:* KCB Bank Kenya\n` +
       `• *Account Name:* ${school.name} - ${admissionNo}\n` +
       `• *Account No:* 1234567890\n\n` +
-      `📱 *M-Pesa Paybill Option:*\n` +
+      `*M-Pesa Paybill Option:*\n` +
       `• *Business No / Paybill:* 522533\n` +
       `• *Account No:* 8048859#${student.fullName}${student.gradeLevel ? ' ' + student.gradeLevel : ''}\n` +
       `• *Amount:* ${balance > 0 ? balance : 1000}\n\n` +
-      `🔗 *Or click here for online payment (Card / M-Pesa / Bank):*\n` +
+      `*Or click here for online payment (Card / M-Pesa / Bank):*\n` +
       `${payLink}\n\n` +
       `_Payments are automatically verified via KCB Buni API and instant SMS receipts are dispatched to your number._`;
 
@@ -623,19 +623,19 @@ export class WhatsAppService {
         senderName,
         matchedStudent: student.fullName,
         replyText:
-          `📖 *eDIARY · ${student.fullName}*\n\n` +
-          `No pending homework or teacher remarks recorded for today. The learner is all caught up! 🎉`,
+          `*eDIARY · ${student.fullName}*\n\n` +
+          `No pending homework or teacher remarks recorded for today. The learner is all caught up!`,
         intent: 'EDIARY',
       };
     }
 
     const latest = entries[0];
     const reply =
-      `📖 *eDIARY & HOMEWORK · ${school.name}*\n` +
+      `*eDIARY & HOMEWORK · ${school.name}*\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
-      `👤 *Learner:* ${student.fullName} (${student.gradeLevel})\n` +
-      `📅 *Date:* ${latest.date}\n` +
-      `📝 *Topic:* ${latest.title}\n\n` +
+      `*Learner:* ${student.fullName} (${student.gradeLevel})\n` +
+      `*Date:* ${latest.date}\n` +
+      `*Topic:* ${latest.title}\n\n` +
       `*Homework / Assignment:*\n${latest.homework}\n\n` +
       `*Teacher Remarks:*\n${latest.teacherRemarks || 'Active participation in class today.'}\n\n` +
       `*Requirements for Tomorrow:*\n${latest.requirementsTomorrow || 'Standard learning materials.'}\n\n` +
@@ -675,10 +675,10 @@ export class WhatsAppService {
 
     const rate = total > 0 ? Math.round((present / total) * 100) : 100;
     const reply =
-      `📅 *LIVE ATTENDANCE REPORT*\n` +
+      `*LIVE ATTENDANCE REPORT*\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
-      `👤 *Learner:* ${primary.fullName} (${primary.gradeLevel})\n` +
-      `🆔 *Adm No:* ${primary.admissionNumber}\n\n` +
+      `*Learner:* ${primary.fullName} (${primary.gradeLevel})\n` +
+      `*Adm No:* ${primary.admissionNumber}\n\n` +
       `• *Overall Attendance Rate:* *${rate}%*\n` +
       `• *Today's Roll-Call Status:* *${todayStatus}*\n` +
       `• *Classes Held This Term:* ${total || 45} sessions\n` +
@@ -694,14 +694,14 @@ export class WhatsAppService {
     };
   }
 
-  private async handleCbcProgressCommand(
+  private async handleCBCProgressCommand(
     senderPhone: string,
     firstName: string,
     senderName: string,
     student: Student
   ): Promise<WhatsAppResponse> {
-    const summatives = await this.cbcRepository.findSummatives({ studentId: student.id });
-    const formatives = await this.cbcRepository.findFormatives({ studentId: student.id });
+    const summatives = await this.CBCRepository.findSummatives({ studentId: student.id });
+    const formatives = await this.CBCRepository.findFormatives({ studentId: student.id });
 
     let currentTermId: string | undefined;
     let currentYearId: string | undefined;
@@ -720,7 +720,7 @@ export class WhatsAppService {
     let reportCard = null;
     if (currentTermId && currentYearId) {
       try {
-        reportCard = await this.cbcRepository.findReportCard(student.id, currentTermId, currentYearId);
+        reportCard = await this.CBCRepository.findReportCard(student.id, currentTermId, currentYearId);
       } catch {
         // Ignore
       }
@@ -732,9 +732,9 @@ export class WhatsAppService {
         senderName,
         matchedStudent: student.fullName,
         replyText:
-          `🌟 *CBC COMPETENCY REPORT · ${student.fullName}*\n` +
+          `*CBC COMPETENCY REPORT · ${student.fullName}*\n` +
           `━━━━━━━━━━━━━━━━━━━━\n` +
-          `📚 *Grade Level:* ${student.gradeLevel}\n\n` +
+          `*Grade Level:* ${student.gradeLevel}\n\n` +
           `No assessment records or report cards have been published for this learner yet.\n` +
           `Assessments will appear here once recorded by the class teacher.`,
         intent: 'CBC_PROGRESS',
@@ -753,13 +753,13 @@ export class WhatsAppService {
       : '';
 
     const reply =
-      `🌟 *CBC COMPETENCY REPORT · ${student.fullName}*\n` +
+      `*CBC COMPETENCY REPORT · ${student.fullName}*\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
-      `📚 *Grade Level:* ${student.gradeLevel}\n` +
-      `🎯 *Overall Performance Level:* *${overallLevel}*\n` +
-      `📊 *Average Score:* *${averageScore}*\n` +
-      `📝 *Summative Assessments Logged:* ${summatives.length}\n` +
-      `🔍 *Formative Rubrics Observed:* ${formatives.length}\n\n` +
+      `*Grade Level:* ${student.gradeLevel}\n` +
+      `*Overall Performance Level:* *${overallLevel}*\n` +
+      `*Average Score:* *${averageScore}*\n` +
+      `*Summative Assessments Logged:* ${summatives.length}\n` +
+      `*Formative Rubrics Observed:* ${formatives.length}\n\n` +
       (formativeHighlights ? `*Recent Competencies Observed:*\n${formativeHighlights}` : '') +
       `*Class Teacher's CBC Remarks:*\n${teacherRemarks}\n\n` +
       `_Full CBC report card with strand breakdowns is available on your Parent Portal._`;
@@ -795,7 +795,7 @@ export class WhatsAppService {
             .map(
               (s: any) =>
                 `• ${s.startTime || '08:00'} - ${s.endTime || '08:45'}: ${
-                  s.isBreak ? '☕ ' + (s.label || 'Break') : s.learningAreaName || s.label || 'Lesson'
+                  s.isBreak ? (s.label || 'Break') : s.learningAreaName || s.label || 'Lesson'
                 }`
             )
             .join('\n');
@@ -807,10 +807,10 @@ export class WhatsAppService {
 
     const todayDay = new Date().toLocaleDateString('en-US', { weekday: 'long' });
     const reply =
-      `🕒 *DAILY TIMETABLE · ${student.fullName}*\n` +
+      `*DAILY TIMETABLE · ${student.fullName}*\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
-      `📚 *Grade Level:* ${student.gradeLevel}\n` +
-      `📅 *Schedule for:* *${todayDay}*\n\n` +
+      `*Grade Level:* ${student.gradeLevel}\n` +
+      `*Schedule for:* *${todayDay}*\n\n` +
       `${slotsText}\n\n` +
       `_For full weekly timetable schedules, please visit the SmartShule Parent Portal._`;
 
@@ -831,7 +831,7 @@ export class WhatsAppService {
   ): Promise<WhatsAppResponse> {
     const profiles = students.map((s, idx) => {
       return (
-        `📌 *Learner #${idx + 1}:* ${s.fullName}\n` +
+        `*Learner #${idx + 1}:* ${s.fullName}\n` +
         `   • *Admission Number:* ${s.admissionNumber}\n` +
         `   • *Grade Level:* ${s.gradeLevel}\n` +
         `   • *Gender:* ${s.gender}\n` +
@@ -842,7 +842,7 @@ export class WhatsAppService {
     });
 
     const reply =
-      `📋 *ENROLLED LEARNER PROFILES & ENROLMENT*\n` +
+      `*ENROLLED LEARNER PROFILES & ENROLMENT*\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
       `Dear ${firstName}, here are the verified registration records for your child(ren):\n\n` +
       profiles.join('\n\n') +
@@ -882,15 +882,15 @@ export class WhatsAppService {
     }
 
     const reply =
-      `🏫 *SCHOOL INFORMATION & CONTACTS*\n` +
+      `*SCHOOL INFORMATION & CONTACTS*\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
-      `🏛️ *Institution:* ${school.name}\n` +
-      `📜 *Motto:* _"${school.motto}"_\n` +
-      (school.centerCode ? `🏷️ *KNEC / CBC Center Code:* ${school.centerCode}\n\n` : '\n') +
-      `📞 *Official Phone:* ${school.phone}\n` +
-      `✉️ *Email:* ${school.email}\n` +
-      `📍 *Physical Address:* ${school.address}\n\n` +
-      `📅 *Term Calendar:*\n${calendarInfo}\n\n` +
+      `*Institution:* ${school.name}\n` +
+      `*Motto:* _"${school.motto}"_\n` +
+      (school.centerCode ? `*KNEC / CBC Center Code:* ${school.centerCode}\n\n` : '\n') +
+      `*Official Phone:* ${school.phone}\n` +
+      `*Email:* ${school.email}\n` +
+      `*Physical Address:* ${school.address}\n\n` +
+      `*Term Calendar:*\n${calendarInfo}\n\n` +
       `_Admissions & Enquiries Desk open Monday–Friday, 08:00 AM – 05:00 PM._`;
 
     return {
@@ -914,7 +914,7 @@ export class WhatsAppService {
 
     if (isDirectQuestion && questionText) {
       const reply =
-        `✅ *QUESTION LOGGED & FORWARDED*\n` +
+        `*QUESTION LOGGED & FORWARDED*\n` +
         `━━━━━━━━━━━━━━━━━━━━\n` +
         `Dear ${firstName},\n\n` +
         `Your question regarding *${student.fullName}* has been sent to the class teacher:\n` +
@@ -933,7 +933,7 @@ export class WhatsAppService {
 
     const school = await this.getSchoolProfile(student.schoolId);
     const reply =
-      `❓ *PARENT HELP DESK · ${school.name}*\n` +
+      `*PARENT HELP DESK · ${school.name}*\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +
       `Dear ${firstName},\n\n` +
       `You can ask homework questions or upload textbook/problem photos directly to teachers using the *SmartShule Visual Help Desk* on your Parent Portal.\n\n` +
@@ -1158,24 +1158,24 @@ export class WhatsAppService {
     }
 
     // 3. CBC Assessment Summary
-    const cbcSummary = {
+    const CBCSummary = {
       recentAssessments: [] as Array<{ learningArea: string; strand: string; scoreLevel: string }>,
       averagePerformance: 'Not assessed yet',
       teacherRemarks: 'No assessment remarks recorded yet.',
     };
 
     try {
-      const summatives = await this.cbcRepository.findSummatives({ studentId: student.id });
-      const formatives = await this.cbcRepository.findFormatives({ studentId: student.id });
+      const summatives = await this.CBCRepository.findSummatives({ studentId: student.id });
+      const formatives = await this.CBCRepository.findFormatives({ studentId: student.id });
       const allAssessments = [...(summatives || []), ...(formatives || [])];
       if (allAssessments.length > 0) {
-        cbcSummary.recentAssessments = allAssessments.slice(0, 3).map((a: any) => ({
+        CBCSummary.recentAssessments = allAssessments.slice(0, 3).map((a: any) => ({
           learningArea: a.learningAreaId || 'Learning Area',
           strand: a.strandId || 'Strand',
           scoreLevel: a.rating || 'ME',
         }));
-        cbcSummary.averagePerformance = 'Recorded';
-        cbcSummary.teacherRemarks = (allAssessments[0] as any).teacherRemarks || 'Progress recorded in portal.';
+        CBCSummary.averagePerformance = 'Recorded';
+        CBCSummary.teacherRemarks = (allAssessments[0] as any).teacherRemarks || 'Progress recorded in portal.';
       }
     } catch (e) {
       // ignore
@@ -1205,7 +1205,7 @@ export class WhatsAppService {
       guardian,
       feeSummary,
       attendanceSummary,
-      cbcSummary,
+      CBCSummary,
       ediarySummary,
     };
   }
@@ -1268,7 +1268,7 @@ export class WhatsAppService {
       },
       feeSummary: dbProfile.feeSummary,
       attendanceSummary: dbProfile.attendanceSummary,
-      cbcSummary: dbProfile.cbcSummary,
+      CBCSummary: dbProfile.CBCSummary,
       ediarySummary: dbProfile.ediarySummary,
       tone: params.tone || 'professional',
     });

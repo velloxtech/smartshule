@@ -12,18 +12,18 @@ async function bootstrap() {
 
   app.listen(PORT, () => {
     console.log('====================================================');
-    console.log(`🚀 SmartShule School Management API running on port ${PORT}`);
-    console.log(`📡 URL: http://localhost:${PORT}`);
-    console.log(`🩺 Health: http://localhost:${PORT}/health`);
-    console.log(`📚 API Root: http://localhost:${PORT}/api/v1`);
+    console.log(`SmartShule School Management API running on port ${PORT}`);
+    console.log(`URL: http://localhost:${PORT}`);
+    console.log(`Health: http://localhost:${PORT}/health`);
+    console.log(`API Root: http://localhost:${PORT}/api/v1`);
     console.log('----------------------------------------------------');
     const dbType = process.env.DB_TYPE || 'in-memory';
     const dbTarget = process.env.ACTIVE_DB_TARGET ? ` (${process.env.ACTIVE_DB_TARGET.toUpperCase()})` : '';
-    console.log(`🗄️  Database:      ${dbType}${dbTarget}`);
-    console.log(`🏦 Fee Collection: PAYBILL ${process.env.KCB_BUNI_SHORTCODE || '522533'} (Direct Settlements & Manual Reconciliation)`);
-    console.log(`💬 WhatsApp API:   ${process.env.WHATSAPP_ACCESS_TOKEN ? 'META CLOUD API' : 'REAL WHATSAPP QR MULTI-DEVICE'}`);
-    console.log(`📨 SMS Gateway:    ${process.env.SMS_PROVIDER || 'africastalking'} (${process.env.AFRICASTALKING_SENDER_ID || 'SMARTSHULE'})`);
-    console.log(`🤖 Gemini AI API:  ${process.env.GEMINI_API_KEY ? 'CONFIGURED' : 'OPTIONAL'}`);
+    console.log(`Database:       ${dbType}${dbTarget}`);
+    console.log(`Fee Collection: PAYBILL ${process.env.KCB_BUNI_SHORTCODE || '522533'} (Direct Settlements & Manual Reconciliation)`);
+    console.log(`WhatsApp API:   ${process.env.WHATSAPP_ACCESS_TOKEN ? 'META CLOUD API' : 'REAL WHATSAPP QR MULTI-DEVICE'}`);
+    console.log(`SMS Gateway:    ${process.env.SMS_PROVIDER || 'africastalking'} (${process.env.AFRICASTALKING_SENDER_ID || 'SMARTSHULE'})`);
+    console.log(`Gemini AI API:  ${process.env.GEMINI_API_KEY ? 'CONFIGURED' : 'OPTIONAL'}`);
     console.log('====================================================');
   });
 }

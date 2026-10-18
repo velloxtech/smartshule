@@ -20,6 +20,8 @@ import { BursarDashboardView } from './components/views/BursarDashboardView';
 import { TeacherDashboardView } from './components/views/TeacherDashboardView';
 import { ParentDashboardView } from './components/views/ParentDashboardView';
 import { StudentsView } from './components/views/StudentsView';
+import { OnboardQueueView } from './components/views/OnboardQueueView';
+import { SlotApplicationsView } from './components/views/SlotApplicationsView';
 import { TeachersView } from './components/views/TeachersView';
 import { GeofenceView } from './components/views/GeofenceView';
 import { ClassesView } from './components/views/ClassesView';
@@ -112,8 +114,8 @@ export default function App() {
   const [forwardPaymentModalOpen, setForwardPaymentModalOpen] = useState(false);
   const [selectedStudentForPayment, setSelectedStudentForPayment] = useState<Student | undefined>(undefined);
 
-  const [cbcModalOpen, setCbcModalOpen] = useState(false);
-  const [selectedStudentForCbc, setSelectedStudentForCbc] = useState<Student | undefined>(undefined);
+  const [CBCModalOpen, setCBCModalOpen] = useState(false);
+  const [selectedStudentForCBC, setSelectedStudentForCBC] = useState<Student | undefined>(undefined);
 
   const [admitModalOpen, setAdmitModalOpen] = useState(false);
   const [smsModalOpen, setSmsModalOpen] = useState(false);
@@ -248,7 +250,7 @@ export default function App() {
             feeBalance,
             totalFee,
             attendanceRate: st.attendanceRate ?? 0,
-            cbcRating: st.cbcRating || '--',
+            CBCRating: st.CBCRating || '--',
             status: st.status === 'ACTIVE' || st.status === 'Active' ? 'Active' : (st.status || 'Active'),
             profilePhotoUrl: st.profilePhotoUrl,
             dateOfBirth: st.dateOfBirth,
@@ -347,7 +349,9 @@ export default function App() {
           } catch {
             setTeachers([]);
           }
+        }
 
+        if (!isFinanceOnly) {
           try {
             const formativesRes = await apiService.listFormatives().catch(() => null);
             if (formativesRes?.data && Array.isArray(formativesRes.data)) {
@@ -356,13 +360,13 @@ export default function App() {
                 studentId: f.studentId,
                 studentName: f.studentName || 'Learner',
                 admNo: f.admissionNumber || '',
-                grade: f.gradeLevel ? f.gradeLevel.replace('_', ' ') : 'Grade 7',
-                learningArea: f.learningAreaId || 'CBC Learning Area',
-                strand: f.strandId || f.subStrandId || 'Strand',
-                subStrand: f.specificOutcomeTested || 'Sub-strand',
+                grade: f.gradeLevel ? f.gradeLevel.replace('_', ' ') : 'CBC Class',
+                learningArea: f.learningAreaName || f.learningAreaId || 'CBC Learning Area',
+                strand: f.strandName || f.strandId || f.subStrandId || 'Strand',
+                subStrand: f.subStrandTitle || f.specificOutcomeTested || 'Sub-strand',
                 rating: f.performanceLevel as any,
                 evidence: f.evidenceNotes || f.teacherRemarks || 'Formative observation',
-                recordedBy: 'CBC Educator',
+                recordedBy: f.teacherName || 'CBC Educator',
                 date: f.assessmentDate,
                 targetedCompetencies: f.targetedCompetencies,
                 valuesObserved: f.valuesObserved,
@@ -458,9 +462,9 @@ export default function App() {
     handleOpenPayment(student);
   };
 
-  const handleOpenCbc = (student?: Student) => {
-    setSelectedStudentForCbc(student || (students && students.length > 0 ? students[0] : undefined));
-    setCbcModalOpen(true);
+  const handleOpenCBC = (student?: Student) => {
+    setSelectedStudentForCBC(student || (students && students.length > 0 ? students[0] : undefined));
+    setCBCModalOpen(true);
   };
 
   const handleOpenSms = (target: any = 'all') => {
@@ -528,7 +532,7 @@ export default function App() {
     setStudents((prev) =>
       prev.map((s) =>
         s.id === assessment.studentId
-          ? { ...s, cbcRating: assessment.rating }
+          ? { ...s, CBCRating: assessment.rating }
           : s
       )
     );
@@ -831,7 +835,7 @@ export default function App() {
           }}
           onOpenQuickAction={(action) => {
             if (action === 'mpesa') handleOpenMpesa();
-            if (action === 'cbc') handleOpenCbc();
+            if (action === 'CBC') handleOpenCBC();
             if (action === 'admit') setAdmitModalOpen(true);
             if (action === 'sms') handleOpenSms('all');
           }}
@@ -956,7 +960,7 @@ export default function App() {
                       activities={activities}
                       totalCollectedFee={totalCollectedFee}
                       onOpenMpesa={() => handleOpenMpesa()}
-                      onOpenCBCModal={() => handleOpenCbc()}
+                      onOpenCBCModal={() => handleOpenCBC()}
                       onOpenAdmitModal={() => setAdmitModalOpen(true)}
                       onOpenSmsModal={handleOpenSms}
                       onOpenKnecSync={() => setKnecSyncModalOpen(true)}
@@ -987,7 +991,7 @@ export default function App() {
               <StudentsView
                 students={students}
                 onOpenMpesaWithStudent={handleOpenMpesa}
-                onOpenCBCWithStudent={handleOpenCbc}
+                onOpenCBCWithStudent={handleOpenCBC}
                 onOpenAdmitModal={() => setAdmitModalOpen(true)}
                 onViewReportCard={handleViewReportCard}
                 onRefreshStudents={refreshStudentsAndFees}
@@ -1006,6 +1010,22 @@ export default function App() {
                 }
               />
             )
+          )}
+
+          {currentTab === 'slot-applications' && (
+            <SlotApplicationsView
+              onAdmitLearner={handleAdmitStudent}
+              onRefreshStudents={refreshStudentsAndFees}
+              onNavigateTab={(tab) => setCurrentTab(tab as any)}
+            />
+          )}
+
+          {currentTab === 'onboard-queue' && (
+            <OnboardQueueView
+              onAdmitLearner={handleAdmitStudent}
+              onRefreshStudents={refreshStudentsAndFees}
+              onNavigateTab={(tab) => setCurrentTab(tab as any)}
+            />
           )}
 
           {currentTab === 'teachers-staff' && (
@@ -1072,7 +1092,7 @@ export default function App() {
             />
           )}
 
-          {currentTab === 'cbc-analytics' && <CompetencyAnalyticsView />}
+          {currentTab === 'CBC-analytics' && <CompetencyAnalyticsView />}
           {currentTab === 'broadsheets' && <MasterBroadsheetView />}
 
           {currentTab === 'schemes-lesson-plans' && <SchemesView />}
@@ -1133,7 +1153,7 @@ export default function App() {
 
           {currentTab === 'announcements' && <AnnouncementsView />}
 
-          {currentTab === 'visual-cbc' && <VisualCBCView />}
+          {currentTab === 'visual-CBC' && <VisualCBCView />}
 
           {currentTab === 'whatsapp-bot' && (
             user?.role && [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN].includes(user.role) ? (
@@ -1271,10 +1291,10 @@ export default function App() {
       />
 
       <CBCFormativeModal
-        isOpen={cbcModalOpen}
-        onClose={() => setCbcModalOpen(false)}
+        isOpen={CBCModalOpen}
+        onClose={() => setCBCModalOpen(false)}
         students={students}
-        initialStudent={selectedStudentForCbc}
+        initialStudent={selectedStudentForCBC}
         onSave={handleSaveAssessment}
       />
 

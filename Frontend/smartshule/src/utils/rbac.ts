@@ -50,6 +50,32 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
         ],
       },
       {
+        id: 'slot-applications',
+        label: 'Slot Applications',
+        icon: 'event_available',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.HEAD_TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
+          UserRole.ADMISSIONS,
+        ],
+      },
+      {
+        id: 'onboard-queue',
+        label: 'Onboard Queue',
+        icon: 'how_to_reg',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.HEAD_TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
+          UserRole.ADMISSIONS,
+        ],
+      },
+      {
         id: 'students-guardians',
         label: 'Learners & Guardians',
         icon: 'group',
@@ -144,6 +170,8 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
           UserRole.HEAD_TEACHER,
           UserRole.DEPUTY_HEAD_TEACHER,
           UserRole.TEACHER,
+          UserRole.PARENT,
+          UserRole.GUARDIAN,
         ],
       },
       {
@@ -189,7 +217,7 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
         ],
       },
       {
-        id: 'cbc-analytics',
+        id: 'CBC-analytics',
         label: 'Competency Analytics',
         icon: 'monitoring',
         allowedRoles: [
@@ -563,7 +591,7 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
         ],
       },
       {
-        id: 'visual-cbc',
+        id: 'visual-CBC',
         label: 'Visual CBC & Help Desk',
         icon: 'photo_camera',
         allowedRoles: [

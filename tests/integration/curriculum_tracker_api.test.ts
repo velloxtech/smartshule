@@ -202,4 +202,125 @@ describe('Curriculum Progress Tracker API Integration Tests', () => {
     expect(res.body.data.subjects).toBeDefined();
     expect(res.body.data.subjects.length).toBeGreaterThanOrEqual(1);
   });
+
+  let dailyLogId: string;
+
+  it('9. Teacher logs a daily curriculum delivery entry with a comprehensive reflection section', async () => {
+    const res = await request(app)
+      .post(`/api/v1/curriculum-tracker/${trackerId}/daily-logs`)
+      .set('Authorization', `Bearer ${teacherToken}`)
+      .send({
+        date: '2026-10-18',
+        dayOfWeek: 'Monday',
+        weekNumber: 2,
+        lessonPeriod: 'Period 2 (08:40 - 09:20)',
+        strand: 'Christian Values - Obedience',
+        subStrand: 'Obeying parents and teachers in daily chores',
+        learningOutcomesTaught: 'Learners role-played active obedience to teachers and parents without complaining',
+        activitiesConducted: 'Learners formed pairs, acted out scenarios of parental instructions and discussed outcomes',
+        resourcesUsed: 'Flashcards, Bible verses cards (Exodus 20:12)',
+        status: 'TAUGHT',
+        reflection: {
+          comprehensionLevel: 'EXCELLENT',
+          whatWentWell: 'Learners were exceptionally engaged during the pair role-play and connected scripture with home conduct.',
+          challengesFaced: 'Two learners struggled with stage confidence during their presentation.',
+          remedialPlan: 'Pair shy learners with encouraging buddies in tomorrow’s recitation.',
+          nextSteps: 'Give 3-question reflection exercise in eDiary for home reinforcement.'
+        }
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.log).toBeDefined();
+    expect(res.body.data.log.strand).toBe('Christian Values - Obedience');
+    expect(res.body.data.log.reflection.comprehensionLevel).toBe('EXCELLENT');
+    expect(res.body.data.log.reflection.whatWentWell).toContain('exceptionally engaged');
+    expect(res.body.data.tracker.stats.totalDailyLogs).toBe(1);
+    expect(res.body.data.tracker.stats.totalReflections).toBe(1);
+
+    dailyLogId = res.body.data.log.id;
+  });
+
+  it('10. Teacher updates their daily log and refines remedial reflections', async () => {
+    const res = await request(app)
+      .put(`/api/v1/curriculum-tracker/${trackerId}/daily-logs/${dailyLogId}`)
+      .set('Authorization', `Bearer ${teacherToken}`)
+      .send({
+        activitiesConducted: 'Learners formed pairs, acted out scenarios of parental instructions and sang obedience anthem',
+        reflection: {
+          whatWentWell: 'Role-play and obedience anthem reinforced the lesson memorably.',
+          remedialPlan: 'Buddies assigned for tomorrow; extra flashcards sent home.'
+        }
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.log.activitiesConducted).toContain('sang obedience anthem');
+    expect(res.body.data.log.reflection.whatWentWell).toContain('obedience anthem');
+    expect(res.body.data.log.reflection.remedialPlan).toContain('Buddies assigned');
+    // Ensure original fields preserved
+    expect(res.body.data.log.reflection.comprehensionLevel).toBe('EXCELLENT');
+  });
+
+  it('11. Headteacher and School Director can view centralized daily tracking logs across the school', async () => {
+    const res = await request(app)
+      .get('/api/v1/curriculum-tracker/daily-logs?date=2026-10-18')
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.total).toBeGreaterThanOrEqual(1);
+
+    const targetLog = res.body.data.find((l: any) => l.id === dailyLogId);
+    expect(targetLog).toBeDefined();
+    expect(targetLog.subjectName).toBe('Christian Religious Education');
+    expect(targetLog.className).toBe('Grade 3');
+    expect(targetLog.reflection).toBeDefined();
+    expect(targetLog.reflection.whatWentWell).toBeDefined();
+  });
+
+  it('12. Regular Teacher is forbidden from adding leadership endorsement', async () => {
+    const res = await request(app)
+      .post(`/api/v1/curriculum-tracker/${trackerId}/daily-logs/${dailyLogId}/endorse`)
+      .set('Authorization', `Bearer ${teacherToken}`)
+      .send({
+        remarks: 'Attempting to self-endorse'
+      });
+
+    expect(res.status).toBe(403);
+  });
+
+  it('13. Headteacher / School Director endorses the teacher’s daily tracking log with supervisory remarks', async () => {
+    const res = await request(app)
+      .post(`/api/v1/curriculum-tracker/${trackerId}/daily-logs/${dailyLogId}/endorse`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        remarks: 'Commendable use of collaborative role play and scripture integration. Approved for tomorrow’s continuation.'
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.log.endorsement).toBeDefined();
+    expect(res.body.data.log.endorsement.remarks).toContain('Commendable use of collaborative role play');
+    expect(res.body.data.log.endorsement.endorsedByRole).toBe('SUPER_ADMIN');
+    expect(res.body.data.tracker.stats.totalEndorsements).toBe(1);
+  });
+
+  it('14. School Director can delete a daily log when required', async () => {
+    const res = await request(app)
+      .delete(`/api/v1/curriculum-tracker/${trackerId}/daily-logs/${dailyLogId}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+
+    // Verify deleted
+    const verifyRes = await request(app)
+      .get(`/api/v1/curriculum-tracker/${trackerId}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(verifyRes.status).toBe(200);
+    const deletedLog = verifyRes.body.data.dailyLogs.find((l: any) => l.id === dailyLogId);
+    expect(deletedLog).toBeUndefined();
+  });
 });

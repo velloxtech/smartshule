@@ -11,7 +11,8 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
+class _LoginScreenState extends State<LoginScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final TextEditingController _idController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -50,9 +51,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     );
 
     if (success && mounted) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const MainShell()),
-      );
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (_) => const MainShell()));
     }
   }
 
@@ -68,7 +69,12 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
             // Top Hero Banner (matches Web Frontend Header & Logo)
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.only(top: 56, bottom: 36, left: 24, right: 24),
+              padding: const EdgeInsets.only(
+                top: 56,
+                bottom: 36,
+                left: 24,
+                right: 24,
+              ),
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   colors: [AppTheme.primaryMaroonDark, AppTheme.primaryMaroon],
@@ -124,16 +130,25 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   const SizedBox(height: 6),
                   // School Motto Pill (matches Web Motto)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.25),
+                      ),
                     ),
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.auto_awesome, color: Colors.amberAccent, size: 14),
+                        Icon(
+                          Icons.auto_awesome,
+                          color: Colors.amberAccent,
+                          size: 14,
+                        ),
                         SizedBox(width: 6),
                         Text(
                           '"The future Begins Here"',
@@ -191,7 +206,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                color: AppTheme.primaryMaroon.withValues(alpha: 0.2),
+                                color: AppTheme.primaryMaroon.withValues(
+                                  alpha: 0.2,
+                                ),
                                 blurRadius: 6,
                                 offset: const Offset(0, 2),
                               ),
@@ -199,14 +216,20 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                           ),
                           labelColor: Colors.white,
                           unselectedLabelColor: AppTheme.textMuted,
-                          labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                          labelStyle: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                          ),
                           tabs: const [
                             Tab(
                               icon: Icon(Icons.co_present_rounded, size: 18),
                               text: 'Teacher Portal',
                             ),
                             Tab(
-                              icon: Icon(Icons.family_restroom_rounded, size: 18),
+                              icon: Icon(
+                                Icons.family_restroom_rounded,
+                                size: 18,
+                              ),
                               text: 'Parent Portal',
                             ),
                           ],
@@ -228,8 +251,13 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                       TextField(
                         controller: _idController,
                         decoration: InputDecoration(
-                          prefixIcon: const Icon(Icons.person_outline, size: 20),
-                          hintText: _tabController.index == 0 ? 'teacher.sarah' : 'parent.david',
+                          prefixIcon: const Icon(
+                            Icons.person_outline,
+                            size: 20,
+                          ),
+                          hintText: _tabController.index == 0
+                              ? 'teacher.sarah'
+                              : 'parent.david',
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -251,10 +279,14 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                           prefixIcon: const Icon(Icons.lock_outline, size: 20),
                           suffixIcon: IconButton(
                             icon: Icon(
-                              _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                              _obscurePassword
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
                               size: 20,
                             ),
-                            onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                            onPressed: () => setState(
+                              () => _obscurePassword = !_obscurePassword,
+                            ),
                           ),
                         ),
                       ),
@@ -269,16 +301,25 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             decoration: BoxDecoration(
                               color: const Color(0xFFFEF2F2),
                               borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: const Color(0xFFFECACA)),
+                              border: Border.all(
+                                color: const Color(0xFFFECACA),
+                              ),
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.error_outline, color: Color(0xFFB91C1C), size: 18),
+                                const Icon(
+                                  Icons.error_outline,
+                                  color: Color(0xFFB91C1C),
+                                  size: 18,
+                                ),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
                                     auth.errorMessage!,
-                                    style: const TextStyle(color: Color(0xFFB91C1C), fontSize: 12),
+                                    style: const TextStyle(
+                                      color: Color(0xFFB91C1C),
+                                      fontSize: 12,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -293,7 +334,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             ? const SizedBox(
                                 height: 20,
                                 width: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
                               )
                             : const Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -333,18 +377,27 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             child: OutlinedButton.icon(
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: AppTheme.primaryMaroon,
-                                side: const BorderSide(color: AppTheme.primaryMaroonBorder),
+                                side: const BorderSide(
+                                  color: AppTheme.primaryMaroonBorder,
+                                ),
                                 backgroundColor: AppTheme.primaryMaroonTint,
-                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
                               ),
                               icon: const Icon(Icons.co_present, size: 16),
-                              label: const Text('Demo Teacher', style: TextStyle(fontSize: 12)),
+                              label: const Text(
+                                'Demo Teacher',
+                                style: TextStyle(fontSize: 12),
+                              ),
                               onPressed: () async {
                                 final navigator = Navigator.of(context);
                                 await auth.loginAsTeacherDemo();
                                 if (mounted) {
                                   navigator.pushReplacement(
-                                    MaterialPageRoute(builder: (_) => const MainShell()),
+                                    MaterialPageRoute(
+                                      builder: (_) => const MainShell(),
+                                    ),
                                   );
                                 }
                               },
@@ -355,18 +408,27 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             child: OutlinedButton.icon(
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: AppTheme.primaryMaroon,
-                                side: const BorderSide(color: AppTheme.primaryMaroonBorder),
+                                side: const BorderSide(
+                                  color: AppTheme.primaryMaroonBorder,
+                                ),
                                 backgroundColor: AppTheme.primaryMaroonTint,
-                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
                               ),
                               icon: const Icon(Icons.family_restroom, size: 16),
-                              label: const Text('Demo Parent', style: TextStyle(fontSize: 12)),
+                              label: const Text(
+                                'Demo Parent',
+                                style: TextStyle(fontSize: 12),
+                              ),
                               onPressed: () async {
                                 final navigator = Navigator.of(context);
                                 await auth.loginAsParentDemo();
                                 if (mounted) {
                                   navigator.pushReplacement(
-                                    MaterialPageRoute(builder: (_) => const MainShell()),
+                                    MaterialPageRoute(
+                                      builder: (_) => const MainShell(),
+                                    ),
                                   );
                                 }
                               },
@@ -385,10 +447,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               padding: const EdgeInsets.only(bottom: 24),
               child: Text(
                 'SmartShule CBC Portal • All institutional accounts managed via UI',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Colors.grey.shade600,
-                ),
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
               ),
             ),
           ],

@@ -3,7 +3,7 @@ import { apiService } from '../../services/api';
 import { TimetableData, TimetableSlot, PeriodDefinition, DayDefinition, UserRole } from '../../types';
 import { AddTimetableSlotModal } from '../modals/AddTimetableSlotModal';
 import { useAuth } from '../../context/AuthContext';
-import { sortAndGroupClasses, sortClassesInCbcSequence } from '../../utils/classCategorization';
+import { sortAndGroupClasses, sortClassesInCBCSequence } from '../../utils/classCategorization';
 
 const DEFAULT_PERIODS: PeriodDefinition[] = [
   { periodNumber: 1, name: 'Period 1', startTime: '08:00', endTime: '08:45', isBreak: false, isLunch: false },
@@ -135,7 +135,7 @@ export const TimetableView: React.FC = () => {
         if (scRes?.data) setSchoolInfo(scRes.data);
         if (ctxRes?.data) setCurrentContext(ctxRes.data);
         if (cRes?.data && Array.isArray(cRes.data)) {
-          const sorted = sortClassesInCbcSequence(cRes.data);
+          const sorted = sortClassesInCBCSequence(cRes.data);
           setClassesList(sorted);
           if (sorted.length > 0 && !selectedClassId) {
             setSelectedClassId(sorted[0].id);
@@ -346,7 +346,7 @@ export const TimetableView: React.FC = () => {
 
   // Primary active save action
   const handleSaveGrid = () => {
-    persistGridActive(periods, days, timetable?.slots || [], '✅ Timetable successfully saved to database! All periods, days, and lesson slots are permanently persisted.');
+    persistGridActive(periods, days, timetable?.slots || [], 'Timetable successfully saved to database! All periods, days, and lesson slots are permanently persisted.');
   };
 
   // Row (Period) Actions with instant active database persist
@@ -362,14 +362,14 @@ export const TimetableView: React.FC = () => {
       isBreak: false,
       isLunch: false,
     });
-    await persistGridActive(updated, days, timetable?.slots || [], '✅ New period added and actively saved to database!');
+    await persistGridActive(updated, days, timetable?.slots || [], 'New period added and actively saved to database!');
   };
 
   const handleUpdatePeriod = async (updatedPeriod: PeriodDefinition) => {
     const updated = periods.map((p) => (p.periodNumber === updatedPeriod.periodNumber ? updatedPeriod : p));
     setPeriods(updated);
     setEditingPeriod(null);
-    await persistGridActive(updated, days, timetable?.slots || [], '✅ Period times updated and actively saved to database!');
+    await persistGridActive(updated, days, timetable?.slots || [], 'Period times updated and actively saved to database!');
   };
 
   const handleDeletePeriod = async (periodNum: number) => {
@@ -382,7 +382,7 @@ export const TimetableView: React.FC = () => {
     if (timetable) {
       setTimetable({ ...timetable, slots: updatedSlots });
     }
-    await persistGridActive(updated, days, updatedSlots, `✅ Period ${periodNum} removed and actively saved to database!`);
+    await persistGridActive(updated, days, updatedSlots, `Period ${periodNum} removed and actively saved to database!`);
   };
 
   // Column (Day) Actions with instant active database persist
@@ -396,7 +396,7 @@ export const TimetableView: React.FC = () => {
     setDays(updated);
     setIsAddDayOpen(false);
     setNewDayLabel('Saturday');
-    await persistGridActive(periods, updated, timetable?.slots || [], `✅ Day "${newDayLabel.trim()}" added and actively saved to database!`);
+    await persistGridActive(periods, updated, timetable?.slots || [], `Day "${newDayLabel.trim()}" added and actively saved to database!`);
   };
 
   const handleDeleteDay = async (dayKey: string) => {
@@ -410,7 +410,7 @@ export const TimetableView: React.FC = () => {
         slots: updatedSlots,
       });
     }
-    await persistGridActive(periods, updated, updatedSlots, `✅ Day column "${dayKey}" removed and actively saved to database!`);
+    await persistGridActive(periods, updated, updatedSlots, `Day column "${dayKey}" removed and actively saved to database!`);
   };
 
   const handleSlotAdded = (updatedTimetable: TimetableData) => {
@@ -423,7 +423,7 @@ export const TimetableView: React.FC = () => {
     }
     setIsGridDirty(false);
     const timestamp = new Date().toLocaleTimeString();
-    setSaveSuccessMsg(`✅ Timetable slot assigned and saved to database! (Active at ${timestamp})`);
+    setSaveSuccessMsg(`Timetable slot assigned and saved to database! (Active at ${timestamp})`);
     setTimeout(() => setSaveSuccessMsg(null), 4000);
   };
 
@@ -434,7 +434,7 @@ export const TimetableView: React.FC = () => {
         if (res.success && res.data) {
           setTimetable(res.data);
           const timestamp = new Date().toLocaleTimeString();
-          setSaveSuccessMsg(`✅ Timetable slot deleted and saved to database! (Active at ${timestamp})`);
+          setSaveSuccessMsg(`Timetable slot deleted and saved to database! (Active at ${timestamp})`);
           setTimeout(() => setSaveSuccessMsg(null), 3500);
           return;
         }
@@ -449,7 +449,7 @@ export const TimetableView: React.FC = () => {
         slots: updatedSlots,
       });
     }
-    await persistGridActive(periods, days, updatedSlots, '✅ Slot deleted and timetable updated in database!');
+    await persistGridActive(periods, days, updatedSlots, 'Slot deleted and timetable updated in database!');
   };
 
   const handleCellClick = (dayKey: string, pDef: PeriodDefinition, existingSlot?: TimetableSlot) => {

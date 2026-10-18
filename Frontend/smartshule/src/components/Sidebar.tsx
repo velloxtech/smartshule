@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { TabType, UserRole } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { getFilteredNavSections, getRoleDisplayName, getRoleBadgeStyle } from '../utils/rbac';
+import { onboardingService } from '../services/onboardingService';
 
 interface SidebarProps {
   currentTab: TabType;
@@ -23,6 +24,35 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const { user, logout } = useAuth();
   const navSections = getFilteredNavSections(user?.role);
   const badgeStyle = getRoleBadgeStyle(user?.role);
+  const [pendingOnboardingsCount, setPendingOnboardingsCount] = useState(0);
+  const [pendingSlotsCount, setPendingSlotsCount] = useState(0);
+
+  useEffect(() => {
+    const updateCounts = () => {
+      setPendingOnboardingsCount(onboardingService.getPendingCount());
+      setPendingSlotsCount(onboardingService.getPendingSlotsCount());
+    };
+    updateCounts();
+    if (typeof window !== 'undefined') {
+      window.addEventListener('smartshule_onboarding_updated', updateCounts);
+    }
+    const interval = setInterval(updateCounts, 4000);
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('smartshule_onboarding_updated', updateCounts);
+      }
+      clearInterval(interval);
+    };
+  }, []);
+
+  const canAccessOnboardQueue = user?.role && [
+    UserRole.SUPER_ADMIN,
+    UserRole.ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.HEAD_TEACHER,
+    UserRole.DEPUTY_HEAD_TEACHER,
+    UserRole.ADMISSIONS,
+  ].includes(user.role);
 
   const isAdmin = user?.role && [
     UserRole.SUPER_ADMIN,
@@ -153,6 +183,57 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </span>
                 </button>
               )}
+              {canAccessOnboardQueue && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSelectTab('slot-applications');
+                      onCloseMobile();
+                    }}
+                    className="w-full mt-1.5 py-1.5 px-2.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-600/30 text-emerald-950 text-xs font-bold flex items-center justify-between transition-all cursor-pointer shadow-2xs"
+                    title="Open Admission Slot Applications & Tour/Assessment Scheduling"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[16px] text-emerald-800">event_available</span>
+                      <span>Slot Applications</span>
+                    </div>
+                    {pendingSlotsCount > 0 ? (
+                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full bg-emerald-600 text-white animate-pulse">
+                        {pendingSlotsCount} New
+                      </span>
+                    ) : (
+                      <span className="text-[9px] font-mono uppercase bg-emerald-800/15 text-emerald-900 px-1.5 py-0.2 rounded-full font-bold">
+                        Slots
+                      </span>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onSelectTab('onboard-queue');
+                      onCloseMobile();
+                    }}
+                    className="w-full mt-1.5 py-1.5 px-2.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-600/30 text-amber-950 text-xs font-bold flex items-center justify-between transition-all cursor-pointer shadow-2xs"
+                    title="Open Admitted Learner Onboard Queue"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[16px] text-amber-800">how_to_reg</span>
+                      <span>Onboard Queue</span>
+                    </div>
+                    {pendingOnboardingsCount > 0 ? (
+                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full bg-amber-600 text-white animate-pulse">
+                        {pendingOnboardingsCount} New
+                      </span>
+                    ) : (
+                      <span className="text-[9px] font-mono uppercase bg-[#7a1228]/15 text-[#7a1228] px-1.5 py-0.2 rounded-full font-bold">
+                        Queue
+                      </span>
+                    )}
+                  </button>
+                </>
+              )}
             </div>
           </div>
 
@@ -189,6 +270,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         </span>
                         <span className="font-body-md text-sm truncate">{item.label}</span>
                       </div>
+                      {item.id === 'slot-applications' && (
+                        <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full uppercase shrink-0 ${
+                          pendingSlotsCount > 0
+                            ? (isActive ? 'bg-emerald-400 text-emerald-950 font-bold' : 'bg-emerald-600 text-white font-bold animate-pulse')
+                            : (isActive ? 'bg-white/20 text-white' : 'bg-[#7a1228]/15 text-[#7a1228]')
+                        }`}>
+                          {pendingSlotsCount > 0 ? `${pendingSlotsCount} New` : 'Slots'}
+                        </span>
+                      )}
+                      {item.id === 'onboard-queue' && (
+                        <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full uppercase shrink-0 ${
+                          pendingOnboardingsCount > 0
+                            ? (isActive ? 'bg-amber-400 text-amber-950 font-bold' : 'bg-amber-600 text-white font-bold animate-pulse')
+                            : (isActive ? 'bg-white/20 text-white' : 'bg-[#7a1228]/15 text-[#7a1228]')
+                        }`}>
+                          {pendingOnboardingsCount > 0 ? `${pendingOnboardingsCount} New` : 'Queue'}
+                        </span>
+                      )}
                       {item.id === 'archived-records' && (
                         <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full uppercase shrink-0 ${
                           isActive ? 'bg-white/20 text-white' : 'bg-[#7a1228]/15 text-[#7a1228]'

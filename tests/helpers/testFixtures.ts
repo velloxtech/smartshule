@@ -1,6 +1,6 @@
 import { AppContainer } from '../../src/infrastructure/container';
 import { User, UserRole, UserStatus } from '../../src/core/domain/user/User';
-import { Student, StudentGender, CbcGradeLevel, StudentStatus } from '../../src/core/domain/user/Student';
+import { Student, StudentGender, CBCGradeLevel, StudentStatus } from '../../src/core/domain/user/Student';
 import { Teacher } from '../../src/core/domain/user/Teacher';
 import { Guardian, GuardianRelationship } from '../../src/core/domain/user/Guardian';
 import { School } from '../../src/core/domain/academic/School';
@@ -208,7 +208,7 @@ export async function setupTestFixtures(container: AppContainer) {
   const classGrade7 = ClassRoom.create(
     {
       name: 'Grade 7',
-      gradeLevel: CbcGradeLevel.GRADE_7,
+      gradeLevel: CBCGradeLevel.GRADE_7,
       educationLevel: EducationLevel.JUNIOR_SCHOOL,
       schoolId
     },
@@ -294,7 +294,7 @@ export async function setupTestFixtures(container: AppContainer) {
       lastName: 'Kariuki',
       dateOfBirth: '2013-05-14',
       gender: StudentGender.MALE,
-      gradeLevel: CbcGradeLevel.GRADE_7,
+      gradeLevel: CBCGradeLevel.GRADE_7,
       streamId,
       schoolId,
       academicYearId,
@@ -310,7 +310,7 @@ export async function setupTestFixtures(container: AppContainer) {
     {
       name: 'Integrated Science',
       code: 'SCIE7',
-      gradeLevel: CbcGradeLevel.GRADE_7,
+      gradeLevel: CBCGradeLevel.GRADE_7,
       educationLevel: EducationLevel.JUNIOR_SCHOOL,
       isElective: false,
       schoolId
@@ -323,7 +323,7 @@ export async function setupTestFixtures(container: AppContainer) {
     {
       name: 'Mathematics',
       code: 'MATH7',
-      gradeLevel: CbcGradeLevel.GRADE_7,
+      gradeLevel: CBCGradeLevel.GRADE_7,
       educationLevel: EducationLevel.JUNIOR_SCHOOL,
       isElective: false,
       schoolId
@@ -337,14 +337,14 @@ export async function setupTestFixtures(container: AppContainer) {
   const strandScience1 = Strand.create(
     {
       learningAreaId: learningAreaScience.id,
-      gradeLevel: CbcGradeLevel.GRADE_7,
+      gradeLevel: CBCGradeLevel.GRADE_7,
       code: 'STR-SCIE-01',
       title: 'Living Things and Their Environment',
       description: 'Study of cells, classification of living organisms, and ecosystems'
     },
     strandId1
   );
-  await container.cbcAssessmentRepository.saveStrand(strandScience1);
+  await container.CBCAssessmentRepository.saveStrand(strandScience1);
 
   const subStrandId1 = 'substrand-scie-01';
   const subStrandScience1 = SubStrand.create(
@@ -361,7 +361,7 @@ export async function setupTestFixtures(container: AppContainer) {
     },
     subStrandId1
   );
-  await container.cbcAssessmentRepository.saveSubStrand(subStrandScience1);
+  await container.CBCAssessmentRepository.saveSubStrand(subStrandScience1);
 
   // 10. Formative Assessment Sample
   const formative = FormativeAssessment.create(
@@ -386,7 +386,7 @@ export async function setupTestFixtures(container: AppContainer) {
     },
     'formative-001'
   );
-  await container.cbcAssessmentRepository.saveFormative(formative);
+  await container.CBCAssessmentRepository.saveFormative(formative);
 
   // 11. Summative Assessment Sample
   const summative = SummativeAssessment.create(
@@ -411,7 +411,7 @@ export async function setupTestFixtures(container: AppContainer) {
     },
     'summative-001'
   );
-  await container.cbcAssessmentRepository.saveSummative(summative);
+  await container.CBCAssessmentRepository.saveSummative(summative);
 
   // 12. Scheme of Work Sample
   const scheme = SchemeOfWork.create(
@@ -605,7 +605,7 @@ export async function setupTestFixtures(container: AppContainer) {
       schoolId,
       academicYearId,
       termId,
-      gradeLevel: CbcGradeLevel.GRADE_7,
+      gradeLevel: CBCGradeLevel.GRADE_7,
       title: 'Grade 7 Junior Secondary - Term 1 2026 Fee Structure',
       items: [
         {

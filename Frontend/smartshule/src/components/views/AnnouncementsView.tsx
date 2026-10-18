@@ -69,7 +69,7 @@ Please be reminded regarding the settlement of the 2026 Annual Fee Schedule for 
 
 1. Simplified Annual Structure: All fees are scheduled as an all-inclusive annual fee covering tuition, learning materials, and ICT levies.
 2. Official Payment Channels:
-   • M-Pesa Paybill: 247247 | Account Number: <Admission Number>
+   • M-Pesa Paybill: 247247 | Account Number: <Child's Full Name & Grade> (not admission number)
    • Bank Account: Equity Bank | Account Name: Grace Seeds School | Acc No: 0140293847291
 3. Clearance Deadline: Kindly ensure any outstanding arrears or term settlements are ratified before Monday next week.
 4. Download Structure: You may access and download your learner's full breakdown on the Fee Structure tab.
@@ -728,9 +728,9 @@ export const AnnouncementsView: React.FC = () => {
     doc.circle(stampX, stampY, 13, 'S');
 
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(6);
+    doc.setFontSize(6.5);
     doc.setTextColor(30, 58, 138);
-    doc.text('★ GRACE SEEDS SCHOOL ★', stampX, stampY - 6, { align: 'center' });
+    doc.text('GRACE SEEDS SCHOOL', stampX, stampY - 6, { align: 'center' });
     doc.setFontSize(7);
     doc.text('OFFICIAL MEMO', stampX, stampY - 1, { align: 'center' });
     doc.setFontSize(6.5);
@@ -1522,7 +1522,7 @@ export const AnnouncementsView: React.FC = () => {
                 {/* Stamp Seal Graphic */}
                 <div className="w-28 h-28 rounded-full border-2 border-indigo-700 border-dashed p-1 flex flex-col items-center justify-center text-center text-indigo-800 rotate-[-8deg] bg-indigo-50/40 select-none shadow-xs">
                   <span className="text-[9px] font-bold uppercase tracking-tighter">
-                    ★ GRACE SEEDS SCHOOL ★
+                    GRACE SEEDS SCHOOL
                   </span>
                   <span className="text-[11px] font-black uppercase my-0.5">OFFICIAL MEMO</span>
                   <span className="text-[8px] font-semibold tracking-widest text-emerald-700">

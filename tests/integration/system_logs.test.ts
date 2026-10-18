@@ -169,7 +169,7 @@ describe('System Logs & Audit Trail Integration Tests', () => {
 
     it('records a MARKS_UPLOADED audit event when teacher uploads summative marks', async () => {
       const marksRes = await request(app)
-        .post('/api/v1/cbc/summative')
+        .post('/api/v1/CBC/summative')
         .set('Authorization', `Bearer ${teacherToken}`)
         .send({
           studentId: 'student-001',
@@ -210,7 +210,7 @@ describe('System Logs & Audit Trail Integration Tests', () => {
 
     it('records a MARKS_UPLOADED audit event when teacher records formative assessment marks', async () => {
       const formativeRes = await request(app)
-        .post('/api/v1/cbc/formative')
+        .post('/api/v1/CBC/formative')
         .set('Authorization', `Bearer ${teacherToken}`)
         .send({
           studentId: 'student-001',

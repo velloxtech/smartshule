@@ -45,7 +45,11 @@ class ProfileScreen extends StatelessWidget {
               api.setBaseUrl(urlController.text.trim());
               Navigator.of(ctx).pop();
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Updated backend to: ${urlController.text.trim()}')),
+                SnackBar(
+                  content: Text(
+                    'Updated backend to: ${urlController.text.trim()}',
+                  ),
+                ),
               );
             },
             child: const Text('Save URL'),
@@ -81,7 +85,11 @@ class ProfileScreen extends StatelessWidget {
                 child: Image.asset(
                   'assets/images/logo.png',
                   fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => const Icon(Icons.school, size: 18, color: AppTheme.primaryMaroon),
+                  errorBuilder: (_, __, ___) => const Icon(
+                    Icons.school,
+                    size: 18,
+                    color: AppTheme.primaryMaroon,
+                  ),
                 ),
               ),
             ),
@@ -97,7 +105,9 @@ class ProfileScreen extends StatelessWidget {
           children: [
             // User Card
             Card(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(20),
                 child: Column(
@@ -106,7 +116,9 @@ class ProfileScreen extends StatelessWidget {
                       radius: 36,
                       backgroundColor: primaryColor.withValues(alpha: 0.15),
                       child: Text(
-                        user?.firstName.isNotEmpty == true ? user!.firstName[0] : 'U',
+                        user?.firstName.isNotEmpty == true
+                            ? user!.firstName[0]
+                            : 'U',
                         style: const TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
@@ -117,20 +129,31 @@ class ProfileScreen extends StatelessWidget {
                     const SizedBox(height: 12),
                     Text(
                       user?.fullName ?? 'User',
-                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       user?.email ?? '',
-                      style: const TextStyle(fontSize: 13, color: AppTheme.textMuted),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppTheme.textMuted,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: primaryColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: primaryColor.withValues(alpha: 0.3)),
+                        border: Border.all(
+                          color: primaryColor.withValues(alpha: 0.3),
+                        ),
                       ),
                       child: Text(
                         user?.role.displayName.toUpperCase() ?? 'USER',
@@ -153,9 +176,14 @@ class ProfileScreen extends StatelessWidget {
               child: Column(
                 children: [
                   ListTile(
-                    leading: const Icon(Icons.swap_horiz, color: AppTheme.primaryMaroon),
+                    leading: const Icon(
+                      Icons.swap_horiz,
+                      color: AppTheme.primaryMaroon,
+                    ),
                     title: Text(
-                      isTeacher ? 'Switch to Parent Portal' : 'Switch to Teacher Portal',
+                      isTeacher
+                          ? 'Switch to Parent Portal'
+                          : 'Switch to Teacher Portal',
                       style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
                     subtitle: Text(
@@ -165,7 +193,9 @@ class ProfileScreen extends StatelessWidget {
                     ),
                     trailing: const Icon(Icons.arrow_forward_ios, size: 14),
                     onTap: () {
-                      final target = isTeacher ? UserRole.parent : UserRole.teacher;
+                      final target = isTeacher
+                          ? UserRole.parent
+                          : UserRole.teacher;
                       auth.switchRole(target);
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
@@ -178,8 +208,14 @@ class ProfileScreen extends StatelessWidget {
                   const Divider(height: 1),
                   ListTile(
                     leading: const Icon(Icons.dns_outlined),
-                    title: const Text('Backend API Server', style: TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: Text(ApiService().baseUrl, style: const TextStyle(fontSize: 12)),
+                    title: const Text(
+                      'Backend API Server',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text(
+                      ApiService().baseUrl,
+                      style: const TextStyle(fontSize: 12),
+                    ),
                     trailing: const Icon(Icons.edit, size: 18),
                     onTap: () => _showServerSettingsDialog(context),
                   ),

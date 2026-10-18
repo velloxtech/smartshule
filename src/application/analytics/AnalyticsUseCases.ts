@@ -1,7 +1,7 @@
 import { IStudentRepository } from '../../core/ports/repositories/IStudentRepository';
 import { ITeacherRepository } from '../../core/ports/repositories/ITeacherRepository';
 import { IAcademicRepository } from '../../core/ports/repositories/IAcademicRepository';
-import { ICbcAssessmentRepository } from '../../core/ports/repositories/ICbcAssessmentRepository';
+import { ICBCAssessmentRepository } from '../../core/ports/repositories/ICbcAssessmentRepository';
 import { IAttendanceRepository } from '../../core/ports/repositories/ITimetableRepository';
 import { IFeeRepository } from '../../core/ports/repositories/IFeeRepository';
 import { IUserRepository } from '../../core/ports/repositories/IUserRepository';
@@ -14,7 +14,7 @@ export class AnalyticsUseCases {
     private readonly studentRepository: IStudentRepository,
     private readonly teacherRepository: ITeacherRepository,
     private readonly academicRepository: IAcademicRepository,
-    private readonly cbcRepository: ICbcAssessmentRepository,
+    private readonly CBCRepository: ICBCAssessmentRepository,
     private readonly attendanceRepository: IAttendanceRepository,
     private readonly feeRepository: IFeeRepository,
     private readonly userRepository?: IUserRepository
@@ -54,7 +54,7 @@ export class AnalyticsUseCases {
     const totalArrears = invoices.reduce((sum, i) => sum + i.balance, 0);
 
     // CBC Assessment Stats
-    let cbcProficiencySummary = {
+    let CBCProficiencySummary = {
       exceeding: 0,
       meeting: 0,
       approaching: 0,
@@ -63,12 +63,12 @@ export class AnalyticsUseCases {
     };
 
     if (currentTerm && currentYear) {
-      const summatives = await this.cbcRepository.findSummatives({
+      const summatives = await this.CBCRepository.findSummatives({
         termId: currentTerm.id,
         academicYearId: currentYear.id
       });
 
-      cbcProficiencySummary = {
+      CBCProficiencySummary = {
         exceeding: summatives.filter(s => s.overallPerformanceLevel === PerformanceLevel.EXCEEDING_EXPECTATIONS).length,
         meeting: summatives.filter(s => s.overallPerformanceLevel === PerformanceLevel.MEETING_EXPECTATIONS).length,
         approaching: summatives.filter(s => s.overallPerformanceLevel === PerformanceLevel.APPROACHING_EXPECTATIONS).length,
@@ -94,7 +94,7 @@ export class AnalyticsUseCases {
         totalArrears,
         collectionRatePercentage: totalInvoiced > 0 ? Math.round((totalCollected / totalInvoiced) * 100) : 0
       },
-      cbcProficiency: cbcProficiencySummary
+      CBCProficiency: CBCProficiencySummary
     };
   }
 }

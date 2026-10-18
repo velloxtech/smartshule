@@ -290,7 +290,7 @@ export const Header: React.FC<HeaderProps> = ({
                           </div>
                         </div>
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800">
-                          CBC: {s.cbcRating}
+                          CBC: {s.CBCRating}
                         </span>
                       </div>
                     ))}

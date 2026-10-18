@@ -247,7 +247,7 @@ export const OnboardSchoolModal: React.FC<OnboardSchoolModalProps> = ({
                           : 'bg-white/20 text-white'
                       }`}
                     >
-                      {isPast ? '✓' : s.num}
+                      {isPast ? <span className="material-symbols-outlined text-[13px] font-bold">check</span> : s.num}
                     </span>
                     <span className="text-xs font-semibold truncate">{s.title}</span>
                   </div>
@@ -430,7 +430,7 @@ export const OnboardSchoolModal: React.FC<OnboardSchoolModalProps> = ({
 
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-                  Physical Campus Location & Road <span className="text-rose-600">*</span>
+                  Physical School Location & Road <span className="text-rose-600">*</span>
                 </label>
                 <input
                   type="text"

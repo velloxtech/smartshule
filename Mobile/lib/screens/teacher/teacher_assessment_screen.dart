@@ -8,7 +8,8 @@ class TeacherAssessmentScreen extends StatefulWidget {
   const TeacherAssessmentScreen({super.key});
 
   @override
-  State<TeacherAssessmentScreen> createState() => _TeacherAssessmentScreenState();
+  State<TeacherAssessmentScreen> createState() =>
+      _TeacherAssessmentScreenState();
 }
 
 class _TeacherAssessmentScreenState extends State<TeacherAssessmentScreen> {
@@ -18,10 +19,14 @@ class _TeacherAssessmentScreenState extends State<TeacherAssessmentScreen> {
   bool _loading = true;
 
   String _selectedLearningArea = 'Mathematics Activities';
-  final TextEditingController _strandController = TextEditingController(text: 'Numbers');
-  final TextEditingController _subStrandController = TextEditingController(text: 'Addition & Regrouping');
+  final TextEditingController _strandController = TextEditingController(
+    text: 'Numbers',
+  );
+  final TextEditingController _subStrandController = TextEditingController(
+    text: 'Addition & Regrouping',
+  );
   final TextEditingController _remarksController = TextEditingController();
-  CbcRating _selectedRating = CbcRating.meetingExpectations;
+  CBCRating _selectedRating = CBCRating.meetingExpectations;
 
   final List<String> _learningAreas = [
     'Mathematics Activities',
@@ -39,7 +44,10 @@ class _TeacherAssessmentScreenState extends State<TeacherAssessmentScreen> {
   }
 
   Future<void> _loadLearners() async {
-    final list = await _apiService.getLearners(grade: 'Grade 3', stream: 'East');
+    final list = await _apiService.getLearners(
+      grade: 'Grade 3',
+      stream: 'East',
+    );
     if (mounted) {
       setState(() {
         _learners = list;
@@ -60,7 +68,7 @@ class _TeacherAssessmentScreenState extends State<TeacherAssessmentScreen> {
   void _saveAssessment() async {
     if (_selectedLearner == null) return;
 
-    final assessment = CbcAssessmentModel(
+    final assessment = CBCAssessmentModel(
       id: 'asm_${DateTime.now().millisecondsSinceEpoch}',
       learnerId: _selectedLearner!.id,
       learnerName: _selectedLearner!.name,
@@ -89,9 +97,7 @@ class _TeacherAssessmentScreenState extends State<TeacherAssessmentScreen> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
@@ -112,7 +118,11 @@ class _TeacherAssessmentScreenState extends State<TeacherAssessmentScreen> {
                 child: Image.asset(
                   'assets/images/logo.png',
                   fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => const Icon(Icons.school, size: 18, color: AppTheme.primaryMaroon),
+                  errorBuilder: (_, __, ___) => const Icon(
+                    Icons.school,
+                    size: 18,
+                    color: AppTheme.primaryMaroon,
+                  ),
                 ),
               ),
             ),
@@ -136,22 +146,31 @@ class _TeacherAssessmentScreenState extends State<TeacherAssessmentScreen> {
                   children: [
                     const Text(
                       'Select Learner',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<StudentModel>(
                       value: _selectedLearner,
                       decoration: const InputDecoration(
                         prefixIcon: Icon(Icons.person),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                       ),
                       items: _learners.map((learner) {
                         return DropdownMenuItem(
                           value: learner,
-                          child: Text('${learner.name} (${learner.admissionNumber})'),
+                          child: Text(
+                            '${learner.name} (${learner.admissionNumber})',
+                          ),
                         );
                       }).toList(),
-                      onChanged: (val) => setState(() => _selectedLearner = val),
+                      onChanged: (val) =>
+                          setState(() => _selectedLearner = val),
                     ),
                   ],
                 ),
@@ -168,20 +187,29 @@ class _TeacherAssessmentScreenState extends State<TeacherAssessmentScreen> {
                   children: [
                     const Text(
                       'Learning Area (Sub-theme)',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<String>(
                       value: _selectedLearningArea,
                       decoration: const InputDecoration(
                         prefixIcon: Icon(Icons.book_outlined),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                       ),
                       items: _learningAreas
-                          .map((a) => DropdownMenuItem(value: a, child: Text(a)))
+                          .map(
+                            (a) => DropdownMenuItem(value: a, child: Text(a)),
+                          )
                           .toList(),
                       onChanged: (val) {
-                        if (val != null) setState(() => _selectedLearningArea = val);
+                        if (val != null)
+                          setState(() => _selectedLearningArea = val);
                       },
                     ),
                     const SizedBox(height: 16),
@@ -215,34 +243,41 @@ class _TeacherAssessmentScreenState extends State<TeacherAssessmentScreen> {
                   children: [
                     const Text(
                       'CBC Performance Level',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     _buildRubricOption(
-                      rating: CbcRating.exceedingExpectations,
+                      rating: CBCRating.exceedingExpectations,
                       title: 'Exceeding Expectations (EE)',
-                      subtitle: 'Consistently demonstrates mastery & creative application',
+                      subtitle:
+                          'Consistently demonstrates mastery & creative application',
                       color: const Color(0xFF15803D),
                     ),
                     const SizedBox(height: 8),
                     _buildRubricOption(
-                      rating: CbcRating.meetingExpectations,
+                      rating: CBCRating.meetingExpectations,
                       title: 'Meeting Expectations (ME)',
-                      subtitle: 'Demonstrates expected competency with minimal guidance',
+                      subtitle:
+                          'Demonstrates expected competency with minimal guidance',
                       color: const Color(0xFF0284C7),
                     ),
                     const SizedBox(height: 8),
                     _buildRubricOption(
-                      rating: CbcRating.approachingExpectations,
+                      rating: CBCRating.approachingExpectations,
                       title: 'Approaching Expectations (AE)',
-                      subtitle: 'Demonstrates partial competency, requires support',
+                      subtitle:
+                          'Demonstrates partial competency, requires support',
                       color: const Color(0xFFB45309),
                     ),
                     const SizedBox(height: 8),
                     _buildRubricOption(
-                      rating: CbcRating.belowExpectations,
+                      rating: CBCRating.belowExpectations,
                       title: 'Below Expectations (BE)',
-                      subtitle: 'Struggles with fundamental concepts, requires remedial work',
+                      subtitle:
+                          'Struggles with fundamental concepts, requires remedial work',
                       color: const Color(0xFFB91C1C),
                     ),
                     const SizedBox(height: 16),
@@ -250,8 +285,10 @@ class _TeacherAssessmentScreenState extends State<TeacherAssessmentScreen> {
                       controller: _remarksController,
                       maxLines: 3,
                       decoration: const InputDecoration(
-                        labelText: 'Teacher Qualitative Remarks / Portfolio Evidence',
-                        hintText: 'e.g. Explains calculation methods accurately to peers.',
+                        labelText:
+                            'Teacher Qualitative Remarks / Portfolio Evidence',
+                        hintText:
+                            'e.g. Explains calculation methods accurately to peers.',
                         alignLabelWithHint: true,
                       ),
                     ),
@@ -270,7 +307,10 @@ class _TeacherAssessmentScreenState extends State<TeacherAssessmentScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
                 icon: const Icon(Icons.check),
-                label: const Text('Save CBC Assessment', style: TextStyle(fontSize: 16)),
+                label: const Text(
+                  'Save CBC Assessment',
+                  style: TextStyle(fontSize: 16),
+                ),
                 onPressed: _saveAssessment,
               ),
             ),
@@ -281,7 +321,7 @@ class _TeacherAssessmentScreenState extends State<TeacherAssessmentScreen> {
   }
 
   Widget _buildRubricOption({
-    required CbcRating rating,
+    required CBCRating rating,
     required String title,
     required String subtitle,
     required Color color,
@@ -306,10 +346,7 @@ class _TeacherAssessmentScreenState extends State<TeacherAssessmentScreen> {
             Container(
               width: 32,
               height: 32,
-              decoration: BoxDecoration(
-                color: color,
-                shape: BoxShape.circle,
-              ),
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
               child: Center(
                 child: Text(
                   rating.code,
@@ -341,7 +378,7 @@ class _TeacherAssessmentScreenState extends State<TeacherAssessmentScreen> {
                 ],
               ),
             ),
-            Radio<CbcRating>(
+            Radio<CBCRating>(
               value: rating,
               groupValue: _selectedRating,
               activeColor: color,

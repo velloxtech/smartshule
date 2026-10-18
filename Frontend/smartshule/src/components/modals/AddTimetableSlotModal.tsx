@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
-import { sortAndGroupClasses, sortClassesInCbcSequence } from '../../utils/classCategorization';
+import { sortAndGroupClasses, sortClassesInCBCSequence } from '../../utils/classCategorization';
 
 interface AddTimetableSlotModalProps {
   isOpen: boolean;
@@ -162,13 +162,13 @@ export const AddTimetableSlotModal: React.FC<AddTimetableSlotModalProps> = ({
           }
         }
         if (cRes?.data && Array.isArray(cRes.data) && cRes.data.length > 0) {
-          const sorted = sortClassesInCbcSequence(cRes.data);
+          const sorted = sortClassesInCBCSequence(cRes.data);
           setClassesList(sorted);
           if (!selectedClassRoomId && !classRoomId) {
             setSelectedClassRoomId(sorted[0].id);
           }
         } else if (propClasses && propClasses.length > 0) {
-          const sorted = sortClassesInCbcSequence(propClasses);
+          const sorted = sortClassesInCBCSequence(propClasses);
           setClassesList(sorted);
           if (!selectedClassRoomId && !classRoomId) {
             setSelectedClassRoomId(sorted[0].id);
@@ -235,7 +235,7 @@ export const AddTimetableSlotModal: React.FC<AddTimetableSlotModalProps> = ({
           const confStream = conflict.streamId ? ` (Stream: ${conflict.streamId})` : '';
 
           setClashWarning(
-            `⚠️ CLASH DETECTED: ${teacherName} is already scheduled in ${confClassName}${confStream} on ${dayOfWeek}, Period ${periodNumber}. A teacher cannot have two classes simultaneously!`
+            `CLASH DETECTED: ${teacherName} is already scheduled in ${confClassName}${confStream} on ${dayOfWeek}, Period ${periodNumber}. A teacher cannot have two classes simultaneously!`
           );
           setIsClashBlocked(true);
         } else {

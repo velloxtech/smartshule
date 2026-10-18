@@ -51,17 +51,16 @@ class _MainShellState extends State<MainShell> {
     const activeColor = AppTheme.primaryMaroon;
 
     return Scaffold(
-      body: IndexedStack(
-        index: activeIndex,
-        children: pages,
-      ),
+      body: IndexedStack(index: activeIndex, children: pages),
       bottomNavigationBar: NavigationBar(
         selectedIndex: activeIndex,
         onDestinationSelected: (index) {
           setState(() => _currentIndex = index);
         },
         indicatorColor: activeColor.withValues(alpha: 0.15),
-        destinations: isTeacher ? _buildTeacherNavItems() : _buildParentNavItems(),
+        destinations: isTeacher
+            ? _buildTeacherNavItems()
+            : _buildParentNavItems(),
       ),
     );
   }
@@ -110,7 +109,10 @@ class _MainShellState extends State<MainShell> {
       ),
       NavigationDestination(
         icon: Icon(Icons.account_balance_wallet_outlined),
-        selectedIcon: Icon(Icons.account_balance_wallet, color: AppTheme.primaryMaroon),
+        selectedIcon: Icon(
+          Icons.account_balance_wallet,
+          color: AppTheme.primaryMaroon,
+        ),
         label: 'Fees & M-Pesa',
       ),
       NavigationDestination(

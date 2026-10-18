@@ -24,8 +24,8 @@ export const CompetencyAnalyticsView: React.FC = () => {
           params.academicYearId = ctxRes.data.currentYear.id;
         }
 
-        const cbcRes = await apiService.getCbcAnalytics(Object.keys(params).length ? params : undefined).catch(() => null);
-        if (cbcRes?.success) setAnalytics(cbcRes.data);
+        const CBCRes = await apiService.getCBCAnalytics(Object.keys(params).length ? params : undefined).catch(() => null);
+        if (CBCRes?.success) setAnalytics(CBCRes.data);
       } catch {
         // Fallback
       } finally {
@@ -35,11 +35,11 @@ export const CompetencyAnalyticsView: React.FC = () => {
     loadStats();
   }, []);
 
-  const total = analytics?.totalAssessments ?? dashboardData?.cbcProficiency?.totalAssessments ?? 0;
-  const ee = analytics?.distribution?.EXCEEDING_EXPECTATIONS ?? dashboardData?.cbcProficiency?.exceeding ?? 0;
-  const me = analytics?.distribution?.MEETING_EXPECTATIONS ?? dashboardData?.cbcProficiency?.meeting ?? 0;
-  const ae = analytics?.distribution?.APPROACHING_EXPECTATIONS ?? dashboardData?.cbcProficiency?.approaching ?? 0;
-  const be = analytics?.distribution?.BELOW_EXPECTATIONS ?? dashboardData?.cbcProficiency?.below ?? 0;
+  const total = analytics?.totalAssessments ?? dashboardData?.CBCProficiency?.totalAssessments ?? 0;
+  const ee = analytics?.distribution?.EXCEEDING_EXPECTATIONS ?? dashboardData?.CBCProficiency?.exceeding ?? 0;
+  const me = analytics?.distribution?.MEETING_EXPECTATIONS ?? dashboardData?.CBCProficiency?.meeting ?? 0;
+  const ae = analytics?.distribution?.APPROACHING_EXPECTATIONS ?? dashboardData?.CBCProficiency?.approaching ?? 0;
+  const be = analytics?.distribution?.BELOW_EXPECTATIONS ?? dashboardData?.CBCProficiency?.below ?? 0;
 
   const eePct = total > 0 ? Math.round((ee / total) * 100) : 0;
   const mePct = total > 0 ? Math.round((me / total) * 100) : 0;

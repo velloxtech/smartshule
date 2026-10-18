@@ -7,14 +7,14 @@ import {
   ExpenseStatus,
   IncomeSource
 } from '../../../core/domain/finance/Fee';
-import { CbcGradeLevel } from '../../../core/domain/user/Student';
+import { CBCGradeLevel } from '../../../core/domain/user/Student';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
 
 export const CreateFeeStructureSchema = z.object({
   schoolId: z.string().min(1),
   academicYearId: z.string().min(1),
   termId: z.string().optional().default('ALL'),
-  gradeLevel: z.nativeEnum(CbcGradeLevel),
+  gradeLevel: z.nativeEnum(CBCGradeLevel),
   title: z.string().min(1),
   dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   termPercentages: z.object({
@@ -55,7 +55,7 @@ export const GenerateInvoicesSchema = z.object({
   schoolId: z.string().min(1),
   academicYearId: z.string().min(1),
   termId: z.string().min(1),
-  gradeLevel: z.nativeEnum(CbcGradeLevel).optional(),
+  gradeLevel: z.nativeEnum(CBCGradeLevel).optional(),
   studentId: z.string().optional()
 });
 
@@ -63,7 +63,7 @@ export const SyncFeesSchema = z.object({
   schoolId: z.string().optional(),
   academicYearId: z.string().optional(),
   termId: z.string().optional(),
-  gradeLevel: z.nativeEnum(CbcGradeLevel).optional()
+  gradeLevel: z.nativeEnum(CBCGradeLevel).optional()
 }).passthrough();
 
 export const AddManualArrearSchema = z.object({

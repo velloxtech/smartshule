@@ -25,6 +25,9 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
   const [loading, setLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isForwardPaymentModalOpen, setIsForwardPaymentModalOpen] = useState(false);
+  const [activeCbcTab, setActiveCbcTab] = useState<'formative' | 'summative'>('formative');
+  const [selectedFormativeRating, setSelectedFormativeRating] = useState<string>('All');
+  const [selectedFormativeSubject, setSelectedFormativeSubject] = useState<string>('All');
 
   const loadPortalData = async () => {
     setLoading(true);
@@ -108,6 +111,30 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
       default:
         return <span className="px-2.5 py-0.5 rounded-full bg-secondary text-white font-bold text-xs">ME · Meeting Expectations</span>;
     }
+  };
+
+  const formativeAssessments: any[] = currentChild?.CBC?.formativeAssessments || [];
+  const summativeEvaluations: any[] = currentChild?.CBC?.latestEvaluations || [];
+
+  const formativesEeCount = formativeAssessments.filter((f: any) => f.performanceLevel === 'EE').length;
+  const formativesMeCount = formativeAssessments.filter((f: any) => f.performanceLevel === 'ME').length;
+  const formativesAeCount = formativeAssessments.filter((f: any) => f.performanceLevel === 'AE').length;
+  const formativesBeCount = formativeAssessments.filter((f: any) => f.performanceLevel === 'BE').length;
+
+  const filteredFormatives = formativeAssessments.filter((f: any) => {
+    const matchesRating = selectedFormativeRating === 'All' || f.performanceLevel === selectedFormativeRating;
+    const resolvedName = resolveLearningAreaName(f.learningAreaId, f.learningAreaName);
+    const matchesSubject = selectedFormativeSubject === 'All' || resolvedName === selectedFormativeSubject;
+    return matchesRating && matchesSubject;
+  });
+
+  const uniqueFormativeSubjects = Array.from(
+    new Set(formativeAssessments.map((f: any) => resolveLearningAreaName(f.learningAreaId, f.learningAreaName)))
+  ).sort();
+
+  const formatEnumLabel = (text?: string) => {
+    if (!text) return '';
+    return text.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
   };
 
   if (loading) {
@@ -225,7 +252,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                   feeBalance: currentChild.fee?.balance || 0,
                   totalFee: currentChild.fee?.totalBilled || 0,
                   attendanceRate: currentChild.attendance?.attendanceRate || 100,
-                  cbcRating: 'ME',
+                  CBCRating: 'ME',
                   status: currentChild.status || 'Active'
                 })}
                 className="inline-flex items-center gap-1.5 px-3 py-2 bg-surface-container hover:bg-surface-container-high text-primary rounded-lg text-xs font-bold border border-outline-variant/30 transition-all cursor-pointer"
@@ -296,7 +323,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                       <span> (including <strong className="text-rose-950 font-bold">KES {arrearsAmount.toLocaleString()}</strong> in prior fee arrears)</span>
                     ) : ''} for{' '}
                     <strong>{currentChild.firstName} {currentChild.lastName}</strong> is due on or before{' '}
-                    <strong className="text-slate-900">{formattedDueDate}</strong>. Pay via Lipa na M-Pesa Paybill <strong className="font-data-mono text-emerald-800">522533</strong> (Account: <strong className="font-data-mono text-[#7a1228]">8048859#{currentChild.admissionNumber || currentChild.firstName}</strong>) or KCB Bank (A/C: 1234567890), then forward your confirmation message.
+                    <strong className="text-slate-900">{formattedDueDate}</strong>. Pay via Lipa na M-Pesa Paybill <strong className="font-data-mono text-emerald-800">522533</strong> (Account: <strong className="font-data-mono text-[#7a1228]">8048859#{currentChild.firstName} {currentChild.lastName} ({resolveGradeName(currentChild.gradeLevel)})</strong> — kindly use child’s name &amp; grade, not admission number) or KCB Bank (A/C: 1234567890), then forward your confirmation message.
                   </p>
                 </div>
               </div>
@@ -340,7 +367,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
 
           {/* Quick Shortcuts for Parent Portal */}
           {onNavigateTab && (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <div
                 onClick={() => onNavigateTab('ediary')}
                 className="p-3.5 rounded-xl bg-surface-container-lowest border border-outline-variant/30 hover:border-primary/50 shadow-xs cursor-pointer flex items-center gap-3 transition-all group"
@@ -355,7 +382,20 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
               </div>
 
               <div
-                onClick={() => onNavigateTab('visual-cbc')}
+                onClick={() => onNavigateTab('formative-assessments')}
+                className="p-3.5 rounded-xl bg-surface-container-lowest border border-outline-variant/30 hover:border-primary/50 shadow-xs cursor-pointer flex items-center gap-3 transition-all group"
+              >
+                <div className="w-10 h-10 rounded-xl bg-emerald-700/10 text-emerald-800 flex items-center justify-center font-bold group-hover:scale-105 transition-transform">
+                  <span className="material-symbols-outlined text-xl">fact_check</span>
+                </div>
+                <div>
+                  <div className="font-bold text-xs text-on-surface">CBC Formative Progress</div>
+                  <div className="text-[11px] text-on-surface-variant">Classroom rubrics & CATs</div>
+                </div>
+              </div>
+
+              <div
+                onClick={() => onNavigateTab('visual-CBC')}
                 className="p-3.5 rounded-xl bg-surface-container-lowest border border-outline-variant/30 hover:border-primary/50 shadow-xs cursor-pointer flex items-center gap-3 transition-all group"
               >
                 <div className="w-10 h-10 rounded-xl bg-secondary/10 text-secondary flex items-center justify-center font-bold group-hover:scale-105 transition-transform">
@@ -398,13 +438,13 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
 
             <div className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs">
               <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
-                CBC Competencies Logged
+                CBC Formative Rubrics
               </span>
               <div className="text-2xl font-bold font-data-mono text-primary mt-1">
-                {currentChild.cbc?.assessmentsCount || 0}
+                {currentChild.CBC?.formativesCount ?? formativeAssessments.length ?? currentChild.CBC?.assessmentsCount ?? 0}
               </div>
               <span className="text-[11px] text-secondary font-semibold mt-1 block">
-                Continuous Teacher Rubrics
+                Continuous Classroom Evaluations
               </span>
             </div>
 
@@ -433,8 +473,8 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
               <div className="text-2xl font-bold font-data-mono text-secondary mt-1">
                 KES {(currentChild.fee?.totalPaid || 0).toLocaleString()}
               </div>
-              <span className="text-[11px] text-emerald-700 font-semibold mt-1 block truncate" title={`Official Paybill: 522533 · Acc: 8048859#${currentChild.admissionNumber || currentChild.firstName} (${resolveGradeName(currentChild.gradeLevel)})`}>
-                Official Paybill: 522533 · Acc: 8048859#{currentChild.admissionNumber || currentChild.firstName} · {resolveGradeName(currentChild.gradeLevel)}
+              <span className="text-[11px] text-emerald-700 font-semibold mt-1 block truncate" title={`Official Paybill: 522533 · Acc: 8048859#${currentChild.firstName} ${currentChild.lastName} (${resolveGradeName(currentChild.gradeLevel)})`}>
+                Official Paybill: 522533 · Acc: 8048859#{currentChild.firstName} {currentChild.lastName} · {resolveGradeName(currentChild.gradeLevel)} (Name &amp; Grade)
               </span>
             </div>
           </div>
@@ -489,7 +529,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                         <div className="flex justify-between text-on-surface-variant text-[11px]">
                           <span>Paid: KES {inv.amountPaid?.toLocaleString()}</span>
                           <span className={`font-semibold ${inv.balance > 0 ? 'text-error font-bold' : 'text-emerald-700'}`}>
-                            Bal: KES {inv.balance?.toLocaleString()} {inv.balance === 0 && '✓ Cleared'}
+                            Bal: KES {inv.balance?.toLocaleString()} {inv.balance === 0 && '(Cleared)'}
                           </span>
                         </div>
                       </div>
@@ -541,45 +581,252 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
               )}
             </div>
 
-            {/* Continuous Assessment Evaluations */}
+            {/* Continuous Assessment Evaluations & CBC Formative Progress */}
             <div className="bg-surface-container-lowest rounded-xl p-5 shadow-xs border border-outline-variant/30 space-y-4">
-              <div className="flex items-center justify-between border-b border-surface-container pb-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-surface-container pb-3 gap-2">
                 <div className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-secondary text-[20px]">grading</span>
                   <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider">CBC Assessment Portfolio</h3>
                 </div>
-                <span className="text-xs font-semibold text-secondary">KICD CBA Rubrics</span>
+                {onNavigateTab && (
+                  <button
+                    onClick={() => onNavigateTab('formative-assessments')}
+                    className="text-xs font-bold text-primary hover:underline flex items-center gap-1 self-start sm:self-auto cursor-pointer"
+                  >
+                    <span>Full Formative Rubric Records</span>
+                    <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                  </button>
+                )}
               </div>
 
-              {currentChild.cbc?.latestEvaluations?.length > 0 ? (
-                <div className="space-y-3">
-                  {currentChild.cbc.latestEvaluations.map((ev: any) => {
-                    const rawScore = ev.percentageScore ?? ev.overallScore ?? ev.score ?? (ev.strandScores?.[0]?.rawScore !== undefined ? ev.strandScores[0].rawScore : null);
-                    const scoreDisplay = rawScore !== null && rawScore !== undefined ? `${rawScore}%` : 'Competency Assessed';
-                    const areaName = resolveLearningAreaName(ev.learningAreaId, ev.learningAreaName || ev.name);
+              {/* Sub-tab navigation: Formative vs Summative */}
+              <div className="flex items-center gap-2 border-b border-outline-variant/20 pb-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveCbcTab('formative')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    activeCbcTab === 'formative'
+                      ? 'bg-primary text-white shadow-xs'
+                      : 'bg-surface-container text-on-surface-variant hover:text-on-surface'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-sm">fact_check</span>
+                  <span>Formative CATs & Rubrics</span>
+                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                    activeCbcTab === 'formative' ? 'bg-white/20 text-white' : 'bg-surface-container-high text-on-surface'
+                  }`}>
+                    {formativeAssessments.length}
+                  </span>
+                </button>
 
-                    return (
-                      <div key={ev.id} className="p-3 rounded-xl bg-surface-container-low border border-outline-variant/20 space-y-2 text-xs">
-                        <div className="flex items-center justify-between">
-                          <span className="font-bold text-primary">{areaName}</span>
-                          {getRatingBadge(ev.overallPerformanceLevel)}
-                        </div>
-                        <p className="text-xs text-on-surface italic bg-white/70 p-2.5 rounded-lg border-l-2 border-primary/40">
-                          "{ev.teacherRemarks || 'Demonstrates strong understanding and mastery of core strand competencies.'}"
-                        </p>
-                        <div className="flex items-center justify-between text-[11px] text-outline pt-1">
-                          <span>Evaluated: {ev.evaluationDate || 'Term 3 2026'}</span>
-                          <span className="font-bold text-secondary font-data-mono">
-                            {scoreDisplay}
-                          </span>
-                        </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveCbcTab('summative')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    activeCbcTab === 'summative'
+                      ? 'bg-primary text-white shadow-xs'
+                      : 'bg-surface-container text-on-surface-variant hover:text-on-surface'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-sm">military_tech</span>
+                  <span>Summative Terminal Exams</span>
+                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                    activeCbcTab === 'summative' ? 'bg-white/20 text-white' : 'bg-surface-container-high text-on-surface'
+                  }`}>
+                    {summativeEvaluations.length}
+                  </span>
+                </button>
+              </div>
+
+              {activeCbcTab === 'formative' ? (
+                <div className="space-y-3.5">
+                  {/* Formative Level Breakdown Pills */}
+                  {formativeAssessments.length > 0 && (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      <div className="p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-center">
+                        <span className="text-[10px] font-bold text-emerald-800 uppercase block">EE · Exceeding</span>
+                        <span className="text-base font-extrabold text-emerald-900 font-data-mono">{formativesEeCount}</span>
                       </div>
-                    );
-                  })}
+                      <div className="p-2 rounded-lg bg-blue-50 border border-blue-200 text-center">
+                        <span className="text-[10px] font-bold text-blue-800 uppercase block">ME · Meeting</span>
+                        <span className="text-base font-extrabold text-blue-900 font-data-mono">{formativesMeCount}</span>
+                      </div>
+                      <div className="p-2 rounded-lg bg-amber-50 border border-amber-200 text-center">
+                        <span className="text-[10px] font-bold text-amber-800 uppercase block">AE · Approaching</span>
+                        <span className="text-base font-extrabold text-amber-900 font-data-mono">{formativesAeCount}</span>
+                      </div>
+                      <div className="p-2 rounded-lg bg-rose-50 border border-rose-200 text-center">
+                        <span className="text-[10px] font-bold text-rose-800 uppercase block">BE · Below</span>
+                        <span className="text-base font-extrabold text-rose-900 font-data-mono">{formativesBeCount}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Formative Filters if items exist */}
+                  {formativeAssessments.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                      <select
+                        value={selectedFormativeSubject}
+                        onChange={(e) => setSelectedFormativeSubject(e.target.value)}
+                        className="bg-surface-container-low text-[11px] font-semibold py-1 px-2.5 rounded-lg border border-outline-variant/30 text-on-surface cursor-pointer"
+                      >
+                        <option value="All">All Subjects ({formativeAssessments.length})</option>
+                        {uniqueFormativeSubjects.map((s) => (
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
+                        ))}
+                      </select>
+
+                      <select
+                        value={selectedFormativeRating}
+                        onChange={(e) => setSelectedFormativeRating(e.target.value)}
+                        className="bg-surface-container-low text-[11px] font-semibold py-1 px-2.5 rounded-lg border border-outline-variant/30 text-on-surface cursor-pointer"
+                      >
+                        <option value="All">All Rubric Levels</option>
+                        <option value="EE">EE - Exceeding Expectations</option>
+                        <option value="ME">ME - Meeting Expectations</option>
+                        <option value="AE">AE - Approaching Expectations</option>
+                        <option value="BE">BE - Below Expectations</option>
+                      </select>
+                    </div>
+                  )}
+
+                  {/* List of Formatives */}
+                  {filteredFormatives.length > 0 ? (
+                    <div className="space-y-3">
+                      {filteredFormatives.map((fa: any) => {
+                        const areaName = resolveLearningAreaName(fa.learningAreaId, fa.learningAreaName);
+                        return (
+                          <div
+                            key={fa.id}
+                            className="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant/20 space-y-2 text-xs hover:border-primary/30 transition-colors"
+                          >
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-extrabold text-primary">{areaName}</span>
+                                {fa.subStrandCode && (
+                                  <span className="px-1.5 py-0.5 rounded bg-surface-container text-[10px] font-bold text-on-surface-variant font-data-mono">
+                                    {fa.subStrandCode}
+                                  </span>
+                                )}
+                              </div>
+                              {getRatingBadge(fa.performanceLevel)}
+                            </div>
+
+                            {/* Sub-strand title & Outcome Tested */}
+                            <div className="text-[11px] text-on-surface space-y-0.5">
+                              {fa.subStrandTitle && (
+                                <div>
+                                  <span className="text-on-surface-variant font-medium">Sub-strand:</span>{' '}
+                                  <strong className="text-on-surface">{fa.subStrandTitle}</strong>
+                                </div>
+                              )}
+                              {fa.specificOutcomeTested && (
+                                <div>
+                                  <span className="text-on-surface-variant font-medium">Outcome Tested:</span>{' '}
+                                  <span className="text-slate-800">{fa.specificOutcomeTested}</span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Targeted Competencies and Core Values Observed */}
+                            {((fa.targetedCompetencies && fa.targetedCompetencies.length > 0) ||
+                              (fa.valuesObserved && fa.valuesObserved.length > 0)) && (
+                              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                                {fa.targetedCompetencies?.map((c: string) => (
+                                  <span
+                                    key={c}
+                                    className="px-2 py-0.5 rounded-md bg-purple-50 text-purple-800 border border-purple-200 text-[10px] font-semibold"
+                                  >
+                                    Competency: {formatEnumLabel(c)}
+                                  </span>
+                                ))}
+                                {fa.valuesObserved?.map((v: string) => (
+                                  <span
+                                    key={v}
+                                    className="px-2 py-0.5 rounded-md bg-teal-50 text-teal-800 border border-teal-200 text-[10px] font-semibold"
+                                  >
+                                    Value: {formatEnumLabel(v)}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Teacher Evidence & Observation Notes */}
+                            {(fa.evidenceNotes || fa.teacherRemarks) && (
+                              <p className="text-xs text-on-surface italic bg-white/80 p-2.5 rounded-lg border-l-2 border-primary/50 shadow-2xs">
+                                "{fa.evidenceNotes || fa.teacherRemarks}"
+                              </p>
+                            )}
+
+                            {/* Footer metadata */}
+                            <div className="flex items-center justify-between text-[11px] text-outline pt-1 border-t border-outline-variant/15">
+                              <span>
+                                Date: <strong>{fa.assessmentDate || 'Term 3 2026'}</strong>
+                                {fa.assessmentMethod && (
+                                  <span> · Method: <strong className="text-secondary">{formatEnumLabel(fa.assessmentMethod)}</strong></span>
+                                )}
+                              </span>
+                              <span className="text-on-surface-variant">
+                                Evaluator: <strong className="text-on-surface">{fa.teacherName || 'Class Teacher'}</strong>
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="p-8 text-center text-xs text-on-surface-variant bg-surface-container-low/50 rounded-xl border border-dashed border-outline-variant/40">
+                      <span className="material-symbols-outlined text-3xl text-outline mb-1 block">fact_check</span>
+                      <strong className="block text-on-surface mb-0.5">No Formative Rubrics Found</strong>
+                      {formativeAssessments.length === 0
+                        ? 'No continuous classroom observation rubrics or CATs have been logged for this learner yet. Observations will display here as educators evaluate sub-strands.'
+                        : 'No formative rubrics match your active filter selection.'}
+                    </div>
+                  )}
                 </div>
               ) : (
-                <div className="p-8 text-center text-xs text-on-surface-variant">
-                  No formative or summative assessments logged for this term yet. Continuous assessments will appear here as teachers complete rubrics.
+                /* Summative Evaluations Tab */
+                <div className="space-y-3">
+                  {summativeEvaluations.length > 0 ? (
+                    summativeEvaluations.map((ev: any) => {
+                      const rawScore =
+                        ev.percentageScore ??
+                        ev.overallScore ??
+                        ev.score ??
+                        (ev.strandScores?.[0]?.rawScore !== undefined ? ev.strandScores[0].rawScore : null);
+                      const scoreDisplay = rawScore !== null && rawScore !== undefined ? `${rawScore}%` : 'Competency Assessed';
+                      const areaName = resolveLearningAreaName(ev.learningAreaId, ev.learningAreaName || ev.name);
+
+                      return (
+                        <div
+                          key={ev.id}
+                          className="p-3 rounded-xl bg-surface-container-low border border-outline-variant/20 space-y-2 text-xs"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-primary">{areaName}</span>
+                            {getRatingBadge(ev.overallPerformanceLevel)}
+                          </div>
+                          <p className="text-xs text-on-surface italic bg-white/70 p-2.5 rounded-lg border-l-2 border-primary/40">
+                            "{ev.teacherRemarks || 'Demonstrates strong understanding and mastery of core strand competencies.'}"
+                          </p>
+                          <div className="flex items-center justify-between text-[11px] text-outline pt-1">
+                            <span>Evaluated: {ev.evaluationDate || 'Term 3 2026'}</span>
+                            <span className="font-bold text-secondary font-data-mono">
+                              {scoreDisplay}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="p-8 text-center text-xs text-on-surface-variant bg-surface-container-low/50 rounded-xl border border-dashed border-outline-variant/40">
+                      <span className="material-symbols-outlined text-3xl text-outline mb-1 block">military_tech</span>
+                      <strong className="block text-on-surface mb-0.5">No Summative Terminal Exams Found</strong>
+                      Summative terminal examination marks for this term have not been posted yet.
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -704,7 +951,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
             feeBalance: currentChild.fee?.balance || 0,
             totalFee: currentChild.fee?.totalBilled || 0,
             attendanceRate: currentChild.attendance?.attendanceRate || 100,
-            cbcRating: 'ME',
+            CBCRating: 'ME',
             status: currentChild.status || 'Active',
             dateOfBirth: currentChild.dateOfBirth,
             medicalConditions: currentChild.medicalConditions,

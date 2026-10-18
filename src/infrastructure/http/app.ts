@@ -116,7 +116,7 @@ export function createExpressApp(container: AppContainer): Express {
           'Academic Structure & Levels (/api/v1/academics)',
           'Students & Guardians (/api/v1/students)',
           'Teachers & Streams (/api/v1/teachers)',
-          'CBC Assessments & Report Cards (/api/v1/cbc)',
+          'CBC Assessments & Report Cards (/api/v1/CBC)',
           'Schemes of Work & Lesson Plans (/api/v1/curriculum)',
           'Timetables & Conflict Checks (/api/v1/timetables)',
           'Class Registers & Attendance (/api/v1/attendance)',

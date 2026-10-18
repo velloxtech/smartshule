@@ -1,5 +1,5 @@
 import { Entity } from '../shared/Entity';
-import { CbcGradeLevel } from '../user/Student';
+import { CBCGradeLevel } from '../user/Student';
 
 export enum EducationLevel {
   PRE_PRIMARY = 'PRE_PRIMARY',     // PP1, PP2
@@ -11,7 +11,7 @@ export enum EducationLevel {
 
 export interface ClassRoomProps {
   name: string; // e.g. "Grade 7"
-  gradeLevel: CbcGradeLevel;
+  gradeLevel: CBCGradeLevel;
   educationLevel: EducationLevel;
   schoolId: string;
 }
@@ -25,7 +25,7 @@ export class ClassRoom extends Entity<ClassRoomProps> {
     return this._props.name;
   }
 
-  public get gradeLevel(): CbcGradeLevel {
+  public get gradeLevel(): CBCGradeLevel {
     return this._props.gradeLevel;
   }
 
@@ -99,7 +99,7 @@ export class Stream extends Entity<StreamProps> {
 export interface LearningAreaProps {
   name: string; // e.g. "Integrated Science", "Mathematics", "Kiswahili"
   code: string; // e.g. "SCIE7", "MATH7"
-  gradeLevel: CbcGradeLevel;
+  gradeLevel: CBCGradeLevel;
   educationLevel: EducationLevel;
   isElective: boolean;
   schoolId: string;
@@ -119,7 +119,7 @@ export class LearningArea extends Entity<LearningAreaProps> {
     return this._props.code;
   }
 
-  public get gradeLevel(): CbcGradeLevel {
+  public get gradeLevel(): CBCGradeLevel {
     return this._props.gradeLevel;
   }
 

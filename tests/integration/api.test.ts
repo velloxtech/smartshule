@@ -161,9 +161,9 @@ describe('SmartShule Hexagonal API Integration Tests', () => {
   });
 
   describe('6. CBC Assessments & Report Cards', () => {
-    it('POST /api/v1/cbc/formative records continuous assessment', async () => {
+    it('POST /api/v1/CBC/formative records continuous assessment', async () => {
       const res = await request(app)
-        .post('/api/v1/cbc/formative')
+        .post('/api/v1/CBC/formative')
         .set('Authorization', `Bearer ${teacherToken}`)
         .send({
           studentId: 'student-001',
@@ -186,9 +186,9 @@ describe('SmartShule Hexagonal API Integration Tests', () => {
       expect(res.body.data.performanceScore).toBe(3);
     });
 
-    it('POST /api/v1/cbc/summative records summative assessment with strand breakdown', async () => {
+    it('POST /api/v1/CBC/summative records summative assessment with strand breakdown', async () => {
       const res = await request(app)
-        .post('/api/v1/cbc/summative')
+        .post('/api/v1/CBC/summative')
         .set('Authorization', `Bearer ${teacherToken}`)
         .send({
           studentId: 'student-001',
@@ -214,9 +214,9 @@ describe('SmartShule Hexagonal API Integration Tests', () => {
       expect(res.body.data.strandScores.length).toBe(1);
     });
 
-    it('POST /api/v1/cbc/summative records overall assessment without strand breakdown (optional strands)', async () => {
+    it('POST /api/v1/CBC/summative records overall assessment without strand breakdown (optional strands)', async () => {
       const res = await request(app)
-        .post('/api/v1/cbc/summative')
+        .post('/api/v1/CBC/summative')
         .set('Authorization', `Bearer ${teacherToken}`)
         .send({
           studentId: 'student-001',
@@ -231,9 +231,9 @@ describe('SmartShule Hexagonal API Integration Tests', () => {
       expect(res.body.data.strandScores).toEqual([]);
     });
 
-    it('POST /api/v1/cbc/report-cards/generate compiles CBC Report Card', async () => {
+    it('POST /api/v1/CBC/report-cards/generate compiles CBC Report Card', async () => {
       const res = await request(app)
-        .post('/api/v1/cbc/report-cards/generate')
+        .post('/api/v1/CBC/report-cards/generate')
         .set('Authorization', `Bearer ${teacherToken}`)
         .send({
           studentId: 'student-001',
@@ -252,9 +252,9 @@ describe('SmartShule Hexagonal API Integration Tests', () => {
       expect(res.body.data.valueAssessments.length).toBe(7);
     });
 
-    it('GET /api/v1/cbc/analytics calculates proficiency distribution', async () => {
+    it('GET /api/v1/CBC/analytics calculates proficiency distribution', async () => {
       const res = await request(app)
-        .get('/api/v1/cbc/analytics?termId=term-2026-1&academicYearId=year-2026')
+        .get('/api/v1/CBC/analytics?termId=term-2026-1&academicYearId=year-2026')
         .set('Authorization', `Bearer ${teacherToken}`);
 
       expect(res.status).toBe(200);

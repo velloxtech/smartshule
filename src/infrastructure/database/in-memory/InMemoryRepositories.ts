@@ -3,7 +3,7 @@ import { IStudentRepository, StudentFilterCriteria } from '../../../core/ports/r
 import { ITeacherRepository, IGuardianRepository } from '../../../core/ports/repositories/ITeacherRepository';
 import { IAcademicRepository } from '../../../core/ports/repositories/IAcademicRepository';
 import {
-  ICbcAssessmentRepository,
+  ICBCAssessmentRepository,
   FormativeFilterCriteria,
   SummativeFilterCriteria
 } from '../../../core/ports/repositories/ICbcAssessmentRepository';
@@ -40,7 +40,7 @@ import {
 } from '../../../core/ports/repositories/IDeletedStudentRepository';
 
 import { User } from '../../../core/domain/user/User';
-import { Student, CbcGradeLevel } from '../../../core/domain/user/Student';
+import { Student, CBCGradeLevel } from '../../../core/domain/user/Student';
 import { DeletedStudent } from '../../../core/domain/user/DeletedStudent';
 import { Teacher } from '../../../core/domain/user/Teacher';
 import { Guardian } from '../../../core/domain/user/Guardian';
@@ -52,7 +52,7 @@ import {
   SubStrand,
   FormativeAssessment,
   SummativeAssessment,
-  CbcReportCard
+  CBCReportCard
 } from '../../../core/domain/cbc/CbcAssessment';
 import { SchemeOfWork } from '../../../core/domain/curriculum-plan/SchemeOfWork';
 import { LessonPlan } from '../../../core/domain/curriculum-plan/LessonPlan';
@@ -357,7 +357,7 @@ export class InMemoryAcademicRepository implements IAcademicRepository {
     return this.learningAreas.get(id) || null;
   }
 
-  public async findAllLearningAreas(filters?: { gradeLevel?: CbcGradeLevel; schoolId?: string }): Promise<LearningArea[]> {
+  public async findAllLearningAreas(filters?: { gradeLevel?: CBCGradeLevel; schoolId?: string }): Promise<LearningArea[]> {
     let result = Array.from(this.learningAreas.values());
     if (filters?.schoolId) result = result.filter(a => a.schoolId === filters.schoolId);
     if (filters?.gradeLevel) result = result.filter(a => a.gradeLevel === filters.gradeLevel);
@@ -384,19 +384,19 @@ export class InMemoryAcademicRepository implements IAcademicRepository {
   }
 }
 
-export class InMemoryCbcAssessmentRepository implements ICbcAssessmentRepository {
+export class InMemoryCBCAssessmentRepository implements ICBCAssessmentRepository {
   private strands: Map<string, Strand> = new Map();
   private subStrands: Map<string, SubStrand> = new Map();
   private formatives: Map<string, FormativeAssessment> = new Map();
   private summatives: Map<string, SummativeAssessment> = new Map();
-  private reportCards: Map<string, CbcReportCard> = new Map();
+  private reportCards: Map<string, CBCReportCard> = new Map();
 
   // Strands
   public async findStrandById(id: string): Promise<Strand | null> {
     return this.strands.get(id) || null;
   }
 
-  public async findStrandsByLearningArea(learningAreaId: string, gradeLevel?: CbcGradeLevel): Promise<Strand[]> {
+  public async findStrandsByLearningArea(learningAreaId: string, gradeLevel?: CBCGradeLevel): Promise<Strand[]> {
     return Array.from(this.strands.values()).filter(
       s => s.learningAreaId === learningAreaId && (!gradeLevel || s.gradeLevel === gradeLevel)
     );
@@ -500,11 +500,11 @@ export class InMemoryCbcAssessmentRepository implements ICbcAssessmentRepository
   }
 
   // Report Cards
-  public async findReportCardById(id: string): Promise<CbcReportCard | null> {
+  public async findReportCardById(id: string): Promise<CBCReportCard | null> {
     return this.reportCards.get(id) || null;
   }
 
-  public async findReportCard(studentId: string, termId: string, academicYearId: string): Promise<CbcReportCard | null> {
+  public async findReportCard(studentId: string, termId: string, academicYearId: string): Promise<CBCReportCard | null> {
     const termCandidates = [termId];
     if (termId.includes('-t')) termCandidates.push(termId.replace('-t', '-'));
     else if (/-\d+$/.test(termId)) termCandidates.push(termId.replace(/-(\d+)$/, '-t$1'));
@@ -530,11 +530,11 @@ export class InMemoryCbcAssessmentRepository implements ICbcAssessmentRepository
     return null;
   }
 
-  public async findReportCardsByStudent(studentId: string): Promise<CbcReportCard[]> {
+  public async findReportCardsByStudent(studentId: string): Promise<CBCReportCard[]> {
     return Array.from(this.reportCards.values()).filter(rc => rc.studentId === studentId);
   }
 
-  public async findReportCardsByTerm(termId: string, streamId?: string): Promise<CbcReportCard[]> {
+  public async findReportCardsByTerm(termId: string, streamId?: string): Promise<CBCReportCard[]> {
     const termCandidates = [termId];
     if (termId.includes('-t')) termCandidates.push(termId.replace('-t', '-'));
     else if (/-\d+$/.test(termId)) termCandidates.push(termId.replace(/-(\d+)$/, '-t$1'));
@@ -545,11 +545,11 @@ export class InMemoryCbcAssessmentRepository implements ICbcAssessmentRepository
     return result;
   }
 
-  public async saveReportCard(reportCard: CbcReportCard): Promise<void> {
+  public async saveReportCard(reportCard: CBCReportCard): Promise<void> {
     this.reportCards.set(reportCard.id, reportCard);
   }
 
-  public async updateReportCard(reportCard: CbcReportCard): Promise<void> {
+  public async updateReportCard(reportCard: CBCReportCard): Promise<void> {
     this.reportCards.set(reportCard.id, reportCard);
   }
 
@@ -749,7 +749,7 @@ export class InMemoryFeeRepository implements IFeeRepository {
     return this.feeStructures.get(id) || null;
   }
 
-  public async findFeeStructure(gradeLevel: CbcGradeLevel, termId: string, academicYearId: string): Promise<FeeStructure | null> {
+  public async findFeeStructure(gradeLevel: CBCGradeLevel, termId: string, academicYearId: string): Promise<FeeStructure | null> {
     let exactMatch: FeeStructure | null = null;
     let annualMatch: FeeStructure | null = null;
     let yearMatch: FeeStructure | null = null;

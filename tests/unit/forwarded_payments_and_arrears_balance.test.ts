@@ -1,5 +1,5 @@
 import { InvoiceStatus, PaymentMethod, PaymentStatus, StudentInvoice } from '../../src/core/domain/finance/Fee';
-import { CbcGradeLevel, Student, StudentGender, StudentStatus } from '../../src/core/domain/user/Student';
+import { CBCGradeLevel, Student, StudentGender, StudentStatus } from '../../src/core/domain/user/Student';
 import { FeeUseCases } from '../../src/application/finance/FeeUseCases';
 import {
   InMemoryFeeRepository,
@@ -63,7 +63,7 @@ describe('Parent Forwarded Payment Verification and Arrears Persistence Tests', 
         lastName: 'Achieng',
         dateOfBirth: '2016-08-15',
         gender: StudentGender.FEMALE,
-        gradeLevel: CbcGradeLevel.GRADE_4,
+        gradeLevel: CBCGradeLevel.GRADE_4,
         streamId: 'stream-4b',
         schoolId,
         academicYearId,

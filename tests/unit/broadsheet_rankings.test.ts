@@ -1,19 +1,19 @@
 import { BroadsheetUseCases } from '../../src/application/academics/BroadsheetUseCases';
 import { IAcademicRepository } from '../../src/core/ports/repositories/IAcademicRepository';
 import { IStudentRepository } from '../../src/core/ports/repositories/IStudentRepository';
-import { ICbcAssessmentRepository } from '../../src/core/ports/repositories/ICbcAssessmentRepository';
-import { Student, StudentGender, CbcGradeLevel, StudentStatus } from '../../src/core/domain/user/Student';
+import { ICBCAssessmentRepository } from '../../src/core/ports/repositories/ICbcAssessmentRepository';
+import { Student, StudentGender, CBCGradeLevel, StudentStatus } from '../../src/core/domain/user/Student';
 
 describe('Broadsheet Comparative Analytics Unit Tests', () => {
   let academicRepo: jest.Mocked<IAcademicRepository>;
   let studentRepo: jest.Mocked<IStudentRepository>;
-  let cbcRepo: jest.Mocked<ICbcAssessmentRepository>;
+  let CBCRepo: jest.Mocked<ICBCAssessmentRepository>;
   let broadsheetUseCases: BroadsheetUseCases;
 
   const mockClass: any = {
     id: 'class-g4',
     name: 'Grade 4',
-    gradeLevel: CbcGradeLevel.GRADE_4,
+    gradeLevel: CBCGradeLevel.GRADE_4,
     educationLevel: 'PRIMARY',
     schoolId: 'sch-1'
   };
@@ -33,9 +33,9 @@ describe('Broadsheet Comparative Analytics Unit Tests', () => {
   };
 
   const mockLearningAreas: any[] = [
-    { id: 'math', name: 'Mathematics', code: 'MATH', gradeLevel: CbcGradeLevel.GRADE_4 },
-    { id: 'eng', name: 'English Language', code: 'ENG', gradeLevel: CbcGradeLevel.GRADE_4 },
-    { id: 'kisw', name: 'Kiswahili Language', code: 'KISW', gradeLevel: CbcGradeLevel.GRADE_4 }
+    { id: 'math', name: 'Mathematics', code: 'MATH', gradeLevel: CBCGradeLevel.GRADE_4 },
+    { id: 'eng', name: 'English Language', code: 'ENG', gradeLevel: CBCGradeLevel.GRADE_4 },
+    { id: 'kisw', name: 'Kiswahili Language', code: 'KISW', gradeLevel: CBCGradeLevel.GRADE_4 }
   ];
 
   const studentEast1 = Student.create({
@@ -44,7 +44,7 @@ describe('Broadsheet Comparative Analytics Unit Tests', () => {
     lastName: 'Kamau',
     dateOfBirth: '2014-01-01',
     gender: StudentGender.FEMALE,
-    gradeLevel: CbcGradeLevel.GRADE_4,
+    gradeLevel: CBCGradeLevel.GRADE_4,
     streamId: 'stream-east',
     schoolId: 'sch-1',
     academicYearId: 'year-2026',
@@ -58,7 +58,7 @@ describe('Broadsheet Comparative Analytics Unit Tests', () => {
     lastName: 'Mwangi',
     dateOfBirth: '2014-02-01',
     gender: StudentGender.MALE,
-    gradeLevel: CbcGradeLevel.GRADE_4,
+    gradeLevel: CBCGradeLevel.GRADE_4,
     streamId: 'stream-east',
     schoolId: 'sch-1',
     academicYearId: 'year-2026',
@@ -72,7 +72,7 @@ describe('Broadsheet Comparative Analytics Unit Tests', () => {
     lastName: 'Otieno',
     dateOfBirth: '2014-03-01',
     gender: StudentGender.MALE,
-    gradeLevel: CbcGradeLevel.GRADE_4,
+    gradeLevel: CBCGradeLevel.GRADE_4,
     streamId: 'stream-west',
     schoolId: 'sch-1',
     academicYearId: 'year-2026',
@@ -120,12 +120,12 @@ describe('Broadsheet Comparative Analytics Unit Tests', () => {
       { studentId: 's-w1', learningAreaId: 'kisw', overallPerformanceLevel: 'ME', strandScores: [{ rawScore: 74 }] },
     ];
 
-    cbcRepo = {
+    CBCRepo = {
       findSummatives: jest.fn().mockResolvedValue(mockAssessments),
       findReportCardsByTerm: jest.fn().mockResolvedValue([]),
     } as any;
 
-    broadsheetUseCases = new BroadsheetUseCases(academicRepo, studentRepo, cbcRepo);
+    broadsheetUseCases = new BroadsheetUseCases(academicRepo, studentRepo, CBCRepo);
   });
 
   it('should return broadsheet with class rankings, best class per subject, and best student per subject', async () => {

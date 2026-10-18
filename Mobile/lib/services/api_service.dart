@@ -24,10 +24,10 @@ class ApiService {
   }
 
   Map<String, String> get _headers => {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        if (authToken != null) 'Authorization': 'Bearer $authToken',
-      };
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    if (authToken != null) 'Authorization': 'Bearer $authToken',
+  };
 
   // ---------------------------------------------------------------------------
   // AUTHENTICATION
@@ -41,10 +41,7 @@ class ApiService {
           .post(
             Uri.parse('$baseUrl/auth/login'),
             headers: _headers,
-            body: jsonEncode({
-              'identifier': identifier,
-              'password': password,
-            }),
+            body: jsonEncode({'identifier': identifier, 'password': password}),
           )
           .timeout(const Duration(seconds: 8));
 
@@ -59,7 +56,8 @@ class ApiService {
       // Fallback for offline / demo mode
     }
 
-    final isTeacher = identifier.toLowerCase().contains('teacher') ||
+    final isTeacher =
+        identifier.toLowerCase().contains('teacher') ||
         identifier.toLowerCase().contains('educator') ||
         identifier.startsWith('t_');
 
@@ -82,11 +80,16 @@ class ApiService {
   // ---------------------------------------------------------------------------
   // STUDENTS / LEARNERS
   // ---------------------------------------------------------------------------
-  Future<List<StudentModel>> getLearners({String? grade, String? stream}) async {
+  Future<List<StudentModel>> getLearners({
+    String? grade,
+    String? stream,
+  }) async {
     try {
       final res = await http
           .get(
-            Uri.parse('$baseUrl/students?grade=${grade ?? "Grade 3"}&stream=${stream ?? "East"}'),
+            Uri.parse(
+              '$baseUrl/students?grade=${grade ?? "Grade 3"}&stream=${stream ?? "East"}',
+            ),
             headers: _headers,
           )
           .timeout(const Duration(seconds: 6));
@@ -189,11 +192,11 @@ class ApiService {
   // ---------------------------------------------------------------------------
   // CBC ASSESSMENTS
   // ---------------------------------------------------------------------------
-  Future<bool> recordAssessment(CbcAssessmentModel assessment) async {
+  Future<bool> recordAssessment(CBCAssessmentModel assessment) async {
     try {
       final res = await http
           .post(
-            Uri.parse('$baseUrl/cbc/formative'),
+            Uri.parse('$baseUrl/CBC/formative'),
             headers: _headers,
             body: jsonEncode({
               'studentId': assessment.learnerId,
@@ -212,11 +215,13 @@ class ApiService {
     }
   }
 
-  Future<List<CbcAssessmentModel>> getAssessmentsForLearner(String learnerId) async {
+  Future<List<CBCAssessmentModel>> getAssessmentsForLearner(
+    String learnerId,
+  ) async {
     try {
       final res = await http
           .get(
-            Uri.parse('$baseUrl/cbc/formative?studentId=$learnerId'),
+            Uri.parse('$baseUrl/CBC/formative?studentId=$learnerId'),
             headers: _headers,
           )
           .timeout(const Duration(seconds: 6));
@@ -225,53 +230,54 @@ class ApiService {
         final data = jsonDecode(res.body);
         final list = (data['data'] as List?) ?? [];
         if (list.isNotEmpty) {
-          return list.map((item) => CbcAssessmentModel.fromJson(item)).toList();
+          return list.map((item) => CBCAssessmentModel.fromJson(item)).toList();
         }
       }
     } catch (_) {}
 
     return [
-      CbcAssessmentModel(
+      CBCAssessmentModel(
         id: 'asm_01',
         learnerId: learnerId,
         learnerName: 'Liam Kiprono',
         learningArea: 'Mathematics Activities',
         strand: 'Numbers',
         subStrand: 'Addition & Subtraction within 100',
-        rating: CbcRating.exceedingExpectations,
-        remarks: 'Demonstrates outstanding calculation fluency and peer tutoring.',
+        rating: CBCRating.exceedingExpectations,
+        remarks:
+            'Demonstrates outstanding calculation fluency and peer tutoring.',
         date: DateTime.now().subtract(const Duration(days: 2)),
       ),
-      CbcAssessmentModel(
+      CBCAssessmentModel(
         id: 'asm_02',
         learnerId: learnerId,
         learnerName: 'Liam Kiprono',
         learningArea: 'English Language Activities',
         strand: 'Reading & Comprehension',
         subStrand: 'Independent Reading',
-        rating: CbcRating.meetingExpectations,
+        rating: CBCRating.meetingExpectations,
         remarks: 'Reads with clear expression and good comprehension.',
         date: DateTime.now().subtract(const Duration(days: 4)),
       ),
-      CbcAssessmentModel(
+      CBCAssessmentModel(
         id: 'asm_03',
         learnerId: learnerId,
         learnerName: 'Liam Kiprono',
         learningArea: 'Environmental Activities',
         strand: 'Our Weather & Soil',
         subStrand: 'Soil Conservation',
-        rating: CbcRating.meetingExpectations,
+        rating: CBCRating.meetingExpectations,
         remarks: 'Active participant in outdoor soil texture observations.',
         date: DateTime.now().subtract(const Duration(days: 6)),
       ),
-      CbcAssessmentModel(
+      CBCAssessmentModel(
         id: 'asm_04',
         learnerId: learnerId,
         learnerName: 'Liam Kiprono',
         learningArea: 'Creative Arts & Sports',
         strand: 'Music & Movement',
         subStrand: 'Rhythm and Percussion',
-        rating: CbcRating.exceedingExpectations,
+        rating: CBCRating.exceedingExpectations,
         remarks: 'Exceptional sense of tempo and drum synchronization.',
         date: DateTime.now().subtract(const Duration(days: 8)),
       ),
@@ -284,10 +290,7 @@ class ApiService {
   Future<List<AnnouncementModel>> getAnnouncements() async {
     try {
       final res = await http
-          .get(
-            Uri.parse('$baseUrl/announcements'),
-            headers: _headers,
-          )
+          .get(Uri.parse('$baseUrl/announcements'), headers: _headers)
           .timeout(const Duration(seconds: 6));
 
       if (res.statusCode == 200) {
@@ -389,7 +392,7 @@ class ApiService {
           method: 'M-PESA',
           transactionCode: 'QKC1190TY2',
         ),
-      ]
+      ],
     };
   }
 }

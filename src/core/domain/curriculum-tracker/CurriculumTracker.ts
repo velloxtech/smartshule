@@ -2,6 +2,45 @@ import { Entity } from '../shared/Entity';
 
 export type WeekCoverageStatus = 'PENDING' | 'IN_PROGRESS' | 'COVERED' | 'DELAYED';
 
+export type DailyLessonStatus = 'TAUGHT' | 'PARTIALLY_TAUGHT' | 'POSTPONED' | 'REMEDIAL';
+export type LearnerComprehension = 'EXCELLENT' | 'GOOD' | 'AVERAGE' | 'NEEDS_REMEDIATION';
+
+export interface DailyReflection {
+  comprehensionLevel: LearnerComprehension;
+  whatWentWell: string;
+  challengesFaced?: string;
+  remedialPlan?: string;
+  nextSteps?: string;
+}
+
+export interface AdministrativeEndorsement {
+  endorsedByUserId: string;
+  endorsedByName: string;
+  endorsedByRole: string; // 'HEAD_TEACHER' | 'DEPUTY_HEAD_TEACHER' | 'SUPER_ADMIN' | 'ADMIN' | 'SCHOOL_ADMIN'
+  remarks: string;
+  endorsedAt: string;
+}
+
+export interface CurriculumTrackerDailyLog {
+  id: string;
+  date: string; // YYYY-MM-DD
+  dayOfWeek?: string;
+  weekNumber?: number;
+  lessonPeriod?: string;
+  strand: string;
+  subStrand: string;
+  learningOutcomesTaught: string;
+  activitiesConducted?: string;
+  resourcesUsed?: string;
+  status: DailyLessonStatus;
+  reflection: DailyReflection;
+  endorsement?: AdministrativeEndorsement;
+  loggedByTeacherId: string;
+  loggedByTeacherName: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface CurriculumTrackerWeekItem {
   id: string;
   weekNumber: number; // 1, 2, ... totalWeeks
@@ -36,6 +75,7 @@ export interface CurriculumTrackerProps {
   term: string; // e.g. "Term 1", "Term 2", "Term 3"
   totalWeeks: number; // e.g. 12
   items: CurriculumTrackerWeekItem[];
+  dailyLogs?: CurriculumTrackerDailyLog[];
   status: 'ACTIVE' | 'COMPLETED' | 'ARCHIVED';
 }
 
@@ -47,6 +87,9 @@ export interface CurriculumTrackerStats {
   delayedWeeks: number;
   completionPercentage: number;
   commentsCount: number;
+  totalDailyLogs: number;
+  totalReflections: number;
+  totalEndorsements: number;
 }
 
 export class CurriculumTracker extends Entity<CurriculumTrackerProps> {
@@ -61,6 +104,7 @@ export class CurriculumTracker extends Entity<CurriculumTrackerProps> {
         ...props,
         totalWeeks: props.totalWeeks || 12,
         items: props.items || [],
+        dailyLogs: props.dailyLogs || [],
         status: props.status || 'ACTIVE'
       },
       id,
@@ -121,6 +165,10 @@ export class CurriculumTracker extends Entity<CurriculumTrackerProps> {
     return this._props.items;
   }
 
+  public get dailyLogs(): CurriculumTrackerDailyLog[] {
+    return this._props.dailyLogs || [];
+  }
+
   public get status(): 'ACTIVE' | 'COMPLETED' | 'ARCHIVED' {
     return this._props.status;
   }
@@ -156,6 +204,86 @@ export class CurriculumTracker extends Entity<CurriculumTrackerProps> {
       this._props.items.sort((a, b) => a.weekNumber - b.weekNumber);
     }
     this.checkAndUpdateOverallStatus();
+    this.touch();
+  }
+
+  public addDailyLog(
+    log: Omit<CurriculumTrackerDailyLog, 'id' | 'createdAt' | 'updatedAt'> & { id?: string }
+  ): CurriculumTrackerDailyLog {
+    if (!this._props.dailyLogs) {
+      this._props.dailyLogs = [];
+    }
+
+    const nowIso = new Date().toISOString();
+    const newLog: CurriculumTrackerDailyLog = {
+      ...log,
+      id: log.id || `daily-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+      createdAt: nowIso,
+      updatedAt: nowIso
+    };
+
+    this._props.dailyLogs.unshift(newLog); // latest first
+    this.touch();
+    return newLog;
+  }
+
+  public updateDailyLog(
+    logId: string,
+    updates: Partial<CurriculumTrackerDailyLog>
+  ): CurriculumTrackerDailyLog {
+    if (!this._props.dailyLogs) {
+      this._props.dailyLogs = [];
+    }
+
+    const idx = this._props.dailyLogs.findIndex(l => l.id === logId);
+    if (idx === -1) {
+      throw new Error(`Daily log ${logId} not found`);
+    }
+
+    const existing = this._props.dailyLogs[idx];
+    const updated: CurriculumTrackerDailyLog = {
+      ...existing,
+      ...updates,
+      id: existing.id,
+      createdAt: existing.createdAt,
+      updatedAt: new Date().toISOString()
+    };
+
+    this._props.dailyLogs[idx] = updated;
+    this.touch();
+    return updated;
+  }
+
+  public endorseDailyLog(
+    logId: string,
+    endorsement: AdministrativeEndorsement
+  ): CurriculumTrackerDailyLog {
+    if (!this._props.dailyLogs) {
+      this._props.dailyLogs = [];
+    }
+
+    const idx = this._props.dailyLogs.findIndex(l => l.id === logId);
+    if (idx === -1) {
+      throw new Error(`Daily log ${logId} not found`);
+    }
+
+    const existing = this._props.dailyLogs[idx];
+    const updated: CurriculumTrackerDailyLog = {
+      ...existing,
+      endorsement,
+      updatedAt: new Date().toISOString()
+    };
+
+    this._props.dailyLogs[idx] = updated;
+    this.touch();
+    return updated;
+  }
+
+  public removeDailyLog(logId: string): void {
+    if (!this._props.dailyLogs) {
+      return;
+    }
+    this._props.dailyLogs = this._props.dailyLogs.filter(l => l.id !== logId);
     this.touch();
   }
 
@@ -229,6 +357,13 @@ export class CurriculumTracker extends Entity<CurriculumTrackerProps> {
     const pending = total - (covered + inProgress + delayed);
     const commentsCount = this._props.items.filter(i => !!i.teacherComment && i.teacherComment.trim().length > 0).length;
 
+    const dailyLogs = this._props.dailyLogs || [];
+    const totalDailyLogs = dailyLogs.length;
+    const totalReflections = dailyLogs.filter(
+      l => !!l.reflection && !!l.reflection.whatWentWell && l.reflection.whatWentWell.trim().length > 0
+    ).length;
+    const totalEndorsements = dailyLogs.filter(l => !!l.endorsement).length;
+
     return {
       totalWeeks: total,
       coveredWeeks: covered,
@@ -236,7 +371,10 @@ export class CurriculumTracker extends Entity<CurriculumTrackerProps> {
       pendingWeeks: pending > 0 ? pending : 0,
       delayedWeeks: delayed,
       completionPercentage: total > 0 ? Math.round((covered / total) * 100) : 0,
-      commentsCount
+      commentsCount,
+      totalDailyLogs,
+      totalReflections,
+      totalEndorsements
     };
   }
 
@@ -265,6 +403,7 @@ export class CurriculumTracker extends Entity<CurriculumTrackerProps> {
       term: this.term,
       totalWeeks: this.totalWeeks,
       items: this.items,
+      dailyLogs: this.dailyLogs,
       status: this.status,
       stats: this.getStats(),
       createdAt: this.createdAt,

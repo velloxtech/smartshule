@@ -3,14 +3,14 @@ import { IGuardianRepository } from '../../core/ports/repositories/ITeacherRepos
 import { IUserRepository } from '../../core/ports/repositories/IUserRepository';
 import { IAcademicRepository } from '../../core/ports/repositories/IAcademicRepository';
 import { IFeeRepository } from '../../core/ports/repositories/IFeeRepository';
-import { ICbcAssessmentRepository } from '../../core/ports/repositories/ICbcAssessmentRepository';
+import { ICBCAssessmentRepository } from '../../core/ports/repositories/ICbcAssessmentRepository';
 import { IAttendanceRepository } from '../../core/ports/repositories/ITimetableRepository';
 import { ILunchFeeRepository } from '../../core/ports/repositories/ILunchFeeRepository';
 import { IDeletedStudentRepository, DeletedStudentFilterCriteria } from '../../core/ports/repositories/IDeletedStudentRepository';
 import { IComplaintRepository } from '../../core/ports/repositories/IComplaintRepository';
 import { IEDiaryRepository } from '../../core/ports/repositories/IEDiaryRepository';
 import { IMediaRepository } from '../../core/ports/repositories/IMediaRepository';
-import { Student, StudentGender, CbcGradeLevel, StudentStatus } from '../../core/domain/user/Student';
+import { Student, StudentGender, CBCGradeLevel, StudentStatus } from '../../core/domain/user/Student';
 import { DeletedStudent, DeletedStudentLinkedData, ClearedPendingWork } from '../../core/domain/user/DeletedStudent';
 import { Guardian, GuardianRelationship } from '../../core/domain/user/Guardian';
 import { User, UserRole, UserStatus, isBillingAuthorizedRole } from '../../core/domain/user/User';
@@ -19,26 +19,26 @@ import { IPasswordHasher } from '../../core/ports/services/IExternalServices';
 import { StudentInvoice, InvoiceStatus, FeeStructure, FeeItem, Payment, PaymentStatus } from '../../core/domain/finance/Fee';
 import { ClassRoom, EducationLevel } from '../../core/domain/academic/ClassRoom';
 
-export const CBC_GRADE_PROGRESSION: Record<CbcGradeLevel, CbcGradeLevel | 'GRADUATED'> = {
-  [CbcGradeLevel.PLAYGROUP]: CbcGradeLevel.PP1,
-  [CbcGradeLevel.PP1]: CbcGradeLevel.PP2,
-  [CbcGradeLevel.PP2]: CbcGradeLevel.GRADE_1,
-  [CbcGradeLevel.GRADE_1]: CbcGradeLevel.GRADE_2,
-  [CbcGradeLevel.GRADE_2]: CbcGradeLevel.GRADE_3,
-  [CbcGradeLevel.GRADE_3]: CbcGradeLevel.GRADE_4,
-  [CbcGradeLevel.GRADE_4]: CbcGradeLevel.GRADE_5,
-  [CbcGradeLevel.GRADE_5]: CbcGradeLevel.GRADE_6,
-  [CbcGradeLevel.GRADE_6]: CbcGradeLevel.GRADE_7,
-  [CbcGradeLevel.GRADE_7]: CbcGradeLevel.GRADE_8,
-  [CbcGradeLevel.GRADE_8]: CbcGradeLevel.GRADE_9,
-  [CbcGradeLevel.GRADE_9]: CbcGradeLevel.SENIOR_1,
-  [CbcGradeLevel.SENIOR_1]: CbcGradeLevel.SENIOR_2,
-  [CbcGradeLevel.SENIOR_2]: CbcGradeLevel.SENIOR_3,
-  [CbcGradeLevel.SENIOR_3]: 'GRADUATED',
+export const CBC_GRADE_PROGRESSION: Record<CBCGradeLevel, CBCGradeLevel | 'GRADUATED'> = {
+  [CBCGradeLevel.PLAYGROUP]: CBCGradeLevel.PP1,
+  [CBCGradeLevel.PP1]: CBCGradeLevel.PP2,
+  [CBCGradeLevel.PP2]: CBCGradeLevel.GRADE_1,
+  [CBCGradeLevel.GRADE_1]: CBCGradeLevel.GRADE_2,
+  [CBCGradeLevel.GRADE_2]: CBCGradeLevel.GRADE_3,
+  [CBCGradeLevel.GRADE_3]: CBCGradeLevel.GRADE_4,
+  [CBCGradeLevel.GRADE_4]: CBCGradeLevel.GRADE_5,
+  [CBCGradeLevel.GRADE_5]: CBCGradeLevel.GRADE_6,
+  [CBCGradeLevel.GRADE_6]: CBCGradeLevel.GRADE_7,
+  [CBCGradeLevel.GRADE_7]: CBCGradeLevel.GRADE_8,
+  [CBCGradeLevel.GRADE_8]: CBCGradeLevel.GRADE_9,
+  [CBCGradeLevel.GRADE_9]: CBCGradeLevel.SENIOR_1,
+  [CBCGradeLevel.SENIOR_1]: CBCGradeLevel.SENIOR_2,
+  [CBCGradeLevel.SENIOR_2]: CBCGradeLevel.SENIOR_3,
+  [CBCGradeLevel.SENIOR_3]: 'GRADUATED',
 };
 
 export interface PromoteStudentDTO {
-  targetGradeLevel?: CbcGradeLevel;
+  targetGradeLevel?: CBCGradeLevel;
   targetAcademicYearId?: string;
   targetTermId?: string;
   targetClassroomId?: string;
@@ -48,7 +48,7 @@ export interface PromoteStudentDTO {
 
 export interface BulkPromoteStudentsDTO {
   studentIds: string[];
-  targetGradeLevel?: CbcGradeLevel;
+  targetGradeLevel?: CBCGradeLevel;
   targetAcademicYearId?: string;
   targetTermId?: string;
   targetClassroomId?: string;
@@ -71,7 +71,7 @@ export interface RegisterStudentDTO {
   lastName: string;
   dateOfBirth: string;
   gender: StudentGender;
-  gradeLevel: CbcGradeLevel;
+  gradeLevel: CBCGradeLevel;
   classroomId?: string;
   streamId?: string;
   schoolId: string;
@@ -105,7 +105,7 @@ export interface UpdateStudentDTO {
   dateOfBirth?: string;
   medicalConditions?: string;
   specialNeeds?: string;
-  gradeLevel?: CbcGradeLevel;
+  gradeLevel?: CBCGradeLevel;
   classroomId?: string;
   streamId?: string;
   academicYearId?: string;
@@ -138,7 +138,7 @@ export class StudentUseCases {
     private readonly passwordHasher: IPasswordHasher,
     private readonly academicRepository?: IAcademicRepository,
     private readonly feeRepository?: IFeeRepository,
-    private readonly cbcRepository?: ICbcAssessmentRepository,
+    private readonly CBCRepository?: ICBCAssessmentRepository,
     private readonly attendanceRepository?: IAttendanceRepository,
     private readonly lunchFeeRepository?: ILunchFeeRepository,
     private readonly deletedStudentRepository?: IDeletedStudentRepository,
@@ -1049,8 +1049,8 @@ export class StudentUseCases {
           const invBal = inv.status === InvoiceStatus.CARRIED_FORWARD ? 0 : (Number(inv.balance) || 0);
           const invBilled = inv.status === InvoiceStatus.CARRIED_FORWARD ? 0 : (Number(inv.amountPayable) || Number(inv.amountBilled) || 0);
           studentFeeMap.set(inv.studentId, {
-            balance: cur.balance + invBal,
-            billed: cur.billed + invBilled
+            balance: Math.round((cur.balance + invBal) * 100) / 100,
+            billed: Math.round((cur.billed + invBilled) * 100) / 100
           });
         }
       } catch {}
@@ -1202,25 +1202,26 @@ export class StudentUseCases {
           const invoices = await this.feeRepository.findInvoices({ studentId: s.id });
           const payments = await this.feeRepository.findPayments({ studentId: s.id });
           const activeInvoices = invoices.filter(inv => (inv.status as any) !== 'CARRIED_FORWARD' && (inv.status as any) !== InvoiceStatus.CARRIED_FORWARD);
-          const totalPaid = payments.filter(p => p.status === 'COMPLETED' || (p.status as any) === PaymentStatus.COMPLETED).reduce((acc, p) => acc + (Number(p.amount) || 0), 0);
-          const activeBalance = activeInvoices.reduce((sum, inv) => sum + (Number(inv.balance) || 0), 0);
-          const totalBilled = totalPaid + activeBalance;
+          const totalPaid = Math.round(payments.filter(p => p.status === 'COMPLETED' || (p.status as any) === PaymentStatus.COMPLETED).reduce((acc, p) => acc + (Number(p.amount) || 0), 0) * 100) / 100;
+          const activeBalance = Math.round(activeInvoices.reduce((sum, inv) => sum + (Number(inv.balance) || 0), 0) * 100) / 100;
+          const totalBilled = Math.round((totalPaid + activeBalance) * 100) / 100;
 
-          // Identify arrears explicitly from active invoices
+          // Identify arrears explicitly from active invoices without duplicate counting
           let arrearsAmount = 0;
           for (const inv of activeInvoices) {
-            if (Array.isArray(inv.items)) {
-              for (const it of inv.items) {
-                if (it.name.toLowerCase().includes('arrear') || it.name.toLowerCase().includes('carried forward')) {
-                  arrearsAmount += Number(it.amount) || 0;
-                }
-              }
-            }
             if (inv.feeStructureId === 'MANUAL_ARREARS' || inv.invoiceNumber.includes('ARR')) {
               arrearsAmount += Number(inv.balance) || 0;
+            } else if (Array.isArray(inv.items)) {
+              let invArrearItems = 0;
+              for (const it of inv.items) {
+                if (it.name && (it.name.toLowerCase().includes('arrear') || it.name.toLowerCase().includes('carried forward'))) {
+                  invArrearItems += Number(it.amount) || 0;
+                }
+              }
+              arrearsAmount += Math.min(invArrearItems, Number(inv.balance) || 0);
             }
           }
-          const effectiveArrears = Math.min(arrearsAmount, activeBalance);
+          const effectiveArrears = Math.round(Math.min(arrearsAmount, activeBalance) * 100) / 100;
 
           const activeInvoice = activeInvoices.find(inv => inv.balance > 0) || activeInvoices[0] || invoices[0];
           const dueDate = activeInvoice ? activeInvoice.dueDate : null;
@@ -1236,11 +1237,64 @@ export class StudentUseCases {
           };
         }
 
-        let cbcSummary = { assessmentsCount: 0, latestEvaluations: [] as any[] };
-        if (this.cbcRepository) {
-          const summatives = await this.cbcRepository.findSummatives({ studentId: s.id });
-          cbcSummary = {
-            assessmentsCount: summatives.length,
+        let CBCSummary = {
+          assessmentsCount: 0,
+          formativesCount: 0,
+          summativesCount: 0,
+          formativeAssessments: [] as any[],
+          latestEvaluations: [] as any[]
+        };
+        if (this.CBCRepository) {
+          const [summatives, formatives] = await Promise.all([
+            this.CBCRepository.findSummatives({ studentId: s.id }),
+            this.CBCRepository.findFormatives({ studentId: s.id })
+          ]);
+
+          const hydratedFormatives = await Promise.all(
+            formatives.map(async f => {
+              const json = f.toJSON();
+              const learningAreaName = this.resolveBackendLearningAreaName(json.learningAreaId);
+              let subStrandTitle = json.subStrandId;
+              let subStrandCode = '';
+              try {
+                if (this.CBCRepository?.findSubStrandById && json.subStrandId) {
+                  const sub = await this.CBCRepository.findSubStrandById(json.subStrandId);
+                  if (sub) {
+                    subStrandTitle = sub.title;
+                    subStrandCode = sub.code;
+                  }
+                }
+              } catch {
+                // fallback
+              }
+
+              let teacherName = 'Class Teacher';
+              if (json.teacherId && this.userRepository) {
+                try {
+                  const teacher = await this.userRepository.findById(json.teacherId);
+                  if (teacher) {
+                    teacherName = `${teacher.firstName} ${teacher.lastName}`.trim();
+                  }
+                } catch {
+                  // fallback
+                }
+              }
+
+              return {
+                ...json,
+                learningAreaName,
+                subStrandTitle,
+                subStrandCode,
+                teacherName
+              };
+            })
+          );
+
+          CBCSummary = {
+            assessmentsCount: summatives.length + formatives.length,
+            formativesCount: formatives.length,
+            summativesCount: summatives.length,
+            formativeAssessments: hydratedFormatives,
             latestEvaluations: summatives.slice(0, 5).map(ev => {
               const json = ev.toJSON();
               let rawScore: number | null = null;
@@ -1298,7 +1352,7 @@ export class StudentUseCases {
         return {
           ...studentWithAcademics,
           fee: feeInfo,
-          cbc: cbcSummary,
+          CBC: CBCSummary,
           attendance: attendanceStats,
           lunch: lunchInfo
         };
@@ -1408,7 +1462,7 @@ export class StudentUseCases {
 
     // Update student's grade, stream, classroom, academic year
     student.promoteOrTransfer(
-      nextGrade as CbcGradeLevel,
+      nextGrade as CBCGradeLevel,
       dto.targetClassroomId || student.classroomId,
       dto.targetStreamId !== undefined ? dto.targetStreamId : student.streamId,
       targetAcademicYearId
@@ -1445,7 +1499,7 @@ export class StudentUseCases {
           : 0;
 
         // 2. Find fee structure for nextGrade
-        let feeStructure = await this.feeRepository.findFeeStructure(nextGrade as CbcGradeLevel, targetTermId, targetAcademicYearId);
+        let feeStructure = await this.feeRepository.findFeeStructure(nextGrade as CBCGradeLevel, targetTermId, targetAcademicYearId);
         if (!feeStructure) {
           const allStructures = await this.feeRepository.findAllFeeStructures(student.schoolId);
           feeStructure = allStructures.find(fs => fs.gradeLevel === nextGrade) || null;
@@ -1518,7 +1572,7 @@ export class StudentUseCases {
               schoolId: student.schoolId,
               academicYearId: targetAcademicYearId,
               termId: 'ALL',
-              gradeLevel: nextGrade as CbcGradeLevel,
+              gradeLevel: nextGrade as CBCGradeLevel,
               title: `${gradeName} Annual Fee Schedule`,
               items: defaultItems,
               dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -1722,10 +1776,10 @@ export class StudentUseCases {
     const lunchPayments = this.lunchFeeRepository ? await this.lunchFeeRepository.findPayments(undefined, id) : [];
 
     // Assessments and Report Cards
-    const formativeAssessments = this.cbcRepository ? await this.cbcRepository.findFormatives({ studentId: id }) : [];
-    const summativeAssessments = this.cbcRepository ? await this.cbcRepository.findSummatives({ studentId: id }) : [];
-    const reportCards = this.cbcRepository && this.cbcRepository.findReportCardsByStudent
-      ? await this.cbcRepository.findReportCardsByStudent(id)
+    const formativeAssessments = this.CBCRepository ? await this.CBCRepository.findFormatives({ studentId: id }) : [];
+    const summativeAssessments = this.CBCRepository ? await this.CBCRepository.findSummatives({ studentId: id }) : [];
+    const reportCards = this.CBCRepository && this.CBCRepository.findReportCardsByStudent
+      ? await this.CBCRepository.findReportCardsByStudent(id)
       : [];
 
     // Attendance Records
@@ -1928,15 +1982,15 @@ export class StudentUseCases {
       }
     }
 
-    if (this.cbcRepository) {
-      if (this.cbcRepository.deleteFormativesByStudent) {
-        await this.cbcRepository.deleteFormativesByStudent(id);
+    if (this.CBCRepository) {
+      if (this.CBCRepository.deleteFormativesByStudent) {
+        await this.CBCRepository.deleteFormativesByStudent(id);
       }
-      if (this.cbcRepository.deleteSummativesByStudent) {
-        await this.cbcRepository.deleteSummativesByStudent(id);
+      if (this.CBCRepository.deleteSummativesByStudent) {
+        await this.CBCRepository.deleteSummativesByStudent(id);
       }
-      if (this.cbcRepository.deleteReportCardsByStudent) {
-        await this.cbcRepository.deleteReportCardsByStudent(id);
+      if (this.CBCRepository.deleteReportCardsByStudent) {
+        await this.CBCRepository.deleteReportCardsByStudent(id);
       }
     }
 
@@ -2038,7 +2092,7 @@ export class StudentUseCases {
         lastName: archived.lastName,
         dateOfBirth: sData.dateOfBirth,
         gender: sData.gender,
-        gradeLevel: archived.gradeLevel as CbcGradeLevel,
+        gradeLevel: archived.gradeLevel as CBCGradeLevel,
         classroomId: archived.classroomId,
         streamId: archived.streamId,
         schoolId: archived.schoolId,

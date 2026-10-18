@@ -1,8 +1,8 @@
-import { Student, CbcGradeLevel } from '../../domain/user/Student';
+import { Student, CBCGradeLevel } from '../../domain/user/Student';
 
 export interface StudentFilterCriteria {
   schoolId?: string;
-  gradeLevel?: CbcGradeLevel;
+  gradeLevel?: CBCGradeLevel;
   classroomId?: string;
   streamId?: string;
   academicYearId?: string;

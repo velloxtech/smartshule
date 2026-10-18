@@ -1206,7 +1206,7 @@ export const MasterBroadsheetView: React.FC = () => {
                               }`}
                             >
                               <td className="p-2.5 border text-center font-bold font-mono text-sm">
-                                {cr.rank === 1 ? '🥇 1' : cr.rank === 2 ? '🥈 2' : cr.rank === 3 ? '🥉 3' : `#${cr.rank}`}
+                                {cr.rank === 1 ? '1st' : cr.rank === 2 ? '2nd' : cr.rank === 3 ? '3rd' : `#${cr.rank}`}
                               </td>
                               <td className="p-2.5 border">
                                 <div className="flex items-center gap-2">
@@ -1602,7 +1602,7 @@ export const MasterBroadsheetView: React.FC = () => {
                                 : 'bg-white hover:bg-slate-200 text-slate-700 border border-slate-200'
                             }`}
                           >
-                            <span>🏫 Stream {s.name}</span>
+                            <span>Stream {s.name}</span>
                             {count > 0 && (
                               <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${selectedStreamId === s.id ? 'bg-white/20 text-white' : 'bg-black/10'}`}>
                                 {count}
@@ -1693,7 +1693,7 @@ export const MasterBroadsheetView: React.FC = () => {
                             {sec.topStudent && (
                               <div className="bg-white/10 px-3 py-1.5 rounded-xl border border-white/15 text-left max-w-[170px] truncate">
                                 <div className="text-[10px] text-amber-300 uppercase font-semibold flex items-center gap-1">
-                                  <span>🥇 Top Learner</span>
+                                  <span>Top Learner</span>
                                 </div>
                                 <div className="text-xs font-black text-white truncate" title={sec.topStudent.studentName}>
                                   {sec.topStudent.studentName}
@@ -1744,11 +1744,11 @@ export const MasterBroadsheetView: React.FC = () => {
                                 <tr key={row.studentId} className="hover:bg-slate-50 transition-colors">
                                   <td className="p-2 border text-center font-bold font-mono">
                                     {(row.streamRank || row.rank) === 1
-                                      ? '🥇 1'
+                                      ? '1st'
                                       : (row.streamRank || row.rank) === 2
-                                      ? '🥈 2'
+                                      ? '2nd'
                                       : (row.streamRank || row.rank) === 3
-                                      ? '🥉 3'
+                                      ? '3rd'
                                       : `#${row.streamRank || row.rank}`}
                                   </td>
                                   <td className="p-2 border text-center font-bold font-mono text-indigo-950 bg-indigo-50/30">
@@ -2048,11 +2048,11 @@ export const MasterBroadsheetView: React.FC = () => {
                             <tr key={row.studentId} className="hover:bg-slate-50 transition-colors">
                               <td className="p-2 border text-center font-bold font-mono">
                                 {(row.streamRank || row.rank) === 1
-                                  ? '🥇 1'
+                                  ? '1st'
                                   : (row.streamRank || row.rank) === 2
-                                  ? '🥈 2'
+                                  ? '2nd'
                                   : (row.streamRank || row.rank) === 3
-                                  ? '🥉 3'
+                                  ? '3rd'
                                   : `#${row.streamRank || row.rank}`}
                               </td>
                               <td className="p-2 border text-center font-bold font-mono text-indigo-950 bg-indigo-50/30">

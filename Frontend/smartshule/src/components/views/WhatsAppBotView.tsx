@@ -231,7 +231,7 @@ export const WhatsAppBotView: React.FC = () => {
 
   // Initiate legacy QR code connection (with ban warning)
   const handleConnectLegacyQR = async () => {
-    if (!window.confirm('⚠️ WARNING: Using unofficial WhatsApp Web QR code connection can get your phone number permanently banned by Meta. Are you sure you want to proceed instead of using the official Meta Cloud API?')) {
+    if (!window.confirm('WARNING: Using unofficial WhatsApp Web QR code connection can get your phone number permanently banned by Meta. Are you sure you want to proceed instead of using the official Meta Cloud API?')) {
       return;
     }
     setIsConnecting(true);
@@ -273,7 +273,7 @@ export const WhatsAppBotView: React.FC = () => {
   const applyTemplate = (type: 'fee' | 'ediary' | 'attendance' | 'announcement') => {
     const s = students.find((st) => st.id === selectedStudentId) || students[0];
     const learnerName = s ? s.name : 'your child';
-    const admNo = s ? s.admNo : 'ADM-001';
+    const admNo = s ? (s.admNo || s.admissionNumber) : '01';
     const balance = s ? s.feeBalance : 12000;
     const schoolName = user?.schoolName || 'Grace Seeds School';
     const childGrade = s ? (s.grade || '') : '';
@@ -282,7 +282,7 @@ export const WhatsAppBotView: React.FC = () => {
     if (type === 'fee') {
       setSelectedTemplate('fee_balance_reminder');
       setOutboundMessage(
-        `Dear Parent/Guardian, this is an official fee statement from ${schoolName}. ${learnerName} (Adm: ${admNo}) has an outstanding balance of KES ${balance.toLocaleString()}. Pay directly via KCB Paybill 522533 (Account: ${childAcc}). Reply '2' for instant payment link.`
+        `Dear Parent/Guardian, this is an official fee statement from ${schoolName}. ${learnerName} has an outstanding balance of KES ${balance.toLocaleString()}. Pay directly via KCB Paybill 522533 (Account: ${childAcc} — please use child's name and grade as account reference, not admission number). Reply '2' for instant payment link.`
       );
     } else if (type === 'ediary') {
       setSelectedTemplate('daily_ediary_notice');
@@ -1208,8 +1208,8 @@ export const WhatsAppBotView: React.FC = () => {
                   onClick={() => applyTemplate('fee')}
                   className="p-2 rounded-lg bg-surface-container-low hover:bg-surface-container text-left border border-outline-variant/20 transition-all cursor-pointer"
                 >
-                  <span className="font-bold block text-primary text-xs">💰 Fee Balance</span>
-                  <span className="text-[10px] text-on-surface-variant">KCB Paybill details</span>
+                  <span className="font-bold block text-primary text-xs">Fee Balance</span>
+                  <span className="text-[10px] text-on-surface-variant">M-Pesa Paybill details</span>
                 </button>
 
                 <button
@@ -1217,7 +1217,7 @@ export const WhatsAppBotView: React.FC = () => {
                   onClick={() => applyTemplate('ediary')}
                   className="p-2 rounded-lg bg-surface-container-low hover:bg-surface-container text-left border border-outline-variant/20 transition-all cursor-pointer"
                 >
-                  <span className="font-bold block text-teal-800 text-xs">📖 eDiary / Tasks</span>
+                  <span className="font-bold block text-teal-800 text-xs">eDiary / Tasks</span>
                   <span className="text-[10px] text-on-surface-variant">Homework alert</span>
                 </button>
 
@@ -1226,7 +1226,7 @@ export const WhatsAppBotView: React.FC = () => {
                   onClick={() => applyTemplate('attendance')}
                   className="p-2 rounded-lg bg-surface-container-low hover:bg-surface-container text-left border border-outline-variant/20 transition-all cursor-pointer"
                 >
-                  <span className="font-bold block text-emerald-800 text-xs">📅 Attendance</span>
+                  <span className="font-bold block text-emerald-800 text-xs">Attendance</span>
                   <span className="text-[10px] text-on-surface-variant">Daily roll-call alert</span>
                 </button>
 
@@ -1235,7 +1235,7 @@ export const WhatsAppBotView: React.FC = () => {
                   onClick={() => applyTemplate('announcement')}
                   className="p-2 rounded-lg bg-surface-container-low hover:bg-surface-container text-left border border-outline-variant/20 transition-all cursor-pointer"
                 >
-                  <span className="font-bold block text-purple-800 text-xs">📢 Announcement</span>
+                  <span className="font-bold block text-purple-800 text-xs">Announcement</span>
                   <span className="text-[10px] text-on-surface-variant">Academic circular</span>
                 </button>
               </div>

@@ -13,7 +13,7 @@ export enum StudentStatus {
   SUSPENDED = 'SUSPENDED'
 }
 
-export enum CbcGradeLevel {
+export enum CBCGradeLevel {
   PLAYGROUP = 'PLAYGROUP',
   PP1 = 'PP1',
   PP2 = 'PP2',
@@ -39,7 +39,7 @@ export interface StudentProps {
   lastName: string;
   dateOfBirth: string; // YYYY-MM-DD
   gender: StudentGender;
-  gradeLevel: CbcGradeLevel;
+  gradeLevel: CBCGradeLevel;
   classroomId?: string;
   streamId?: string;
   schoolId: string;
@@ -90,7 +90,7 @@ export class Student extends Entity<StudentProps> {
     return this._props.gender;
   }
 
-  public get gradeLevel(): CbcGradeLevel {
+  public get gradeLevel(): CBCGradeLevel {
     return this._props.gradeLevel;
   }
 
@@ -152,7 +152,7 @@ export class Student extends Entity<StudentProps> {
   }
 
   public promoteOrTransfer(
-    newGradeLevel: CbcGradeLevel,
+    newGradeLevel: CBCGradeLevel,
     newClassroomIdOrStreamId?: string,
     newStreamIdOrAcademicYearId?: string,
     newAcademicYearId?: string

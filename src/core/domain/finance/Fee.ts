@@ -1,5 +1,5 @@
 import { Entity } from '../shared/Entity';
-import { CbcGradeLevel } from '../user/Student';
+import { CBCGradeLevel } from '../user/Student';
 
 export enum PaymentMethod {
   KCB_BUNI = 'KCB_BUNI',
@@ -63,7 +63,7 @@ export interface FeeStructureProps {
   schoolId: string;
   academicYearId: string;
   termId?: string; // 'ALL' or specific term ID
-  gradeLevel: CbcGradeLevel;
+  gradeLevel: CBCGradeLevel;
   title: string;
   items: FeeItem[];
   dueDate: string;
@@ -204,7 +204,7 @@ export class FeeStructure extends Entity<FeeStructureProps> {
     return this._props.termId || 'ALL';
   }
 
-  public get gradeLevel(): CbcGradeLevel {
+  public get gradeLevel(): CBCGradeLevel {
     return this._props.gradeLevel;
   }
 
@@ -376,8 +376,10 @@ export class StudentInvoice extends Entity<StudentInvoiceProps> {
   }
 
   public recordPayment(amount: number): void {
-    this._props.amountPaid += amount;
-    this._props.balance = Math.max(0, this._props.amountPayable - this._props.amountPaid);
+    const cleanAmount = Number(amount) || 0;
+    this._props.amountPaid = Math.round((this._props.amountPaid + cleanAmount) * 100) / 100;
+    const rawBalance = this._props.amountPayable - this._props.amountPaid;
+    this._props.balance = rawBalance <= 0.001 ? 0 : Math.round(rawBalance * 100) / 100;
 
     if (this._props.balance === 0) {
       this._props.status = InvoiceStatus.PAID;
@@ -388,9 +390,16 @@ export class StudentInvoice extends Entity<StudentInvoiceProps> {
   }
 
   public applyDiscount(discount: number): void {
-    this._props.discountAmount = discount;
-    this._props.amountPayable = Math.max(0, this._props.amountBilled - discount);
-    this._props.balance = Math.max(0, this._props.amountPayable - this._props.amountPaid);
+    const cleanDiscount = Number(discount) || 0;
+    this._props.discountAmount = Math.round(cleanDiscount * 100) / 100;
+    this._props.amountPayable = Math.max(0, Math.round((this._props.amountBilled - cleanDiscount) * 100) / 100);
+    const rawBalance = this._props.amountPayable - this._props.amountPaid;
+    this._props.balance = rawBalance <= 0.001 ? 0 : Math.round(rawBalance * 100) / 100;
+    if (this._props.balance === 0) {
+      this._props.status = InvoiceStatus.PAID;
+    } else if (this._props.amountPaid > 0) {
+      this._props.status = InvoiceStatus.PARTIALLY_PAID;
+    }
     this.touch();
   }
 
@@ -402,9 +411,11 @@ export class StudentInvoice extends Entity<StudentInvoiceProps> {
 
   public appendFeeItem(item: FeeItem): void {
     this._props.items.push(item);
-    this._props.amountBilled += item.amount;
-    this._props.amountPayable += item.amount;
-    this._props.balance += item.amount;
+    const itemAmount = Math.round((Number(item.amount) || 0) * 100) / 100;
+    this._props.amountBilled = Math.round((this._props.amountBilled + itemAmount) * 100) / 100;
+    this._props.amountPayable = Math.round((this._props.amountPayable + itemAmount) * 100) / 100;
+    const rawBalance = this._props.amountPayable - this._props.amountPaid;
+    this._props.balance = rawBalance <= 0.001 ? 0 : Math.round(rawBalance * 100) / 100;
     this.touch();
   }
 
@@ -449,7 +460,11 @@ export interface PaymentProps {
 
 export class Payment extends Entity<PaymentProps> {
   public static create(props: PaymentProps, id: string, createdAt?: Date, updatedAt?: Date): Payment {
-    return new Payment(props, id, createdAt, updatedAt);
+    const cleanProps: PaymentProps = {
+      ...props,
+      amount: Math.round((Number(props.amount) || 0) * 100) / 100
+    };
+    return new Payment(cleanProps, id, createdAt, updatedAt);
   }
 
   public get schoolId(): string {

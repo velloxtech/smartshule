@@ -27,7 +27,7 @@ export interface GeminiDraftParams {
     percentage: number;
     lastRecordedDate?: string;
   };
-  cbcSummary?: {
+  CBCSummary?: {
     recentAssessments?: Array<{ learningArea: string; strand: string; scoreLevel: string }>;
     averagePerformance?: string;
     teacherRemarks?: string;
@@ -115,7 +115,7 @@ export class GeminiService {
       guardian,
       feeSummary,
       attendanceSummary,
-      cbcSummary,
+      CBCSummary,
       ediarySummary,
       tone = 'professional'
     } = params;
@@ -134,8 +134,8 @@ export class GeminiService {
       ? `Attendance Rate: ${attendanceSummary.percentage}% (${attendanceSummary.presentCount} present, ${attendanceSummary.absentCount} absent).`
       : 'Attendance details not requested.';
 
-    const cbcText = cbcSummary
-      ? `Performance: ${cbcSummary.averagePerformance || 'Meeting Expectations (ME)'}. Remarks: ${cbcSummary.teacherRemarks || 'Good academic engagement.'}`
+    const CBCText = CBCSummary
+      ? `Performance: ${CBCSummary.averagePerformance || 'Meeting Expectations (ME)'}. Remarks: ${CBCSummary.teacherRemarks || 'Good academic engagement.'}`
       : 'CBC performance details not requested.';
 
     const ediaryText = ediarySummary
@@ -159,14 +159,14 @@ VERIFIED DATABASE PROFILE OF RECIPIENT & STUDENT:
 - Grade Level: ${grade}
 - Financial / Fee Records: ${feeText}
 - Attendance Records: ${attendanceText}
-- CBC Academic Assessment: ${cbcText}
+- CBC Academic Assessment: ${CBCText}
 - eDiary Homework: ${ediaryText}
 
 DESIRED TONE:
 ${tone} (must remain respectful, helpful, and official)
 
 MANDATORY RULES:
-1. Use WhatsApp markdown: *bold* for key numbers, student name, and headlines. Use emojis appropriately (e.g. 💰, 📖, 📅, 🏫, ✅) to make it readable and friendly.
+1. Use WhatsApp markdown: *bold* for key numbers, student name, and headlines. Maintain a clean, professional, and elegant format without emojis.
 2. Address the parent courteously: e.g. "Dear ${guardianName}," or "Dear Parent of ${learnerName},"
 3. ONLY use the REAL numbers and data provided above. DO NOT invent or hallucinate balances, dates, or contacts.
 4. STRICT RELEVANCE: Only include information directly answering the inquiry. DO NOT mention fees, balances, or payments unless the user specifically asked about fees, payments, or invoices.
@@ -193,7 +193,7 @@ MANDATORY RULES:
    * Dynamic fallback generator that uses real database facts if Gemini API is temporarily unavailable
    */
   private generateFallbackDraft(params: GeminiDraftParams): string {
-    const { command, student, guardian, feeSummary, attendanceSummary, cbcSummary, ediarySummary } = params;
+    const { command, student, guardian, feeSummary, attendanceSummary, CBCSummary, ediarySummary } = params;
     const cmdUpper = command.toUpperCase();
     const guardianName = guardian.fullName || 'Parent/Guardian';
     const learner = student.fullName;
@@ -204,11 +204,11 @@ MANDATORY RULES:
 
     if (/\b(HOMEWORK|EDIARY|DIARY|ASSIGNMENT|ASSIGNMENTS|TASK|TASKS)\b/i.test(cmdUpper)) {
       return (
-        `👋 *Dear ${guardianName},*\n\n` +
+        `*Dear ${guardianName},*\n\n` +
         `Here is today's CBC eDiary homework notice for *${learner}* (Adm: *${adm}* · ${student.gradeLevel}):\n\n` +
-        `📖 *Assigned Homework:*\n` +
+        `*Assigned Homework:*\n` +
         `${ediarySummary?.recentHomework || 'No pending homework recorded for today.'}\n\n` +
-        `🎒 *Requirements for Tomorrow:*\n` +
+        `*Requirements for Tomorrow:*\n` +
         `${ediarySummary?.requirementsTomorrow || 'Standard learning materials.'}\n\n` +
         `Please inspect your child's work and acknowledge via the eDiary portal.\n\n` +
         `Warm regards,\n` +
@@ -221,9 +221,9 @@ MANDATORY RULES:
       const pct = attendanceSummary ? attendanceSummary.percentage : 0;
       const absent = attendanceSummary ? attendanceSummary.absentCount : 0;
       return (
-        `👋 *Dear ${guardianName},*\n\n` +
+        `*Dear ${guardianName},*\n\n` +
         `Regarding *${learner}* (Adm: *${adm}* · ${student.gradeLevel}):\n\n` +
-        `📅 *Term Attendance Summary:*\n` +
+        `*Term Attendance Summary:*\n` +
         `• Overall Attendance: *${pct}%*\n` +
         `• Recorded Absences: *${absent} day(s)*\n\n` +
         `Consistent attendance is essential for CBC curriculum progress. Please notify us if your child is unwell or unable to attend.\n\n` +
@@ -235,11 +235,11 @@ MANDATORY RULES:
 
     if (/\b(CBC|RESULT|RESULTS|REPORT|GRADE|GRADES|PERFORMANCE|RUBRIC)\b/i.test(cmdUpper)) {
       return (
-        `👋 *Dear ${guardianName},*\n\n` +
+        `*Dear ${guardianName},*\n\n` +
         `We are pleased to share a CBC academic update for *${learner}* (Adm: *${adm}* · ${student.gradeLevel}):\n\n` +
-        `🌟 *CBC Competency Evaluation:*\n` +
-        `• Overall Performance: *${cbcSummary?.averagePerformance || 'Recorded in portal'}*\n` +
-        `• Teacher Remarks: _"${cbcSummary?.teacherRemarks || 'Continuous assessment progress recorded in SmartShule.'}"_\n\n` +
+        `*CBC Competency Evaluation:*\n` +
+        `• Overall Performance: *${CBCSummary?.averagePerformance || 'Recorded in portal'}*\n` +
+        `• Teacher Remarks: _"${CBCSummary?.teacherRemarks || 'Continuous assessment progress recorded in SmartShule.'}"_\n\n` +
         `You can review complete strand-by-strand CBC assessments via the SmartShule parent portal.\n\n` +
         `Warm regards,\n` +
         `*${schoolName} Academic Directorate*\n` +
@@ -251,10 +251,10 @@ MANDATORY RULES:
       const bal = feeSummary ? feeSummary.balance.toLocaleString() : '0';
       const paymentLink = feeSummary?.paymentUrl || `https://pay.smartshule.ac.ke/pay/${student.admissionNumber}`;
       return (
-        `👋 *Dear ${guardianName},*\n\n` +
+        `*Dear ${guardianName},*\n\n` +
         `This is an official fee update from *${schoolName}* for *${learner}* (Adm: *${adm}* · ${student.gradeLevel}).\n\n` +
-        `💰 *Current Outstanding Balance:* KES *${bal}*\n\n` +
-        `💳 *Payment Options:*\n` +
+        `*Current Outstanding Balance:* KES *${bal}*\n\n` +
+        `*Payment Options:*\n` +
         `• *Online Payment (Card / Bank):* ${paymentLink}\n` +
         `• *KCB / M-Pesa Paybill:* 522533 (Acc: *8048859#${learner}${student.gradeLevel ? ' ' + student.gradeLevel : ''}*)\n\n` +
         `Kindly settle the outstanding amount or reach out to our accounts desk.\n\n` +
@@ -266,7 +266,7 @@ MANDATORY RULES:
 
     // Default general message
     return (
-      `👋 *Dear ${guardianName},*\n\n` +
+      `*Dear ${guardianName},*\n\n` +
       `Official communication from *${schoolName}* concerning *${learner}* (Adm: *${adm}* · ${student.gradeLevel}):\n\n` +
       `Thank you for your message: "${command}". Our administration desk has received your request.\n\n` +
       `Please contact the school office if you have any questions.\n\n` +
