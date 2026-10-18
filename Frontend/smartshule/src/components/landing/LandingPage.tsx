@@ -74,7 +74,6 @@ const PROGRAMMES = [
 ]
 
 const STATS = [
-  { value: '500+', label: 'Happy pupils enrolled' },
   { value: '1:15', label: 'Teacher-to-pupil ratio' },
   { value: '13+', label: 'Years of excellence' },
   { value: '12', label: 'Extra-curricular clubs' },
@@ -452,7 +451,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </section>
 
           <section className="bg-[#7b1c35] py-10">
-            <div className="max-w-5xl mx-auto px-6 grid grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="max-w-4xl mx-auto px-6 grid grid-cols-1 sm:grid-cols-3 gap-6">
               {STATS.map(s => (
                 <div key={s.label} className="text-center">
                   <p style={{ fontFamily: 'Fraunces, serif' }} className="text-4xl font-bold text-[#f5c84a] mb-1">{s.value}</p>
