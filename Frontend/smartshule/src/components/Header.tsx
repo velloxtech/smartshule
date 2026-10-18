@@ -335,7 +335,7 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Right Actions: Dual-View Switcher, System Pulse, Alerts, Help, Profile */}
         <div className="flex items-center gap-2 md:gap-3">
-          {/* Dual-View Toggle for Staff with Children in Grace Seeds School */}
+          {/* Dual-View Toggle for Staff/Teachers with Children in School */}
           {isStaffWithChildren && (
             <div className="flex items-center p-0.5 rounded-xl bg-[#590000] border border-white/20 shadow-xs">
               <button
@@ -349,11 +349,11 @@ export const Header: React.FC<HeaderProps> = ({
                     ? 'bg-white text-[#800000] shadow-xs font-bold'
                     : 'text-white/80 hover:text-white hover:bg-white/10'
                 }`}
-                title="Staff Workspace: Classes, lesson plans, schemes, records"
+                title={user?.role === UserRole.TEACHER ? 'Teacher Workspace: Classes, lesson plans, schemes, records' : 'Staff Workspace'}
               >
                 <span className="material-symbols-outlined text-[16px]">badge</span>
-                <span className="hidden sm:inline">Staff Workspace</span>
-                <span className="sm:hidden">Staff</span>
+                <span className="hidden sm:inline">{user?.role === UserRole.TEACHER ? 'Teacher Workspace' : 'Staff Workspace'}</span>
+                <span className="sm:hidden">{user?.role === UserRole.TEACHER ? 'Teacher' : 'Staff'}</span>
               </button>
               <button
                 type="button"
@@ -505,13 +505,13 @@ export const Header: React.FC<HeaderProps> = ({
                   {isStaffWithChildren && (
                     <div className="p-2 mb-2 rounded-xl bg-rose-50 border border-[#800000]/20">
                       <div className="text-[11px] font-bold text-[#800000] flex items-center justify-between">
-                        <span>Staff Dual Role</span>
+                        <span>{user?.role === UserRole.TEACHER ? 'Teacher & Parent Role' : 'Staff Dual Role'}</span>
                         <span className="px-1.5 py-0.5 rounded text-[10px] bg-white text-[#800000] font-bold border border-[#800000]/20">
-                          {activeViewMode === 'STAFF' ? 'Staff Workspace' : 'Parent View'}
+                          {activeViewMode === 'STAFF' ? (user?.role === UserRole.TEACHER ? 'Teacher Workspace' : 'Staff Workspace') : 'Parent View'}
                         </span>
                       </div>
                       <p className="text-[10px] text-slate-600 mt-1">
-                        Active role: {activeViewMode === 'STAFF' ? 'School Staff' : 'Parent / Guardian'}
+                        Active role: {activeViewMode === 'STAFF' ? (user?.role === UserRole.TEACHER ? 'Teacher' : 'School Staff') : 'Parent / Guardian'}
                       </p>
                       <button
                         type="button"
@@ -527,7 +527,7 @@ export const Header: React.FC<HeaderProps> = ({
                           {activeViewMode === 'STAFF' ? 'family_restroom' : 'badge'}
                         </span>
                         <span>
-                          {activeViewMode === 'STAFF' ? 'Switch to Parent View' : 'Switch to Staff Workspace'}
+                          {activeViewMode === 'STAFF' ? 'Switch to Parent View' : (user?.role === UserRole.TEACHER ? 'Switch to Teacher Workspace' : 'Switch to Staff Workspace')}
                         </span>
                       </button>
                     </div>

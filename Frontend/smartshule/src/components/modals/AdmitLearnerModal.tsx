@@ -31,7 +31,6 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
     UserRole.SUPER_ADMIN,
     UserRole.ADMIN,
     UserRole.SCHOOL_ADMIN,
-    UserRole.HEAD_TEACHER,
     UserRole.BURSAR,
     UserRole.ACCOUNTANT
   ].includes(user?.role as UserRole);

@@ -498,7 +498,7 @@ describe('Access Controls, 8 Role Accounts & Lesson Plan Approvals', () => {
   describe('5. User Management & Access Control', () => {
     let createdUserId: string;
 
-    it('allows Super Admin, Admin, Head Teacher, and Deputy to list users', async () => {
+    it('allows Super Admin and Admin to list users', async () => {
       const saRes = await request(app)
         .get('/api/v1/users')
         .set('Authorization', `Bearer ${superAdminToken}`);
@@ -509,19 +509,20 @@ describe('Access Controls, 8 Role Accounts & Lesson Plan Approvals', () => {
         .get('/api/v1/users')
         .set('Authorization', `Bearer ${adminToken}`);
       expect(adminRes.status).toBe(200);
+      expect(Array.isArray(adminRes.body.data)).toBe(true);
+    });
 
+    it('denies user management listing to non-admin roles (Head Teacher, Deputy, Teacher, Parent, Bursar)', async () => {
       const htRes = await request(app)
         .get('/api/v1/users')
         .set('Authorization', `Bearer ${headTeacherToken}`);
-      expect(htRes.status).toBe(200);
+      expect(htRes.status).toBe(403);
 
       const deputyRes = await request(app)
         .get('/api/v1/users')
         .set('Authorization', `Bearer ${deputyToken}`);
-      expect(deputyRes.status).toBe(200);
-    });
+      expect(deputyRes.status).toBe(403);
 
-    it('denies user management listing to non-admin roles (Teacher, Parent, Bursar)', async () => {
       const teacherRes = await request(app)
         .get('/api/v1/users')
         .set('Authorization', `Bearer ${teacherToken}`);
@@ -561,10 +562,23 @@ describe('Access Controls, 8 Role Accounts & Lesson Plan Approvals', () => {
       expect(updateRes.status).toBe(200);
       expect(updateRes.body.data.fullName).toBe('Brian Updated Oduor');
 
-      // 3. Suspend
-      const suspendRes = await request(app)
+      // Verify Head Teacher and Deputy cannot alter user status (403 Forbidden)
+      const htDenyStatus = await request(app)
         .patch(`/api/v1/users/${createdUserId}/status`)
         .set('Authorization', `Bearer ${headTeacherToken}`)
+        .send({ status: 'SUSPENDED' });
+      expect(htDenyStatus.status).toBe(403);
+
+      const deputyDenyStatus = await request(app)
+        .patch(`/api/v1/users/${createdUserId}/status`)
+        .set('Authorization', `Bearer ${deputyToken}`)
+        .send({ status: 'SUSPENDED' });
+      expect(deputyDenyStatus.status).toBe(403);
+
+      // 3. Suspend via Admin
+      const suspendRes = await request(app)
+        .patch(`/api/v1/users/${createdUserId}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
         .send({ status: 'SUSPENDED' });
       expect(suspendRes.status).toBe(200);
       expect(suspendRes.body.data.status).toBe('SUSPENDED');
@@ -578,10 +592,10 @@ describe('Access Controls, 8 Role Accounts & Lesson Plan Approvals', () => {
         });
       expect(failedLogin.status).toBe(401);
 
-      // Reactivate
+      // Reactivate via Super Admin
       const reactivateRes = await request(app)
         .patch(`/api/v1/users/${createdUserId}/status`)
-        .set('Authorization', `Bearer ${deputyToken}`)
+        .set('Authorization', `Bearer ${superAdminToken}`)
         .send({ status: 'ACTIVE' });
       expect(reactivateRes.status).toBe(200);
       expect(reactivateRes.body.data.status).toBe('ACTIVE');
@@ -791,6 +805,107 @@ describe('Access Controls, 8 Role Accounts & Lesson Plan Approvals', () => {
         .get('/api/v1/finance/defaulters')
         .set('Authorization', `Bearer ${parentToken}`);
       expect(res.status).toBe(403);
+    });
+  });
+
+  describe('8. Head Teacher & Deputy Head Teacher Access Restrictions (Finance & Administration)', () => {
+    it('denies HEAD_TEACHER and DEPUTY_HEAD_TEACHER from Finance module endpoints (403 Forbidden)', async () => {
+      // 1. Defaulters
+      const htDefaulters = await request(app)
+        .get('/api/v1/finance/defaulters')
+        .set('Authorization', `Bearer ${headTeacherToken}`);
+      expect(htDefaulters.status).toBe(403);
+
+      const depDefaulters = await request(app)
+        .get('/api/v1/finance/defaulters')
+        .set('Authorization', `Bearer ${deputyToken}`);
+      expect(depDefaulters.status).toBe(403);
+
+      // 2. Cash Flow Ledger
+      const htCashflow = await request(app)
+        .get('/api/v1/finance/cashflow-ledger')
+        .set('Authorization', `Bearer ${headTeacherToken}`);
+      expect(htCashflow.status).toBe(403);
+
+      const depCashflow = await request(app)
+        .get('/api/v1/finance/cashflow-ledger')
+        .set('Authorization', `Bearer ${deputyToken}`);
+      expect(depCashflow.status).toBe(403);
+
+      // 3. Operating Expenses
+      const htExpenses = await request(app)
+        .get('/api/v1/finance/expenses')
+        .set('Authorization', `Bearer ${headTeacherToken}`);
+      expect(htExpenses.status).toBe(403);
+
+      const depExpenses = await request(app)
+        .get('/api/v1/finance/expenses')
+        .set('Authorization', `Bearer ${deputyToken}`);
+      expect(depExpenses.status).toBe(403);
+
+      // 4. Other Income / Grants
+      const htIncome = await request(app)
+        .get('/api/v1/finance/income')
+        .set('Authorization', `Bearer ${headTeacherToken}`);
+      expect(htIncome.status).toBe(403);
+
+      const depIncome = await request(app)
+        .get('/api/v1/finance/income')
+        .set('Authorization', `Bearer ${deputyToken}`);
+      expect(depIncome.status).toBe(403);
+
+      // 5. Arrears Summary
+      const htArrears = await request(app)
+        .get('/api/v1/finance/arrears/summary')
+        .set('Authorization', `Bearer ${headTeacherToken}`);
+      expect(htArrears.status).toBe(403);
+
+      const depArrears = await request(app)
+        .get('/api/v1/finance/arrears/summary')
+        .set('Authorization', `Bearer ${deputyToken}`);
+      expect(depArrears.status).toBe(403);
+
+      // 6. Fee Structure Mutation
+      const htFeeStruct = await request(app)
+        .post('/api/v1/finance/structures')
+        .set('Authorization', `Bearer ${headTeacherToken}`)
+        .send({ title: 'Test Structure', academicYearId: 'yr-1', termId: 'tm-1', gradeLevel: 'PP1', totalAmount: 10000 });
+      expect(htFeeStruct.status).toBe(403);
+    });
+
+    it('denies HEAD_TEACHER and DEPUTY_HEAD_TEACHER from Administrative pages (User Mgmt, Archive Vault, System Logs)', async () => {
+      // 1. User Management Listing
+      const htUsers = await request(app)
+        .get('/api/v1/users')
+        .set('Authorization', `Bearer ${headTeacherToken}`);
+      expect(htUsers.status).toBe(403);
+
+      const depUsers = await request(app)
+        .get('/api/v1/users')
+        .set('Authorization', `Bearer ${deputyToken}`);
+      expect(depUsers.status).toBe(403);
+
+      // 2. Archived Accounts (Deleted Records Vault)
+      const htArchive = await request(app)
+        .get('/api/v1/students/deleted')
+        .set('Authorization', `Bearer ${headTeacherToken}`);
+      expect(htArchive.status).toBe(403);
+
+      const depArchive = await request(app)
+        .get('/api/v1/students/deleted')
+        .set('Authorization', `Bearer ${deputyToken}`);
+      expect(depArchive.status).toBe(403);
+
+      // 3. System Logs
+      const htLogs = await request(app)
+        .get('/api/v1/system-logs')
+        .set('Authorization', `Bearer ${headTeacherToken}`);
+      expect(htLogs.status).toBe(403);
+
+      const depLogs = await request(app)
+        .get('/api/v1/system-logs')
+        .set('Authorization', `Bearer ${deputyToken}`);
+      expect(depLogs.status).toBe(403);
     });
   });
 });

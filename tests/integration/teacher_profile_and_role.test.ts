@@ -121,4 +121,107 @@ describe('Teacher & Staff Onboarding and Profile Management Integration Tests', 
     expect(updateRes.body.data.qualification).toBe('Doctor of Philosophy in Education (Ph.D)');
     expect(updateRes.body.data.user.phone).toBe('+254711122233');
   });
+
+  it('does NOT provide parent dual-role to teachers without an admitted child in the school', async () => {
+    // 1. Teacher Sarah Mwangi has no children admitted in the school
+    const profileRes = await request(app)
+      .get('/api/v1/auth/profile')
+      .set('Authorization', `Bearer ${teacherToken}`);
+
+    expect(profileRes.status).toBe(200);
+    expect(profileRes.body.data.role).toBe('TEACHER');
+    expect(profileRes.body.data.hasEnrolledChildren).toBe(false);
+    expect(profileRes.body.data.enrolledChildIds).toEqual([]);
+
+    // 2. Querying guardian portal data returns zero children for this teacher
+    const guardianMeRes = await request(app)
+      .get('/api/v1/students/guardian/me')
+      .set('Authorization', `Bearer ${teacherToken}`);
+
+    expect(guardianMeRes.status).toBe(200);
+    expect(guardianMeRes.body.data.children).toHaveLength(0);
+  });
+
+  it('ONLY provides parent dual-role to teachers whom the system has recognized have a child admitted in the school', async () => {
+    // 1. Onboard a teacher who will also have an admitted child
+    const newTeacherRes = await request(app)
+      .post('/api/v1/teachers')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        email: 'teacher.parent@smartshule.ac.ke',
+        password: 'Password@123',
+        firstName: 'Beatrice',
+        lastName: 'Wanjiku',
+        phone: '+254744111222',
+        schoolId: 'school-001',
+        employeeNumber: 'EMP-TCH-088',
+        tscNumber: 'TSC/889900',
+        specialization: ['Science', 'Agriculture']
+      });
+
+    expect(newTeacherRes.status).toBe(201);
+
+    // Login as Beatrice before any child is admitted
+    const loginBeforeRes = await request(app)
+      .post('/api/v1/auth/login')
+      .send({ email: 'teacher.parent@smartshule.ac.ke', password: 'Password@123' });
+
+    expect(loginBeforeRes.status).toBe(200);
+    expect(loginBeforeRes.body.data.user.hasEnrolledChildren).toBe(false);
+    expect(loginBeforeRes.body.data.user.enrolledChildIds).toEqual([]);
+
+    // 2. Now admit a learner whose parent/guardian is Beatrice Wanjiku (matching phone +254744111222 / email)
+    const admitRes = await request(app)
+      .post('/api/v1/students')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        firstName: 'Samuel',
+        lastName: 'Kariuki',
+        dateOfBirth: '2016-04-12',
+        gender: 'MALE',
+        gradeLevel: 'GRADE_3',
+        schoolId: 'school-001',
+        guardian: {
+          firstName: 'Beatrice',
+          lastName: 'Wanjiku',
+          phone: '+254744111222',
+          emergencyContact: '+254744111222',
+          email: 'teacher.parent@smartshule.ac.ke',
+          nationalId: '30112233',
+          relationship: 'MOTHER'
+        }
+      });
+
+    expect(admitRes.status).toBe(201);
+    const admittedStudentId = admitRes.body.data.id;
+    expect(admittedStudentId).toBeDefined();
+
+    // 3. Login as Beatrice now that her child is admitted in the school
+    const loginAfterRes = await request(app)
+      .post('/api/v1/auth/login')
+      .send({ email: 'teacher.parent@smartshule.ac.ke', password: 'Password@123' });
+
+    expect(loginAfterRes.status).toBe(200);
+    expect(loginAfterRes.body.data.user.role).toBe('TEACHER');
+    expect(loginAfterRes.body.data.user.hasEnrolledChildren).toBe(true);
+    expect(loginAfterRes.body.data.user.enrolledChildIds).toContain(admittedStudentId);
+
+    // Profile check
+    const profileAfterRes = await request(app)
+      .get('/api/v1/auth/profile')
+      .set('Authorization', `Bearer ${loginAfterRes.body.data.accessToken}`);
+
+    expect(profileAfterRes.status).toBe(200);
+    expect(profileAfterRes.body.data.hasEnrolledChildren).toBe(true);
+    expect(profileAfterRes.body.data.enrolledChildIds).toContain(admittedStudentId);
+
+    // Guardian portal data check
+    const guardianDataRes = await request(app)
+      .get('/api/v1/students/guardian/me')
+      .set('Authorization', `Bearer ${loginAfterRes.body.data.accessToken}`);
+
+    expect(guardianDataRes.status).toBe(200);
+    expect(guardianDataRes.body.data.children).toHaveLength(1);
+    expect(guardianDataRes.body.data.children[0].id).toBe(admittedStudentId);
+  });
 });

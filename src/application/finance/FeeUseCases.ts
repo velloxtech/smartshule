@@ -2008,7 +2008,7 @@ export class FeeUseCases {
 
   // 15. List Expenses (Money Out)
   public async listExpenses(filters: ExpenseFilterCriteria, requestingUser?: UserContext) {
-    if (requestingUser && ![UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT, UserRole.BURSAR, UserRole.HEAD_TEACHER].includes(requestingUser.role)) {
+    if (requestingUser && ![UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT, UserRole.BURSAR].includes(requestingUser.role)) {
       throw new ForbiddenError('You do not have permission to view school expenses.');
     }
 
@@ -2019,7 +2019,7 @@ export class FeeUseCases {
 
   // 16. Update Expense Status
   public async updateExpenseStatus(id: string, status: ExpenseStatus, requestingUser?: UserContext) {
-    if (requestingUser && ![UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT, UserRole.BURSAR, UserRole.HEAD_TEACHER].includes(requestingUser.role)) {
+    if (requestingUser && ![UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT, UserRole.BURSAR].includes(requestingUser.role)) {
       throw new ForbiddenError('You do not have permission to authorize or update expenses.');
     }
 
@@ -2084,7 +2084,7 @@ export class FeeUseCases {
 
   // 19. List Other Income
   public async listOtherIncome(filters: OtherIncomeFilterCriteria, requestingUser?: UserContext) {
-    if (requestingUser && ![UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT, UserRole.BURSAR, UserRole.HEAD_TEACHER].includes(requestingUser.role)) {
+    if (requestingUser && ![UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT, UserRole.BURSAR].includes(requestingUser.role)) {
       throw new ForbiddenError('You do not have permission to view school income.');
     }
 
@@ -2110,7 +2110,7 @@ export class FeeUseCases {
 
   // 21. Unified Cash Flow & Financial Ledger (Money In vs Money Out)
   public async getCashFlowLedger(schoolId?: string, filters?: { startDate?: string; endDate?: string }, requestingUser?: UserContext) {
-    if (requestingUser && ![UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT, UserRole.BURSAR, UserRole.HEAD_TEACHER].includes(requestingUser.role)) {
+    if (requestingUser && ![UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT, UserRole.BURSAR].includes(requestingUser.role)) {
       throw new ForbiddenError('Only School Management and Accountants can view the Cash Flow Ledger.');
     }
 

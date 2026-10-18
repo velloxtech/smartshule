@@ -789,13 +789,23 @@ export class StudentUseCases {
       const allStudents = await this.studentRepository.findAll();
       for (const s of allStudents) {
         if (s.guardianIds && s.guardianIds.includes(guardian.id)) {
-          linkedStudentIds.add(s.id);
+          if (s.status === StudentStatus.ACTIVE || !s.status) {
+            linkedStudentIds.add(s.id);
+          }
         }
       }
     }
 
-    if (linkedStudentIds.size > 0) {
-      return Array.from(linkedStudentIds);
+    const validStudentIds: string[] = [];
+    for (const sid of Array.from(linkedStudentIds)) {
+      const st = await this.studentRepository.findById(sid);
+      if (st && (st.status === StudentStatus.ACTIVE || !st.status)) {
+        validStudentIds.push(sid);
+      }
+    }
+
+    if (validStudentIds.length > 0) {
+      return validStudentIds;
     }
 
     // Link demo/default parent or staff member with child if unassigned but students exist
@@ -824,37 +834,6 @@ export class StudentUseCases {
           await this.studentRepository.update(demoStudent);
         }
         return [demoStudent.id];
-      }
-
-      // Check if user is staff (e.g. teacher or administrative staff with child in Grace Seeds School)
-      const isStaffMember = user.role === UserRole.TEACHER ||
-        user.email === 'sarah.mwangi@smartshule.ac.ke' ||
-        (user.email && user.email.includes('teacher'));
-
-      if (isStaffMember) {
-        // Link to an enrolled learner at Grace Seeds School
-        const staffChild = allStudents.length > 1 ? allStudents[1] : allStudents[0];
-        if (guardian) {
-          guardian.linkStudent(staffChild.id);
-          await this.guardianRepository.update(guardian);
-        } else {
-          guardian = Guardian.create(
-            {
-              userId: user.id,
-              nationalId: '28475922',
-              relationship: GuardianRelationship.MOTHER,
-              emergencyContact: user.phone || '+254711000111',
-              studentIds: [staffChild.id]
-            },
-            `grd-staff-${user.id}`
-          );
-          await this.guardianRepository.save(guardian);
-        }
-        if (!staffChild.guardianIds.includes(guardian.id)) {
-          staffChild.addGuardian(guardian.id);
-          await this.studentRepository.update(staffChild);
-        }
-        return [staffChild.id];
       }
     }
 

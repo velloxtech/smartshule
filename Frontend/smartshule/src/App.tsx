@@ -677,7 +677,6 @@ export default function App() {
             UserRole.SUPER_ADMIN,
             UserRole.ADMIN,
             UserRole.SCHOOL_ADMIN,
-            UserRole.HEAD_TEACHER,
           ].includes(user.role);
           if (isPermitted) {
             setAppView('archive');
@@ -687,8 +686,13 @@ export default function App() {
         }
       } else if (hash === '#/arrears' || hash === '#/fee-arrears' || search.includes('view=arrears')) {
         if (isAuthenticated) {
-          setCurrentTab('arrears');
-          if (appView !== 'portal') setAppView('portal');
+          if (user?.role && isTabPermitted('arrears', user.role)) {
+            setCurrentTab('arrears');
+            if (appView !== 'portal') setAppView('portal');
+          } else {
+            setCurrentTab('dashboard');
+            if (appView !== 'portal') setAppView('portal');
+          }
         }
       } else if (appView === 'archive' && !hash && !search.includes('view=archive')) {
         setAppView('portal');

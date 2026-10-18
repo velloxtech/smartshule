@@ -215,7 +215,8 @@ export class AppContainer {
       this.passwordHasher,
       this.tokenService,
       this.notificationService,
-      this.guardianRepository
+      this.guardianRepository,
+      this.studentRepository
     );
     this.studentUseCases = new StudentUseCases(
       this.studentRepository,

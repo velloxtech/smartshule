@@ -59,15 +59,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
     UserRole.SUPER_ADMIN,
     UserRole.ADMIN,
     UserRole.SCHOOL_ADMIN,
-    UserRole.HEAD_TEACHER,
   ].includes(user.role);
 
   const isFinanceAdmin = user?.role && [
     UserRole.SUPER_ADMIN,
     UserRole.ADMIN,
     UserRole.SCHOOL_ADMIN,
-    UserRole.HEAD_TEACHER,
-    UserRole.DEPUTY_HEAD_TEACHER,
     UserRole.BURSAR,
     UserRole.ACCOUNTANT,
   ].includes(user.role);
@@ -143,7 +140,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <div className="flex items-center justify-between pt-1 border-t border-[#7a1228]/10">
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${badgeStyle.bg} ${badgeStyle.text} uppercase tracking-wider`}>
                   {isStaffWithChildren && activeViewMode === 'PARENT'
-                    ? 'Parent View · Staff Child'
+                    ? (user?.role === UserRole.TEACHER ? "Parent View · Teacher's Child" : 'Parent View · Staff Child')
                     : getRoleDisplayName(user?.role)}
                 </span>
                 <span className="w-2 h-2 rounded-full bg-secondary" title="Active Session"></span>
@@ -157,10 +154,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     onCloseMobile();
                   }}
                   className="w-full mt-1 py-1 px-2 rounded-lg bg-primary text-white text-[10px] font-bold flex items-center justify-center gap-1 hover:bg-[#660000] transition-colors cursor-pointer shadow-2xs"
-                  title="Return to Staff Workspace"
+                  title={user?.role === UserRole.TEACHER ? "Return to Teacher Workspace" : "Return to Staff Workspace"}
                 >
                   <span className="material-symbols-outlined text-[14px]">badge</span>
-                  <span>Return to Staff Workspace</span>
+                  <span>{user?.role === UserRole.TEACHER ? 'Return to Teacher Workspace' : 'Return to Staff Workspace'}</span>
                 </button>
               )}
               {isAdmin && (

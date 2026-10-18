@@ -33,7 +33,6 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
     UserRole.SUPER_ADMIN,
     UserRole.ADMIN,
     UserRole.SCHOOL_ADMIN,
-    UserRole.HEAD_TEACHER,
   ].includes(currentUser.role);
 
   const fetchArchivedRecords = async () => {

@@ -19,7 +19,6 @@ export const BILLING_AUTHORIZED_ROLES: UserRole[] = [
   UserRole.SUPER_ADMIN,
   UserRole.ADMIN,
   UserRole.SCHOOL_ADMIN,
-  UserRole.HEAD_TEACHER,
   UserRole.BURSAR,
   UserRole.ACCOUNTANT
 ];
