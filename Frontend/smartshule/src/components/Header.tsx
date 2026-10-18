@@ -35,7 +35,14 @@ export const Header: React.FC<HeaderProps> = ({
   academicContext,
   backendConnected = true,
 }) => {
-  const { user, logout } = useAuth();
+  const {
+    user,
+    logout,
+    activeViewMode,
+    setActiveViewMode,
+    isStaffWithChildren,
+    enrolledChildrenCount,
+  } = useAuth();
   const [termDropdownOpen, setTermDropdownOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -79,7 +86,10 @@ export const Header: React.FC<HeaderProps> = ({
     user?.role === UserRole.SCHOOL_ADMIN ||
     user?.role === UserRole.HEAD_TEACHER;
 
-  const isParent = user?.role === UserRole.PARENT || user?.role === UserRole.GUARDIAN;
+  const isParent =
+    user?.role === UserRole.PARENT ||
+    user?.role === UserRole.GUARDIAN ||
+    (isStaffWithChildren && activeViewMode === 'PARENT');
 
   const filteredStudents = searchQuery.trim()
     ? students.filter(
@@ -323,8 +333,59 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Right Actions: System Pulse, Alerts, Help, Profile */}
+        {/* Right Actions: Dual-View Switcher, System Pulse, Alerts, Help, Profile */}
         <div className="flex items-center gap-2 md:gap-3">
+          {/* Dual-View Toggle for Staff with Children in Grace Seeds School */}
+          {isStaffWithChildren && (
+            <div className="flex items-center p-0.5 rounded-xl bg-[#590000] border border-white/20 shadow-xs">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveViewMode('STAFF');
+                  if (onNavigateTab) onNavigateTab('dashboard');
+                }}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  activeViewMode === 'STAFF'
+                    ? 'bg-white text-[#800000] shadow-xs font-bold'
+                    : 'text-white/80 hover:text-white hover:bg-white/10'
+                }`}
+                title="Staff Workspace: Classes, lesson plans, schemes, records"
+              >
+                <span className="material-symbols-outlined text-[16px]">badge</span>
+                <span className="hidden sm:inline">Staff Workspace</span>
+                <span className="sm:hidden">Staff</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveViewMode('PARENT');
+                  if (onNavigateTab) onNavigateTab('dashboard');
+                }}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  activeViewMode === 'PARENT'
+                    ? 'bg-white text-[#800000] shadow-xs font-bold'
+                    : 'text-white/80 hover:text-white hover:bg-white/10'
+                }`}
+                title="Parent View: Child attendance, e-diary, report cards, fees"
+              >
+                <span className="material-symbols-outlined text-[16px]">family_restroom</span>
+                <span className="hidden sm:inline">Parent View</span>
+                <span className="sm:hidden">Parent</span>
+                {enrolledChildrenCount > 0 && (
+                  <span
+                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                      activeViewMode === 'PARENT'
+                        ? 'bg-[#800000] text-white'
+                        : 'bg-white/20 text-white'
+                    }`}
+                  >
+                    {enrolledChildrenCount}
+                  </span>
+                )}
+              </button>
+            </div>
+          )}
+
           {/* Live system pulse key detail */}
           <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#660000] border border-white/10 text-xs">
             <span
@@ -441,6 +502,36 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
 
                 <div className="py-2 space-y-1">
+                  {isStaffWithChildren && (
+                    <div className="p-2 mb-2 rounded-xl bg-rose-50 border border-[#800000]/20">
+                      <div className="text-[11px] font-bold text-[#800000] flex items-center justify-between">
+                        <span>Staff Dual Role</span>
+                        <span className="px-1.5 py-0.5 rounded text-[10px] bg-white text-[#800000] font-bold border border-[#800000]/20">
+                          {activeViewMode === 'STAFF' ? 'Staff Workspace' : 'Parent View'}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-600 mt-1">
+                        Active role: {activeViewMode === 'STAFF' ? 'School Staff' : 'Parent / Guardian'}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const nextMode = activeViewMode === 'STAFF' ? 'PARENT' : 'STAFF';
+                          setActiveViewMode(nextMode);
+                          setUserMenuOpen(false);
+                          if (onNavigateTab) onNavigateTab('dashboard');
+                        }}
+                        className="mt-2 w-full py-1.5 px-2 rounded-lg bg-[#800000] text-white text-xs font-bold hover:bg-[#660000] transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-[15px]">
+                          {activeViewMode === 'STAFF' ? 'family_restroom' : 'badge'}
+                        </span>
+                        <span>
+                          {activeViewMode === 'STAFF' ? 'Switch to Parent View' : 'Switch to Staff Workspace'}
+                        </span>
+                      </button>
+                    </div>
+                  )}
                   {isParent && onNavigateTab && (
                     <button
                       onClick={() => {

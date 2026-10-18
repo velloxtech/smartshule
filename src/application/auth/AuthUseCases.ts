@@ -37,6 +37,9 @@ export interface AuthResponseDTO {
     schoolId?: string;
     schoolName?: string;
     mustChangePassword?: boolean;
+    hasEnrolledChildren?: boolean;
+    enrolledChildIds?: string[];
+    guardianId?: string;
   };
 }
 
@@ -280,6 +283,8 @@ export class AuthUseCases {
     const accessToken = this.tokenService.generateAccessToken(tokenPayload);
     const refreshToken = this.tokenService.generateRefreshToken(tokenPayload);
 
+    const guardianLink = await this.resolveGuardianLink(user.id, user.phone);
+
     return {
       accessToken,
       refreshToken,
@@ -293,7 +298,10 @@ export class AuthUseCases {
         phone: user.phone,
         schoolId: user.schoolId || 'school-001',
         schoolName: 'Grace Seeds School',
-        mustChangePassword: Boolean(mustChangePassword)
+        mustChangePassword: Boolean(mustChangePassword),
+        hasEnrolledChildren: guardianLink.hasEnrolledChildren,
+        enrolledChildIds: guardianLink.enrolledChildIds,
+        guardianId: guardianLink.guardianId
       }
     };
   }
@@ -321,12 +329,54 @@ export class AuthUseCases {
     return { accessToken };
   }
 
+  private async resolveGuardianLink(userId: string, userPhone?: string): Promise<{
+    hasEnrolledChildren: boolean;
+    enrolledChildIds: string[];
+    guardianId?: string;
+  }> {
+    if (!this.guardianRepository) {
+      return { hasEnrolledChildren: false, enrolledChildIds: [] };
+    }
+    try {
+      let guardian = await this.guardianRepository.findByUserId(userId);
+      if (!guardian && userPhone) {
+        guardian = await this.guardianRepository.findByPhone(userPhone);
+      }
+      if (!guardian) {
+        const allGuardians = await this.guardianRepository.findAll();
+        guardian = allGuardians.find(g => (userPhone && PhoneUtils.areMatches(g.emergencyContact, userPhone)) || g.userId === userId) || null;
+      }
+      if (guardian) {
+        if (guardian.userId !== userId) {
+          guardian.setUserId(userId);
+          await this.guardianRepository.update(guardian);
+        }
+        const studentIds = guardian.studentIds || [];
+        return {
+          hasEnrolledChildren: studentIds.length > 0,
+          enrolledChildIds: studentIds,
+          guardianId: guardian.id
+        };
+      }
+    } catch {
+      // Ignore lookup errors
+    }
+    return { hasEnrolledChildren: false, enrolledChildIds: [] };
+  }
+
   public async getProfile(userId: string) {
     const user = await this.userRepository.findById(userId);
     if (!user) {
       throw new NotFoundError('User', userId);
     }
-    return user.toJSON();
+    const profile = user.toJSON();
+    const guardianLink = await this.resolveGuardianLink(user.id, user.phone);
+    return {
+      ...profile,
+      hasEnrolledChildren: guardianLink.hasEnrolledChildren,
+      enrolledChildIds: guardianLink.enrolledChildIds,
+      guardianId: guardianLink.guardianId
+    };
   }
 
   public async changePassword(userId: string, dto: { currentPassword: string; newPassword: string }) {

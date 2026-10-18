@@ -83,8 +83,9 @@ import { LegalModal, LegalTabType } from './components/legal/LegalModal';
 import { CookieBanner } from './components/legal/CookieBanner';
 
 export default function App() {
-  const { user, isAuthenticated, isLoading } = useAuth();
-  const isGuardian = user?.role === UserRole.GUARDIAN || user?.role === UserRole.PARENT;
+  const { user, isAuthenticated, isLoading, activeViewMode, isStaffWithChildren } = useAuth();
+  const effectiveRole = (isStaffWithChildren && activeViewMode === 'PARENT') ? UserRole.PARENT : user?.role;
+  const isGuardian = effectiveRole === UserRole.GUARDIAN || effectiveRole === UserRole.PARENT;
   const [appView, setAppView] = useState<'landing' | 'login' | 'portal' | 'archive'>('landing');
   const [currentTab, setCurrentTab] = useState<TabType>('dashboard');
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -142,15 +143,15 @@ export default function App() {
 
   // Role-Based Tab Guard: if active tab is forbidden for this role, bounce to dashboard
   useEffect(() => {
-    if (user && !isTabPermitted(currentTab, user.role)) {
+    if (effectiveRole && !isTabPermitted(currentTab, effectiveRole)) {
       setCurrentTab('dashboard');
     }
-  }, [user, currentTab]);
+  }, [effectiveRole, currentTab]);
 
   // Refresh students and attached fee balances
   const refreshStudentsAndFees = useCallback(async () => {
     try {
-      const isParentOnly = user?.role === UserRole.PARENT || user?.role === UserRole.GUARDIAN;
+      const isParentOnly = effectiveRole === UserRole.PARENT || effectiveRole === UserRole.GUARDIAN;
       if (isParentOnly) {
         const portalRes = await apiService.getGuardianPortalData().catch(() => null);
         if (portalRes?.data?.children && Array.isArray(portalRes.data.children)) {
@@ -882,6 +883,16 @@ export default function App() {
         <main className="flex-1 px-4 sm:px-6 lg:px-8 pt-4 max-w-7xl w-full mx-auto print:p-0 print:m-0 print:max-w-none print:w-full">
           {currentTab === 'dashboard' && (
             (() => {
+              if (isStaffWithChildren && activeViewMode === 'PARENT') {
+                return (
+                  <ParentDashboardView
+                    onOpenMpesaWithStudent={(student) => handleOpenKcbBuni(student)}
+                    onOpenKcbBuniWithStudent={(student) => handleOpenKcbBuni(student)}
+                    onViewReportCard={(student) => handleViewReportCard(student)}
+                    onNavigateTab={(tab) => setCurrentTab(tab as any)}
+                  />
+                );
+              }
               switch (user?.role) {
                 case UserRole.SUPER_ADMIN:
                   return (

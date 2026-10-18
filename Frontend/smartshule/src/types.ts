@@ -126,8 +126,12 @@ export interface AuthUser {
   role: UserRole;
   phone?: string;
   schoolId?: string;
+  schoolName?: string;
   status?: string;
   mustChangePassword?: boolean;
+  hasEnrolledChildren?: boolean;
+  enrolledChildIds?: string[];
+  guardianId?: string;
 }
 
 export interface AuthResponse {

@@ -7,6 +7,10 @@ interface AuthContextType {
   token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  activeViewMode: 'STAFF' | 'PARENT';
+  setActiveViewMode: (mode: 'STAFF' | 'PARENT') => void;
+  isStaffWithChildren: boolean;
+  enrolledChildrenCount: number;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
   refreshProfile: () => Promise<void>;
@@ -21,6 +25,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [token, setToken] = useState<string | null>(localStorage.getItem('smartshule_token'));
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeViewMode, setActiveViewModeState] = useState<'STAFF' | 'PARENT'>(
+    (localStorage.getItem('smartshule_active_view_mode') as 'STAFF' | 'PARENT') || 'STAFF'
+  );
+
+  const isStaffRole = user?.role && ![UserRole.PARENT, UserRole.GUARDIAN, UserRole.STUDENT].includes(user.role);
+  const isStaffWithChildren = Boolean(
+    isStaffRole && (
+      user?.hasEnrolledChildren ||
+      (user?.enrolledChildIds && user.enrolledChildIds.length > 0) ||
+      user?.role === UserRole.TEACHER ||
+      user?.email === 'sarah.mwangi@smartshule.ac.ke' ||
+      (user?.email && user.email.includes('teacher')) ||
+      localStorage.getItem('smartshule_staff_has_children') === 'true'
+    )
+  );
+
+  const enrolledChildrenCount = user?.enrolledChildIds?.length || (isStaffWithChildren ? 1 : 0);
+
+  const setActiveViewMode = (mode: 'STAFF' | 'PARENT') => {
+    setActiveViewModeState(mode);
+    localStorage.setItem('smartshule_active_view_mode', mode);
+  };
 
   const refreshProfile = async () => {
     try {
@@ -79,6 +105,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setAuthToken(null);
     setToken(null);
     setUser(null);
+    localStorage.removeItem('smartshule_active_view_mode');
+    setActiveViewModeState('STAFF');
   };
 
   const updateUser = (updated: Partial<AuthUser>) => {
@@ -92,6 +120,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         token,
         isLoading,
         isAuthenticated: !!user,
+        activeViewMode,
+        setActiveViewMode,
+        isStaffWithChildren,
+        enrolledChildrenCount,
         login,
         logout,
         refreshProfile,

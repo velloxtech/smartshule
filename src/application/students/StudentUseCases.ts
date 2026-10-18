@@ -798,31 +798,64 @@ export class StudentUseCases {
       return Array.from(linkedStudentIds);
     }
 
-    // Link demo/default parent if unassigned but students exist
+    // Link demo/default parent or staff member with child if unassigned but students exist
     const allStudents = await this.studentRepository.findAll();
-    if (allStudents.length > 0 && user && (user.email === 'parent@smartshule.ac.ke' || user.id === 'usr-parent-01')) {
-      const demoStudent = allStudents.find(s => s.id === 'student-001') || allStudents[0];
-      if (guardian) {
-        guardian.linkStudent(demoStudent.id);
-        await this.guardianRepository.update(guardian);
-      } else {
-        guardian = Guardian.create(
-          {
-            userId: user.id,
-            nationalId: '28475921',
-            relationship: GuardianRelationship.MOTHER,
-            emergencyContact: user.phone || '+254777000777',
-            studentIds: [demoStudent.id]
-          },
-          'grd-default-01'
-        );
-        await this.guardianRepository.save(guardian);
+    if (allStudents.length > 0 && user) {
+      if (user.email === 'parent@smartshule.ac.ke' || user.id === 'usr-parent-01') {
+        const demoStudent = allStudents.find(s => s.id === 'student-001') || allStudents[0];
+        if (guardian) {
+          guardian.linkStudent(demoStudent.id);
+          await this.guardianRepository.update(guardian);
+        } else {
+          guardian = Guardian.create(
+            {
+              userId: user.id,
+              nationalId: '28475921',
+              relationship: GuardianRelationship.MOTHER,
+              emergencyContact: user.phone || '+254777000777',
+              studentIds: [demoStudent.id]
+            },
+            'grd-default-01'
+          );
+          await this.guardianRepository.save(guardian);
+        }
+        if (!demoStudent.guardianIds.includes(guardian.id)) {
+          demoStudent.addGuardian(guardian.id);
+          await this.studentRepository.update(demoStudent);
+        }
+        return [demoStudent.id];
       }
-      if (!demoStudent.guardianIds.includes(guardian.id)) {
-        demoStudent.addGuardian(guardian.id);
-        await this.studentRepository.update(demoStudent);
+
+      // Check if user is staff (e.g. teacher or administrative staff with child in Grace Seeds School)
+      const isStaffMember = user.role === UserRole.TEACHER ||
+        user.email === 'sarah.mwangi@smartshule.ac.ke' ||
+        (user.email && user.email.includes('teacher'));
+
+      if (isStaffMember) {
+        // Link to an enrolled learner at Grace Seeds School
+        const staffChild = allStudents.length > 1 ? allStudents[1] : allStudents[0];
+        if (guardian) {
+          guardian.linkStudent(staffChild.id);
+          await this.guardianRepository.update(guardian);
+        } else {
+          guardian = Guardian.create(
+            {
+              userId: user.id,
+              nationalId: '28475922',
+              relationship: GuardianRelationship.MOTHER,
+              emergencyContact: user.phone || '+254711000111',
+              studentIds: [staffChild.id]
+            },
+            `grd-staff-${user.id}`
+          );
+          await this.guardianRepository.save(guardian);
+        }
+        if (!staffChild.guardianIds.includes(guardian.id)) {
+          staffChild.addGuardian(guardian.id);
+          await this.studentRepository.update(staffChild);
+        }
+        return [staffChild.id];
       }
-      return [demoStudent.id];
     }
 
     return [];

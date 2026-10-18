@@ -21,9 +21,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onNavigateLanding,
   onOpenLegalModal,
 }) => {
-  const { user, logout } = useAuth();
-  const navSections = getFilteredNavSections(user?.role);
-  const badgeStyle = getRoleBadgeStyle(user?.role);
+  const { user, logout, activeViewMode, setActiveViewMode, isStaffWithChildren } = useAuth();
+  const effectiveRole = (isStaffWithChildren && activeViewMode === 'PARENT') ? UserRole.PARENT : user?.role;
+  const navSections = getFilteredNavSections(effectiveRole);
+  const badgeStyle = getRoleBadgeStyle(effectiveRole);
   const [pendingOnboardingsCount, setPendingOnboardingsCount] = useState(0);
   const [pendingSlotsCount, setPendingSlotsCount] = useState(0);
 
@@ -141,10 +142,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
               <div className="flex items-center justify-between pt-1 border-t border-[#7a1228]/10">
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${badgeStyle.bg} ${badgeStyle.text} uppercase tracking-wider`}>
-                  {getRoleDisplayName(user?.role)}
+                  {isStaffWithChildren && activeViewMode === 'PARENT'
+                    ? 'Parent View · Staff Child'
+                    : getRoleDisplayName(user?.role)}
                 </span>
                 <span className="w-2 h-2 rounded-full bg-secondary" title="Active Session"></span>
               </div>
+              {isStaffWithChildren && activeViewMode === 'PARENT' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveViewMode('STAFF');
+                    onSelectTab('dashboard');
+                    onCloseMobile();
+                  }}
+                  className="w-full mt-1 py-1 px-2 rounded-lg bg-primary text-white text-[10px] font-bold flex items-center justify-center gap-1 hover:bg-[#660000] transition-colors cursor-pointer shadow-2xs"
+                  title="Return to Staff Workspace"
+                >
+                  <span className="material-symbols-outlined text-[14px]">badge</span>
+                  <span>Return to Staff Workspace</span>
+                </button>
+              )}
               {isAdmin && (
                 <button
                   type="button"
