@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { apiService } from '../../services/api';
 import { AttendanceEntry, UserRole } from '../../types';
 import { useAuth } from '../../context/AuthContext';
@@ -75,14 +77,14 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
               ? {
                   student: child,
                   stats: {
-                    totalSessions: 60,
-                    present: 58,
-                    absent: 2,
-                    late: 0,
-                    excused: 0,
-                    overallAttendanceRate: child.attendance.attendanceRate || 97,
+                    totalSessions: child.attendance.totalSessions ?? (child.attendance.presentDays ? (child.attendance.presentDays + (child.attendance.absentDays || 0)) : (child.attendance.todayStatus ? 1 : 0)),
+                    present: child.attendance.presentDays ?? (child.attendance.todayStatus === 'PRESENT' ? 1 : 0),
+                    absent: child.attendance.absentDays ?? (child.attendance.todayStatus === 'ABSENT' ? 1 : 0),
+                    late: child.attendance.lateDays ?? (child.attendance.todayStatus === 'LATE' ? 1 : 0),
+                    excused: child.attendance.excusedDays ?? 0,
+                    overallAttendanceRate: child.attendance.attendanceRate ?? 100,
                   },
-                  history: [],
+                  history: child.attendance.history || [],
                 }
               : null
           );
@@ -271,15 +273,330 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
     return resolveStreamName(streamId) || resolveClassName(streamId) || 'Unassigned';
   };
 
+  const getSchoolLogoBase64 = async (): Promise<string | null> => {
+    const urlsToTry = ['/logo.png', '/logo.jpg'];
+    for (const url of urlsToTry) {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) continue;
+        const blob = await res.blob();
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+        if (base64 && base64.startsWith('data:image')) {
+          return base64;
+        }
+      } catch {
+        // continue
+      }
+    }
+    return null;
+  };
+
+  const downloadTeacherRegisterPDF = async () => {
+    if (students.length === 0) {
+      alert('No learners found for this register date.');
+      return;
+    }
+
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const logoBase64 = await getSchoolLogoBase64();
+    const schoolName = 'Grace Seeds School';
+    const motto = 'The Future Begins Here';
+
+    // Top burgundy bar
+    doc.setFillColor(122, 18, 40);
+    doc.rect(0, 0, 210, 5, 'F');
+
+    let curY = 12;
+    if (logoBase64) {
+      try {
+        doc.addImage(logoBase64, 'PNG', 14, curY, 15, 15);
+      } catch {
+        // continue
+      }
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(122, 18, 40);
+    doc.text(schoolName, 32, curY + 4);
+
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`"${motto}" · P.O. Box 12-20123 / 12-40123 Kisumu · Tel: 0745436312`, 32, curY + 9);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(30, 41, 59);
+    doc.text('OFFICIAL DAILY ATTENDANCE & ROLL CALL REGISTER', 32, curY + 14);
+
+    // Metadata card
+    curY += 19;
+    doc.setFillColor(248, 250, 252);
+    doc.rect(14, curY, 182, 16, 'F');
+    doc.setDrawColor(226, 232, 240);
+    doc.rect(14, curY, 182, 16, 'S');
+
+    const assignedClassName = getAssignedDisplayName();
+    const totalRoll = students.length;
+    const rate = totalRoll > 0 ? Math.round(((presentCount + lateCount) / totalRoll) * 100) : 0;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(15, 23, 42);
+    doc.text(`Class/Stream: ${assignedClassName}`, 18, curY + 5);
+    doc.text(`Date: ${registerDate}`, 90, curY + 5);
+    doc.text(`Educator: ${teacherDisplayName}`, 140, curY + 5);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(122, 18, 40);
+    doc.text(`Roll: ${totalRoll} Learners`, 18, curY + 11);
+    doc.setTextColor(5, 150, 105);
+    doc.text(`Present: ${presentCount}`, 55, curY + 11);
+    doc.setTextColor(220, 38, 38);
+    doc.text(`Absent: ${absentCount}`, 85, curY + 11);
+    doc.setTextColor(217, 119, 6);
+    doc.text(`Late: ${lateCount}`, 115, curY + 11);
+    doc.setTextColor(30, 41, 59);
+    doc.text(`Rate: ${rate}%`, 145, curY + 11);
+
+    curY += 20;
+
+    const rows = students.map((s, idx) => {
+      const st = attendanceEntries[s.id] || 'PRESENT';
+      const phone = s.guardian?.phone || s.guardianPhone || '--';
+      return [
+        String(idx + 1),
+        s.admissionNumber || s.admNo || '--',
+        s.name || `${s.firstName || ''} ${s.lastName || ''}`.trim() || 'Learner',
+        s.gender === 'FEMALE' || s.gender === 'Girl' ? 'F' : 'M',
+        st,
+        phone,
+        st === 'ABSENT' ? 'SMS Notification Sent' : st === 'LATE' ? 'Late Arrival Noted' : 'Normal attendance',
+      ];
+    });
+
+    autoTable(doc, {
+      startY: curY,
+      head: [['#', 'Adm No', 'Learner Full Name', 'Sex', 'Status', 'Guardian Contact', 'Attendance Remark']],
+      body: rows,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [122, 18, 40],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 7.5,
+      },
+      bodyStyles: {
+        fontSize: 7.5,
+        textColor: [31, 41, 55],
+        cellPadding: 2,
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252],
+      },
+      columnStyles: {
+        0: { cellWidth: 8, fontStyle: 'bold' },
+        1: { cellWidth: 22 },
+        2: { cellWidth: 50, fontStyle: 'bold' },
+        3: { cellWidth: 10 },
+        4: { cellWidth: 22, fontStyle: 'bold' },
+        5: { cellWidth: 32 },
+        6: { cellWidth: 38 },
+      },
+      margin: { left: 14, right: 14 },
+    });
+
+    const lastTable = (doc as any).lastAutoTable;
+    curY = (lastTable && lastTable.finalY ? lastTable.finalY : 240) + 7;
+
+    if (curY + 28 > 280) {
+      doc.addPage('a4', 'portrait');
+      curY = 18;
+    }
+
+    doc.setDrawColor(203, 213, 225);
+    doc.setLineWidth(0.3);
+    doc.line(14, curY, 196, curY);
+    curY += 6;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(30, 41, 59);
+
+    doc.text(`Class Educator: ${teacherDisplayName}`, 14, curY);
+    doc.line(14, curY + 6, 80, curY + 6);
+    doc.text('Signature & Date', 14, curY + 10);
+
+    doc.text('Headteacher Endorsement:', 115, curY);
+    doc.line(115, curY + 6, 185, curY + 6);
+    doc.text('Official Seal / Stamp & Date', 115, curY + 10);
+
+    doc.setFontSize(6.5);
+    doc.setTextColor(148, 163, 184);
+    doc.text('Grace Seeds School · Official Daily Attendance Roll Register Dossier', 105, 290, { align: 'center' });
+
+    doc.save(`Grace_Seeds_Daily_Attendance_Register_${assignedClassName.replace(/\s+/g, '_')}_${registerDate}.pdf`);
+  };
+
+  const downloadParentAttendancePDF = async () => {
+    const activeChild = parentChildren.find((c) => c.id === selectedChildId) || parentChildren[0];
+    if (!activeChild) return;
+
+    const stats = parentAttendanceSummary?.stats || {
+      totalSessions: activeChild?.attendance?.totalSessions ?? 0,
+      present: activeChild?.attendance?.presentDays ?? (activeChild?.attendance?.todayStatus === 'PRESENT' ? 1 : 0),
+      absent: activeChild?.attendance?.absentDays ?? (activeChild?.attendance?.todayStatus === 'ABSENT' ? 1 : 0),
+      late: activeChild?.attendance?.lateDays ?? (activeChild?.attendance?.todayStatus === 'LATE' ? 1 : 0),
+      excused: activeChild?.attendance?.excusedDays ?? 0,
+      overallAttendanceRate: activeChild?.attendance?.attendanceRate ?? 100,
+    };
+    const history = parentAttendanceSummary?.history || [];
+
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const logoBase64 = await getSchoolLogoBase64();
+    const schoolName = 'Grace Seeds School';
+    const motto = 'The Future Begins Here';
+
+    // Top burgundy bar
+    doc.setFillColor(122, 18, 40);
+    doc.rect(0, 0, 210, 5, 'F');
+
+    let curY = 12;
+    if (logoBase64) {
+      try {
+        doc.addImage(logoBase64, 'PNG', 14, curY, 15, 15);
+      } catch {
+        // continue
+      }
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(122, 18, 40);
+    doc.text(schoolName, 32, curY + 4);
+
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`"${motto}" · P.O. Box 12-20123 / 12-40123 Kisumu · Tel: 0745436312`, 32, curY + 9);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(30, 41, 59);
+    doc.text('OFFICIAL LEARNER ATTENDANCE & PUNCTUALITY CERTIFICATE', 32, curY + 14);
+
+    // Meta box
+    curY += 19;
+    doc.setFillColor(248, 250, 252);
+    doc.rect(14, curY, 182, 16, 'F');
+    doc.setDrawColor(226, 232, 240);
+    doc.rect(14, curY, 182, 16, 'S');
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(15, 23, 42);
+    doc.text(`Learner: ${activeChild.firstName} ${activeChild.lastName}`, 18, curY + 5);
+    doc.text(`Admission No: ${activeChild.admissionNumber}`, 95, curY + 5);
+    doc.text(`Grade/Class: ${activeChild.gradeLevel ? activeChild.gradeLevel.replace('_', ' ') : 'Primary'}`, 140, curY + 5);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(122, 18, 40);
+    doc.text(`Attendance Standing: ${stats.overallAttendanceRate}%`, 18, curY + 11);
+    doc.setTextColor(5, 150, 105);
+    doc.text(`Present: ${stats.present} Days`, 70, curY + 11);
+    doc.setTextColor(220, 38, 38);
+    doc.text(`Absent: ${stats.absent} Days`, 110, curY + 11);
+    doc.setTextColor(217, 119, 6);
+    doc.text(`Late: ${stats.late} Days`, 150, curY + 11);
+
+    curY += 21;
+
+    const rows = history.length > 0 ? history.map((h: any, idx: number) => [
+      String(idx + 1),
+      h.date,
+      h.type === 'DAILY_MORNING' ? 'Morning Roll' : (h.type || 'Session'),
+      h.status,
+      h.remarks || 'Normal attendance logged',
+    ]) : [
+      ['1', new Date().toISOString().split('T')[0], 'Morning Roll', 'PRESENT', 'Normal check-in logged']
+    ];
+
+    autoTable(doc, {
+      startY: curY,
+      head: [['#', 'Date', 'Session Type', 'Status', 'Teacher Note / Remarks']],
+      body: rows,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [122, 18, 40],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 7.5,
+      },
+      bodyStyles: {
+        fontSize: 7.5,
+        textColor: [31, 41, 55],
+        cellPadding: 2,
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252],
+      },
+      columnStyles: {
+        0: { cellWidth: 10, fontStyle: 'bold' },
+        1: { cellWidth: 32 },
+        2: { cellWidth: 35 },
+        3: { cellWidth: 30, fontStyle: 'bold' },
+        4: { cellWidth: 75 },
+      },
+      margin: { left: 14, right: 14 },
+    });
+
+    const lastTable = (doc as any).lastAutoTable;
+    curY = (lastTable && lastTable.finalY ? lastTable.finalY : 240) + 7;
+
+    if (curY + 28 > 280) {
+      doc.addPage('a4', 'portrait');
+      curY = 18;
+    }
+
+    doc.setDrawColor(203, 213, 225);
+    doc.setLineWidth(0.3);
+    doc.line(14, curY, 196, curY);
+    curY += 6;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(30, 41, 59);
+
+    doc.text('Class Educator Certification:', 14, curY);
+    doc.line(14, curY + 6, 80, curY + 6);
+    doc.text('Signature & Date', 14, curY + 10);
+
+    doc.text('Headteacher Official Endorsement:', 115, curY);
+    doc.line(115, curY + 6, 185, curY + 6);
+    doc.text('Official Seal / Stamp & Date', 115, curY + 10);
+
+    doc.setFontSize(6.5);
+    doc.setTextColor(148, 163, 184);
+    doc.text('Grace Seeds School · Official Learner Attendance Dossier', 105, 290, { align: 'center' });
+
+    doc.save(`Grace_Seeds_Attendance_${activeChild.firstName}_${activeChild.lastName}.pdf`);
+  };
+
   if (isParent) {
     const activeChild = parentChildren.find((c) => c.id === selectedChildId) || parentChildren[0];
     const stats = parentAttendanceSummary?.stats || {
-      totalSessions: 60,
-      present: 58,
-      absent: 2,
-      late: 0,
-      excused: 0,
-      overallAttendanceRate: activeChild?.attendance?.attendanceRate ?? 97,
+      totalSessions: activeChild?.attendance?.totalSessions ?? 0,
+      present: activeChild?.attendance?.presentDays ?? (activeChild?.attendance?.todayStatus === 'PRESENT' ? 1 : 0),
+      absent: activeChild?.attendance?.absentDays ?? (activeChild?.attendance?.todayStatus === 'ABSENT' ? 1 : 0),
+      late: activeChild?.attendance?.lateDays ?? (activeChild?.attendance?.todayStatus === 'LATE' ? 1 : 0),
+      excused: activeChild?.attendance?.excusedDays ?? 0,
+      overallAttendanceRate: activeChild?.attendance?.attendanceRate ?? 100,
     };
     const history = parentAttendanceSummary?.history || [];
 
@@ -303,22 +620,32 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
             </p>
           </div>
 
-          {parentChildren.length > 1 && (
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-on-surface-variant">Select Child:</span>
-              <select
-                value={selectedChildId}
-                onChange={(e) => setSelectedChildId(e.target.value)}
-                className="bg-surface-container-lowest border border-outline-variant/40 rounded-lg py-1.5 px-3 text-xs font-bold text-on-surface shadow-xs"
-              >
-                {parentChildren.map((child) => (
-                  <option key={child.id} value={child.id}>
-                    {child.firstName} {child.lastName} ({child.admissionNumber})
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+          <div className="flex items-center gap-2 flex-wrap">
+            {parentChildren.length > 1 && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-on-surface-variant">Select Child:</span>
+                <select
+                  value={selectedChildId}
+                  onChange={(e) => setSelectedChildId(e.target.value)}
+                  className="bg-surface-container-lowest border border-outline-variant/40 rounded-lg py-1.5 px-3 text-xs font-bold text-on-surface shadow-xs"
+                >
+                  {parentChildren.map((child) => (
+                    <option key={child.id} value={child.id}>
+                      {child.firstName} {child.lastName} ({child.admissionNumber})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            <button
+              onClick={downloadParentAttendancePDF}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-rose-50 border border-rose-200 text-[#7a1228] rounded-xl hover:bg-rose-100 text-xs font-bold shadow-xs transition-all cursor-pointer"
+              title="Download official learner attendance certificate as PDF"
+            >
+              <span className="material-symbols-outlined text-[16px]">download</span>
+              <span>Download Record (PDF)</span>
+            </button>
+          </div>
         </div>
 
         {/* Learner Info Card */}
@@ -460,17 +787,27 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
             Biometric & Teacher Roll-Call Register
           </h1>
           <p className="text-xs text-on-surface-variant mt-0.5">
-            {schoolInfo?.name || 'SmartShule'} · Morning roll call records, absence reasons, and parent SMS alerts
+            {schoolInfo?.name || 'Grace Seeds School'} · Morning roll call records, absence reasons, and parent SMS alerts
           </p>
         </div>
 
-        <button
-          onClick={() => onOpenSmsModal('absentee')}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#7a1228] text-white rounded-lg hover:bg-[#5e0d1e] text-sm font-semibold shadow-md transition-all self-start sm:self-auto cursor-pointer"
-        >
-          <span className="material-symbols-outlined text-[18px]">sms</span>
-          <span>Trigger Absentee SMS Alerts</span>
-        </button>
+        <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">
+          <button
+            onClick={downloadTeacherRegisterPDF}
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-rose-50 border border-rose-200 text-[#7a1228] rounded-xl hover:bg-rose-100 text-sm font-semibold shadow-xs transition-all cursor-pointer"
+            title="Download Daily Attendance Register as PDF"
+          >
+            <span className="material-symbols-outlined text-[18px]">download</span>
+            <span>Download Register (PDF)</span>
+          </button>
+          <button
+            onClick={() => onOpenSmsModal('absentee')}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#7a1228] text-white rounded-xl hover:bg-[#5e0d1e] text-sm font-semibold shadow-md transition-all cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[18px]">sms</span>
+            <span>Trigger Absentee SMS Alerts</span>
+          </button>
+        </div>
       </div>
 
       {/* Date & Stream Selector */}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
 import { IncomeSourceType, OtherIncomeRecord } from '../../types';
 
@@ -32,10 +32,23 @@ export const RecordIncomeModal: React.FC<RecordIncomeModalProps> = ({
     'BANK_TRANSFER' | 'BANK_DEPOSIT' | 'MPESA' | 'CHEQUE' | 'CASH' | 'CARD' | 'KCB_BUNI'
   >('BANK_TRANSFER');
   const [paymentReference, setPaymentReference] = useState('');
-  const [incomeDate, setIncomeDate] = useState(new Date().toISOString().split('T')[0]);
+  const [incomeDate, setIncomeDate] = useState('');
   const [notes, setNotes] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Reset all entry fields to blank whenever the modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setTitle('');
+      setAmount('');
+      setReceivedFrom('');
+      setPaymentReference('');
+      setIncomeDate('');
+      setNotes('');
+      setError(null);
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -70,7 +83,7 @@ export const RecordIncomeModal: React.FC<RecordIncomeModalProps> = ({
         paymentMethod,
         paymentReference: paymentReference.trim(),
         receivedFrom: receivedFrom.trim(),
-        incomeDate,
+        incomeDate: incomeDate || new Date().toISOString().split('T')[0],
         notes: notes.trim() || undefined,
       });
 

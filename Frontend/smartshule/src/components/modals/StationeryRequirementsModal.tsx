@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export interface BookItem {
   learningArea: string;
@@ -249,121 +251,244 @@ export const StationeryRequirementsModal: React.FC<StationeryRequirementsModalPr
     window.print();
   };
 
-  const handleExportHTML = () => {
-    const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8"/>
-  <title>Grace Seeds School - Requirements List - ${selectedReq.label}</title>
-  <style>
-    @page { size: A4 portrait; margin: 10mm; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #111; line-height: 1.3; font-size: 11px; margin: 0; padding: 15px; }
-    .header { text-align: center; border-bottom: 2px solid #800000; padding-bottom: 8px; margin-bottom: 12px; }
-    .school-title { font-size: 20px; font-weight: 900; color: #800000; margin: 0; text-transform: uppercase; }
-    .meta { font-size: 10px; color: #555; margin: 2px 0; }
-    .motto { font-size: 11px; font-style: italic; color: #800000; font-weight: bold; margin-top: 2px; }
-    .title-banner { background: #800000; color: #fff; padding: 6px 12px; font-size: 13px; font-weight: bold; text-align: center; margin: 10px 0; border-radius: 4px; text-transform: uppercase; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 10.5px; }
-    th, td { border: 1px solid #777; padding: 5px 8px; text-align: left; }
-    th { background: #fce8ec; color: #800000; font-weight: bold; text-transform: uppercase; }
-    .section-title { font-size: 12px; font-weight: bold; color: #800000; text-transform: uppercase; margin: 10px 0 5px; border-bottom: 1px solid #800000; padding-bottom: 2px; }
-    .footer { margin-top: 20px; border-top: 1px dashed #800000; padding-top: 8px; font-size: 10px; color: #444; display: flex; justify-content: space-between; }
-    .paybill { background: #fdf2f4; border: 1.5px solid #800000; padding: 8px; border-radius: 6px; margin: 10px 0; }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <h1 class="school-title">GRACE SEEDS SCHOOL</h1>
-    <div class="meta">P.O. BOX 12-20123 / 12-40123 KISUMU · Tel: 0745436312 · Email: schoolgraceseeds@gmail.com</div>
-    <div class="motto">&quot;The Future Begins Here&quot;</div>
-  </div>
+  const getSchoolLogoBase64 = async (): Promise<string | null> => {
+    const urlsToTry = ['/logo.png', '/logo.jpg'];
+    for (const url of urlsToTry) {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) continue;
+        const blob = await res.blob();
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+        if (base64 && base64.startsWith('data:image')) {
+          return base64;
+        }
+      } catch {
+        // try next
+      }
+    }
+    return null;
+  };
 
-  <div class="title-banner">
-    Official Requirements List &amp; Booklist 2027 — ${selectedReq.label.toUpperCase()}
-  </div>
+  const handleExportPDF = async () => {
+    const logoBase64 = await getSchoolLogoBase64();
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const schoolName = 'Grace Seeds School';
+    const motto = 'The Future Begins Here';
 
-  <div class="section-title">1. Approved Textbooks &amp; Learners Workbooks</div>
-  <table>
-    <thead>
-      <tr>
-        <th style="width: 25%;">Learning Area</th>
-        <th style="width: 45%;">Workbook / Textbook Title</th>
-        <th style="width: 15%;">Publisher</th>
-        <th style="width: 15%;">Authors / Remarks</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${selectedReq.workbooks.map((b) => `
-        <tr>
-          <td><strong>${b.learningArea}</strong></td>
-          <td>${b.bookTitle}</td>
-          <td><span style="font-weight: 600; color: #800000;">${b.publisher}</span></td>
-          <td>${b.authors || 'KICD Approved'}</td>
-        </tr>
-      `).join('')}
-    </tbody>
-  </table>
+    // Top burgundy bar
+    doc.setFillColor(122, 18, 40);
+    doc.rect(0, 0, 210, 5, 'F');
 
-  <div class="section-title">2. Mandatory Stationery &amp; Practical Supplies</div>
-  <table>
-    <thead>
-      <tr>
-        <th style="width: 50%;">Stationery Item</th>
-        <th style="width: 20%;">Quantity Required</th>
-        <th style="width: 30%;">Specifications &amp; Brand</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${selectedReq.stationeries.map((s) => `
-        <tr>
-          <td><strong>${s.item}</strong></td>
-          <td><span style="font-weight: bold; color: #047857;">${s.quantity}</span></td>
-          <td>${s.notes || 'As indicated'}</td>
-        </tr>
-      `).join('')}
-    </tbody>
-  </table>
+    let curY = 12;
+    if (logoBase64) {
+      try {
+        doc.addImage(logoBase64, 'PNG', 14, curY, 16, 16);
+      } catch {
+        // continue
+      }
+    }
 
-  <div class="section-title">3. Items Available in School Store</div>
-  <table>
-    <thead>
-      <tr>
-        <th style="width: 50%;">Item Description</th>
-        <th style="width: 25%;">Amount (KES)</th>
-        <th style="width: 25%;">Remarks</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${selectedReq.schoolStoreItems.map((item) => `
-        <tr>
-          <td><strong>${item.item}</strong></td>
-          <td><strong>KES ${item.price.toLocaleString()}</strong></td>
-          <td>${item.notes || 'Available at School Office'}</td>
-        </tr>
-      `).join('')}
-    </tbody>
-  </table>
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(15);
+    doc.setTextColor(122, 18, 40);
+    doc.text(schoolName, 34, curY + 5);
 
-  <div class="paybill">
-    <strong>MODE OF PAYMENT:</strong><br/>
-    M-PESA PAYBILL: <strong>522533</strong> &nbsp;|&nbsp; ACCOUNT NO: <strong>8048859# &lt;LEARNER'S NAME AND GRADE&gt;</strong>
-  </div>
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8.5);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`"${motto}"`, 34, curY + 10);
 
-  <div class="footer">
-    <div>Grace Seeds School · Kisumu County</div>
-    <div>Official Ratified Requirement Dossier</div>
-  </div>
-</body>
-</html>`;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(71, 85, 105);
+    doc.text('Ministry of Education · Official Stationeries, Textbooks & Materials Dossier', 34, curY + 15);
 
-    const blob = new Blob([html], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Grace_Seeds_Requirements_${selectedReq.id}.html`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    curY += 21;
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.5);
+    doc.line(14, curY, 196, curY);
+
+    curY += 6;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(17, 24, 39);
+    doc.text(`REQUIREMENTS LIST: ${selectedReq.label.toUpperCase()}`, 14, curY);
+
+    curY += 5;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(55, 65, 81);
+    doc.text(`Education Level: ${selectedReq.sublabel} · Official Academic Requirements`, 14, curY);
+
+    curY += 6;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(122, 18, 40);
+    doc.text('1. APPROVED TEXTBOOKS & LEARNERS WORKBOOKS', 14, curY);
+    curY += 3;
+
+    const bookRows = selectedReq.workbooks.map((b) => [
+      b.learningArea,
+      b.bookTitle,
+      b.publisher,
+      b.authors || 'KICD Approved',
+    ]);
+
+    autoTable(doc, {
+      startY: curY,
+      head: [['Learning Area', 'Workbook / Textbook Title', 'Publisher', 'Authors / Remarks']],
+      body: bookRows,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [122, 18, 40],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 7.5,
+      },
+      bodyStyles: {
+        fontSize: 7.5,
+        textColor: [31, 41, 55],
+        cellPadding: 2,
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252],
+      },
+      columnStyles: {
+        0: { cellWidth: 42, fontStyle: 'bold' },
+        1: { cellWidth: 62 },
+        2: { cellWidth: 38 },
+        3: { cellWidth: 40 },
+      },
+      margin: { left: 14, right: 14 },
+    });
+
+    let lastTable = (doc as any).lastAutoTable;
+    curY = (lastTable && lastTable.finalY ? lastTable.finalY : 120) + 7;
+    if (curY + 40 > 280) {
+      doc.addPage('a4', 'portrait');
+      curY = 18;
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(122, 18, 40);
+    doc.text('2. MANDATORY STATIONERY & PRACTICAL SUPPLIES', 14, curY);
+    curY += 3;
+
+    const statRows = selectedReq.stationeries.map((s, idx) => [
+      (idx + 1).toString(),
+      s.item,
+      s.quantity,
+      s.notes || 'As indicated',
+    ]);
+
+    autoTable(doc, {
+      startY: curY,
+      head: [['#', 'Stationery Item', 'Quantity Required', 'Specifications & Notes']],
+      body: statRows,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [71, 85, 105],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 7.5,
+      },
+      bodyStyles: {
+        fontSize: 7.5,
+        textColor: [31, 41, 55],
+        cellPadding: 2,
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252],
+      },
+      columnStyles: {
+        0: { cellWidth: 10, halign: 'center' },
+        1: { cellWidth: 84 },
+        2: { cellWidth: 26, fontStyle: 'bold', halign: 'center' },
+        3: { cellWidth: 62 },
+      },
+      margin: { left: 14, right: 14 },
+    });
+
+    lastTable = (doc as any).lastAutoTable;
+    curY = (lastTable && lastTable.finalY ? lastTable.finalY : 180) + 7;
+    if (curY + 45 > 280) {
+      doc.addPage('a4', 'portrait');
+      curY = 18;
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(122, 18, 40);
+    doc.text('3. STANDARDIZED ITEMS (AVAILABLE IN SCHOOL OFFICE / STORE)', 14, curY);
+    curY += 3;
+
+    const storeRows = selectedReq.schoolStoreItems.map((item) => [
+      item.item,
+      `KES ${item.price.toLocaleString()}`,
+      item.notes || 'Available at School Office',
+    ]);
+
+    autoTable(doc, {
+      startY: curY,
+      head: [['Store Item Description', 'Official Rate', 'Availability / Remarks']],
+      body: storeRows,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [122, 18, 40],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 7.5,
+      },
+      bodyStyles: {
+        fontSize: 7.5,
+        textColor: [31, 41, 55],
+        cellPadding: 2,
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252],
+      },
+      columnStyles: {
+        0: { cellWidth: 90 },
+        1: { cellWidth: 38, fontStyle: 'bold' },
+        2: { cellWidth: 54 },
+      },
+      margin: { left: 14, right: 14 },
+    });
+
+    lastTable = (doc as any).lastAutoTable;
+    curY = (lastTable && lastTable.finalY ? lastTable.finalY : 230) + 7;
+    if (curY + 25 > 280) {
+      doc.addPage('a4', 'portrait');
+      curY = 18;
+    }
+
+    doc.setFillColor(254, 242, 242);
+    doc.rect(14, curY, 182, 14, 'F');
+    doc.setDrawColor(254, 202, 202);
+    doc.rect(14, curY, 182, 14, 'S');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(122, 18, 40);
+    doc.text('OFFICIAL M-PESA PAYBILL PAYMENT DETAILS:', 18, curY + 5);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(31, 41, 55);
+    doc.text('BUSINESS NO: 522533   |   ACCOUNT NO: 8048859# <LEARNER NAME & GRADE>', 18, curY + 10);
+
+    curY += 20;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`Grace Seeds School · Kisumu County · Official Ratified Requirement Dossier · Generated on ${new Date().toLocaleDateString()}`, 105, 290, { align: 'center' });
+
+    doc.save(`Grace_Seeds_Requirements_${selectedReq.id}.pdf`);
   };
 
   return (
@@ -391,12 +516,12 @@ export const StationeryRequirementsModal: React.FC<StationeryRequirementsModalPr
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={handleExportHTML}
+              onClick={handleExportPDF}
               className="px-3 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-white text-xs font-bold transition flex items-center gap-1 border border-white/20"
-              title="Download standalone HTML document for printing"
+              title="Download official requirements list as PDF"
             >
               <span className="material-symbols-outlined text-sm">download</span>
-              <span className="hidden sm:inline">Export HTML</span>
+              <span className="hidden sm:inline">Download PDF</span>
             </button>
             <button
               onClick={handlePrint}

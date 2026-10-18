@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { Student, TimetableSlot, SchemeOfWork, LessonPlan } from '../../types';
@@ -29,26 +31,100 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
   const [myLessonPlans, setMyLessonPlans] = useState<LessonPlan[]>([]);
   const [myAssessmentsCount, setMyAssessmentsCount] = useState<number>(0);
   const [currentContext, setCurrentContext] = useState<any>(null);
+  const [schoolInfo, setSchoolInfo] = useState<any>(null);
+  const [resolvedAssignedClass, setResolvedAssignedClass] = useState<string>('Assigned Subject Teacher');
   const [loading, setLoading] = useState(true);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
 
   const todayDate = new Date().toISOString().split('T')[0];
 
+  const getSchoolLogoBase64 = async (customUrl?: string): Promise<string | null> => {
+    const urlsToTry = [customUrl, '/logo.png', '/logo.jpg'].filter(Boolean) as string[];
+    for (const url of urlsToTry) {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) continue;
+        const blob = await res.blob();
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+        if (base64 && base64.startsWith('data:image')) {
+          return base64;
+        }
+      } catch {
+        // try next fallback
+      }
+    }
+    return null;
+  };
+
   useEffect(() => {
     async function loadTeacherData() {
       setLoading(true);
       try {
-        // 1. Teacher Profile & Academic Context
-        const [profileRes, ctxRes] = await Promise.all([
+        // 1. Teacher Profile, Academic Context, Classes and School Info
+        const [profileRes, ctxRes, classesRes, schoolRes] = await Promise.all([
           apiService.getMyTeacherProfile().catch(() => null),
           apiService.getCurrentContext().catch(() => null),
+          apiService.getClasses().catch(() => null),
+          apiService.getSchool().catch(() => null),
         ]);
         const profile = profileRes?.data || null;
         setTeacherProfile(profile);
         const ctx = ctxRes?.data || null;
         setCurrentContext(ctx);
+        if (schoolRes?.data) setSchoolInfo(schoolRes.data);
 
-        const assignedStreamId = profile?.assignedClassStreamIds?.[0];
+        // Fetch streams from database to build exact class and stream maps
+        const classList = classesRes?.data || [];
+        const classMap = new Map<string, string>();
+        const streamMap = new Map<string, string>();
+        const allStreams: any[] = [];
+
+        for (const c of classList) {
+          const cName = c.name || resolveGradeName(c.gradeLevel);
+          classMap.set(c.id, cName);
+          try {
+            const strRes = await apiService.getStreamsByClass(c.id);
+            if (strRes?.success && Array.isArray(strRes.data)) {
+              for (const s of strRes.data) {
+                const sName = resolveStreamName(s.id, s.name);
+                const fullStreamName = `${cName} - ${sName}`;
+                streamMap.set(s.id, fullStreamName);
+                allStreams.push({ ...s, classRoom: c, fullStreamName });
+              }
+            }
+          } catch {
+            // continue
+          }
+        }
+
+        // Determine assigned stream IDs from DB profile or classTeacherId assignment
+        let assignedStreamIds: string[] = Array.isArray(profile?.assignedClassStreamIds)
+          ? profile.assignedClassStreamIds
+          : [];
+
+        if (assignedStreamIds.length === 0 && profile?.id) {
+          const matchingStream = allStreams.find((s) => s.classTeacherId === profile.id);
+          if (matchingStream) {
+            assignedStreamIds = [matchingStream.id];
+          }
+        }
+
+        let resolvedClassName = 'Assigned Subject Teacher';
+        if (assignedStreamIds.length > 0) {
+          const names = assignedStreamIds.map((id) => streamMap.get(id) || classMap.get(id) || resolveStreamName(id));
+          const uniqueNames = Array.from(new Set(names)).filter(Boolean);
+          if (uniqueNames.length > 0) {
+            resolvedClassName = uniqueNames.join(', ');
+          }
+        }
+        setResolvedAssignedClass(resolvedClassName);
+
+        const assignedStreamId = assignedStreamIds[0];
         const teacherId = profile?.id;
         const termId = ctx?.currentTerm?.id;
 
@@ -66,20 +142,20 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
         if (stRes?.data && Array.isArray(stRes.data)) {
           const mapped: Student[] = stRes.data.map((s: any) => ({
             id: s.id,
-            admNo: s.admissionNumber,
-            upi: s.upiNumber || '--',
-            nemis: s.upiNumber || '--',
-            name: `${s.firstName} ${s.lastName}`,
-            gender: s.gender === 'FEMALE' ? 'Girl' : 'Boy',
-            grade: resolveGradeName(s.gradeLevel),
-            stream: resolveStreamName(s.streamId, s.stream?.name || s.streamName) || '--',
-            guardianName: s.guardian ? `${s.guardian.firstName} ${s.guardian.lastName}` : '--',
-            guardianPhone: s.guardian?.phone || '--',
+            admNo: s.admissionNumber || s.admNo || '--',
+            upi: s.upiNumber || s.upi || '--',
+            nemis: s.upiNumber || s.nemis || '--',
+            name: s.name || `${s.firstName || ''} ${s.lastName || ''}`.trim() || 'Learner',
+            gender: s.gender === 'FEMALE' || s.gender === 'Girl' ? 'Girl' : 'Boy',
+            grade: resolveGradeName(s.gradeLevel || s.grade),
+            stream: streamMap.get(s.streamId) || resolveStreamName(s.streamId, s.stream?.name || s.streamName) || '--',
+            guardianName: s.guardian ? `${s.guardian.firstName || ''} ${s.guardian.lastName || ''}`.trim() : (s.guardianName || '--'),
+            guardianPhone: s.guardian?.phone || s.guardianPhone || '--',
             feeBalance: s.feeBalance || 0,
             totalFee: s.totalFee || 0,
             attendanceRate: s.attendanceRate ?? 0,
             CBCRating: s.CBCRating || '--',
-            status: s.status === 'ACTIVE' ? 'Active' : (s.status || 'Active'),
+            status: s.status === 'ACTIVE' || s.status === 'Active' ? 'Active' : (s.status || 'Active'),
           }));
           setMyStudents(mapped);
         } else {
@@ -129,9 +205,7 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
   const specialization = teacherProfile?.specialization?.length
     ? teacherProfile.specialization.join(', ')
     : 'CBC Educator';
-  const assignedClass = teacherProfile?.assignedClassStreamIds?.length
-    ? teacherProfile.assignedClassStreamIds.join(', ')
-    : 'Assigned Subject Teacher';
+  const assignedClass = resolvedAssignedClass;
 
   // Calculate Roll Call status
   const totalInClass = myStudents.length;
@@ -144,6 +218,138 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
 
   const boysCount = myStudents.filter((s) => s.gender === 'Boy').length;
   const girlsCount = myStudents.filter((s) => s.gender === 'Girl').length;
+
+  const downloadRosterPDF = async () => {
+    if (myStudents.length === 0) {
+      alert('No learners available in this roster to download.');
+      return;
+    }
+    const logoBase64 = await getSchoolLogoBase64(schoolInfo?.logoUrl);
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const schoolName = schoolInfo?.name || 'Grace Seeds School';
+    const motto = schoolInfo?.motto || 'The Future Begins Here';
+
+    // Top burgundy accent bar
+    doc.setFillColor(122, 18, 40);
+    doc.rect(0, 0, 210, 5, 'F');
+
+    let curY = 14;
+    if (logoBase64) {
+      try {
+        doc.addImage(logoBase64, 'PNG', 14, curY, 18, 18);
+      } catch {
+        // fallback
+      }
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(15);
+    doc.setTextColor(122, 18, 40);
+    doc.text(schoolName, 36, curY + 6);
+
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8.5);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`"${motto}"`, 36, curY + 11);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(71, 85, 105);
+    doc.text('Ministry of Education CBC Official Class Register & Emergency Roster', 36, curY + 16);
+
+    curY += 24;
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.5);
+    doc.line(14, curY, 196, curY);
+
+    curY += 6;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(17, 24, 39);
+    doc.text(`CLASS LEARNER ROSTER · ${assignedClass.toUpperCase()}`, 14, curY);
+
+    curY += 6;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(55, 65, 81);
+    const termLabel = currentContext?.currentTerm?.name ? `${currentContext.currentTerm.name}` : 'Term 1';
+    const yearLabel = currentContext?.currentYear?.year ? `${currentContext.currentYear.year}` : new Date().getFullYear().toString();
+    doc.text(`Educator: Tr. ${teacherName} (${tscNumber}) · Academic Period: ${termLabel}, ${yearLabel}`, 14, curY);
+
+    curY += 5;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor(122, 18, 40);
+    doc.text(
+      `Total Enrolled: ${totalInClass} Learners (${boysCount} Boys · ${girlsCount} Girls) · Roll Call: ${
+        hasRegisterToday ? `${attendancePct}% Present (${presentCount}/${totalInClass})` : 'Not Marked Today'
+      }`,
+      14,
+      curY
+    );
+
+    curY += 4;
+
+    const tableRows = myStudents.map((st, idx) => [
+      (idx + 1).toString(),
+      st.name,
+      st.admNo,
+      st.upi,
+      st.gender,
+      st.guardianName,
+      st.guardianPhone,
+    ]);
+
+    autoTable(doc, {
+      startY: curY,
+      head: [['#', 'Learner Name', 'Adm #', 'UPI / NEMIS', 'Gender', 'Guardian / Contact', 'Emergency Phone']],
+      body: tableRows,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [122, 18, 40],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 8,
+        halign: 'left',
+      },
+      bodyStyles: {
+        fontSize: 8,
+        textColor: [31, 41, 55],
+        cellPadding: 2.5,
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252],
+      },
+      columnStyles: {
+        0: { cellWidth: 8, halign: 'center' },
+        1: { cellWidth: 42, fontStyle: 'bold' },
+        2: { cellWidth: 20, halign: 'center' },
+        3: { cellWidth: 26, halign: 'center' },
+        4: { cellWidth: 16, halign: 'center' },
+        5: { cellWidth: 46 },
+        6: { cellWidth: 24, halign: 'center' },
+      },
+      margin: { left: 14, right: 14 },
+    });
+
+    const lastTable = (doc as any).lastAutoTable;
+    let finalY = (lastTable && lastTable.finalY ? lastTable.finalY : 200) + 10;
+    if (finalY + 30 > 285) {
+      doc.addPage('a4', 'portrait');
+      finalY = 20;
+    }
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`Certified by Class Teacher: Tr. ${teacherName} ___________________________   Date: ${new Date().toLocaleDateString()}`, 14, finalY);
+    doc.text('Approved by Principal / Head Teacher: ___________________________   Official Rubber Stamp: [                ]', 14, finalY + 8);
+
+    doc.setFontSize(7.5);
+    doc.text(`Grace Seeds School · Generated on ${new Date().toLocaleString()} · Confidential Pedagogical Document`, 105, 290, { align: 'center' });
+
+    doc.save(`Grace_Seeds_School_Roster_${assignedClass.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
 
   return (
     <div className="space-y-6 pb-12">
@@ -637,9 +843,19 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
               Pedagogical and emergency profile view for instructional staff (Financial data restricted)
             </p>
           </div>
-          <span className="px-3 py-1 rounded bg-[#7a1228]/10 text-[#7a1228] text-xs font-bold self-start sm:self-auto">
-            {myStudents.length} Active Learners
-          </span>
+          <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+            <button
+              onClick={downloadRosterPDF}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#7a1228] hover:bg-[#5e0d1e] text-white text-xs font-semibold shadow-xs transition-all cursor-pointer"
+              title="Download official Class Learner Roster as PDF"
+            >
+              <span className="material-symbols-outlined text-[16px]">download</span>
+              <span>Download Roster (PDF)</span>
+            </button>
+            <span className="px-3 py-1.5 rounded-lg bg-[#7a1228]/10 text-[#7a1228] text-xs font-bold">
+              {myStudents.length} Active Learners
+            </span>
+          </div>
         </div>
 
         {myStudents.length > 0 ? (

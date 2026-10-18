@@ -14,7 +14,7 @@ export const GenerateInvoicesModal: React.FC<GenerateInvoicesModalProps> = ({
   onInvoicesGenerated,
 }) => {
   const [scope, setScope] = useState<'grade' | 'all'>('all');
-  const [gradeLevel, setGradeLevel] = useState('GRADE_7');
+  const [gradeLevel, setGradeLevel] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -25,13 +25,24 @@ export const GenerateInvoicesModal: React.FC<GenerateInvoicesModalProps> = ({
   const [terms, setTerms] = useState<AcademicTerm[]>([]);
   const [selectedTermId, setSelectedTermId] = useState('');
 
+  // Reset fields to blank on modal open
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedYearId('');
+      setSelectedTermId('');
+      setGradeLevel('');
+      setScope('all');
+      setError(null);
+      setMessage(null);
+    }
+  }, [isOpen]);
+
   useEffect(() => {
     if (!isOpen) return;
     async function loadAcademicData() {
       try {
-        const [schoolRes, contextRes, yearsRes] = await Promise.all([
+        const [schoolRes, yearsRes] = await Promise.all([
           apiService.getSchool().catch(() => null),
-          apiService.getCurrentContext().catch(() => null),
           apiService.getYears().catch(() => null),
         ]);
 
@@ -41,15 +52,6 @@ export const GenerateInvoicesModal: React.FC<GenerateInvoicesModalProps> = ({
 
         if (yearsRes?.success && yearsRes.data && yearsRes.data.length > 0) {
           setAcademicYears(yearsRes.data);
-          const currentYear = contextRes?.data?.currentYear || yearsRes.data.find(y => y.isCurrent) || yearsRes.data[0];
-          setSelectedYearId(currentYear.id);
-
-          const termsRes = await apiService.getTerms(currentYear.id);
-          if (termsRes?.success && termsRes.data) {
-            setTerms(termsRes.data);
-            const currentTerm = contextRes?.data?.currentTerm || termsRes.data.find(t => t.isCurrent) || termsRes.data[0];
-            if (currentTerm) setSelectedTermId(currentTerm.id);
-          }
         }
       } catch (err) {
         console.error('Failed to load academic data for invoice generation:', err);
@@ -82,6 +84,10 @@ export const GenerateInvoicesModal: React.FC<GenerateInvoicesModalProps> = ({
     e.preventDefault();
     if (!selectedYearId || !selectedTermId) {
       setError('Please select an active academic year and term.');
+      return;
+    }
+    if (scope === 'grade' && !gradeLevel) {
+      setError('Please select a CBC grade.');
       return;
     }
 
@@ -157,15 +163,12 @@ export const GenerateInvoicesModal: React.FC<GenerateInvoicesModalProps> = ({
                 required
                 className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-xs text-on-surface focus:outline-primary"
               >
-                {academicYears.length > 0 ? (
-                  academicYears.map((y) => (
-                    <option key={y.id} value={y.id}>
-                      {y.name} {y.isCurrent ? '(Active)' : ''}
-                    </option>
-                  ))
-                ) : (
-                  <option value="">No years created</option>
-                )}
+                <option value="">-- Select Academic Year --</option>
+                {academicYears.map((y) => (
+                  <option key={y.id} value={y.id}>
+                    {y.name} {y.isCurrent ? '(Active)' : ''}
+                  </option>
+                ))}
               </select>
             </div>
             <div>
@@ -178,15 +181,12 @@ export const GenerateInvoicesModal: React.FC<GenerateInvoicesModalProps> = ({
                 required
                 className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-xs text-on-surface focus:outline-primary"
               >
-                {terms.length > 0 ? (
-                  terms.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                    </option>
-                  ))
-                ) : (
-                  <option value="">No terms created</option>
-                )}
+                <option value="">-- Select Term --</option>
+                {terms.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -229,8 +229,10 @@ export const GenerateInvoicesModal: React.FC<GenerateInvoicesModalProps> = ({
               <select
                 value={gradeLevel}
                 onChange={(e) => setGradeLevel(e.target.value)}
+                required
                 className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-sm text-on-surface focus:outline-primary"
               >
+                <option value="">-- Select CBC Grade --</option>
                 <option value="PLAYGROUP">Playgroup</option>
                 <option value="PP1">PP1</option>
                 <option value="PP2">PP2</option>

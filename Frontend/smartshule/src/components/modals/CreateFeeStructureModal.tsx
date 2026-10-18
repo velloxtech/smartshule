@@ -66,7 +66,9 @@ const TEMPLATES: Record<string, { label: string; desc: string; icon: string; gra
   },
 };
 
-const DEFAULT_FEE_ITEMS: FeeLineItemState[] = TEMPLATES.graceseed_pp.items;
+const BLANK_FEE_ITEMS: FeeLineItemState[] = [
+  { id: 'item-1', name: '', category: 'TUITION', isOptional: false, amount: '' }
+];
 
 export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = ({
   isOpen,
@@ -78,7 +80,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
   const [selectedTermId, setSelectedTermId] = useState('term-2026-t1');
   const [title, setTitle] = useState('');
   const [dueDate, setDueDate] = useState('');
-  const [items, setItems] = useState<FeeLineItemState[]>(DEFAULT_FEE_ITEMS);
+  const [items, setItems] = useState<FeeLineItemState[]>(BLANK_FEE_ITEMS);
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -153,14 +155,12 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
         setItems(converted);
       }
     } else {
-      // Default initial title
-      const yearObj = academicYears.find((y) => y.id === selectedYearId);
-      const yearName = yearObj ? resolveAcademicYearName(yearObj.name || yearObj.id) : '2026';
-      const gradeName = resolveGradeName(gradeLevel);
-      const termLabel = resolveTermLabel(selectedTermId);
-      setTitle(`${gradeName} CBC ${termLabel} Fee Schedule — ${yearName}`);
+      // Keep entry fields completely blank for fresh creation
+      setTitle('');
+      setDueDate('');
+      setItems([{ id: `item-${Date.now()}`, name: '', category: 'TUITION', isOptional: false, amount: '' }]);
     }
-  }, [isOpen, initialData, selectedYearId, selectedTermId, gradeLevel, academicYears]);
+  }, [isOpen, initialData]);
 
   if (!isOpen) return null;
 
@@ -174,26 +174,14 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
     } catch {
       setTerms([]);
     }
-    const yearObj = academicYears.find((y) => y.id === yearId);
-    const yearName = yearObj ? resolveAcademicYearName(yearObj.name || yearObj.id) : '2026';
-    const termLabel = resolveTermLabel(selectedTermId);
-    setTitle(`${resolveGradeName(gradeLevel)} CBC ${termLabel} Fee Schedule — ${yearName}`);
   };
 
   const handleTermChange = (newTermId: string) => {
     setSelectedTermId(newTermId);
-    const yearObj = academicYears.find((y) => y.id === selectedYearId);
-    const yearName = yearObj ? resolveAcademicYearName(yearObj.name || yearObj.id) : '2026';
-    const termLabel = resolveTermLabel(newTermId);
-    setTitle(`${resolveGradeName(gradeLevel)} CBC ${termLabel} Fee Schedule — ${yearName}`);
   };
 
   const handleGradeChange = (newGrade: string) => {
     setGradeLevel(newGrade);
-    const yearObj = academicYears.find((y) => y.id === selectedYearId);
-    const yearName = yearObj ? resolveAcademicYearName(yearObj.name || yearObj.id) : '2026';
-    const termLabel = resolveTermLabel(selectedTermId);
-    setTitle(`${resolveGradeName(newGrade)} CBC ${termLabel} Fee Schedule — ${yearName}`);
   };
 
   // Apply preset template
@@ -204,6 +192,10 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
     if (tpl.gradeLevel) {
       handleGradeChange(tpl.gradeLevel);
     }
+    const yearObj = academicYears.find((y) => y.id === selectedYearId);
+    const yearName = yearObj ? resolveAcademicYearName(yearObj.name || yearObj.id) : '2026';
+    const termLabel = resolveTermLabel(selectedTermId);
+    setTitle(`${resolveGradeName(tpl.gradeLevel || gradeLevel)} CBC ${termLabel} Fee Schedule — ${yearName}`);
   };
 
   // Update annual KES amount
@@ -219,7 +211,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
       name: '',
       category: 'OTHER',
       isOptional: false,
-      amount: '0',
+      amount: '',
     };
     setItems((prev) => [...prev, newItem]);
   };
@@ -252,7 +244,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
         name: 'School Lunch Scheme',
         category: 'MEALS',
         isOptional: true,
-        amount: '9000',
+        amount: '',
       };
     } else if (type === 'ADMISSION') {
       newItem = {
@@ -260,7 +252,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
         name: 'Admission & Registration Fee',
         category: 'ADMISSION',
         isOptional: true,
-        amount: '1500',
+        amount: '',
       };
     } else if (type === 'TRANSPORT') {
       newItem = {
@@ -268,7 +260,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
         name: 'School Transport Scheme',
         category: 'TRANSPORT',
         isOptional: true,
-        amount: '12000',
+        amount: '',
       };
     } else {
       newItem = {
@@ -276,7 +268,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
         name: 'Track Suit / School Uniform',
         category: 'OTHER',
         isOptional: true,
-        amount: '2000',
+        amount: '',
       };
     }
     setItems((prev) => [...prev, newItem]);

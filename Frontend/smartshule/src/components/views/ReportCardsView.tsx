@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { Student, CBCReportCardData } from '../../types';
 import { apiService } from '../../services/api';
 import { resolveStreamName, resolveGradeName, resolveAcademicYearName, resolveLearningAreaName, resolveLearningAreaCode } from '../../utils/formatters';
@@ -1132,24 +1134,191 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
     }
   };
 
-  // Standalone offline HTML export
-  const handleExportHTML = () => {
+  const getSchoolLogoBase64 = async (customUrl?: string): Promise<string | null> => {
+    const urlsToTry = [customUrl, '/logo.png', '/logo.jpg'].filter(Boolean) as string[];
+    for (const url of urlsToTry) {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) continue;
+        const blob = await res.blob();
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+        if (base64 && base64.startsWith('data:image')) {
+          return base64;
+        }
+      } catch {
+        // try next
+      }
+    }
+    return null;
+  };
+
+  // Official CBC Report Card PDF Export
+  const handleExportPDF = async () => {
     if (!student) return;
-    const activeTerm = availableTerms.find(t => t.id === selectedTermId) || currentTerm;
+    const activeTerm = availableTerms.find((t) => t.id === selectedTermId) || currentTerm;
     const termName = activeTerm?.name || 'Term 3';
     const yearName = resolveAcademicYearName(currentYear?.name || currentYear?.year || currentYear?.id);
-    const graphSVGString = buildPerformanceGraphSVG(recordedTerms, resolvedSubjects);
-    const htmlContent = buildReportCardPrintHTML(termName, yearName, graphSVGString);
+    const logoBase64 = await getSchoolLogoBase64(school?.logoUrl);
 
-    const blob = new Blob([htmlContent], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `Report_Card_${student.admNo}_${student.name.replace(/\s+/g, '_')}_${termName.replace(/\s+/g, '_')}.html`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const schoolName = school?.name || 'Grace Seeds School';
+    const motto = school?.motto || 'The Future Begins Here';
+
+    // Top burgundy bar
+    doc.setFillColor(122, 18, 40);
+    doc.rect(0, 0, 210, 5, 'F');
+
+    let curY = 12;
+    if (logoBase64) {
+      try {
+        doc.addImage(logoBase64, 'PNG', 14, curY, 18, 18);
+      } catch {
+        // continue
+      }
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(15);
+    doc.setTextColor(122, 18, 40);
+    doc.text(schoolName, 36, curY + 6);
+
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8.5);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`"${motto}"`, 36, curY + 11);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(71, 85, 105);
+    doc.text('Ministry of Education · Kenya Competency-Based Curriculum (CBC) Official Report Card', 36, curY + 16);
+
+    curY += 23;
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.5);
+    doc.line(14, curY, 196, curY);
+
+    curY += 5;
+    // Learner Dossier Header Box
+    doc.setFillColor(248, 250, 252);
+    doc.rect(14, curY, 182, 18, 'F');
+    doc.setDrawColor(226, 232, 240);
+    doc.rect(14, curY, 182, 18, 'S');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor(17, 24, 39);
+    doc.text(`Learner: ${student.name}`, 18, curY + 5.5);
+    doc.text(`Adm #: ${student.admNo}`, 85, curY + 5.5);
+    doc.text(`UPI / NEMIS: ${student.upi || '--'}`, 140, curY + 5.5);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(55, 65, 81);
+    doc.text(`Grade / Stream: ${student.grade} - ${student.stream}`, 18, curY + 12);
+    doc.text(`Period: ${termName}, ${yearName}`, 85, curY + 12);
+    doc.text(`Attendance Rate: ${student.attendanceRate || 100}%`, 140, curY + 12);
+
+    curY += 23;
+
+    // Assessment Matrix Table
+    const tableRows = resolvedSubjects.map((s, idx) => [
+      (idx + 1).toString(),
+      s.name,
+      s.rubricCode || '--',
+      `${s.summativeScore || s.score || 0}%`,
+      s.performanceLevel.replace(/_/g, ' '),
+      s.teacherRemarks || 'Satisfactory progress demonstrated.',
+    ]);
+
+    autoTable(doc, {
+      startY: curY,
+      head: [['#', 'Learning Area', 'Rubric', 'Score', 'Performance Level', 'Teacher Pedagogical Remarks']],
+      body: tableRows,
+      foot: [['', 'OVERALL TERMLY EVALUATION', '', `${overallAverage}%`, overallPerformanceLevel, `Quality Pass: ${Math.round((resolvedSubjects.filter(s => s.rubricCode === 'EE' || s.rubricCode === 'ME').length / Math.max(1, resolvedSubjects.length)) * 100)}%`]],
+      theme: 'grid',
+      headStyles: {
+        fillColor: [122, 18, 40],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 8,
+      },
+      bodyStyles: {
+        fontSize: 7.5,
+        textColor: [31, 41, 55],
+        cellPadding: 2,
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252],
+      },
+      footStyles: {
+        fillColor: [254, 242, 242],
+        textColor: [122, 18, 40],
+        fontStyle: 'bold',
+        fontSize: 8,
+      },
+      columnStyles: {
+        0: { cellWidth: 8, halign: 'center' },
+        1: { cellWidth: 42, fontStyle: 'bold' },
+        2: { cellWidth: 16, halign: 'center' },
+        3: { cellWidth: 16, halign: 'center', fontStyle: 'bold' },
+        4: { cellWidth: 36 },
+        5: { cellWidth: 64 },
+      },
+      margin: { left: 14, right: 14 },
+    });
+
+    const lastTable = (doc as any).lastAutoTable;
+    let finalY = (lastTable && lastTable.finalY ? lastTable.finalY : 200) + 7;
+    if (finalY + 45 > 280) {
+      doc.addPage('a4', 'portrait');
+      finalY = 18;
+    }
+
+    // Teacher & Headteacher remarks
+    doc.setFillColor(249, 250, 251);
+    doc.rect(14, finalY, 182, 34, 'F');
+    doc.setDrawColor(226, 232, 240);
+    doc.rect(14, finalY, 182, 34, 'S');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(122, 18, 40);
+    doc.text('CLASS TEACHER REMARKS & RECOMMENDATIONS:', 18, finalY + 5.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(31, 41, 55);
+    doc.text(teacherRemarks || 'Consistently demonstrates good understanding of CBC competencies and participates actively.', 18, finalY + 10.5);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(122, 18, 40);
+    doc.text('PRINCIPAL / HEAD TEACHER DIRECTIVE & ENDORSEMENT:', 18, finalY + 19);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(31, 41, 55);
+    doc.text(principalRemarks || 'Commendable academic effort. Encouraged to sustain reading habit and inquiry skills next term.', 18, finalY + 24);
+
+    finalY += 40;
+    if (finalY + 15 > 285) {
+      doc.addPage('a4', 'portrait');
+      finalY = 18;
+    }
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139);
+    doc.text('Class Teacher Signature: _______________________', 18, finalY);
+    doc.text('Head Teacher Official Stamp: [                             ]', 115, finalY);
+
+    doc.setFontSize(7);
+    doc.text(`Grace Seeds School · Official Progress Dossier · Generated on ${new Date().toLocaleString()}`, 105, 290, { align: 'center' });
+
+    doc.save(`Grace_Seeds_School_Report_Card_${student.admNo}_${student.name.replace(/[^a-zA-Z0-9]/g, '_')}_${termName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
   };
 
   if (!student) {
@@ -1390,14 +1559,14 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
             <span>Download / Print PDF</span>
           </button>
 
-          {/* Export HTML Button */}
+          {/* Download PDF Button */}
           <button
-            onClick={handleExportHTML}
+            onClick={handleExportPDF}
             className="px-3 py-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-bold border border-outline-variant/30 transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer"
-            title="Download standalone offline HTML dossier"
+            title="Download official CBC Report Card as PDF document"
           >
             <span className="material-symbols-outlined text-[16px]">download</span>
-            <span>Export HTML</span>
+            <span>Download Report Card (PDF)</span>
           </button>
         </div>
       </div>

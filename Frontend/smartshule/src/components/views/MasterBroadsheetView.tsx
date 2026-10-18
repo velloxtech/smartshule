@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { apiService } from '../../services/api';
 import {
   BroadsheetResult,
@@ -414,6 +416,191 @@ export const MasterBroadsheetView: React.FC = () => {
     window.print();
   };
 
+  const getSchoolLogoBase64 = async (): Promise<string | null> => {
+    const urlsToTry = ['/logo.png', '/logo.jpg'];
+    for (const url of urlsToTry) {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) continue;
+        const blob = await res.blob();
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+        if (base64 && base64.startsWith('data:image')) {
+          return base64;
+        }
+      } catch {
+        // continue
+      }
+    }
+    return null;
+  };
+
+  const handleExportBroadsheetPDF = async () => {
+    if (!broadsheet || !broadsheet.rows.length) {
+      alert('No broadsheet data available to generate PDF.');
+      return;
+    }
+
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const logoBase64 = await getSchoolLogoBase64();
+    const schoolName = 'Grace Seeds School';
+    const motto = 'The Future Begins Here';
+
+    // Top burgundy bar
+    doc.setFillColor(122, 18, 40);
+    doc.rect(0, 0, 297, 6, 'F');
+
+    let curY = 12;
+    if (logoBase64) {
+      try {
+        doc.addImage(logoBase64, 'PNG', 14, curY, 15, 15);
+      } catch {
+        // continue
+      }
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(122, 18, 40);
+    doc.text(schoolName, 32, curY + 4);
+
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`"${motto}" · P.O. Box 12-20123 / 12-40123 Kisumu · Tel: 0745436312`, 32, curY + 9);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(30, 41, 59);
+    doc.text('OFFICIAL CBC MASTER BROADSHEET & SUMMATIVE ASSESSMENT MARKSHEET', 32, curY + 14);
+
+    // Meta card
+    curY += 19;
+    doc.setFillColor(248, 250, 252);
+    doc.rect(14, curY, 269, 13, 'F');
+    doc.setDrawColor(226, 232, 240);
+    doc.rect(14, curY, 269, 13, 'S');
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(15, 23, 42);
+    doc.text(`Class: ${broadsheet.className || 'All Grades'}`, 18, curY + 5);
+    doc.text(`Stream: ${broadsheet.streamName || 'All Streams'}`, 85, curY + 5);
+    doc.text(`Term: ${selectedTerm} · ${selectedYear}`, 155, curY + 5);
+    doc.text(`Learners Ranked: ${broadsheet.rows.length}`, 225, curY + 5);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(122, 18, 40);
+    doc.text(`Class Mean Score: ${broadsheet.summary?.averageScore ?? 0}%`, 18, curY + 10);
+    doc.setTextColor(71, 85, 105);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Performance: ${broadsheet.summary?.overallPerformanceLevel || 'CBC Standard'}`, 85, curY + 10);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 225, curY + 10);
+
+    curY += 17;
+
+    // Build Table Headers: Rank, Adm, Name, Sex, <Subjects initials>, Total, Mean, Level, Remarks
+    const laHeaders = broadsheet.learningAreas.map((la) => getSubjectInitials(la.name || la.code));
+    const tableHead = [
+      'Rnk',
+      'Adm',
+      'Student Name',
+      'Sex',
+      ...laHeaders,
+      'Tot',
+      'Mean %',
+      'Level',
+      'Remarks',
+    ];
+
+    const tableRows = broadsheet.rows.map((r) => {
+      const subScores = broadsheet.learningAreas.map((la) => {
+        const sub = r.subjects[la.id];
+        return sub ? `${sub.numericScore}%` : '--';
+      });
+
+      return [
+        String(r.streamRank || r.rank || '--'),
+        r.admissionNumber || '--',
+        r.studentName || '--',
+        r.gender?.[0] || 'M',
+        ...subScores,
+        String(r.totalScore),
+        `${r.averageScore}%`,
+        r.overallPerformanceLevel || '--',
+        r.remarks || 'Pass',
+      ];
+    });
+
+    autoTable(doc, {
+      startY: curY,
+      head: [tableHead],
+      body: tableRows,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [122, 18, 40],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 7,
+      },
+      bodyStyles: {
+        fontSize: 6.5,
+        textColor: [31, 41, 55],
+        cellPadding: 1.8,
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252],
+      },
+      columnStyles: {
+        0: { cellWidth: 10, fontStyle: 'bold' },
+        1: { cellWidth: 18 },
+        2: { cellWidth: 42, fontStyle: 'bold' },
+        3: { cellWidth: 8 },
+      },
+      margin: { left: 14, right: 14 },
+    });
+
+    const lastTable = (doc as any).lastAutoTable;
+    curY = (lastTable && lastTable.finalY ? lastTable.finalY : 170) + 7;
+
+    if (curY + 26 > 195) {
+      doc.addPage('a4', 'landscape');
+      curY = 16;
+    }
+
+    // Signatures
+    doc.setDrawColor(203, 213, 225);
+    doc.setLineWidth(0.3);
+    doc.line(14, curY, 283, curY);
+    curY += 6;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(30, 41, 59);
+
+    doc.text('Class Educator Certification:', 14, curY);
+    doc.line(14, curY + 6, 85, curY + 6);
+    doc.text('Signature & Date', 14, curY + 10);
+
+    doc.text('Academic Dean Verification:', 105, curY);
+    doc.line(105, curY + 6, 185, curY + 6);
+    doc.text('Endorsement & Date', 105, curY + 10);
+
+    doc.text('Headteacher Endorsement:', 205, curY);
+    doc.line(205, curY + 6, 283, curY + 6);
+    doc.text('Official Seal / Stamp & Date', 205, curY + 10);
+
+    doc.setFontSize(6.5);
+    doc.setTextColor(148, 163, 184);
+    doc.text('Grace Seeds School · Official CBC Summative Master Broadsheet Dossier', 148, 204, { align: 'center' });
+
+    doc.save(`Grace_Seeds_Broadsheet_${broadsheet.className}_${broadsheet.streamName || 'All'}_Term${selectedTerm}_${selectedYear}.pdf`);
+  };
+
   // CSV DOWNLOAD 1: Stream Marksheet
   const handleExportCSV = () => {
     if (!broadsheet || !broadsheet.rows.length) return;
@@ -712,6 +899,15 @@ export const MasterBroadsheetView: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={handleExportBroadsheetPDF}
+            disabled={!broadsheet || !broadsheet.rows.length}
+            className="bg-white/20 hover:bg-white/30 disabled:opacity-50 text-white border border-white/30 px-4 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 shadow-sm cursor-pointer"
+            title="Download official CBC broadsheet as PDF"
+          >
+            <span className="material-symbols-outlined text-lg">download</span>
+            Download Broadsheet (PDF)
+          </button>
           <button
             onClick={handleExportAllAnalyticsCSV}
             disabled={!broadsheet || !broadsheet.rows.length}
@@ -1559,6 +1755,14 @@ export const MasterBroadsheetView: React.FC = () => {
                           search
                         </span>
                       </div>
+                      <button
+                        onClick={handleExportBroadsheetPDF}
+                        className="bg-rose-50 hover:bg-rose-100 text-[#500b1b] border border-rose-200 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
+                        title="Download Stream Marksheet as PDF"
+                      >
+                        <span className="material-symbols-outlined text-base">download</span>
+                        Download Marksheet PDF
+                      </button>
                       <button
                         onClick={handleExportCSV}
                         className="bg-[#500b1b] hover:bg-[#7a1228] text-white px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm"

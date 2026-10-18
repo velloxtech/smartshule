@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { apiService } from '../../services/api';
 import { SchemeOfWork, LessonPlan, UserRole } from '../../types';
 import { CreateSchemeModal } from '../modals/CreateSchemeModal';
@@ -22,12 +24,338 @@ export const SchemesView: React.FC = () => {
   const [schemes, setSchemes] = useState<SchemeOfWork[]>([]);
   const [lessonPlans, setLessonPlans] = useState<LessonPlan[]>([]);
   const [teacherProfile, setTeacherProfile] = useState<any>(null);
+  const [schoolInfo, setSchoolInfo] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   // Modals
   const [isCreateSchemeOpen, setIsCreateSchemeOpen] = useState(false);
   const [isCreatePlanOpen, setIsCreatePlanOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<LessonPlan | null>(null);
+
+  const getSchoolLogoBase64 = async (customUrl?: string): Promise<string | null> => {
+    const urlsToTry = [customUrl, '/logo.png', '/logo.jpg'].filter(Boolean) as string[];
+    for (const url of urlsToTry) {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) continue;
+        const blob = await res.blob();
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+        if (base64 && base64.startsWith('data:image')) {
+          return base64;
+        }
+      } catch {
+        // try next fallback
+      }
+    }
+    return null;
+  };
+
+  const downloadSchemePDF = async (scheme: SchemeOfWork) => {
+    const logoBase64 = await getSchoolLogoBase64(schoolInfo?.logoUrl);
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const schoolName = schoolInfo?.name || 'Grace Seeds School';
+    const motto = schoolInfo?.motto || 'The Future Begins Here';
+
+    // Top burgundy bar
+    doc.setFillColor(122, 18, 40);
+    doc.rect(0, 0, 297, 5, 'F');
+
+    let curY = 12;
+    if (logoBase64) {
+      try {
+        doc.addImage(logoBase64, 'PNG', 14, curY, 16, 16);
+      } catch {
+        // continue
+      }
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(122, 18, 40);
+    doc.text(schoolName, 34, curY + 5);
+
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`"${motto}"`, 34, curY + 10);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(71, 85, 105);
+    doc.text('Ministry of Education · KICD Competency-Based Curriculum Scheme of Work', 34, curY + 15);
+
+    curY += 20;
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.5);
+    doc.line(14, curY, 283, curY);
+
+    curY += 6;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(17, 24, 39);
+    doc.text(`SCHEME OF WORK: ${scheme.title.toUpperCase()}`, 14, curY);
+
+    curY += 5;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(55, 65, 81);
+    const teacherName = teacherProfile?.user ? `${teacherProfile.user.firstName} ${teacherProfile.user.lastName}` : (user?.fullName || 'Educator');
+    doc.text(`Educator: Tr. ${teacherName} (${teacherProfile?.tscNumber || 'TSC Verified'}) · Status: ${scheme.status} · Entries: ${scheme.entries?.length || 0} Lessons`, 14, curY);
+
+    if (scheme.reviewRemarks) {
+      curY += 4.5;
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(8);
+      doc.setTextColor(122, 18, 40);
+      doc.text(`HOD / Head Teacher Endorsement: "${scheme.reviewRemarks}"`, 14, curY);
+    }
+
+    curY += 4;
+
+    const tableRows = (scheme.entries || []).map((e) => [
+      e.weekNumber?.toString() || '1',
+      e.lessonNumber?.toString() || '1',
+      e.strandTitle || '--',
+      e.subStrandTitle || '--',
+      (e.specificLearningOutcomes || []).join('; ') || '--',
+      (e.keyInquiryQuestions || []).join('; ') || '--',
+      (e.learningExperiences || []).join('; ') || '--',
+      (e.learningResources || []).join('; ') || '--',
+      (e.assessmentMethods || []).join(', ') || '--',
+      e.reflection || 'Delivered effectively',
+    ]);
+
+    autoTable(doc, {
+      startY: curY,
+      head: [['Wk', 'Lsn', 'Strand', 'Sub-Strand', 'Specific Learning Outcomes', 'Key Inquiry Questions', 'Learning Experiences', 'Resources', 'Assessment', 'Reflection']],
+      body: tableRows.length > 0 ? tableRows : [['1', '1', 'CBC Strand', 'Sub-strand', 'Competency outcome', 'Inquiry question', 'Learner activities', 'Textbook & aids', 'Observation', 'Completed']],
+      theme: 'grid',
+      headStyles: {
+        fillColor: [122, 18, 40],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 7.5,
+        halign: 'left',
+      },
+      bodyStyles: {
+        fontSize: 7,
+        textColor: [31, 41, 55],
+        cellPadding: 2,
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252],
+      },
+      columnStyles: {
+        0: { cellWidth: 10, halign: 'center' },
+        1: { cellWidth: 10, halign: 'center' },
+        2: { cellWidth: 26 },
+        3: { cellWidth: 26 },
+        4: { cellWidth: 44 },
+        5: { cellWidth: 36 },
+        6: { cellWidth: 42 },
+        7: { cellWidth: 28 },
+        8: { cellWidth: 22 },
+        9: { cellWidth: 25 },
+      },
+      margin: { left: 14, right: 14 },
+    });
+
+    const lastTable = (doc as any).lastAutoTable;
+    let finalY = (lastTable && lastTable.finalY ? lastTable.finalY : 170) + 8;
+    if (finalY + 22 > 195) {
+      doc.addPage('a4', 'landscape');
+      finalY = 15;
+    }
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`Subject Teacher: _________________________   Date: ${new Date().toLocaleDateString()}`, 14, finalY);
+    doc.text('HOD / Curriculum Coordinator: _________________________   Date: ____________', 105, finalY);
+    doc.text('Principal / Head Teacher Stamp: [                           ]', 210, finalY);
+
+    doc.setFontSize(7);
+    doc.text(`Grace Seeds School · Generated on ${new Date().toLocaleString()} · Official Academic Record`, 148, 202, { align: 'center' });
+
+    doc.save(`Grace_Seeds_School_Scheme_${scheme.title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
+  };
+
+  const downloadLessonPlanPDF = async (plan: LessonPlan) => {
+    const logoBase64 = await getSchoolLogoBase64(schoolInfo?.logoUrl);
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const schoolName = schoolInfo?.name || 'Grace Seeds School';
+    const motto = schoolInfo?.motto || 'The Future Begins Here';
+
+    // Top burgundy bar
+    doc.setFillColor(122, 18, 40);
+    doc.rect(0, 0, 210, 5, 'F');
+
+    let curY = 13;
+    if (logoBase64) {
+      try {
+        doc.addImage(logoBase64, 'PNG', 14, curY, 16, 16);
+      } catch {
+        // continue
+      }
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(122, 18, 40);
+    doc.text(schoolName, 34, curY + 5);
+
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`"${motto}"`, 34, curY + 10);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(71, 85, 105);
+    doc.text('Ministry of Education · KICD 40-Minute CBC Lesson Plan Dossier', 34, curY + 15);
+
+    curY += 21;
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.5);
+    doc.line(14, curY, 196, curY);
+
+    curY += 6;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(17, 24, 39);
+    doc.text(`40-MINUTE LESSON PLAN: ${plan.strand.toUpperCase()}`, 14, curY);
+
+    curY += 5;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(55, 65, 81);
+    const teacherName = teacherProfile?.user ? `${teacherProfile.user.firstName} ${teacherProfile.user.lastName}` : (user?.fullName || 'Educator');
+    const rollText = `${plan.rollBoys ?? 0} Boys · ${plan.rollGirls ?? 0} Girls (Total: ${(plan.rollBoys ?? 0) + (plan.rollGirls ?? 0)})`;
+    doc.text(`Date: ${plan.lessonDate} · Duration: ${plan.durationMinutes} Mins · Class Roll: ${rollText}`, 14, curY);
+
+    curY += 4.5;
+    doc.text(`Sub-Strand: ${plan.subStrand} · Educator: Tr. ${teacherName} · Status: ${plan.status || 'DRAFT'}`, 14, curY);
+
+    curY += 6;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor(122, 18, 40);
+    doc.text('SPECIFIC LEARNING OUTCOMES:', 14, curY);
+    curY += 4;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(31, 41, 55);
+    (plan.specificLearningOutcomes || ['Outcome defined']).forEach((o) => {
+      doc.text(`• ${o}`, 18, curY);
+      curY += 4;
+    });
+
+    curY += 1;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor(122, 18, 40);
+    doc.text('KEY INQUIRY QUESTION(S):', 14, curY);
+    curY += 4;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(31, 41, 55);
+    (plan.keyInquiryQuestions || ['Inquiry question defined']).forEach((q) => {
+      doc.text(`• ${q}`, 18, curY);
+      curY += 4;
+    });
+
+    curY += 2;
+
+    // Steps table
+    const stepRows = (plan.steps || []).map((s) => [
+      `Step ${s.stepNumber}`,
+      `${s.durationMinutes} mins`,
+      s.teacherActivities || '--',
+      s.learnerActivities || '--',
+    ]);
+
+    autoTable(doc, {
+      startY: curY,
+      head: [['Lesson Phase', 'Time', 'Teacher Activities (Facilitation)', 'Learner Activities (Experience)']],
+      body: stepRows.length > 0 ? stepRows : [
+        ['Step 1', '5 mins', 'Introduction & context setting', 'Respond to inquiry questions'],
+        ['Step 2', '15 mins', 'Demonstration & concept exploration', 'Observe & collaborate in pairs'],
+        ['Step 3', '15 mins', 'Guided activity & assessment check', 'Complete activity in exercise books'],
+        ['Step 4', '5 mins', 'Conclusion & review summary', 'Self-evaluate & ask questions'],
+      ],
+      theme: 'grid',
+      headStyles: {
+        fillColor: [122, 18, 40],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 8,
+      },
+      bodyStyles: {
+        fontSize: 7.5,
+        textColor: [31, 41, 55],
+        cellPadding: 2.5,
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252],
+      },
+      columnStyles: {
+        0: { cellWidth: 26, fontStyle: 'bold' },
+        1: { cellWidth: 18, halign: 'center' },
+        2: { cellWidth: 72 },
+        3: { cellWidth: 66 },
+      },
+      margin: { left: 14, right: 14 },
+    });
+
+    const lastTable = (doc as any).lastAutoTable;
+    let finalY = (lastTable && lastTable.finalY ? lastTable.finalY : 210) + 7;
+    if (finalY + 45 > 280) {
+      doc.addPage('a4', 'portrait');
+      finalY = 18;
+    }
+
+    if (plan.teacherSelfReflection) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(122, 18, 40);
+      doc.text('TEACHER SELF-REFLECTION & REMEDIAL:', 14, finalY);
+      finalY += 4;
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(7.5);
+      doc.setTextColor(55, 65, 81);
+      doc.text(`"${plan.teacherSelfReflection}"`, 18, finalY);
+      finalY += 6;
+    }
+
+    if (plan.reviewRemarks) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(16, 185, 129);
+      doc.text('HEAD TEACHER / DEPUTY APPROVAL REMARKS:', 14, finalY);
+      finalY += 4;
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(7.5);
+      doc.setTextColor(55, 65, 81);
+      doc.text(`"${plan.reviewRemarks}"`, 18, finalY);
+      finalY += 6;
+    }
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`Teacher: Tr. ${teacherName} _______________________   Date: ${new Date().toLocaleDateString()}`, 14, finalY);
+    doc.text('Head Teacher Approval Stamp: [                               ]', 120, finalY);
+
+    doc.setFontSize(7);
+    doc.text(`Grace Seeds School · Generated on ${new Date().toLocaleString()} · Confidential Lesson Dossier`, 105, 290, { align: 'center' });
+
+    doc.save(`Grace_Seeds_School_Lesson_Plan_${plan.strand.replace(/[^a-zA-Z0-9]/g, '_')}_${plan.lessonDate}.pdf`);
+  };
 
   useEffect(() => {
     async function initTeacher() {
@@ -277,7 +605,15 @@ export const SchemesView: React.FC = () => {
                     {s.status}
                   </span>
 
-                  <div className="flex gap-2 items-center">
+                  <div className="flex gap-2 items-center flex-wrap">
+                    <button
+                      onClick={() => downloadSchemePDF(s)}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#7a1228] text-white hover:bg-[#5e0d1e] text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+                      title="Download official Scheme of Work as PDF"
+                    >
+                      <span className="material-symbols-outlined text-[15px]">download</span>
+                      <span>Download PDF</span>
+                    </button>
                     {s.status === 'DRAFT' && (
                       <button
                         onClick={() => handleSubmitScheme(s.id)}
@@ -357,7 +693,7 @@ export const SchemesView: React.FC = () => {
                         )}
                       </div>
                       <span className="text-xs text-outline font-data-mono">
-                        Roll: {lp.rollBoys || 20}B / {lp.rollGirls || 18}G
+                        Roll: {lp.rollBoys ?? 0}B / {lp.rollGirls ?? 0}G
                       </span>
                     </div>
 
@@ -387,6 +723,15 @@ export const SchemesView: React.FC = () => {
 
                   <div className="mt-3 pt-3 border-t border-surface-container flex items-center justify-between flex-wrap gap-2">
                     <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => downloadLessonPlanPDF(lp)}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-[#7a1228] text-white hover:bg-[#5e0d1e] text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+                        title="Download official 40-Minute Lesson Plan as PDF"
+                      >
+                        <span className="material-symbols-outlined text-[14px]">download</span>
+                        <span>PDF</span>
+                      </button>
+
                       <button
                         onClick={() => handleDeleteLessonPlan(lp.id, lp.strand)}
                         title="Delete Lesson Plan"
@@ -546,13 +891,23 @@ export const SchemesView: React.FC = () => {
             </div>
 
             {/* Modal Review Actions Footer */}
-            <div className="p-3 bg-surface-container-low border-t border-outline-variant/30 flex items-center justify-between gap-2">
-              <button
-                onClick={() => setSelectedPlan(null)}
-                className="px-3 py-1.5 rounded-lg border border-outline text-on-surface hover:bg-surface-container-high text-xs font-semibold cursor-pointer"
-              >
-                Close
-              </button>
+            <div className="p-3 bg-surface-container-low border-t border-outline-variant/30 flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setSelectedPlan(null)}
+                  className="px-3 py-1.5 rounded-lg border border-outline text-on-surface hover:bg-surface-container-high text-xs font-semibold cursor-pointer"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => downloadLessonPlanPDF(selectedPlan)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#7a1228] text-white hover:bg-[#5e0d1e] text-xs font-bold shadow-xs cursor-pointer"
+                  title="Download 40-Minute Lesson Plan as PDF"
+                >
+                  <span className="material-symbols-outlined text-[14px]">download</span>
+                  <span>Download PDF</span>
+                </button>
+              </div>
               <div className="flex items-center gap-2">
                 {isTeacher && (!selectedPlan.status || selectedPlan.status === 'DRAFT' || selectedPlan.status === 'REJECTED') && (
                   <button

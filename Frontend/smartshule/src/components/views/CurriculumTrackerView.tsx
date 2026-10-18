@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import {
   apiService,
   libraryApi,
@@ -761,6 +763,229 @@ export const CurriculumTrackerView: React.FC = () => {
     return Math.round(sum / trackers.length);
   }, [trackers]);
 
+  const getSchoolLogoBase64 = async (): Promise<string | null> => {
+    const urlsToTry = ['/logo.png', '/logo.jpg'];
+    for (const url of urlsToTry) {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) continue;
+        const blob = await res.blob();
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+        if (base64 && base64.startsWith('data:image')) {
+          return base64;
+        }
+      } catch {
+        // continue
+      }
+    }
+    return null;
+  };
+
+  const downloadTrackerPDF = async () => {
+    if (!selectedTracker) return;
+
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const logoBase64 = await getSchoolLogoBase64();
+    const schoolName = 'Grace Seeds School';
+    const motto = 'The Future Begins Here';
+
+    // Top burgundy bar
+    doc.setFillColor(122, 18, 40);
+    doc.rect(0, 0, 297, 6, 'F');
+
+    let curY = 12;
+    if (logoBase64) {
+      try {
+        doc.addImage(logoBase64, 'PNG', 14, curY, 15, 15);
+      } catch {
+        // continue
+      }
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(122, 18, 40);
+    doc.text(schoolName, 32, curY + 4);
+
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`"${motto}" · P.O. Box 12-20123 / 12-40123 Kisumu · Tel: 0745436312`, 32, curY + 9);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(30, 41, 59);
+    doc.text('OFFICIAL CURRICULUM SYLLABUS COVERAGE & REFLECTIONS BROADSHEET', 32, curY + 14);
+
+    // Meta box
+    curY += 19;
+    doc.setFillColor(248, 250, 252);
+    doc.rect(14, curY, 269, 13, 'F');
+    doc.setDrawColor(226, 232, 240);
+    doc.rect(14, curY, 269, 13, 'S');
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(15, 23, 42);
+    doc.text(`Subject: ${selectedTracker.subjectName}`, 18, curY + 5);
+    doc.text(`Class: ${selectedTracker.className} ${selectedTracker.streamName ? `(${selectedTracker.streamName})` : ''}`, 85, curY + 5);
+    doc.text(`Term: ${selectedTracker.term} · ${selectedTracker.academicYear}`, 155, curY + 5);
+    doc.text(`Educator: ${selectedTracker.teacherName}`, 220, curY + 5);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(122, 18, 40);
+    doc.text(`Syllabus Coverage: ${stats.completionPercentage}% (${stats.coveredWeeks}/${stats.totalWeeks} Weeks Covered)`, 18, curY + 10);
+    doc.setTextColor(71, 85, 105);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Total Daily Lessons Recorded: ${selectedTracker.dailyLogs?.length || 0} Lessons`, 155, curY + 10);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 220, curY + 10);
+
+    curY += 17;
+
+    // Table 1: 12-Week Syllabus Scope
+    const weekRows = (selectedTracker.weeks || []).map((w) => {
+      const isCov = w.status === 'COVERED';
+      const isProg = w.status === 'IN_PROGRESS';
+      const statusText = isCov ? `Covered (${w.dateCovered || 'Done'})` : isProg ? 'In Progress' : 'Pending';
+      return [
+        `Week ${w.week}`,
+        w.strand ? `${w.strand}\nSub-strand: ${w.subStrand || '--'}` : '--',
+        w.learningOutcomes || '--',
+        w.suggestedExperiences || '--',
+        statusText,
+        w.teacherComment || 'No comment recorded',
+      ];
+    });
+
+    autoTable(doc, {
+      startY: curY,
+      head: [['Week', 'Strand & Sub-strand', 'Learning Outcomes & Inquiries', 'Suggested Experiences / Activities', 'Status & Date', 'Teacher Reflection & Remark']],
+      body: weekRows,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [122, 18, 40],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 7.5,
+      },
+      bodyStyles: {
+        fontSize: 7,
+        textColor: [31, 41, 55],
+        cellPadding: 2,
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252],
+      },
+      columnStyles: {
+        0: { cellWidth: 16, fontStyle: 'bold' },
+        1: { cellWidth: 48 },
+        2: { cellWidth: 62 },
+        3: { cellWidth: 62 },
+        4: { cellWidth: 28, fontStyle: 'bold' },
+        5: { cellWidth: 53 },
+      },
+      margin: { left: 14, right: 14 },
+    });
+
+    let lastTable = (doc as any).lastAutoTable;
+    curY = (lastTable && lastTable.finalY ? lastTable.finalY : 170) + 6;
+
+    // Check if daily logs exist, if so add Table 2 on next page or below
+    const dailyLogs = selectedTracker.dailyLogs || [];
+    if (dailyLogs.length > 0) {
+      if (curY + 50 > 195) {
+        doc.addPage('a4', 'landscape');
+        curY = 14;
+      }
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(122, 18, 40);
+      doc.text('DAILY LESSON TRACKING, COMPREHENSION & REFLECTIONS LOG', 14, curY);
+      curY += 4;
+
+      const dailyRows = dailyLogs.map((log) => [
+        `${log.lessonDate}\nPeriod: ${log.period || '--'} (Wk ${log.weekNumber})`,
+        `${log.strand}\nTarget: ${log.learningObjective || '--'}`,
+        log.status,
+        `${log.comprehensionLevel} (${log.comprehensionPercentage ?? '--'}%)`,
+        `Learners: ${log.learnersPresent ?? '--'}/${log.totalLearners ?? '--'}\n${log.teacherReflection || 'No notes'}\nRemediation: ${log.interventionNeeded ? log.interventionStrategy || 'Required' : 'None'}`,
+        log.endorsedBy ? `Endorsed: ${log.endorsedRole || 'Admin'}\n${log.endorsedNotes || ''}` : 'Pending Endorsement',
+      ]);
+
+      autoTable(doc, {
+        startY: curY,
+        head: [['Date & Lesson', 'Strand & Learning Objective', 'Status', 'Comprehension', 'Attendance & Teacher Reflection', 'Leadership Oversight']],
+        body: dailyRows,
+        theme: 'grid',
+        headStyles: {
+          fillColor: [71, 85, 105],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+          fontSize: 7.5,
+        },
+        bodyStyles: {
+          fontSize: 7,
+          textColor: [31, 41, 55],
+          cellPadding: 2,
+        },
+        alternateRowStyles: {
+          fillColor: [248, 250, 252],
+        },
+        columnStyles: {
+          0: { cellWidth: 28 },
+          1: { cellWidth: 58 },
+          2: { cellWidth: 24, fontStyle: 'bold' },
+          3: { cellWidth: 32 },
+          4: { cellWidth: 72 },
+          5: { cellWidth: 55 },
+        },
+        margin: { left: 14, right: 14 },
+      });
+
+      lastTable = (doc as any).lastAutoTable;
+      curY = (lastTable && lastTable.finalY ? lastTable.finalY : 170) + 6;
+    }
+
+    if (curY + 26 > 195) {
+      doc.addPage('a4', 'landscape');
+      curY = 16;
+    }
+
+    // Sign off blocks
+    doc.setDrawColor(203, 213, 225);
+    doc.setLineWidth(0.3);
+    doc.line(14, curY, 283, curY);
+    curY += 6;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(30, 41, 59);
+
+    // 3 Signatures: Teacher, Headteacher, Director
+    doc.text(`Subject Teacher: ${selectedTracker.teacherName}`, 14, curY);
+    doc.line(14, curY + 6, 85, curY + 6);
+    doc.text('Signature & Date', 14, curY + 10);
+
+    doc.text('Headteacher Endorsement:', 105, curY);
+    doc.line(105, curY + 6, 185, curY + 6);
+    doc.text('Signature & Date', 105, curY + 10);
+
+    doc.text('School Director Oversight:', 205, curY);
+    doc.line(205, curY + 6, 283, curY + 6);
+    doc.text('Official Seal / Stamp & Date', 205, curY + 10);
+
+    doc.setFontSize(6.5);
+    doc.setTextColor(148, 163, 184);
+    doc.text('Grace Seeds School · Official KICD CBC Curriculum Tracker Dossier', 148, 204, { align: 'center' });
+
+    doc.save(`Grace_Seeds_Curriculum_Tracker_${selectedTracker.subjectName}_${selectedTracker.className}.pdf`);
+  };
+
   return (
     <div className="w-full space-y-6 pb-12">
       {/* Print Specific CSS */}
@@ -839,6 +1064,16 @@ export const CurriculumTrackerView: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={downloadTrackerPDF}
+            disabled={!selectedTracker}
+            className="px-3.5 py-2 bg-rose-50 border border-rose-200 text-[#7a1228] rounded-xl hover:bg-rose-100 transition-colors font-semibold text-xs flex items-center gap-1.5 shadow-xs disabled:opacity-50 cursor-pointer"
+            title="Download official syllabus coverage report as PDF"
+          >
+            <span className="material-symbols-outlined text-[18px]">download</span>
+            <span>Download Tracker (PDF)</span>
+          </button>
+
           <button
             onClick={() => window.print()}
             disabled={!selectedTracker}

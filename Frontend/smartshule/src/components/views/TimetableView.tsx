@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { apiService } from '../../services/api';
 import { TimetableData, TimetableSlot, PeriodDefinition, DayDefinition, UserRole } from '../../types';
 import { AddTimetableSlotModal } from '../modals/AddTimetableSlotModal';
@@ -908,23 +910,157 @@ export const TimetableView: React.FC = () => {
     }
   };
 
-  // Standalone offline HTML export in Landscape Orientation (Whole Page, No Term Ribbon)
-  const handleExportHTML = () => {
+  const getSchoolLogoBase64 = async (customUrl?: string): Promise<string | null> => {
+    const urlsToTry = [customUrl, '/logo.png', '/logo.jpg'].filter(Boolean) as string[];
+    for (const url of urlsToTry) {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) continue;
+        const blob = await res.blob();
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+        if (base64 && base64.startsWith('data:image')) {
+          return base64;
+        }
+      } catch {
+        // try next
+      }
+    }
+    return null;
+  };
+
+  // Official A4 Landscape PDF Timetable Export
+  const handleExportPDF = async () => {
     const titleContext = viewMode === 'class'
       ? `${activeClassName}${selectedStreamName ? ` (${selectedStreamName})` : ''}`
       : activeTeacherName;
     const yearName = currentContext?.currentYear?.name || new Date().getFullYear().toString();
-    const htmlContent = buildTimetablePrintHTML(titleContext, yearName);
+    const termLabel = currentContext?.currentTerm?.name || 'Term 1';
+    const schoolName = schoolInfo?.name || 'Grace Seeds School';
+    const motto = schoolInfo?.motto || 'The Future Begins Here';
 
-    const blob = new Blob([htmlContent], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `Grace_Seeds_School_Timetable_${titleContext.replace(/[\s()]/g, '_')}_Landscape.html`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    const logoBase64 = await getSchoolLogoBase64(schoolInfo?.logoUrl);
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+    // Top burgundy bar
+    doc.setFillColor(122, 18, 40);
+    doc.rect(0, 0, 297, 5, 'F');
+
+    let curY = 12;
+    if (logoBase64) {
+      try {
+        doc.addImage(logoBase64, 'PNG', 14, curY, 16, 16);
+      } catch {
+        // continue
+      }
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(122, 18, 40);
+    doc.text(schoolName, 34, curY + 5);
+
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`"${motto}"`, 34, curY + 10);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(71, 85, 105);
+    doc.text('Ministry of Education · KICD Competency-Based Curriculum Official Timetable', 34, curY + 15);
+
+    curY += 20;
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.5);
+    doc.line(14, curY, 283, curY);
+
+    curY += 6;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(17, 24, 39);
+    doc.text(`TIMETABLE: ${titleContext.toUpperCase()}`, 14, curY);
+
+    curY += 5;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(55, 65, 81);
+    doc.text(`Academic Period: ${termLabel}, ${yearName} · View: ${viewMode === 'class' ? 'Classroom / Stream' : 'Educator Teaching Schedule'}`, 14, curY);
+
+    curY += 4;
+
+    const enabledDays = days.filter((d) => d.isEnabled !== false);
+    const headRow = ['Day', ...periods.map((p) => `${p.name}\n${p.startTime}-${p.endTime}`)];
+
+    const tableRows = enabledDays.map((d) => {
+      const row = [d.label];
+      periods.forEach((p) => {
+        if (p.isBreak) {
+          row.push(p.isLunch ? 'LUNCH & REST' : 'BREAK');
+        } else {
+          const slot = activeSlots.find((sl) => sl.dayOfWeek === d.dayOfWeek && sl.periodNumber === p.periodNumber);
+          if (slot) {
+            const subject = slot.learningAreaName || slot.label || 'Subject';
+            const teacher = slot.teacherName ? `Tr. ${slot.teacherName}` : '';
+            const room = slot.roomName ? `[${slot.roomName}]` : '';
+            const parts = [subject, teacher, room].filter(Boolean);
+            row.push(parts.join('\n'));
+          } else {
+            row.push('--');
+          }
+        }
+      });
+      return row;
+    });
+
+    autoTable(doc, {
+      startY: curY,
+      head: [headRow],
+      body: tableRows,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [122, 18, 40],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 7.5,
+        halign: 'center',
+      },
+      bodyStyles: {
+        fontSize: 7,
+        textColor: [31, 41, 55],
+        cellPadding: 2.5,
+        halign: 'center',
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252],
+      },
+      columnStyles: {
+        0: { cellWidth: 24, fontStyle: 'bold', fillColor: [241, 245, 249], halign: 'center' },
+      },
+      margin: { left: 14, right: 14 },
+    });
+
+    const lastTable = (doc as any).lastAutoTable;
+    let finalY = (lastTable && lastTable.finalY ? lastTable.finalY : 170) + 8;
+    if (finalY + 22 > 195) {
+      doc.addPage('a4', 'landscape');
+      finalY = 15;
+    }
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`Timetable Coordinator: ___________________________   Date: ${new Date().toLocaleDateString()}`, 14, finalY);
+    doc.text('Principal / Head Teacher Stamp: [                               ]', 180, finalY);
+
+    doc.setFontSize(7);
+    doc.text(`Grace Seeds School · Generated on ${new Date().toLocaleString()} · Official Academic Schedule`, 148, 202, { align: 'center' });
+
+    doc.save(`Grace_Seeds_School_Timetable_${titleContext.replace(/[^a-zA-Z0-9]/g, '_')}_Landscape.pdf`);
   };
 
   return (
@@ -1159,12 +1295,12 @@ export const TimetableView: React.FC = () => {
           </button>
 
           <button
-            onClick={handleExportHTML}
+            onClick={handleExportPDF}
             className="inline-flex items-center gap-1.5 px-3 py-2 bg-surface-container hover:bg-surface-container-high text-on-surface rounded-lg text-xs font-bold border border-outline-variant/30 transition-all cursor-pointer"
-            title="Download offline standalone landscape HTML timetable"
+            title="Download official standalone landscape PDF timetable"
           >
             <span className="material-symbols-outlined text-[16px]">download</span>
-            <span>Export Landscape HTML</span>
+            <span>Download Timetable (PDF)</span>
           </button>
 
           {canEditGrid && (

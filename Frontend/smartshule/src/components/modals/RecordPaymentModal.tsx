@@ -40,7 +40,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
   const { user } = useAuth();
 
   // Student & Invoice selection
-  const [selectedStudentId, setSelectedStudentId] = useState(initialStudent?.id || students[0]?.id || '');
+  const [selectedStudentId, setSelectedStudentId] = useState(initialStudent?.id || '');
   const [studentSearch, setStudentSearch] = useState('');
   const [invoices, setInvoices] = useState<StudentInvoice[]>([]);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string>(initialInvoice?.id || '');
@@ -50,7 +50,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
   // Core Payment details
   const [amount, setAmount] = useState('');
   const [paymentChannel, setPaymentChannel] = useState<PaymentChannel>('CASH');
-  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
+  const [paymentDate, setPaymentDate] = useState('');
 
   // Cash-specific fields
   const [cashReceiptRef, setCashReceiptRef] = useState('');
@@ -59,12 +59,12 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
   const [isCashVerified, setIsCashVerified] = useState(false);
 
   // Bank Deposit-specific fields
-  const [bankName, setBankName] = useState('KCB Bank Kenya');
+  const [bankName, setBankName] = useState('');
   const [customBankName, setCustomBankName] = useState('');
   const [bankBranch, setBankBranch] = useState('');
   const [slipNumber, setSlipNumber] = useState('');
   const [depositorName, setDepositorName] = useState('');
-  const [schoolBankAccount, setSchoolBankAccount] = useState('KCB Fees Collection A/C (Paybill 522533 · Acc: 8048859#)');
+  const [schoolBankAccount, setSchoolBankAccount] = useState('');
   const [isSlipVerified, setIsSlipVerified] = useState(false);
 
   // M-Pesa / Transfer / Cheque fields
@@ -76,6 +76,33 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [recordedResult, setRecordedResult] = useState<any | null>(null);
+
+  // Reset all entry fields to blank whenever the modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedStudentId(initialStudent?.id || '');
+      setSelectedInvoiceId(initialInvoice?.id || '');
+      setStudentSearch('');
+      setAmount('');
+      setPaymentDate('');
+      setCashReceiptRef('');
+      setReceivedFrom('');
+      setCashDenominations('');
+      setIsCashVerified(false);
+      setBankName('');
+      setCustomBankName('');
+      setBankBranch('');
+      setSlipNumber('');
+      setDepositorName('');
+      setSchoolBankAccount('');
+      setIsSlipVerified(false);
+      setTransactionReference('');
+      setMpesaPhoneNumber('');
+      setNotes('');
+      setError(null);
+      setRecordedResult(null);
+    }
+  }, [isOpen, initialStudent, initialInvoice]);
 
   // Load School Metadata
   useEffect(() => {
@@ -95,16 +122,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
     }
   }, [initialStudent]);
 
-  // Auto-generate cash reference on mount or channel switch
-  useEffect(() => {
-    if (paymentChannel === 'CASH' && !cashReceiptRef) {
-      const year = new Date().getFullYear();
-      const randomCode = Math.floor(10000 + Math.random() * 90000);
-      setCashReceiptRef(`CSH-${year}-${randomCode}`);
-    }
-  }, [paymentChannel, cashReceiptRef]);
-
-  // Load invoices whenever selectedStudentId changes
+  // Load invoices whenever selectedStudentId changes without auto-populating amount
   useEffect(() => {
     if (!selectedStudentId) {
       setInvoices([]);
@@ -119,19 +137,8 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
           setInvoices(res.data);
           if (initialInvoice && res.data.some(i => i.id === initialInvoice.id)) {
             setSelectedInvoiceId(initialInvoice.id);
-            if ((initialInvoice.balance || 0) > 0) {
-              setAmount(initialInvoice.balance.toString());
-            }
           } else {
-            const unpaid = res.data.find((inv) => (inv.balance || 0) > 0) || res.data[0];
-            if (unpaid) {
-              setSelectedInvoiceId(unpaid.id);
-              if ((unpaid.balance || 0) > 0) {
-                setAmount(unpaid.balance.toString());
-              }
-            } else {
-              setSelectedInvoiceId('');
-            }
+            setSelectedInvoiceId('');
           }
         } else {
           setInvoices([]);
@@ -174,6 +181,10 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
 
     // Validation for Bank Deposit
     if (paymentChannel === 'BANK_DEPOSIT') {
+      if (!bankName) {
+        setError('Please select the Bank deposited into.');
+        return;
+      }
       if (!slipNumber.trim()) {
         setError('Please enter the Bank Deposit Slip / Teller Reference number.');
         return;
@@ -531,10 +542,6 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
                 value={selectedInvoiceId}
                 onChange={(e) => {
                   setSelectedInvoiceId(e.target.value);
-                  const inv = invoices.find((i) => i.id === e.target.value);
-                  if (inv && (inv.balance || 0) > 0) {
-                    setAmount(inv.balance.toString());
-                  }
                 }}
                 required
                 className="w-full bg-surface-container-lowest border border-outline-variant/40 rounded-lg p-2.5 text-xs text-on-surface focus:outline-primary font-data-mono font-medium"
@@ -690,6 +697,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
                     onChange={(e) => setBankName(e.target.value)}
                     className="w-full bg-surface-container-lowest border border-sky-300 rounded-lg p-2 text-xs text-on-surface focus:outline-sky-600 font-semibold"
                   >
+                    <option value="">-- Select Bank --</option>
                     {KENYAN_BANKS.map((b) => (
                       <option key={b} value={b}>
                         {b}

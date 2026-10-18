@@ -41,13 +41,11 @@ export const ArrearsView: React.FC<ArrearsViewProps> = ({
   const [formStudentId, setFormStudentId] = useState('');
   const [formAmount, setFormAmount] = useState<number | ''>('');
   const [formMode, setFormMode] = useState<'SET' | 'ADD'>('ADD');
-  const [formReason, setFormReason] = useState('Opening Fee Arrears / Prior Balance');
+  const [formReason, setFormReason] = useState('');
   const [customReason, setCustomReason] = useState('');
   const [formYear, setFormYear] = useState('year-2026');
   const [formTerm, setFormTerm] = useState('term-2026-t1');
-  const [formDueDate, setFormDueDate] = useState(
-    new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-  );
+  const [formDueDate, setFormDueDate] = useState('');
   const [formNotes, setFormNotes] = useState('');
   const [isSubmittingSingle, setIsSubmittingSingle] = useState(false);
 
@@ -181,10 +179,11 @@ export const ArrearsView: React.FC<ArrearsViewProps> = ({
   const handleOpenAddForStudent = (student: Student) => {
     setSelectedStudentForArrear(student);
     setFormStudentId(student.id);
-    setFormAmount(student.feeBalance > 0 ? student.feeBalance : '');
-    setFormMode('SET');
-    setFormReason('Opening Fee Arrears / Prior Balance');
+    setFormAmount('');
+    setFormMode('ADD');
+    setFormReason('');
     setCustomReason('');
+    setFormDueDate('');
     setFormNotes('');
     setIsAddArrearModalOpen(true);
   };
@@ -192,11 +191,12 @@ export const ArrearsView: React.FC<ArrearsViewProps> = ({
   // Open Add Arrear Modal blank (to select student)
   const handleOpenAddGeneral = () => {
     setSelectedStudentForArrear(null);
-    setFormStudentId(students[0]?.id || '');
+    setFormStudentId('');
     setFormAmount('');
     setFormMode('ADD');
-    setFormReason('Opening Fee Arrears / Prior Balance');
+    setFormReason('');
     setCustomReason('');
+    setFormDueDate('');
     setFormNotes('');
     setIsAddArrearModalOpen(true);
   };

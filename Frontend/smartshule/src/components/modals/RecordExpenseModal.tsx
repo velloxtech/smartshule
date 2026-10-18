@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
 import { ExpenseCategoryType, ExpenseRecord, ExpenseStatusType } from '../../types';
 
@@ -33,11 +33,24 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
   const [payee, setPayee] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'MPESA' | 'BANK_TRANSFER' | 'BANK_DEPOSIT' | 'CHEQUE' | 'CASH' | 'CARD'>('MPESA');
   const [paymentReference, setPaymentReference] = useState('');
-  const [expenseDate, setExpenseDate] = useState(new Date().toISOString().split('T')[0]);
+  const [expenseDate, setExpenseDate] = useState('');
   const [status, setStatus] = useState<ExpenseStatusType>('PAID');
   const [notes, setNotes] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Reset all entry fields to blank whenever the modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setTitle('');
+      setAmount('');
+      setPayee('');
+      setPaymentReference('');
+      setExpenseDate('');
+      setNotes('');
+      setError(null);
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -72,7 +85,7 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
         paymentMethod,
         paymentReference: paymentReference.trim(),
         payee: payee.trim(),
-        expenseDate,
+        expenseDate: expenseDate || new Date().toISOString().split('T')[0],
         status,
         notes: notes.trim() || undefined,
       });

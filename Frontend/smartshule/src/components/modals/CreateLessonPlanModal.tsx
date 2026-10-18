@@ -98,6 +98,27 @@ export const CreateLessonPlanModal: React.FC<CreateLessonPlanModalProps> = ({
       });
   }, [selectedClassRoomId]);
 
+  // Load genuine learner counts from database for the selected class/stream
+  useEffect(() => {
+    if (!selectedClassRoomId) return;
+    apiService
+      .getStudents({
+        classroomId: selectedClassRoomId,
+        streamId: selectedStreamId || undefined,
+      })
+      .then((res) => {
+        if (res?.data && Array.isArray(res.data) && res.data.length > 0) {
+          const boys = res.data.filter((s: any) => s.gender === 'MALE' || s.gender === 'Boy').length;
+          const girls = res.data.filter((s: any) => s.gender === 'FEMALE' || s.gender === 'Girl').length;
+          setRollBoys(String(boys));
+          setRollGirls(String(girls));
+        }
+      })
+      .catch(() => {
+        // keep current
+      });
+  }, [selectedClassRoomId, selectedStreamId]);
+
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {

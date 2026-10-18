@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import CreateRecordOfWorkModal from '../modals/CreateRecordOfWorkModal';
 import EditRecordOfWorkModal from '../modals/EditRecordOfWorkModal';
 import { apiService } from '../../services/api';
@@ -99,6 +101,166 @@ const RecordsOfWorkView: React.FC = () => {
     return weeks;
   }, [records]);
 
+  const getSchoolLogoBase64 = async (): Promise<string | null> => {
+    const urlsToTry = ['/logo.png', '/logo.jpg'];
+    for (const url of urlsToTry) {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) continue;
+        const blob = await res.blob();
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+        if (base64 && base64.startsWith('data:image')) {
+          return base64;
+        }
+      } catch {
+        // continue
+      }
+    }
+    return null;
+  };
+
+  const downloadRecordsOfWorkPDF = async () => {
+    const dataToExport = filteredRecords.length > 0 ? filteredRecords : records;
+    if (dataToExport.length === 0) {
+      alert('No record of work entries available to download.');
+      return;
+    }
+
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const logoBase64 = await getSchoolLogoBase64();
+    const schoolName = 'Grace Seeds School';
+    const motto = 'The Future Begins Here';
+
+    // Top burgundy bar
+    doc.setFillColor(122, 18, 40);
+    doc.rect(0, 0, 297, 6, 'F');
+
+    let curY = 12;
+    if (logoBase64) {
+      try {
+        doc.addImage(logoBase64, 'PNG', 14, curY, 15, 15);
+      } catch {
+        // continue
+      }
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(122, 18, 40);
+    doc.text(schoolName, 32, curY + 4);
+
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`"${motto}" · P.O. Box 12-20123 / 12-40123 Kisumu · Tel: 0745436312`, 32, curY + 9);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(30, 41, 59);
+    doc.text('OFFICIAL CURRICULUM DELIVERY & RECORD OF WORK DOSSIER', 32, curY + 14);
+
+    // Metadata card
+    curY += 19;
+    doc.setFillColor(248, 250, 252);
+    doc.rect(14, curY, 269, 13, 'F');
+    doc.setDrawColor(226, 232, 240);
+    doc.rect(14, curY, 269, 13, 'S');
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(15, 23, 42);
+    doc.text(`Academic Period: Term 3 · 2026`, 18, curY + 5);
+    doc.text(`Total Lessons Logged: ${dataToExport.length} Lessons`, 95, curY + 5);
+    doc.text(`Reflections Logged: ${totalReflections} (${records.length > 0 ? Math.round((totalReflections / records.length) * 100) : 0}%)`, 165, curY + 5);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 235, curY + 5);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(122, 18, 40);
+    doc.text(`Scope: ${weekFilter === 'ALL' ? 'All Teaching Weeks' : `Week ${weekFilter}`} ${searchTerm ? `(Filter: "${searchTerm}")` : ''}`, 18, curY + 10);
+
+    curY += 17;
+
+    const tableRows = dataToExport.map((r) => [
+      `Wk ${r.week} · ${r.day}\n${r.period ? `Period: ${r.period}` : 'Standard'}`,
+      r.subjectAndGrade,
+      r.strandAndWorkCovered,
+      r.reference || 'KICD Approved Textbooks',
+      r.reflection ? r.reflection : 'No specific reflection noted',
+      r.comments ? r.comments : 'Endorsed by Subject Educator',
+    ]);
+
+    autoTable(doc, {
+      startY: curY,
+      head: [['Term Schedule', 'Subject & Grade', 'Strand & Work Covered', 'Reference Materials', 'Teacher Reflection & Evaluation', 'Leadership Remarks']],
+      body: tableRows,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [122, 18, 40],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 7.5,
+      },
+      bodyStyles: {
+        fontSize: 7,
+        textColor: [31, 41, 55],
+        cellPadding: 2.5,
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252],
+      },
+      columnStyles: {
+        0: { cellWidth: 26, fontStyle: 'bold' },
+        1: { cellWidth: 38, fontStyle: 'bold' },
+        2: { cellWidth: 70 },
+        3: { cellWidth: 42 },
+        4: { cellWidth: 50 },
+        5: { cellWidth: 43 },
+      },
+      margin: { left: 14, right: 14 },
+    });
+
+    const lastTable = (doc as any).lastAutoTable;
+    curY = (lastTable && lastTable.finalY ? lastTable.finalY : 170) + 7;
+
+    if (curY + 26 > 195) {
+      doc.addPage('a4', 'landscape');
+      curY = 16;
+    }
+
+    // Signatures
+    doc.setDrawColor(203, 213, 225);
+    doc.setLineWidth(0.3);
+    doc.line(14, curY, 283, curY);
+    curY += 6;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(30, 41, 59);
+
+    doc.text('Subject Educator:', 14, curY);
+    doc.line(14, curY + 6, 85, curY + 6);
+    doc.text('Signature & Date', 14, curY + 10);
+
+    doc.text('Headteacher / Deputy Review:', 105, curY);
+    doc.line(105, curY + 6, 185, curY + 6);
+    doc.text('Endorsement & Date', 105, curY + 10);
+
+    doc.text('School Director Oversight:', 205, curY);
+    doc.line(205, curY + 6, 283, curY + 6);
+    doc.text('Official Seal / Stamp & Date', 205, curY + 10);
+
+    doc.setFontSize(6.5);
+    doc.setTextColor(148, 163, 184);
+    doc.text('Grace Seeds School · Official Curriculum Record of Work & Syllabus Delivery Log', 148, 204, { align: 'center' });
+
+    doc.save(`Grace_Seeds_Record_of_Work_Term3_2026.pdf`);
+  };
+
   return (
     <div className="w-full space-y-6">
       {/* Print Specific CSS */}
@@ -139,7 +301,7 @@ const RecordsOfWorkView: React.FC = () => {
       {/* Printable Header (Visible Only When Printing) */}
       <div className="hidden print:block text-center mb-6">
         <h2 className="text-xl font-black uppercase tracking-wider text-gray-900">
-          SmartShule Academic Management
+          Grace Seeds School Academic Management
         </h2>
         <h3 className="text-sm font-bold text-gray-700 mt-1 uppercase">
           Curriculum Delivery & Record of Work Log
@@ -162,6 +324,14 @@ const RecordsOfWorkView: React.FC = () => {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={downloadRecordsOfWorkPDF}
+            className="px-4 py-2.5 bg-rose-50 border border-rose-200 text-[#7a1228] rounded-xl hover:bg-rose-100 transition-colors font-semibold text-sm flex items-center gap-2 shadow-sm cursor-pointer"
+            title="Download official records of work as PDF"
+          >
+            <span className="material-symbols-outlined text-[20px]">download</span>
+            Download PDF
+          </button>
           <button
             onClick={() => window.print()}
             className="px-4 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-semibold text-sm flex items-center gap-2 shadow-sm"

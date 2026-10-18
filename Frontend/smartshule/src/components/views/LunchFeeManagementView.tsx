@@ -111,25 +111,25 @@ export const LunchFeeManagementView: React.FC = () => {
   // Form states - Single Enrollment
   const [enrollForm, setEnrollForm] = useState({
     studentId: '',
-    planName: 'Standard Hot Lunch',
-    amount: 6000,
+    planName: '',
+    amount: '' as unknown as number,
     dietaryNotes: '',
     notes: '',
   });
 
   // Form states - Bulk Enrollment
-  const [bulkGrade, setBulkGrade] = useState('PP1');
+  const [bulkGrade, setBulkGrade] = useState('');
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
-  const [bulkAmount, setBulkAmount] = useState(6000);
-  const [bulkPlanName, setBulkPlanName] = useState('Standard Hot Lunch');
+  const [bulkAmount, setBulkAmount] = useState<number | ''>('');
+  const [bulkPlanName, setBulkPlanName] = useState('');
   const [bulkDietary, setBulkDietary] = useState('');
 
   // Form states - Payment
   const [paymentForm, setPaymentForm] = useState({
-    amount: 0,
+    amount: '' as unknown as number,
     paymentMethod: 'MPESA',
     transactionReference: '',
-    paymentDate: new Date().toISOString().split('T')[0],
+    paymentDate: '',
     notes: '',
   });
 
@@ -146,8 +146,8 @@ export const LunchFeeManagementView: React.FC = () => {
   const [expenseForm, setExpenseForm] = useState({
     title: '',
     category: 'FOOD_CEREALS' as LunchExpenseCategory,
-    amount: 0,
-    expenseDate: new Date().toISOString().split('T')[0],
+    amount: '' as unknown as number,
+    expenseDate: '',
     paymentMethod: 'MPESA',
     paymentReference: '',
     vendorPayee: '',
@@ -552,7 +552,16 @@ export const LunchFeeManagementView: React.FC = () => {
           {activeSubTab === 'roster' ? (
             <>
               <button
-                onClick={() => setIsEnrollModalOpen(true)}
+                onClick={() => {
+                  setEnrollForm({
+                    studentId: '',
+                    planName: '',
+                    amount: '' as unknown as number,
+                    dietaryNotes: '',
+                    notes: '',
+                  });
+                  setIsEnrollModalOpen(true);
+                }}
                 className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-white text-primary rounded-xl font-bold text-xs hover:bg-rose-50 shadow-sm transition-all cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[18px]">person_add</span>
@@ -560,7 +569,14 @@ export const LunchFeeManagementView: React.FC = () => {
               </button>
 
               <button
-                onClick={() => setIsBulkModalOpen(true)}
+                onClick={() => {
+                  setBulkGrade('');
+                  setSelectedStudentIds([]);
+                  setBulkAmount('');
+                  setBulkPlanName('');
+                  setBulkDietary('');
+                  setIsBulkModalOpen(true);
+                }}
                 className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-amber-400 text-amber-950 rounded-xl font-bold text-xs hover:bg-amber-300 shadow-sm transition-all cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[18px]">group_add</span>
@@ -588,7 +604,20 @@ export const LunchFeeManagementView: React.FC = () => {
           ) : (
             <>
               <button
-                onClick={() => setIsRecordExpenseModalOpen(true)}
+                onClick={() => {
+                  setExpenseForm({
+                    title: '',
+                    category: 'FOOD_CEREALS',
+                    amount: '' as unknown as number,
+                    expenseDate: '',
+                    paymentMethod: 'MPESA',
+                    paymentReference: '',
+                    vendorPayee: '',
+                    receiptVoucherNumber: '',
+                    notes: '',
+                  });
+                  setIsRecordExpenseModalOpen(true);
+                }}
                 className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-emerald-500 text-white rounded-xl font-bold text-xs hover:bg-emerald-600 shadow-sm transition-all cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[18px]">add_shopping_cart</span>
@@ -937,10 +966,10 @@ export const LunchFeeManagementView: React.FC = () => {
                                 onClick={() => {
                                   setSelectedEnrollment(enr);
                                   setPaymentForm({
-                                    amount: enr.balance,
+                                    amount: '' as unknown as number,
                                     paymentMethod: 'MPESA',
                                     transactionReference: '',
-                                    paymentDate: new Date().toISOString().split('T')[0],
+                                    paymentDate: '',
                                     notes: '',
                                   });
                                   setIsPaymentModalOpen(true);
@@ -1102,7 +1131,20 @@ export const LunchFeeManagementView: React.FC = () => {
               )}
 
               <button
-                onClick={() => setIsRecordExpenseModalOpen(true)}
+                onClick={() => {
+                  setExpenseForm({
+                    title: '',
+                    category: 'FOOD_CEREALS',
+                    amount: '' as unknown as number,
+                    expenseDate: '',
+                    paymentMethod: 'MPESA',
+                    paymentReference: '',
+                    vendorPayee: '',
+                    receiptVoucherNumber: '',
+                    notes: '',
+                  });
+                  setIsRecordExpenseModalOpen(true);
+                }}
                 className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold shadow-xs cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[16px]">add</span>
@@ -1300,7 +1342,7 @@ export const LunchFeeManagementView: React.FC = () => {
                     value={enrollForm.planName}
                     onChange={(e) => setEnrollForm({ ...enrollForm, planName: e.target.value })}
                     className="w-full px-3 py-2 bg-surface-container-low rounded-lg text-on-surface border border-outline-variant/30"
-                    placeholder="Standard Hot Lunch"
+                    placeholder="e.g. Standard Hot Lunch"
                   />
                 </div>
 
@@ -1312,8 +1354,9 @@ export const LunchFeeManagementView: React.FC = () => {
                     type="number"
                     min="0"
                     required
-                    value={enrollForm.amount}
-                    onChange={(e) => setEnrollForm({ ...enrollForm, amount: Number(e.target.value) })}
+                    placeholder="0"
+                    value={enrollForm.amount || ''}
+                    onChange={(e) => setEnrollForm({ ...enrollForm, amount: e.target.value === '' ? ('' as any) : Number(e.target.value) })}
                     className="w-full px-3 py-2 bg-surface-container-low rounded-lg text-on-surface font-data-mono font-bold border border-outline-variant/30"
                   />
                 </div>
@@ -1393,6 +1436,7 @@ export const LunchFeeManagementView: React.FC = () => {
                   }}
                   className="w-full px-3 py-2 bg-surface-container-low rounded-lg text-on-surface border border-outline-variant/30 font-semibold cursor-pointer"
                 >
+                  <option value="">-- Select Grade --</option>
                   <option value="PLAYGROUP">Playgroup</option>
                   <option value="PP1">PP1</option>
                   <option value="PP2">PP2</option>
@@ -1410,7 +1454,7 @@ export const LunchFeeManagementView: React.FC = () => {
 
               <div className="p-3 bg-surface-container-low rounded-xl border border-outline-variant/30 max-h-40 overflow-y-auto space-y-1.5">
                 <div className="flex items-center justify-between font-bold text-[11px] pb-1 border-b border-surface-container">
-                  <span>Learners in {bulkGrade} ({studentsInBulkGrade.length})</span>
+                  <span>Learners in {bulkGrade || 'Selected Grade'} ({studentsInBulkGrade.length})</span>
                   <button
                     type="button"
                     onClick={() => {
@@ -1452,8 +1496,9 @@ export const LunchFeeManagementView: React.FC = () => {
                     type="number"
                     min="0"
                     required
+                    placeholder="0"
                     value={bulkAmount}
-                    onChange={(e) => setBulkAmount(Number(e.target.value))}
+                    onChange={(e) => setBulkAmount(e.target.value === '' ? '' : Number(e.target.value))}
                     className="w-full px-3 py-2 bg-surface-container-low rounded-lg text-on-surface font-data-mono font-bold border border-outline-variant/30"
                   />
                 </div>
@@ -1462,6 +1507,7 @@ export const LunchFeeManagementView: React.FC = () => {
                   <label className="block text-on-surface-variant font-semibold mb-1">Meal Plan</label>
                   <input
                     type="text"
+                    placeholder="e.g. Standard Hot Lunch"
                     value={bulkPlanName}
                     onChange={(e) => setBulkPlanName(e.target.value)}
                     className="w-full px-3 py-2 bg-surface-container-low rounded-lg text-on-surface border border-outline-variant/30"
@@ -1531,8 +1577,9 @@ export const LunchFeeManagementView: React.FC = () => {
                   type="number"
                   min="1"
                   required
-                  value={paymentForm.amount}
-                  onChange={(e) => setPaymentForm({ ...paymentForm, amount: Number(e.target.value) })}
+                  placeholder="0"
+                  value={paymentForm.amount || ''}
+                  onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value === '' ? ('' as any) : Number(e.target.value) })}
                   className="w-full px-3 py-2 bg-surface-container-low rounded-lg text-on-surface font-data-mono font-bold text-sm border border-outline-variant/30"
                 />
               </div>
@@ -1747,9 +1794,10 @@ export const LunchFeeManagementView: React.FC = () => {
                     type="number"
                     min="1"
                     required
-                    value={expenseForm.amount}
+                    placeholder="0"
+                    value={expenseForm.amount || ''}
                     onChange={(e) =>
-                      setExpenseForm({ ...expenseForm, amount: Number(e.target.value) })
+                      setExpenseForm({ ...expenseForm, amount: e.target.value === '' ? ('' as any) : Number(e.target.value) })
                     }
                     className="w-full px-3 py-2 bg-surface-container-low rounded-lg text-on-surface font-data-mono font-bold text-sm border border-outline-variant/30"
                   />

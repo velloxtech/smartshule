@@ -20,13 +20,13 @@ export const ForwardPaymentModal: React.FC<ForwardPaymentModalProps> = ({
 }) => {
   const { user } = useAuth();
 
-  const [selectedStudentId, setSelectedStudentId] = useState<string>(initialStudent?.id || students[0]?.id || '');
+  const [selectedStudentId, setSelectedStudentId] = useState<string>(initialStudent?.id || '');
   const [paymentMethod, setPaymentMethod] = useState<'MPESA' | 'BANK_DEPOSIT' | 'BANK_TRANSFER' | 'CHEQUE' | 'CASH'>('MPESA');
   const [transactionReference, setTransactionReference] = useState('');
   const [amount, setAmount] = useState('');
-  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split('T')[0]);
-  const [mpesaPhoneNumber, setMpesaPhoneNumber] = useState(user?.phone || '');
-  const [senderName, setSenderName] = useState(user ? `${user.firstName} ${user.lastName}` : '');
+  const [paymentDate, setPaymentDate] = useState('');
+  const [mpesaPhoneNumber, setMpesaPhoneNumber] = useState('');
+  const [senderName, setSenderName] = useState('');
   const [smsMessage, setSmsMessage] = useState('');
   const [notes, setNotes] = useState('');
 
@@ -36,20 +36,23 @@ export const ForwardPaymentModal: React.FC<ForwardPaymentModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [successResult, setSuccessResult] = useState<any | null>(null);
 
+  // Reset all entry fields to blank whenever the modal opens
   useEffect(() => {
-    if (initialStudent?.id) {
-      setSelectedStudentId(initialStudent.id);
-    } else if (students.length > 0 && !selectedStudentId) {
-      setSelectedStudentId(students[0].id);
+    if (isOpen) {
+      setSelectedStudentId(initialStudent?.id || '');
+      setPaymentMethod('MPESA');
+      setTransactionReference('');
+      setAmount('');
+      setPaymentDate('');
+      setMpesaPhoneNumber('');
+      setSenderName('');
+      setSmsMessage('');
+      setNotes('');
+      setError(null);
+      setSuccessResult(null);
+      setParseSuccessMsg(null);
     }
-  }, [initialStudent, students]);
-
-  useEffect(() => {
-    if (user) {
-      if (!mpesaPhoneNumber && user.phone) setMpesaPhoneNumber(user.phone);
-      if (!senderName && (user.firstName || user.lastName)) setSenderName(`${user.firstName || ''} ${user.lastName || ''}`.trim());
-    }
-  }, [user]);
+  }, [isOpen, initialStudent]);
 
   // Intelligent parser for Kenyan Lipa na M-Pesa & Bank SMS confirmations
   const handleParseSms = (text: string) => {
@@ -293,6 +296,7 @@ export const ForwardPaymentModal: React.FC<ForwardPaymentModalProps> = ({
                 required
                 className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-xs text-on-surface focus:outline-primary font-medium"
               >
+                <option value="">-- Choose Learner --</option>
                 {students.map((st: any) => {
                   const sName = st.name || st.fullName || `${st.firstName || ''} ${st.lastName || ''}`.trim();
                   const sAdm = st.admNo || st.admissionNumber || '';
