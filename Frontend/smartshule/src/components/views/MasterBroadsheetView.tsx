@@ -399,19 +399,6 @@ export const MasterBroadsheetView: React.FC = () => {
     return sections;
   }, [broadsheet, selectedStreamId, streams, searchTerm]);
 
-  // Helper download function
-  const downloadCSV = (filename: string, content: string) => {
-    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', filename);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
   const handlePrint = () => {
     window.print();
   };
@@ -478,6 +465,56 @@ export const MasterBroadsheetView: React.FC = () => {
     doc.setTextColor(30, 41, 59);
     doc.text('OFFICIAL CBC MASTER BROADSHEET & SUMMATIVE ASSESSMENT MARKSHEET', 32, curY + 14);
 
+    // Calculate genuine Class Mean Score directly from rows or streamMeanScore
+    const validRows = (broadsheet.rows || []).filter(
+      (r: any) => typeof r.averageScore === 'number' && !isNaN(r.averageScore)
+    );
+    const computedMeanScore = validRows.length > 0
+      ? Math.round(validRows.reduce((acc: number, r: any) => acc + r.averageScore, 0) / validRows.length)
+      : 0;
+    const classMeanScore = (broadsheet.streamMeanScore !== undefined && broadsheet.streamMeanScore !== null && broadsheet.streamMeanScore > 0)
+      ? broadsheet.streamMeanScore
+      : computedMeanScore;
+
+    // Helper: compute mean rubric points for a student row
+    const getRowMeanPoints = (r: any): number => {
+      if (typeof r.meanPoints === 'number' && !isNaN(r.meanPoints) && r.meanPoints > 0) {
+        return Number(r.meanPoints.toFixed(2));
+      }
+      if (typeof r.totalPoints === 'number' && r.totalPoints > 0) {
+        const count = broadsheet.learningAreas.filter((la) => r.subjects[la.id]?.numericScore !== undefined).length || broadsheet.learningAreas.length || 1;
+        return Number((r.totalPoints / count).toFixed(2));
+      }
+      const score = Number(r.averageScore) || 0;
+      if (score >= 80) return Number((3.5 + Math.min(0.5, ((score - 80) / 20) * 0.5)).toFixed(2));
+      if (score >= 65) return Number((2.5 + ((score - 65) / 15) * 0.99).toFixed(2));
+      if (score >= 50) return Number((1.5 + ((score - 50) / 15) * 0.99).toFixed(2));
+      if (score > 0) return Number((1.0 + (score / 50) * 0.49).toFixed(2));
+      return 0;
+    };
+
+    // Calculate genuine Class Mean Rubric Points
+    const validPointsRows = (broadsheet.rows || []).map(getRowMeanPoints).filter((p) => p > 0);
+    const computedClassMeanPoints = validPointsRows.length > 0
+      ? Number((validPointsRows.reduce((acc, p) => acc + p, 0) / validPointsRows.length).toFixed(2))
+      : (classMeanScore >= 80 ? 3.75 : classMeanScore >= 65 ? 3.00 : classMeanScore >= 50 ? 2.00 : 1.25);
+    const classMeanRubricPoints = (broadsheet.streamMeanPoints !== undefined && broadsheet.streamMeanPoints !== null && broadsheet.streamMeanPoints > 0)
+      ? Number(broadsheet.streamMeanPoints.toFixed(2))
+      : computedClassMeanPoints;
+
+    const getShortRubricLevel = (level?: string, score?: number, meanPts?: number): string => {
+      const lvl = (level || '').toUpperCase();
+      if (lvl.includes('EXCEED') || lvl === 'EE' || (meanPts !== undefined && meanPts >= 3.5) || (score !== undefined && score >= 80)) return 'EE';
+      if (lvl.includes('MEET') || lvl === 'ME' || (meanPts !== undefined && meanPts >= 2.5) || (score !== undefined && score >= 65)) return 'ME';
+      if (lvl.includes('APPROACH') || lvl === 'AE' || (meanPts !== undefined && meanPts >= 1.5) || (score !== undefined && score >= 50)) return 'AE';
+      if (lvl.includes('BELOW') || lvl === 'BE' || (meanPts !== undefined && meanPts < 1.5) || (score !== undefined && score < 50)) return 'BE';
+      return level || 'ME';
+    };
+    const cohortRubricLevel = getShortRubricLevel(undefined, classMeanScore, classMeanRubricPoints);
+
+    const termDisplay = broadsheet.termName || academicTerms.find((t) => t.id === selectedTerm)?.name || selectedTerm;
+    const yearDisplay = broadsheet.yearName || academicYears.find((y) => y.id === selectedYear)?.name || selectedYear;
+
     // Meta card
     curY += 19;
     doc.setFillColor(248, 250, 252);
@@ -490,31 +527,31 @@ export const MasterBroadsheetView: React.FC = () => {
     doc.setTextColor(15, 23, 42);
     doc.text(`Class: ${broadsheet.className || 'All Grades'}`, 18, curY + 5);
     doc.text(`Stream: ${broadsheet.streamName || 'All Streams'}`, 85, curY + 5);
-    doc.text(`Term: ${selectedTerm} · ${selectedYear}`, 155, curY + 5);
+    doc.text(`Term: ${termDisplay} · ${yearDisplay}`, 155, curY + 5);
     doc.text(`Learners Ranked: ${broadsheet.rows.length}`, 225, curY + 5);
 
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(122, 18, 40);
-    doc.text(`Class Mean Score: ${broadsheet.summary?.averageScore ?? 0}%`, 18, curY + 10);
+    doc.text(`Class Mean Score: ${classMeanScore}%`, 18, curY + 10);
+    doc.setTextColor(30, 41, 59);
+    doc.text(`Mean Rubric Points: ${classMeanRubricPoints.toFixed(2)} pts (${cohortRubricLevel})`, 85, curY + 10);
     doc.setTextColor(71, 85, 105);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Performance: ${broadsheet.summary?.overallPerformanceLevel || 'CBC Standard'}`, 85, curY + 10);
     doc.text(`Generated: ${new Date().toLocaleDateString()}`, 225, curY + 10);
 
     curY += 17;
 
-    // Build Table Headers: Rank, Adm, Name, Sex, <Subjects initials>, Total, Mean, Level, Remarks
+    // Build Table Headers: Rank, Student Name, <Subjects initials>, Total, Mean %, Tot Pts, Mean Rubric Pts, Rubric Level
     const laHeaders = broadsheet.learningAreas.map((la) => getSubjectInitials(la.name || la.code));
     const tableHead = [
       'Rnk',
-      'Adm',
       'Student Name',
-      'Sex',
       ...laHeaders,
-      'Tot',
+      'Total',
       'Mean %',
-      'Level',
-      'Remarks',
+      'Tot Pts',
+      'Mean Rubric Pts',
+      'Rubric Level',
     ];
 
     const tableRows = broadsheet.rows.map((r) => {
@@ -523,16 +560,21 @@ export const MasterBroadsheetView: React.FC = () => {
         return sub ? `${sub.numericScore}%` : '--';
       });
 
+      const rowMeanPts = getRowMeanPoints(r);
+      const rowLevel = getShortRubricLevel(r.overallPerformanceLevel, r.averageScore, rowMeanPts);
+      const rowTotalPts = typeof r.totalPoints === 'number' && r.totalPoints > 0
+        ? String(r.totalPoints)
+        : String(Math.round(rowMeanPts * broadsheet.learningAreas.length));
+
       return [
         String(r.streamRank || r.rank || '--'),
-        r.admissionNumber || '--',
         r.studentName || '--',
-        r.gender?.[0] || 'M',
         ...subScores,
         String(r.totalScore),
         `${r.averageScore}%`,
-        r.overallPerformanceLevel || '--',
-        r.remarks || 'Pass',
+        rowTotalPts,
+        rowMeanPts.toFixed(2),
+        rowLevel,
       ];
     });
 
@@ -556,10 +598,8 @@ export const MasterBroadsheetView: React.FC = () => {
         fillColor: [248, 250, 252],
       },
       columnStyles: {
-        0: { cellWidth: 10, fontStyle: 'bold' },
-        1: { cellWidth: 18 },
-        2: { cellWidth: 42, fontStyle: 'bold' },
-        3: { cellWidth: 8 },
+        0: { cellWidth: 10, fontStyle: 'bold', halign: 'center' },
+        1: { cellWidth: 48, fontStyle: 'bold' },
       },
       margin: { left: 14, right: 14 },
     });
@@ -598,250 +638,763 @@ export const MasterBroadsheetView: React.FC = () => {
     doc.setTextColor(148, 163, 184);
     doc.text('Grace Seeds School · Official CBC Summative Master Broadsheet Dossier', 148, 204, { align: 'center' });
 
-    doc.save(`Grace_Seeds_Broadsheet_${broadsheet.className}_${broadsheet.streamName || 'All'}_Term${selectedTerm}_${selectedYear}.pdf`);
+    const filenameClass = (broadsheet.className || 'Class').replace(/\s+/g, '_');
+    const filenameStream = (broadsheet.streamName || 'All_Streams').replace(/\s+/g, '_');
+    const filenameTerm = String(termDisplay).replace(/\s+/g, '_');
+    const filenameYear = String(yearDisplay).replace(/\s+/g, '_');
+    doc.save(`Grace_Seeds_Broadsheet_${filenameClass}_${filenameStream}_${filenameTerm}_${filenameYear}.pdf`);
   };
 
-  // CSV DOWNLOAD 1: Stream Marksheet
-  const handleExportCSV = () => {
-    if (!broadsheet || !broadsheet.rows.length) return;
-    const headers = ['Stream Rank', 'Class Rank', 'Stream', 'Adm No', 'Student Name', 'Sex'];
-    broadsheet.learningAreas.forEach((la) => {
-      headers.push(`${la.name} (Score %)`, `${la.name} (Level)`, `${la.name} (Points)`, `${la.name} (Subject Rank)`);
+  // PDF EXPORT 1: Class & Stream Ranking Report
+  const handleExportClassRankingPDF = async () => {
+    if (!effectiveClassRankings.length) {
+      alert('No class ranking records available to generate PDF.');
+      return;
+    }
+
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const logoBase64 = await getSchoolLogoBase64();
+    const schoolName = 'Grace Seeds School';
+    const motto = 'The Future Begins Here';
+
+    doc.setFillColor(122, 18, 40);
+    doc.rect(0, 0, 297, 6, 'F');
+
+    let curY = 12;
+    if (logoBase64) {
+      try {
+        doc.addImage(logoBase64, 'PNG', 14, curY, 15, 15);
+      } catch {
+        // continue
+      }
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(122, 18, 40);
+    doc.text(schoolName, 32, curY + 4);
+
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`"${motto}" · P.O. Box 12-20123 / 12-40123 Kisumu · Tel: 0745436312`, 32, curY + 9);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(30, 41, 59);
+    doc.text('OFFICIAL CLASS & STREAM PERFORMANCE RANKING REPORT', 32, curY + 14);
+
+    curY += 19;
+    doc.setFillColor(248, 250, 252);
+    doc.rect(14, curY, 269, 13, 'F');
+    doc.setDrawColor(226, 232, 240);
+    doc.rect(14, curY, 269, 13, 'S');
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(15, 23, 42);
+    doc.text(`Evaluation Period: Term ${selectedTerm} · ${selectedYear}`, 18, curY + 5);
+    doc.text(`Target Grade: ${broadsheet?.className || 'All Grades'}`, 95, curY + 5);
+    doc.text(`Total Ranked Streams: ${effectiveClassRankings.length}`, 165, curY + 5);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 230, curY + 5);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(122, 18, 40);
+    doc.text('Kenyan CBC Academic Performance Rankings & Quality Pass Rate (EE + ME)', 18, curY + 10);
+
+    curY += 17;
+
+    const rows = effectiveClassRankings.map((r) => [
+      String(r.rank),
+      r.className,
+      r.streamName,
+      String(r.totalStudents),
+      `${r.meanScore}%`,
+      r.overallPerformanceLevel,
+      `${r.qualityPassRate || 0}%`,
+      r.topStudentName || '--',
+      `${r.topStudentScore || 0}%`,
+      String(r.counts?.EE || 0),
+      String(r.counts?.ME || 0),
+      String(r.counts?.AE || 0),
+      String(r.counts?.BE || 0),
+    ]);
+
+    autoTable(doc, {
+      startY: curY,
+      head: [['Rank', 'Class', 'Stream', 'Learners', 'Mean %', 'Level', 'Quality Pass', 'Top Learner', 'Top Score', 'EE', 'ME', 'AE', 'BE']],
+      body: rows,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [122, 18, 40],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 7.5,
+      },
+      bodyStyles: {
+        fontSize: 7,
+        textColor: [31, 41, 55],
+        cellPadding: 2,
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252],
+      },
+      columnStyles: {
+        0: { cellWidth: 12, fontStyle: 'bold' },
+        1: { cellWidth: 26 },
+        2: { cellWidth: 26 },
+        3: { cellWidth: 16 },
+        4: { cellWidth: 18, fontStyle: 'bold' },
+        5: { cellWidth: 22 },
+        6: { cellWidth: 22 },
+        7: { cellWidth: 45 },
+        8: { cellWidth: 20 },
+        9: { cellWidth: 12 },
+        10: { cellWidth: 12 },
+        11: { cellWidth: 12 },
+        12: { cellWidth: 12 },
+      },
+      margin: { left: 14, right: 14 },
     });
-    headers.push('Total Marks', 'Mean Score (%)', 'Total Points', 'Mean GPA', 'Overall Level', 'Teacher Remarks');
 
-    const csvRows: string[] = [headers.join(',')];
+    const lastTable = (doc as any).lastAutoTable;
+    curY = (lastTable && lastTable.finalY ? lastTable.finalY : 170) + 8;
+    if (curY + 26 > 195) {
+      doc.addPage('a4', 'landscape');
+      curY = 16;
+    }
 
-    broadsheet.rows.forEach((r) => {
-      const row: string[] = [
-        String(r.streamRank || r.rank),
-        String(r.classRank || r.rank),
-        `"${r.streamName || broadsheet.streamName}"`,
-        `"${r.admissionNumber || ''}"`,
-        `"${r.studentName || ''}"`,
-        `"${r.gender?.[0] || 'M'}"`,
-      ];
+    doc.setDrawColor(203, 213, 225);
+    doc.setLineWidth(0.3);
+    doc.line(14, curY, 283, curY);
+    curY += 6;
 
-      broadsheet.learningAreas.forEach((la) => {
-        const sub = r.subjects[la.id];
-        row.push(sub ? String(sub.numericScore) : '0');
-        row.push(sub ? `"${sub.levelLabel || sub.performanceLevel}"` : '"--"');
-        row.push(sub ? String(sub.points || 0) : '0');
-        row.push(sub && sub.subjectRank ? String(sub.subjectRank) : '--');
-      });
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(30, 41, 59);
 
-      row.push(
-        String(r.totalScore),
-        String(r.averageScore),
-        String(r.totalPoints || 0),
-        String(r.meanPoints || 0),
-        `"${r.overallPerformanceLevel}"`,
-        `"${r.remarks || ''}"`
-      );
-      csvRows.push(row.join(','));
-    });
+    doc.text('Head of Assessment / Dean:', 14, curY);
+    doc.line(14, curY + 6, 85, curY + 6);
+    doc.text('Signature & Date', 14, curY + 10);
 
-    downloadCSV(
-      `Broadsheet_Marksheet_${broadsheet.className}_${broadsheet.streamName}_${selectedTerm}_${selectedYear}.csv`,
-      csvRows.join('\n')
-    );
+    doc.text('Headteacher Endorsement:', 105, curY);
+    doc.line(105, curY + 6, 185, curY + 6);
+    doc.text('Signature & Date', 105, curY + 10);
+
+    doc.text('School Director Oversight:', 205, curY);
+    doc.line(205, curY + 6, 283, curY + 6);
+    doc.text('Official Seal / Stamp & Date', 205, curY + 10);
+
+    doc.setFontSize(6.5);
+    doc.setTextColor(148, 163, 184);
+    doc.text('Grace Seeds School · Official Class & Stream Ranking Report', 148, 204, { align: 'center' });
+
+    doc.save(`Grace_Seeds_Class_Ranking_${broadsheet?.className || 'Class'}_Term${selectedTerm}_${selectedYear}.pdf`);
   };
 
-  // CSV DOWNLOAD 2: Class & Stream Ranking
-  const handleExportClassRankingCSV = () => {
-    if (!effectiveClassRankings.length) return;
-    const headers = [
-      'Rank',
-      'Class Name',
-      'Stream Name',
-      'Total Learners',
-      'Mean Score (%)',
-      'Performance Level',
-      'Quality Pass Rate (EE+ME %)',
-      'Top Learner Name',
-      'Top Learner Score (%)',
-      'EE Count',
-      'ME Count',
-      'AE Count',
-      'BE Count',
-    ];
-    const rows = effectiveClassRankings.map((r) =>
-      [
-        r.rank,
-        `"${r.className}"`,
-        `"${r.streamName}"`,
-        r.totalStudents,
-        r.meanScore,
-        `"${r.overallPerformanceLevel}"`,
-        `"${r.qualityPassRate || 0}%"`,
-        `"${r.topStudentName || ''}"`,
-        r.topStudentScore || 0,
-        r.counts?.EE || 0,
-        r.counts?.ME || 0,
-        r.counts?.AE || 0,
-        r.counts?.BE || 0,
-      ].join(',')
-    );
+  // PDF EXPORT 2: Best Performing Class Per Subject Report
+  const handleExportBestClassPerSubjectPDF = async () => {
+    if (!effectiveBestClassesPerSubject.length) {
+      alert('No subject performance data available to generate PDF.');
+      return;
+    }
 
-    const csvContent = [headers.join(','), ...rows].join('\n');
-    downloadCSV(
-      `Class_Ranking_${broadsheet?.className || 'Class'}_${selectedTerm}_${selectedYear}.csv`,
-      csvContent
-    );
-  };
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const logoBase64 = await getSchoolLogoBase64();
+    const schoolName = 'Grace Seeds School';
+    const motto = 'The Future Begins Here';
 
-  // CSV DOWNLOAD 3: Best Performing Class Per Subject
-  const handleExportBestClassPerSubjectCSV = () => {
-    if (!effectiveBestClassesPerSubject.length) return;
-    const headers = [
-      'Subject / Learning Area',
-      'Best Performing Class',
-      'Best Stream',
-      'Subject Mean Score (%)',
-      'Performance Level',
-      'Total Candidates',
-      'Runner-Up Stream',
-      'Runner-Up Mean Score (%)',
-      'Lead Margin (%)',
-    ];
+    doc.setFillColor(122, 18, 40);
+    doc.rect(0, 0, 297, 6, 'F');
+
+    let curY = 12;
+    if (logoBase64) {
+      try {
+        doc.addImage(logoBase64, 'PNG', 14, curY, 15, 15);
+      } catch {
+        // continue
+      }
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(122, 18, 40);
+    doc.text(schoolName, 32, curY + 4);
+
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`"${motto}" · P.O. Box 12-20123 / 12-40123 Kisumu · Tel: 0745436312`, 32, curY + 9);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(30, 41, 59);
+    doc.text('SUBJECT EXCELLENCE & BEST PERFORMING CLASSES REPORT', 32, curY + 14);
+
+    curY += 19;
+    doc.setFillColor(248, 250, 252);
+    doc.rect(14, curY, 269, 13, 'F');
+    doc.setDrawColor(226, 232, 240);
+    doc.rect(14, curY, 269, 13, 'S');
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(15, 23, 42);
+    doc.text(`Academic Term: Term ${selectedTerm} · ${selectedYear}`, 18, curY + 5);
+    doc.text(`Evaluation Scope: ${broadsheet?.className || 'All Grades'}`, 95, curY + 5);
+    doc.text(`Total Learning Areas: ${effectiveBestClassesPerSubject.length}`, 165, curY + 5);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 230, curY + 5);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(122, 18, 40);
+    doc.text('Top Class Performance Comparison per Learning Area with Runner-Up Margins', 18, curY + 10);
+
+    curY += 17;
+
     const rows = effectiveBestClassesPerSubject.map((b) => {
       const margin = b.runnerUpMeanScore
-        ? (b.meanScore - b.runnerUpMeanScore).toFixed(1)
-        : '0.0';
+        ? `+${(b.meanScore - b.runnerUpMeanScore).toFixed(1)}%`
+        : '0.0%';
       return [
-        `"${b.learningAreaName}"`,
-        `"${b.bestClassName}"`,
-        `"${b.bestStreamName}"`,
-        b.meanScore,
-        `"${b.performanceLevel}"`,
-        b.totalStudents,
-        `"${b.runnerUpStreamName || 'None'}"`,
-        b.runnerUpMeanScore || '--',
+        b.learningAreaName,
+        `${b.bestClassName} (${b.bestStreamName})`,
+        `${b.meanScore}%`,
+        b.performanceLevel,
+        String(b.totalStudents),
+        b.runnerUpStreamName ? `${b.runnerUpStreamName}` : 'None',
+        b.runnerUpMeanScore ? `${b.runnerUpMeanScore}%` : '--',
         margin,
-      ].join(',');
-    });
-
-    const csvContent = [headers.join(','), ...rows].join('\n');
-    downloadCSV(
-      `Best_Performing_Class_Per_Subject_${broadsheet?.className || 'Class'}_${selectedTerm}_${selectedYear}.csv`,
-      csvContent
-    );
-  };
-
-  // CSV DOWNLOAD 4: Best Student Per Subject
-  const handleExportBestStudentPerSubjectCSV = () => {
-    if (!effectiveBestStudentsPerSubject.length) return;
-    const headers = [
-      'Subject / Learning Area',
-      'Top Learner Name',
-      'Admission Number',
-      'Class',
-      'Stream',
-      'Gender',
-      'Highest Score (%)',
-      'Performance Level',
-    ];
-    const rows = effectiveBestStudentsPerSubject.map((s) =>
-      [
-        `"${s.learningAreaName}"`,
-        `"${s.studentName}"`,
-        `"${s.admissionNumber}"`,
-        `"${s.className}"`,
-        `"${s.streamName}"`,
-        `"${s.gender}"`,
-        s.score,
-        `"${s.performanceLevel}"`,
-      ].join(',')
-    );
-
-    const csvContent = [headers.join(','), ...rows].join('\n');
-    downloadCSV(
-      `Best_Student_Per_Subject_${broadsheet?.className || 'Class'}_${selectedTerm}_${selectedYear}.csv`,
-      csvContent
-    );
-  };
-
-  // CSV DOWNLOAD 5: Master Consolidated Package (All Analytics + Broadsheet)
-  const handleExportAllAnalyticsCSV = () => {
-    if (!broadsheet) return;
-
-    const lines: string[] = [];
-    lines.push('GRACE SEEDS SCHOOL - CONSOLIDATED MASTER BROADSHEET & ANALYTICS REPORT');
-    lines.push('KEMRI Street, Kisian, Kisumu, Kenya · Tel: 0745436312 · Email: schoolgraceseeds@gmail.com');
-    lines.push(`Academic Term: ${selectedTerm}, Year: ${selectedYear}, Class: ${broadsheet.className}, Stream: ${broadsheet.streamName}`);
-    lines.push(`Generated On: ${new Date().toLocaleDateString('en-KE')}`);
-    lines.push('');
-
-    // Section 1: Class Ranking
-    lines.push('=== 1. CLASS & STREAM RANKINGS ===');
-    lines.push('Rank,Class,Stream,Enrolled Students,Mean Score (%),Level,Pass Rate (%),Top Learner,Top Score,EE,ME,AE,BE');
-    effectiveClassRankings.forEach((r) => {
-      lines.push(
-        `${r.rank},"${r.className}","${r.streamName}",${r.totalStudents},${r.meanScore},"${r.overallPerformanceLevel}","${r.qualityPassRate}%","${r.topStudentName}",${r.topStudentScore},${r.counts?.EE || 0},${r.counts?.ME || 0},${r.counts?.AE || 0},${r.counts?.BE || 0}`
-      );
-    });
-    lines.push('');
-
-    // Section 2: Best Class Per Subject
-    lines.push('=== 2. BEST PERFORMING CLASS PER SUBJECT ===');
-    lines.push('Subject / Learning Area,Best Class,Best Stream,Mean Score (%),Level,Candidates,Runner-Up Stream,Runner-Up Mean (%)');
-    effectiveBestClassesPerSubject.forEach((b) => {
-      lines.push(
-        `"${b.learningAreaName}","${b.bestClassName}","${b.bestStreamName}",${b.meanScore},"${b.performanceLevel}",${b.totalStudents},"${b.runnerUpStreamName || 'None'}",${b.runnerUpMeanScore || '--'}`
-      );
-    });
-    lines.push('');
-
-    // Section 3: Best Student Per Subject
-    lines.push('=== 3. BEST STUDENT PER SUBJECT (SUBJECT CHAMPIONS) ===');
-    lines.push('Subject / Learning Area,Top Learner Name,Adm No,Class,Stream,Gender,Score (%),Level');
-    effectiveBestStudentsPerSubject.forEach((s) => {
-      lines.push(
-        `"${s.learningAreaName}","${s.studentName}","${s.admissionNumber}","${s.className}","${s.streamName}","${s.gender}",${s.score},"${s.performanceLevel}"`
-      );
-    });
-    lines.push('');
-
-    // Section 4: Stream Broadsheet Marksheet
-    lines.push('=== 4. STREAM & GRADE LEARNER MARKSHEET ===');
-    const marksheetHeaders = ['Stream Rank', 'Class Rank', 'Stream', 'Adm No', 'Student Name', 'Sex'];
-    broadsheet.learningAreas.forEach((la) => {
-      marksheetHeaders.push(`${la.name} (Score %)`, `${la.name} (Level)`, `${la.name} (Points)`, `${la.name} (Pos)`);
-    });
-    marksheetHeaders.push('Total Marks', 'Mean Score (%)', 'Total Points', 'Mean GPA', 'Overall Level', 'Teacher Remarks');
-    lines.push(marksheetHeaders.join(','));
-
-    broadsheet.rows.forEach((r) => {
-      const row: string[] = [
-        String(r.streamRank || r.rank),
-        String(r.classRank || r.rank),
-        `"${r.streamName || broadsheet.streamName}"`,
-        `"${r.admissionNumber || ''}"`,
-        `"${r.studentName || ''}"`,
-        `"${r.gender?.[0] || 'M'}"`,
       ];
-      broadsheet.learningAreas.forEach((la) => {
-        const sub = r.subjects[la.id];
-        row.push(sub ? String(sub.numericScore) : '0');
-        row.push(sub ? `"${sub.levelLabel || sub.performanceLevel}"` : '"--"');
-        row.push(sub ? String(sub.points || 0) : '0');
-        row.push(sub && sub.subjectRank ? String(sub.subjectRank) : '--');
-      });
-      row.push(
-        String(r.totalScore),
-        String(r.averageScore),
-        String(r.totalPoints || 0),
-        String(r.meanPoints || 0),
-        `"${r.overallPerformanceLevel}"`,
-        `"${r.remarks || ''}"`
-      );
-      lines.push(row.join(','));
     });
 
-    downloadCSV(
-      `Master_Broadsheet_Complete_Analytics_${broadsheet.className}_${broadsheet.streamName}_${selectedTerm}_${selectedYear}.csv`,
-      lines.join('\n')
+    autoTable(doc, {
+      startY: curY,
+      head: [['Subject / Learning Area', 'Best Class & Stream', 'Mean Score (%)', 'Performance Level', 'Candidates', 'Runner-Up Stream', 'Runner-Up Mean', 'Lead Margin']],
+      body: rows,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [122, 18, 40],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 7.5,
+      },
+      bodyStyles: {
+        fontSize: 7,
+        textColor: [31, 41, 55],
+        cellPadding: 2.5,
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252],
+      },
+      columnStyles: {
+        0: { cellWidth: 50, fontStyle: 'bold' },
+        1: { cellWidth: 55, fontStyle: 'bold' },
+        2: { cellWidth: 26 },
+        3: { cellWidth: 32 },
+        4: { cellWidth: 22 },
+        5: { cellWidth: 34 },
+        6: { cellWidth: 26 },
+        7: { cellWidth: 24, fontStyle: 'bold' },
+      },
+      margin: { left: 14, right: 14 },
+    });
+
+    const lastTable = (doc as any).lastAutoTable;
+    curY = (lastTable && lastTable.finalY ? lastTable.finalY : 170) + 8;
+    if (curY + 26 > 195) {
+      doc.addPage('a4', 'landscape');
+      curY = 16;
+    }
+
+    doc.setDrawColor(203, 213, 225);
+    doc.setLineWidth(0.3);
+    doc.line(14, curY, 283, curY);
+    curY += 6;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(30, 41, 59);
+
+    doc.text('Head of Assessment / Dean:', 14, curY);
+    doc.line(14, curY + 6, 85, curY + 6);
+    doc.text('Signature & Date', 14, curY + 10);
+
+    doc.text('Headteacher Endorsement:', 105, curY);
+    doc.line(105, curY + 6, 185, curY + 6);
+    doc.text('Signature & Date', 105, curY + 10);
+
+    doc.text('School Director Oversight:', 205, curY);
+    doc.line(205, curY + 6, 283, curY + 6);
+    doc.text('Official Seal / Stamp & Date', 205, curY + 10);
+
+    doc.setFontSize(6.5);
+    doc.setTextColor(148, 163, 184);
+    doc.text('Grace Seeds School · Official Best Performing Class Per Subject Report', 148, 204, { align: 'center' });
+
+    doc.save(`Grace_Seeds_Best_Classes_Per_Subject_${broadsheet?.className || 'Class'}_Term${selectedTerm}_${selectedYear}.pdf`);
+  };
+
+  // PDF EXPORT 3: Best Performing Student Per Subject Report
+  const handleExportBestStudentPerSubjectPDF = async () => {
+    if (!effectiveBestStudentsPerSubject.length) {
+      alert('No subject student data available to generate PDF.');
+      return;
+    }
+
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const logoBase64 = await getSchoolLogoBase64();
+    const schoolName = 'Grace Seeds School';
+    const motto = 'The Future Begins Here';
+
+    doc.setFillColor(122, 18, 40);
+    doc.rect(0, 0, 297, 6, 'F');
+
+    let curY = 12;
+    if (logoBase64) {
+      try {
+        doc.addImage(logoBase64, 'PNG', 14, curY, 15, 15);
+      } catch {
+        // continue
+      }
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(122, 18, 40);
+    doc.text(schoolName, 32, curY + 4);
+
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`"${motto}" · P.O. Box 12-20123 / 12-40123 Kisumu · Tel: 0745436312`, 32, curY + 9);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(30, 41, 59);
+    doc.text('SUBJECT MERIT ROLL & BEST PERFORMING LEARNERS REPORT', 32, curY + 14);
+
+    curY += 19;
+    doc.setFillColor(248, 250, 252);
+    doc.rect(14, curY, 269, 13, 'F');
+    doc.setDrawColor(226, 232, 240);
+    doc.rect(14, curY, 269, 13, 'S');
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(15, 23, 42);
+    doc.text(`Academic Term: Term ${selectedTerm} · ${selectedYear}`, 18, curY + 5);
+    doc.text(`Evaluation Scope: ${broadsheet?.className || 'All Grades'}`, 95, curY + 5);
+    doc.text(`Total Learning Areas: ${effectiveBestStudentsPerSubject.length}`, 165, curY + 5);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 230, curY + 5);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(122, 18, 40);
+    doc.text('Top Scoring Learners Across All Evaluated Competency Learning Areas', 18, curY + 10);
+
+    curY += 17;
+
+    const rows = effectiveBestStudentsPerSubject.map((s) => [
+      s.learningAreaName,
+      s.studentName,
+      s.admissionNumber || '--',
+      s.className,
+      s.streamName,
+      s.gender?.[0] || 'M',
+      `${s.score}%`,
+      s.performanceLevel,
+      'Exemplary Competency Mastered',
+    ]);
+
+    autoTable(doc, {
+      startY: curY,
+      head: [['Learning Area', 'Top Learner Full Name', 'Admission No', 'Class', 'Stream', 'Sex', 'Score (%)', 'Performance Level', 'Academic Distinction']],
+      body: rows,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [122, 18, 40],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 7.5,
+      },
+      bodyStyles: {
+        fontSize: 7,
+        textColor: [31, 41, 55],
+        cellPadding: 2.5,
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252],
+      },
+      columnStyles: {
+        0: { cellWidth: 46, fontStyle: 'bold' },
+        1: { cellWidth: 50, fontStyle: 'bold' },
+        2: { cellWidth: 26 },
+        3: { cellWidth: 24 },
+        4: { cellWidth: 24 },
+        5: { cellWidth: 10 },
+        6: { cellWidth: 20, fontStyle: 'bold' },
+        7: { cellWidth: 26 },
+        8: { cellWidth: 43 },
+      },
+      margin: { left: 14, right: 14 },
+    });
+
+    const lastTable = (doc as any).lastAutoTable;
+    curY = (lastTable && lastTable.finalY ? lastTable.finalY : 170) + 8;
+    if (curY + 26 > 195) {
+      doc.addPage('a4', 'landscape');
+      curY = 16;
+    }
+
+    doc.setDrawColor(203, 213, 225);
+    doc.setLineWidth(0.3);
+    doc.line(14, curY, 283, curY);
+    curY += 6;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(30, 41, 59);
+
+    doc.text('Head of Assessment / Dean:', 14, curY);
+    doc.line(14, curY + 6, 85, curY + 6);
+    doc.text('Signature & Date', 14, curY + 10);
+
+    doc.text('Headteacher Endorsement:', 105, curY);
+    doc.line(105, curY + 6, 185, curY + 6);
+    doc.text('Signature & Date', 105, curY + 10);
+
+    doc.text('School Director Oversight:', 205, curY);
+    doc.line(205, curY + 6, 283, curY + 6);
+    doc.text('Official Seal / Stamp & Date', 205, curY + 10);
+
+    doc.setFontSize(6.5);
+    doc.setTextColor(148, 163, 184);
+    doc.text('Grace Seeds School · Official Best Student Per Subject Report', 148, 204, { align: 'center' });
+
+    doc.save(`Grace_Seeds_Best_Students_Per_Subject_${broadsheet?.className || 'Class'}_Term${selectedTerm}_${selectedYear}.pdf`);
+  };
+
+  // PDF EXPORT 4: Master Consolidated Package (All Analytics + Broadsheet)
+  const handleExportAllAnalyticsPDF = async () => {
+    if (!broadsheet || !broadsheet.rows.length) {
+      alert('No broadsheet data available to generate consolidated PDF.');
+      return;
+    }
+
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const logoBase64 = await getSchoolLogoBase64();
+    const schoolName = 'Grace Seeds School';
+    const motto = 'The Future Begins Here';
+
+    // Top burgundy bar
+    doc.setFillColor(122, 18, 40);
+    doc.rect(0, 0, 297, 6, 'F');
+
+    let curY = 12;
+    if (logoBase64) {
+      try {
+        doc.addImage(logoBase64, 'PNG', 14, curY, 15, 15);
+      } catch {
+        // continue
+      }
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(122, 18, 40);
+    doc.text(schoolName, 32, curY + 4);
+
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`"${motto}" · P.O. Box 12-20123 / 12-40123 Kisumu · Tel: 0745436312`, 32, curY + 9);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(30, 41, 59);
+    doc.text('CONSOLIDATED MASTER BROADSHEET & CBC ACADEMIC DOSSIER', 32, curY + 14);
+
+    // Calculate genuine Class Mean Score directly from rows or streamMeanScore
+    const validRows = (broadsheet.rows || []).filter(
+      (r: any) => typeof r.averageScore === 'number' && !isNaN(r.averageScore)
     );
+    const computedMean = validRows.length > 0
+      ? Math.round(validRows.reduce((acc: number, r: any) => acc + r.averageScore, 0) / validRows.length)
+      : 0;
+    const classMeanScore = (broadsheet.streamMeanScore !== undefined && broadsheet.streamMeanScore !== null && broadsheet.streamMeanScore > 0)
+      ? broadsheet.streamMeanScore
+      : computedMean;
+
+    // Helper: compute mean rubric points for a student row
+    const getRowMeanPoints = (r: any): number => {
+      if (typeof r.meanPoints === 'number' && !isNaN(r.meanPoints) && r.meanPoints > 0) {
+        return Number(r.meanPoints.toFixed(2));
+      }
+      if (typeof r.totalPoints === 'number' && r.totalPoints > 0) {
+        const count = broadsheet.learningAreas.filter((la) => r.subjects[la.id]?.numericScore !== undefined).length || broadsheet.learningAreas.length || 1;
+        return Number((r.totalPoints / count).toFixed(2));
+      }
+      const score = Number(r.averageScore) || 0;
+      if (score >= 80) return Number((3.5 + Math.min(0.5, ((score - 80) / 20) * 0.5)).toFixed(2));
+      if (score >= 65) return Number((2.5 + ((score - 65) / 15) * 0.99).toFixed(2));
+      if (score >= 50) return Number((1.5 + ((score - 50) / 15) * 0.99).toFixed(2));
+      if (score > 0) return Number((1.0 + (score / 50) * 0.49).toFixed(2));
+      return 0;
+    };
+
+    // Calculate genuine Class Mean Rubric Points
+    const validPointsRows = (broadsheet.rows || []).map(getRowMeanPoints).filter((p) => p > 0);
+    const computedClassMeanPoints = validPointsRows.length > 0
+      ? Number((validPointsRows.reduce((acc, p) => acc + p, 0) / validPointsRows.length).toFixed(2))
+      : (classMeanScore >= 80 ? 3.75 : classMeanScore >= 65 ? 3.00 : classMeanScore >= 50 ? 2.00 : 1.25);
+    const classMeanRubricPoints = (broadsheet.streamMeanPoints !== undefined && broadsheet.streamMeanPoints !== null && broadsheet.streamMeanPoints > 0)
+      ? Number(broadsheet.streamMeanPoints.toFixed(2))
+      : computedClassMeanPoints;
+
+    const getShortRubricLevel = (level?: string, score?: number, meanPts?: number): string => {
+      const lvl = (level || '').toUpperCase();
+      if (lvl.includes('EXCEED') || lvl === 'EE' || (meanPts !== undefined && meanPts >= 3.5) || (score !== undefined && score >= 80)) return 'EE';
+      if (lvl.includes('MEET') || lvl === 'ME' || (meanPts !== undefined && meanPts >= 2.5) || (score !== undefined && score >= 65)) return 'ME';
+      if (lvl.includes('APPROACH') || lvl === 'AE' || (meanPts !== undefined && meanPts >= 1.5) || (score !== undefined && score >= 50)) return 'AE';
+      if (lvl.includes('BELOW') || lvl === 'BE' || (meanPts !== undefined && meanPts < 1.5) || (score !== undefined && score < 50)) return 'BE';
+      return level || 'ME';
+    };
+    const cohortRubricLevel = getShortRubricLevel(undefined, classMeanScore, classMeanRubricPoints);
+
+    curY += 19;
+    doc.setFillColor(248, 250, 252);
+    doc.rect(14, curY, 269, 13, 'F');
+    doc.setDrawColor(226, 232, 240);
+    doc.rect(14, curY, 269, 13, 'S');
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(15, 23, 42);
+    doc.text(`Class: ${broadsheet.className || 'All Grades'}`, 18, curY + 5);
+    doc.text(`Stream: ${broadsheet.streamName || 'All Streams'}`, 85, curY + 5);
+    doc.text(`Term: ${termDisplay} · ${yearDisplay}`, 155, curY + 5);
+    doc.text(`Learners Ranked: ${broadsheet.rows.length}`, 225, curY + 5);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(122, 18, 40);
+    doc.text(`Class Mean Score: ${classMeanScore}%`, 18, curY + 10);
+    doc.setTextColor(30, 41, 59);
+    doc.text(`Mean Rubric Points: ${classMeanRubricPoints.toFixed(2)} pts (${cohortRubricLevel})`, 85, curY + 10);
+    doc.setTextColor(71, 85, 105);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 225, curY + 10);
+
+    curY += 17;
+
+    // SECTION 1: Master Broadsheet Marksheet Table
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(122, 18, 40);
+    doc.text('1. MASTER EVALUATION BROADSHEET & SUMMATIVE MARKS', 14, curY);
+    curY += 4;
+
+    const laHeaders = broadsheet.learningAreas.map((la) => getSubjectInitials(la.name || la.code));
+    const tableHead = [
+      'Rnk',
+      'Student Name',
+      ...laHeaders,
+      'Total',
+      'Mean %',
+      'Tot Pts',
+      'Mean Rubric Pts',
+      'Rubric Level',
+    ];
+
+    const tableRows = broadsheet.rows.map((r) => {
+      const subScores = broadsheet.learningAreas.map((la) => {
+        const sub = r.subjects[la.id];
+        return sub ? `${sub.numericScore}%` : '--';
+      });
+
+      const rowMeanPts = getRowMeanPoints(r);
+      const rowLevel = getShortRubricLevel(r.overallPerformanceLevel, r.averageScore, rowMeanPts);
+      const rowTotalPts = typeof r.totalPoints === 'number' && r.totalPoints > 0
+        ? String(r.totalPoints)
+        : String(Math.round(rowMeanPts * broadsheet.learningAreas.length));
+
+      return [
+        String(r.streamRank || r.rank || '--'),
+        r.studentName || '--',
+        ...subScores,
+        String(r.totalScore),
+        `${r.averageScore}%`,
+        rowTotalPts,
+        rowMeanPts.toFixed(2),
+        rowLevel,
+      ];
+    });
+
+    autoTable(doc, {
+      startY: curY,
+      head: [tableHead],
+      body: tableRows,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [122, 18, 40],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 7,
+      },
+      bodyStyles: {
+        fontSize: 6.5,
+        textColor: [31, 41, 55],
+        cellPadding: 1.8,
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252],
+      },
+      columnStyles: {
+        0: { cellWidth: 10, fontStyle: 'bold', halign: 'center' },
+        1: { cellWidth: 48, fontStyle: 'bold' },
+      },
+      margin: { left: 14, right: 14 },
+    });
+
+    let lastTable = (doc as any).lastAutoTable;
+    curY = (lastTable && lastTable.finalY ? lastTable.finalY : 170) + 8;
+
+    // SECTION 2: Class Rankings (New Page)
+    if (effectiveClassRankings.length > 0) {
+      doc.addPage('a4', 'landscape');
+      curY = 14;
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(122, 18, 40);
+      doc.text('2. CLASS & STREAM PERFORMANCE RANKINGS', 14, curY);
+      curY += 4;
+
+      const rankRows = effectiveClassRankings.map((r) => [
+        String(r.rank),
+        r.className,
+        r.streamName,
+        String(r.totalStudents),
+        `${r.meanScore}%`,
+        r.overallPerformanceLevel,
+        `${r.qualityPassRate || 0}%`,
+        r.topStudentName || '--',
+        `${r.topStudentScore || 0}%`,
+        String(r.counts?.EE || 0),
+        String(r.counts?.ME || 0),
+        String(r.counts?.AE || 0),
+        String(r.counts?.BE || 0),
+      ]);
+
+      autoTable(doc, {
+        startY: curY,
+        head: [['Rank', 'Class', 'Stream', 'Learners', 'Mean %', 'Level', 'Quality Pass', 'Top Learner', 'Top Score', 'EE', 'ME', 'AE', 'BE']],
+        body: rankRows,
+        theme: 'grid',
+        headStyles: {
+          fillColor: [71, 85, 105],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+          fontSize: 7.5,
+        },
+        bodyStyles: {
+          fontSize: 7,
+          textColor: [31, 41, 55],
+          cellPadding: 2,
+        },
+        alternateRowStyles: {
+          fillColor: [248, 250, 252],
+        },
+        margin: { left: 14, right: 14 },
+      });
+
+      lastTable = (doc as any).lastAutoTable;
+      curY = (lastTable && lastTable.finalY ? lastTable.finalY : 170) + 8;
+    }
+
+    // SECTION 3: Best Subject Performance & Top Students
+    if (effectiveBestStudentsPerSubject.length > 0) {
+      if (curY + 60 > 195) {
+        doc.addPage('a4', 'landscape');
+        curY = 14;
+      }
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(122, 18, 40);
+      doc.text('3. TOP PERFORMING LEARNERS PER LEARNING AREA', 14, curY);
+      curY += 4;
+
+      const studentRows = effectiveBestStudentsPerSubject.map((s) => [
+        s.learningAreaName,
+        s.studentName,
+        s.admissionNumber || '--',
+        s.className,
+        s.streamName,
+        s.gender?.[0] || 'M',
+        `${s.score}%`,
+        s.performanceLevel,
+      ]);
+
+      autoTable(doc, {
+        startY: curY,
+        head: [['Learning Area', 'Top Learner Full Name', 'Admission No', 'Class', 'Stream', 'Sex', 'Score (%)', 'Performance Level']],
+        body: studentRows,
+        theme: 'grid',
+        headStyles: {
+          fillColor: [122, 18, 40],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+          fontSize: 7.5,
+        },
+        bodyStyles: {
+          fontSize: 7,
+          textColor: [31, 41, 55],
+          cellPadding: 2,
+        },
+        alternateRowStyles: {
+          fillColor: [248, 250, 252],
+        },
+        margin: { left: 14, right: 14 },
+      });
+
+      lastTable = (doc as any).lastAutoTable;
+      curY = (lastTable && lastTable.finalY ? lastTable.finalY : 170) + 8;
+    }
+
+    if (curY + 26 > 195) {
+      doc.addPage('a4', 'landscape');
+      curY = 16;
+    }
+
+    // Signatures
+    doc.setDrawColor(203, 213, 225);
+    doc.setLineWidth(0.3);
+    doc.line(14, curY, 283, curY);
+    curY += 6;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(30, 41, 59);
+
+    doc.text('Class Educator Certification:', 14, curY);
+    doc.line(14, curY + 6, 85, curY + 6);
+    doc.text('Signature & Date', 14, curY + 10);
+
+    doc.text('Academic Dean Verification:', 105, curY);
+    doc.line(105, curY + 6, 185, curY + 6);
+    doc.text('Endorsement & Date', 105, curY + 10);
+
+    doc.text('Headteacher Official Endorsement:', 205, curY);
+    doc.line(205, curY + 6, 283, curY + 6);
+    doc.text('Official Seal / Stamp & Date', 205, curY + 10);
+
+    doc.setFontSize(6.5);
+    doc.setTextColor(148, 163, 184);
+    doc.text('Grace Seeds School · Complete Consolidated CBC Analytics & Broadsheet Dossier', 148, 204, { align: 'center' });
+
+    const filenameClass = (broadsheet.className || 'Class').replace(/\s+/g, '_');
+    const filenameTerm = String(termDisplay).replace(/\s+/g, '_');
+    const filenameYear = String(yearDisplay).replace(/\s+/g, '_');
+    doc.save(`Grace_Seeds_Consolidated_Analytics_${filenameClass}_${filenameTerm}_${filenameYear}.pdf`);
   };
 
   const getLevelBadge = (level: string) => {
@@ -909,13 +1462,13 @@ export const MasterBroadsheetView: React.FC = () => {
             Download Broadsheet (PDF)
           </button>
           <button
-            onClick={handleExportAllAnalyticsCSV}
+            onClick={handleExportAllAnalyticsPDF}
             disabled={!broadsheet || !broadsheet.rows.length}
-            className="bg-white/10 hover:bg-white/20 disabled:opacity-50 text-white border border-white/20 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 shadow-sm"
-            title="Download complete analytics package including all ranking tables and broadsheet"
+            className="bg-white/10 hover:bg-white/20 disabled:opacity-50 text-white border border-white/20 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 shadow-sm cursor-pointer"
+            title="Download complete analytics package including all ranking tables and broadsheet as PDF"
           >
             <span className="material-symbols-outlined text-lg">download</span>
-            Export All Analytics CSV
+            Download Consolidated Analytics (PDF)
           </button>
           <button
             onClick={handlePrint}
@@ -1361,12 +1914,12 @@ export const MasterBroadsheetView: React.FC = () => {
                   </div>
                   {effectiveClassRankings.length > 0 && (
                     <button
-                      onClick={handleExportClassRankingCSV}
-                      className="print:hidden bg-amber-600 hover:bg-amber-700 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm self-start sm:self-auto"
-                      title="Download Class Ranking Table as CSV"
+                      onClick={handleExportClassRankingPDF}
+                      className="print:hidden bg-amber-600 hover:bg-amber-700 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm self-start sm:self-auto cursor-pointer"
+                      title="Download Class Ranking Table as PDF"
                     >
                       <span className="material-symbols-outlined text-base">download</span>
-                      Download Class Ranking CSV
+                      Download Class Ranking (PDF)
                     </button>
                   )}
                 </div>
@@ -1504,12 +2057,12 @@ export const MasterBroadsheetView: React.FC = () => {
                   </div>
                   {effectiveBestClassesPerSubject.length > 0 && (
                     <button
-                      onClick={handleExportBestClassPerSubjectCSV}
-                      className="print:hidden bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm self-start sm:self-auto"
-                      title="Download Best Class Per Subject Table as CSV"
+                      onClick={handleExportBestClassPerSubjectPDF}
+                      className="print:hidden bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm self-start sm:self-auto cursor-pointer"
+                      title="Download Best Class Per Subject Table as PDF"
                     >
                       <span className="material-symbols-outlined text-base">download</span>
-                      Download Best Class CSV
+                      Download Best Classes (PDF)
                     </button>
                   )}
                 </div>
@@ -1630,12 +2183,12 @@ export const MasterBroadsheetView: React.FC = () => {
                   </div>
                   {effectiveBestStudentsPerSubject.length > 0 && (
                     <button
-                      onClick={handleExportBestStudentPerSubjectCSV}
-                      className="print:hidden bg-emerald-700 hover:bg-emerald-800 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm self-start sm:self-auto"
-                      title="Download Best Student Per Subject Table as CSV"
+                      onClick={handleExportBestStudentPerSubjectPDF}
+                      className="print:hidden bg-emerald-700 hover:bg-emerald-800 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm self-start sm:self-auto cursor-pointer"
+                      title="Download Best Student Per Subject Table as PDF"
                     >
                       <span className="material-symbols-outlined text-base">download</span>
-                      Download Best Student CSV
+                      Download Top Students (PDF)
                     </button>
                   )}
                 </div>
@@ -1757,19 +2310,11 @@ export const MasterBroadsheetView: React.FC = () => {
                       </div>
                       <button
                         onClick={handleExportBroadsheetPDF}
-                        className="bg-rose-50 hover:bg-rose-100 text-[#500b1b] border border-rose-200 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs cursor-pointer"
+                        className="bg-[#500b1b] hover:bg-[#7a1228] text-white px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
                         title="Download Stream Marksheet as PDF"
                       >
                         <span className="material-symbols-outlined text-base">download</span>
-                        Download Marksheet PDF
-                      </button>
-                      <button
-                        onClick={handleExportCSV}
-                        className="bg-[#500b1b] hover:bg-[#7a1228] text-white px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm"
-                        title="Download Stream Marksheet as CSV"
-                      >
-                        <span className="material-symbols-outlined text-base">download</span>
-                        Download Marksheet CSV
+                        Download Marksheet (PDF)
                       </button>
                     </div>
                   </div>
