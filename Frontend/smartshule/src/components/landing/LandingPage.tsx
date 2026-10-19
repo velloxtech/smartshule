@@ -20,6 +20,10 @@ import {
   CheckCircle2,
   Target,
   X,
+  Award,
+  Compass,
+  Maximize2,
+  Camera,
 } from 'lucide-react'
 import ProgrammesPage from './ProgrammesPage'
 import AdmissionsPage from './AdmissionsPage'
@@ -30,10 +34,13 @@ import ApplyAdmissionSlotPage from './ApplyAdmissionSlotPage'
 const logo = '/logo.jpg'
 const whatsappImg = '/hero-school.png'
 const heroSchool = '/hero-school.png'
+const graduationBannerImg = '/graduation-banner.jpeg'
+const scoutsMarchingImg = '/scouts-marching.jpeg'
 
 const NAV_LINKS = [
   { name: 'Home', view: 'home', section: null },
   { name: 'About Us', view: 'home', section: 'about' },
+  { name: 'School Life', view: 'home', section: 'school-life' },
   { name: 'Programmes', view: 'programmes', section: null },
   { name: 'Admissions', view: 'admissions', section: null },
   { name: 'Apply for Slot', view: 'apply-slot', section: null },
@@ -147,6 +154,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [preselectedGrade, setPreselectedGrade] = useState<string>('PP1')
   const [showEnrolModal, setShowEnrolModal] = useState(false)
   const [modalSubmitted, setModalSubmitted] = useState(false)
+  const [previewImage, setPreviewImage] = useState<{ src: string; title: string; subtitle: string } | null>(null)
   const [enrolForm, setEnrolForm] = useState({
     parentName: '',
     phone: '',
@@ -154,6 +162,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     childName: '',
     programme: 'Playgroup',
   })
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setPreviewImage(null)
+        setShowEnrolModal(false)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   useEffect(() => {
     const handleHash = () => {
@@ -211,26 +230,23 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   return (
     <div className="min-h-screen bg-[#fdfaf6] text-[#1f0a10]">
-
-      <div className="bg-[#5a1226] text-white text-xs py-2 px-6 text-center tracking-wide flex justify-between items-center max-w-7xl mx-auto">
-        <span className="hidden sm:inline-flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-[#f5c84a]" /> Kisumu, Kisian, KEMRI Road</span>
-        <span className="mx-auto sm:mx-0 inline-flex items-center gap-1.5"><Phone className="w-3.5 h-3.5 text-[#f5c84a]" /> Admissions open for 2027 — Call us: <span className="font-semibold text-[#f5c84a]">0745 436312</span></span>
-        <span className="hidden md:inline-flex items-center gap-1.5 text-white/70"><Mail className="w-3.5 h-3.5 text-[#f5c84a]" /> schoolgraceseeds@gmail.com</span>
-      </div>
-
       <nav className="sticky top-0 z-50 bg-[#7b1c35] shadow-lg">
-        <div className="max-w-7xl mx-auto px-6 lg:px-12 flex items-center justify-between h-16">
+        <div className="max-w-7xl mx-auto px-6 lg:px-12 flex items-center justify-between h-16 sm:h-20 transition-all">
           <button
             onClick={() => {
               setCurrentPage('home')
               window.scrollTo({ top: 0, behavior: 'smooth' })
             }}
-            className="flex items-center gap-3 cursor-pointer text-left"
+            className="flex items-center gap-3.5 cursor-pointer text-left group"
           >
-            <img src={logo} alt="Grace Seeds School crest" className="h-10 w-10 rounded-full object-cover bg-white p-0.5" />
+            <img
+              src={logo}
+              alt="Grace Seeds School crest"
+              className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl object-contain bg-white p-1 shadow-md border border-white/30 group-hover:scale-105 transition-transform"
+            />
             <div>
-              <p style={{ fontFamily: 'Fraunces, serif' }} className="text-white font-semibold text-base leading-tight">Grace Seeds School</p>
-              <p className="text-white/60 text-[10px] tracking-widest uppercase">School</p>
+              <p style={{ fontFamily: 'Fraunces, serif' }} className="text-white font-bold text-base sm:text-lg leading-tight">Grace Seeds School</p>
+              <p className="text-[#f5c84a] text-[10px] sm:text-xs tracking-widest uppercase font-semibold mt-0.5">School</p>
             </div>
           </button>
 
@@ -390,8 +406,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <div className="absolute inset-0">
               <img
                 src={logo}
-                alt="Happy Grace Seeds School children smiling together"
-                className="w-full h-full object-cover opacity-30"
+                alt="Grace Seeds School crest"
+                className="w-full h-full object-cover opacity-40"
               />
             </div>
 
@@ -464,12 +480,24 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <section id="about" className="py-20 bg-[#fdfaf6]">
             <div className="max-w-7xl mx-auto px-6 lg:px-12 grid lg:grid-cols-2 gap-16 items-center">
               <div className="relative">
-                <div className="rounded-3xl overflow-hidden aspect-[4/3] bg-[#f9eef1] shadow-lg">
+                <div
+                  onClick={() => setPreviewImage({
+                    src: heroSchool,
+                    title: 'Grace Seeds School Campus & Assembly',
+                    subtitle: 'Our learners and educators gathered together outside classrooms in Kisian, Kisumu.'
+                  })}
+                  className="rounded-3xl overflow-hidden aspect-[4/3] bg-[#f9eef1] shadow-lg cursor-pointer group relative"
+                >
                   <img
-                    src={whatsappImg}
+                    src={heroSchool}
                     alt="Grace Seeds pupils in school uniform drawing together"
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
+                  <div className="absolute inset-0 bg-black/15 group-hover:bg-transparent transition-colors" />
+                  <span className="absolute bottom-4 left-4 bg-black/60 backdrop-blur-sm text-white text-xs px-3.5 py-1.5 rounded-full font-medium flex items-center gap-1.5">
+                    <Maximize2 className="w-3 h-3 text-[#f5c84a]" />
+                    School Assembly & Campus
+                  </span>
                 </div>
               </div>
 
@@ -494,6 +522,179 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 >
                   View Academic Programmes →
                 </button>
+              </div>
+            </div>
+          </section>
+
+          {/* School Life & Photo Highlights Section */}
+          <section id="school-life" className="py-20 bg-[#f9eef1] relative">
+            <div className="max-w-7xl mx-auto px-6 lg:px-12">
+              <div className="flex flex-col md:flex-row md:items-end justify-between mb-14 gap-6">
+                <div>
+                  <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-[#f0d8df] text-[#7b1c35] text-xs font-bold tracking-widest uppercase mb-3 shadow-sm">
+                    <Camera className="w-3.5 h-3.5 text-[#e8a92a]" />
+                    Life at Grace Seeds
+                  </div>
+                  <h2 style={{ fontFamily: 'Fraunces, serif' }} className="text-4xl lg:text-5xl font-bold text-[#5a1226] leading-tight">
+                    Where Excellence Meets<br />
+                    <em className="text-[#e8a92a] not-italic">Character & Joy</em>
+                  </h2>
+                </div>
+                <p className="text-[#8a6470] text-base max-w-md">
+                  From annual celebrations of academic distinction to vibrant scouting parades on the red carpet, see our learners thrive in a supportive, value-grounded environment.
+                </p>
+              </div>
+
+              <div className="grid lg:grid-cols-2 gap-8">
+                {/* Feature 1: Academic Excellence Celebration */}
+                <div className="bg-white rounded-3xl border border-[#f0d8df] overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col group">
+                  <div
+                    onClick={() => setPreviewImage({
+                      src: graduationBannerImg,
+                      title: '6th Annual Celebration of Academic Excellence',
+                      subtitle: 'Honouring learner dedication and inspiring every child to reach their full potential.'
+                    })}
+                    className="relative aspect-[16/10] overflow-hidden cursor-pointer bg-slate-100"
+                  >
+                    <img
+                      src={graduationBannerImg}
+                      alt="Grace Seeds learner standing beside the 6th Annual Celebration of Academic Excellence banner"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/10 opacity-60 group-hover:opacity-40 transition-opacity" />
+
+                    <span className="absolute top-4 left-4 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#7b1c35] text-white text-xs font-bold shadow-md">
+                      <Award className="w-3.5 h-3.5 text-[#f5c84a]" />
+                      Annual Academic Honors
+                    </span>
+
+                    <button
+                      className="absolute bottom-4 right-4 bg-white/90 hover:bg-white text-[#5a1226] p-2.5 rounded-full shadow-lg backdrop-blur-sm transition-transform hover:scale-110"
+                      title="Click to view full image"
+                    >
+                      <Maximize2 className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <div className="p-8 flex-1 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center gap-2 text-xs font-bold text-[#e8a92a] uppercase tracking-wider mb-2">
+                        <span>Milestones & Graduations</span>
+                        <span>•</span>
+                        <span>Annual Event</span>
+                      </div>
+                      <h3 style={{ fontFamily: 'Fraunces, serif' }} className="text-2xl font-bold text-[#5a1226] mb-3">
+                        Celebration of Academic Excellence
+                      </h3>
+                      <p className="text-[#8a6470] text-sm leading-relaxed mb-6">
+                        We celebrate every learner's dedication, progress, and accomplishments. Our annual ceremony brings together learners, teachers, and parents in festive celebration of foundational CBE milestones.
+                      </p>
+
+                      <div className="space-y-2.5 border-t border-[#f0d8df] pt-5">
+                        <div className="flex items-start gap-2.5 text-xs text-[#1f0a10]">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                          <span><strong>Learner Recognition:</strong> Rewarding hard work, creativity, and moral discipline.</span>
+                        </div>
+                        <div className="flex items-start gap-2.5 text-xs text-[#1f0a10]">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                          <span><strong>Foundation for the Future:</strong> Setting pupils up for success in Lower and Upper Primary.</span>
+                        </div>
+                        <div className="flex items-start gap-2.5 text-xs text-[#1f0a10]">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                          <span><strong>Proud Community:</strong> Parents, guardians, and educators partnering together.</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-6 pt-4 border-t border-dashed border-[#f0d8df] flex items-center justify-between">
+                      <span className="text-xs text-[#8a6470] italic">Grace Seeds Compound, Kisian</span>
+                      <button
+                        onClick={() => {
+                          setCurrentPage('apply-slot')
+                          window.scrollTo({ top: 0, behavior: 'smooth' })
+                        }}
+                        className="text-xs font-bold text-[#7b1c35] hover:text-[#e8a92a] transition-colors flex items-center gap-1"
+                      >
+                        Enrol Your Child →
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Feature 2: Scouts Marching & Co-Curriculars */}
+                <div className="bg-white rounded-3xl border border-[#f0d8df] overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col group">
+                  <div
+                    onClick={() => setPreviewImage({
+                      src: scoutsMarchingImg,
+                      title: 'Grace Seeds Junior Scouts Troop',
+                      subtitle: 'Marching parade, discipline, and active leadership training on school grounds.'
+                    })}
+                    className="relative aspect-[16/10] overflow-hidden cursor-pointer bg-slate-100"
+                  >
+                    <img
+                      src={scoutsMarchingImg}
+                      alt="Grace Seeds Scouts marching in uniform along the red carpet"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/10 opacity-60 group-hover:opacity-40 transition-opacity" />
+
+                    <span className="absolute top-4 left-4 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#5a1226] text-white text-xs font-bold shadow-md">
+                      <Compass className="w-3.5 h-3.5 text-[#f5c84a]" />
+                      Co-Curriculars & Scouts
+                    </span>
+
+                    <button
+                      className="absolute bottom-4 right-4 bg-white/90 hover:bg-white text-[#5a1226] p-2.5 rounded-full shadow-lg backdrop-blur-sm transition-transform hover:scale-110"
+                      title="Click to view full image"
+                    >
+                      <Maximize2 className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <div className="p-8 flex-1 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center gap-2 text-xs font-bold text-[#e8a92a] uppercase tracking-wider mb-2">
+                        <span>Leadership & Discipline</span>
+                        <span>•</span>
+                        <span>12+ Extra-Curricular Clubs</span>
+                      </div>
+                      <h3 style={{ fontFamily: 'Fraunces, serif' }} className="text-2xl font-bold text-[#5a1226] mb-3">
+                        Junior Scouts Troop & Outdoor Life
+                      </h3>
+                      <p className="text-[#8a6470] text-sm leading-relaxed mb-6">
+                        Character is forged through action. Our accredited Scouts troop instills teamwork, respect, and civic duty, teaching young boys and girls self-reliance and community service.
+                      </p>
+
+                      <div className="space-y-2.5 border-t border-[#f0d8df] pt-5">
+                        <div className="flex items-start gap-2.5 text-xs text-[#1f0a10]">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                          <span><strong>Parades & Red Carpet Drills:</strong> Fostering poise, rhythm, and self-confidence.</span>
+                        </div>
+                        <div className="flex items-start gap-2.5 text-xs text-[#1f0a10]">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                          <span><strong>Life & Survival Skills:</strong> First aid, nature navigation, and knot-tying.</span>
+                        </div>
+                        <div className="flex items-start gap-2.5 text-xs text-[#1f0a10]">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                          <span><strong>12+ Dynamic Clubs:</strong> Creative Arts, Music, Debate, Chess, Science, and Sports.</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-6 pt-4 border-t border-dashed border-[#f0d8df] flex items-center justify-between">
+                      <span className="text-xs text-[#8a6470] italic">Kenya Scouts Association Accredited</span>
+                      <button
+                        onClick={() => {
+                          setCurrentPage('programmes')
+                          window.scrollTo({ top: 0, behavior: 'smooth' })
+                        }}
+                        className="text-xs font-bold text-[#7b1c35] hover:text-[#e8a92a] transition-colors flex items-center gap-1"
+                      >
+                        Explore Programmes →
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </section>
@@ -731,11 +932,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         <div className="max-w-7xl mx-auto px-6 lg:px-12">
           <div className="grid md:grid-cols-3 gap-8 mb-10">
             <div>
-              <div className="flex items-center gap-3 mb-4">
-                <img src={logo} alt="Grace Seeds School crest" className="h-10 w-10 rounded-full object-contain bg-white/10 p-1" />
+              <div className="flex items-center gap-4 mb-4">
+                <img
+                  src={logo}
+                  alt="Grace Seeds School crest"
+                  className="h-16 w-16 rounded-2xl object-contain bg-white p-1.5 shadow-lg border border-white/20"
+                />
                 <div>
-                  <p style={{ fontFamily: 'Fraunces, serif' }} className="text-white font-bold text-base leading-tight">Grace Seeds School</p>
-                  <p className="text-white/50 text-[10px] tracking-widest uppercase">School</p>
+                  <p style={{ fontFamily: 'Fraunces, serif' }} className="text-white font-bold text-lg leading-tight">Grace Seeds School</p>
+                  <p className="text-[#f5c84a] text-xs tracking-widest uppercase font-semibold mt-0.5">School</p>
                 </div>
               </div>
               <p className="text-white/50 text-sm leading-relaxed">"The Future Begins Here"</p>
@@ -898,6 +1103,49 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </button>
               </form>
             )}
+          </div>
+        </div>
+      )}
+
+      {previewImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn"
+          onClick={() => setPreviewImage(null)}
+        >
+          <div
+            className="bg-[#1f0a10] border border-white/20 rounded-3xl overflow-hidden max-w-4xl w-full max-h-[92vh] flex flex-col shadow-2xl relative"
+            onClick={e => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setPreviewImage(null)}
+              className="absolute top-4 right-4 z-10 text-white bg-black/60 hover:bg-black/90 p-2.5 rounded-full backdrop-blur-sm cursor-pointer transition-colors shadow-lg"
+              aria-label="Close image preview"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="relative flex-1 overflow-auto bg-black flex items-center justify-center min-h-[300px] p-2">
+              <img
+                src={previewImage.src}
+                alt={previewImage.title}
+                className="max-h-[75vh] w-auto max-w-full object-contain rounded-lg"
+              />
+            </div>
+            <div className="p-5 bg-[#3d0c1a] border-t border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h4 style={{ fontFamily: 'Fraunces, serif' }} className="text-white text-lg font-bold">
+                  {previewImage.title}
+                </h4>
+                <p className="text-white/70 text-xs mt-0.5">
+                  {previewImage.subtitle}
+                </p>
+              </div>
+              <button
+                onClick={() => setPreviewImage(null)}
+                className="self-end sm:self-center px-5 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-semibold cursor-pointer transition-colors"
+              >
+                Close Preview
+              </button>
+            </div>
           </div>
         </div>
       )}
