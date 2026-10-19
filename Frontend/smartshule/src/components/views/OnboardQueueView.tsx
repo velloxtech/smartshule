@@ -56,7 +56,7 @@ export const OnboardQueueView: React.FC<OnboardQueueViewProps> = ({
   const [streamAssignment, setStreamAssignment] = useState('East');
   const [customAdmNo, setCustomAdmNo] = useState('');
   const [existingStudentAdmNos, setExistingStudentAdmNos] = useState<string[]>([]);
-  const [approvalNotes, setApprovalNotes] = useState('Dossier verified and approved for CBC admission.');
+  const [approvalNotes, setApprovalNotes] = useState('Dossier verified and approved for CBE admission.');
   const [rejectReason, setRejectReason] = useState('');
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [viewingEmail, setViewingEmail] = useState<OnboardingEmailLog | null>(null);
@@ -430,8 +430,8 @@ export const OnboardQueueView: React.FC<OnboardQueueViewProps> = ({
       setStepTitle('School Tour & Learner Readiness Interaction');
       setStepNotes('Please come accompanied by the child for a guided school walkthrough and early learning readiness interaction.');
     } else if (newType === 'READINESS_ASSESSMENT') {
-      setStepTitle('CBC Diagnostic Placement & Readiness Evaluation');
-      setStepNotes('Diagnostic learning evaluation session for CBC placement and developmental progress check.');
+      setStepTitle('CBE Diagnostic Placement & Readiness Evaluation');
+      setStepNotes('Diagnostic learning evaluation session for CBE placement and developmental progress check.');
     } else if (newType === 'DOCUMENT_VERIFICATION') {
       setStepTitle('Original Document Verification & Learner KYC Review');
       setStepNotes('Please present original birth certificate, clinic card, and previous school academic progress report.');
@@ -897,7 +897,7 @@ export const OnboardQueueView: React.FC<OnboardQueueViewProps> = ({
                         Step 02: Learner Interaction & School Tour Scheduling
                       </h5>
                       <p className="text-[11px] text-amber-900/80">
-                        Schedule CBC readiness evaluation, guided school tour, or document verification.
+                        Schedule CBE readiness evaluation, guided school tour, or document verification.
                       </p>
                     </div>
                   </div>
@@ -954,7 +954,7 @@ export const OnboardQueueView: React.FC<OnboardQueueViewProps> = ({
                   </div>
                 ) : (
                   <p className="text-xs text-amber-900/80 italic">
-                    No school tour or CBC placement interaction has been scheduled yet for this applicant. Click &quot;Schedule Step 02&quot; above to arrange an appointment and dispatch an automatic email invitation to {selectedApp.parentEmail}.
+                    No school tour or CBE placement interaction has been scheduled yet for this applicant. Click &quot;Schedule Step 02&quot; above to arrange an appointment and dispatch an automatic email invitation to {selectedApp.parentEmail}.
                   </p>
                 )}
               </div>

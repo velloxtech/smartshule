@@ -66,7 +66,7 @@ export const HeadTeacherDashboardView: React.FC<HeadTeacherDashboardViewProps> =
               Curriculum Standards & Academic Oversight
             </h1>
             <p className="mt-1 text-sm text-purple-100 max-w-xl">
-              Supervising instructional quality, CBC rubrics fidelity, teacher curriculum delivery pace, and institutional performance.
+              Supervising instructional quality, CBE rubrics fidelity, teacher curriculum delivery pace, and institutional performance.
             </p>
           </div>
 
@@ -136,7 +136,7 @@ export const HeadTeacherDashboardView: React.FC<HeadTeacherDashboardViewProps> =
           </div>
           <div className="mt-3">
             <div className="text-2xl font-black text-on-surface">{teachers.length}</div>
-            <div className="text-[11px] text-on-surface-variant mt-1">Certified CBC subject specialists</div>
+            <div className="text-[11px] text-on-surface-variant mt-1">Certified CBE subject specialists</div>
           </div>
         </div>
 
@@ -251,7 +251,7 @@ export const HeadTeacherDashboardView: React.FC<HeadTeacherDashboardViewProps> =
               >
                 <span className="material-symbols-outlined text-purple-700 text-[22px]">article</span>
                 <div>
-                  <div className="text-xs font-bold text-on-surface">CBC Report Cards</div>
+                  <div className="text-xs font-bold text-on-surface">CBE Report Cards</div>
                   <div className="text-[11px] text-on-surface-variant">Compile term summaries & comments</div>
                 </div>
               </button>

@@ -98,7 +98,7 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
     const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(archivedRecords, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute('href', dataStr);
-    downloadAnchor.setAttribute('download', `SmartShule_Archived_Accounts_and_Data_${new Date().toISOString().slice(0, 10)}.json`);
+    downloadAnchor.setAttribute('download', `Grace_Seeds_School_Archived_Accounts_and_Data_${new Date().toISOString().slice(0, 10)}.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
@@ -378,7 +378,7 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
         <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">
-              <span>SmartShule Isolated Archive System</span>
+              <span>Grace Seeds School Isolated Archive System</span>
               <span>•</span>
               <span className="text-emerald-700 font-semibold">PostgreSQL & MongoDB Dual-Engine Ready</span>
             </div>
@@ -390,7 +390,7 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
               </span>
             </h1>
             <p className="text-sm text-slate-600 mt-1 max-w-4xl">
-              Deleted learners, exclusive parent logins, fee invoices, CBC formative/summative marks, attendance registers, and welfare grievances are securely preserved in the isolated archive table. Restoring any record reinstates credentials and operational ledgers seamlessly.
+              Deleted learners, exclusive parent logins, fee invoices, CBE formative/summative marks, attendance registers, and welfare grievances are securely preserved in the isolated archive table. Restoring any record reinstates credentials and operational ledgers seamlessly.
             </p>
           </div>
 
@@ -954,7 +954,7 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
           <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 space-y-6">
             <div>
               <h2 className="text-base font-bold text-slate-900">
-                Preserved CBC Competency Marks & Term Report Cards
+                Preserved CBE Competency Marks & Term Report Cards
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
                 Archived assessments are retained for KNEC and MoE regulatory audits and can be restored anytime.
@@ -1102,7 +1102,7 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
         <div className="max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="font-bold">SmartShule Enterprise Archive Vault</span>
+            <span className="font-bold">Grace Seeds School Enterprise Archive Vault</span>
             <span className="text-rose-200">•</span>
             <span className="text-rose-100">{currentUser?.schoolName || 'Grace Seeds School'}</span>
           </div>

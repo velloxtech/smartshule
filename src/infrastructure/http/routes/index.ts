@@ -94,7 +94,8 @@ import {
   KcbBuniConfirmationSchema,
   RecordExpenseSchema,
   UpdateExpenseStatusSchema,
-  RecordOtherIncomeSchema
+  RecordOtherIncomeSchema,
+  UpdateFeeBannerSchema
 } from '../controllers/FinanceController';
 
 import {
@@ -198,6 +199,7 @@ import {
   UpdateDailyLogSchema,
   EndorseDailyLogSchema
 } from '../controllers/CurriculumTrackerController';
+import { StudentSponsorshipController } from '../controllers/StudentSponsorshipController';
 
 export function createApiRouter(container: AppContainer): Router {
   const router = Router();
@@ -231,6 +233,7 @@ export function createApiRouter(container: AppContainer): Router {
   const broadsheetController = new BroadsheetController(container.broadsheetUseCases);
   const occurrenceController = new OccurrenceController(container.occurrenceUseCases);
   const curriculumTrackerController = new CurriculumTrackerController(container.curriculumTrackerUseCases);
+  const sponsorshipController = new StudentSponsorshipController(container.studentSponsorshipUseCases);
 
   // ==========================================
   // 1. AUTH ROUTES
@@ -488,6 +491,8 @@ export function createApiRouter(container: AppContainer): Router {
   financeRouter.get('/summary', authMiddleware, financeController.getFinanceSummary); // Parent vs Admin summary
   financeRouter.post('/payments', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), validateBody(RecordPaymentSchema), financeController.recordPayment);
   financeRouter.get('/payments', authMiddleware, financeController.listPayments); // Parent isolated
+  financeRouter.get('/payments/:id/receipt', authMiddleware, financeController.getPaymentReceipt);
+  financeRouter.post('/payments/:id/issue-receipt', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), financeController.reissueReceipt);
   financeRouter.post('/payments/forward-transaction', authMiddleware, validateBody(ForwardPaymentTransactionSchema), financeController.forwardPaymentTransaction);
   financeRouter.get('/payments/forwarded', authMiddleware, financeController.getForwardedTransactions);
   financeRouter.post('/payments/forwarded/:id/verify', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), validateBody(VerifyForwardedPaymentSchema), financeController.verifyForwardedTransaction);
@@ -522,6 +527,16 @@ export function createApiRouter(container: AppContainer): Router {
   financeRouter.post('/income', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT), validateBody(RecordOtherIncomeSchema), financeController.recordOtherIncome);
   financeRouter.get('/income', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT), financeController.listOtherIncome);
   financeRouter.delete('/income/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT), financeController.deleteOtherIncome);
+
+  // Parent Fee Payment Deadline Notice Banner (Director/Admin only for management updates)
+  financeRouter.get('/fee-banner', authMiddleware, financeController.getFeeBanner);
+  financeRouter.put(
+    '/fee-banner',
+    authMiddleware,
+    requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN),
+    validateBody(UpdateFeeBannerSchema),
+    financeController.updateFeeBanner
+  );
 
   router.use('/finance', financeRouter);
 
@@ -1126,6 +1141,24 @@ export function createApiRouter(container: AppContainer): Router {
   });
 
   router.use('/onboarding', onboardingRouter);
+
+  // ==========================================
+  // Fully Sponsored Students (Admin/Director Only)
+  // ==========================================
+  const sponsorshipRouter = Router();
+  const requireAdminOnly = requireRoles([UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN]);
+  sponsorshipRouter.use(authMiddleware, requireAdminOnly);
+
+  sponsorshipRouter.post('/', sponsorshipController.createSponsorship);
+  sponsorshipRouter.get('/', sponsorshipController.listSponsorships);
+  sponsorshipRouter.get('/stats', sponsorshipController.getStats);
+  sponsorshipRouter.get('/student/:studentId', sponsorshipController.getSponsorshipByStudentId);
+  sponsorshipRouter.get('/:id', sponsorshipController.getSponsorshipById);
+  sponsorshipRouter.put('/:id', sponsorshipController.updateSponsorship);
+  sponsorshipRouter.patch('/:id/status', sponsorshipController.updateSponsorshipStatus);
+  sponsorshipRouter.delete('/:id', sponsorshipController.deleteSponsorship);
+
+  router.use('/sponsorships', sponsorshipRouter);
 
   return router;
 }

@@ -323,7 +323,7 @@ export const ForwardPaymentModal: React.FC<ForwardPaymentModalProps> = ({
                 rows={2}
                 value={smsMessage}
                 onChange={(e) => handleParseSms(e.target.value)}
-                placeholder="Paste the full M-Pesa SMS message here (e.g., QK7823LM91 Confirmed. Ksh15,000.00 sent to 522533 SmartShule on 17/10/26...)"
+                placeholder="Paste the full M-Pesa SMS message here (e.g., QK7823LM91 Confirmed. Ksh15,000.00 sent to 522533 Grace Seeds School on 17/10/26...)"
                 className="w-full bg-white border border-purple-200 rounded-lg p-2 text-xs text-on-surface focus:outline-purple-600 font-data-mono placeholder:font-body"
               />
               {parseSuccessMsg && (

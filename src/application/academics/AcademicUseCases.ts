@@ -155,7 +155,7 @@ export class AcademicUseCases {
     if (dto.isCurrent) {
       const existingTerms = await this.academicRepository.findTermsByYear(dto.academicYearId);
       for (const t of existingTerms) {
-        if (t.isCurrent) {
+        if (t.isCurrent) {         
           t.setCurrent(false);
           await this.academicRepository.updateTerm(t);
         }

@@ -1225,7 +1225,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
               <span className="material-symbols-outlined text-[24px]">grade</span>
             </div>
             <div>
-              <h3 className="font-semibold text-base leading-tight">Upload Marks & CBC Rubric</h3>
+              <h3 className="font-semibold text-base leading-tight">Upload Marks & CBE Rubric</h3>
               <p className="text-xs text-rose-100">KICD Competency-Based Assessment System</p>
             </div>
           </div>
@@ -1587,7 +1587,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                 <div className="bg-slate-100 border-b border-slate-200 px-4 py-2.5 grid grid-cols-12 gap-2 text-[11px] font-bold uppercase text-slate-600 tracking-wider items-center">
                   <div className="col-span-5 sm:col-span-4">Learning Area / Subject</div>
                   <div className="col-span-4 sm:col-span-3 text-center">Marks (Score / Out Of)</div>
-                  <div className="col-span-3 sm:col-span-2 text-center">CBC Level</div>
+                  <div className="col-span-3 sm:col-span-2 text-center">CBE Level</div>
                   <div className="col-span-12 sm:col-span-3 hidden sm:block">Pedagogical Remarks</div>
                 </div>
 
@@ -1729,7 +1729,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
               <div className="p-3.5 bg-rose-50/40 border border-rose-200/60 rounded-xl space-y-3">
                 <div className="text-[11px] font-bold uppercase tracking-wider text-[#7a1228] flex items-center gap-1.5">
                   <span className="material-symbols-outlined text-[16px]">psychology</span>
-                  <span>Formative CBC Competency Evaluation</span>
+                  <span>Formative CBE Competency Evaluation</span>
                 </div>
 
                 <div>
@@ -1833,7 +1833,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                     Learner Numerical Marks & KICD Rubric
                   </span>
                   <span className="text-[11px] text-on-surface-variant font-medium">
-                    Standard CBC Rating
+                    Standard CBE Rating
                   </span>
                 </div>
 
@@ -1973,7 +1973,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                     }}
                     className="text-[10px] text-primary hover:underline font-semibold cursor-pointer"
                   >
-                    Reset to CBC Standard
+                    Reset to CBE Standard
                   </button>
                 </div>
                 <textarea
@@ -1984,7 +1984,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                     setCustomRemarks(e.target.value);
                     setIsCustomRemarkEdited(true);
                   }}
-                  placeholder="Enter or customize CBC remarks..."
+                  placeholder="Enter or customize CBE remarks..."
                   className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-xs text-on-surface leading-relaxed"
                 />
               </div>

@@ -50,7 +50,7 @@ const PROGRAMMES = [
   {
     level: 'PP1 (Pre-Primary 1)',
     age: 'Age 4',
-    desc: 'CBC foundational areas: Language, Mathematical activities, Environmental, and Psychomotor skills.',
+    desc: 'CBE foundational areas: Language, Mathematical activities, Environmental, and Psychomotor skills.',
     icon: Palette,
   },
   {
@@ -62,13 +62,13 @@ const PROGRAMMES = [
   {
     level: 'Lower Primary',
     age: 'Grade 1 – 3',
-    desc: 'CBC Key Stage 1: Literacy, Kiswahili, English, Math, Hygiene & Nutrition, and Creative Arts.',
+    desc: 'CBE Key Stage 1: Literacy, Kiswahili, English, Math, Hygiene & Nutrition, and Creative Arts.',
     icon: BookOpen,
   },
   {
     level: 'Upper Primary',
     age: 'Grade 4 – 6',
-    desc: 'CBC Key Stage 2: Science & Tech, Social Studies, Creative Arts, and Digital Literacy.',
+    desc: 'CBE Key Stage 2: Science & Tech, Social Studies, Creative Arts, and Digital Literacy.',
     icon: FlaskConical,
   },
 ]

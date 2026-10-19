@@ -424,7 +424,7 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
           <div className="flex flex-col items-center justify-center gap-2">
             <span className="material-symbols-outlined text-5xl text-outline">person_off</span>
             <p className="font-bold text-base text-on-surface">No educators found</p>
-            <p className="text-xs text-outline">Click "Onboard CBC Teacher" to register faculty members with TSC numbers.</p>
+            <p className="text-xs text-outline">Click "Onboard CBE Teacher" to register faculty members with TSC numbers.</p>
           </div>
         </div>
       ) : (
@@ -546,7 +546,7 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
                 </div>
                 <div>
                   <h3 className="font-semibold text-sm">Assign Class & Stream</h3>
-                  <p className="text-[11px] text-rose-200">Allocate CBC grade level and roll-call stream</p>
+                  <p className="text-[11px] text-rose-200">Allocate CBE grade level and roll-call stream</p>
                 </div>
               </div>
               <button
@@ -598,7 +598,7 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
               {/* Dropdown 1: Target Class / Grade Level */}
               <div>
                 <label className="block font-bold text-on-surface-variant mb-1 uppercase text-[10px] tracking-wider">
-                  1. Target CBC Class / Grade Level <span className="text-error">*</span>
+                  1. Target CBE Class / Grade Level <span className="text-error">*</span>
                 </label>
                 <div className="relative">
                   <select
@@ -618,7 +618,7 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
                     )}
                   </select>
                 </div>
-                <p className="text-[10px] text-outline mt-1">Select the CBC class level to which this teacher is assigned.</p>
+                <p className="text-[10px] text-outline mt-1">Select the CBE class level to which this teacher is assigned.</p>
               </div>
 
               {/* Dropdown 2: Target Stream Allocation */}

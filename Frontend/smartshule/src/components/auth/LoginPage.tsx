@@ -236,12 +236,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLandi
           </div>
           <div className="text-left">
             <div className="font-bold text-lg tracking-tight text-white flex items-center gap-1.5">
-              <span>SmartShule Portal</span>
+              <span>Grace Seeds School</span>
               <span className="text-[11px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded bg-white/20 text-white">
-                CBC Portal
+                CBE Portal
               </span>
             </div>
-            <p className="text-xs text-rose-200">Competency-Based Curriculum System</p>
+            <p className="text-xs text-rose-200">Competency-Based Education (CBE) System</p>
           </div>
         </button>
 
@@ -276,11 +276,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLandi
               </span>
             </div>
             <h1 className="text-2xl font-bold tracking-tight">
-              {authMode === 'login' && 'SmartShule CBC Portal Sign In'}
+              {authMode === 'login' && 'Grace Seeds School CBE Portal Sign In'}
               {authMode === 'forgot_request' && 'Reset Your Password'}
               {authMode === 'forgot_verify' && 'Verify 6-Digit Code'}
               {authMode === 'initial_setup' && 'Primary Administrator Setup'}
-              {authMode === 'register' && 'Create Your SmartShule Account'}
+              {authMode === 'register' && 'Create Your Grace Seeds School Account'}
             </h1>
             <p className="text-xs text-rose-200 mt-1 max-w-xs mx-auto">
               {authMode === 'login' &&
@@ -450,7 +450,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLandi
                     </div>
                   )}
                   <p className="text-[10px] text-gray-400">
-                    SmartShule CBC Portal · All institutional accounts are fed and managed via the UI
+                    Grace Seeds School CBE Portal · All institutional accounts are fed and managed via the UI
                   </p>
                 </div>
               </>
@@ -893,7 +893,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLandi
         </div>
 
         <p>Grace Seeds School · &quot;The future Begins Here&quot;</p>
-        <p className="text-[11px] text-rose-300/70">SmartShule · Competency-Based Curriculum System</p>
+        <p className="text-[11px] text-rose-300/70">Grace Seeds School · Competency-Based Education (CBE) System</p>
         <div className="flex items-center gap-1.5 text-xs text-rose-100 font-medium">
           <span>Powered by</span>
           <span className="font-bold text-white tracking-wide">Vellox Tech</span>

@@ -141,7 +141,7 @@ export class SmsNotificationAdapter implements INotificationService {
 
     console.log(`[EMAIL OUTBOUND via ${smtpHost}] From: ${fromAddress} | To: ${toEmail} | Subject: "${subject}"`);
 
-    if (smtpUser && smtpPass) {
+    if (process.env.NODE_ENV !== 'test' && smtpUser && smtpPass) {
       try {
         const transporter = nodemailer.createTransport({
           host: smtpHost,

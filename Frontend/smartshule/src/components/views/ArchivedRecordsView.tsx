@@ -84,7 +84,7 @@ export const ArchivedRecordsView: React.FC<ArchivedRecordsViewProps> = ({
     const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(archivedRecords, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute('href', dataStr);
-    downloadAnchor.setAttribute('download', `SmartShule_Archived_Accounts_and_Data_${new Date().toISOString().slice(0, 10)}.json`);
+    downloadAnchor.setAttribute('download', `Grace_Seeds_School_Archived_Accounts_and_Data_${new Date().toISOString().slice(0, 10)}.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
@@ -215,7 +215,7 @@ export const ArchivedRecordsView: React.FC<ArchivedRecordsViewProps> = ({
             </span>
           </div>
           <p className="text-xs text-on-surface-variant mt-1">
-            Complete administrative repository of archived parent & learner accounts, historical fee invoices, CBC marks, attendance records, and cleared debts.
+            Complete administrative repository of archived parent & learner accounts, historical fee invoices, CBE marks, attendance records, and cleared debts.
           </p>
         </div>
 
@@ -735,7 +735,7 @@ export const ArchivedRecordsView: React.FC<ArchivedRecordsViewProps> = ({
                       onClick={() => setSelectedRecord(r)}
                       className="w-full py-1.5 bg-surface-container-low hover:bg-surface-container text-primary font-bold text-xs rounded-lg transition-colors cursor-pointer"
                     >
-                      Inspect CBC Marks & Rubrics
+                      Inspect CBE Marks & Rubrics
                     </button>
                   </div>
                 );

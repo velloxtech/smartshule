@@ -320,7 +320,7 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="font-bold text-base sm:text-lg leading-tight text-white">
-                    Onboard CBC Teacher
+                    Onboard CBE Teacher
                   </h3>
                   <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-400/30">
                     TSC & Chapter 6 Aligned
@@ -630,7 +630,7 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
                 </div>
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-                    KICD CBC Accreditation
+                    KICD CBE Accreditation
                   </label>
                   <label className="flex items-center gap-2 p-2.5 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer">
                     <input
@@ -640,20 +640,20 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
                       className="w-4 h-4 rounded text-[#7a1228] focus:ring-[#7a1228]"
                     />
                     <span className="text-xs font-medium text-slate-800">
-                      Certified in CBC Competency-Based Assessment (CBA)
+                      Certified in CBE Competency-Based Assessment (CBA)
                     </span>
                   </label>
                 </div>
               </div>
 
-              {/* Dynamic Database CBC Subjects Selector */}
+              {/* Dynamic Database CBE Subjects Selector */}
               <div className="space-y-2 p-3.5 bg-slate-50 border border-slate-200 rounded-2xl">
                 <div className="flex items-center justify-between">
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                    CBC Learning Areas & Specializations <span className="text-rose-600">*</span>
+                    CBE Learning Areas & Specializations <span className="text-rose-600">*</span>
                   </label>
                   <span className="text-[10px] text-slate-500 font-medium">
-                    Loaded from Database ({dbLearningAreas.length > 0 ? `${dbLearningAreas.length} Available` : 'Standard CBC'})
+                    Loaded from Database ({dbLearningAreas.length > 0 ? `${dbLearningAreas.length} Available` : 'Standard CBE'})
                   </span>
                 </div>
 
@@ -842,7 +842,7 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
                     <strong className="text-slate-900 font-bold block mb-0.5">
                       Chapter Six Leadership and Integrity Pledge (Articles 73–75)
                     </strong>
-                    I solemnly swear to uphold the Constitution of Kenya (2010), execute my teaching duties with honesty and impartiality, protect the integrity of CBC assessments, and reject all forms of corruption, favoritism, or ethical misconduct.
+                    I solemnly swear to uphold the Constitution of Kenya (2010), execute my teaching duties with honesty and impartiality, protect the integrity of CBE assessments, and reject all forms of corruption, favoritism, or ethical misconduct.
                   </div>
                 </label>
 

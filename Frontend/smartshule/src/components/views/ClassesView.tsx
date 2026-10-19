@@ -149,7 +149,7 @@ export const ClassesView: React.FC = () => {
             Classes, Streams & Learner Distribution
           </h1>
           <p className="text-xs text-on-surface-variant mt-0.5">
-            Playgroup through Grade 9 CBC streams, education cycles, and classroom allocations
+            Playgroup through Grade 9 CBE streams, education cycles, and classroom allocations
           </p>
         </div>
 
@@ -169,7 +169,7 @@ export const ClassesView: React.FC = () => {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-sm text-primary uppercase tracking-wider">
-              Active Registered CBC Grades ({classes.length})
+              Active Registered CBE Grades ({classes.length})
             </h3>
             <span className="text-xs text-secondary font-semibold">Live Backend Synced</span>
           </div>
@@ -262,7 +262,7 @@ export const ClassesView: React.FC = () => {
           <div className="flex flex-col items-center justify-center gap-2">
             <span className="material-symbols-outlined text-5xl text-outline">meeting_room</span>
             <p className="font-bold text-base text-on-surface">No classes configured</p>
-            <p className="text-xs text-outline">Click "Add Class" above to create CBC grades and streams.</p>
+            <p className="text-xs text-outline">Click "Add Class" above to create CBE grades and streams.</p>
           </div>
         </div>
       )}
@@ -272,7 +272,7 @@ export const ClassesView: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
           <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-md w-full max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
             <div className="bg-[#7a1228] text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
-              <h3 className="font-semibold text-sm">Add New CBC Class / Grade</h3>
+              <h3 className="font-semibold text-sm">Add New CBE Class / Grade</h3>
               <button onClick={() => setIsAddClassOpen(false)} className="text-rose-100 hover:text-white cursor-pointer shrink-0">
                 <span className="material-symbols-outlined text-[18px]">close</span>
               </button>

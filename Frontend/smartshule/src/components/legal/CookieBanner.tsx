@@ -59,7 +59,7 @@ export const CookieBanner: React.FC<CookieBannerProps> = ({ onOpenPreferences })
               </span>
             </div>
             <p className="text-xs text-slate-300 mt-1 leading-relaxed">
-              SmartShule uses strictly necessary session cookies for secure sign-in and optional functional cookies to remember your workspace settings. We never use advertising trackers or sell personal data.
+              Grace Seeds School uses strictly necessary session cookies for secure sign-in and optional functional cookies to remember your workspace settings. We never use advertising trackers or sell personal data.
             </p>
           </div>
         </div>

@@ -784,7 +784,7 @@ export const TimetableView: React.FC = () => {
         <img src="/logo.png" onerror="if(!this.src.endsWith('/logo.jpg')){this.src='/logo.jpg';}" alt="${schoolTitle} Logo" class="logo" />
         <div>
           <h1 class="school-title">${schoolTitle}</h1>
-          <div class="sub-title">MINISTRY OF EDUCATION · CBC MASTER TIMETABLE</div>
+          <div class="sub-title">MINISTRY OF EDUCATION · CBE MASTER TIMETABLE</div>
           <div class="meta-info">${schoolAddress} · Tel: ${schoolPhone} · ${schoolEmail}</div>
         </div>
       </div>
@@ -1537,7 +1537,7 @@ export const TimetableView: React.FC = () => {
                 GRACE SEEDS SCHOOL
               </h2>
               <p className="text-xs print:text-[8px] font-bold text-gray-700 uppercase tracking-wide mt-0.5 print:mt-0">
-                MINISTRY OF EDUCATION · CBC MASTER TIMETABLE
+                MINISTRY OF EDUCATION · CBE MASTER TIMETABLE
               </p>
               <p className="text-[11px] print:text-[7.5px] text-gray-500 font-medium">
                 KEMRI Street, Kisian, Kisumu · Tel: 0745436312 · schoolgraceseeds@gmail.com

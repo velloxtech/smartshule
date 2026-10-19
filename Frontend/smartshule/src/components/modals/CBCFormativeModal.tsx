@@ -134,7 +134,7 @@ export const CBCFormativeModal: React.FC<CBCFormativeModalProps> = ({
               <span className="material-symbols-outlined text-[24px]">rule</span>
             </div>
             <div>
-              <h3 className="font-semibold text-base leading-tight">Record CBC Formative Rubric</h3>
+              <h3 className="font-semibold text-base leading-tight">Record CBE Formative Rubric</h3>
               <p className="text-xs text-rose-100">KICD Competency Framework · 4-Level Assessment Scale</p>
             </div>
           </div>
@@ -227,7 +227,7 @@ export const CBCFormativeModal: React.FC<CBCFormativeModalProps> = ({
             {/* 4-Level Rubric Selector */}
             <div>
               <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1.5">
-                CBC Rubric Level
+                CBE Rubric Level
               </label>
               <div className="grid grid-cols-2 gap-2">
                 {rubricButtons.map((btn) => {
@@ -288,7 +288,7 @@ export const CBCFormativeModal: React.FC<CBCFormativeModalProps> = ({
                 className="px-5 py-2.5 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary-container transition-all flex items-center gap-1.5 shadow-md cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[18px]">save</span>
-                <span>Save CBC Assessment</span>
+                <span>Save CBE Assessment</span>
               </button>
             </div>
           </form>

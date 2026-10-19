@@ -18,7 +18,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGrade, setSelectedGrade] = useState('All');
-  const [selectedStatus, setSelectedStatus] = useState<'All' | 'Has_Balance' | 'Cleared'>('All');
+  const [selectedStatus, setSelectedStatus] = useState<'All' | 'Has_Balance' | 'Cleared' | 'Sponsored'>('All');
   const [sortBy, setSortBy] = useState<'name' | 'balance_desc' | 'balance_asc' | 'adm'>('balance_desc');
 
   // Selected student for detailed fee inspection
@@ -188,6 +188,9 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
           const streamMatch = (s.stream || '').toLowerCase().includes(query);
           const guardianNameMatch = (s.guardianName || '').toLowerCase().includes(query);
           const guardianPhoneMatch = (s.guardianPhone || '').replace(/\s+/g, '').includes(query);
+          const sponsorMatch = (s.isSponsored ? 'scholarship sponsored bursary' : '').includes(query) ||
+            ((s as any).sponsorship?.sponsorName || '').toLowerCase().includes(query) ||
+            ((s as any).sponsorship?.approvalReference || '').toLowerCase().includes(query);
 
           if (
             !nameMatch &&
@@ -197,7 +200,8 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
             !gradeMatch &&
             !streamMatch &&
             !guardianNameMatch &&
-            !guardianPhoneMatch
+            !guardianPhoneMatch &&
+            !sponsorMatch
           ) {
             return false;
           }
@@ -213,6 +217,9 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
           return false;
         }
         if (selectedStatus === 'Cleared' && ((s.feeBalance || 0) > 0 || (s.totalFee || 0) <= 0)) {
+          return false;
+        }
+        if (selectedStatus === 'Sponsored' && !s.isSponsored && !(s as any).sponsorship) {
           return false;
         }
 
@@ -267,12 +274,20 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
     ? `8048859#${selectedStudent.name}${studentGradeStr ? ' ' + studentGradeStr : ''}`.trim()
     : `8048859#${selectedStudent?.admNo || ''}`;
 
-  // Current balance calculated from statement or student summary
   const currentBilled = statementData?.summary?.totalBilled ?? selectedStudent?.totalFee ?? 0;
   const currentPaid = statementData?.summary?.totalPaid ?? Math.max(0, (selectedStudent?.totalFee || 0) - (selectedStudent?.feeBalance || 0));
   const currentBalance = statementData?.summary?.currentBalance ?? selectedStudent?.feeBalance ?? 0;
-  const isCleared = currentBilled > 0 && currentBalance <= 0;
-  const isPendingInvoice = currentBilled <= 0 && currentBalance <= 0;
+  const isSponsoredLearner = Boolean(
+    selectedStudent?.isSponsored ||
+    (selectedStudent as any)?.sponsorship ||
+    statementData?.isSponsored ||
+    statementData?.sponsorship ||
+    (statementData?.summary?.status === 'SPONSORED') ||
+    (statementData?.summary?.status === 'CHARGE_EXEMPT')
+  );
+  const activeSponsorship = statementData?.sponsorship || (selectedStudent as any)?.sponsorship || null;
+  const isCleared = !isSponsoredLearner && currentBilled > 0 && currentBalance <= 0;
+  const isPendingInvoice = !isSponsoredLearner && currentBilled <= 0 && currentBalance <= 0;
 
   const invoicesList: StudentInvoice[] = statementData?.invoices || [];
   const paymentsList: any[] = statementData?.payments || [];
@@ -305,13 +320,23 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
         {/* Global Action Shortcut */}
         {selectedStudent && (
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setIsRecordPaymentOpen(true)}
-              className="px-3.5 py-2 bg-primary hover:bg-primary-container text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[16px]">add_card</span>
-              <span>Record Payment</span>
-            </button>
+            {isSponsoredLearner ? (
+              <span
+                className="px-3.5 py-2 bg-surface-container text-primary font-extrabold border border-primary/20 rounded-xl text-xs flex items-center gap-1.5 shadow-2xs"
+                title="Learner is enrolled in 100% Institutional Scholarship and cannot be charged fees"
+              >
+                <span className="material-symbols-outlined text-[16px]">lock</span>
+                <span>Charge Exempt</span>
+              </span>
+            ) : (
+              <button
+                onClick={() => setIsRecordPaymentOpen(true)}
+                className="px-3.5 py-2 bg-primary hover:bg-primary-container text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[16px]">add_card</span>
+                <span>Record Payment</span>
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -413,6 +438,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
               <option value="All">All Fee Statuses</option>
               <option value="Has_Balance">Has Arrears / Balance</option>
               <option value="Cleared">Fully Cleared (KES 0)</option>
+              <option value="Sponsored">100% Scholarship / Sponsored</option>
             </select>
           </div>
 
@@ -529,6 +555,14 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                           <span>·</span>
                           <span className="text-primary font-semibold">{st.grade}</span>
                         </div>
+                        {st.isSponsored && (
+                          <div className="mt-1">
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-[#7a1228]/10 text-primary border border-[#7a1228]/25">
+                              <span className="material-symbols-outlined text-[13px]">workspace_premium</span>
+                              <span>100% Scholarship</span>
+                            </span>
+                          </div>
+                        )}
                         {st.guardianPhone && st.guardianPhone !== '--' && (
                           <div className="text-[10px] text-on-surface-variant/80 truncate mt-0.5">
                             Parent: {st.guardianPhone}
@@ -541,21 +575,29 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                     <div className="text-right shrink-0">
                       <div
                         className={`text-xs font-extrabold font-data-mono ${
-                          hasBal ? 'text-error' : 'text-emerald-700'
+                          st.isSponsored ? 'text-primary' : hasBal ? 'text-error' : 'text-emerald-700'
                         }`}
                       >
-                        {hasBal ? `KES ${st.feeBalance.toLocaleString()}` : 'KES 0'}
+                        {st.isSponsored ? 'KES 0 (Waived)' : hasBal ? `KES ${st.feeBalance.toLocaleString()}` : 'KES 0'}
                       </div>
                       <span
-                        className={`inline-block px-1.5 py-0.2 rounded text-[9.5px] font-bold uppercase tracking-wider mt-0.5 ${
-                          hasBal
+                        className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9.5px] font-extrabold uppercase tracking-wider mt-0.5 ${
+                          st.isSponsored
+                            ? 'bg-[#7a1228] text-white shadow-2xs'
+                            : hasBal
                             ? 'bg-error-container/40 text-error'
                             : (st.totalFee || 0) > 0
                             ? 'bg-emerald-100 text-emerald-800'
                             : 'bg-slate-100 text-slate-600 border border-slate-200'
                         }`}
+                        title={st.isSponsored ? 'Learner is enrolled in 100% Scholarship and cannot be charged fees' : undefined}
                       >
-                        {hasBal ? 'Balance' : (st.totalFee || 0) > 0 ? 'Cleared' : 'Pending'}
+                        {st.isSponsored ? (
+                          <>
+                            <span className="material-symbols-outlined text-[11px]">lock</span>
+                            <span>Charge Exempt</span>
+                          </>
+                        ) : hasBal ? 'Balance' : (st.totalFee || 0) > 0 ? 'Cleared' : 'Pending'}
                       </span>
                     </div>
                   </div>
@@ -634,6 +676,45 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                   </div>
                 </div>
 
+                {/* Institutional Scholarship Program Directive Banner */}
+                {isSponsoredLearner && (
+                  <div className="p-4 sm:p-5 bg-gradient-to-r from-amber-500/15 via-[#7a1228]/10 to-amber-500/15 border-b-2 border-primary/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 animate-in fade-in">
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-12 h-12 rounded-2xl bg-[#7a1228] text-white flex items-center justify-center font-bold shrink-0 shadow-sm">
+                        <span className="material-symbols-outlined text-[26px]">workspace_premium</span>
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="text-sm sm:text-base font-extrabold text-[#7a1228] tracking-tight">
+                            Institutional Full Scholarship Program Active
+                          </h3>
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-[#7a1228] text-white shadow-2xs">
+                            100% Fee Waiver · Charge Exempt
+                          </span>
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[12px]">lock</span>
+                            Cannot Be Charged
+                          </span>
+                        </div>
+                        <p className="text-xs text-on-surface-variant mt-1">
+                          Benefactor: <strong className="text-on-surface">{activeSponsorship?.sponsorName || (activeSponsorship as any)?.benefactorName || "School Director's Benevolence Fund"}</strong>
+                          {' · '}
+                          Approval Ref: <span className="font-data-mono font-bold text-primary">{activeSponsorship?.approvalReference || "DIR-SCH-2026"}</span>
+                          {activeSponsorship?.termlySubsidyAmount && (
+                            <>
+                              {' · '}
+                              Subsidized Value: <strong className="font-data-mono text-primary">KES {activeSponsorship.termlySubsidyAmount.toLocaleString()} / term</strong>
+                            </>
+                          )}
+                        </p>
+                        <p className="text-[11px] text-on-surface-variant/80 mt-0.5">
+                          This learner&apos;s tuition and curriculum levies are fully covered by the school scholarship program. All billing invoices are subsidized and cleared under director institutional directives.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* 4 Financial Health Stat Cards */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 bg-surface-container-low/50 border-b border-outline-variant/20">
                   <div className="p-3 bg-surface-container-lowest rounded-xl border border-outline-variant/30">
@@ -662,17 +743,17 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                     </span>
                     <div
                       className={`text-base sm:text-lg font-extrabold font-data-mono mt-1 ${
-                        isCleared ? 'text-emerald-700' : 'text-error'
+                        isSponsoredLearner ? 'text-primary' : isCleared ? 'text-emerald-700' : 'text-error'
                       }`}
                     >
-                      KES {currentBalance.toLocaleString()}
+                      {isSponsoredLearner ? 'KES 0 (Waived)' : `KES ${currentBalance.toLocaleString()}`}
                     </div>
                     <span
                       className={`text-[10px] font-semibold mt-0.5 block ${
-                        isCleared ? 'text-emerald-700' : 'text-error'
+                        isSponsoredLearner ? 'text-primary' : isCleared ? 'text-emerald-700' : 'text-error'
                       }`}
                     >
-                      {isCleared ? 'Nil Balance (All Clear)' : 'Fee Arrears Due'}
+                      {isSponsoredLearner ? 'Charge Exempt · 100% Scholarship' : isCleared ? 'Nil Balance (All Clear)' : 'Fee Arrears Due'}
                     </span>
                   </div>
 
@@ -683,17 +764,17 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                     <div className="flex items-center gap-1.5 mt-1">
                       <span
                         className={`material-symbols-outlined text-[18px] ${
-                          isCleared ? 'text-emerald-600' : isPendingInvoice ? 'text-slate-500' : 'text-amber-600'
+                          isSponsoredLearner ? 'text-primary' : isCleared ? 'text-emerald-600' : isPendingInvoice ? 'text-slate-500' : 'text-amber-600'
                         }`}
                       >
-                        {isCleared ? 'verified' : isPendingInvoice ? 'receipt_long' : 'pending_actions'}
+                        {isSponsoredLearner ? 'lock' : isCleared ? 'verified' : isPendingInvoice ? 'receipt_long' : 'pending_actions'}
                       </span>
                       <span className="font-bold text-xs text-on-surface">
-                        {isCleared ? 'Cleared' : isPendingInvoice ? 'Pending Invoicing' : 'Pending Payment'}
+                        {isSponsoredLearner ? 'Charge Exempt' : isCleared ? 'Cleared' : isPendingInvoice ? 'Pending Invoicing' : 'Pending Payment'}
                       </span>
                     </div>
                     <span className="text-[10px] text-on-surface-variant mt-0.5 block">
-                      {isCleared ? 'Eligible for Term Exams' : isPendingInvoice ? 'No Invoice Issued' : 'Requires Clearance'}
+                      {isSponsoredLearner ? '100% Scholarship · Cannot Be Charged' : isCleared ? 'Eligible for Term Exams' : isPendingInvoice ? 'No Invoice Issued' : 'Requires Clearance'}
                     </span>
                   </div>
                 </div>
@@ -735,14 +816,24 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
 
                   {/* Immediate Action Buttons */}
                   <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setIsRecordPaymentOpen(true)}
-                      className="px-3.5 py-2 bg-primary hover:bg-primary-container text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
-                    >
-                      <span className="material-symbols-outlined text-[16px]">point_of_sale</span>
-                      <span>Record Payment</span>
-                    </button>
+                    {isSponsoredLearner ? (
+                      <span
+                        className="px-3.5 py-2 bg-surface-container text-primary font-bold border border-primary/20 rounded-xl text-xs flex items-center gap-1.5 cursor-not-allowed shadow-2xs"
+                        title="Learner is enrolled in 100% Institutional Scholarship and cannot be charged fees"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">lock</span>
+                        <span>Charge Exempt</span>
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setIsRecordPaymentOpen(true)}
+                        className="px-3.5 py-2 bg-primary hover:bg-primary-container text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">point_of_sale</span>
+                        <span>Record Payment</span>
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => window.print()}
@@ -1133,7 +1224,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                               </div>
                               <div>
                                 <h3 className="text-base font-extrabold uppercase tracking-tight text-slate-900">
-                                  {user?.schoolName || 'SmartShule CBC Academy'}
+                                  {user?.schoolName || 'Grace Seeds School'}
                                 </h3>
                                 <p className="text-xs text-slate-600">
                                   Official Learner Fee Statement &amp; Audit Ledger

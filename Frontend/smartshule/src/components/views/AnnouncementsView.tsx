@@ -747,7 +747,7 @@ export const AnnouncementsView: React.FC = () => {
     doc.setFontSize(7.5);
     doc.setTextColor(148, 163, 184);
     doc.text(
-      'Grace Seeds School Communication Portal • SmartShule ERP System • Official Certified Notice',
+      'Grace Seeds School Communication Portal • CBE ERP System • Official Certified Notice',
       pageWidth / 2,
       pageHeight - 9,
       { align: 'center' }

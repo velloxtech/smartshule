@@ -9,6 +9,7 @@ import {
   ExpenseStatus,
   IncomeSource
 } from '../../domain/finance/Fee';
+import { FeeBannerConfig } from '../../domain/finance/FeeBannerConfig';
 import { CBCGradeLevel } from '../../domain/user/Student';
 
 export interface InvoiceFilterCriteria {
@@ -88,5 +89,9 @@ export interface IFeeRepository {
   saveOtherIncome(income: OtherIncome): Promise<void>;
   updateOtherIncome(income: OtherIncome): Promise<void>;
   deleteOtherIncome(id: string): Promise<void>;
+
+  // Fee Deadline Notice Banner Settings
+  getFeeBannerConfig(schoolId?: string): Promise<FeeBannerConfig | null>;
+  saveFeeBannerConfig(config: FeeBannerConfig): Promise<void>;
 }
 

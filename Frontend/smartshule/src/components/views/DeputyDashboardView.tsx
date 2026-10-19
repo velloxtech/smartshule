@@ -188,7 +188,7 @@ export const DeputyDashboardView: React.FC<DeputyDashboardViewProps> = ({
           <div>
             <h2 className="text-base font-bold text-on-surface">Submitted Lesson Plans Awaiting Your Approval</h2>
             <p className="text-xs text-on-surface-variant">
-              Approve or return with constructive feedback to ensure CBC pedagogical standards.
+              Approve or return with constructive feedback to ensure CBE pedagogical standards.
             </p>
           </div>
           <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-900">

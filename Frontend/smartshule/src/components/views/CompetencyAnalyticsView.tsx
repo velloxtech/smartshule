@@ -62,12 +62,12 @@ export const CompetencyAnalyticsView: React.FC = () => {
         <div className="flex items-center gap-2 font-label-md text-label-md text-on-surface-variant">
           <span>Home</span>
           <span>/</span>
-          <span>CBC Competencies</span>
+          <span>CBE Competencies</span>
           <span>/</span>
           <span className="text-primary font-semibold">Competency Analytics</span>
         </div>
         <h1 className="font-headline-lg text-headline-lg text-on-surface mt-1">
-          CBC Performance Analytics & Strand Mastery
+          CBE Performance Analytics & Strand Mastery
         </h1>
         <p className="text-xs text-on-surface-variant mt-0.5">
           Macro-level learning outcome distribution across active continuous assessment rubrics from database
@@ -124,7 +124,7 @@ export const CompetencyAnalyticsView: React.FC = () => {
               <div className="p-8 text-center text-on-surface-variant text-xs">
                 <span className="material-symbols-outlined text-3xl text-outline mb-1">analytics</span>
                 <p className="font-medium text-sm text-on-surface">No subject assessment data available</p>
-                <p className="mt-1">Assessments entered by teachers via CBC Evaluation will automatically reflect here.</p>
+                <p className="mt-1">Assessments entered by teachers via CBE Evaluation will automatically reflect here.</p>
               </div>
             ) : (
               <div className="space-y-4 pt-2">

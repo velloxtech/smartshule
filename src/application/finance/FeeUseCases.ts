@@ -37,8 +37,53 @@ import {
   ExpenseStatus,
   IncomeSource
 } from '../../core/domain/finance/Fee';
+import { FeeBannerConfig } from '../../core/domain/finance/FeeBannerConfig';
+import { IStudentSponsorshipRepository } from '../../core/ports/repositories/IStudentSponsorshipRepository';
 import { CBCGradeLevel } from '../../core/domain/user/Student';
 import { UserRole, isBillingAuthorizedRole } from '../../core/domain/user/User';
+import { WhatsAppClientManager } from '../../infrastructure/services/WhatsAppClientManager';
+
+export interface ReceiptDeliveryInfo {
+  email: { sent: boolean; recipient?: string; error?: string };
+  whatsApp: { sent: boolean; recipient?: string; error?: string };
+  sms: { sent: boolean; recipient?: string; error?: string };
+}
+
+export interface PaymentReceiptPayload {
+  receiptNumber: string;
+  paymentDate: string;
+  amountPaid: number;
+  paymentMethod: string;
+  transactionReference: string;
+  studentId: string;
+  studentName: string;
+  admissionNumber: string;
+  gradeLevel: string;
+  streamName?: string;
+  invoiceNumber?: string;
+  previousBalance?: number;
+  remainingBalance: number;
+  schoolName: string;
+  schoolPhone: string;
+  schoolEmail: string;
+  schoolAddress: string;
+  servedBy?: string;
+  bankName?: string;
+  slipNumber?: string;
+  notes?: string;
+}
+
+export interface UpdateFeeBannerConfigDTO {
+  schoolId?: string;
+  deadlineDate: string;
+  bannerTitle?: string;
+  customMessage?: string;
+  paybillNumber?: string;
+  bankAccountNumber?: string;
+  bankName?: string;
+  isEnabled?: boolean;
+  showOnlyToDefaulters?: boolean;
+}
 import {
   IdGenerator,
   NotFoundError,
@@ -142,6 +187,9 @@ export interface UserContext {
   userId: string;
   role: UserRole;
   schoolId?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
 }
 
 export interface AddManualArrearDTO {
@@ -186,7 +234,9 @@ export class FeeUseCases {
     private readonly paymentGateway: IPaymentGateway,
     private readonly notificationService: INotificationService,
     private readonly academicRepository?: IAcademicRepository,
-    kcbBuniGateway?: IKcbBuniPaymentGateway
+    kcbBuniGateway?: IKcbBuniPaymentGateway,
+    private readonly studentSponsorshipRepository?: IStudentSponsorshipRepository,
+    private readonly whatsAppClientManager?: WhatsAppClientManager
   ) {
     this.kcbBuniGateway = kcbBuniGateway || (paymentGateway as any);
   }
@@ -553,6 +603,16 @@ export class FeeUseCases {
       const student = await this.studentRepository.findById(dto.studentId);
       if (!student) throw new NotFoundError('Student', dto.studentId);
 
+      // Sponsored learners are charge exempt and cannot be invoiced
+      if (this.studentSponsorshipRepository) {
+        const activeSp = await this.studentSponsorshipRepository.findByStudentId(student.id);
+        if (activeSp && activeSp.sponsorshipStatus === 'ACTIVE') {
+          throw new ConflictError(
+            `Cannot generate fee invoice: Learner ${student.fullName} is enrolled under the Institutional Scholarship Program (100% Fee Waiver) and is exempt from all fee charges.`
+          );
+        }
+      }
+
       const feeStructure = await this.feeRepository.findFeeStructure(student.gradeLevel, dto.termId, dto.academicYearId);
       if (!feeStructure) {
         throw new NotFoundError(`Fee structure for grade ${student.gradeLevel}, term ${dto.termId}`);
@@ -627,6 +687,14 @@ export class FeeUseCases {
       });
 
       for (const student of students) {
+        // Sponsored learners are charge exempt and cannot be invoiced
+        if (this.studentSponsorshipRepository) {
+          const activeSp = await this.studentSponsorshipRepository.findByStudentId(student.id);
+          if (activeSp && activeSp.sponsorshipStatus === 'ACTIVE') {
+            continue; // Charge Exempt: skip sponsored students
+          }
+        }
+
         const feeStructure = await this.feeRepository.findFeeStructure(student.gradeLevel, dto.termId, dto.academicYearId);
         if (!feeStructure) continue;
 
@@ -915,6 +983,17 @@ export class FeeUseCases {
     if (!invoice) throw new NotFoundError('Invoice', dto.invoiceId);
 
     const student = await this.studentRepository.findById(invoice.studentId);
+
+    // Sponsored learners are charge exempt and have no fee liability
+    if (this.studentSponsorshipRepository) {
+      const activeSp = await this.studentSponsorshipRepository.findByStudentId(invoice.studentId);
+      if (activeSp && activeSp.sponsorshipStatus === 'ACTIVE') {
+        throw new ConflictError(
+          `Cannot record payment: Learner ${student?.fullName || invoice.studentId} is enrolled under the Institutional Scholarship Program (100% Fee Waiver) and has zero fee liability.`
+        );
+      }
+    }
+
     const receiptNumber = `REC-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
 
     // Resolve or auto-generate transaction reference for Cash / Manual Bank Deposit
@@ -1003,38 +1082,303 @@ export class FeeUseCases {
     );
     const studentTotalBalance = Math.round(activeStudentInvoices.reduce((sum, i) => sum + (Number(i.balance) || 0), 0) * 100) / 100;
 
-    // Send SMS receipt confirmation to guardian reporting the true total remaining balance
+    // Generate official receipt and issue to guardian via Email, WhatsApp, and SMS
+    let receiptResult: any = null;
     if (student) {
-      const guardians = await this.guardianRepository.findByStudentId(student.id);
-      const channelLabel = dto.paymentMethod === PaymentMethod.CASH
-        ? 'CASH'
-        : dto.paymentMethod === PaymentMethod.BANK_DEPOSIT
-        ? `Bank Deposit (${dto.bankName || 'Direct Deposit'}${dto.slipNumber ? ` - Slip #${dto.slipNumber}` : ''})`
-        : dto.paymentMethod === PaymentMethod.CHEQUE
-        ? 'Cheque'
-        : dto.paymentMethod;
-
-      const balanceMessage = studentTotalBalance > 0
-        ? `New balance: KES ${studentTotalBalance}.`
-        : `Fees fully settled. New balance: KES 0.`;
-
-      for (const g of guardians) {
-        const u = await this.userRepository.findById(g.userId);
-        if (u && u.phone) {
-          await this.notificationService.sendSms(
-            u.phone,
-            `SmartShule Receipt: Received KES ${paymentAmount} via ${channelLabel} (Ref: ${txRef}) for ${student.fullName} (Adm: ${student.admissionNumber}). Receipt #${receiptNumber}. ${balanceMessage}`
-          );
-        }
-      }
+      receiptResult = await this.issuePaymentReceipt({
+        payment,
+        student,
+        remainingBalance: studentTotalBalance,
+        invoice,
+        previousBalance: invoice.balance + paymentAmount,
+        servedBy: dto.recordedByUserId,
+        bankName: dto.bankName,
+        slipNumber: dto.slipNumber
+      });
     }
 
     return {
       payment: payment.toJSON(),
       updatedInvoice: invoice.toJSON(),
       studentTotalBalance,
-      hasArrears: studentTotalBalance > 0
+      hasArrears: studentTotalBalance > 0,
+      receipt: receiptResult?.receipt,
+      delivery: receiptResult?.delivery
     };
+  }
+
+  public generateReceiptHtml(receipt: PaymentReceiptPayload): string {
+    const formattedAmount = Number(receipt.amountPaid || 0).toLocaleString();
+    const formattedBal = Number(receipt.remainingBalance || 0).toLocaleString();
+    const isCleared = receipt.remainingBalance <= 0;
+
+    return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Official Fee Receipt - ${receipt.receiptNumber}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f5f7; margin: 0; padding: 20px; color: #1f2937; }
+    .receipt-card { max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 14px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.06); border: 1px solid #e5e7eb; }
+    .header { background: #7a1228; color: #ffffff; padding: 24px 20px; text-align: center; }
+    .school-title { font-size: 19px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin: 0; }
+    .school-sub { font-size: 11px; opacity: 0.9; margin-top: 4px; }
+    .badge { display: inline-block; background: rgba(255,255,255,0.18); border-radius: 9999px; padding: 4px 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; margin-top: 10px; }
+    .content { padding: 24px; }
+    .highlight-box { background: #fdf2f4; border: 1px solid #fecdd3; border-radius: 10px; padding: 14px 16px; margin-bottom: 20px; }
+    .highlight-title { font-size: 10px; font-weight: 700; text-transform: uppercase; color: #9f1239; letter-spacing: 0.5px; }
+    .highlight-amount { font-size: 24px; font-weight: 800; color: #7a1228; font-family: monospace; margin-top: 2px; }
+    .highlight-meta { font-size: 11px; color: #6b7280; margin-top: 4px; }
+    .info-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 18px; }
+    .info-table td { padding: 8px 0; border-bottom: 1px solid #f3f4f6; }
+    .info-table td.label { color: #6b7280; font-weight: 500; width: 44%; }
+    .info-table td.value { color: #111827; font-weight: 700; text-align: right; }
+    .balance-row td { background: #f9fafb; padding: 10px 8px; border-bottom: none; }
+    .stamp-box { border: 2px dashed #d1d5db; border-radius: 8px; padding: 12px; text-align: center; color: #6b7280; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin-top: 14px; background: #fafafa; }
+    .footer { background: #f9fafb; padding: 14px 20px; border-top: 1px solid #e5e7eb; text-align: center; font-size: 11px; color: #6b7280; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <div class="receipt-card">
+    <div class="header">
+      <div class="school-title">${receipt.schoolName}</div>
+      <div class="school-sub">${receipt.schoolAddress} · Tel: ${receipt.schoolPhone}</div>
+      <div class="badge">Official Fee Payment Receipt</div>
+    </div>
+    <div class="content">
+      <div class="highlight-box">
+        <div class="highlight-title">Payment Confirmed</div>
+        <div class="highlight-amount">KES ${formattedAmount}</div>
+        <div class="highlight-meta">Receipt #${receipt.receiptNumber} · Date: ${receipt.paymentDate}</div>
+      </div>
+      <table class="info-table">
+        <tr><td class="label">Learner Name</td><td class="value">${receipt.studentName}</td></tr>
+        <tr><td class="label">Admission Number</td><td class="value">${receipt.admissionNumber}</td></tr>
+        <tr><td class="label">CBE Grade Level</td><td class="value">${receipt.gradeLevel}${receipt.streamName ? ` (${receipt.streamName})` : ''}</td></tr>
+        <tr><td class="label">Payment Method</td><td class="value">${receipt.paymentMethod}</td></tr>
+        <tr><td class="label">Transaction Reference</td><td class="value" style="font-family: monospace;">${receipt.transactionReference}</td></tr>
+        ${receipt.bankName ? `<tr><td class="label">Bank / Branch</td><td class="value">${receipt.bankName}</td></tr>` : ''}
+        ${receipt.slipNumber ? `<tr><td class="label">Deposit Slip #</td><td class="value">${receipt.slipNumber}</td></tr>` : ''}
+        ${receipt.invoiceNumber ? `<tr><td class="label">Invoice Number</td><td class="value">${receipt.invoiceNumber}</td></tr>` : ''}
+        ${receipt.previousBalance !== undefined ? `<tr><td class="label">Previous Balance</td><td class="value">KES ${Number(receipt.previousBalance).toLocaleString()}</td></tr>` : ''}
+        <tr class="balance-row">
+          <td class="label" style="font-weight: 700; color: #111827;">Outstanding Balance</td>
+          <td class="value" style="color: ${isCleared ? '#059669' : '#b91c1c'}; font-size: 14px;">KES ${formattedBal} ${isCleared ? '(CLEARED)' : ''}</td>
+        </tr>
+      </table>
+      <div class="stamp-box">
+        Official Verified Receipt · Grace Seeds School Accounts Office
+      </div>
+    </div>
+    <div class="footer">
+      Thank you for your timely payment.<br/>
+      Inquiries: ${receipt.schoolEmail} | ${receipt.schoolPhone} | M-Pesa Paybill: 522533
+    </div>
+  </div>
+</body>
+</html>`;
+  }
+
+  public generateReceiptWhatsAppText(receipt: PaymentReceiptPayload): string {
+    const formattedAmount = Number(receipt.amountPaid || 0).toLocaleString();
+    const formattedBal = Number(receipt.remainingBalance || 0).toLocaleString();
+    const isCleared = receipt.remainingBalance <= 0;
+
+    return `🧾 *${receipt.schoolName.toUpperCase()} — OFFICIAL RECEIPT*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+*Receipt No:* ${receipt.receiptNumber}
+*Date:* ${receipt.paymentDate}
+*Learner:* ${receipt.studentName}
+*Adm No:* ${receipt.admissionNumber}
+*Grade:* ${receipt.gradeLevel}${receipt.streamName ? ` (${receipt.streamName})` : ''}
+
+*Amount Paid:* KES ${formattedAmount}
+*Method:* ${receipt.paymentMethod}
+*Reference:* ${receipt.transactionReference}${receipt.bankName ? `\n*Bank:* ${receipt.bankName}` : ''}${receipt.slipNumber ? `\n*Slip #:* ${receipt.slipNumber}` : ''}${receipt.invoiceNumber ? `\n*Invoice:* ${receipt.invoiceNumber}` : ''}
+
+*Outstanding Balance:* KES ${formattedBal}${isCleared ? ' (CLEARED ✅)' : ''}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+_Thank you for supporting your child's education._
+_Finance Office · Tel: ${receipt.schoolPhone}_`;
+  }
+
+  public generateReceiptPlainText(receipt: PaymentReceiptPayload): string {
+    return `${receipt.schoolName.toUpperCase()} - OFFICIAL FEE PAYMENT RECEIPT
+Receipt Number: ${receipt.receiptNumber}
+Date: ${receipt.paymentDate}
+Learner: ${receipt.studentName} (Adm: ${receipt.admissionNumber})
+Grade Level: ${receipt.gradeLevel}
+Amount Paid: KES ${Number(receipt.amountPaid || 0).toLocaleString()}
+Payment Method: ${receipt.paymentMethod} (Ref: ${receipt.transactionReference})
+${receipt.invoiceNumber ? `Invoice: ${receipt.invoiceNumber}\n` : ''}Outstanding Balance: KES ${Number(receipt.remainingBalance || 0).toLocaleString()}
+${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.schoolEmail}`;
+  }
+
+  public async issuePaymentReceipt(data: {
+    payment: Payment;
+    student: Student;
+    remainingBalance: number;
+    invoice?: StudentInvoice | null;
+    previousBalance?: number;
+    servedBy?: string;
+    bankName?: string;
+    slipNumber?: string;
+  }): Promise<{ receipt: PaymentReceiptPayload; delivery: ReceiptDeliveryInfo }> {
+    const student = data.student;
+    const payment = data.payment;
+    const receiptNumber = payment.receiptNumber || `REC-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
+    const paymentAmount = Number(payment.amount) || 0;
+    const paymentDate = payment.paymentDate || new Date().toISOString().split('T')[0];
+
+    const receipt: PaymentReceiptPayload = {
+      receiptNumber,
+      paymentDate,
+      amountPaid: paymentAmount,
+      paymentMethod: payment.paymentMethod,
+      transactionReference: payment.transactionReference,
+      studentId: student.id,
+      studentName: student.fullName,
+      admissionNumber: student.admissionNumber,
+      gradeLevel: student.gradeLevel,
+      streamName: (student as any).streamName || student.streamId || undefined,
+      invoiceNumber: data.invoice?.invoiceNumber,
+      previousBalance: data.previousBalance,
+      remainingBalance: data.remainingBalance,
+      schoolName: 'Grace Seeds School',
+      schoolPhone: '0745436312',
+      schoolEmail: 'schoolgraceseeds@gmail.com',
+      schoolAddress: 'KEMRI Street, Kisian, Kisumu, Kenya',
+      servedBy: data.servedBy || 'School Accounts Office',
+      bankName: data.bankName,
+      slipNumber: data.slipNumber,
+      notes: payment.notes
+    };
+
+    const delivery: ReceiptDeliveryInfo = {
+      email: { sent: false },
+      whatsApp: { sent: false },
+      sms: { sent: false }
+    };
+
+    const guardians = await this.guardianRepository.findByStudentId(student.id);
+    for (const g of guardians) {
+      const u = await this.userRepository.findById(g.userId);
+      const recipientPhone = u?.phone || g.emergencyContact;
+      const recipientEmail = u?.email;
+
+      // 1. Issue via Email
+      if (recipientEmail && recipientEmail.includes('@') && !recipientEmail.endsWith('@smartshule.local')) {
+        try {
+          const emailSubject = `Official Fee Payment Receipt: ${receiptNumber} - ${student.fullName} (${student.admissionNumber})`;
+          const emailHtml = this.generateReceiptHtml(receipt);
+          const emailText = this.generateReceiptPlainText(receipt);
+          await this.notificationService.sendEmail(recipientEmail, emailSubject, emailText, emailHtml);
+          delivery.email = { sent: true, recipient: recipientEmail };
+        } catch (err: any) {
+          delivery.email = { sent: false, recipient: recipientEmail, error: err.message };
+        }
+      }
+
+      // 2. Issue via WhatsApp
+      if (recipientPhone) {
+        const whatsappText = this.generateReceiptWhatsAppText(receipt);
+        if (this.whatsAppClientManager) {
+          try {
+            const waRes = await this.whatsAppClientManager.sendRealMessage(recipientPhone, whatsappText);
+            if (waRes && waRes.success) {
+              delivery.whatsApp = { sent: true, recipient: recipientPhone };
+            } else {
+              delivery.whatsApp = { sent: false, recipient: recipientPhone, error: waRes?.error || 'WhatsApp client not connected' };
+            }
+          } catch (err: any) {
+            delivery.whatsApp = { sent: false, recipient: recipientPhone, error: err.message };
+          }
+        }
+
+        // 3. Issue via SMS
+        try {
+          const channelLabel = payment.paymentMethod === PaymentMethod.CASH
+            ? 'CASH'
+            : payment.paymentMethod === PaymentMethod.BANK_DEPOSIT
+            ? `Bank Deposit (${data.bankName || 'Deposit'}${data.slipNumber ? ` #${data.slipNumber}` : ''})`
+            : payment.paymentMethod;
+          const balMsg = data.remainingBalance > 0
+            ? `New balance: KES ${data.remainingBalance.toLocaleString()}.`
+            : `Fees fully settled. New balance: KES 0.`;
+          const smsText = `Grace Seeds School Receipt: Received KES ${paymentAmount.toLocaleString()} via ${channelLabel} (Ref: ${payment.transactionReference}) for ${student.fullName} (Adm: ${student.admissionNumber}). Receipt #${receiptNumber}. ${balMsg}`;
+          await this.notificationService.sendSms(recipientPhone, smsText);
+          delivery.sms = { sent: true, recipient: recipientPhone };
+        } catch (err: any) {
+          delivery.sms = { sent: false, recipient: recipientPhone, error: err.message };
+        }
+      }
+    }
+
+    return { receipt, delivery };
+  }
+
+  public async reissuePaymentReceipt(paymentId: string) {
+    const payment = await this.feeRepository.findPaymentById(paymentId);
+    if (!payment) throw new NotFoundError('Payment Record', paymentId);
+
+    const student = await this.studentRepository.findById(payment.studentId);
+    if (!student) throw new NotFoundError('Student', payment.studentId);
+
+    const invoice = payment.invoiceId ? await this.feeRepository.findInvoiceById(payment.invoiceId) : null;
+    const allStudentInvoices = await this.feeRepository.findInvoices({ studentId: payment.studentId });
+    const remainingBalance = Math.round(
+      allStudentInvoices
+        .filter(i => (i.status as any) !== 'CARRIED_FORWARD' && (i.status as any) !== InvoiceStatus.CARRIED_FORWARD)
+        .reduce((sum, i) => sum + (Number(i.balance) || 0), 0) * 100
+    ) / 100;
+
+    return await this.issuePaymentReceipt({
+      payment,
+      student,
+      remainingBalance,
+      invoice,
+      servedBy: payment.recordedByUserId
+    });
+  }
+
+  public async getPaymentReceipt(paymentId: string) {
+    const payment = await this.feeRepository.findPaymentById(paymentId);
+    if (!payment) throw new NotFoundError('Payment Record', paymentId);
+
+    const student = await this.studentRepository.findById(payment.studentId);
+    if (!student) throw new NotFoundError('Student', payment.studentId);
+
+    const invoice = payment.invoiceId ? await this.feeRepository.findInvoiceById(payment.invoiceId) : null;
+    const allStudentInvoices = await this.feeRepository.findInvoices({ studentId: payment.studentId });
+    const remainingBalance = Math.round(
+      allStudentInvoices
+        .filter(i => (i.status as any) !== 'CARRIED_FORWARD' && (i.status as any) !== InvoiceStatus.CARRIED_FORWARD)
+        .reduce((sum, i) => sum + (Number(i.balance) || 0), 0) * 100
+    ) / 100;
+
+    const receipt: PaymentReceiptPayload = {
+      receiptNumber: payment.receiptNumber,
+      paymentDate: payment.paymentDate,
+      amountPaid: payment.amount,
+      paymentMethod: payment.paymentMethod,
+      transactionReference: payment.transactionReference,
+      studentId: student.id,
+      studentName: student.fullName,
+      admissionNumber: student.admissionNumber,
+      gradeLevel: student.gradeLevel,
+      streamName: (student as any).streamName || student.streamId || undefined,
+      invoiceNumber: invoice?.invoiceNumber,
+      previousBalance: invoice ? invoice.balance + payment.amount : undefined,
+      remainingBalance,
+      schoolName: 'Grace Seeds School',
+      schoolPhone: '0745436312',
+      schoolEmail: 'schoolgraceseeds@gmail.com',
+      schoolAddress: 'KEMRI Street, Kisian, Kisumu, Kenya',
+      servedBy: payment.recordedByUserId,
+      notes: payment.notes
+    };
+
+    return { receipt };
   }
 
   // 4. KCB Buni M-Pesa Express STK Push
@@ -1349,12 +1693,24 @@ export class FeeUseCases {
       };
     }
 
+    let isSponsored = false;
+    if (this.studentSponsorshipRepository) {
+      try {
+        const sp = await this.studentSponsorshipRepository.findByStudentId(student.id);
+        if (sp && sp.sponsorshipStatus === 'ACTIVE') {
+          isSponsored = true;
+        }
+      } catch {}
+    }
+
     const invoices = await this.feeRepository.findInvoices({ studentId: student.id });
-    const balance = invoices.reduce((sum, inv) => sum + inv.balance, 0);
+    const balance = isSponsored ? 0 : invoices.reduce((sum, inv) => sum + inv.balance, 0);
 
     return {
       resultCode: '0',
-      resultDesc: 'Validation Successful',
+      resultDesc: isSponsored
+        ? 'Validation Successful: Learner is under Institutional Scholarship Program (100% Fee Waiver). Balance: KES 0.'
+        : 'Validation Successful',
       studentName: `${student.fullName} (${student.gradeLevel.replace('_', ' ')})`,
       currentBalance: balance
     };
@@ -1417,16 +1773,22 @@ export class FeeUseCases {
 
     await this.feeRepository.savePayment(payment);
 
-    // Send SMS receipt confirmation to guardians
-    const guardians = await this.guardianRepository.findByStudentId(student.id);
-    for (const g of guardians) {
-      const u = await this.userRepository.findById(g.userId);
-      if (u && u.phone) {
-        await this.notificationService.sendSms(
-          u.phone,
-          `SmartShule KCB Bank: Received KES ${dto.transactionAmount} for ${student.fullName} (Adm: ${student.admissionNumber}) via KCB Paybill 522533. Ref: ${dto.transactionId}. Receipt #${receiptNumber}.`
-        );
-      }
+    // Issue official receipt via Email, WhatsApp, and SMS
+    const allInvs = await this.feeRepository.findInvoices({ studentId: student.id });
+    const remainingBalance = Math.round(
+      allInvs
+        .filter(i => (i.status as any) !== 'CARRIED_FORWARD' && (i.status as any) !== InvoiceStatus.CARRIED_FORWARD)
+        .reduce((sum, i) => sum + (Number(i.balance) || 0), 0) * 100
+    ) / 100;
+
+    let receiptResult: any = null;
+    if (student) {
+      receiptResult = await this.issuePaymentReceipt({
+        payment,
+        student,
+        remainingBalance,
+        servedBy: 'KCB Buni Paybill 522533 Gateway'
+      });
     }
 
     return {
@@ -1434,7 +1796,9 @@ export class FeeUseCases {
       resultDesc: 'Payment confirmed successfully',
       paymentId: payment.id,
       receiptNumber,
-      studentId: student.id
+      studentId: student.id,
+      receipt: receiptResult?.receipt,
+      delivery: receiptResult?.delivery
     };
   }
 
@@ -1799,15 +2163,33 @@ export class FeeUseCases {
       })
     );
 
+    let sponsorshipJson: any = null;
+    if (this.studentSponsorshipRepository) {
+      try {
+        const sp = await this.studentSponsorshipRepository.findByStudentId(studentId);
+        if (sp && sp.sponsorshipStatus === 'ACTIVE') {
+          sponsorshipJson = sp.toJSON();
+        }
+      } catch {}
+    }
+
     return {
-      student: student.toJSON(),
+      student: {
+        ...student.toJSON(),
+        isSponsored: !!sponsorshipJson,
+        sponsorship: sponsorshipJson
+      },
+      isSponsored: !!sponsorshipJson,
+      sponsorship: sponsorshipJson,
       summary: {
         totalBilled,
         totalPaid,
-        currentBalance,
-        arrearsBalance,
-        hasArrears: currentBalance > 0,
-        status: currentBalance <= 0 ? 'CLEARED' : 'PENDING_BALANCE'
+        currentBalance: sponsorshipJson ? 0 : currentBalance,
+        arrearsBalance: sponsorshipJson ? 0 : arrearsBalance,
+        hasArrears: sponsorshipJson ? false : currentBalance > 0,
+        status: sponsorshipJson ? 'CHARGE_EXEMPT' : currentBalance <= 0 ? 'CLEARED' : 'PENDING_BALANCE',
+        statusLabel: sponsorshipJson ? '100% Scholarship (Charge Exempt)' : currentBalance <= 0 ? 'Cleared' : 'Pending Payment',
+        isSponsored: !!sponsorshipJson
       },
       invoices: enrichedInvoices,
       payments: payments.map(p => p.toJSON())
@@ -1833,6 +2215,21 @@ export class FeeUseCases {
       const guardians = student ? await this.guardianRepository.findByStudentId(student.id) : [];
       const primaryGuardianUser = guardians.length > 0 ? await this.userRepository.findById(guardians[0].userId) : null;
 
+      let spJson: any = null;
+      if (this.studentSponsorshipRepository && student) {
+        try {
+          const sp = await this.studentSponsorshipRepository.findByStudentId(student.id);
+          if (sp && sp.sponsorshipStatus === 'ACTIVE') {
+            spJson = sp.toJSON();
+          }
+        } catch {}
+      }
+
+      if (spJson) {
+        // Sponsored learners have 100% fee waiver - exclude from defaulters
+        continue;
+      }
+
       defaulters.push({
         invoiceId: inv.id,
         invoiceNumber: inv.invoiceNumber,
@@ -1844,7 +2241,9 @@ export class FeeUseCases {
         amountPaid: inv.amountPaid,
         balance: inv.balance,
         dueDate: inv.dueDate,
-        guardianContact: primaryGuardianUser ? { name: primaryGuardianUser.fullName, phone: primaryGuardianUser.phone } : null
+        guardianContact: primaryGuardianUser ? { name: primaryGuardianUser.fullName, phone: primaryGuardianUser.phone } : null,
+        isSponsored: !!spJson,
+        sponsorship: spJson
       });
     }
 
@@ -2352,6 +2751,16 @@ export class FeeUseCases {
       throw new NotFoundError('Student', dto.studentId);
     }
 
+    // Sponsored learners are charge exempt and cannot have fee arrears charged
+    if (this.studentSponsorshipRepository) {
+      const activeSp = await this.studentSponsorshipRepository.findByStudentId(dto.studentId);
+      if (activeSp && activeSp.sponsorshipStatus === 'ACTIVE') {
+        throw new ConflictError(
+          `Cannot charge fee arrears: Learner ${student.fullName} is enrolled under the Institutional Scholarship Program (100% Fee Waiver) and is exempt from all fee charges.`
+        );
+      }
+    }
+
     const schoolId = student.schoolId || 'school-001';
     const targetYear = dto.academicYearId || student.academicYearId || 'year-2026';
     const targetTerm = dto.termId || 'term-2026-t1';
@@ -2836,19 +3245,16 @@ export class FeeUseCases {
         .reduce((sum, i) => sum + (Number(i.balance) || 0), 0) * 100
     ) / 100;
 
-    // Send official receipt SMS to guardian
-    const guardians = await this.guardianRepository.findByStudentId(student.id);
-    for (const g of guardians) {
-      const u = await this.userRepository.findById(g.userId);
-      if (u && u.phone) {
-        const balNote = remainingBalance > 0
-          ? `Outstanding balance: KES ${remainingBalance.toLocaleString()}.`
-          : `Fees fully settled. Balance: KES 0.`;
-        await this.notificationService.sendSms(
-          u.phone,
-          `SmartShule Receipt: Payment of KES ${payment.amount.toLocaleString()} (Ref: ${payment.transactionReference}) for ${student.fullName} has been VERIFIED. Official Receipt #${officialReceiptNumber}. ${balNote}`
-        );
-      }
+    // Issue official receipt via Email, WhatsApp, and SMS
+    let receiptResult: any = null;
+    if (student) {
+      receiptResult = await this.issuePaymentReceipt({
+        payment,
+        student,
+        remainingBalance,
+        invoice,
+        servedBy: requestingUser?.userId || 'Admin Accounts'
+      });
     }
 
     return {
@@ -2856,8 +3262,89 @@ export class FeeUseCases {
       message: `Transaction verified and credited to fee ledger. Official Receipt #${officialReceiptNumber} generated.`,
       receiptNumber: officialReceiptNumber,
       remainingBalance,
-      payment: payment.toJSON()
+      payment: payment.toJSON(),
+      receipt: receiptResult?.receipt,
+      delivery: receiptResult?.delivery
     };
+  }
+
+  // 24. Fee Deadline Banner Configuration (Parent Page)
+  public async getFeeBannerConfig(schoolId?: string) {
+    const targetSchoolId = schoolId || 'school-001';
+    let config = await this.feeRepository.getFeeBannerConfig(targetSchoolId);
+    if (!config) {
+      config = FeeBannerConfig.create(
+        {
+          schoolId: targetSchoolId,
+          deadlineDate: '2026-11-15',
+          bannerTitle: 'School Fee Payment Notice',
+          customMessage: '',
+          paybillNumber: '522533',
+          bankAccountNumber: '1234567890',
+          bankName: 'KCB Bank',
+          isEnabled: true,
+          showOnlyToDefaulters: true
+        },
+        `fee-banner-${targetSchoolId}`
+      );
+      await this.feeRepository.saveFeeBannerConfig(config);
+    }
+    return config.toJSON();
+  }
+
+  public async updateFeeBannerConfig(dto: UpdateFeeBannerConfigDTO, requestingUser?: UserContext) {
+    if (
+      !requestingUser ||
+      ![UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN].includes(requestingUser.role)
+    ) {
+      throw new ForbiddenError('Only School Directors and Super Administrators can set the fee payment deadline banner.');
+    }
+
+    if (!dto.deadlineDate || !/^\d{4}-\d{2}-\d{2}$/.test(dto.deadlineDate)) {
+      throw new ValidationError('A valid deadline date in YYYY-MM-DD format is required.');
+    }
+
+    const targetSchoolId = dto.schoolId || requestingUser.schoolId || 'school-001';
+    let config = await this.feeRepository.getFeeBannerConfig(targetSchoolId);
+
+    const userName = requestingUser.firstName
+      ? `${requestingUser.firstName} ${requestingUser.lastName || ''}`.trim()
+      : requestingUser.role;
+
+    if (!config) {
+      config = FeeBannerConfig.create(
+        {
+          schoolId: targetSchoolId,
+          deadlineDate: dto.deadlineDate,
+          bannerTitle: dto.bannerTitle || 'School Fee Payment Notice',
+          customMessage: dto.customMessage ?? '',
+          paybillNumber: dto.paybillNumber || '522533',
+          bankAccountNumber: dto.bankAccountNumber || '1234567890',
+          bankName: dto.bankName || 'KCB Bank',
+          isEnabled: dto.isEnabled !== false,
+          showOnlyToDefaulters: dto.showOnlyToDefaulters !== false,
+          updatedByUserId: requestingUser.userId,
+          updatedByUserName: userName
+        },
+        `fee-banner-${targetSchoolId}`
+      );
+    } else {
+      config.update({
+        deadlineDate: dto.deadlineDate,
+        bannerTitle: dto.bannerTitle ?? config.bannerTitle,
+        customMessage: dto.customMessage !== undefined ? dto.customMessage : config.customMessage,
+        paybillNumber: dto.paybillNumber ?? config.paybillNumber,
+        bankAccountNumber: dto.bankAccountNumber ?? config.bankAccountNumber,
+        bankName: dto.bankName ?? config.bankName,
+        isEnabled: dto.isEnabled !== undefined ? dto.isEnabled : config.isEnabled,
+        showOnlyToDefaulters: dto.showOnlyToDefaulters !== undefined ? dto.showOnlyToDefaulters : config.showOnlyToDefaulters,
+        updatedByUserId: requestingUser.userId,
+        updatedByUserName: userName
+      });
+    }
+
+    await this.feeRepository.saveFeeBannerConfig(config);
+    return config.toJSON();
   }
 }
 

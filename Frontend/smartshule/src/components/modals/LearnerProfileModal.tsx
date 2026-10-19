@@ -174,17 +174,17 @@ export const LearnerProfileModal: React.FC<LearnerProfileModalProps> = ({
               <div>
                 <span className="text-on-surface-variant text-[10px] block">Special Educational Needs:</span>
                 <span className="font-medium text-xs">
-                  {raw.specialNeeds || 'None reported. Learner follows mainstream standard CBC curriculum.'}
+                  {raw.specialNeeds || 'None reported. Learner follows mainstream standard CBE curriculum.'}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* CBC Competency & Attendance Overview */}
+          {/* CBE Competency & Attendance Overview */}
           <div className="grid grid-cols-2 gap-3">
             <div className="p-3 rounded-xl bg-surface-container-low border border-outline-variant/30 text-center">
               <span className="text-on-surface-variant block text-[10px] uppercase font-bold">
-                Overall CBC Rubric
+                Overall CBE Rubric
               </span>
               <span className="text-lg font-bold text-primary block mt-0.5">
                 {student.CBCRating} · Meeting

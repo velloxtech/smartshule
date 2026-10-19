@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { AssessmentRecord, CBCRubric, Student, BackendLearningArea } from '../../types';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -20,12 +20,33 @@ export const FormativeAssessmentsView: React.FC<FormativeAssessmentsViewProps> =
   onDeleteAssessment,
   onNavigateTab,
 }) => {
-  const { user } = useAuth();
-  const isParent = user?.role === 'PARENT' || user?.role === 'GUARDIAN';
+  const { user, activeViewMode } = useAuth();
+  const isParent = user?.role === 'PARENT' || user?.role === 'GUARDIAN' || activeViewMode === 'PARENT';
+  const [parentPortalData, setParentPortalData] = useState<any>(null);
+  const [checkingClearance, setCheckingClearance] = useState<boolean>(isParent);
   const [selectedRating, setSelectedRating] = useState<string>('All');
   const [selectedSubject, setSelectedSubject] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isParent) {
+      setCheckingClearance(true);
+      apiService.getGuardianPortalData()
+        .then((res) => {
+          if (res?.success && res.data) {
+            setParentPortalData(res.data);
+          }
+        })
+        .catch(() => {})
+        .finally(() => setCheckingClearance(false));
+    }
+  }, [isParent]);
+
+  const children = parentPortalData?.children || [];
+  const isFeeCleared = !isParent || (children.length > 0 && children.every((c: any) => Boolean(c.isChargeExempt) || (c.fee?.balance || 0) <= 0));
+  const unclearedChild = children.find((c: any) => !c.isChargeExempt && (c.fee?.balance || 0) > 0) || children[0];
+  const feeBalance = unclearedChild?.fee?.balance || 0;
 
   const handleDeleteAssessment = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this formative assessment (CAT) record?')) {
@@ -116,6 +137,88 @@ export const FormativeAssessmentsView: React.FC<FormativeAssessmentsViewProps> =
   const aePct = totalCount > 0 ? `${((aeCount / totalCount) * 100).toFixed(1)}%` : '0.0%';
   const bePct = totalCount > 0 ? `${((beCount / totalCount) * 100).toFixed(1)}%` : '0.0%';
 
+  if (isParent && checkingClearance) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] gap-3">
+        <div className="w-10 h-10 border-4 border-[#800000] border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-xs font-semibold text-[#800000] font-body">Verifying fee clearance status with Grace Seeds School...</p>
+      </div>
+    );
+  }
+
+  if (isParent && !isFeeCleared) {
+    const studentName = unclearedChild?.fullName || `${unclearedChild?.firstName} ${unclearedChild?.lastName}` || 'Learner';
+    const admNo = unclearedChild?.admissionNumber || 'N/A';
+    const waText = encodeURIComponent(
+      `Hello, I am requesting fee clearance authorization and access to the continuous formative assessment records for my child ${studentName} (Adm: ${admNo}) at Grace Seeds School.`
+    );
+
+    return (
+      <div className="max-w-2xl mx-auto py-10 px-4 space-y-6">
+        <div className="bg-surface-container-lowest p-6 sm:p-8 rounded-2xl border-2 border-amber-400/60 shadow-md text-center space-y-5">
+          <div className="w-16 h-16 rounded-2xl bg-amber-100 text-amber-900 mx-auto flex items-center justify-center shadow-xs">
+            <span className="material-symbols-outlined text-4xl">lock</span>
+          </div>
+
+          <div>
+            <span className="px-3 py-1 rounded-full text-[11px] font-extrabold bg-[#7a1228] text-white uppercase tracking-wider">
+              Fee Clearance Required
+            </span>
+            <h2 className="text-xl sm:text-2xl font-black text-on-surface mt-2.5">
+              CBE Formative Assessments Withheld
+            </h2>
+            <p className="text-xs sm:text-sm text-on-surface-variant max-w-lg mx-auto mt-1 leading-relaxed">
+              In accordance with Grace Seeds School policy, continuous assessment rubrics, practical tasks, and CAT records are released once term levies are settled or authorized by leadership.
+            </p>
+          </div>
+
+          <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-left space-y-2 max-w-md mx-auto">
+            <div className="flex justify-between text-xs font-bold text-on-surface">
+              <span>Learner:</span>
+              <span className="text-primary">{studentName}</span>
+            </div>
+            <div className="flex justify-between text-xs text-on-surface-variant">
+              <span>Admission Number:</span>
+              <span className="font-data-mono">{admNo}</span>
+            </div>
+            <div className="flex justify-between text-xs font-bold pt-2 border-t border-amber-200">
+              <span className="text-amber-950">Outstanding Balance:</span>
+              <span className="font-data-mono text-base text-[#7a1228] font-black">
+                KES {feeBalance.toLocaleString()}
+              </span>
+            </div>
+          </div>
+
+          <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <a
+              href={`https://wa.me/254745436312?text=${waText}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
+            >
+              <span className="material-symbols-outlined text-[18px]">chat</span>
+              <span>Request Clearance from Head Teacher</span>
+            </a>
+
+            <a
+              href={`https://wa.me/254745436312?text=${waText}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[#7a1228] hover:bg-[#5a1226] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
+            >
+              <span className="material-symbols-outlined text-[18px]">support_agent</span>
+              <span>Request Clearance from Director</span>
+            </a>
+          </div>
+
+          <div className="text-[11px] text-on-surface-variant pt-2 border-t border-outline-variant/20">
+            For direct inquiries, reach Grace Seeds School office at <strong className="text-primary">0745436312</strong> or <strong className="text-primary">schoolgraceseeds@gmail.com</strong>.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 pb-12">
       {/* Header Banner */}
@@ -124,7 +227,7 @@ export const FormativeAssessmentsView: React.FC<FormativeAssessmentsViewProps> =
           <div className="flex items-center gap-2 text-xs font-medium text-on-surface-variant mb-1">
             <span>Academics</span>
             <span>/</span>
-            <span>CBC Assessment System</span>
+            <span>CBE Assessment System</span>
             <span>/</span>
             <span className="text-primary font-bold">Formative Assessments</span>
           </div>

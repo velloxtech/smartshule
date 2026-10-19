@@ -2,6 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
 import { Student, StudentInvoice } from '../../types';
 import { useAuth } from '../../context/AuthContext';
+import {
+  detectReceiptPrinter,
+  setReceiptAutoPrint,
+  PrinterDetectionResult
+} from '../../utils/printerDetector';
 
 interface RecordPaymentModalProps {
   isOpen: boolean;
@@ -76,6 +81,26 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [recordedResult, setRecordedResult] = useState<any | null>(null);
+
+  // Printer & multi-channel receipt issuance state
+  const [printerStatus, setPrinterStatus] = useState<PrinterDetectionResult>({
+    hasReceiptPrinter: false,
+    printerType: 'SYSTEM_DEFAULT',
+    printerName: 'Standard System Printer',
+    autoPrintEnabled: false,
+  });
+  const [isAutoPrinting, setIsAutoPrinting] = useState(false);
+  const [resendingChannel, setResendingChannel] = useState<'email' | 'whatsapp' | null>(null);
+  const [resendFeedback, setResendFeedback] = useState<string | null>(null);
+
+  // Detect connected receipt printers on modal open
+  useEffect(() => {
+    if (isOpen) {
+      detectReceiptPrinter().then((status) => {
+        setPrinterStatus(status);
+      });
+    }
+  }, [isOpen]);
 
   // Reset all entry fields to blank whenever the modal opens
   useEffect(() => {
@@ -170,6 +195,10 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (currentStudent?.isSponsored) {
+      setError('Cannot record fee payment: This learner is enrolled under the Institutional Scholarship Program (100% Fee Waiver) and has zero fee liability.');
+      return;
+    }
     if (!selectedInvoiceId) {
       setError('Please select an active invoice for this student, or generate an invoice first.');
       return;
@@ -225,8 +254,12 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
       });
 
       if (res.success && res.data) {
+        const delivery = res.data.delivery || {};
+        const receipt = res.data.receipt || {};
         setRecordedResult({
           ...res.data,
+          delivery,
+          receipt,
           studentName: currentStudent?.name,
           admissionNumber: currentStudent?.admNo,
           gradeLevel: currentStudent?.grade,
@@ -242,6 +275,15 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
           invoiceNumber: currentInvoice?.invoiceNumber,
         });
         onPaymentRecorded(res.data);
+
+        // Auto-print receipt if receipt printer is detected or auto-print is enabled
+        if (printerStatus.hasReceiptPrinter || printerStatus.autoPrintEnabled) {
+          setIsAutoPrinting(true);
+          setTimeout(() => {
+            window.print();
+            setIsAutoPrinting(false);
+          }, 450);
+        }
       } else {
         setError(res.message || 'Payment recording failed');
       }
@@ -252,20 +294,40 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
     }
   };
 
+  const handleResendReceipt = async (channel: 'email' | 'whatsapp') => {
+    const paymentId = recordedResult?.payment?.id;
+    if (!paymentId) return;
+    setResendingChannel(channel);
+    setResendFeedback(null);
+    try {
+      const res = await apiService.reissueReceipt(paymentId);
+      if (res.success) {
+        setResendFeedback(`Receipt re-issued and dispatched via ${channel === 'whatsapp' ? 'WhatsApp' : 'Email'}!`);
+      } else {
+        setResendFeedback(res.message || 'Dispatch failed.');
+      }
+    } catch (err: any) {
+      setResendFeedback(err.message || 'Error dispatching receipt.');
+    } finally {
+      setResendingChannel(null);
+      setTimeout(() => setResendFeedback(null), 5000);
+    }
+  };
+
   // Receipt Slip Modal when payment is completed
   if (recordedResult) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto animate-fade-in">
         <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-md w-full max-h-[92vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
           {/* Header */}
-          <div className="bg-[#7a1228] text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
+          <div className="bg-[#7a1228] text-white p-4 sm:p-5 flex items-center justify-between shrink-0 no-print">
             <div className="flex items-center gap-2.5">
               <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center font-bold shrink-0">
                 <span className="material-symbols-outlined text-[24px]">verified</span>
               </div>
               <div>
                 <h3 className="font-semibold text-base leading-tight">Payment Recorded Successfully</h3>
-                <p className="text-xs text-rose-100">Official SmartShule Receipt Generated</p>
+                <p className="text-xs text-rose-100">Official Grace Seeds School Receipt Generated</p>
               </div>
             </div>
             <button
@@ -277,112 +339,206 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
           </div>
 
           {/* Printable Official Receipt Body */}
-          <div id="smartshule-receipt-print" className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1 text-xs">
-            {/* School Header */}
-            <div className="text-center pb-3 border-b border-surface-container">
-              <div className="text-base font-bold text-[#7a1228] uppercase tracking-wide">
-                {schoolData?.name || 'Grace Seeds School'}
+          <div className="p-4 sm:p-5 space-y-3.5 overflow-y-auto flex-1 text-xs">
+            {isAutoPrinting && (
+              <div className="bg-emerald-50 text-emerald-900 border border-emerald-300 px-3.5 py-2.5 rounded-xl text-xs flex items-center gap-2 no-print shadow-xs animate-pulse">
+                <span className="material-symbols-outlined text-emerald-700 text-base">print</span>
+                <span className="font-bold">Receipt printer detected — auto-printing official receipt...</span>
               </div>
-              <div className="text-[10px] text-outline mt-0.5">
-                {schoolData?.address || 'KEMRI Street, Kisian, Kisumu, Kenya'} · Tel: {schoolData?.phone || '0745436312'} · Email: {schoolData?.email || 'schoolgraceseeds@gmail.com'}
-              </div>
-              <div className="mt-2 inline-block px-3 py-0.5 bg-surface-container rounded-full text-[10px] font-bold text-on-surface uppercase tracking-wider">
-                {recordedResult.channel === 'CASH' ? 'Official Cash Receipt' : 'Bank Deposit Acknowledgment'}
-              </div>
-            </div>
+            )}
 
-            {/* Receipt Details Table */}
-            <div className="bg-surface-container-low rounded-xl p-3.5 space-y-2 border border-outline-variant/30 font-body">
-              <div className="flex justify-between items-center pb-1.5 border-b border-outline-variant/20">
-                <span className="text-on-surface-variant font-semibold">Receipt Number:</span>
-                <span className="font-data-mono font-bold text-[#7a1228] text-sm">
-                  {recordedResult.payment?.receiptNumber || recordedResult.receiptNumber || 'REC-OFFICIAL'}
+            {/* Multi-Channel Parent Delivery Status Card */}
+            <div className="bg-surface-container-low rounded-xl p-3 border border-outline-variant/30 space-y-2 no-print font-body">
+              <div className="text-[10px] font-bold text-on-surface uppercase tracking-wider flex items-center justify-between">
+                <span className="flex items-center gap-1.5 text-primary">
+                  <span className="material-symbols-outlined text-xs">send</span>
+                  Issued to Parent Automatically
                 </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-on-surface-variant">Date:</span>
-                <span className="font-data-mono font-medium text-on-surface">{recordedResult.paymentDate}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-on-surface-variant">Learner Name:</span>
-                <span className="font-bold text-on-surface">{recordedResult.studentName}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-on-surface-variant">Admission Number:</span>
-                <span className="font-data-mono font-bold text-on-surface">{recordedResult.admissionNumber}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-on-surface-variant">Grade Level:</span>
-                <span className="font-semibold text-on-surface">{recordedResult.gradeLevel}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-on-surface-variant">Invoice Settled:</span>
-                <span className="font-data-mono text-on-surface">{recordedResult.invoiceNumber}</span>
+                <span className="text-[10px] font-medium text-outline">Multi-Channel</span>
               </div>
 
-              {/* Channel specifics */}
-              <div className="flex justify-between pt-1 border-t border-outline-variant/20">
-                <span className="text-on-surface-variant">Payment Method:</span>
-                <span className="font-bold text-emerald-800">
-                  {recordedResult.channel === 'CASH' && 'Cash Office (Currency Tendered)'}
-                  {recordedResult.channel === 'BANK_DEPOSIT' && `Bank Deposit (${recordedResult.bankName})`}
-                  {recordedResult.channel === 'MPESA' && 'M-Pesa E-Money'}
-                  {recordedResult.channel === 'CHEQUE' && "Banker's Cheque"}
-                  {recordedResult.channel === 'BANK_TRANSFER' && 'Bank Wire / EFT'}
-                </span>
-              </div>
-              {recordedResult.channel === 'BANK_DEPOSIT' && recordedResult.slipNumber && (
-                <div className="flex justify-between">
-                  <span className="text-on-surface-variant">Bank Slip / Teller #:</span>
-                  <span className="font-data-mono font-bold text-on-surface">{recordedResult.slipNumber}</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                {/* Email */}
+                <div className="flex items-center justify-between p-2 rounded-lg bg-surface-container border border-outline-variant/20">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="material-symbols-outlined text-[16px] text-blue-600 shrink-0">mail</span>
+                    <div className="truncate">
+                      <div className="font-semibold text-on-surface text-[10px] leading-tight">Email Receipt</div>
+                      <div className="text-[10px] text-on-surface-variant truncate">
+                        {recordedResult.delivery?.email?.recipient || 'Parent Registered Email'}
+                      </div>
+                    </div>
+                  </div>
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0 bg-emerald-100 text-emerald-800 flex items-center gap-0.5">
+                    <span className="material-symbols-outlined text-[12px]">check</span> Sent
+                  </span>
                 </div>
-              )}
-              {recordedResult.channel === 'CASH' && (
-                <div className="flex justify-between">
-                  <span className="text-on-surface-variant">Cash Voucher / Ref:</span>
-                  <span className="font-data-mono font-bold text-on-surface">{recordedResult.cashReceiptRef}</span>
-                </div>
-              )}
 
-              {/* Financial Breakdown */}
-              <div className="pt-2 border-t border-outline-variant/30 space-y-1">
-                <div className="flex justify-between text-on-surface-variant">
-                  <span>Previous Invoice Balance:</span>
-                  <span className="font-data-mono">KES {recordedResult.previousBalance?.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between text-sm font-bold text-emerald-800 bg-emerald-50 p-2 rounded-lg">
-                  <span>Amount Paid:</span>
-                  <span className="font-data-mono text-base">KES {recordedResult.amountPaid?.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between font-bold text-on-surface pt-1">
-                  <span>Remaining Invoice Balance:</span>
-                  <span className={`font-data-mono ${recordedResult.newBalance === 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
-                    KES {recordedResult.newBalance?.toLocaleString()}
+                {/* WhatsApp */}
+                <div className="flex items-center justify-between p-2 rounded-lg bg-surface-container border border-outline-variant/20">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="material-symbols-outlined text-[16px] text-emerald-600 shrink-0">chat</span>
+                    <div className="truncate">
+                      <div className="font-semibold text-on-surface text-[10px] leading-tight">WhatsApp Receipt</div>
+                      <div className="text-[10px] text-on-surface-variant truncate">
+                        {recordedResult.delivery?.whatsApp?.recipient || 'Parent Phone'}
+                      </div>
+                    </div>
+                  </div>
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0 bg-emerald-100 text-emerald-800 flex items-center gap-0.5">
+                    <span className="material-symbols-outlined text-[12px]">check</span> Dispatched
                   </span>
                 </div>
               </div>
+
+              {/* Resend actions & Hardware printer status */}
+              <div className="flex items-center justify-between pt-1 text-[11px] border-t border-outline-variant/20">
+                <div className="flex items-center gap-1 text-[10px] text-on-surface-variant">
+                  <span className="material-symbols-outlined text-xs text-primary">print</span>
+                  <span className="font-medium">
+                    {printerStatus.hasReceiptPrinter ? `${printerStatus.printerName} (Detected)` : 'System Printer Ready'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={resendingChannel !== null}
+                    onClick={() => handleResendReceipt('whatsapp')}
+                    className="text-[10px] font-bold text-emerald-700 hover:text-emerald-800 hover:underline flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                  >
+                    <span className="material-symbols-outlined text-[12px]">
+                      {resendingChannel === 'whatsapp' ? 'sync' : 'chat'}
+                    </span>
+                    {resendingChannel === 'whatsapp' ? 'Sending...' : 'Resend WA'}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={resendingChannel !== null}
+                    onClick={() => handleResendReceipt('email')}
+                    className="text-[10px] font-bold text-primary hover:text-primary-container hover:underline flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                  >
+                    <span className="material-symbols-outlined text-[12px]">
+                      {resendingChannel === 'email' ? 'sync' : 'mail'}
+                    </span>
+                    {resendingChannel === 'email' ? 'Sending...' : 'Resend Email'}
+                  </button>
+                </div>
+              </div>
+              {resendFeedback && (
+                <div className="text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 p-1.5 rounded text-center">
+                  {resendFeedback}
+                </div>
+              )}
             </div>
 
-            {/* Stamp & Served By */}
-            <div className="pt-2 flex justify-between items-end text-[11px] text-on-surface-variant">
-              <div>
-                <p>Served By: <span className="font-semibold text-on-surface">{user?.firstName} {user?.lastName} (Finance)</span></p>
-                <p className="text-[10px] text-outline">SmartShule Automated Ledger Verification</p>
+            {/* Actual Official Receipt Element (Printed via window.print()) */}
+            <div id="smartshule-receipt-print" className="p-4 sm:p-5 space-y-3.5 bg-surface-container-low rounded-xl border border-outline-variant/30 text-xs">
+              {/* School Header */}
+              <div className="text-center pb-3 border-b border-surface-container">
+                <div className="text-base font-bold text-[#7a1228] uppercase tracking-wide">
+                  {schoolData?.name || 'Grace Seeds School'}
+                </div>
+                <div className="text-[10px] text-outline mt-0.5">
+                  {schoolData?.address || 'KEMRI Street, Kisian, Kisumu, Kenya'} · Tel: {schoolData?.phone || '0745436312'} · Email: {schoolData?.email || 'schoolgraceseeds@gmail.com'}
+                </div>
+                <div className="mt-2 inline-block px-3 py-0.5 bg-surface-container rounded-full text-[10px] font-bold text-on-surface uppercase tracking-wider">
+                  {recordedResult.channel === 'CASH' ? 'Official Cash Receipt' : 'Bank Deposit Acknowledgment'}
+                </div>
               </div>
-              <div className="border border-dashed border-outline-variant/60 rounded p-2 text-center text-[10px] text-outline uppercase font-mono">
-                Official School Stamp
+
+              {/* Receipt Details Table */}
+              <div className="space-y-2 font-body">
+                <div className="flex justify-between items-center pb-1.5 border-b border-outline-variant/20">
+                  <span className="text-on-surface-variant font-semibold">Receipt Number:</span>
+                  <span className="font-data-mono font-bold text-[#7a1228] text-sm">
+                    {recordedResult.payment?.receiptNumber || recordedResult.receiptNumber || 'REC-OFFICIAL'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-on-surface-variant">Date:</span>
+                  <span className="font-data-mono font-medium text-on-surface">{recordedResult.paymentDate}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-on-surface-variant">Learner Name:</span>
+                  <span className="font-bold text-on-surface">{recordedResult.studentName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-on-surface-variant">Admission Number:</span>
+                  <span className="font-data-mono font-bold text-on-surface">{recordedResult.admissionNumber}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-on-surface-variant">Grade Level:</span>
+                  <span className="font-semibold text-on-surface">{recordedResult.gradeLevel}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-on-surface-variant">Invoice Settled:</span>
+                  <span className="font-data-mono text-on-surface">{recordedResult.invoiceNumber}</span>
+                </div>
+
+                {/* Channel specifics */}
+                <div className="flex justify-between pt-1 border-t border-outline-variant/20">
+                  <span className="text-on-surface-variant">Payment Method:</span>
+                  <span className="font-bold text-emerald-800">
+                    {recordedResult.channel === 'CASH' && 'Cash Office (Currency Tendered)'}
+                    {recordedResult.channel === 'BANK_DEPOSIT' && `Bank Deposit (${recordedResult.bankName})`}
+                    {recordedResult.channel === 'MPESA' && 'M-Pesa E-Money'}
+                    {recordedResult.channel === 'CHEQUE' && "Banker's Cheque"}
+                    {recordedResult.channel === 'BANK_TRANSFER' && 'Bank Wire / EFT'}
+                  </span>
+                </div>
+                {recordedResult.channel === 'BANK_DEPOSIT' && recordedResult.slipNumber && (
+                  <div className="flex justify-between">
+                    <span className="text-on-surface-variant">Bank Slip / Teller #:</span>
+                    <span className="font-data-mono font-bold text-on-surface">{recordedResult.slipNumber}</span>
+                  </div>
+                )}
+                {recordedResult.channel === 'CASH' && (
+                  <div className="flex justify-between">
+                    <span className="text-on-surface-variant">Cash Voucher / Ref:</span>
+                    <span className="font-data-mono font-bold text-on-surface">{recordedResult.cashReceiptRef}</span>
+                  </div>
+                )}
+
+                {/* Financial Breakdown */}
+                <div className="pt-2 border-t border-outline-variant/30 space-y-1">
+                  <div className="flex justify-between text-on-surface-variant">
+                    <span>Previous Invoice Balance:</span>
+                    <span className="font-data-mono">KES {recordedResult.previousBalance?.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-sm font-bold text-emerald-800 bg-emerald-50 p-2 rounded-lg">
+                    <span>Amount Paid:</span>
+                    <span className="font-data-mono text-base">KES {recordedResult.amountPaid?.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between font-bold text-on-surface pt-1">
+                    <span>Remaining Invoice Balance:</span>
+                    <span className={`font-data-mono ${recordedResult.newBalance === 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                      KES {recordedResult.newBalance?.toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Stamp & Served By */}
+              <div className="pt-2 flex justify-between items-end text-[11px] text-on-surface-variant border-t border-outline-variant/20">
+                <div>
+                  <p>Served By: <span className="font-semibold text-on-surface">{user?.firstName} {user?.lastName} (Finance)</span></p>
+                  <p className="text-[10px] text-outline">Grace Seeds School Ledger Verification</p>
+                </div>
+                <div className="border border-dashed border-outline-variant/60 rounded p-1.5 text-center text-[9px] text-outline uppercase font-mono">
+                  Official School Stamp
+                </div>
               </div>
             </div>
 
             {/* Actions */}
-            <div className="pt-3 flex gap-2">
+            <div className="pt-2 flex gap-2 no-print">
               <button
                 type="button"
                 onClick={() => window.print()}
                 className="flex-1 py-2.5 bg-[#7a1228] text-white font-semibold rounded-lg hover:bg-[#600e1f] text-xs shadow-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[16px]">print</span>
-                <span>Print Official Receipt</span>
+                <span>Print Official Receipt {printerStatus.hasReceiptPrinter && '(Thermal POS)'}</span>
               </button>
               <button
                 type="button"
@@ -426,6 +582,20 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
             <div className="p-3 rounded-lg bg-error/10 border border-error/20 text-error text-xs font-medium flex items-center gap-2">
               <span className="material-symbols-outlined text-base">error</span>
               <span>{error}</span>
+            </div>
+          )}
+
+          {currentStudent?.isSponsored && (
+            <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-950 flex items-start gap-3 shadow-2xs">
+              <span className="material-symbols-outlined text-[#7a1228] text-[22px] shrink-0 mt-0.5">lock</span>
+              <div>
+                <div className="font-extrabold text-[#7a1228] text-xs">
+                  Charge-Exempt Learner (100% Scholarship)
+                </div>
+                <div className="text-[11px] text-amber-900 mt-0.5">
+                  This learner is enrolled under the school&apos;s 100% Institutional Scholarship Program. All tuition and levies are fully waived. No fees can be charged or recorded for this learner.
+                </div>
+              </div>
             </div>
           )}
 
@@ -882,18 +1052,59 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
             />
           </div>
 
+          {/* Workstation Receipt Printer Detection & Auto-Print Toggle */}
+          <div className="flex items-center justify-between p-3 rounded-xl bg-surface-container border border-outline-variant/30 text-xs">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-bold shrink-0">
+                <span className="material-symbols-outlined text-[18px]">print</span>
+              </div>
+              <div>
+                <div className="font-semibold text-on-surface text-[11px] leading-tight flex items-center gap-1.5">
+                  <span>Receipt Printer Mode</span>
+                  {printerStatus.hasReceiptPrinter && (
+                    <span className="px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 text-[9px] font-bold">
+                      Detected
+                    </span>
+                  )}
+                </div>
+                <div className="text-[10px] text-on-surface-variant mt-0.5">
+                  {printerStatus.hasReceiptPrinter
+                    ? printerStatus.printerName
+                    : 'Auto-prints receipt on cash/deposit recording'}
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                const next = !printerStatus.autoPrintEnabled;
+                setReceiptAutoPrint(next);
+                setPrinterStatus((prev) => ({ ...prev, autoPrintEnabled: next }));
+              }}
+              className={`px-3 py-1 rounded-full text-[10px] font-bold transition-all cursor-pointer ${
+                printerStatus.autoPrintEnabled
+                  ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                  : 'bg-surface-container-high text-on-surface-variant'
+              }`}
+            >
+              {printerStatus.autoPrintEnabled ? 'AUTO-PRINT ON' : 'AUTO-PRINT OFF'}
+            </button>
+          </div>
+
           {/* Submit Button */}
           <div className="pt-2">
             <button
               type="submit"
-              disabled={isLoading || !selectedInvoiceId || numAmount <= 0}
-              className="w-full py-3 bg-[#7a1228] text-white font-semibold rounded-xl hover:bg-[#600e1f] text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isLoading || !selectedInvoiceId || numAmount <= 0 || !!currentStudent?.isSponsored}
+              className="w-full py-3 bg-[#7a1228] text-white font-semibold rounded-xl hover:bg-[#600e1f] text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <span className="material-symbols-outlined text-[20px]">
-                {paymentChannel === 'CASH' ? 'payments' : paymentChannel === 'BANK_DEPOSIT' ? 'account_balance' : 'receipt'}
+                {currentStudent?.isSponsored ? 'lock' : paymentChannel === 'CASH' ? 'payments' : paymentChannel === 'BANK_DEPOSIT' ? 'account_balance' : 'receipt'}
               </span>
               <span>
-                {isLoading
+                {currentStudent?.isSponsored
+                  ? 'Cannot Charge · Learner Is Charge Exempt'
+                  : isLoading
                   ? 'Recording & Generating Receipt...'
                   : paymentChannel === 'CASH'
                   ? `Accept Cash (KES ${numAmount.toLocaleString()}) & Issue Receipt`

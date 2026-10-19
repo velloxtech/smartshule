@@ -149,7 +149,7 @@ export const AdmissionsDashboardView: React.FC<AdmissionsDashboardViewProps> = (
           <div>
             <h2 className="text-base font-bold text-on-surface">Recent Student Admissions</h2>
             <p className="text-xs text-on-surface-variant">
-              Complete records of newly registered CBC learners and guardian contact points.
+              Complete records of newly registered CBE learners and guardian contact points.
             </p>
           </div>
           <div className="relative w-full sm:w-64">

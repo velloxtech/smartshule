@@ -317,6 +317,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           Arrears
                         </span>
                       )}
+                      {item.id === 'sponsored-students' && (
+                        <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full uppercase shrink-0 ${
+                          isActive ? 'bg-white/20 text-white' : 'bg-[#7a1228]/15 text-[#7a1228]'
+                        }`}>
+                          Exempt
+                        </span>
+                      )}
+                      {item.id === 'fee-deadline-banner' && (
+                        <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full uppercase shrink-0 ${
+                          isActive ? 'bg-white/20 text-white' : 'bg-[#7a1228]/15 text-[#7a1228]'
+                        }`}>
+                          Banner
+                        </span>
+                      )}
                     </button>
                   );
                 })}

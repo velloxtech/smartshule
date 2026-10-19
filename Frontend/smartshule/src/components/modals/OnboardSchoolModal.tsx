@@ -587,7 +587,7 @@ export const OnboardSchoolModal: React.FC<OnboardSchoolModalProps> = ({
                   <strong className="font-bold text-[#7a1228] block text-sm">
                     Constitution of Kenya (2010) Institutional Charter
                   </strong>
-                  By onboarding on SmartShule, the institution binds itself to the following constitutional principles.
+                  By onboarding on Grace Seeds School Portal, the institution binds itself to the following constitutional principles.
                 </div>
               </div>
 

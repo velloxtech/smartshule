@@ -64,6 +64,8 @@ import { DisciplineClubsView } from './components/views/DisciplineClubsView';
 import { MasterBroadsheetView } from './components/views/MasterBroadsheetView';
 import { OccurrenceBookView } from './components/views/OccurrenceBookView';
 import { CurriculumTrackerView } from './components/views/CurriculumTrackerView';
+import { FeeDeadlineBannerManagementView } from './components/views/FeeDeadlineBannerManagementView';
+import { SponsoredStudentsView } from './components/views/SponsoredStudentsView';
 
 // Modals
 import { RecordPaymentModal } from './components/modals/RecordPaymentModal';
@@ -166,6 +168,8 @@ export default function App() {
             gender: c.gender === 'FEMALE' || c.gender === 'Girl' ? 'Girl' : 'Boy',
             feeBalance: c.fee?.balance ?? 0,
             totalFee: c.fee?.totalBilled ?? 0,
+            isChargeExempt: Boolean(c.isChargeExempt),
+            fee: c.fee,
             attendanceRate: c.attendance?.attendanceRate ?? 100,
             guardianName: portalRes.data.guardian?.user
               ? `${portalRes.data.guardian.user.firstName} ${portalRes.data.guardian.user.lastName}`
@@ -303,6 +307,9 @@ export default function App() {
                   stream: c.streamId || 'Stream A',
                   gender: c.gender || 'Other',
                   feeBalance: c.fee?.balance ?? 0,
+                  totalFee: c.fee?.totalBilled ?? 0,
+                  isChargeExempt: Boolean(c.isChargeExempt),
+                  fee: c.fee,
                   attendanceRate: c.attendance?.attendanceRate ?? 100,
                   guardianName: portalRes.data.guardian?.user ? `${portalRes.data.guardian.user.firstName} ${portalRes.data.guardian.user.lastName}` : (user?.name || 'Parent'),
                   guardianPhone: user?.phone || '+254777000777',
@@ -1239,6 +1246,8 @@ export default function App() {
           )}
 
           {currentTab === 'system-logs' && <SystemLogsView />}
+          {currentTab === 'fee-deadline-banner' && <FeeDeadlineBannerManagementView />}
+          {currentTab === 'sponsored-students' && <SponsoredStudentsView />}
           {(currentTab === 'concerns' || currentTab === 'complaints') && <ConcernsView />}
           {currentTab === 'lunch-fee-management' && <LunchFeeManagementView />}
           {currentTab === 'parent-profile' && (

@@ -157,7 +157,7 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
     ],
   },
   {
-    group: 'CBC Competencies & Grading',
+    group: 'CBE Competencies & Grading',
     items: [
       {
         id: 'formative-assessments',
@@ -202,7 +202,7 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
       },
       {
         id: 'report-cards',
-        label: 'CBC Report Cards',
+        label: 'CBE Report Cards',
         icon: 'article',
         allowedRoles: [
           UserRole.SUPER_ADMIN,
@@ -414,6 +414,26 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
         ],
       },
       {
+        id: 'sponsored-students',
+        label: 'Sponsored Learners',
+        icon: 'volunteer_activism',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
+          UserRole.SCHOOL_ADMIN,
+        ],
+      },
+      {
+        id: 'fee-deadline-banner',
+        label: 'Fee Deadline Banner',
+        icon: 'notification_important',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
+          UserRole.SCHOOL_ADMIN,
+        ],
+      },
+      {
         id: 'invoices-mpesa',
         label: 'Bank & KCB Invoices',
         icon: 'account_balance',
@@ -580,7 +600,7 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
       },
       {
         id: 'visual-CBC',
-        label: 'Visual CBC & Help Desk',
+        label: 'Visual CBE & Help Desk',
         icon: 'photo_camera',
         allowedRoles: [
           UserRole.SUPER_ADMIN,

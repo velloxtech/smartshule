@@ -360,13 +360,13 @@ export const VisualCBCView: React.FC = () => {
             <span>/</span>
             <span>Digital Classroom</span>
             <span>/</span>
-            <span className="text-primary font-semibold">Visual CBC & Parent Help Desk</span>
+            <span className="text-primary font-semibold">Visual CBE & Parent Help Desk</span>
           </div>
           <h1 className="font-headline-lg text-headline-lg text-on-surface mt-1">
             Visual Learning Evidence & Photo Q&A Desk
           </h1>
           <p className="text-xs text-on-surface-variant mt-0.5">
-            Parents snap photos to ask teachers homework questions, and teachers document hands-on CBC practical milestones
+            Parents snap photos to ask teachers homework questions, and teachers document hands-on CBE practical milestones
           </p>
         </div>
 

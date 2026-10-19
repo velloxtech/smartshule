@@ -189,7 +189,7 @@ export const ParentProfileView: React.FC<ParentProfileViewProps> = ({ onNavigate
         <div className="space-y-1">
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/10 text-white text-[11px] font-semibold tracking-wider uppercase">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            Parent & Family Records · SmartShule Portal
+            Parent & Family Records · Grace Seeds School CBE Portal
           </div>
           <h1 className="text-xl md:text-2xl font-black tracking-tight">
             My Profile & Child Records
@@ -498,11 +498,11 @@ export const ParentProfileView: React.FC<ParentProfileViewProps> = ({ onNavigate
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-bold text-slate-900">Enrolled Child / Learner Profile</h2>
                 <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 text-[11px] font-bold uppercase tracking-wider">
-                  CBC Registered
+                  CBE Registered
                 </span>
               </div>
               <p className="text-xs text-slate-500">
-                Student demographic records, CBC admission number, NEMIS/UPI, and health/medical disclosures.
+                Student demographic records, CBE admission number, NEMIS/UPI, and health/medical disclosures.
               </p>
             </div>
           </div>

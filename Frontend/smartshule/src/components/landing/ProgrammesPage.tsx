@@ -91,12 +91,12 @@ export const PROGRAMMES_DATA: ProgrammeDetail[] = [
   {
     id: 'pp1',
     level: 'Pre-Primary 1 (PP1)',
-    subtitle: 'CBC Foundation Stage 1',
+    subtitle: 'CBE Foundation Stage 1',
     age: 'Age 4',
     icon: Palette,
     colorTheme: 'from-pink-500/20 to-purple-500/20',
     tagline: 'Cultivating curiosity, early phonics, and hands-on mathematical concepts.',
-    overview: 'In PP1, children embrace structured CBC learning areas while keeping wonder and creativity at the core. We introduce foundational literacy, mathematical concepts, environmental awareness, and creative psychomotor skills through collaborative activities.',
+    overview: 'In PP1, children embrace structured CBE learning areas while keeping wonder and creativity at the core. We introduce foundational literacy, mathematical concepts, environmental awareness, and creative psychomotor skills through collaborative activities.',
     keyAreas: [
       { title: 'Language Activities', desc: 'Phonemic awareness, letter formation, listening skills, and story re-telling.', icon: BookOpen },
       { title: 'Mathematical Activities', desc: 'Sorting, patterns, counting objects, shapes, and spatial awareness.', icon: Binary },
@@ -128,7 +128,7 @@ export const PROGRAMMES_DATA: ProgrammeDetail[] = [
   {
     id: 'pp2',
     level: 'Pre-Primary 2 (PP2)',
-    subtitle: 'CBC Foundation Stage 2',
+    subtitle: 'CBE Foundation Stage 2',
     age: 'Age 5',
     icon: Sun,
     colorTheme: 'from-amber-400/20 to-emerald-500/20',
@@ -165,12 +165,12 @@ export const PROGRAMMES_DATA: ProgrammeDetail[] = [
   {
     id: 'lower-primary',
     level: 'Lower Primary',
-    subtitle: 'CBC Key Stage 1 (Grades 1 – 3)',
+    subtitle: 'CBE Key Stage 1 (Grades 1 – 3)',
     age: 'Grades 1 – 3 (Ages 6 – 8)',
     icon: BookOpen,
     colorTheme: 'from-blue-500/20 to-indigo-500/20',
     tagline: 'Building strong academic foundations, critical thinking, and digital skills.',
-    overview: 'Lower Primary marks the beginning of official primary education under Kenya’s CBC curriculum. Pupils engage deeply with Literacy, Mathematics, Environmental Studies, Creative Arts, and Hygiene Education through project-based learning.',
+    overview: 'Lower Primary marks the beginning of official primary education under Kenya’s CBE framework. Pupils engage deeply with Literacy, Mathematics, Environmental Studies, Creative Arts, and Hygiene Education through project-based learning.',
     keyAreas: [
       { title: 'Literacy & Languages', desc: 'English Activities, Kiswahili Shughuli za Lugha, and French basics.', icon: BookText },
       { title: 'Mathematics', desc: 'Numbers, Operations, Geometry, Measurement, and Data handling.', icon: Compass },
@@ -192,7 +192,7 @@ export const PROGRAMMES_DATA: ProgrammeDetail[] = [
       { time: '01:30 PM - 03:30 PM', activity: 'Creative Arts, Computer & Skating Clubs' }
     ],
     highlights: [
-      'CBC Portfolio management & continuous assessment',
+      'CBE Portfolio management & continuous assessment',
       'Computer lab access & interactive smart learning',
       'Clubs: Computer, Skating, French, Swimming & Chess',
       'Educational field visits & science expos'
@@ -202,7 +202,7 @@ export const PROGRAMMES_DATA: ProgrammeDetail[] = [
   {
     id: 'upper-primary',
     level: 'Upper Primary',
-    subtitle: 'CBC Key Stage 2 (Grades 4 – 6)',
+    subtitle: 'CBE Key Stage 2 (Grades 4 – 6)',
     age: 'Grades 4 – 6 (Ages 9 – 12)',
     icon: FlaskConical,
     colorTheme: 'from-emerald-500/20 to-teal-500/20',
@@ -248,15 +248,15 @@ export const CLUBS_DATA = [
 export const FAQS_DATA = [
   {
     q: 'What curriculum does Grace Seeds School follow?',
-    a: 'We strictly adhere to the Kenyan Competency-Based Curriculum (CBC), enhanced with modern activity-based teaching methods, ICT integration, and strong moral values.'
+    a: 'We strictly adhere to Kenya’s Competency-Based Education (CBE) framework, enhanced with modern activity-based teaching methods, ICT integration, and strong moral values.'
   },
   {
     q: 'At what age can my child join Playgroup?',
     a: 'Children can join our Playgroup from age 2 (24 months). We provide a gentle transition with toilet training support and a warm care team.'
   },
   {
-    q: 'How does CBC assessment work at Grace Seeds?',
-    a: 'Rather than relying solely on high-stakes end-of-term exams, CBC relies on continuous formative assessment. We evaluate portfolios, practical projects, observational rubrics, and group presentations to track every pupil’s growth.'
+    q: 'How does CBE assessment work at Grace Seeds?',
+    a: 'Rather than relying solely on high-stakes end-of-term exams, CBE relies on continuous formative assessment. We evaluate portfolios, practical projects, observational rubrics, and group presentations to track every pupil’s growth.'
   },
   {
     q: 'Are extra-curricular clubs included in the school routine?',

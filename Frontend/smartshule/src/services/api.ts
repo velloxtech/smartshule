@@ -78,6 +78,9 @@ import {
   OccurrenceRecord,
   OccurrenceDailySummary,
   GeofenceConfig,
+  FeeBannerConfig,
+  StudentSponsorship,
+  SponsorshipStats,
   TeacherClockInRecord,
   FacultyRosterItem,
   FacultyDailyRoster,
@@ -1261,6 +1264,16 @@ const coreApiService = {
     });
   },
 
+  getPaymentReceipt: async (paymentId: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/finance/payments/${encodeURIComponent(paymentId)}/receipt`);
+  },
+
+  reissueReceipt: async (paymentId: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/finance/payments/${encodeURIComponent(paymentId)}/issue-receipt`, {
+      method: 'POST',
+    });
+  },
+
   // Parent Payment Forwarding & Verification
   forwardPaymentTransaction: async (data: {
     studentId: string;
@@ -1338,6 +1351,76 @@ const coreApiService = {
 
   getFeeStatement: async (studentId: string): Promise<ApiResponse<any>> => {
     return apiFetch<ApiResponse<any>>(`/finance/statements/${studentId}`);
+  },
+
+  getFeeBannerConfig: async (schoolId?: string): Promise<ApiResponse<FeeBannerConfig>> => {
+    const qs = schoolId ? `?schoolId=${encodeURIComponent(schoolId)}` : '';
+    return apiFetch<ApiResponse<FeeBannerConfig>>(`/finance/fee-banner${qs}`);
+  },
+
+  updateFeeBannerConfig: async (data: Partial<FeeBannerConfig>): Promise<ApiResponse<FeeBannerConfig>> => {
+    return apiFetch<ApiResponse<FeeBannerConfig>>('/finance/fee-banner', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Fully Sponsored Students (Admin Only)
+  getSponsoredStudents: async (filters?: any): Promise<ApiResponse<StudentSponsorship[]>> => {
+    const params = new URLSearchParams();
+    if (filters) {
+      Object.entries(filters).forEach(([k, v]) => {
+        if (v !== undefined && v !== null && v !== '') {
+          params.append(k, String(v));
+        }
+      });
+    }
+    const qs = params.toString();
+    return apiFetch<ApiResponse<StudentSponsorship[]>>(`/sponsorships${qs ? `?${qs}` : ''}`);
+  },
+
+  getSponsorshipStats: async (schoolId?: string): Promise<ApiResponse<SponsorshipStats>> => {
+    const qs = schoolId ? `?schoolId=${encodeURIComponent(schoolId)}` : '';
+    return apiFetch<ApiResponse<SponsorshipStats>>(`/sponsorships/stats${qs}`);
+  },
+
+  getSponsoredStudentById: async (id: string): Promise<ApiResponse<StudentSponsorship>> => {
+    return apiFetch<ApiResponse<StudentSponsorship>>(`/sponsorships/${id}`);
+  },
+
+  getSponsoredStudentByStudentId: async (studentId: string): Promise<ApiResponse<StudentSponsorship>> => {
+    return apiFetch<ApiResponse<StudentSponsorship>>(`/sponsorships/student/${studentId}`);
+  },
+
+  createSponsoredStudent: async (data: any): Promise<ApiResponse<StudentSponsorship>> => {
+    return apiFetch<ApiResponse<StudentSponsorship>>('/sponsorships', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateSponsoredStudent: async (id: string, data: any): Promise<ApiResponse<StudentSponsorship>> => {
+    return apiFetch<ApiResponse<StudentSponsorship>>(`/sponsorships/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateSponsoredStudentStatus: async (
+    id: string,
+    status: string,
+    confidentialRemark?: string
+  ): Promise<ApiResponse<StudentSponsorship>> => {
+    return apiFetch<ApiResponse<StudentSponsorship>>(`/sponsorships/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status, confidentialRemark }),
+    });
+  },
+
+  deleteSponsoredStudent: async (id: string): Promise<ApiResponse<{ success: boolean; message: string }>> => {
+    return apiFetch<ApiResponse<{ success: boolean; message: string }>>(`/sponsorships/${id}`, {
+      method: 'DELETE',
+    });
   },
 
   getPayments: async (schoolId?: string, studentId?: string): Promise<ApiResponse<any[]>> => {
