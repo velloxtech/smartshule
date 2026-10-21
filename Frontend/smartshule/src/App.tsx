@@ -817,7 +817,7 @@ export default function App() {
       />
 
       {/* Main Content Viewport (offset by sidebar width on desktop) */}
-      <div className="lg:pl-64 print:pl-0 print:m-0 print:w-full flex flex-col flex-1 min-w-0">
+      <div className="lg:pl-64 print:pl-0 print:m-0 print:w-full flex flex-col flex-1 min-w-0 bg-surface">
         {/* Top Operational Header: Pure Maroon (#800000) */}
         <Header
           onToggleMobile={() => setMobileSidebarOpen(true)}
@@ -880,7 +880,7 @@ export default function App() {
         )}
 
         {/* Dynamic Route Content */}
-        <main className="flex-1 px-4 sm:px-6 lg:px-8 pt-4 max-w-7xl w-full mx-auto print:p-0 print:m-0 print:max-w-none print:w-full">
+        <main className="flex-1 px-4 sm:px-6 lg:px-8 pt-4 pb-12 max-w-7xl w-full mx-auto print:p-0 print:m-0 print:max-w-none print:w-full">
           {currentTab === 'dashboard' && (
             (() => {
               if (isStaffWithChildren && activeViewMode === 'PARENT') {

@@ -97,7 +97,11 @@ const IssueBookModal: React.FC<IssueBookModalProps> = ({
     setBorrowerId(teach.id);
     setBorrowerName(teach.name || teach.tscNumber || 'Teacher');
     setBorrowerAdmissionOrNumber(teach.tscNumber || teach.employeeNumber || '');
-    setBorrowerGradeOrClass(teach.specialization?.join(', ') || 'Teaching Staff');
+    setBorrowerGradeOrClass(
+      Array.isArray(teach.specialization)
+        ? teach.specialization.join(', ')
+        : (teach.specialization || 'Teaching Staff')
+    );
     setMemberSearch('');
   };
 

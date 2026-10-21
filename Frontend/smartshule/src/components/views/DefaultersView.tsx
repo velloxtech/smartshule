@@ -171,7 +171,7 @@ export const DefaultersView: React.FC<DefaultersViewProps> = ({
                               upi: studentMatch?.upi || '',
                               nemis: studentMatch?.nemis || '',
                               name: d.studentName,
-                              gender: studentMatch?.gender || 'Learner',
+                              gender: studentMatch?.gender || 'Boy',
                               grade: d.gradeLevel,
                               stream: studentMatch?.stream || '',
                               guardianName: d.guardianContact?.name || 'Parent',

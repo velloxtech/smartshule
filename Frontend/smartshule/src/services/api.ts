@@ -2404,7 +2404,7 @@ export const libraryApi = {
     });
   },
 
-  reviewLeave: async (id: string, action: 'APPROVE' | 'REJECT', remarks?: string): Promise<ApiResponse<StaffLeave>> => {
+  reviewLeave: async (id: string, action: 'APPROVE' | 'REJECT' | 'APPROVED' | 'REJECTED', remarks?: string): Promise<ApiResponse<StaffLeave>> => {
     return apiFetch<ApiResponse<StaffLeave>>(`/payroll/leaves/${id}/review`, {
       method: 'PATCH',
       body: JSON.stringify({ action, remarks }),

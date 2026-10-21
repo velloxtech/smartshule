@@ -503,7 +503,7 @@ export const FeeStructureView: React.FC = () => {
       s.gradeLevel?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesGrade = gradeFilter === 'ALL' || s.gradeLevel === gradeFilter;
     const matchesTier = selectedTier === 'ALL' || getTierForGrade(s.gradeLevel) === selectedTier;
-    const matchesTerm = selectedTerm === 'ALL' || s.termId === selectedTerm || (!s.termId && selectedTerm === 'ALL');
+    const matchesTerm = selectedTerm === 'ALL' || s.termId === selectedTerm;
     return matchesSearch && matchesGrade && matchesTier && matchesTerm;
   });
 

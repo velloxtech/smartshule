@@ -84,13 +84,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       <aside
         id="main-sidebar"
-        className={`fixed left-0 top-0 bottom-0 w-64 bg-[#DEC4C4] border-r border-[#DEC4C4] z-40 flex flex-col justify-between shadow-[0_1px_8px_rgba(0,0,0,0.06)] overflow-y-auto transition-transform duration-200 ease-in-out ${
+        className={`fixed left-0 top-0 bottom-0 w-64 bg-[#f5ada8] border-r border-[#7a1228]/20 z-40 flex flex-col justify-between shadow-[0_2px_12px_rgba(0,0,0,0.06)] overflow-y-auto transition-transform duration-200 ease-in-out ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
         <div className="flex flex-col">
           {/* Logo Brand Header */}
-          <div className="h-16 px-md flex items-center justify-between gap-sm bg-[#DEC4C4] border-b border-[#7a1228]/10">
+          <div className="h-16 px-md flex items-center justify-between gap-sm bg-[#f5ada8] border-b border-[#7a1228]/15">
             <div className="flex items-center gap-sm">
               <img
                 src="/logo.png"
@@ -126,7 +126,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           {/* User Profile Card */}
           <div className="p-md">
-            <div className="w-full p-3 rounded-xl bg-[#F8F5F5] flex flex-col gap-2 border border-[#7a1228]/15 shadow-[0_4px_16px_rgba(0,0,0,0.09)]">
+            <div className="w-full p-3 rounded-xl bg-white flex flex-col gap-2 border border-[#7a1228]/15 shadow-sm">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
                   {user ? `${user.firstName[0]}${user.lastName[0]}` : <span className="material-symbols-outlined text-[18px]">person</span>}
@@ -278,7 +278,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       className={`flex items-center justify-between px-sm py-2 text-left w-full transition-all rounded-lg cursor-pointer ${
                         isActive
                           ? 'bg-primary text-white font-semibold shadow-sm'
-                          : 'text-[#40000e] hover:bg-[#F8F5F5]/60 hover:text-primary'
+                          : 'text-[#40000e] hover:bg-[#7a1228]/10 hover:text-primary font-medium'
                       }`}
                       data-path={item.id}
                     >
@@ -329,7 +329,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* Sidebar Footer: Landing Page & Sign Out */}
-        <div className="p-sm bg-[#F8F5F5] m-sm rounded-xl space-y-2 border border-[#7a1228]/15 shadow-[0_4px_16px_rgba(0,0,0,0.09)]">
+        <div className="p-sm bg-white m-sm rounded-xl space-y-2 border border-[#7a1228]/15 shadow-sm">
           {onNavigateLanding && (
             <button
               onClick={onNavigateLanding}

@@ -119,10 +119,13 @@ export enum UserRole {
 
 export interface AuthUser {
   id: string;
+  userId?: string;
   email?: string;
   firstName: string;
   lastName: string;
   fullName: string;
+  name?: string;
+  schoolName?: string;
   role: UserRole;
   phone?: string;
   schoolId?: string;
@@ -160,6 +163,10 @@ export interface ApiResponse<T = any> {
 export interface Student {
   id: string;
   admNo: string;
+  admissionNumber?: string;
+  firstName?: string;
+  middleName?: string;
+  lastName?: string;
   upi: string;
   nemis: string;
   name: string;
@@ -222,10 +229,12 @@ export interface DeletedStudentLinkedData {
   reportCards: any[];
   attendanceRecordsCount?: number;
   attendanceRecords: any[];
+  attendance?: any;
   complaintsCount?: number;
   complaints: any[];
   ediaryEntriesCount?: number;
   ediaryEntries: any[];
+  ediary?: any;
   progressPhotosCount?: number;
   progressPhotos: any[];
   helpRequestsCount?: number;
@@ -241,6 +250,7 @@ export interface ClearedPendingWork {
   clearedLunchBalances: number;
   clearedLunchEnrollments: Array<{ id: string; planName: string; balance: number; paymentStatus: string }>;
   resolvedComplaintsCount: number;
+  clearedComplaintsCount?: number;
   resolvedComplaints: Array<{ id: string; title: string }>;
   clearedEdiaryItemsCount: number;
   unlinkedGuardiansCount: number;
@@ -260,6 +270,7 @@ export interface DeletedStudentRecord {
   upiNumber?: string;
   schoolId: string;
   gradeLevel: string;
+  streamName?: string;
   classroomId?: string;
   streamId?: string;
   academicYearId?: string;
@@ -268,6 +279,7 @@ export interface DeletedStudentRecord {
   pendingWorkCleared: ClearedPendingWork;
   deletedAt: string;
   deletedByUserId?: string;
+  deletedBy?: string;
   reason?: string;
 }
 
@@ -277,6 +289,7 @@ export interface Teacher {
   tscNumber: string;
   name: string;
   role: string;
+  specialization?: string | string[];
   learningAreas: string[];
   assignedClass: string;
   phone: string;
@@ -324,7 +337,7 @@ export interface AssessmentRecord {
   subStrand: string;
   rating: CBCRubric;
   evidence: string;
-  recordedBy: string;
+  recordedBy?: string;
   date: string;
   targetedCompetencies?: string[];
   valuesObserved?: string[];
@@ -359,6 +372,8 @@ export interface SchoolInfo {
   id: string;
   name: string;
   code: string;
+  knecCode?: string;
+  registrationNumber?: string;
   centerCode?: string;
   motto?: string;
   email: string;
@@ -444,7 +459,8 @@ export interface AcademicYear {
   startDate: string;
   endDate: string;
   isCurrent: boolean;
-  schoolId: string;
+  schoolId?: string;
+  terms?: AcademicTerm[];
 }
 
 export interface AcademicTerm {
@@ -481,6 +497,7 @@ export interface ClassRoom {
   gradeLevel: string;
   educationLevel: string;
   schoolId: string;
+  streams?: StreamItem[];
 }
 
 export interface StreamItem {
@@ -864,6 +881,9 @@ export interface DashboardSummary {
     year: string;
     term: string;
   };
+  totalStudents?: number;
+  totalTeachers?: number;
+  totalCollectedFees?: number;
   counts: {
     totalStudents: number;
     activeStudents: number;
@@ -940,6 +960,7 @@ export interface FinanceSummaryData {
   totalInvoiced: number;
   totalCollected: number;
   totalOutstanding: number;
+  totalBilled?: number;
   collectionRatePercentage: number;
   invoiceCount: number;
   paymentCount: number;
@@ -1002,7 +1023,7 @@ export type ExpenseCategoryType =
   | 'CAPITAL_DEVELOPMENT'
   | 'OTHER_EXPENSES';
 
-export type ExpenseStatusType = 'PAID' | 'APPROVED' | 'PENDING' | 'REJECTED';
+export type ExpenseStatusType = 'PAID' | 'APPROVED' | 'PENDING' | 'REJECTED' | 'DISBURSED';
 
 export interface ExpenseRecord {
   id: string;
@@ -1092,6 +1113,11 @@ export interface CashFlowLedgerData {
   isSurplus: boolean;
   feeInflow: number;
   otherInflow: number;
+  summary?: {
+    totalExpensesOut?: number;
+    totalOtherIncome?: number;
+    netCashPosition?: number;
+  };
   accountBalances: {
     bank: AccountBalanceDetail;
     mpesa: AccountBalanceDetail;
@@ -1111,6 +1137,7 @@ export interface ParentHelpRequest {
   guardianUserId: string;
   learningAreaId?: string;
   title: string;
+  subject?: string;
   description: string;
   photoUrl: string;
   thumbnailUrl?: string;
@@ -1121,6 +1148,7 @@ export interface ParentHelpRequest {
     height: number;
   };
   status: 'OPEN' | 'IN_REVIEW' | 'RESOLVED';
+  respondedAt?: string;
   teacherResponse?: {
     teacherUserId: string;
     teacherName: string;
@@ -1349,6 +1377,7 @@ export interface LunchEnrollmentItem {
   admissionNumber?: string;
   gradeLevel?: string;
   streamId?: string;
+  streamName?: string;
   studentStatus?: string;
   academicYearId?: string;
   termId?: string;
@@ -1854,7 +1883,7 @@ export interface BroadsheetResult {
   termName: string;
   yearName: string;
   examType?: string;
-  learningAreas: Array<{ id: string; name: string }>;
+  learningAreas: Array<{ id: string; name: string; code?: string }>;
   rows: BroadsheetRow[];
   streamSections?: StreamSection[];
   subjectSummaries: BroadsheetSubjectSummary[];

@@ -1663,7 +1663,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
               {/* LEFT: Trajectory Curve or Line Graph */}
               <g>
                 <rect x="10" y="10" width="340" height="195" rx="6" fill="#ffffff" stroke="#e5e7eb" strokeWidth="1" />
-                <text x="25" y="24" fontSize="8" fontWeight="bold" fill="#800000" fontFamily="system-ui, sans-serif" textTransform="uppercase">
+                <text x="25" y="24" fontSize="8" fontWeight="bold" fill="#800000" fontFamily="system-ui, sans-serif" style={{ textTransform: 'uppercase' }}>
                   Term Aggregate Trajectory (Term 1 to 3)
                 </text>
 
@@ -1749,7 +1749,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
               {/* RIGHT: CBC Learning Areas Dynamic Matrix */}
               <g>
                 <rect x="360" y="10" width="440" height="195" rx="6" fill="#ffffff" stroke="#e5e7eb" strokeWidth="1" />
-                <text x="375" y="24" fontSize="8.5" fontWeight="bold" fill="#800000" fontFamily="system-ui, sans-serif" textTransform="uppercase">
+                <text x="375" y="24" fontSize="8.5" fontWeight="bold" fill="#800000" fontFamily="system-ui, sans-serif" style={{ textTransform: 'uppercase' }}>
                   {`${resolvedSubjects.length} CBC Learning Areas Comparison (Term 1 & Term 2 & Term 3)`}
                 </text>
 

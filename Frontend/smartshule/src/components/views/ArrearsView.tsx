@@ -1292,6 +1292,7 @@ export const ArrearsView: React.FC<ArrearsViewProps> = ({
       {/* MODAL: FEE STATEMENT MODAL */}
       {statementStudent && (
         <FeeStatementModal
+          isOpen={true}
           studentId={statementStudent.id}
           studentName={statementStudent.name}
           onClose={() => setStatementStudent(null)}

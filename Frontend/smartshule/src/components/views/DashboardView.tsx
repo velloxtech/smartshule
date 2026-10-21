@@ -374,9 +374,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           onClick={() => onNavigateTab('students-guardians')}
           className="rounded-xl bg-surface-container-lowest p-md flex flex-col justify-between shadow-xs relative overflow-hidden group hover:shadow-md transition-all cursor-pointer border border-outline-variant/30 hover:border-primary/40"
         >
-          <div className="absolute -right-3 -top-3 w-16 h-16 rounded-full bg-primary/5 flex items-center justify-center">
-            <span className="material-symbols-outlined text-primary/30 text-[32px]">groups</span>
-          </div>
           <div>
             <div className="flex items-center justify-between">
               <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider font-semibold">
@@ -411,11 +408,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           onClick={() => onNavigateTab('invoices-mpesa')}
           className="rounded-xl bg-surface-container-lowest p-md flex flex-col justify-between shadow-xs relative overflow-hidden group hover:shadow-md transition-all cursor-pointer border border-outline-variant/30 hover:border-emerald-500/40"
         >
-          <div className="absolute -right-3 -top-3 w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center">
-            <span className="material-symbols-outlined text-emerald-600/40 text-[32px]">
-              payments
-            </span>
-          </div>
           <div>
             <div className="flex items-center justify-between">
               <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider font-semibold">
@@ -453,11 +445,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           onClick={() => onNavigateTab('defaulters-receipts')}
           className="rounded-xl bg-surface-container-lowest p-md flex flex-col justify-between shadow-xs relative overflow-hidden group hover:shadow-md transition-all cursor-pointer border border-outline-variant/30 hover:border-rose-500/40"
         >
-          <div className="absolute -right-3 -top-3 w-16 h-16 rounded-full bg-rose-500/10 flex items-center justify-center">
-            <span className="material-symbols-outlined text-rose-600/40 text-[32px]">
-              pending_actions
-            </span>
-          </div>
           <div>
             <div className="flex items-center justify-between">
               <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider font-semibold">
@@ -487,9 +474,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           onClick={() => onNavigateTab('teachers-staff')}
           className="rounded-xl bg-surface-container-lowest p-md flex flex-col justify-between shadow-xs relative overflow-hidden group hover:shadow-md transition-all cursor-pointer border border-outline-variant/30 hover:border-indigo-500/40"
         >
-          <div className="absolute -right-3 -top-3 w-16 h-16 rounded-full bg-indigo-500/10 flex items-center justify-center">
-            <span className="material-symbols-outlined text-indigo-600/40 text-[32px]">co_present</span>
-          </div>
           <div>
             <div className="flex items-center justify-between">
               <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider font-semibold">
@@ -522,9 +506,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           onClick={() => onNavigateTab('teachers-staff')}
           className="rounded-xl bg-surface-container-lowest p-md flex flex-col justify-between shadow-xs relative overflow-hidden group hover:shadow-md transition-all cursor-pointer border border-outline-variant/30 hover:border-purple-500/40"
         >
-          <div className="absolute -right-3 -top-3 w-16 h-16 rounded-full bg-purple-500/10 flex items-center justify-center">
-            <span className="material-symbols-outlined text-purple-600/40 text-[32px]">badge</span>
-          </div>
           <div>
             <div className="flex items-center justify-between">
               <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider font-semibold">
