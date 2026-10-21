@@ -35,7 +35,7 @@ const logo = '/logo.jpg'
 const whatsappImg = '/hero-school.png'
 const heroSchool = '/hero-school.png'
 const graduationBannerImg = '/graduation-banner.jpeg'
-const scoutsMarchingImg = '/scouts-marchng.jpeg'
+const scoutsMarchingImg = '/img.jpeg'
 
 const NAV_LINKS = [
   { name: 'Home', view: 'home', section: null },
