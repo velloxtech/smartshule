@@ -1308,8 +1308,22 @@ export class PostgresCBCAssessmentRepository implements ICBCAssessmentRepository
     return Strand.create({ learningAreaId: r.learning_area_id, gradeLevel: r.grade_level, code: r.code, title: r.title, description: r.description }, r.id, r.created_at, r.updated_at);
   }
   public async findStrandsByLearningArea(learningAreaId: string, gradeLevel?: CBCGradeLevel): Promise<Strand[]> {
-    const res = await this.pool.query('SELECT * FROM strands WHERE learning_area_id = $1', [learningAreaId]);
-    return res.rows.map(r => Strand.create({ learningAreaId: r.learning_area_id, gradeLevel: r.grade_level, code: r.code, title: r.title, description: r.description }, r.id, r.created_at, r.updated_at));
+    let q = 'SELECT * FROM strands WHERE learning_area_id = $1';
+    const params: any[] = [learningAreaId];
+    
+    if (gradeLevel) {
+      params.push(gradeLevel);
+      q += ' AND grade_level = $2';
+    }
+    
+    const res = await this.pool.query(q, params);
+    return res.rows.map(r => Strand.create({ 
+      learningAreaId: r.learning_area_id, 
+      gradeLevel: r.grade_level, 
+      code: r.code, 
+      title: r.title, 
+      description: r.description 
+    }, r.id, r.created_at, r.updated_at));
   }
   public async saveStrand(s: Strand): Promise<void> {
     const q = `INSERT INTO strands (id, learning_area_id, grade_level, code, title, description, created_at, updated_at)

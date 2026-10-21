@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Student, CBCRubric, LearningArea, AssessmentRecord } from '../../types';
+import { Student, CBCRubric, LearningArea, AssessmentRecord, BackendStrand, BackendSubStrand } from '../../types';
+import { apiService } from '../../services/api';
 
 interface CBCFormativeModalProps {
   isOpen: boolean;
@@ -11,18 +12,6 @@ interface CBCFormativeModalProps {
   onSaveAssessment?: (record: Omit<AssessmentRecord, 'id' | 'date'>) => void;
 }
 
-const DEFAULT_CBC_LEARNING_AREAS: LearningArea[] = [
-  { id: 'la-math', code: 'MATH', name: 'Mathematics', gradeLevels: [], strands: [] },
-  { id: 'la-eng', code: 'ENG', name: 'English Language', gradeLevels: [], strands: [] },
-  { id: 'la-kisw', code: 'KISW', name: 'Kiswahili Lugha', gradeLevels: [], strands: [] },
-  { id: 'la-sci', code: 'SCI', name: 'Integrated Science', gradeLevels: [], strands: [] },
-  { id: 'la-soc', code: 'SOC', name: 'Social Studies', gradeLevels: [], strands: [] },
-  { id: 'la-cre', code: 'CRE', name: 'CRE / IRE Religious Education', gradeLevels: [], strands: [] },
-  { id: 'la-arts', code: 'ARTS', name: 'Creative Arts & Sports', gradeLevels: [], strands: [] },
-  { id: 'la-agri', code: 'AGRI', name: 'Agriculture & Nutrition', gradeLevels: [], strands: [] },
-  { id: 'la-pretech', code: 'PTECH', name: 'Pre-Technical Studies', gradeLevels: [], strands: [] },
-];
-
 export const CBCFormativeModal: React.FC<CBCFormativeModalProps> = ({
   isOpen,
   onClose,
@@ -32,16 +21,26 @@ export const CBCFormativeModal: React.FC<CBCFormativeModalProps> = ({
   onSave,
   onSaveAssessment,
 }) => {
-  const availableLearningAreas = learningAreas && learningAreas.length > 0 ? learningAreas : DEFAULT_CBC_LEARNING_AREAS;
-
   const [studentId, setStudentId] = useState<string>(
     initialStudent?.id || (students && students.length > 0 ? students[0].id : '')
   );
-  const [learningArea, setLearningArea] = useState<string>(
-    availableLearningAreas[0]?.name || 'Mathematics'
-  );
-  const [strand, setStrand] = useState('');
-  const [subStrand, setSubStrand] = useState('');
+  
+  const currentStudent = students.find((s) => s.id === studentId) || initialStudent || students[0];
+  const studentGradeFormat = currentStudent?.gradeLevel || currentStudent?.grade?.toUpperCase().replace(' ', '_') || '';
+
+  // ALL subjects are global now, no need to filter availableLearningAreas by grade!
+  const availableLearningAreas = learningAreas;
+  const [learningAreaId, setLearningAreaId] = useState<string>('');
+  
+  const [strands, setStrands] = useState<BackendStrand[]>([]);
+  const [strandId, setStrandId] = useState('');
+  const [strandTitle, setStrandTitle] = useState('');
+  
+  const [subStrands, setSubStrands] = useState<BackendSubStrand[]>([]);
+  const [subStrandId, setSubStrandId] = useState('');
+  const [subStrandTitle, setSubStrandTitle] = useState('');
+  
+  const [loadingStrands, setLoadingStrands] = useState(false);
   const [rating, setRating] = useState<CBCRubric>('ME');
   const [evidence, setEvidence] = useState('');
   const [saved, setSaved] = useState(false);
@@ -55,37 +54,94 @@ export const CBCFormativeModal: React.FC<CBCFormativeModalProps> = ({
   }, [initialStudent, students, isOpen]);
 
   useEffect(() => {
-    if (!learningArea) {
-      setLearningArea(availableLearningAreas[0]?.name || 'Mathematics');
+    if (availableLearningAreas.length > 0 && !learningAreaId) {
+      setLearningAreaId(availableLearningAreas[0].id);
     }
-  }, [availableLearningAreas, isOpen, learningArea]);
+  }, [availableLearningAreas, learningAreaId]);
+
+  // SMART DB FETCHING: Fetch only Strands belonging to the Global Subject AND the Learner's Grade
+  useEffect(() => {
+    if (!isOpen || !learningAreaId) {
+      setStrands([]);
+      setStrandId('');
+      setStrandTitle('');
+      return;
+    }
+
+    setLoadingStrands(true);
+    // Notice we are passing the studentGradeFormat as the second parameter here!
+    apiService.getStrandsByLearningArea(learningAreaId, studentGradeFormat)
+      .then(res => {
+        if (res.success && res.data && res.data.length > 0) {
+          setStrands(res.data);
+          setStrandId(res.data[0].id);
+          setStrandTitle(res.data[0].title);
+        } else {
+          setStrands([]);
+          setStrandId('');
+          setStrandTitle('');
+        }
+      })
+      .catch(() => {
+        setStrands([]);
+        setStrandId('');
+        setStrandTitle('');
+      })
+      .finally(() => setLoadingStrands(false));
+  }, [learningAreaId, studentGradeFormat, isOpen]);
+
+  useEffect(() => {
+    if (!strandId || !isOpen) {
+      setSubStrands([]);
+      setSubStrandId('');
+      setSubStrandTitle('');
+      return;
+    }
+
+    apiService.getSubStrandsByStrand(strandId)
+      .then(res => {
+        if (res.success && res.data && res.data.length > 0) {
+          setSubStrands(res.data);
+          setSubStrandId(res.data[0].id);
+          setSubStrandTitle(res.data[0].title);
+        } else {
+          setSubStrands([]);
+          setSubStrandId('');
+          setSubStrandTitle('');
+        }
+      })
+      .catch(() => {
+        setSubStrands([]);
+        setSubStrandId('');
+        setSubStrandTitle('');
+      });
+  }, [strandId, isOpen]);
 
   if (!isOpen) return null;
-
-  const currentStudent = students.find((s) => s.id === studentId) || initialStudent || students[0];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentStudent) return;
+
+    const selectedLa = availableLearningAreas.find(la => la.id === learningAreaId);
 
     const recordPayload = {
       studentId: currentStudent.id,
       studentName: currentStudent.name,
       admNo: currentStudent.admNo,
       grade: currentStudent.grade,
-      learningArea,
-      strand,
-      subStrand,
+      learningAreaId: learningAreaId,
+      learningArea: selectedLa?.name || 'Subject',
+      strandId: strandId,
+      strand: strandTitle || strandId,
+      subStrandId: subStrandId,
+      subStrand: subStrandTitle || subStrandId,
       rating,
       evidence: evidence || 'Demonstrated expected competency level.',
     };
 
-    if (onSave) {
-      onSave(recordPayload);
-    }
-    if (onSaveAssessment) {
-      onSaveAssessment(recordPayload);
-    }
+    if (onSave) onSave(recordPayload);
+    if (onSaveAssessment) onSaveAssessment(recordPayload);
 
     setSaved(true);
     setTimeout(() => {
@@ -93,37 +149,6 @@ export const CBCFormativeModal: React.FC<CBCFormativeModalProps> = ({
       onClose();
     }, 1000);
   };
-
-  const rubricButtons: { key: CBCRubric; label: string; desc: string; activeClass: string; color: string }[] = [
-    {
-      key: 'EE',
-      label: 'Exceeding (EE)',
-      desc: 'Mastery beyond expected standard',
-      activeClass: 'bg-secondary text-white border-secondary',
-      color: '#006a63',
-    },
-    {
-      key: 'ME',
-      label: 'Meeting (ME)',
-      desc: 'Competently meets standard',
-      activeClass: 'bg-primary text-white border-primary',
-      color: '#7a1228',
-    },
-    {
-      key: 'AE',
-      label: 'Approaching (AE)',
-      desc: 'Progressing with teacher guidance',
-      activeClass: 'bg-[#653400] text-white border-[#653400]',
-      color: '#653400',
-    },
-    {
-      key: 'BE',
-      label: 'Below (BE)',
-      desc: 'Urgent individual intervention required',
-      activeClass: 'bg-error text-white border-error',
-      color: '#ba1a1a',
-    },
-  ];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
@@ -138,10 +163,7 @@ export const CBCFormativeModal: React.FC<CBCFormativeModalProps> = ({
               <p className="text-xs text-rose-100">KICD Competency Framework · 4-Level Assessment Scale</p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1 rounded-lg text-rose-100 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
-          >
+          <button onClick={onClose} className="p-1 rounded-lg text-rose-100 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0">
             <span className="material-symbols-outlined text-[20px]">close</span>
           </button>
         </div>
@@ -152,43 +174,23 @@ export const CBCFormativeModal: React.FC<CBCFormativeModalProps> = ({
               <span className="material-symbols-outlined text-[36px]">check_circle</span>
             </div>
             <h4 className="font-bold text-lg text-on-surface">Assessment Recorded Successfully!</h4>
-            <p className="text-xs text-on-surface-variant">
-              Synchronized with school formative records and student portfolio.
-            </p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1 overscroll-contain">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">
-                  Select Learner
-                </label>
-                <select
-                  value={studentId}
-                  onChange={(e) => setStudentId(e.target.value)}
-                  className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-sm text-on-surface focus:outline-primary"
-                >
+                <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">Select Learner</label>
+                <select value={studentId} onChange={(e) => setStudentId(e.target.value)} className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-sm text-on-surface focus:outline-primary">
                   {(students || []).map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} ({s.grade} {s.stream})
-                    </option>
+                    <option key={s.id} value={s.id}>{s.name} ({s.grade})</option>
                   ))}
                 </select>
               </div>
-
               <div>
-                <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">
-                  Learning Area
-                </label>
-                <select
-                  value={learningArea}
-                  onChange={(e) => setLearningArea(e.target.value)}
-                  className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-sm text-on-surface focus:outline-primary"
-                >
+                <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">Global Subject</label>
+                <select value={learningAreaId} onChange={(e) => setLearningAreaId(e.target.value)} required className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-sm text-on-surface focus:outline-primary cursor-pointer">
                   {availableLearningAreas.map((la) => (
-                    <option key={la.id} value={la.name}>
-                      {la.name}
-                    </option>
+                    <option key={la.id} value={la.id}>{la.name}</option>
                   ))}
                 </select>
               </div>
@@ -196,66 +198,46 @@ export const CBCFormativeModal: React.FC<CBCFormativeModalProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">
-                  Strand
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={strand}
-                  onChange={(e) => setStrand(e.target.value)}
-                  className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-sm text-on-surface focus:outline-primary"
-                  placeholder="e.g. Numbers & Operations"
-                />
+                <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">Grade-Specific Strand</label>
+                {loadingStrands ? (
+                  <div className="p-2.5 text-xs text-on-surface-variant">Loading DB strands...</div>
+                ) : strands.length > 0 ? (
+                  <select value={strandId} onChange={(e) => { setStrandId(e.target.value); setStrandTitle(strands.find(s => s.id === e.target.value)?.title || ''); }} required className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-sm text-on-surface focus:outline-primary cursor-pointer truncate">
+                    {strands.map(st => <option key={st.id} value={st.id}>{st.title}</option>)}
+                  </select>
+                ) : (
+                  <div className="p-2.5 text-xs text-error font-medium bg-error/10 rounded-lg">No Strands for {currentStudent?.grade}</div>
+                )}
               </div>
-
               <div>
-                <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">
-                  Sub-Strand
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={subStrand}
-                  onChange={(e) => setSubStrand(e.target.value)}
-                  className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-sm text-on-surface focus:outline-primary"
-                  placeholder="e.g. Fractions & Decimals"
-                />
+                <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">Sub-Strand</label>
+                {subStrands.length > 0 ? (
+                  <select value={subStrandId} onChange={(e) => { setSubStrandId(e.target.value); setSubStrandTitle(subStrands.find(s => s.id === e.target.value)?.title || ''); }} required className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-sm text-on-surface focus:outline-primary cursor-pointer truncate">
+                    {subStrands.map(sub => <option key={sub.id} value={sub.id}>{sub.title}</option>)}
+                  </select>
+                ) : (
+                  <div className="p-2.5 text-xs text-on-surface-variant bg-surface-container-low rounded-lg">-</div>
+                )}
               </div>
             </div>
 
-            {/* 4-Level Rubric Selector */}
             <div>
-              <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1.5">
-                CBE Rubric Level
-              </label>
+              <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1.5">CBE Rubric Level</label>
               <div className="grid grid-cols-2 gap-2">
-                {rubricButtons.map((btn) => {
+                {[
+                  { key: 'EE', label: 'Exceeding (EE)', desc: 'Mastery beyond expected standard', activeClass: 'bg-secondary text-white' },
+                  { key: 'ME', label: 'Meeting (ME)', desc: 'Competently meets standard', activeClass: 'bg-primary text-white' },
+                  { key: 'AE', label: 'Approaching (AE)', desc: 'Progressing with teacher guidance', activeClass: 'bg-[#653400] text-white' },
+                  { key: 'BE', label: 'Below (BE)', desc: 'Urgent individual intervention required', activeClass: 'bg-error text-white' },
+                ].map((btn) => {
                   const isSelected = rating === btn.key;
                   return (
-                    <button
-                      key={btn.key}
-                      type="button"
-                      onClick={() => setRating(btn.key)}
-                      className={`p-2.5 rounded-lg border text-left transition-all cursor-pointer ${
-                        isSelected
-                          ? btn.activeClass + ' shadow-md'
-                          : 'bg-surface-container-low border-outline-variant/30 text-on-surface hover:bg-surface-container'
-                      }`}
-                    >
+                    <button key={btn.key} type="button" onClick={() => setRating(btn.key as any)} className={`p-2.5 rounded-lg border text-left transition-all cursor-pointer ${isSelected ? btn.activeClass + ' shadow-md' : 'bg-surface-container-low border-outline-variant/30 text-on-surface hover:bg-surface-container'}`}>
                       <div className="font-bold text-xs flex items-center justify-between">
                         <span>{btn.label}</span>
-                        {isSelected && (
-                          <span className="material-symbols-outlined text-[16px]">check</span>
-                        )}
+                        {isSelected && <span className="material-symbols-outlined text-[16px]">check</span>}
                       </div>
-                      <div
-                        className={`text-[11px] mt-0.5 ${
-                          isSelected ? 'text-white/90' : 'text-on-surface-variant'
-                        }`}
-                      >
-                        {btn.desc}
-                      </div>
+                      <div className={`text-[11px] mt-0.5 ${isSelected ? 'text-white/90' : 'text-on-surface-variant'}`}>{btn.desc}</div>
                     </button>
                   );
                 })}
@@ -263,30 +245,13 @@ export const CBCFormativeModal: React.FC<CBCFormativeModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">
-                Teacher Observation / Rubric Evidence
-              </label>
-              <textarea
-                rows={2}
-                value={evidence}
-                onChange={(e) => setEvidence(e.target.value)}
-                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-sm text-on-surface focus:outline-primary"
-                placeholder="Learner demonstrated exceptional problem-solving and collaboration during tasks..."
-              />
+              <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">Teacher Observation Evidence</label>
+              <textarea rows={2} value={evidence} onChange={(e) => setEvidence(e.target.value)} className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-sm text-on-surface focus:outline-primary" placeholder="Learner demonstrated exceptional problem-solving..." />
             </div>
 
             <div className="pt-3 flex items-center justify-end gap-2 shrink-0 border-t border-outline-variant/20 mt-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 text-sm font-medium text-on-surface-variant hover:bg-surface-container rounded-lg cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-5 py-2.5 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary-container transition-all flex items-center gap-1.5 shadow-md cursor-pointer"
-              >
+              <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium hover:bg-surface-container rounded-lg cursor-pointer">Cancel</button>
+              <button type="submit" disabled={strands.length === 0} className="px-5 py-2.5 bg-[#7a1228] text-white text-sm font-semibold rounded-lg hover:bg-[#5e0d1e] shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50">
                 <span className="material-symbols-outlined text-[18px]">save</span>
                 <span>Save CBE Assessment</span>
               </button>

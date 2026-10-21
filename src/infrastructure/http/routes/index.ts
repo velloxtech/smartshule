@@ -352,24 +352,32 @@ export function createApiRouter(container: AppContainer): Router {
   // 5. CBC CURRICULUM & ASSESSMENT ROUTES
   // ==========================================
   const CBCRouter = Router();
-  CBCRouter.post('/strands', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), validateBody(CreateStrandSchema), CBCController.createStrand);
+  
+  // ADDED UserRole.TEACHER to strand creation and deletion
+  CBCRouter.post('/strands', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), validateBody(CreateStrandSchema), CBCController.createStrand);
   CBCRouter.get('/strands/by-learning-area/:learningAreaId', authMiddleware, CBCController.getStrandsByLearningArea);
-  CBCRouter.delete('/strands/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), CBCController.deleteStrand);
-  CBCRouter.post('/sub-strands', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), validateBody(CreateSubStrandSchema), CBCController.createSubStrand);
+  CBCRouter.delete('/strands/:id', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), CBCController.deleteStrand);
+  
+  // ADDED UserRole.TEACHER to sub-strand creation and deletion
+  CBCRouter.post('/sub-strands', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), validateBody(CreateSubStrandSchema), CBCController.createSubStrand);
   CBCRouter.get('/sub-strands/by-strand/:strandId', authMiddleware, CBCController.getSubStrandsByStrand);
-  CBCRouter.delete('/sub-strands/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), CBCController.deleteSubStrand);
+  CBCRouter.delete('/sub-strands/:id', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), CBCController.deleteSubStrand);
+  
+  // Formative & Summative (Teachers already had access here)
   CBCRouter.post('/formative', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), validateBody(RecordFormativeSchema), CBCController.recordFormative);
   CBCRouter.get('/formative', authMiddleware, CBCController.listFormatives);
   CBCRouter.delete('/formative/:id', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), CBCController.deleteFormative);
+  
   CBCRouter.post('/summative', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), validateBody(RecordSummativeSchema), CBCController.recordSummative);
   CBCRouter.post('/summative/batch', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), validateBody(RecordSummativeBatchSchema), CBCController.recordSummativeBatch);
   CBCRouter.get('/summative', authMiddleware, CBCController.listSummatives);
   CBCRouter.delete('/summative/:id', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), CBCController.deleteSummative);
+  
   CBCRouter.post('/report-cards/generate', authMiddleware, requireRoles(UserRole.HEAD_TEACHER, UserRole.TEACHER, UserRole.SUPER_ADMIN), validateBody(GenerateReportCardSchema), CBCController.generateReportCard);
   CBCRouter.get('/report-cards', authMiddleware, CBCController.getReportCard);
   CBCRouter.get('/analytics', authMiddleware, CBCController.getAnalytics);
+  
   router.use('/CBC', CBCRouter);
-
   // ==========================================
   // 6. SCHEMES OF WORK & LESSON PLANS ROUTES
   // ==========================================
@@ -889,6 +897,7 @@ export function createApiRouter(container: AppContainer): Router {
   payrollRouter.post('/custom', authMiddleware, allowedPayrollAdminRoles, validateBody(CustomPayrollSchema), payrollController.createCustom);
   payrollRouter.patch('/:id/approve', authMiddleware, allowedPayrollAdminRoles, payrollController.approvePayroll);
   payrollRouter.patch('/:id/pay', authMiddleware, allowedPayrollAdminRoles, validateBody(MarkPaidSchema), payrollController.markPaid);
+  payrollRouter.delete('/:id', authMiddleware, allowedPayrollAdminRoles, payrollController.deletePayroll);
   payrollRouter.get('/teacher/:teacherId', authMiddleware, payrollController.getTeacherPayrolls);
   payrollRouter.get('/leaves/list', authMiddleware, payrollController.listLeaves);
   payrollRouter.post('/leaves/apply', authMiddleware, validateBody(ApplyLeaveSchema), payrollController.applyLeave);
