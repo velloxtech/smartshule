@@ -87,7 +87,8 @@ export class PayrollController {
 
   public listPayrolls = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const month = req.query.month as string | undefined;
+      const monthParam = req.query.month;
+      const month = typeof monthParam === 'string' ? monthParam : undefined;
       const schoolId = req.user?.schoolId;
       const list = await this.payrollUseCases.listPayrolls(month, schoolId);
       return res.status(200).json({
@@ -142,19 +143,9 @@ export class PayrollController {
     }
   };
 
-  /**
-   * Delete a payroll record by ID
-   */
   public deletePayroll = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { id } = req.params;
-      
-      if (!id) {
-        return res.status(400).json({ success: false, message: 'Payroll ID is required' });
-      }
-
-      await this.payrollUseCases.deletePayroll(id);
-
+      await this.payrollUseCases.deletePayroll(req.params.id as string);
       return res.status(200).json({
         success: true,
         message: 'Payroll record deleted successfully'

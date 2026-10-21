@@ -61,7 +61,6 @@ export class PayrollUseCases {
     const results: PayrollRecord[] = [];
 
     for (const teacher of teachers) {
-      // Find teacher user name
       const user = await this.userRepository.findById(teacher.userId);
       const teacherName = user ? `${user.firstName} ${user.lastName}` : 'Faculty Teacher';
 
@@ -70,7 +69,6 @@ export class PayrollUseCases {
         continue;
       }
 
-      // Default remuneration based on qualification/experience
       const basicSalary = 42000;
       const houseAllowance = 12000;
       const commuterAllowance = 4000;
@@ -85,7 +83,6 @@ export class PayrollUseCases {
         otherDeductions
       );
 
-      // Staff ID should be TSC number if it exists; otherwise employee number
       const effectiveTeacherId = (teacher.tscNumber && teacher.tscNumber.trim() !== '')
         ? (teacher.tscNumber.toUpperCase().startsWith('TSC') ? teacher.tscNumber : `TSC-${teacher.tscNumber}`)
         : (teacher.employeeNumber && teacher.employeeNumber.trim() !== '' ? teacher.employeeNumber : teacher.id);
@@ -131,7 +128,6 @@ export class PayrollUseCases {
         if (user) {
           teacherName = `${user.firstName} ${user.lastName}`;
         }
-        // Staff ID: TSC number if it exists; otherwise employee number
         effectiveTeacherId = (teacher.tscNumber && teacher.tscNumber.trim() !== '')
           ? (teacher.tscNumber.toUpperCase().startsWith('TSC') ? teacher.tscNumber : `TSC-${teacher.tscNumber}`)
           : (teacher.employeeNumber && teacher.employeeNumber.trim() !== '' ? teacher.employeeNumber : teacher.id);
@@ -251,7 +247,7 @@ export class PayrollUseCases {
   ): Promise<any> {
     const p = await this.payrollRepository.findPayrollById(id);
     if (!p) throw new NotFoundError('Payroll record not found.');
-    p.markAsPaid(paymentMethod, reference);
+    p.markAsPaid(paymentMethod as any, reference);
     await this.payrollRepository.updatePayroll(p);
     return p.toJSON();
   }
@@ -268,7 +264,6 @@ export class PayrollUseCases {
     return true;
   }
 
-  // --- Leaves Management ---
   public async applyLeave(dto: ApplyLeaveDTO): Promise<StaffLeave> {
     let teacherName = dto.teacherName || 'Faculty Teacher';
     try {
@@ -295,9 +290,7 @@ export class PayrollUseCases {
             substituteTeacherName = `${subUser.firstName} ${subUser.lastName}`;
           }
         }
-      } catch {
-        // Fallback to provided substituteTeacherName if any
-      }
+      } catch {}
     }
 
     let daysCount = dto.daysCount;
