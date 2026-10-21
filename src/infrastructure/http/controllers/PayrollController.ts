@@ -68,33 +68,6 @@ export class PayrollController {
     }
   };
 
-  /**
-   * Delete a payroll record by ID
-   */
-  async deletePayroll(req: Request, res: Response): Promise<void> {
-    try {
-      const { id } = req.params;
-      
-      if (!id) {
-        res.status(400).json({ success: false, message: 'Payroll ID is required' });
-        return;
-      }
-
-      await this.payrollUseCases.deletePayroll(id);
-
-      res.status(200).json({
-        success: true,
-        message: 'Payroll record deleted successfully'
-      });
-    } catch (error: any) {
-      console.error('Error deleting payroll:', error);
-      res.status(500).json({
-        success: false,
-        message: error.message || 'Internal server error while deleting payroll'
-      });
-    }
-  }
-
   public createCustom = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const schoolId = req.body.schoolId || req.user?.schoolId || 'school-001';
@@ -169,9 +142,19 @@ export class PayrollController {
     }
   };
 
+  /**
+   * Delete a payroll record by ID
+   */
   public deletePayroll = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await this.payrollUseCases.deletePayroll(req.params.id as string);
+      const { id } = req.params;
+      
+      if (!id) {
+        return res.status(400).json({ success: false, message: 'Payroll ID is required' });
+      }
+
+      await this.payrollUseCases.deletePayroll(id);
+
       return res.status(200).json({
         success: true,
         message: 'Payroll record deleted successfully'
