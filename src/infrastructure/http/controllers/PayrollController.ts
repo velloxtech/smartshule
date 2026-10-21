@@ -17,11 +17,16 @@ export const CustomPayrollSchema = z.object({
   commuterAllowance: z.number().min(0).optional(),
   responsibilityAllowance: z.number().min(0).optional(),
   otherDeductions: z.number().min(0).optional(),
+  applyStatutory: z.boolean().optional(),
+  applyPaye: z.boolean().optional(),
+  applyShif: z.boolean().optional(),
+  applyNssf: z.boolean().optional(),
+  applyHousingLevy: z.boolean().optional(),
   notes: z.string().optional()
 });
 
 export const MarkPaidSchema = z.object({
-  paymentMethod: z.enum(['BANK_TRANSFER', 'MPESA', 'CHEQUE']),
+  paymentMethod: z.enum(['BANK_TRANSFER', 'MPESA', 'CHEQUE', 'CASH']),
   reference: z.string().optional()
 });
 
@@ -62,6 +67,33 @@ export class PayrollController {
       next(err);
     }
   };
+
+  /**
+   * Delete a payroll record by ID
+   */
+  async deletePayroll(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      
+      if (!id) {
+        res.status(400).json({ success: false, message: 'Payroll ID is required' });
+        return;
+      }
+
+      await this.payrollUseCases.deletePayroll(id);
+
+      res.status(200).json({
+        success: true,
+        message: 'Payroll record deleted successfully'
+      });
+    } catch (error: any) {
+      console.error('Error deleting payroll:', error);
+      res.status(500).json({
+        success: false,
+        message: error.message || 'Internal server error while deleting payroll'
+      });
+    }
+  }
 
   public createCustom = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
@@ -131,6 +163,18 @@ export class PayrollController {
         success: true,
         message: 'Payroll record marked as paid',
         data: payroll
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public deletePayroll = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      await this.payrollUseCases.deletePayroll(req.params.id as string);
+      return res.status(200).json({
+        success: true,
+        message: 'Payroll record deleted successfully'
       });
     } catch (err) {
       next(err);
