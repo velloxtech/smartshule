@@ -20,6 +20,7 @@ export type TabType =
   | 'fee-structure'
   | 'invoices-mpesa'
   | 'arrears'
+  | 'forwarded-payments'
   | 'defaulters-receipts'
   | 'cashflow-ledger'
   | 'expenses-management'
@@ -427,6 +428,27 @@ export interface FeeTransaction {
   phone?: string;
   timestamp: string;
   status: 'Completed' | 'Processing' | 'Failed';
+}
+
+export interface ForwardedPaymentTransaction {
+  id: string;
+  schoolId?: string;
+  invoiceId?: string;
+  studentId: string;
+  receiptNumber: string;
+  amount: number;
+  paymentMethod: 'MPESA' | 'BANK_DEPOSIT' | 'BANK_TRANSFER' | 'CHEQUE' | 'CASH' | string;
+  transactionReference: string;
+  mpesaPhoneNumber?: string;
+  paymentDate: string;
+  recordedByUserId?: string;
+  status: 'PENDING' | 'COMPLETED' | 'FAILED';
+  notes?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  studentName?: string;
+  admissionNumber?: string;
+  gradeLevel?: string;
 }
 
 export interface SystemActivity {
@@ -1649,7 +1671,7 @@ export interface PayrollRecord {
   totalDeductions: number;
   netSalary: number;
   status: 'DRAFT' | 'APPROVED' | 'PAID';
-  paymentMethod?: 'BANK_TRANSFER' | 'MPESA' | 'CHEQUE';
+  paymentMethod?: 'BANK_TRANSFER' | 'MPESA' | 'CHEQUE' | 'CASH';
   paymentReference?: string;
   paidAt?: string;
   notes?: string;

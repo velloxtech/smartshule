@@ -53,7 +53,6 @@ interface UploadMarksModalProps {
   initialAssessmentType?: 'SUMMATIVE' | 'FORMATIVE';
 }
 
-// Curated default CBC Learning Areas to ensure dropdowns are always populated
 const DEFAULT_CBC_LEARNING_AREAS: BackendLearningArea[] = [
   { id: 'la-mat', code: 'MATH', name: 'Mathematics' } as any,
   { id: 'la-eng', code: 'ENG', name: 'English Language' } as any,
@@ -345,24 +344,20 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
 }) => {
   const { user } = useAuth();
 
-  // Academic Context Dropdowns State
   const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
   const [terms, setTerms] = useState<AcademicTerm[]>([]);
   const [academicYearId, setAcademicYearId] = useState<string>('year-2026');
   const [termId, setTermId] = useState<string>('term-2026-t1');
 
-  // Class & Stream Filter Dropdowns State
   const [classes, setClasses] = useState<ClassRoom[]>([]);
   const [streams, setStreams] = useState<StreamItem[]>([]);
   const [filterClassId, setFilterClassId] = useState<string>('');
   const [filterStreamId, setFilterStreamId] = useState<string>('');
 
-  // Learner Selection & Search State
   const [students, setStudents] = useState<Student[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState<string>('');
   const [learnerSearch, setLearnerSearch] = useState<string>('');
 
-  // Curriculum Subject / Learning Area Dropdowns State
   const [learningAreas, setLearningAreas] = useState<BackendLearningArea[]>([]);
   const [selectedLearningAreaId, setSelectedLearningAreaId] = useState<string>('');
   const [assessmentType, setAssessmentType] = useState<'SUMMATIVE' | 'FORMATIVE'>(initialAssessmentType);
@@ -373,37 +368,30 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
     }
   }, [initialAssessmentType, isOpen]);
 
-  // Strand and Sub-strand Dropdowns State
   const [strands, setStrands] = useState<BackendStrand[]>([]);
   const [selectedStrandId, setSelectedStrandId] = useState<string>('');
   const [subStrands, setSubStrands] = useState<BackendSubStrand[]>([]);
   const [selectedSubStrandId, setSelectedSubStrandId] = useState<string>('');
 
-  // Formative Assessment Specific Dropdowns
   const [assessmentMethod, setAssessmentMethod] = useState<string>('OBSERVATION');
   const [targetedCompetency, setTargetedCompetency] = useState<string>('CRITICAL_THINKING_AND_PROBLEM_SOLVING');
   const [observedValue, setObservedValue] = useState<string>('INTEGRITY');
   const [specificOutcomeTested, setSpecificOutcomeTested] = useState<string>('Competency mastery evaluation');
 
-  // Formative Marks Inputs & Single Rubric Evaluation (Used in Formative Mode)
   const [rawScore, setRawScore] = useState<string>('');
   const [maxScore, setMaxScore] = useState<string>('100');
   const [customRemarks, setCustomRemarks] = useState<string>('');
   const [isCustomRemarkEdited, setIsCustomRemarkEdited] = useState(false);
 
-  // Multi-Subject Marks State (for Summative Examinations - All Subjects Entry)
   const [subjectMarks, setSubjectMarks] = useState<Record<string, SubjectMarkEntry>>({});
   const [loadingExistingMarks, setLoadingExistingMarks] = useState<boolean>(false);
   const [existingMarksCount, setExistingMarksCount] = useState<number>(0);
 
-  // Form State
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Distinct Canonical Subjects: Grouped & de-duplicated so each subject appears EXACTLY ONCE
   const effectiveSubjects: CanonicalSubjectItem[] = useMemo(() => {
-    // 1. Identify target grade from selected learner or filtered class
     const student = students.find((s) => s.id === selectedStudentId);
     let targetGrade = '';
     if (student) {
@@ -416,7 +404,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
       }
     }
 
-    // 2. Filter learning areas for the specific grade level if available
     let sourceList = learningAreas;
     if (targetGrade && learningAreas.length > 0) {
       const matching = learningAreas.filter((la: any) => {
@@ -428,7 +415,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
       }
     }
 
-    // 3. Map into canonical dictionary to de-duplicate completely
     const canonicalMap = new Map<string, {
       id: string;
       key: string;
@@ -438,12 +424,11 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
       aliasSet: Set<string>;
     }>();
 
-    // Register grade-matched or general learning areas first
     sourceList.forEach((la) => {
       const key = getSubjectCanonicalKey(`${la.code || ''} ${la.name || ''} ${la.id || ''}`);
       if (!canonicalMap.has(key)) {
         canonicalMap.set(key, {
-          id: la.id, // Primary DB ID for recording marks
+          id: la.id,
           key,
           code: la.code || key,
           name: getCanonicalName(key, la.name),
@@ -458,7 +443,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
       }
     });
 
-    // Backfill with standard CBC subjects if not present
     DEFAULT_CBC_LEARNING_AREAS.forEach((defLa) => {
       const key = getSubjectCanonicalKey(`${defLa.code || ''} ${defLa.name || ''} ${defLa.id || ''}`);
       if (!canonicalMap.has(key)) {
@@ -475,7 +459,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
       }
     });
 
-    // Also register aliases from all other learning areas in DB so existing records match
     learningAreas.forEach((la) => {
       const key = getSubjectCanonicalKey(`${la.code || ''} ${la.name || ''} ${la.id || ''}`);
       if (canonicalMap.has(key)) {
@@ -486,7 +469,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
       }
     });
 
-    // Sort strictly according to standard CBC national curriculum order
     const list = Array.from(canonicalMap.values()).map((c) => ({
       id: c.id,
       key: c.key,
@@ -507,7 +489,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
     return list;
   }, [learningAreas, selectedStudentId, students, filterClassId, classes]);
 
-  // Load initial academic context, classes, learners, and learning areas from DB
   useEffect(() => {
     if (!isOpen) return;
 
@@ -521,12 +502,10 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
           apiService.getClasses().catch(() => null),
         ]);
 
-        // 1. Classes
         if (cRes?.data && Array.isArray(cRes.data)) {
           setClasses(cRes.data);
         }
 
-        // 2. Academic Years & Terms
         if (yrRes?.data && Array.isArray(yrRes.data) && yrRes.data.length > 0) {
           setAcademicYears(yrRes.data);
         } else {
@@ -549,7 +528,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
             setTerms([ctxRes.data.currentTerm]);
           }
         } else {
-          // Default terms fallback
           setTerms([
             { id: 'term-2026-t1', academicYearId: 'year-2026', name: 'Term 1', termNumber: 1, startDate: '2026-01-05', endDate: '2026-04-05', isCurrent: false },
             { id: 'term-2026-t2', academicYearId: 'year-2026', name: 'Term 2', termNumber: 2, startDate: '2026-05-04', endDate: '2026-08-07', isCurrent: false },
@@ -558,7 +536,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
           setTermId('term-2026-t3');
         }
 
-        // 3. Students
         if (stRes?.data && Array.isArray(stRes.data)) {
           const mapped = stRes.data.map(normalizeStudent);
           setStudents(mapped);
@@ -571,7 +548,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
           }
         }
 
-        // 4. Learning Areas (With fallback to DEFAULT_CBC_LEARNING_AREAS)
         if (laRes?.data && Array.isArray(laRes.data) && laRes.data.length > 0) {
           setLearningAreas(laRes.data);
           setSelectedLearningAreaId(laRes.data[0].id);
@@ -587,7 +563,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
     loadData();
   }, [isOpen, initialStudent]);
 
-  // Load terms when academic year changes
   useEffect(() => {
     if (!academicYearId) return;
     apiService
@@ -599,12 +574,9 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
           setTermId(cur.id);
         }
       })
-      .catch(() => {
-        // Keep fallback
-      });
+      .catch(() => {});
   }, [academicYearId]);
 
-  // Load streams when filter class changes
   useEffect(() => {
     if (!filterClassId) {
       setStreams([]);
@@ -627,7 +599,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
       });
   }, [filterClassId]);
 
-  // Fetch strands dynamically when learning area changes (with fallback)
   useEffect(() => {
     if (!selectedLearningAreaId) {
       setStrands([]);
@@ -645,7 +616,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
           setStrands(res.data);
           setSelectedStrandId(res.data[0].id);
         } else {
-          // Provide default CBC strands for this subject
           const defaultList = DEFAULT_STRANDS_MAP[laCode] || DEFAULT_STRANDS_MAP.MATH;
           const mappedStrands: BackendStrand[] = defaultList.map((d) => ({
             id: d.id,
@@ -672,7 +642,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
       });
   }, [selectedLearningAreaId, learningAreas]);
 
-  // Fetch sub-strands dynamically when strand changes (with fallback)
   useEffect(() => {
     if (!selectedStrandId) {
       setSubStrands([]);
@@ -702,7 +671,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
           setSubStrands(mappedSubs);
           setSelectedSubStrandId(mappedSubs[0].id);
         } else {
-          // General fallback sub-strands
           const generalSubs: BackendSubStrand[] = [
             { id: `sub-${selectedStrandId}-1`, strandId: selectedStrandId, code: 'SUB-1', title: 'Concept Exploration & Identification', specificLearningOutcomes: ['Core outcome mastery'] },
             { id: `sub-${selectedStrandId}-2`, strandId: selectedStrandId, code: 'SUB-2', title: 'Practical Application & Inquiry', specificLearningOutcomes: ['Practical implementation'] },
@@ -733,9 +701,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
       });
   }, [selectedStrandId, selectedLearningAreaId, learningAreas]);
 
-  // Filter students by selected class, stream, and search keyword
   const filteredStudents = students.filter((s) => {
-    // 1. Search Query
     if (learnerSearch.trim()) {
       const q = learnerSearch.toLowerCase();
       const matchesName = s.name.toLowerCase().includes(q);
@@ -746,7 +712,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
       }
     }
 
-    // 2. Class Filter
     if (filterClassId) {
       const cls = classes.find((c) => c.id === filterClassId);
       if (cls) {
@@ -761,7 +726,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
       }
     }
 
-    // 3. Stream Filter
     if (filterStreamId) {
       const stm = streams.find((st) => st.id === filterStreamId);
       if (stm) {
@@ -777,7 +741,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
     return true;
   });
 
-  // Ensure selected student exists in filtered list
   useEffect(() => {
     if (filteredStudents.length > 0) {
       const exists = filteredStudents.some((s) => s.id === selectedStudentId);
@@ -787,7 +750,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
     }
   }, [filterClassId, filterStreamId, learnerSearch, filteredStudents, selectedStudentId]);
 
-  // Effect to load existing summative marks whenever learner, year, or term changes
   useEffect(() => {
     if (!isOpen || !selectedStudentId) return;
 
@@ -867,7 +829,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
     };
   }, [isOpen, selectedStudentId, academicYearId, termId, effectiveSubjects]);
 
-  // Handle updates for a specific subject's score
   const handleSubjectScoreChange = (subId: string, value: string) => {
     setSubjectMarks((prev) => {
       const current = prev[subId] || { rawScore: '', maxScore: '100', remarks: '', isCustomRemark: false };
@@ -939,7 +900,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
     });
   };
 
-  // Evaluate single subject rubric
   const getSubjectRubric = (raw: string, max: string) => {
     const num = parseFloat(raw);
     const mx = parseFloat(max) || 100;
@@ -984,7 +944,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
     };
   };
 
-  // Compute aggregate statistics across all entered subjects
   const marksSummary = useMemo(() => {
     let totalRaw = 0;
     let totalMax = 0;
@@ -1030,7 +989,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
     };
   }, [subjectMarks, effectiveSubjects]);
 
-  // Learner Navigation Indexing
   const currentIndex = filteredStudents.findIndex((s) => s.id === selectedStudentId);
   const hasPrev = currentIndex > 0;
   const hasNext = currentIndex >= 0 && currentIndex < filteredStudents.length - 1;
@@ -1051,7 +1009,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
     }
   };
 
-  // Formative single evaluation calculation
   const numScore = parseFloat(rawScore) || 0;
   const numMax = parseFloat(maxScore) || 100;
   const percentage = numMax > 0 ? Math.round((numScore / numMax) * 100) : 0;
@@ -1131,11 +1088,10 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
             academicYearId: effectiveYearId,
             strandScores: [
               {
-                strandId: `str-${sub.id}`,
-                strandTitle: `${sub.name} Assessment`,
+                strandId: sub.id, // Safe fallback to avoid rigid foreign-key validation failures
                 performanceLevel: level,
-                rawScore: raw,
-                maxScore: max,
+                rawScore: isNaN(raw) ? 0 : raw,
+                maxScore: isNaN(max) ? 100 : max,
               },
             ],
             overallPerformanceLevel: level,
@@ -1164,7 +1120,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
           throw new Error(res.message || 'Failed to batch save summative marks');
         }
       } else {
-        // Formative single evaluation flow
         if (!selectedLearningAreaId) {
           setError('Please select a valid learning area / subject');
           setIsLoading(false);
@@ -1218,7 +1173,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
       <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-4xl w-full max-h-[92vh] sm:max-h-[90vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
-        {/* Maroon Header */}
         <div className="bg-[#7a1228] text-white p-4 sm:p-5 flex items-center justify-between shrink-0 shadow-xs">
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-xl bg-white/10 text-white flex items-center justify-center font-bold shrink-0 shadow-inner">
@@ -1253,7 +1207,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
             </div>
           )}
 
-          {/* 1. Academic Session Controls (Year, Term, & Assessment Mode) */}
           <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
@@ -1262,7 +1215,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
               </span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-              {/* Academic Year Dropdown */}
               <div>
                 <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
                   Academic Year
@@ -1280,7 +1232,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                 </select>
               </div>
 
-              {/* Term Dropdown */}
               <div>
                 <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
                   Term / Period
@@ -1302,7 +1253,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                 </select>
               </div>
 
-              {/* Assessment Mode Dropdown */}
               <div>
                 <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
                   Evaluation Type
@@ -1319,7 +1269,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
             </div>
           </div>
 
-          {/* 2. Class & Stream Filtering Dropdowns */}
           <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
@@ -1331,7 +1280,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
               </span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {/* Class Dropdown */}
               <div>
                 <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
                   Class / Grade Level
@@ -1350,7 +1298,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                 </select>
               </div>
 
-              {/* Stream Dropdown */}
               <div>
                 <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
                   Cohort / Stream
@@ -1378,7 +1325,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
             </div>
           </div>
 
-          {/* 3. Learner Selection Dropdown with Search & Image/Avatar Card */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label className="block font-bold text-on-surface-variant uppercase text-xs">
@@ -1411,7 +1357,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
               </div>
             </div>
 
-            {/* Quick Search Input */}
             <div className="relative">
               <span className="material-symbols-outlined absolute left-2.5 top-2.5 text-gray-400 text-[16px]">
                 search
@@ -1434,7 +1379,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
               )}
             </div>
 
-            {/* Learner Select Dropdown */}
             <select
               value={selectedStudentId}
               onChange={(e) => setSelectedStudentId(e.target.value)}
@@ -1456,10 +1400,8 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
               )}
             </select>
 
-            {/* Selected Learner Visual Card with Profile Photo / Avatar */}
             {currentLearner && (
               <div className="p-3 rounded-xl bg-surface-container-lowest border border-outline-variant/30 flex items-center gap-3 shadow-xs">
-                {/* Profile Photo / Initials Avatar */}
                 <div className="w-12 h-12 rounded-full overflow-hidden shrink-0 border-2 border-[#7a1228] bg-rose-50 flex items-center justify-center shadow-xs">
                   {currentLearner.profilePhotoUrl ? (
                     <img
@@ -1503,10 +1445,8 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
             )}
           </div>
 
-          {/* SUMMATIVE MODE: Multi-Subject Marksheet Grid (All Subjects Displayed Ready for Mark Entry) */}
           {assessmentType === 'SUMMATIVE' && (
             <div className="space-y-3.5">
-              {/* Summary Statistics Card */}
               <div className="p-3.5 bg-gradient-to-r from-slate-50 via-rose-50/20 to-slate-50 border border-slate-200 rounded-xl flex flex-wrap items-center justify-between gap-3 shadow-xs">
                 <div className="flex items-center gap-4 sm:gap-6 flex-wrap">
                   <div>
@@ -1566,7 +1506,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                 </div>
               </div>
 
-              {/* Existing Marks notification banner */}
               {existingMarksCount > 0 && (
                 <div className="px-3 py-2 rounded-lg bg-teal-50 border border-teal-200 text-teal-900 text-xs flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -1581,9 +1520,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                 </div>
               )}
 
-              {/* Multi-Subject Entry Marksheet List */}
               <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-xs">
-                {/* Table Header */}
                 <div className="bg-slate-100 border-b border-slate-200 px-4 py-2.5 grid grid-cols-12 gap-2 text-[11px] font-bold uppercase text-slate-600 tracking-wider items-center">
                   <div className="col-span-5 sm:col-span-4">Learning Area / Subject</div>
                   <div className="col-span-4 sm:col-span-3 text-center">Marks (Score / Out Of)</div>
@@ -1591,7 +1528,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                   <div className="col-span-12 sm:col-span-3 hidden sm:block">Pedagogical Remarks</div>
                 </div>
 
-                {/* Table Rows */}
                 <div className="divide-y divide-slate-100 max-h-[380px] overflow-y-auto">
                   {effectiveSubjects.map((sub, index) => {
                     const mark = subjectMarks[sub.id] || { rawScore: '', maxScore: '100', remarks: '', isCustomRemark: false };
@@ -1605,7 +1541,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                           rubric.hasMark ? 'bg-slate-50/50 hover:bg-slate-50' : 'hover:bg-slate-50/70'
                         }`}
                       >
-                        {/* Subject Initials & Name */}
                         <div className="col-span-5 sm:col-span-4 flex items-center gap-2.5 min-w-0">
                           <span className="w-10 h-7 rounded-md bg-[#7a1228] text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs font-data-mono">
                             {initials}
@@ -1620,7 +1555,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                           </div>
                         </div>
 
-                        {/* Score & Max Inputs */}
                         <div className="col-span-4 sm:col-span-3 flex items-center justify-center gap-1.5">
                           <input
                             type="number"
@@ -1645,7 +1579,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                           />
                         </div>
 
-                        {/* Live CBC Rubric Badge */}
                         <div className="col-span-3 sm:col-span-2 flex items-center justify-center">
                           <span
                             className={`w-full py-1 text-center rounded-md text-[11px] font-bold border transition-all font-data-mono ${rubric.badgeColor}`}
@@ -1654,7 +1587,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                           </span>
                         </div>
 
-                        {/* Remarks Input */}
                         <div className="col-span-12 sm:col-span-3 mt-1 sm:mt-0">
                           <input
                             type="text"
@@ -1673,10 +1605,8 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
             </div>
           )}
 
-          {/* FORMATIVE MODE: Single Sub-strand Competency Evaluation */}
           {assessmentType === 'FORMATIVE' && (
             <div className="space-y-4">
-              {/* Subject & Strand */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold text-on-surface-variant uppercase mb-1">
@@ -1725,7 +1655,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                 </div>
               </div>
 
-              {/* Formative Details */}
               <div className="p-3.5 bg-rose-50/40 border border-rose-200/60 rounded-xl space-y-3">
                 <div className="text-[11px] font-bold uppercase tracking-wider text-[#7a1228] flex items-center gap-1.5">
                   <span className="material-symbols-outlined text-[16px]">psychology</span>
@@ -1826,7 +1755,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                 </div>
               </div>
 
-              {/* Formative Marks Entry */}
               <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-xs uppercase text-primary">
@@ -1877,7 +1805,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                   </div>
                 </div>
 
-                {/* Quick Rubric Selector Buttons */}
                 <div>
                   <label className="block text-[10px] font-bold text-on-surface-variant uppercase mb-1.5">
                     Quick Rubric Level Selector (KICD 4-Point Benchmark)
@@ -1942,7 +1869,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                   </div>
                 </div>
 
-                {/* Dynamic CBC Live Evaluation Result */}
                 <div className={`p-3.5 rounded-xl border flex flex-col gap-1.5 transition-all ${levelBadgeColor}`}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -1959,7 +1885,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                 </div>
               </div>
 
-              {/* Formative Remarks */}
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="block font-bold text-on-surface-variant uppercase">
@@ -1991,7 +1916,6 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
             </div>
           )}
 
-          {/* Bottom Action Footer */}
           <div className="pt-3 flex flex-col sm:flex-row items-center justify-between gap-2.5 border-t border-slate-200">
             <button
               type="button"

@@ -4,7 +4,7 @@ import { apiService } from '../../services/api';
 interface SendSmsModalProps {
   isOpen: boolean;
   onClose: () => void;
-  defaultTarget?: 'absentee' | 'fee' | 'all';
+  defaultTarget?: 'absentee' | 'fee' | 'all' | 'reopening';
 }
 
 export const SendSmsModal: React.FC<SendSmsModalProps> = ({
@@ -17,7 +17,7 @@ export const SendSmsModal: React.FC<SendSmsModalProps> = ({
   const [defaulterCount, setDefaulterCount] = useState<number>(0);
   const [absenteeCount, setAbsenteeCount] = useState<number>(0);
 
-  const [target, setTarget] = useState<'absentee' | 'fee' | 'all'>(defaultTarget);
+  const [target, setTarget] = useState<'absentee' | 'fee' | 'all' | 'reopening'>(defaultTarget);
   const [message, setMessage] = useState('');
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent'>('idle');
 
@@ -46,6 +46,8 @@ export const SendSmsModal: React.FC<SendSmsModalProps> = ({
       setMessage(`Dear Parent, this is to inform you that your child was marked absent from ${schoolName} today. Please confirm reason with the school.`);
     } else if (target === 'fee') {
       setMessage(`Dear Parent, ${schoolName} kindly requests you to clear the outstanding fee balance before the upcoming assessment window.`);
+    } else if (target === 'reopening') {
+      setMessage(`Dear Parent/Guardian, ${schoolName} will officially reopen for next term on the scheduled date. Learners are expected promptly by 7:45 AM in complete school uniform. Karibu Sana.`);
     } else {
       setMessage(`Dear Parents and Guardians, please note the upcoming consultative meeting scheduled for next week at ${schoolName}.`);
     }
@@ -53,7 +55,7 @@ export const SendSmsModal: React.FC<SendSmsModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleTargetChange = (newTarget: 'absentee' | 'fee' | 'all') => {
+  const handleTargetChange = (newTarget: 'absentee' | 'fee' | 'all' | 'reopening') => {
     setTarget(newTarget);
   };
 
@@ -114,7 +116,7 @@ export const SendSmsModal: React.FC<SendSmsModalProps> = ({
               <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">
                 Recipient Audience
               </label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <button
                   type="button"
                   onClick={() => handleTargetChange('absentee')}
@@ -139,6 +141,17 @@ export const SendSmsModal: React.FC<SendSmsModalProps> = ({
                 </button>
                 <button
                   type="button"
+                  onClick={() => handleTargetChange('reopening')}
+                  className={`p-2 rounded-lg text-xs font-medium border text-center transition-all cursor-pointer ${
+                    target === 'reopening'
+                      ? 'bg-primary text-white border-primary shadow-xs'
+                      : 'bg-surface-container-low text-on-surface border-outline-variant/30 hover:bg-surface-container'
+                  }`}
+                >
+                  School Reopening ({totalStudents})
+                </button>
+                <button
+                  type="button"
                   onClick={() => handleTargetChange('all')}
                   className={`p-2 rounded-lg text-xs font-medium border text-center transition-all cursor-pointer ${
                     target === 'all'
@@ -146,7 +159,7 @@ export const SendSmsModal: React.FC<SendSmsModalProps> = ({
                       : 'bg-surface-container-low text-on-surface border-outline-variant/30 hover:bg-surface-container'
                   }`}
                 >
-                  All Learners ({totalStudents})
+                  General Notice ({totalStudents})
                 </button>
               </div>
             </div>

@@ -29,7 +29,6 @@ export const getSubjectCanonicalKey = (nameOrCodeOrId: string): string => {
   if (!nameOrCodeOrId) return 'OTHER';
   const clean = nameOrCodeOrId.trim().toUpperCase();
 
-  // 1. Creative Arts (MUST come before CRE so 'CREA' / 'la-g3-crea' / 'Creative Arts' is never merged into CRE)
   if (
     clean.includes('CREATIVE') ||
     clean.includes('CREA') ||
@@ -39,7 +38,6 @@ export const getSubjectCanonicalKey = (nameOrCodeOrId: string): string => {
     return 'CREA';
   }
 
-  // 2. English Reading (MUST come before ENG so 'English Reading Activities' is never merged into ENG)
   if (
     clean.includes('READING') ||
     clean.includes('REA') ||
@@ -48,7 +46,6 @@ export const getSubjectCanonicalKey = (nameOrCodeOrId: string): string => {
     return 'REA';
   }
 
-  // 3. Kusoma Activities (Kusoma / Wakinga / Lower primary literacy)
   if (
     clean.includes('KUSOMA') ||
     clean.includes('KUSO') ||
@@ -57,7 +54,6 @@ export const getSubjectCanonicalKey = (nameOrCodeOrId: string): string => {
     return 'KUSO';
   }
 
-  // 4. Environmental Activities
   if (
     clean.includes('ENVIRONMENT') ||
     clean.includes('ENVI') ||
@@ -67,19 +63,11 @@ export const getSubjectCanonicalKey = (nameOrCodeOrId: string): string => {
     return 'ENVI';
   }
 
-  // 5. English Language
   if (clean.includes('ENG') || clean.includes('ENGLISH')) return 'ENG';
-
-  // 6. Kiswahili Language
   if (clean.includes('KISW') || clean.includes('SWAHILI') || clean.includes('KIS')) return 'KISW';
-
-  // 7. Mathematics
   if (clean.includes('MATH') || clean.includes('MAT')) return 'MATH';
-
-  // 8. Christian / Islamic Religious Education
   if (clean.includes('RELIGIOUS') || clean.includes('CRE') || clean.includes('IRE') || clean.includes('HRE')) return 'CRE';
 
-  // 9. Upper Primary & Junior Secondary Subjects
   if (clean.includes('INTEGRATED SCIENCE') || clean.includes('INTSCI') || clean.includes('SCI_TECH') || clean.includes('SCIENCE') || clean.includes('SCI')) return 'SCI';
   if (clean.includes('HEALTH') || clean.includes('HLTH')) return 'HLTH';
   if (clean.includes('SOCIAL') || clean.includes('SST') || clean.includes('SOC')) return 'SST';
@@ -145,7 +133,6 @@ export const getCanonicalName = (canonicalKey: string, fallbackName?: string): s
   }
 };
 
-// Standard helper to derive 3-to-4 letter Kenyan CBC subject initials
 export const getSubjectInitials = (nameOrCode: string): string => {
   const key = getSubjectCanonicalKey(nameOrCode);
   return getCanonicalInitial(key);
@@ -195,21 +182,18 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Filter States
   const [selectedYearId, setSelectedYearId] = useState<string>('');
   const [selectedTermId, setSelectedTermId] = useState<string>('');
   const [selectedClassId, setSelectedClassId] = useState<string>('All');
   const [selectedStream, setSelectedStream] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
-  // Dropdown options
   const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
   const [terms, setTerms] = useState<AcademicTerm[]>([]);
   const [classes, setClasses] = useState<ClassRoom[]>([]);
   const [allLearningAreas, setAllLearningAreas] = useState<BackendLearningArea[]>(learningAreas);
   const [internalStudents, setInternalStudents] = useState<Student[]>(students);
 
-  // Synchronize or load students if parent passed an empty array
   useEffect(() => {
     if (students && students.length > 0) {
       setInternalStudents(students);
@@ -248,7 +232,6 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
     }
   }, [students]);
 
-  // Load dropdown metadata
   useEffect(() => {
     async function loadMeta() {
       try {
@@ -284,7 +267,6 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
           setAllLearningAreas(DEFAULT_CBC_SUBJECTS);
         }
 
-        // Fetch terms for the active year immediately so selectedTermId is never left empty
         const termsRes = await apiService.getTerms(activeYrId || undefined).catch(() => null);
         if (termsRes?.data && termsRes.data.length > 0) {
           setTerms(termsRes.data);
@@ -303,7 +285,6 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
     loadMeta();
   }, []);
 
-  // Update terms when academic year changes
   useEffect(() => {
     if (!selectedYearId || academicYears.length === 0) return;
     const yr = academicYears.find((y) => y.id === selectedYearId);
@@ -332,7 +313,6 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
     }
   }, [selectedYearId, academicYears]);
 
-  // Load Summative Assessment records
   const fetchSummatives = async () => {
     setLoading(true);
     setError(null);
@@ -344,7 +324,6 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
 
       let loaded = res?.data && Array.isArray(res.data) ? res.data : [];
 
-      // If no records returned with the current termId, try the alternate termId format
       if (loaded.length === 0 && selectedTermId) {
         const altTermId = selectedTermId.includes('-t')
           ? selectedTermId.replace('-t', '-')
@@ -374,9 +353,7 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
     fetchSummatives();
   }, [selectedYearId, selectedTermId]);
 
-  // Distinct Canonical Subjects: Grouped & de-duplicated so each subject appears EXACTLY ONCE
   const effectiveSubjects: CanonicalSubjectItem[] = useMemo(() => {
-    // 1. Identify which learning areas to include based on selected class or assessed summatives
     let sourceList: BackendLearningArea[] = [];
     if (selectedClassId !== 'All') {
       const cls = classes.find((c) => c.id === selectedClassId);
@@ -408,7 +385,6 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
       }
     }
 
-    // 2. Map every learning area to its canonical key and group them
     const canonicalMap = new Map<string, {
       id: string;
       key: string;
@@ -422,7 +398,7 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
       const key = getSubjectCanonicalKey(`${la.code || ''} ${la.name || ''} ${la.id || ''}`);
       if (!canonicalMap.has(key)) {
         canonicalMap.set(key, {
-          id: key, // Use canonical key as primary ID for columns
+          id: key,
           key,
           code: getCanonicalInitial(key),
           name: getCanonicalName(key, la.name),
@@ -437,7 +413,6 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
       }
     });
 
-    // 3. Register alias IDs from all learning areas in DB so scores match across grades
     allLearningAreas.forEach((la) => {
       const key = getSubjectCanonicalKey(`${la.code || ''} ${la.name || ''} ${la.id || ''}`);
       if (canonicalMap.has(key)) {
@@ -448,7 +423,6 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
       }
     });
 
-    // 4. Also register alias IDs from any existing summative assessment records
     summatives.forEach((s) => {
       const key = getSubjectCanonicalKey(s.learningAreaId);
       if (canonicalMap.has(key)) {
@@ -465,7 +439,6 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
       }
     });
 
-    // 5. Sort strictly according to standard CBC national curriculum order
     const list = Array.from(canonicalMap.values()).map((c) => ({
       id: c.id,
       key: c.key,
@@ -486,7 +459,6 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
     return list;
   }, [allLearningAreas, selectedClassId, classes, summatives]);
 
-  // Extract streams from classes
   const availableStreams = useMemo(() => {
     const set = new Set<string>();
     classes.forEach((c) => {
@@ -498,7 +470,6 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
     return Array.from(set).sort();
   }, [classes, internalStudents]);
 
-  // Helper to extract score percentage from summative record
   const getScoreInfo = (s?: BackendSummativeAssessment) => {
     if (!s) return { score: 0, level: '--', points: 0, hasMark: false };
 
@@ -535,27 +506,22 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
     return { score, level, points, hasMark: true };
   };
 
-  // Build Marksheet Matrix: Rows = Students, Columns = Subjects
   const matrixRows = useMemo(() => {
-    // 1. Group summatives by student ID and by both ID & canonical key
     const studentSummativeMap = new Map<string, Map<string, BackendSummativeAssessment>>();
     summatives.forEach((s) => {
       if (!studentSummativeMap.has(s.studentId)) {
         studentSummativeMap.set(s.studentId, new Map());
       }
       const sMap = studentSummativeMap.get(s.studentId)!;
-      // Exact learning area ID matches (e.g. 'la-g3-eng')
       sMap.set(s.learningAreaId, s);
       sMap.set(s.learningAreaId.toLowerCase(), s);
 
-      // Canonical key fallback
       const canon = getSubjectCanonicalKey(s.learningAreaId);
       if (!sMap.has(canon)) {
         sMap.set(canon, s);
       }
     });
 
-    // 2. Identify candidate students (using internalStudents with live database records)
     const candidateMap = new Map<string, Student>();
     internalStudents.forEach((st) => candidateMap.set(st.id, st));
 
@@ -572,7 +538,6 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
       }
     });
 
-    // 3. Filter candidates based on selected Class, Stream, Search Query
     let candidates = Array.from(candidateMap.values());
 
     if (selectedClassId !== 'All') {
@@ -602,7 +567,6 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
       );
     }
 
-    // 4. Construct matrix rows
     const rows = candidates.map((st) => {
       const studentRecords = studentSummativeMap.get(st.id);
       let totalMarks = 0;
@@ -617,14 +581,12 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
       effectiveSubjects.forEach((sub) => {
         let record: BackendSummativeAssessment | undefined;
         if (studentRecords) {
-          // Priority 1: Check by direct learningAreaId or alias in sub.aliasIds
           for (const alias of sub.aliasIds) {
             if (studentRecords.has(alias)) {
               record = studentRecords.get(alias);
               break;
             }
           }
-          // Priority 2: Check by canonical key or sub.id
           if (!record) {
             record = studentRecords.get(sub.id) || studentRecords.get(sub.key) || studentRecords.get(sub.code);
           }
@@ -676,7 +638,6 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
       };
     });
 
-    // 5. Sort by Total Marks descending to determine position ranking
     rows.sort((a, b) => b.totalMarks - a.totalMarks);
     rows.forEach((r, idx) => {
       r.rank = idx + 1;
@@ -685,7 +646,6 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
     return rows;
   }, [summatives, internalStudents, effectiveSubjects, classes, selectedClassId, selectedStream, searchQuery]);
 
-  // Overall Marksheet Metrics
   const summaryStats = useMemo(() => {
     const totalLearners = matrixRows.length;
     const evaluatedLearners = matrixRows.filter((r) => r.subjectCount > 0);
@@ -725,7 +685,6 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
     };
   }, [matrixRows]);
 
-  // Subject Column Mean Averages for footer
   const subjectAverages = useMemo(() => {
     const averages: Record<string, { mean: number; count: number }> = {};
 
@@ -748,11 +707,9 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
     return averages;
   }, [effectiveSubjects, matrixRows]);
 
-  // Export Matrix CSV: Students in Rows, Subject Initials in Columns
   const handleExportMatrixCSV = () => {
     if (matrixRows.length === 0) return;
 
-    // Headers with Subject Initials
     const headers = ['Pos', 'Adm No', 'Learner Full Name', 'Class / Cohort', 'Stream', 'Sex'];
     effectiveSubjects.forEach((sub) => {
       headers.push(`${getSubjectInitials(sub.code || sub.name)} (%)`);
@@ -831,7 +788,6 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
 
   return (
     <div className="space-y-6 pb-12">
-      {/* Header Banner */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-gradient-to-r from-[#500b1b] via-[#7a1228] to-[#991b36] p-6 rounded-2xl text-white shadow-xl">
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold text-rose-200 uppercase tracking-wider mb-1">
@@ -878,7 +834,6 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
         </div>
       </div>
 
-      {/* Summary KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/30 shadow-xs flex items-center justify-between">
           <div>
@@ -943,10 +898,8 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
         </div>
       </div>
 
-      {/* Filter Toolbar */}
       <div className="bg-surface-container-lowest p-4 rounded-xl shadow-xs border border-outline-variant/30 space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-          {/* Year */}
           <div>
             <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">
               Academic Year
@@ -964,7 +917,6 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
             </select>
           </div>
 
-          {/* Term */}
           <div>
             <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">
               Academic Term
@@ -982,7 +934,6 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
             </select>
           </div>
 
-          {/* Class / Grade */}
           <div>
             <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">
               Class / Grade
@@ -1001,7 +952,6 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
             </select>
           </div>
 
-          {/* Stream */}
           <div>
             <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">
               Stream / Cohort
@@ -1021,7 +971,6 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
           </div>
         </div>
 
-        {/* Search Bar */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-1 border-t border-outline-variant/20">
           <div className="relative w-full sm:max-w-md">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
@@ -1036,13 +985,22 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
             />
           </div>
 
-          <div className="text-xs font-medium text-gray-500 self-end sm:self-auto">
-            Showing <strong>{matrixRows.length}</strong> learners across <strong>{effectiveSubjects.length}</strong> subject columns
+          <div className="flex items-center gap-3">
+            <button
+              onClick={fetchSummatives}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+              title="Manually refresh marksheet"
+            >
+              <span className="material-symbols-outlined text-[16px]">sync</span>
+              <span>Refresh</span>
+            </button>
+            <div className="text-xs font-medium text-gray-500">
+              Showing <strong>{matrixRows.length}</strong> learners across <strong>{effectiveSubjects.length}</strong> subject columns
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Main Marksheet Matrix Table: Student details in rows, Subject initials in columns */}
       <div className="bg-surface-container-lowest rounded-2xl shadow-xs border border-outline-variant/30 overflow-hidden">
         {loading ? (
           <div className="py-20 text-center flex flex-col items-center justify-center gap-3 text-gray-500">
@@ -1077,7 +1035,6 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs text-gray-800 border-collapse">
-              {/* Table Header: Subjects in columns using initials */}
               <thead>
                 <tr className="bg-gray-100 text-gray-700 font-bold border-b-2 border-gray-300">
                   <th className="py-3 px-2 border text-center w-12 bg-gray-200/80">Pos</th>
@@ -1086,7 +1043,6 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
                   <th className="py-3 px-2 border text-center w-16">Stream</th>
                   <th className="py-3 px-2 border text-center w-10">Sex</th>
 
-                  {/* Subject Initials in Columns (i.e. MAT, ENG, KIS, SCI, etc.) */}
                   {effectiveSubjects.map((sub) => {
                     const initial = getSubjectInitials(sub.code || sub.name);
                     return (
@@ -1114,39 +1070,32 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
                 </tr>
               </thead>
 
-              {/* Table Body: Student Details in Rows */}
               <tbody className="divide-y divide-gray-200 font-medium">
                 {matrixRows.map((row, idx) => (
                   <tr key={row.studentId} className="hover:bg-amber-50/30 transition-colors">
-                    {/* Position */}
                     <td className="py-2 px-2 border text-center font-bold font-mono text-gray-900 bg-gray-50/50">
                       {idx === 0 ? '1st' : idx === 1 ? '2nd' : idx === 2 ? '3rd' : `#${idx + 1}`}
                     </td>
 
-                    {/* Adm No */}
                     <td className="py-2 px-2 border font-mono font-bold text-[11px] text-gray-700">
                       {row.admNo}
                     </td>
 
-                    {/* Learner Full Name */}
                     <td className="py-2 px-3 border font-bold text-gray-900">
                       <div>{row.name}</div>
                       <div className="text-[10px] text-gray-400 font-normal">{row.grade}</div>
                     </td>
 
-                    {/* Stream */}
                     <td className="py-2 px-2 border text-center">
                       <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-gray-100 text-gray-700 border border-gray-200">
                         {row.stream}
                       </span>
                     </td>
 
-                    {/* Sex */}
                     <td className="py-2 px-2 border text-center font-bold text-gray-600">
                       {row.gender}
                     </td>
 
-                    {/* Subject Scores under Initials Columns */}
                     {effectiveSubjects.map((sub) => {
                       const cell = row.subjectScores[sub.id];
                       return (
@@ -1165,34 +1114,28 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
                       );
                     })}
 
-                    {/* Total Marks */}
                     <td className="py-2 px-2 border text-center font-bold font-mono text-gray-900 bg-gray-50/40">
                       {row.totalMarks}
                     </td>
 
-                    {/* Mean % */}
                     <td className="py-2 px-2 border text-center font-black font-mono text-sm bg-gray-50/40">
                       <span className={getScoreColor(row.meanScore)}>
                         {row.meanScore}%
                       </span>
                     </td>
 
-                    {/* GPA */}
                     <td className="py-2 px-2 border text-center font-black font-mono text-xs text-indigo-950 bg-indigo-50/20">
                       {row.meanGpa}
                     </td>
 
-                    {/* Level */}
                     <td className="py-2 px-2 border text-center bg-indigo-50/20">
                       {getLevelPill(row.overallLevel)}
                     </td>
 
-                    {/* Remarks */}
                     <td className="py-2 px-3 border text-gray-600 text-[11px] truncate max-w-xs italic" title={row.remark}>
                       &quot;{row.remark}&quot;
                     </td>
 
-                    {/* Actions */}
                     <td className="py-2 px-2 border text-right print:hidden">
                       <div className="inline-flex items-center gap-1">
                         {onNavigateTab && (
@@ -1217,14 +1160,12 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
                 ))}
               </tbody>
 
-              {/* Table Footer: Subject Column Averages */}
               <tfoot>
                 <tr className="bg-gray-100 font-bold border-t-2 border-gray-300 text-gray-800 text-[11px]">
                   <td colSpan={5} className="py-2.5 px-3 border text-right uppercase tracking-wider text-gray-600">
                     Subject Class Averages:
                   </td>
 
-                  {/* Subject Means */}
                   {effectiveSubjects.map((sub) => {
                     const avg = subjectAverages[sub.id];
                     return (

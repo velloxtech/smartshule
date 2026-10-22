@@ -30,6 +30,7 @@ export interface UpdateTeacherProfileDTO {
   tscNumber?: string;
   employeeNumber?: string;
   specialization?: string[];
+  assignedClassStreamIds?: string[];
   qualification?: string;
 }
 
@@ -73,10 +74,10 @@ export class TeacherUseCases {
       let relevantTeachers = allTeachers;
       if (dto.schoolId) {
         const schoolUsers = await this.userRepository.findAll({ schoolId: dto.schoolId });
-        const schoolUserIds = new Set(schoolUsers.map(u => u.id));
-        relevantTeachers = allTeachers.filter(t => schoolUserIds.has(t.userId));
+        const schoolUserIds = new Set(schoolUsers.map((u: any) => u.id));
+        relevantTeachers = allTeachers.filter((t: any) => schoolUserIds.has(t.userId));
       }
-      employeeNumber = IdGenerator.generateNextSequentialNumber(relevantTeachers.map(t => t.employeeNumber));
+      employeeNumber = IdGenerator.generateNextSequentialNumber(relevantTeachers.map((t: any) => t.employeeNumber));
     }
 
     const existingEmp = await this.teacherRepository.findByEmployeeNumber(employeeNumber);
@@ -91,7 +92,6 @@ export class TeacherUseCases {
       }
     }
 
-    // Teacher's National ID or Employee Number is used as their initial login password
     const rawPassword = dto.password?.trim() || dto.nationalId?.trim() || employeeNumber || process.env.DEFAULT_TEACHER_PASSWORD || cleanPhone || '';
     if (!rawPassword) {
       throw new ValidationError('A password, National ID, Employee Number, or phone number is required to initialize teacher account.');
@@ -114,13 +114,17 @@ export class TeacherUseCases {
 
     await this.userRepository.save(user);
 
+    const singleAssignedStream = dto.assignedClassStreamIds && dto.assignedClassStreamIds.length > 0 
+      ? [dto.assignedClassStreamIds[0]] 
+      : [];
+
     const teacher = Teacher.create(
       {
         userId: user.id,
         tscNumber: dto.tscNumber,
         employeeNumber,
         specialization: dto.specialization || [],
-        assignedClassStreamIds: dto.assignedClassStreamIds || [],
+        assignedClassStreamIds: singleAssignedStream,
         qualification: dto.qualification
       },
       IdGenerator.generate()
@@ -159,7 +163,7 @@ export class TeacherUseCases {
   public async listTeachers() {
     const teachers = await this.teacherRepository.findAll();
     return Promise.all(
-      teachers.map(async t => {
+      teachers.map(async (t: any) => {
         const u = await this.userRepository.findById(t.userId);
         return {
           ...t.toJSON(),
@@ -192,7 +196,6 @@ export class TeacherUseCases {
       throw new NotFoundError('User for Teacher', teacher.userId);
     }
 
-    // Update User Profile fields
     if (dto.firstName || dto.lastName || dto.phone !== undefined) {
       user.updateProfile(dto.firstName, dto.lastName, dto.phone);
     }
@@ -216,7 +219,6 @@ export class TeacherUseCases {
 
     await this.userRepository.update(user);
 
-    // Update Teacher domain fields
     if (dto.employeeNumber && dto.employeeNumber !== teacher.employeeNumber) {
       const existingEmp = await this.teacherRepository.findByEmployeeNumber(dto.employeeNumber);
       if (existingEmp && existingEmp.id !== teacher.id) {
@@ -230,6 +232,10 @@ export class TeacherUseCases {
       specialization: dto.specialization,
       qualification: dto.qualification,
     });
+
+    if (dto.assignedClassStreamIds && dto.assignedClassStreamIds.length > 0) {
+      teacher.assignStream(dto.assignedClassStreamIds[0]);
+    }
 
     await this.teacherRepository.update(teacher);
 

@@ -98,18 +98,29 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
     loadChildAttendance();
   }, [isParent, selectedChildId, currentContext, parentChildren]);
 
+  // Load initial data and teacher profile to lock down assigned class
   useEffect(() => {
     async function loadInitialData() {
       if (isParent) return;
       try {
-        const [scRes, ctxRes, cRes] = await Promise.all([
+        const [scRes, ctxRes, cRes, tchRes] = await Promise.all([
           apiService.getSchool().catch(() => null),
           apiService.getCurrentContext().catch(() => null),
           apiService.getClasses().catch(() => null),
+          isTeacher ? apiService.getMyTeacherProfile().catch(() => null) : Promise.resolve(null),
         ]);
 
         if (scRes?.data) setSchoolInfo(scRes.data);
         if (ctxRes?.data) setCurrentContext(ctxRes.data);
+
+        let teacherAssignedStreamId = '';
+        if (tchRes?.data) {
+          setTeacherProfile(tchRes.data);
+          // Enforce single-class/stream restriction from assignedClassStreamIds
+          if (tchRes.data.assignedClassStreamIds && tchRes.data.assignedClassStreamIds.length > 0) {
+            teacherAssignedStreamId = tchRes.data.assignedClassStreamIds[0];
+          }
+        }
 
         if (cRes?.data && Array.isArray(cRes.data)) {
           setAvailableClasses(cRes.data);
@@ -128,7 +139,11 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
             }
           }
           setAvailableStreams(allStreams);
-          if (allStreams.length > 0) {
+
+          // Auto-select exact assigned class/stream for teacher
+          if (teacherAssignedStreamId) {
+            setStreamId(teacherAssignedStreamId);
+          } else if (allStreams.length > 0) {
             setStreamId(allStreams[0].id);
           } else if (cRes.data.length > 0) {
             setStreamId(cRes.data[0].id);
@@ -139,29 +154,9 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
       }
     }
     loadInitialData();
-  }, [isParent]);
+  }, [isParent, isTeacher]);
 
-  // Load teacher profile if educator
-  useEffect(() => {
-    async function loadTeacherProfile() {
-      if (isTeacher && !isParent) {
-        try {
-          const res = await apiService.getMyTeacherProfile();
-          if (res?.data) {
-            setTeacherProfile(res.data);
-            if (res.data.assignedClassStreamIds?.length) {
-              setStreamId(res.data.assignedClassStreamIds[0]);
-            }
-          }
-        } catch {
-          // Keep defaults
-        }
-      }
-    }
-    loadTeacherProfile();
-  }, [isTeacher, isParent]);
-
-  // Load students & daily register strictly from database
+  // Load students & daily register strictly from database for the assigned stream/class
   useEffect(() => {
     if (isParent) return;
     if (!streamId) {
@@ -184,7 +179,6 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
         const studentList = (stRes?.data && Array.isArray(stRes.data)) ? stRes.data : [];
         setStudents(studentList);
 
-        // Pre-populate entries
         const initialStatusMap: Record<string, 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED'> = {};
         if (regRes?.success && regRes.data?.entries?.length) {
           regRes.data.entries.forEach((e: AttendanceEntry) => {
@@ -203,7 +197,7 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
       }
     }
     loadStudentsAndRegister();
-  }, [streamId, registerDate]);
+  }, [streamId, registerDate, availableStreams]);
 
   const handleStatusChange = (studentId: string, status: 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED') => {
     setAttendanceEntries((prev) => ({
@@ -270,7 +264,7 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
     if (foundStream) return `${foundStream.className} - ${foundStream.name}`;
     const foundClass = availableClasses.find((c) => c.id === streamId);
     if (foundClass) return foundClass.name;
-    return resolveStreamName(streamId) || resolveClassName(streamId) || 'Unassigned';
+    return resolveStreamName(streamId) || resolveClassName(streamId) || 'Assigned Classroom';
   };
 
   const getSchoolLogoBase64 = async (): Promise<string | null> => {
@@ -307,7 +301,6 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
     const schoolName = 'Grace Seeds School';
     const motto = 'The Future Begins Here';
 
-    // Top burgundy bar
     doc.setFillColor(122, 18, 40);
     doc.rect(0, 0, 210, 5, 'F');
 
@@ -315,9 +308,7 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
     if (logoBase64) {
       try {
         doc.addImage(logoBase64, 'PNG', 14, curY, 15, 15);
-      } catch {
-        // continue
-      }
+      } catch {}
     }
 
     doc.setFont('helvetica', 'bold');
@@ -335,7 +326,6 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
     doc.setTextColor(30, 41, 59);
     doc.text('OFFICIAL DAILY ATTENDANCE & ROLL CALL REGISTER', 32, curY + 14);
 
-    // Metadata card
     curY += 19;
     doc.setFillColor(248, 250, 252);
     doc.rect(14, curY, 182, 16, 'F');
@@ -463,7 +453,6 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
     const schoolName = 'Grace Seeds School';
     const motto = 'The Future Begins Here';
 
-    // Top burgundy bar
     doc.setFillColor(122, 18, 40);
     doc.rect(0, 0, 210, 5, 'F');
 
@@ -471,9 +460,7 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
     if (logoBase64) {
       try {
         doc.addImage(logoBase64, 'PNG', 14, curY, 15, 15);
-      } catch {
-        // continue
-      }
+      } catch {}
     }
 
     doc.setFont('helvetica', 'bold');
@@ -491,7 +478,6 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
     doc.setTextColor(30, 41, 59);
     doc.text('OFFICIAL LEARNER ATTENDANCE & PUNCTUALITY CERTIFICATE', 32, curY + 14);
 
-    // Meta box
     curY += 19;
     doc.setFillColor(248, 250, 252);
     doc.rect(14, curY, 182, 16, 'F');
@@ -602,7 +588,6 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
 
     return (
       <div className="space-y-6 pb-12 font-body">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 font-label-md text-label-md text-on-surface-variant">
@@ -648,7 +633,6 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
           </div>
         </div>
 
-        {/* Learner Info Card */}
         {activeChild && (
           <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30 flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -678,7 +662,6 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
           </div>
         )}
 
-        {/* Stats Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs">
             <div className="text-xs font-bold text-on-surface-variant uppercase">Overall Attendance</div>
@@ -705,7 +688,6 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
           </div>
         </div>
 
-        {/* History Table */}
         <div className="bg-surface-container-lowest rounded-xl shadow-xs border border-outline-variant/30 p-6 space-y-4">
           <div className="flex items-center justify-between border-b border-surface-container pb-3">
             <div>
@@ -810,17 +792,17 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
         </div>
       </div>
 
-      {/* Date & Stream Selector */}
+      {/* Date & Stream Selector (Locked/Disabled for single-class assigned teachers) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl bg-surface-container-low border border-outline-variant/30">
         <div className="flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold text-on-surface-variant">
-              {isTeacher ? 'Assigned Register:' : 'Class / Stream:'}
+              {isTeacher ? 'Assigned Class / Stream:' : 'Class / Stream:'}
             </span>
             {isTeacher ? (
               <span className="px-3 py-1 bg-surface-container-lowest border border-outline-variant/40 rounded-lg text-xs font-bold text-primary flex items-center gap-1.5 shadow-xs">
                 <span className="material-symbols-outlined text-[15px] text-secondary">verified_user</span>
-                {getAssignedDisplayName()} (Class Teacher)
+                {getAssignedDisplayName()} (Assigned Cohort)
               </span>
             ) : (
               <select
@@ -845,9 +827,6 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
                       </option>
                     ))}
                   </optgroup>
-                )}
-                {availableStreams.length === 0 && availableClasses.length === 0 && (
-                  <option value="">No classes or streams created yet</option>
                 )}
               </select>
             )}

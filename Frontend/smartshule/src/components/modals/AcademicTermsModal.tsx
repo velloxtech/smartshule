@@ -52,6 +52,21 @@ export const AcademicTermsModal: React.FC<AcademicTermsModalProps> = ({
     isCurrent: true,
   });
 
+  // Reopening Notification state for School Admin
+  const [showNotifyModal, setShowNotifyModal] = useState(false);
+  const [notifyingTermId, setNotifyingTermId] = useState<string>('');
+  const [notifyOpeningDate, setNotifyOpeningDate] = useState<string>('');
+  const [notifyReportingTime, setNotifyReportingTime] = useState<string>('7:45 AM');
+  const [notifyCustomNotes, setNotifyCustomNotes] = useState<string>(
+    '1. Reporting Time: All learners are expected in school promptly by 7:45 AM for morning assembly.\n' +
+    '2. School Uniform & Grooming: Full official standard uniform, clean black polished leather shoes, and PE sports kit on scheduled activity days.\n' +
+    '3. CBC Materials & Stationery: Ensure all CBC strand workbooks, exercise books, and stationery items are clearly labelled with the learner\'s full name.\n' +
+    '4. Transport & Bus Routes: Morning school buses will commence routes at 6:15 AM sharp. Parents dropping learners directly are requested to use Gate 2.\n' +
+    '5. Fee Clearance: Kindly finalize term fees or obtain financial clearance via M-Pesa Paybill 247247 prior to the first day of school.'
+  );
+  const [notifySendSms, setNotifySendSms] = useState<boolean>(true);
+  const [notifyBroadcasting, setNotifyBroadcasting] = useState<boolean>(false);
+
   useEffect(() => {
     if (isOpen) {
       setFeedback(null);
@@ -293,6 +308,101 @@ export const AcademicTermsModal: React.FC<AcademicTermsModalProps> = ({
     }
   };
 
+  const openReopenNotificationModal = (termId?: string) => {
+    const targetTerm = termId
+      ? terms.find((t) => t.id === termId)
+      : terms.find((t) => t.status === 'UPCOMING') || terms.find((t) => t.isCurrent) || terms[0];
+
+    if (targetTerm) {
+      setNotifyingTermId(targetTerm.id);
+      const sDate = targetTerm.startDate ? targetTerm.startDate.split('T')[0] : '';
+      setNotifyOpeningDate(sDate);
+    } else if (terms.length > 0) {
+      setNotifyingTermId(terms[0].id);
+      setNotifyOpeningDate(terms[0].startDate ? terms[0].startDate.split('T')[0] : '');
+    }
+    setShowNotifyModal(true);
+  };
+
+  const handleBroadcastReopeningNotice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const term = terms.find((t) => t.id === notifyingTermId) || terms[0];
+    if (!term) {
+      setFeedback({ type: 'error', message: 'Please select an academic term.' });
+      return;
+    }
+    if (!notifyOpeningDate) {
+      setFeedback({ type: 'error', message: 'Please specify the school opening date.' });
+      return;
+    }
+
+    setNotifyBroadcasting(true);
+    setFeedback(null);
+
+    const termYear = years.find((y) => y.id === term.academicYearId);
+    const yearLabel = termYear ? ` ${termYear.name}` : '';
+    const formattedDate = new Date(notifyOpeningDate).toLocaleDateString('en-GB', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+
+    const announcementTitle = `📢 Official School Reopening Notice - ${term.name}${yearLabel}`;
+    const announcementContent = `Dear Parents and Guardians,
+
+Grace Seeds School warmly announces the official reopening and reporting directives for ${term.name}${yearLabel}.
+
+📅 Official School Reopening Date: ${formattedDate}
+⏰ Learner Reporting Time: ${notifyReportingTime}
+
+Reporting Guidelines & Directives:
+${notifyCustomNotes}
+
+We look forward to an enriching, inspiring, and fruitful academic session with our learners.
+
+Warm regards,
+Office of the Head Teacher / School Administration
+Grace Seeds School
+KEMRI Road, Kisian, Kisumu
+Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
+
+    try {
+      const res = await apiService.createAnnouncement({
+        title: announcementTitle,
+        content: announcementContent,
+        category: 'GENERAL',
+        priority: 'HIGH',
+        targetAudience: 'PARENTS',
+        isPinned: true,
+        sendSmsBroadcast: notifySendSms,
+        sendWhatsAppBroadcast: false,
+        authorName: 'School Administration',
+        authorRole: 'HEAD_TEACHER',
+      });
+
+      if (res.success) {
+        setFeedback({
+          type: 'success',
+          message: `School Reopening Notice for ${term.name} has been successfully broadcast to all parents${notifySendSms ? ' (with instant SMS alerts dispatched)' : ''}!`,
+        });
+        setShowNotifyModal(false);
+      } else {
+        setFeedback({
+          type: 'error',
+          message: res.error?.message || 'Failed to broadcast reopening notification.',
+        });
+      }
+    } catch (err: any) {
+      setFeedback({
+        type: 'error',
+        message: err.message || 'Error broadcasting reopening notification.',
+      });
+    } finally {
+      setNotifyBroadcasting(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   const currentTerm = academicContext?.currentTerm || terms.find((t) => t.isCurrent);
@@ -494,6 +604,15 @@ export const AcademicTermsModal: React.FC<AcademicTermsModalProps> = ({
                 >
                   <span className="material-symbols-outlined text-[16px]">add</span>
                   <span>+ New Academic Term</span>
+                </button>
+
+                <button
+                  onClick={() => openReopenNotificationModal()}
+                  className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                  title="Broadcast official school reopening date and directives to all parents"
+                >
+                  <span className="material-symbols-outlined text-[16px]">campaign</span>
+                  <span>📢 Broadcast School Opening Date</span>
                 </button>
               </div>
             )}
@@ -815,6 +934,16 @@ export const AcademicTermsModal: React.FC<AcademicTermsModalProps> = ({
                               Set as Active
                             </button>
                           )}
+                          {canManageTerms && (
+                            <button
+                              onClick={() => openReopenNotificationModal(term.id)}
+                              className="px-2.5 py-1 text-xs font-semibold text-amber-900 bg-amber-50 hover:bg-amber-100 rounded-lg border border-amber-300 transition-colors flex items-center gap-1 cursor-pointer"
+                              title="Broadcast reopening notice & directives to parents for this term"
+                            >
+                              <span className="material-symbols-outlined text-[14px]">campaign</span>
+                              <span>Notify Parents</span>
+                            </button>
+                          )}
                         </div>
                       </div>
 
@@ -881,6 +1010,198 @@ export const AcademicTermsModal: React.FC<AcademicTermsModalProps> = ({
             )}
           </div>
         </div>
+
+        {/* Reopening Notification Modal for School Admin */}
+        {showNotifyModal && (
+          <div className="fixed inset-0 z-60 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full max-h-[92vh] flex flex-col overflow-hidden border border-slate-200">
+              {/* Modal Header */}
+              <div className="bg-[#800000] text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center text-white border border-white/20 shrink-0">
+                    <span className="material-symbols-outlined text-[24px]">campaign</span>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-base leading-tight">Broadcast School Opening Notice</h3>
+                    <p className="text-xs text-rose-100">Official Grace Seeds School Parent Reopening Directives</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowNotifyModal(false)}
+                  className="p-1 rounded-lg text-rose-200 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[20px]">close</span>
+                </button>
+              </div>
+
+              {/* Form Content */}
+              <form onSubmit={handleBroadcastReopeningNotice} className="p-5 overflow-y-auto space-y-4 flex-1">
+                {/* Academic Term Selection */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Academic Term
+                    </label>
+                    <select
+                      value={notifyingTermId}
+                      onChange={(e) => {
+                        const tId = e.target.value;
+                        setNotifyingTermId(tId);
+                        const sel = terms.find((t) => t.id === tId);
+                        if (sel?.startDate) {
+                          setNotifyOpeningDate(sel.startDate.split('T')[0]);
+                        }
+                      }}
+                      className="w-full px-3 py-2 text-xs bg-[#F8F5F5] border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#800000] font-semibold text-slate-800"
+                    >
+                      {terms.map((t) => {
+                        const y = years.find((yr) => yr.id === t.academicYearId);
+                        return (
+                          <option key={t.id} value={t.id}>
+                            {t.name} {y ? `(${y.name})` : ''} {t.isCurrent ? '· Active' : ''}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Learner Reporting Time
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={notifyReportingTime}
+                      onChange={(e) => setNotifyReportingTime(e.target.value)}
+                      placeholder="7:45 AM"
+                      className="w-full px-3 py-2 text-xs bg-[#F8F5F5] border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#800000]"
+                    />
+                  </div>
+                </div>
+
+                {/* Reopening Date */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Official School Reopening / Reporting Date
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={notifyOpeningDate}
+                    onChange={(e) => setNotifyOpeningDate(e.target.value)}
+                    className="w-full px-3 py-2 text-xs bg-[#F8F5F5] border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#800000] font-bold text-[#800000]"
+                  />
+                  {notifyOpeningDate && (
+                    <p className="text-[11px] text-slate-500 mt-1 flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[14px] text-emerald-700">event</span>
+                      <span>
+                        Reopening on:{' '}
+                        <strong className="text-slate-800">
+                          {new Date(notifyOpeningDate).toLocaleDateString('en-GB', {
+                            weekday: 'long',
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric',
+                          })}
+                        </strong>
+                      </span>
+                    </p>
+                  )}
+                </div>
+
+                {/* Directives & Reminders */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Reporting Directives &amp; Guidelines for Parents
+                  </label>
+                  <textarea
+                    rows={4}
+                    value={notifyCustomNotes}
+                    onChange={(e) => setNotifyCustomNotes(e.target.value)}
+                    className="w-full px-3 py-2 text-xs bg-[#F8F5F5] border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#800000] font-mono leading-relaxed"
+                    placeholder="Enter directives for uniform, books, bus routes, fees..."
+                  />
+                </div>
+
+                {/* Broadcast Channels */}
+                <div className="bg-amber-50/70 p-3.5 rounded-xl border border-amber-200/80 space-y-2">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-amber-900 block">
+                    Distribution Channels:
+                  </span>
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={true}
+                      disabled
+                      className="rounded text-[#800000] focus:ring-[#800000] h-4 w-4"
+                    />
+                    <span>Publish Official High-Priority Notice to Parent Portal Board (Pinned)</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={notifySendSms}
+                      onChange={(e) => setNotifySendSms(e.target.checked)}
+                      className="rounded text-[#800000] focus:ring-[#800000] h-4 w-4"
+                    />
+                    <span className="flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[15px] text-[#800000]">sms</span>
+                      <span>Dispatch Instant SMS Alert to Registered Parent Contact Numbers</span>
+                    </span>
+                  </label>
+                </div>
+
+                {/* Live Preview Box */}
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1 text-xs">
+                  <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider block">
+                    Live Announcement Preview:
+                  </span>
+                  <div className="font-bold text-[#800000] text-xs">
+                    📢 Official School Reopening Notice -{' '}
+                    {(terms.find((t) => t.id === notifyingTermId) || terms[0])?.name || 'Term'}
+                  </div>
+                  <div className="text-[11px] text-slate-600 line-clamp-3">
+                    Dear Parents and Guardians, Grace Seeds School will officially reopen on{' '}
+                    {notifyOpeningDate
+                      ? new Date(notifyOpeningDate).toLocaleDateString('en-GB', {
+                          weekday: 'long',
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric',
+                        })
+                      : '[Opening Date]'}{' '}
+                    by {notifyReportingTime}. Full directives have been published to your parent dashboard.
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200">
+                  <button
+                    type="button"
+                    onClick={() => setShowNotifyModal(false)}
+                    className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={notifyBroadcasting || !notifyOpeningDate}
+                    className="px-5 py-2 bg-[#800000] hover:bg-[#660000] text-white text-xs font-bold rounded-lg shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">
+                      {notifyBroadcasting ? 'progress_activity' : 'send'}
+                    </span>
+                    <span>
+                      {notifyBroadcasting ? 'Broadcasting Notice...' : '📢 Broadcast Notice to Parents'}
+                    </span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         {/* Footer: Pure Maroon */}
         <div className="bg-[#800000] text-white px-6 py-3 flex items-center justify-between shrink-0 text-xs border-t border-[#660000]">

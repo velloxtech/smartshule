@@ -18,7 +18,7 @@ export interface PayrollProps {
   totalDeductions: number;
   netSalary: number;
   status: 'DRAFT' | 'APPROVED' | 'PAID';
-  paymentMethod?: 'BANK_TRANSFER' | 'MPESA' | 'CHEQUE';
+  paymentMethod?: 'BANK_TRANSFER' | 'MPESA' | 'CHEQUE' | 'CASH';
   paymentReference?: string;
   paidAt?: Date;
   notes?: string;
@@ -88,7 +88,7 @@ export class PayrollRecord extends Entity<PayrollProps> {
     this.touch();
   }
 
-  public markAsPaid(method: 'BANK_TRANSFER' | 'MPESA' | 'CHEQUE', ref?: string): void {
+  public markAsPaid(method: 'BANK_TRANSFER' | 'MPESA' | 'CHEQUE' | 'CASH', ref?: string): void {
     this._props.status = 'PAID';
     this._props.paymentMethod = method;
     this._props.paymentReference = ref;

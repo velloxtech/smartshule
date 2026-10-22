@@ -1063,21 +1063,109 @@ export class StudentUseCases {
     const yearCache = new Map<string, any>();
 
     // Load fee balances for students if fee repository is available
-    const studentFeeMap = new Map<string, { balance: number; billed: number }>();
+    const studentFeeMap = new Map<string, { balance: number; billed: number; paid: number; priorArrears: number }>();
+    let feeStructures: any[] = [];
+    let currentTermNum = 1;
+    let currentTermId = 'term-2026-t1';
+
     if (this.feeRepository) {
       try {
+        try {
+          feeStructures = await this.feeRepository.findAllFeeStructures();
+        } catch {}
+
+        if (this.academicRepository) {
+          try {
+            const activeYear = await this.academicRepository.findCurrentYear();
+            if (activeYear) {
+              const terms = await this.academicRepository.findTermsByYear(activeYear.id);
+              const activeTerm = terms.find(t => t.isCurrent) || terms[0];
+              if (activeTerm) {
+                currentTermId = activeTerm.id;
+                currentTermNum = Number(activeTerm.termNumber) || (activeTerm.id.includes('2') ? 2 : activeTerm.id.includes('3') ? 3 : 1);
+              }
+            }
+          } catch {}
+        }
+
         const studentIds = students.map(s => s.id);
         const invoices = await this.feeRepository.findInvoices({
           studentIds: studentIds.length > 1 ? studentIds : undefined,
           studentId: studentIds.length === 1 ? studentIds[0] : undefined
         });
+
+        const invoicesByStudent = new Map<string, any[]>();
         for (const inv of invoices) {
-          const cur = studentFeeMap.get(inv.studentId) || { balance: 0, billed: 0 };
-          const invBal = inv.status === InvoiceStatus.CARRIED_FORWARD ? 0 : (Number(inv.balance) || 0);
-          const invBilled = inv.status === InvoiceStatus.CARRIED_FORWARD ? 0 : (Number(inv.amountPayable) || Number(inv.amountBilled) || 0);
-          studentFeeMap.set(inv.studentId, {
-            balance: Math.round((cur.balance + invBal) * 100) / 100,
-            billed: Math.round((cur.billed + invBilled) * 100) / 100
+          if (inv.status === InvoiceStatus.CARRIED_FORWARD) continue;
+          const list = invoicesByStudent.get(inv.studentId) || [];
+          list.push(inv);
+          invoicesByStudent.set(inv.studentId, list);
+        }
+
+        for (const [studentId, invs] of invoicesByStudent.entries()) {
+          // Identify primary fee invoice: prefer current term's regular fee invoice, or latest non-manual invoice
+          const currentInv =
+            invs.find(i => i.termId === currentTermId && i.feeStructureId !== 'MANUAL_ARREARS' && !i.invoiceNumber.includes('ARR')) ||
+            invs.find(i => i.feeStructureId !== 'MANUAL_ARREARS' && !i.invoiceNumber.includes('ARR')) ||
+            invs[0];
+
+          let billed = 0;
+          let priorArrears = 0;
+          let paid = 0;
+          let balance = 0;
+
+          if (currentInv) {
+            let termItemsSum = 0;
+            let cfArrears = 0;
+
+            if (Array.isArray(currentInv.items) && currentInv.items.length > 0) {
+              for (const it of currentInv.items) {
+                const itAmt = Number(it.amount) || 0;
+                const itName = (it.name || '').toLowerCase();
+                const isArrear =
+                  itName.includes('arrear') ||
+                  itName.includes('carried forward') ||
+                  itName.includes('previous balance');
+                if (isArrear) {
+                  cfArrears += itAmt;
+                } else {
+                  termItemsSum += itAmt;
+                }
+              }
+            } else {
+              termItemsSum = Number(currentInv.amountPayable) || Number(currentInv.amountBilled) || 0;
+            }
+
+            billed = Math.round(termItemsSum * 100) / 100;
+            priorArrears += Math.round(cfArrears * 100) / 100;
+            paid += Number(currentInv.amountPaid) || 0;
+            balance += Number(currentInv.balance) || 0;
+
+            // Secondary invoices (manual arrears or older unpaid invoices)
+            for (const other of invs) {
+              if (other.id === currentInv.id) continue;
+              const isManualArrear =
+                other.feeStructureId === 'MANUAL_ARREARS' ||
+                other.invoiceNumber.includes('ARR') ||
+                other.invoiceNumber.toLowerCase().includes('arrear');
+
+              if (isManualArrear) {
+                const payable = Number(other.amountPayable) || Number(other.amountBilled) || 0;
+                priorArrears += Math.round(payable * 100) / 100;
+                paid += Number(other.amountPaid) || 0;
+                balance += Number(other.balance) || 0;
+              } else if (Number(other.balance) > 0) {
+                priorArrears += Math.round(Number(other.balance) * 100) / 100;
+                balance += Number(other.balance) || 0;
+              }
+            }
+          }
+
+          studentFeeMap.set(studentId, {
+            balance: Math.round(balance * 100) / 100,
+            billed: Math.round(billed * 100) / 100,
+            paid: Math.round(paid * 100) / 100,
+            priorArrears: Math.round(priorArrears * 100) / 100
           });
         }
       } catch {}
@@ -1099,7 +1187,6 @@ export class StudentUseCases {
     const hydrated = await Promise.all(
       students.map(async s => {
         const studentJson = await this.hydrateStudentAcademicMetadata(s.toJSON(), classCache, streamCache, yearCache);
-        const feeInfo = studentFeeMap.get(s.id) || { balance: 0, billed: 0 };
         const linkedGuardians: any[] = [];
 
         // 1. Check student.guardianIds
@@ -1159,10 +1246,58 @@ export class StudentUseCases {
 
         const sp = sponsorshipMap.get(s.id) || null;
 
+        const feeInfo = studentFeeMap.get(s.id) || { balance: 0, billed: 0, paid: 0, priorArrears: 0 };
+
+        // Fallback to active Fee Structure according to the term if no invoice has been generated yet for this student
+        if (feeInfo.billed === 0 && !sp && feeStructures && feeStructures.length > 0) {
+          const sGrade = (s.gradeLevel || '').toUpperCase();
+          const matchFs = feeStructures.find(fs => {
+            const fsGrade = (fs.gradeLevel || '').toUpperCase();
+            return fsGrade === sGrade || fsGrade.replace(/_/g, ' ') === sGrade.replace(/_/g, ' ');
+          });
+
+          if (matchFs) {
+            let termAmount = 0;
+            const isTermStructure = matchFs.termId && matchFs.termId !== 'ALL' && matchFs.termId !== 'ANNUAL';
+            if (isTermStructure) {
+              termAmount = matchFs.totalAmount || (Array.isArray(matchFs.items) ? matchFs.items.reduce((acc: number, it: any) => acc + (Number(it.amount) || 0), 0) : 0);
+            } else if (currentTermNum === 1 && matchFs.term1Total !== undefined) {
+              termAmount = matchFs.term1Total;
+            } else if (currentTermNum === 2 && matchFs.term2Total !== undefined) {
+              termAmount = matchFs.term2Total;
+            } else if (currentTermNum === 3 && matchFs.term3Total !== undefined) {
+              termAmount = matchFs.term3Total;
+            } else if (matchFs.termBreakdown) {
+              termAmount = currentTermNum === 1
+                ? matchFs.termBreakdown.term1
+                : currentTermNum === 2
+                ? matchFs.termBreakdown.term2
+                : matchFs.termBreakdown.term3;
+            } else {
+              termAmount = matchFs.totalAmount || 0;
+            }
+
+            if (termAmount > 0) {
+              feeInfo.billed = termAmount;
+            }
+          }
+        }
+
+        const totalDue = sp ? 0 : Math.round((feeInfo.billed + feeInfo.priorArrears) * 100) / 100;
+        const overpayment = !sp && feeInfo.paid > totalDue ? Math.round((feeInfo.paid - totalDue) * 100) / 100 : 0;
+        const arrearsDue = !sp && feeInfo.paid < totalDue ? Math.round((totalDue - feeInfo.paid) * 100) / 100 : 0;
+        const balance = sp ? 0 : (overpayment > 0 ? -overpayment : arrearsDue);
+
         return {
           ...studentJson,
-          feeBalance: sp ? 0 : feeInfo.balance,
-          totalFee: feeInfo.billed,
+          feeBalance: balance,
+          totalFee: sp ? 0 : feeInfo.billed,
+          totalPaid: sp ? 0 : feeInfo.paid,
+          creditBalance: sp ? 0 : overpayment,
+          priorArrears: sp ? 0 : feeInfo.priorArrears,
+          totalDue: sp ? 0 : totalDue,
+          arrearsDue: sp ? 0 : arrearsDue,
+          balance: balance,
           isSponsored: !!sp,
           sponsorship: sp ? (typeof sp.toJSON === 'function' ? sp.toJSON() : sp) : null,
           guardian: guardianSummary,
@@ -1241,14 +1376,26 @@ export class StudentUseCases {
 
     const childrenDetails = await Promise.all(
       students.map(async s => {
-        let feeInfo = { totalBilled: 0, totalPaid: 0, balance: 0, arrearsAmount: 0, hasArrears: false, dueDate: null as string | null, invoices: [] as any[], payments: [] as any[] };
+        let sp: any = null;
+        if (this.studentSponsorshipRepository) {
+          try {
+            const foundSp = await this.studentSponsorshipRepository.findByStudentId(s.id);
+            if (foundSp && foundSp.sponsorshipStatus === 'ACTIVE') {
+              sp = typeof foundSp.toJSON === 'function' ? foundSp.toJSON() : foundSp;
+            }
+          } catch {}
+        }
+
+        let feeInfo = { totalBilled: 0, totalPaid: 0, balance: 0, arrearsAmount: 0, hasArrears: false, isCleared: false, isSponsored: false, sponsorship: null as any, overpayment: 0, creditBalance: 0, dueDate: null as string | null, invoices: [] as any[], payments: [] as any[] };
         if (this.feeRepository) {
           const invoices = await this.feeRepository.findInvoices({ studentId: s.id });
           const payments = await this.feeRepository.findPayments({ studentId: s.id });
           const activeInvoices = invoices.filter(inv => (inv.status as any) !== 'CARRIED_FORWARD' && (inv.status as any) !== InvoiceStatus.CARRIED_FORWARD);
           const totalPaid = Math.round(payments.filter(p => p.status === 'COMPLETED' || (p.status as any) === PaymentStatus.COMPLETED).reduce((acc, p) => acc + (Number(p.amount) || 0), 0) * 100) / 100;
           const activeBalance = Math.round(activeInvoices.reduce((sum, inv) => sum + (Number(inv.balance) || 0), 0) * 100) / 100;
-          const totalBilled = Math.round((totalPaid + activeBalance) * 100) / 100;
+          const totalOwed = Math.round(activeInvoices.reduce((sum, inv) => sum + (Number(inv.amountPayable) || Number(inv.amountBilled) || 0), 0) * 100) / 100;
+          const overpayment = !sp && totalPaid > totalOwed ? Math.round((totalPaid - totalOwed) * 100) / 100 : 0;
+          const calculatedBalance = sp ? 0 : (overpayment > 0 ? -overpayment : activeBalance);
 
           // Identify arrears explicitly from active invoices without duplicate counting
           let arrearsAmount = 0;
@@ -1270,11 +1417,16 @@ export class StudentUseCases {
           const activeInvoice = activeInvoices.find(inv => inv.balance > 0) || activeInvoices[0] || invoices[0];
           const dueDate = activeInvoice ? activeInvoice.dueDate : null;
           feeInfo = {
-            totalBilled,
-            totalPaid,
-            balance: activeBalance,
-            arrearsAmount: effectiveArrears,
-            hasArrears: activeBalance > 0,
+            totalBilled: sp ? 0 : totalOwed,
+            totalPaid: sp ? 0 : totalPaid,
+            balance: calculatedBalance,
+            arrearsAmount: sp ? 0 : effectiveArrears,
+            hasArrears: calculatedBalance > 0,
+            isCleared: calculatedBalance <= 0 || !!sp,
+            isSponsored: !!sp,
+            sponsorship: sp,
+            overpayment,
+            creditBalance: overpayment,
             dueDate: dueDate,
             invoices: invoices.map(i => i.toJSON()),
             payments: payments.map(p => p.toJSON())
@@ -1395,6 +1547,11 @@ export class StudentUseCases {
 
         return {
           ...studentWithAcademics,
+          isSponsored: !!sp,
+          sponsorship: sp,
+          isChargeExempt: !!sp,
+          feeBalance: feeInfo.balance,
+          creditBalance: feeInfo.creditBalance,
           fee: feeInfo,
           CBC: CBCSummary,
           attendance: attendanceStats,

@@ -114,13 +114,11 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
           }
         }
 
+        // Enforce strict 1-class assignment limit: resolve only the first assigned class/stream
         let resolvedClassName = 'Assigned Subject Teacher';
         if (assignedStreamIds.length > 0) {
-          const names = assignedStreamIds.map((id) => streamMap.get(id) || classMap.get(id) || resolveStreamName(id));
-          const uniqueNames = Array.from(new Set(names)).filter(Boolean);
-          if (uniqueNames.length > 0) {
-            resolvedClassName = uniqueNames.join(', ');
-          }
+          const primaryStreamId = assignedStreamIds[0];
+          resolvedClassName = streamMap.get(primaryStreamId) || classMap.get(primaryStreamId) || resolveStreamName(primaryStreamId) || 'Assigned Classroom';
         }
         setResolvedAssignedClass(resolvedClassName);
 
@@ -229,7 +227,6 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
     const schoolName = schoolInfo?.name || 'Grace Seeds School';
     const motto = schoolInfo?.motto || 'The Future Begins Here';
 
-    // Top burgundy accent bar
     doc.setFillColor(122, 18, 40);
     doc.rect(0, 0, 210, 5, 'F');
 
@@ -464,7 +461,7 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
         <TeacherGeofenceClockInCard teacherName={teacherName} />
       </div>
 
-      {/* 4 Core Teacher KPI Cards (Pure Database Metrics) */}
+      {/* 4 Core Teacher KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* 1. My Class Enrollment */}
         <div

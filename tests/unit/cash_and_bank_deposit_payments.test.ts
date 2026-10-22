@@ -184,8 +184,8 @@ describe('Cash and Manual Bank Deposit Payments Tests', () => {
       // Verify SMS notification sent
       expect(smsSent.length).toBe(1);
       expect(smsSent[0].phone).toBe('+254711889900');
-      expect(smsSent[0].message).toContain('SmartShule Receipt: Received KES 8000 via CASH');
-      expect(smsSent[0].message).toContain('New balance: KES 12000');
+      expect(smsSent[0].message).toContain('Received KES 8,000 via CASH');
+      expect(smsSent[0].message).toContain('New balance: KES 12,000');
     });
 
     it('records cash payment with a custom paper receipt booklet reference', async () => {
@@ -237,8 +237,8 @@ describe('Cash and Manual Bank Deposit Payments Tests', () => {
       // Verify SMS notification sent
       expect(smsSent.length).toBe(1);
       expect(smsSent[0].phone).toBe('+254711889900');
-      expect(smsSent[0].message).toContain('SmartShule Receipt: Received KES 15000 via Bank Deposit (KCB Bank Kenya - Slip #SLIP-982103)');
-      expect(smsSent[0].message).toContain('New balance: KES 5000');
+      expect(smsSent[0].message).toContain('Received KES 15,000 via Bank Deposit (KCB Bank Kenya #SLIP-982103)');
+      expect(smsSent[0].message).toContain('New balance: KES 5,000');
     });
 
     it('settles invoice completely and transitions status to PAID', async () => {

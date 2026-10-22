@@ -1080,7 +1080,13 @@ export class FeeUseCases {
     const activeStudentInvoices = allStudentInvoices.filter(
       i => (i.status as any) !== 'CARRIED_FORWARD' && (i.status as any) !== InvoiceStatus.CARRIED_FORWARD
     );
-    const studentTotalBalance = Math.round(activeStudentInvoices.reduce((sum, i) => sum + (Number(i.balance) || 0), 0) * 100) / 100;
+    const totalRemainingBalance = activeStudentInvoices.reduce((sum, i) => sum + (Number(i.balance) || 0), 0);
+    const totalBilledAcrossAll = activeStudentInvoices.reduce((sum, i) => sum + (Number(i.amountPayable) || Number(i.amountBilled) || 0), 0);
+    const totalPaidAcrossAll = activeStudentInvoices.reduce((sum, i) => sum + (Number(i.amountPaid) || 0), 0);
+    const overpaymentAmount = totalPaidAcrossAll > totalBilledAcrossAll ? Math.round((totalPaidAcrossAll - totalBilledAcrossAll) * 100) / 100 : 0;
+    const studentTotalBalance = totalRemainingBalance > 0
+      ? Math.round(totalRemainingBalance * 100) / 100
+      : (overpaymentAmount > 0 ? -overpaymentAmount : 0);
 
     // Generate official receipt and issue to guardian via Email, WhatsApp, and SMS
     let receiptResult: any = null;
@@ -1101,6 +1107,8 @@ export class FeeUseCases {
       payment: payment.toJSON(),
       updatedInvoice: invoice.toJSON(),
       studentTotalBalance,
+      overpaymentAmount,
+      creditBalance: overpaymentAmount,
       hasArrears: studentTotalBalance > 0,
       receipt: receiptResult?.receipt,
       delivery: receiptResult?.delivery
@@ -1109,7 +1117,9 @@ export class FeeUseCases {
 
   public generateReceiptHtml(receipt: PaymentReceiptPayload): string {
     const formattedAmount = Number(receipt.amountPaid || 0).toLocaleString();
-    const formattedBal = Number(receipt.remainingBalance || 0).toLocaleString();
+    const isOverpaid = Number(receipt.remainingBalance || 0) < 0;
+    const overpaidAmount = isOverpaid ? Math.abs(Number(receipt.remainingBalance || 0)) : 0;
+    const formattedBal = isOverpaid ? `+KES ${overpaidAmount.toLocaleString()}` : `KES ${Number(receipt.remainingBalance || 0).toLocaleString()}`;
     const isCleared = receipt.remainingBalance <= 0;
 
     return `<!DOCTYPE html>
@@ -1162,8 +1172,8 @@ export class FeeUseCases {
         ${receipt.invoiceNumber ? `<tr><td class="label">Invoice Number</td><td class="value">${receipt.invoiceNumber}</td></tr>` : ''}
         ${receipt.previousBalance !== undefined ? `<tr><td class="label">Previous Balance</td><td class="value">KES ${Number(receipt.previousBalance).toLocaleString()}</td></tr>` : ''}
         <tr class="balance-row">
-          <td class="label" style="font-weight: 700; color: #111827;">Outstanding Balance</td>
-          <td class="value" style="color: ${isCleared ? '#059669' : '#b91c1c'}; font-size: 14px;">KES ${formattedBal} ${isCleared ? '(CLEARED)' : ''}</td>
+          <td class="label" style="font-weight: 700; color: #111827;">${isOverpaid ? 'Advance Prepayment Credit' : 'Outstanding Balance'}</td>
+          <td class="value" style="color: ${isOverpaid ? '#0d9488' : isCleared ? '#059669' : '#b91c1c'}; font-size: 14px;">${formattedBal} ${isOverpaid ? '(OVERPAID / ADVANCE CREDIT)' : isCleared ? '(CLEARED)' : ''}</td>
         </tr>
       </table>
       <div class="stamp-box">
@@ -1181,7 +1191,9 @@ export class FeeUseCases {
 
   public generateReceiptWhatsAppText(receipt: PaymentReceiptPayload): string {
     const formattedAmount = Number(receipt.amountPaid || 0).toLocaleString();
-    const formattedBal = Number(receipt.remainingBalance || 0).toLocaleString();
+    const isOverpaid = Number(receipt.remainingBalance || 0) < 0;
+    const overpaidAmount = isOverpaid ? Math.abs(Number(receipt.remainingBalance || 0)) : 0;
+    const formattedBal = isOverpaid ? `+KES ${overpaidAmount.toLocaleString()}` : `KES ${Number(receipt.remainingBalance || 0).toLocaleString()}`;
     const isCleared = receipt.remainingBalance <= 0;
 
     return `🧾 *${receipt.schoolName.toUpperCase()} — OFFICIAL RECEIPT*
@@ -1196,7 +1208,7 @@ export class FeeUseCases {
 *Method:* ${receipt.paymentMethod}
 *Reference:* ${receipt.transactionReference}${receipt.bankName ? `\n*Bank:* ${receipt.bankName}` : ''}${receipt.slipNumber ? `\n*Slip #:* ${receipt.slipNumber}` : ''}${receipt.invoiceNumber ? `\n*Invoice:* ${receipt.invoiceNumber}` : ''}
 
-*Outstanding Balance:* KES ${formattedBal}${isCleared ? ' (CLEARED ✅)' : ''}
+*Outstanding Balance:* ${isOverpaid ? `+KES ${overpaidAmount.toLocaleString()} (ADVANCE CREDIT / OVERPAID 💰)` : `${formattedBal}${isCleared ? ' (CLEARED ✅)' : ''}`}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 _Thank you for supporting your child's education._
 _Finance Office · Tel: ${receipt.schoolPhone}_`;
@@ -2079,7 +2091,10 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
     const currentBalance = Math.round(
       activeInvoices.reduce((sum, inv) => sum + (Number(inv.balance) || 0), 0) * 100
     ) / 100;
-    const totalBilled = Math.round((totalPaid + currentBalance) * 100) / 100;
+    const totalPayableBilled = Math.round(
+      activeInvoices.reduce((sum, inv) => sum + (Number(inv.amountPayable) || Number(inv.amountBilled) || 0), 0) * 100
+    ) / 100;
+    const totalBilled = totalPayableBilled > 0 ? totalPayableBilled : Math.round((totalPaid + currentBalance) * 100) / 100;
 
     // Identify arrears explicitly from active invoices without duplicate counting
     let arrearsAmount = 0;
@@ -2173,6 +2188,9 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
       } catch {}
     }
 
+    const overpaymentAmount = !sponsorshipJson && totalPaid > totalBilled ? Math.round((totalPaid - totalBilled) * 100) / 100 : 0;
+    const effectiveBalance = sponsorshipJson ? 0 : (currentBalance > 0 ? currentBalance : (overpaymentAmount > 0 ? -overpaymentAmount : 0));
+
     return {
       student: {
         ...student.toJSON(),
@@ -2184,11 +2202,13 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
       summary: {
         totalBilled,
         totalPaid,
-        currentBalance: sponsorshipJson ? 0 : currentBalance,
+        currentBalance: effectiveBalance,
         arrearsBalance: sponsorshipJson ? 0 : arrearsBalance,
         hasArrears: sponsorshipJson ? false : currentBalance > 0,
-        status: sponsorshipJson ? 'CHARGE_EXEMPT' : currentBalance <= 0 ? 'CLEARED' : 'PENDING_BALANCE',
-        statusLabel: sponsorshipJson ? '100% Scholarship (Charge Exempt)' : currentBalance <= 0 ? 'Cleared' : 'Pending Payment',
+        overpaymentAmount,
+        creditBalance: overpaymentAmount,
+        status: sponsorshipJson ? 'CHARGE_EXEMPT' : overpaymentAmount > 0 ? 'OVERPAID' : currentBalance <= 0 ? 'CLEARED' : 'PENDING_BALANCE',
+        statusLabel: sponsorshipJson ? '100% Scholarship (Charge Exempt)' : overpaymentAmount > 0 ? `Advance Credit (+KES ${overpaymentAmount.toLocaleString()})` : currentBalance <= 0 ? 'Cleared' : 'Pending Payment',
         isSponsored: !!sponsorshipJson
       },
       invoices: enrichedInvoices,
@@ -3129,6 +3149,10 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
   }
 
   public async getForwardedTransactions(schoolId?: string, requestingUser?: UserContext) {
+    if (requestingUser && !isBillingAuthorizedRole(requestingUser.role) && requestingUser.role !== UserRole.GUARDIAN && requestingUser.role !== UserRole.PARENT) {
+      throw new ForbiddenError('Only administrative and accounting personnel can access the parent payment verification queue.');
+    }
+
     let studentIds: string[] | undefined = undefined;
     if (requestingUser && (requestingUser.role === UserRole.GUARDIAN || requestingUser.role === UserRole.PARENT)) {
       studentIds = await this.getLinkedStudentIdsForUser(requestingUser.userId);
@@ -3141,7 +3165,9 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
     });
 
     const pendingPayments = allPayments.filter(
-      p => p.status === PaymentStatus.PENDING || p.receiptNumber.startsWith('FWD-')
+      p => p.status === PaymentStatus.PENDING ||
+           p.receiptNumber.startsWith('FWD-') ||
+           (p.notes && (p.notes.includes('Forwarded SMS') || p.notes.includes('Forwarded by parent') || p.notes.includes('Forwarded')))
     );
 
     // Enrich with student details
@@ -3161,6 +3187,12 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
         };
       })
     );
+
+    enriched.sort((a, b) => {
+      const dateA = new Date(a.createdAt || a.paymentDate || 0).getTime();
+      const dateB = new Date(b.createdAt || b.paymentDate || 0).getTime();
+      return dateB - dateA;
+    });
 
     return enriched;
   }

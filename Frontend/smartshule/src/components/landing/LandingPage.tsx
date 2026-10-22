@@ -27,7 +27,7 @@ import {
 } from 'lucide-react'
 import ProgrammesPage from './ProgrammesPage'
 import AdmissionsPage from './AdmissionsPage'
-import CloudSky from './CloudSky'
+import InteractiveLearningLab from './InteractiveLearningLab'
 import LearnerOnboardingPage from './LearnerOnboardingPage'
 import ApplyAdmissionSlotPage from './ApplyAdmissionSlotPage'
 
@@ -850,19 +850,32 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
           </section>
 
-          <section className="py-16 bg-[#fdfaf6]">
+          <section className="py-20 bg-[#fdfaf6] relative">
             <div className="max-w-7xl mx-auto px-6 lg:px-12">
-              <div className="text-center mb-8">
-                <p className="text-[#7b1c35] text-xs font-bold tracking-widest uppercase mb-2">Interactive Experience</p>
-                <h2 style={{ fontFamily: 'Fraunces, serif' }} className="text-3xl font-bold text-[#5a1226]">
-                  Grace Seeds Sky & Environment
+              <div className="text-center max-w-3xl mx-auto mb-10">
+                <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#f9eef1] border border-[#f0d8df] text-[#7b1c35] text-xs font-bold tracking-widest uppercase mb-3 shadow-sm">
+                  <Sparkles className="w-3.5 h-3.5 text-[#e8a92a]" />
+                  Interactive Learning Lab
+                </span>
+                <h2 style={{ fontFamily: 'Fraunces, serif' }} className="text-3xl sm:text-4xl lg:text-5xl font-bold text-[#5a1226]">
+                  How We Learn at Grace Seeds
                 </h2>
-                <p className="text-[#8a6470] text-sm mt-1">Let's fly</p>
+                <p className="text-[#8a6470] text-sm sm:text-base mt-2">
+                  Take a brain challenge, simulate learning milestones by age, or explore the core CBC competencies that nurture the whole child.
+                </p>
               </div>
 
-              <div className="rounded-3xl overflow-hidden shadow-xl border border-[#f0d8df] relative h-72 lg:h-96">
-                <CloudSky style={{ minWidth: 0, minHeight: 0, width: '100%', height: '100%' }} />
-              </div>
+              <InteractiveLearningLab
+                onNavigateApplySlot={(grade) => {
+                  if (grade) setPreselectedGrade(grade);
+                  setCurrentPage('apply-slot');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                onNavigateProgrammes={() => {
+                  setCurrentPage('programmes');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+              />
             </div>
           </section>
 

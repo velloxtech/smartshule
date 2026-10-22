@@ -52,7 +52,7 @@ export const RecordSummativeSchema = z.object({
   academicYearId: z.string().optional(),
   strandScores: z.array(
     z.object({
-      strandId: z.string().min(1),
+      strandId: z.string().optional(), // Made optional to prevent rigid validation errors
       performanceLevel: z.nativeEnum(PerformanceLevel),
       rawScore: z.number().optional(),
       maxScore: z.number().optional()

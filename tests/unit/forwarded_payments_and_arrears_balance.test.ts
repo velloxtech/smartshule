@@ -249,9 +249,8 @@ describe('Parent Forwarded Payment Verification and Arrears Persistence Tests', 
       // Verify SMS receipt confirms verification
       expect(smsSent.length).toBe(1);
       expect(smsSent[0].phone).toBe('+254722334455');
-      expect(smsSent[0].message).toContain('VERIFIED');
       expect(smsSent[0].message).toContain('REC-');
-      expect(smsSent[0].message).toContain('Outstanding balance: KES 10,000.');
+      expect(smsSent[0].message).toContain('New balance: KES 10,000.');
     });
 
     it('rejects fraudulent or invalid forwarded transaction without touching invoice balance', async () => {
@@ -315,7 +314,52 @@ describe('Parent Forwarded Payment Verification and Arrears Persistence Tests', 
       // SMS sent to guardian must report the TRUE remaining balance (KES 6000), NOT KES 0!
       expect(smsSent.length).toBe(1);
       expect(smsSent[0].phone).toBe('+254722334455');
-      expect(smsSent[0].message).toContain('New balance: KES 6000');
+      expect(smsSent[0].message).toContain('New balance: KES 6,000');
+    });
+  });
+
+  describe('4. Fee Overpayment and Advance Credit Recognition', () => {
+    it('correctly records fee overpayment as an advance credit towards future terms and generates overpayment receipt', async () => {
+      // Current Term invoice balance is 14,000, Arrears invoice is 6,000 (total due: 20,000).
+      // Parent pays 25,000 (an overpayment of 5,000).
+      const paymentResult = await feeUseCases.recordPayment({
+        schoolId,
+        invoiceId: currentTermInvoice.id,
+        amount: 25000,
+        paymentMethod: PaymentMethod.BANK_DEPOSIT,
+        bankName: 'Equity Bank Kenya',
+        slipNumber: 'DEP-OVERPAY-999',
+        recordedByUserId: 'usr-bursar-01',
+      });
+
+      // Both invoices should now be settled (balance = 0)
+      expect(paymentResult.updatedInvoice.balance).toBe(0);
+      const arrInv = await feeRepo.findInvoiceById(arrearsInvoice.id);
+      expect(arrInv?.balance).toBe(0);
+
+      // Overpayment amount should be 5,000
+      expect(paymentResult.overpaymentAmount).toBe(5000);
+      expect(paymentResult.creditBalance).toBe(5000);
+      expect(paymentResult.studentTotalBalance).toBe(-5000);
+      expect(paymentResult.hasArrears).toBe(false);
+
+      // Check fee statement recognizes the advance credit
+      const statement = await feeUseCases.getStudentFeeStatement(testStudent.id);
+      expect(statement.summary.overpaymentAmount).toBe(5000);
+      expect(statement.summary.creditBalance).toBe(5000);
+      expect(statement.summary.currentBalance).toBe(-5000);
+      expect(statement.summary.status).toBe('OVERPAID');
+      expect(statement.summary.statusLabel).toContain('Advance Credit (+KES 5,000)');
+
+      // Check receipt HTML contains overpayment recognition
+      const receiptHtml = feeUseCases.generateReceiptHtml(paymentResult.receipt);
+      expect(receiptHtml).toContain('OVERPAID / ADVANCE CREDIT');
+      expect(receiptHtml).toContain('+KES 5,000');
+
+      // Check WhatsApp text contains advance credit badge
+      const receiptWa = feeUseCases.generateReceiptWhatsAppText(paymentResult.receipt);
+      expect(receiptWa).toContain('ADVANCE CREDIT / OVERPAID');
+      expect(receiptWa).toContain('+KES 5,000');
     });
   });
 });

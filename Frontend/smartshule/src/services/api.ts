@@ -2475,6 +2475,12 @@ export const libraryApi = {
     });
   },
 
+  deletePayroll: async (id: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/payroll/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
   getLeaves: async (teacherId?: string): Promise<ApiResponse<StaffLeave[]>> => {
     const params = teacherId ? `?teacherId=${teacherId}` : '';
     return apiFetch<ApiResponse<StaffLeave[]>>(`/payroll/leaves/list${params}`);
@@ -2939,6 +2945,7 @@ export const generateMonthlyPayroll = libraryApi.generateMonthlyPayroll;
 export const createCustomPayroll = libraryApi.createCustomPayroll;
 export const approvePayroll = libraryApi.approvePayroll;
 export const markPayrollPaid = libraryApi.markPayrollPaid;
+export const deletePayroll = libraryApi.deletePayroll;
 export const getLeaves = libraryApi.getLeaves;
 export const applyLeave = libraryApi.applyLeave;
 export const reviewLeave = libraryApi.reviewLeave;

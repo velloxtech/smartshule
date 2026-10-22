@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Student, Teacher, SystemActivity, DashboardSummary, UserRole } from '../../types';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -35,7 +35,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const { user } = useAuth();
   const [quickActionOpen, setQuickActionOpen] = useState(false);
   const [summaryData, setSummaryData] = useState<DashboardSummary | null>(null);
+  const [availableClasses, setAvailableClasses] = useState<any[]>([]);
+  const [todayRegisterMap, setTodayRegisterMap] = useState<Record<string, 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED'>>({});
   const quickActionRef = useRef<HTMLDivElement>(null);
+
+  const todayIso = useMemo(() => new Date().toISOString().split('T')[0], []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -47,23 +51,63 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    async function loadDashboardStats() {
-      try {
-        const res = await apiService.getDashboardAnalytics();
-        if (res.success && res.data) {
-          setSummaryData(res.data);
-        }
-      } catch {
-        // Keep fallback data
+  const loadDashboardStats = useCallback(async () => {
+    try {
+      const [res, cRes, attRes] = await Promise.all([
+        apiService.getDashboardAnalytics().catch(() => null),
+        apiService.getClasses().catch(() => null),
+        apiService.getAttendanceReport({ date: todayIso }).catch(() => null),
+      ]);
+
+      if (res?.success && res.data) {
+        setSummaryData(res.data);
       }
+      if (cRes?.data && Array.isArray(cRes.data)) {
+        setAvailableClasses(cRes.data);
+      }
+
+      const statusMap: Record<string, 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED'> = {};
+      const rawRegisters = attRes?.data?.registers || (Array.isArray(attRes?.data) ? attRes.data : []);
+      
+      if (Array.isArray(rawRegisters)) {
+        rawRegisters.forEach((reg: any) => {
+          if (reg.entries && Array.isArray(reg.entries)) {
+            reg.entries.forEach((e: any) => {
+              if (e.studentId) {
+                statusMap[e.studentId] = e.status;
+              }
+            });
+          }
+        });
+      }
+      setTodayRegisterMap(statusMap);
+    } catch {
+      // Keep existing data gracefully
     }
+  }, [todayIso]);
+
+  useEffect(() => {
     loadDashboardStats();
-  }, []);
+  }, [loadDashboardStats]);
+
+  useEffect(() => {
+    const handleAttendanceSync = () => {
+      loadDashboardStats();
+    };
+
+    window.addEventListener('smartshule:attendance-updated', handleAttendanceSync);
+    return () => {
+      window.removeEventListener('smartshule:attendance-updated', handleAttendanceSync);
+    };
+  }, [loadDashboardStats]);
 
   const totalStudents = summaryData?.counts?.totalStudents ?? students.length;
   const boysCount = students.filter((s) => s.gender === 'Boy').length;
   const girlsCount = students.filter((s) => s.gender === 'Girl').length;
+
+  const totalClassesCount = availableClasses.length > 0 ? availableClasses.length : 8;
+  const totalClassCapacity = totalClassesCount * 40;
+  const admissionPercentage = totalClassCapacity > 0 ? Math.min(100, Math.round((totalStudents / totalClassCapacity) * 100)) : 0;
 
   const currentTotalFee = summaryData?.finance?.totalCollected !== undefined
     ? summaryData.finance.totalCollected
@@ -82,24 +126,70 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const totalNonTeachingStaffCount = summaryData?.counts?.totalNonTeachingStaff ?? 5;
 
   const totalAssessments = summaryData?.CBCProficiency?.totalAssessments || 0;
-  const CBCBenchmarkPct = totalAssessments > 0
-    ? (((summaryData!.CBCProficiency.exceeding + summaryData!.CBCProficiency.meeting) / totalAssessments) * 100).toFixed(1)
-    : '0.0';
 
   const academicPeriodLabel = summaryData?.academicPeriod?.term && summaryData?.academicPeriod?.year && summaryData.academicPeriod.term !== 'N/A'
     ? `${summaryData.academicPeriod.term}, ${summaryData.academicPeriod.year}`
     : 'Active Academic Session';
 
-  // Real Dynamic Attendance Grouped by Grade
+  const gradeEnrollmentBreakdown = useMemo(() => {
+    const classDataMap = new Map<string, { id: string; name: string; boys: number; girls: number; total: number }>();
+
+    availableClasses.forEach((cls) => {
+      classDataMap.set(cls.id, {
+        id: cls.id,
+        name: cls.name || cls.gradeLevel?.replace(/_/g, ' ') || 'Class',
+        boys: 0,
+        girls: 0,
+        total: 0,
+      });
+    });
+
+    students.forEach((s) => {
+      let key = s.classroomId;
+      if (!key || !classDataMap.has(key)) {
+        const match = availableClasses.find(
+          (c) => c.name?.toLowerCase() === (s.grade || '').toLowerCase()
+        );
+        key = match ? match.id : (s.grade || 'Unassigned');
+      }
+
+      if (!classDataMap.has(key)) {
+        classDataMap.set(key, {
+          id: key,
+          name: s.grade || 'Unassigned',
+          boys: 0,
+          girls: 0,
+          total: 0,
+        });
+      }
+
+      const entry = classDataMap.get(key)!;
+      entry.total += 1;
+      if (s.gender === 'Boy') entry.boys += 1;
+      else if (s.gender === 'Girl') entry.girls += 1;
+    });
+
+    return Array.from(classDataMap.values()).filter((c) => c.total > 0 || availableClasses.some((ac) => ac.id === c.id));
+  }, [students, availableClasses]);
+
   const dynamicAttendanceGradeData = useMemo(() => {
     if (!students || students.length === 0) return [];
     const map: Record<string, { present: number; total: number; late: number }> = {};
+
     students.forEach((s) => {
       const g = s.grade || 'Grade 7';
       if (!map[g]) map[g] = { present: 0, total: 0, late: 0 };
       map[g].total += 1;
-      if ((s.attendanceRate || 0) >= 80) map[g].present += 1;
+
+      const statusToday = todayRegisterMap[s.id];
+      if (statusToday === 'PRESENT') {
+        map[g].present += 1;
+      } else if (statusToday === 'LATE') {
+        map[g].present += 1;
+        map[g].late += 1;
+      }
     });
+
     return Object.entries(map).map(([grade, d]) => ({
       grade,
       present: d.present,
@@ -107,20 +197,23 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       pct: d.total > 0 ? (d.present / d.total) * 100 : 0,
       late: d.late,
     }));
-  }, [students]);
+  }, [students, todayRegisterMap]);
 
-  const avgAttendancePct = useMemo(() => {
-    if (!students || students.length === 0) return 0;
-    const total = students.reduce((acc, s) => acc + (s.attendanceRate || 0), 0);
-    return Math.round(total / students.length);
-  }, [students]);
+  const hasRegisterDataToday = Object.keys(todayRegisterMap).length > 0;
+
+  const totalPresentToday = useMemo(() => {
+    return Object.values(todayRegisterMap).filter((st) => st === 'PRESENT' || st === 'LATE').length;
+  }, [todayRegisterMap]);
 
   const absentStudentsCount = useMemo(() => {
-    if (!students || students.length === 0) return 0;
-    return students.filter((s) => (s.attendanceRate || 0) < 50).length;
-  }, [students]);
+    return Object.values(todayRegisterMap).filter((st) => st === 'ABSENT').length;
+  }, [todayRegisterMap]);
 
-  // Real Dynamic Defaulters Grouped by Grade
+  const avgAttendancePct = useMemo(() => {
+    if (!students || students.length === 0 || !hasRegisterDataToday) return 0;
+    return Math.round((totalPresentToday / students.length) * 100);
+  }, [students, totalPresentToday, hasRegisterDataToday]);
+
   const dynamicFeeDefaultersByGrade = useMemo(() => {
     if (!students || students.length === 0) return [];
     const map: Record<string, { count: number; totalBalance: number }> = {};
@@ -177,12 +270,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const meOffset = -eeLen;
   const aeOffset = -(eeLen + meLen);
   const beOffset = -(eeLen + meLen + aeLen);
-
-  // Check user roles
-  const isTeacher = user?.role === UserRole.TEACHER;
-  const isFinance = user?.role === UserRole.ACCOUNTANT;
-  const isGuardian = user?.role === UserRole.GUARDIAN || user?.role === UserRole.PARENT;
-  const isStudent = user?.role === UserRole.STUDENT;
 
   return (
     <div className="flex flex-col w-full pb-xl">
@@ -245,6 +332,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 id="quickActionMenu"
                 className="absolute right-0 mt-xs w-56 max-w-[calc(100vw-2rem)] rounded-lg bg-surface-container-lowest p-xs shadow-xl z-50 border border-outline-variant/30 flex flex-col gap-base animate-in fade-in slide-in-from-top-1"
               >
+                <button
+                  onClick={() => {
+                    setQuickActionOpen(false);
+                    onNavigateTab('attendance-register');
+                  }}
+                  className="flex items-center gap-xs px-sm py-xs rounded-lg text-rose-900 hover:bg-rose-50 transition-colors text-left w-full cursor-pointer font-medium"
+                >
+                  <span className="material-symbols-outlined text-[#7a1228] text-[18px]">
+                    how_to_reg
+                  </span>
+                  <span className="font-body-md text-body-md">Daily Roll Call</span>
+                </button>
+
                 <button
                   onClick={() => {
                     setQuickActionOpen(false);
@@ -326,241 +426,229 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </div>
 
-      {/* School Director WhatsApp Module Quick Access Banner */}
-      <div className="rounded-2xl bg-gradient-to-r from-emerald-900 to-teal-800 text-white p-4 sm:p-5 shadow-sm my-2 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border border-emerald-600/30">
-        <div className="flex items-center gap-3 sm:gap-4">
-          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-400 shrink-0 shadow-inner">
-            <span className="material-symbols-outlined text-[28px] sm:text-[32px]">chat</span>
-          </div>
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="font-bold text-base sm:text-lg text-white tracking-tight">
-                WhatsApp Parent Desk Module
-              </h2>
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                Director Access Enabled
-              </span>
-            </div>
-            <p className="text-xs sm:text-sm text-emerald-100/80 mt-0.5 max-w-2xl">
-              Real-time communication with parents: instant fee balance checks, online payment links, CBE digital reports, attendance notices, and AI assistance.
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 self-stretch sm:self-auto shrink-0">
-          <button
-            onClick={() => onNavigateTab('sponsored-students')}
-            className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[#7a1228] hover:bg-[#5a1226] text-white font-bold text-xs sm:text-sm border border-white/20 transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer hover:shadow-[#7a1228]/25"
-            type="button"
-          >
-            <span className="material-symbols-outlined text-[18px]">volunteer_activism</span>
-            <span>Sponsored Learners</span>
-          </button>
-          <button
-            onClick={() => onNavigateTab('fee-deadline-banner')}
-            className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer hover:shadow-amber-500/25"
-            type="button"
-          >
-            <span className="material-symbols-outlined text-[18px]">notification_important</span>
-            <span>Fee Deadline Banner</span>
-          </button>
-          <button
-            onClick={() => onNavigateTab('user-management')}
-            className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs sm:text-sm border border-white/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
-            type="button"
-          >
-            <span className="material-symbols-outlined text-[18px]">manage_accounts</span>
-            <span>User Management</span>
-          </button>
-          <button
-            onClick={() => onNavigateTab('whatsapp-bot')}
-            className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer hover:shadow-emerald-500/25"
-            type="button"
-          >
-            <span className="material-symbols-outlined text-[18px]">forum</span>
-            <span>Open WhatsApp Module</span>
-          </button>
-        </div>
-      </div>
-
-      {/* 5 Director High-Impact KPI Summaries */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 my-2">
+      {/* 6 Executive High-Impact KPI Summaries */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3 my-2">
         {/* 1. Total Number of Learners */}
         <div
           onClick={() => onNavigateTab('students-guardians')}
-          className="rounded-xl bg-surface-container-lowest p-md flex flex-col justify-between shadow-xs relative overflow-hidden group hover:shadow-md transition-all cursor-pointer border border-outline-variant/30 hover:border-primary/40"
+          className="rounded-xl bg-surface-container-lowest p-3 flex flex-col justify-between shadow-xs relative overflow-hidden group hover:shadow-md transition-all cursor-pointer border border-outline-variant/30 hover:border-primary/40"
         >
-          <div className="absolute -right-3 -top-3 w-16 h-16 rounded-full bg-primary/5 flex items-center justify-center">
-            <span className="material-symbols-outlined text-primary/30 text-[32px]">groups</span>
+          <div className="flex items-center justify-between">
+            <span className="font-label-md text-[11px] text-on-surface-variant uppercase tracking-wider font-bold truncate">
+              Total Learners
+            </span>
+            <span className="inline-flex items-center text-primary font-label-md font-semibold text-[10px] bg-primary/10 px-1.5 py-0.2 rounded">
+              Active
+            </span>
           </div>
-          <div>
-            <div className="flex items-center justify-between">
-              <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider font-semibold">
-                Total Learners
-              </span>
-              <span className="inline-flex items-center text-primary font-label-md text-label-md font-semibold text-xs">
-                <span className="material-symbols-outlined text-[14px] mr-0.5">school</span> Active
-              </span>
-            </div>
-            <div className="flex items-baseline gap-xs mt-xs">
-              <span className="font-display text-display text-on-surface font-bold text-2xl lg:text-3xl">
+          <div className="my-1.5">
+            <div className="flex items-baseline gap-1">
+              <span className="font-display font-bold text-xl lg:text-2xl text-on-surface font-data-mono">
                 {totalStudents.toLocaleString()}
               </span>
-              <span className="font-label-md text-label-md text-on-surface-variant">learners</span>
+              <span className="text-[11px] text-on-surface-variant">pupils</span>
             </div>
           </div>
-          <div className="mt-md pt-sm bg-surface-container-low/50 rounded-lg p-xs flex items-center justify-between text-xs">
-            <div className="flex items-center gap-xs">
-              <span className="w-2 h-2 rounded-full bg-primary"></span>
-              <span className="font-data-mono text-data-mono text-on-surface">{boysCount} Boys</span>
+          <div className="pt-1.5 border-t border-surface-container flex items-center justify-between text-[11px] text-on-surface-variant font-medium">
+            <span className="text-primary font-bold">{boysCount} Boys</span>
+            <span className="text-outline">|</span>
+            <span className="text-secondary font-bold">{girlsCount} Girls</span>
+          </div>
+        </div>
+
+        {/* 2. Admission Percentage & Capacity */}
+        <div
+          onClick={() => onNavigateTab('admissions')}
+          className="rounded-xl bg-surface-container-lowest p-3 flex flex-col justify-between shadow-xs relative overflow-hidden group hover:shadow-md transition-all cursor-pointer border border-outline-variant/30 hover:border-teal-500/40"
+        >
+          <div className="flex items-center justify-between">
+            <span className="font-label-md text-[11px] text-on-surface-variant uppercase tracking-wider font-bold truncate">
+              Admissions
+            </span>
+            <span className="inline-flex items-center text-teal-800 font-label-md font-semibold text-[10px] bg-teal-50 border border-teal-200 px-1.5 py-0.2 rounded">
+              Capacity
+            </span>
+          </div>
+          <div className="my-1.5">
+            <div className="flex items-baseline gap-1">
+              <span className="font-display font-bold text-xl lg:text-2xl text-teal-700 font-data-mono">
+                {admissionPercentage}%
+              </span>
+              <span className="text-[11px] text-on-surface-variant">enrolled</span>
             </div>
-            <span className="text-outline text-[12px]">|</span>
-            <div className="flex items-center gap-xs">
-              <span className="w-2 h-2 rounded-full bg-secondary"></span>
-              <span className="font-data-mono text-data-mono text-on-surface">{girlsCount} Girls</span>
+          </div>
+          <div className="pt-1.5 border-t border-surface-container flex items-center justify-between text-[11px] text-on-surface-variant">
+            <span className="font-data-mono font-semibold text-slate-700 truncate">
+              {totalStudents} / {totalClassCapacity || 480} slots
+            </span>
+            <div className="w-10 h-1.5 bg-surface-container-high rounded-full overflow-hidden shrink-0 ml-1">
+              <div
+                className="h-full bg-teal-600 rounded-full"
+                style={{ width: `${Math.min(100, admissionPercentage)}%` }}
+              />
             </div>
           </div>
         </div>
 
-        {/* 2. Fee Paid (Collected) */}
+        {/* 3. Fee Paid (Collected) */}
         <div
           onClick={() => onNavigateTab('invoices-mpesa')}
-          className="rounded-xl bg-surface-container-lowest p-md flex flex-col justify-between shadow-xs relative overflow-hidden group hover:shadow-md transition-all cursor-pointer border border-outline-variant/30 hover:border-emerald-500/40"
+          className="rounded-xl bg-surface-container-lowest p-3 flex flex-col justify-between shadow-xs relative overflow-hidden group hover:shadow-md transition-all cursor-pointer border border-outline-variant/30 hover:border-emerald-500/40"
         >
-          <div className="absolute -right-3 -top-3 w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center">
-            <span className="material-symbols-outlined text-emerald-600/40 text-[32px]">
-              payments
+          <div className="flex items-center justify-between">
+            <span className="font-label-md text-[11px] text-on-surface-variant uppercase tracking-wider font-bold truncate">
+              Fee Paid
+            </span>
+            <span className="inline-flex items-center text-emerald-800 font-semibold text-[10px] bg-emerald-50 px-1.5 py-0.2 rounded">
+              {feePct}%
             </span>
           </div>
-          <div>
-            <div className="flex items-center justify-between">
-              <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider font-semibold">
-                Fee Paid
-              </span>
-              <span className="inline-flex items-center text-emerald-800 font-label-md text-label-md font-semibold text-[11px] bg-emerald-50 px-1.5 py-0.5 rounded">
-                <span className="material-symbols-outlined text-[13px] mr-0.5">check_circle</span> Collected
-              </span>
+          <div className="my-1.5">
+            <div className="font-bold text-base lg:text-lg text-emerald-700 tracking-tight font-data-mono truncate">
+              KES {currentTotalFee.toLocaleString()}
             </div>
-            <div className="flex flex-col mt-xs">
-              <span className="font-headline-lg text-headline-lg text-emerald-700 font-bold tracking-tight text-xl lg:text-2xl">
-                KES {currentTotalFee.toLocaleString()}
-              </span>
-              <span className="font-label-md text-label-md text-on-surface-variant text-xs mt-0.5">
-                Target: KES {targetFee.toLocaleString()}
-              </span>
+            <div className="text-[10px] text-on-surface-variant truncate">
+              Target: KES {targetFee.toLocaleString()}
             </div>
           </div>
-          <div className="mt-md pt-sm flex flex-col gap-xs">
-            <div className="flex justify-between font-label-md text-label-md text-xs">
-              <span className="text-on-surface-variant">Collection Rate</span>
-              <span className="font-bold text-emerald-700">{feePct}%</span>
-            </div>
-            <div className="w-full h-1.5 rounded-full bg-surface-container-highest overflow-hidden">
-              <div
-                className="h-full bg-emerald-600 rounded-full transition-all duration-500"
-                style={{ width: `${Math.min(100, feePct)}%` }}
-              ></div>
-            </div>
+          <div className="pt-1.5 border-t border-surface-container flex items-center justify-between text-[11px]">
+            <span className="text-on-surface-variant text-[10px]">Collected</span>
+            <span className="font-bold text-emerald-700 font-data-mono">{feePct}% Rate</span>
           </div>
         </div>
 
-        {/* 3. Fee Arrears (Outstanding) */}
+        {/* 4. Fee Arrears (Outstanding) */}
         <div
           onClick={() => onNavigateTab('defaulters-receipts')}
-          className="rounded-xl bg-surface-container-lowest p-md flex flex-col justify-between shadow-xs relative overflow-hidden group hover:shadow-md transition-all cursor-pointer border border-outline-variant/30 hover:border-rose-500/40"
+          className="rounded-xl bg-surface-container-lowest p-3 flex flex-col justify-between shadow-xs relative overflow-hidden group hover:shadow-md transition-all cursor-pointer border border-outline-variant/30 hover:border-rose-500/40"
         >
-          <div className="absolute -right-3 -top-3 w-16 h-16 rounded-full bg-rose-500/10 flex items-center justify-center">
-            <span className="material-symbols-outlined text-rose-600/40 text-[32px]">
-              pending_actions
+          <div className="flex items-center justify-between">
+            <span className="font-label-md text-[11px] text-on-surface-variant uppercase tracking-wider font-bold truncate">
+              Fee Arrears
+            </span>
+            <span className="inline-flex items-center text-rose-800 font-semibold text-[10px] bg-rose-50 px-1.5 py-0.2 rounded">
+              Pending
             </span>
           </div>
-          <div>
-            <div className="flex items-center justify-between">
-              <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider font-semibold">
-                Fee Arrears
-              </span>
-              <span className="inline-flex items-center text-rose-800 font-label-md text-label-md font-semibold text-[11px] bg-rose-50 px-1.5 py-0.5 rounded">
-                <span className="material-symbols-outlined text-[13px] mr-0.5">warning</span> Outstanding
-              </span>
+          <div className="my-1.5">
+            <div className="font-bold text-base lg:text-lg text-rose-700 tracking-tight font-data-mono truncate">
+              KES {feeArrears.toLocaleString()}
             </div>
-            <div className="flex flex-col mt-xs">
-              <span className="font-headline-lg text-headline-lg text-rose-700 font-bold tracking-tight text-xl lg:text-2xl">
-                KES {feeArrears.toLocaleString()}
-              </span>
-              <span className="font-label-md text-label-md text-on-surface-variant text-xs mt-0.5">
-                Unpaid across learners
-              </span>
+            <div className="text-[10px] text-on-surface-variant truncate">
+              Unpaid balances
             </div>
           </div>
-          <div className="mt-md pt-sm bg-rose-50/70 rounded-lg p-xs flex items-center justify-between text-xs text-rose-900 font-medium">
-            <span>Send Defaulters SMS</span>
-            <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+          <div className="pt-1.5 border-t border-surface-container flex items-center justify-between text-[11px] text-rose-800 font-bold">
+            <span className="text-[10px]">Defaulters SMS</span>
+            <span className="material-symbols-outlined text-[13px]">arrow_forward</span>
           </div>
         </div>
 
-        {/* 4. Number of Teachers */}
+        {/* 5. Number of Teachers */}
         <div
           onClick={() => onNavigateTab('teachers-staff')}
-          className="rounded-xl bg-surface-container-lowest p-md flex flex-col justify-between shadow-xs relative overflow-hidden group hover:shadow-md transition-all cursor-pointer border border-outline-variant/30 hover:border-indigo-500/40"
+          className="rounded-xl bg-surface-container-lowest p-3 flex flex-col justify-between shadow-xs relative overflow-hidden group hover:shadow-md transition-all cursor-pointer border border-outline-variant/30 hover:border-indigo-500/40"
         >
-          <div className="absolute -right-3 -top-3 w-16 h-16 rounded-full bg-indigo-500/10 flex items-center justify-center">
-            <span className="material-symbols-outlined text-indigo-600/40 text-[32px]">co_present</span>
+          <div className="flex items-center justify-between">
+            <span className="font-label-md text-[11px] text-on-surface-variant uppercase tracking-wider font-bold truncate">
+              Teachers
+            </span>
+            <span className="inline-flex items-center px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-800 font-semibold text-[10px]">
+              Faculty
+            </span>
           </div>
-          <div>
-            <div className="flex items-center justify-between">
-              <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider font-semibold">
-                Teachers
-              </span>
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-800 font-label-md text-label-md font-semibold text-[11px]">
-                Teaching Staff
-              </span>
-            </div>
-            <div className="flex items-baseline gap-xs mt-xs">
-              <span className="font-display text-display text-indigo-900 font-bold text-2xl lg:text-3xl">
+          <div className="my-1.5">
+            <div className="flex items-baseline gap-1">
+              <span className="font-display font-bold text-xl lg:text-2xl text-indigo-950 font-data-mono">
                 {totalTeachersCount}
               </span>
-              <span className="font-label-md text-label-md text-on-surface-variant">educators</span>
+              <span className="text-[11px] text-on-surface-variant">educators</span>
             </div>
           </div>
-          <div className="mt-md pt-sm bg-surface-container-low/50 rounded-lg p-xs flex items-center justify-between text-xs">
-            <div className="flex items-center gap-xs">
-              <span className="material-symbols-outlined text-secondary text-[15px]">check_circle</span>
-              <span className="font-data-mono text-data-mono text-on-surface">
-                {teachers.filter((t) => t.status === 'Clocked In').length}/{totalTeachersCount} Clocked In
-              </span>
-            </div>
-            <span className="text-on-surface-variant font-medium">Active Today</span>
+          <div className="pt-1.5 border-t border-surface-container flex items-center justify-between text-[11px] text-on-surface-variant">
+            <span className="text-[10px] text-secondary font-bold font-data-mono">
+              {teachers.filter((t) => t.status === 'Clocked In').length}/{totalTeachersCount} Clocked In
+            </span>
+            <span className="text-[10px]">Active</span>
           </div>
         </div>
 
-        {/* 5. Number of Non-Teaching Staff */}
+        {/* 6. Non-Teaching Staff */}
         <div
           onClick={() => onNavigateTab('teachers-staff')}
-          className="rounded-xl bg-surface-container-lowest p-md flex flex-col justify-between shadow-xs relative overflow-hidden group hover:shadow-md transition-all cursor-pointer border border-outline-variant/30 hover:border-purple-500/40"
+          className="rounded-xl bg-surface-container-lowest p-3 flex flex-col justify-between shadow-xs relative overflow-hidden group hover:shadow-md transition-all cursor-pointer border border-outline-variant/30 hover:border-purple-500/40"
         >
-          <div className="absolute -right-3 -top-3 w-16 h-16 rounded-full bg-purple-500/10 flex items-center justify-center">
-            <span className="material-symbols-outlined text-purple-600/40 text-[32px]">badge</span>
+          <div className="flex items-center justify-between">
+            <span className="font-label-md text-[11px] text-on-surface-variant uppercase tracking-wider font-bold truncate">
+              Staff
+            </span>
+            <span className="inline-flex items-center px-1.5 py-0.2 rounded bg-purple-50 text-purple-800 font-semibold text-[10px]">
+              Operations
+            </span>
           </div>
-          <div>
-            <div className="flex items-center justify-between">
-              <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider font-semibold">
-                Non-Teaching Staff
-              </span>
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-purple-50 text-purple-800 font-label-md text-label-md font-semibold text-[11px]">
-                Operations & Admin
-              </span>
-            </div>
-            <div className="flex items-baseline gap-xs mt-xs">
-              <span className="font-display text-display text-purple-900 font-bold text-2xl lg:text-3xl">
+          <div className="my-1.5">
+            <div className="flex items-baseline gap-1">
+              <span className="font-display font-bold text-xl lg:text-2xl text-purple-950 font-data-mono">
                 {totalNonTeachingStaffCount}
               </span>
-              <span className="font-label-md text-label-md text-on-surface-variant">personnel</span>
+              <span className="text-[11px] text-on-surface-variant">personnel</span>
             </div>
           </div>
-          <div className="mt-md pt-sm bg-surface-container-low/50 rounded-lg p-xs flex items-center justify-between text-xs text-on-surface-variant">
-            <span>Bursar, Admissions, Admin</span>
-            <span className="font-semibold text-purple-700">Support</span>
+          <div className="pt-1.5 border-t border-surface-container flex items-center justify-between text-[11px] text-on-surface-variant">
+            <span className="text-[10px] truncate">Admin & Ops</span>
+            <span className="text-purple-700 font-bold text-[10px]">Support</span>
           </div>
+        </div>
+      </div>
+
+      {/* INDIVIDUAL CLASS/GRADE ENROLLMENT CARDS */}
+      <div className="my-3 space-y-2">
+        <div className="flex items-center justify-between px-1">
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+            <span className="material-symbols-outlined text-[#7a1228] text-base">meeting_room</span>
+            Active Classes & Cohort Pupil Distribution
+          </span>
+          <span className="text-[11px] text-slate-500 font-medium">
+            {gradeEnrollmentBreakdown.length} Classes Evaluated
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
+          {gradeEnrollmentBreakdown.map((c) => (
+            <div
+              key={c.id}
+              onClick={() => onNavigateTab('classes')}
+              className="p-3 rounded-xl bg-surface-container-lowest border border-outline-variant/30 hover:border-[#7a1228]/50 hover:shadow-xs transition-all cursor-pointer flex flex-col justify-between space-y-2"
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-xs text-slate-900 truncate" title={c.name}>
+                  {c.name}
+                </span>
+                <span className="w-6 h-6 rounded-md bg-[#7a1228]/10 text-[#7a1228] flex items-center justify-center font-bold text-[10px]">
+                  {c.name.split(' ').map((n: string) => n[0]).join('')}
+                </span>
+              </div>
+
+              <div>
+                <div className="text-xl font-black font-data-mono text-slate-900 leading-tight">
+                  {c.total}
+                  <span className="text-[10px] text-slate-400 font-normal ml-1">Pupils</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-medium mt-0.5">
+                  <span className="text-sky-700 font-bold">{c.boys}B</span>
+                  <span>·</span>
+                  <span className="text-pink-700 font-bold">{c.girls}G</span>
+                </div>
+              </div>
+
+              <div className="w-full bg-slate-100 rounded-full h-1 overflow-hidden">
+                <div
+                  className="bg-[#7a1228] h-1 rounded-full transition-all duration-300"
+                  style={{ width: `${Math.min(100, Math.round((c.total / 40) * 100))}%` }}
+                />
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -569,7 +657,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
       {/* Primary Analytic Row: Attendance Breakdown & CBC Competency Distribution */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-md my-sm">
-        {/* Attendance Breakdown (7 Cols) */}
+        {/* Attendance Breakdown (7 Cols) - Powered directly by live daily roll-call */}
         <div className="lg:col-span-7 rounded-xl bg-surface-container-lowest p-lg shadow-xs flex flex-col justify-between">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-sm pb-md">
             <div>
@@ -580,16 +668,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </h2>
               </div>
               <p className="font-label-md text-label-md text-on-surface-variant mt-0.5">
-                Real-time biometric & teacher-logged roll calls for today
+                Real-time biometric & teacher-logged roll calls for today ({todayIso})
               </p>
             </div>
             <div className="flex items-center gap-xs self-start sm:self-auto">
               <button
-                onClick={() => onOpenSmsModal('absentee')}
-                className="px-sm py-xs rounded-lg bg-surface-container text-on-surface font-label-md text-label-md hover:bg-surface-container-highest transition-colors cursor-pointer"
+                onClick={() => onNavigateTab('attendance-register')}
+                className="px-sm py-xs rounded-lg bg-[#7a1228] text-white font-label-md text-label-md hover:bg-[#5e0d1e] transition-colors cursor-pointer"
                 type="button"
               >
-                Trigger SMS To Absentee Parents
+                Open Roll Call Register
               </button>
             </div>
           </div>
@@ -602,37 +690,38 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </div>
             ) : (
               dynamicAttendanceGradeData.map((item) => (
-              <div key={item.grade} className="flex items-center gap-md">
-                <div className="w-20 shrink-0 flex flex-col">
-                  <span className="font-body-md text-body-md font-semibold text-on-surface">
-                    {item.grade}
-                  </span>
-                  <span className="font-label-md text-label-md text-on-surface-variant">
-                    {item.present} / {item.total}
-                  </span>
-                </div>
-                <div className="flex-1 flex flex-col gap-xs">
-                  <div className="w-full h-3 rounded-full bg-surface-container-high overflow-hidden flex">
-                    <div className="bg-secondary h-full" style={{ width: `${item.pct}%` }}></div>
-                    <div className="bg-error h-full" style={{ width: `${100 - item.pct}%` }}></div>
+                <div key={item.grade} className="flex items-center gap-md">
+                  <div className="w-20 shrink-0 flex flex-col">
+                    <span className="font-body-md text-body-md font-semibold text-on-surface">
+                      {item.grade}
+                    </span>
+                    <span className="font-label-md text-label-md text-on-surface-variant">
+                      {item.present} / {item.total}
+                    </span>
                   </div>
-                </div>
-                <div className="w-16 text-right shrink-0">
-                  <span className="font-data-mono text-data-mono font-semibold text-secondary">
-                    {item.pct.toFixed(1)}%
+                  <div className="flex-1 flex flex-col gap-xs">
+                    <div className="w-full h-3 rounded-full bg-surface-container-high overflow-hidden flex">
+                      <div className="bg-secondary h-full transition-all duration-300" style={{ width: `${item.pct}%` }}></div>
+                      <div className="bg-error h-full transition-all duration-300" style={{ width: `${100 - item.pct}%` }}></div>
+                    </div>
+                  </div>
+                  <div className="w-16 text-right shrink-0">
+                    <span className="font-data-mono text-data-mono font-semibold text-secondary">
+                      {item.pct.toFixed(1)}%
+                    </span>
+                  </div>
+                  <span
+                    className={`px-xs py-0.5 rounded font-label-md text-label-md shrink-0 ${
+                      item.late > 0
+                        ? 'bg-amber-100 text-amber-900 font-medium'
+                        : 'bg-surface-container text-on-surface-variant'
+                    }`}
+                  >
+                    {item.late} late
                   </span>
                 </div>
-                <span
-                  className={`px-xs py-0.5 rounded font-label-md text-label-md shrink-0 ${
-                    item.late > 3
-                      ? 'bg-error-container text-on-error-container font-medium'
-                      : 'bg-surface-container text-on-surface-variant'
-                  }`}
-                >
-                  {item.late} late
-                </span>
-              </div>
-            )))}
+              ))
+            )}
           </div>
 
           {/* Attendance Footer Stats */}
@@ -642,7 +731,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <span className="w-3 h-3 rounded bg-error ml-sm"></span> Absent ({students.length > 0 ? Math.max(0, 100 - avgAttendancePct) : 0}%)
             </div>
             <span className="font-label-md text-label-md text-on-surface">
-              Total Absent Learners: <strong className="text-error font-bold">{absentStudentsCount}</strong>
+              Total Absent Today: <strong className="text-error font-bold">{absentStudentsCount}</strong>
             </span>
           </div>
         </div>
@@ -667,12 +756,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 : 'No formative or summative assessments recorded yet'}
             </p>
 
-            {/* Donut Chart & Rubrics */}
             <div className="flex flex-col sm:flex-row items-center gap-md">
-              {/* Visual SVG Donut Chart */}
               <div className="relative w-40 h-40 shrink-0 flex items-center justify-center">
                 <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                  {/* Background Ring */}
                   <circle
                     className="text-surface-container-high"
                     cx="50"
@@ -684,7 +770,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   ></circle>
                   {totalAssessments > 0 && (
                     <>
-                      {/* EE */}
                       <circle
                         className="text-secondary"
                         cx="50"
@@ -696,7 +781,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         strokeDashoffset="0"
                         strokeWidth="12"
                       ></circle>
-                      {/* ME */}
                       <circle
                         className="text-primary"
                         cx="50"
@@ -708,7 +792,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         strokeDashoffset={meOffset}
                         strokeWidth="12"
                       ></circle>
-                      {/* AE */}
                       <circle
                         className="text-tertiary-container"
                         cx="50"
@@ -720,7 +803,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         strokeDashoffset={aeOffset}
                         strokeWidth="12"
                       ></circle>
-                      {/* BE */}
                       <circle
                         className="text-error"
                         cx="50"
@@ -745,7 +827,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </div>
               </div>
 
-              {/* CBC Rubrics Grid */}
               <div className="flex-1 flex flex-col gap-xs w-full">
                 <div className="flex items-center justify-between p-xs rounded bg-surface-container-low">
                   <div className="flex items-center gap-xs">
@@ -795,7 +876,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           </div>
 
-          {/* KICD Core Values Index */}
           <div className="mt-md pt-sm">
             <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider block mb-xs">
               KICD Core Values Index
@@ -851,7 +931,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           </div>
 
-          {/* Weekly Inflow Multi-bar Chart */}
           <div className="bg-surface-container-low p-md rounded-xl">
             <div className="flex items-center justify-between mb-sm">
               <span className="font-label-md text-label-md font-semibold text-on-surface">
@@ -869,7 +948,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </div>
             </div>
 
-            {/* SVG Multi-bar weekly visualization */}
             <div className="w-full h-44 flex items-end justify-between gap-sm pt-sm">
               {weeklyFinanceTrend.map((wf) => (
                 <div
@@ -898,7 +976,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           </div>
 
-          {/* Highest Outstanding Fee Balances */}
           <div className="mt-md">
             <div className="flex items-center justify-between mb-xs">
               <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider block">
@@ -966,7 +1043,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               Real-time audit log of fee, academic, and attendance events
             </p>
 
-            {/* Activity Timeline */}
             <div className="flex flex-col gap-md">
               {activities.length === 0 ? (
                 <div className="py-8 text-center text-xs text-on-surface-variant">

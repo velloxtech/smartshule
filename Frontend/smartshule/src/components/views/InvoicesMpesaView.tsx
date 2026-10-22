@@ -707,6 +707,15 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
                 <span>Forward Payment SMS</span>
               </button>
             )}
+            {!isGuardian && onNavigateTab && (
+              <button
+                onClick={() => onNavigateTab('forwarded-payments')}
+                className="px-3.5 py-2 bg-gradient-to-r from-[#7a1228] to-[#500b1a] hover:from-[#600e20] hover:to-[#400914] text-white rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 self-start sm:self-auto shadow-xs"
+              >
+                <span className="material-symbols-outlined text-[16px]">open_in_new</span>
+                <span>Open Dedicated Verification Page</span>
+              </button>
+            )}
           </div>
 
           <div className="overflow-x-auto">
@@ -920,6 +929,9 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
           setIsRecordPayOpen(false);
           setSelectedInvoiceForPay(undefined);
           setSelectedStudentForPay(undefined);
+        }}
+        onArrearRecorded={() => {
+          loadData();
         }}
       />
 

@@ -31,23 +31,11 @@ export const ArrearsView: React.FC<ArrearsViewProps> = ({
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  // Modals state
-  const [isAddArrearModalOpen, setIsAddArrearModalOpen] = useState(false);
-  const [selectedStudentForArrear, setSelectedStudentForArrear] = useState<Student | null>(null);
+  // Unified Fee & Arrears Modal state (Single unified entry modal)
+  const [isUnifiedFeeModalOpen, setIsUnifiedFeeModalOpen] = useState(false);
+  const [unifiedFeeModalStudent, setUnifiedFeeModalStudent] = useState<Student | null>(null);
+  const [unifiedFeeModalMode, setUnifiedFeeModalMode] = useState<'PAYMENT' | 'ARREARS'>('ARREARS');
   const [statementStudent, setStatementStudent] = useState<{ id: string; name: string } | null>(null);
-  const [paymentModalStudent, setPaymentModalStudent] = useState<Student | null>(null);
-
-  // Single Arrear Form state
-  const [formStudentId, setFormStudentId] = useState('');
-  const [formAmount, setFormAmount] = useState<number | ''>('');
-  const [formMode, setFormMode] = useState<'SET' | 'ADD'>('ADD');
-  const [formReason, setFormReason] = useState('');
-  const [customReason, setCustomReason] = useState('');
-  const [formYear, setFormYear] = useState('year-2026');
-  const [formTerm, setFormTerm] = useState('term-2026-t1');
-  const [formDueDate, setFormDueDate] = useState('');
-  const [formNotes, setFormNotes] = useState('');
-  const [isSubmittingSingle, setIsSubmittingSingle] = useState(false);
 
   // Batch Entry State
   const [batchGrade, setBatchGrade] = useState('Grade 1');
@@ -179,98 +167,25 @@ export const ArrearsView: React.FC<ArrearsViewProps> = ({
       .sort((a, b) => a.admNo.localeCompare(b.admNo));
   }, [students, batchGrade, batchStream]);
 
-  // Open Add Arrear Modal for a specific student
+  // Open Unified Fee & Arrears Modal for a specific student (Arrears mode)
   const handleOpenAddForStudent = (student: Student) => {
-    setSelectedStudentForArrear(student);
-    setFormStudentId(student.id);
-    setFormAmount('');
-    setFormMode('ADD');
-    setFormReason('');
-    setCustomReason('');
-    setFormDueDate('');
-    setFormNotes('');
-    setIsAddArrearModalOpen(true);
+    setUnifiedFeeModalStudent(student);
+    setUnifiedFeeModalMode('ARREARS');
+    setIsUnifiedFeeModalOpen(true);
   };
 
-  // Open Add Arrear Modal blank (to select student)
+  // Open Unified Fee & Arrears Modal blank
   const handleOpenAddGeneral = () => {
-    setSelectedStudentForArrear(null);
-    setFormStudentId('');
-    setFormAmount('');
-    setFormMode('ADD');
-    setFormReason('');
-    setCustomReason('');
-    setFormDueDate('');
-    setFormNotes('');
-    setIsAddArrearModalOpen(true);
+    setUnifiedFeeModalStudent(null);
+    setUnifiedFeeModalMode('ARREARS');
+    setIsUnifiedFeeModalOpen(true);
   };
 
-  // Submit Single Arrear Form
-  const handleSubmitSingleArrear = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formStudentId) {
-      setFeedback({ type: 'error', message: 'Please select a learner.' });
-      return;
-    }
-    const targetStudent = students.find((s) => s.id === formStudentId) || selectedStudentForArrear;
-    if (targetStudent?.isSponsored) {
-      setFeedback({
-        type: 'error',
-        message: `Cannot charge fee arrears: Learner ${targetStudent.name} is enrolled under the Institutional Scholarship Program (100% Fee Waiver) and is exempt from all fee charges.`,
-      });
-      return;
-    }
-    const amountNum = Number(formAmount);
-    if (isNaN(amountNum) || amountNum < 0) {
-      setFeedback({ type: 'error', message: 'Please enter a valid non-negative arrears amount.' });
-      return;
-    }
-
-    const effectiveReason = formReason === 'Custom Reason' ? customReason.trim() : formReason;
-    if (!effectiveReason) {
-      setFeedback({ type: 'error', message: 'Please provide a reason or category for the arrears.' });
-      return;
-    }
-
-    setIsSubmittingSingle(true);
-    setFeedback(null);
-    try {
-      const res = await apiService.addManualArrear({
-        studentId: formStudentId,
-        amount: amountNum,
-        mode: formMode,
-        reason: effectiveReason,
-        academicYearId: formYear,
-        termId: formTerm,
-        dueDate: formDueDate,
-        notes: formNotes,
-      });
-
-      if (res.success) {
-        setFeedback({
-          type: 'success',
-          message: res.message || `Arrears of KES ${amountNum.toLocaleString()} recorded successfully!`,
-        });
-        setIsAddArrearModalOpen(false);
-        if (onRefreshStudents) {
-          await onRefreshStudents();
-        }
-        await loadSummary();
-      } else {
-        setFeedback({
-          type: 'error',
-          message: res.message || 'Failed to record fee arrears. Please try again.',
-        });
-      }
-    } catch (err: any) {
-      setFeedback({
-        type: 'error',
-        message: err.message || 'Error occurred while recording manual arrears.',
-      });
-    } finally {
-      setIsSubmittingSingle(false);
-      setTimeout(() => setFeedback(null), 6000);
-    }
+  // Open Unified Fee & Arrears Modal in Payment mode
+  const handleOpenPaymentForStudent = (student: Student) => {
+    setUnifiedFeeModalStudent(student);
+    setUnifiedFeeModalMode('PAYMENT');
+    setIsUnifiedFeeModalOpen(true);
   };
 
   // Save single row in batch grid
@@ -377,18 +292,7 @@ export const ArrearsView: React.FC<ArrearsViewProps> = ({
     window.print();
   };
 
-  const selectedStudentObj = useMemo(() => {
-    return students.find((s) => s.id === formStudentId) || selectedStudentForArrear;
-  }, [students, formStudentId, selectedStudentForArrear]);
 
-  // Projected new balance in modal preview
-  const projectedBalance = useMemo(() => {
-    if (!selectedStudentObj) return 0;
-    const current = selectedStudentObj.feeBalance || 0;
-    const inputVal = Number(formAmount) || 0;
-    if (formMode === 'SET') return inputVal;
-    return current + inputVal;
-  }, [selectedStudentObj, formAmount, formMode]);
 
   return (
     <div className="space-y-6 pb-16">
@@ -838,7 +742,7 @@ export const ArrearsView: React.FC<ArrearsViewProps> = ({
                             {/* Record Payment */}
                             {!student.isSponsored && (
                               <button
-                                onClick={() => setPaymentModalStudent(student)}
+                                onClick={() => handleOpenPaymentForStudent(student)}
                                 className="p-1.5 rounded-lg hover:bg-emerald-50 text-emerald-700 hover:text-emerald-800 transition-colors cursor-pointer"
                                 title="Record Direct Payment Receipt"
                               >
@@ -966,7 +870,8 @@ export const ArrearsView: React.FC<ArrearsViewProps> = ({
                 </thead>
                 <tbody className="divide-y divide-outline-variant/15 text-xs text-on-surface">
                   {batchStudents.map((st, idx) => {
-                    const currentBal = st.feeBalance || 0;
+                    const rawBal = st.feeBalance || 0;
+                    const currentBal = Math.max(0, rawBal);
                     const enteredVal = batchValues[st.id] !== undefined ? batchValues[st.id] : currentBal;
                     const isSavingThis = batchSavingId === st.id;
                     const isSaved = savedRowIds[st.id];
@@ -990,7 +895,13 @@ export const ArrearsView: React.FC<ArrearsViewProps> = ({
                         </td>
                         <td className="py-2.5 px-4 text-on-surface-variant">{st.stream || '--'}</td>
                         <td className="py-2.5 px-4 text-right font-data-mono font-semibold text-on-surface">
-                          KES {currentBal.toLocaleString()}
+                          {rawBal < 0 ? (
+                            <span className="text-emerald-700 font-bold" title="Prepaid credit / overpayment">
+                              +KES {Math.abs(rawBal).toLocaleString()} <span className="text-[10px] font-semibold text-emerald-600">(Credit)</span>
+                            </span>
+                          ) : (
+                            `KES ${rawBal.toLocaleString()}`
+                          )}
                         </td>
                         <td className="py-2.5 px-4 text-right">
                           {st.isSponsored ? (
@@ -1056,327 +967,6 @@ export const ArrearsView: React.FC<ArrearsViewProps> = ({
         </div>
       )}
 
-      {/* MODAL: ADD / ADJUST INDIVIDUAL ARREAR */}
-      {isAddArrearModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-xs animate-fade-in">
-          <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 shadow-2xl max-w-lg w-full overflow-hidden flex flex-col max-h-[92vh]">
-            {/* Modal Header */}
-            <div className="p-4 sm:p-5 border-b border-outline-variant/20 flex items-center justify-between bg-surface-container-low/40">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold">
-                  <span className="material-symbols-outlined text-[20px]">assignment_late</span>
-                </div>
-                <div>
-                  <h3 className="font-headline-sm text-sm font-bold text-on-surface">
-                    Record Manual Fee Arrears
-                  </h3>
-                  <p className="text-[11px] text-on-surface-variant">
-                    Add or update fee arrears balance for a learner
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setIsAddArrearModalOpen(false)}
-                className="p-1 rounded-lg hover:bg-black/5 text-on-surface-variant cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[20px]">close</span>
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <form onSubmit={handleSubmitSingleArrear} className="p-4 sm:p-5 overflow-y-auto space-y-4 text-xs">
-              {/* Select Learner */}
-              <div>
-                <label className="block text-[11px] font-bold text-on-surface-variant uppercase mb-1">
-                  Learner *
-                </label>
-                {selectedStudentForArrear ? (
-                  <div className="p-3 rounded-xl bg-surface-container-low border border-outline-variant/30 flex items-center justify-between">
-                    <div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold text-on-surface text-sm">
-                          {selectedStudentForArrear.name}
-                        </span>
-                        {selectedStudentForArrear.isSponsored && (
-                          <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-[#7a1228] text-white">
-                            <span className="material-symbols-outlined text-[12px]">workspace_premium</span>
-                            <span>100% Scholarship</span>
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-[11px] text-on-surface-variant mt-0.5">
-                        Adm: <span className="font-mono">{selectedStudentForArrear.admNo}</span> · {selectedStudentForArrear.grade}
-                      </div>
-                    </div>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                      {selectedStudentForArrear.isSponsored ? 'KES 0 (Waived)' : `Current Bal: KES ${(selectedStudentForArrear.feeBalance || 0).toLocaleString()}`}
-                    </span>
-                  </div>
-                ) : (
-                  <select
-                    value={formStudentId}
-                    onChange={(e) => setFormStudentId(e.target.value)}
-                    required
-                    className="w-full px-3 py-2.5 rounded-xl bg-surface-container-lowest border border-outline-variant/50 text-xs text-on-surface font-semibold focus:outline-hidden focus:border-primary"
-                  >
-                    <option value="">Select a learner...</option>
-                    {students.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name} (Adm: {s.admNo}) - {s.grade} {s.isSponsored ? '[100% Scholarship]' : `[Bal: KES ${(s.feeBalance || 0).toLocaleString()}]`}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-
-              {selectedStudentObj?.isSponsored && (
-                <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-950 flex items-start gap-2.5 shadow-2xs">
-                  <span className="material-symbols-outlined text-[#7a1228] text-[20px] shrink-0 mt-0.5">lock</span>
-                  <div className="text-xs">
-                    <span className="font-extrabold text-[#7a1228]">Charge-Exempt Learner:</span> This learner is enrolled under the school&apos;s 100% Institutional Scholarship Scheme ({selectedStudentObj.sponsorship?.benefactorName || 'Institutional Sponsorship'}). The system recognizes them as fully subsidized and strictly blocks charging or adding fee arrears.
-                  </div>
-                </div>
-              )}
-
-              {/* Mode Selection Toggle */}
-              <div>
-                <label className="block text-[11px] font-bold text-on-surface-variant uppercase mb-1">
-                  Arrears Application Mode
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setFormMode('SET')}
-                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                      formMode === 'SET'
-                        ? 'border-primary bg-primary/10 text-primary font-bold shadow-2xs'
-                        : 'border-outline-variant/40 bg-surface-container-lowest text-on-surface-variant hover:border-outline'
-                    }`}
-                  >
-                    <div className="text-xs font-bold">Set / Replace Exact Arrear</div>
-                    <div className="text-[10px] text-on-surface-variant font-normal mt-0.5">
-                      Sets student total arrears balance to this exact figure
-                    </div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFormMode('ADD')}
-                    className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                      formMode === 'ADD'
-                        ? 'border-primary bg-primary/10 text-primary font-bold shadow-2xs'
-                        : 'border-outline-variant/40 bg-surface-container-lowest text-on-surface-variant hover:border-outline'
-                    }`}
-                  >
-                    <div className="text-xs font-bold">Add to Existing Balance</div>
-                    <div className="text-[10px] text-on-surface-variant font-normal mt-0.5">
-                      Adds this amount on top of current arrears
-                    </div>
-                  </button>
-                </div>
-              </div>
-
-              {/* Arrears Amount */}
-              <div>
-                <label className="block text-[11px] font-bold text-on-surface-variant uppercase mb-1">
-                  Arrears Amount (KES) *
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold text-xs text-on-surface-variant">
-                    KES
-                  </span>
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    required
-                    placeholder="e.g. 8500"
-                    value={formAmount}
-                    onChange={(e) => setFormAmount(e.target.value === '' ? '' : Number(e.target.value))}
-                    className="w-full pl-12 pr-4 py-2.5 rounded-xl bg-surface-container-lowest border border-outline-variant/50 text-sm font-data-mono font-bold text-on-surface focus:outline-hidden focus:border-primary"
-                  />
-                </div>
-
-                {/* Quick amount chips */}
-                <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                  <span className="text-[10px] text-outline">Quick Presets:</span>
-                  {[1000, 2500, 5000, 10000, 15000].map((amt) => (
-                    <button
-                      key={amt}
-                      type="button"
-                      onClick={() => setFormAmount(amt)}
-                      className="px-2 py-0.5 rounded-lg bg-surface-container-low hover:bg-surface-container text-[10px] font-mono text-on-surface border border-outline-variant/30 cursor-pointer"
-                    >
-                      +{amt.toLocaleString()}
-                    </button>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => setFormAmount(0)}
-                    className="px-2 py-0.5 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-mono cursor-pointer"
-                  >
-                    Clear (0)
-                  </button>
-                </div>
-              </div>
-
-              {/* Arrear Reason / Category Presets */}
-              <div>
-                <label className="block text-[11px] font-bold text-on-surface-variant uppercase mb-1">
-                  Reason / Source of Arrears *
-                </label>
-                <div className="flex flex-wrap gap-1.5 mb-2">
-                  {[
-                    'Opening Fee Arrears / Prior Balance',
-                    'Term 3 2025 Balance Carried Forward',
-                    'Previous School Unpaid Balance',
-                    'Transport & Bus Service Arrears',
-                    'Custom Reason',
-                  ].map((r) => (
-                    <button
-                      key={r}
-                      type="button"
-                      onClick={() => setFormReason(r)}
-                      className={`px-2.5 py-1 rounded-lg text-[10px] font-semibold border transition-all cursor-pointer ${
-                        formReason === r
-                          ? 'bg-primary text-white border-primary shadow-2xs font-bold'
-                          : 'bg-surface-container-low text-on-surface-variant border-outline-variant/30 hover:border-outline'
-                      }`}
-                    >
-                      {r}
-                    </button>
-                  ))}
-                </div>
-
-                {formReason === 'Custom Reason' && (
-                  <input
-                    type="text"
-                    required
-                    placeholder="Enter specific custom reason..."
-                    value={customReason}
-                    onChange={(e) => setCustomReason(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-surface-container-lowest border border-outline-variant/50 text-xs text-on-surface focus:outline-hidden focus:border-primary mt-1"
-                  />
-                )}
-              </div>
-
-              {/* Term & Year Selection */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-bold text-on-surface-variant uppercase mb-1">
-                    Academic Year
-                  </label>
-                  <select
-                    value={formYear}
-                    onChange={(e) => setFormYear(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-surface-container-lowest border border-outline-variant/50 text-xs text-on-surface font-semibold focus:outline-hidden focus:border-primary"
-                  >
-                    <option value="year-2026">2026 Academic Year</option>
-                    <option value="year-2025">2025 (Prior Year)</option>
-                    <option value="year-2024">2024 (Prior Year)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold text-on-surface-variant uppercase mb-1">
-                    Academic Term
-                  </label>
-                  <select
-                    value={formTerm}
-                    onChange={(e) => setFormTerm(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-surface-container-lowest border border-outline-variant/50 text-xs text-on-surface font-semibold focus:outline-hidden focus:border-primary"
-                  >
-                    <option value="term-2026-t1">Term 1 (Current)</option>
-                    <option value="term-2026-t2">Term 2</option>
-                    <option value="term-2026-t3">Term 3</option>
-                    <option value="ALL">Annual / Opening Balance</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Due Date & Notes */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-bold text-on-surface-variant uppercase mb-1">
-                    Due Date
-                  </label>
-                  <input
-                    type="date"
-                    value={formDueDate}
-                    onChange={(e) => setFormDueDate(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-surface-container-lowest border border-outline-variant/50 text-xs text-on-surface font-semibold focus:outline-hidden focus:border-primary"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-on-surface-variant uppercase mb-1">
-                    Bursar Notes / Slip #
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Ledger folio #42"
-                    value={formNotes}
-                    onChange={(e) => setFormNotes(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-surface-container-lowest border border-outline-variant/50 text-xs text-on-surface focus:outline-hidden focus:border-primary"
-                  />
-                </div>
-              </div>
-
-              {/* Balance Projection Box */}
-              {selectedStudentObj && (
-                <div className="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant/30 flex items-center justify-between">
-                  <div>
-                    <span className="text-[10px] font-bold uppercase text-on-surface-variant">
-                      Resulting Learner Balance
-                    </span>
-                    <div className="text-base font-black font-data-mono text-error mt-0.5">
-                      KES {projectedBalance.toLocaleString()}
-                    </div>
-                  </div>
-                  <div className="text-right text-[11px] text-on-surface-variant">
-                    <div>Current: KES {(selectedStudentObj.feeBalance || 0).toLocaleString()}</div>
-                    <div className="font-semibold text-primary">
-                      {formMode === 'SET' ? 'Mode: Exact Override' : `+ KES ${(Number(formAmount) || 0).toLocaleString()}`}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Submit Buttons */}
-              <div className="pt-2 flex items-center justify-end gap-2.5 border-t border-outline-variant/20">
-                <button
-                  type="button"
-                  onClick={() => setIsAddArrearModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-outline-variant/50 text-on-surface-variant hover:bg-surface-container text-xs font-semibold cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmittingSingle || !!selectedStudentObj?.isSponsored}
-                  className="px-5 py-2 rounded-xl bg-primary text-white hover:bg-primary/95 text-xs font-bold shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  {isSubmittingSingle ? (
-                    <>
-                      <span className="material-symbols-outlined text-[16px] animate-spin">refresh</span>
-                      <span>Saving Arrears...</span>
-                    </>
-                  ) : selectedStudentObj?.isSponsored ? (
-                    <>
-                      <span className="material-symbols-outlined text-[17px]">lock</span>
-                      <span>Cannot Charge · Learner Is Exempt</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="material-symbols-outlined text-[17px]">save</span>
-                      <span>Save Fee Arrears</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
       {/* MODAL: FEE STATEMENT MODAL */}
       {statementStudent && (
         <FeeStatementModal
@@ -1386,15 +976,30 @@ export const ArrearsView: React.FC<ArrearsViewProps> = ({
         />
       )}
 
-      {/* MODAL: RECORD PAYMENT MODAL */}
-      {paymentModalStudent && (
+      {/* UNIFIED FEE & ARREARS ENTRY MODAL (Single Modal for Paid Fees & Arrears) */}
+      {isUnifiedFeeModalOpen && (
         <RecordPaymentModal
-          isOpen={true}
-          onClose={() => setPaymentModalStudent(null)}
+          isOpen={isUnifiedFeeModalOpen}
+          onClose={() => {
+            setIsUnifiedFeeModalOpen(false);
+            setUnifiedFeeModalStudent(null);
+          }}
           students={students}
-          initialStudent={paymentModalStudent}
+          initialStudent={unifiedFeeModalStudent || undefined}
+          initialMode={unifiedFeeModalMode}
           onPaymentRecorded={async () => {
-            setPaymentModalStudent(null);
+            if (onRefreshStudents) {
+              await onRefreshStudents();
+            }
+            await loadSummary();
+          }}
+          onArrearRecorded={async () => {
+            if (onRefreshStudents) {
+              await onRefreshStudents();
+            }
+            await loadSummary();
+          }}
+          onRefreshStudents={async () => {
             if (onRefreshStudents) {
               await onRefreshStudents();
             }
