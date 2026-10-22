@@ -189,6 +189,8 @@ export const OnboardQueueView: React.FC<OnboardQueueViewProps> = ({
         lastName: app.parentName.trim().split(' ').slice(1).join(' ') || 'Guardian',
         email: app.parentEmail.trim().toLowerCase(),
         phoneNumber: cleanParentPhone,
+        phone: cleanParentPhone,
+        emergencyContact: cleanEmergencyPhone || cleanParentPhone,
         relationship: guardianRel,
         nationalId: app.parentNationalId?.trim() || undefined,
       },

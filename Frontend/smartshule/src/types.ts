@@ -100,6 +100,7 @@ export interface StudentSponsorship {
   sponsorshipStatus: SponsorshipStatus;
   coverage: SponsorshipCoverage;
   sponsorName: string;
+  benefactorName?: string;
   sponsorContact?: string;
   termlySubsidyAmount: number;
   annualSubsidyAmount: number;
@@ -211,7 +212,6 @@ export interface AuthUser {
   role: UserRole;
   phone?: string;
   schoolId?: string;
-  schoolName?: string;
   status?: string;
   mustChangePassword?: boolean;
   hasEnrolledChildren?: boolean;

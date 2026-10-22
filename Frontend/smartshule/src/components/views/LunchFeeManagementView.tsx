@@ -283,7 +283,7 @@ export const LunchFeeManagementView: React.FC = () => {
     try {
       const res = await apiService.bulkEnrollStudentsInLunch({
         studentIds: selectedStudentIds,
-        amount: bulkAmount,
+        amount: Number(bulkAmount) || 0,
         planName: bulkPlanName,
         dietaryNotes: bulkDietary,
       });

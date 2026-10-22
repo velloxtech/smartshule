@@ -514,6 +514,9 @@ const coreApiService = {
     streamId?: string;
     academicYearId?: string;
     search?: string;
+    limit?: number;
+    page?: number;
+    [key: string]: any;
   }): Promise<ApiResponse<any[]>> => {
     const q = new URLSearchParams();
     if (filters?.schoolId) q.append('schoolId', filters.schoolId);
@@ -522,6 +525,10 @@ const coreApiService = {
     if (filters?.streamId) q.append('streamId', filters.streamId);
     if (filters?.academicYearId) q.append('academicYearId', filters.academicYearId);
     if (filters?.search) q.append('search', filters.search);
+
+    if (filters?.limit) q.append('limit', String(filters.limit));
+
+    if (filters?.page) q.append('page', String(filters.page));
     return apiFetch<ApiResponse<any[]>>(`/students?${q.toString()}`);
   },
 
@@ -530,31 +537,37 @@ const coreApiService = {
   },
 
   registerStudent: async (data: {
-    admissionNumber: string;
+    admissionNumber?: string;
     upiNumber?: string;
     firstName: string;
     middleName?: string;
     lastName: string;
     dateOfBirth: string;
-    gender: 'MALE' | 'FEMALE' | 'OTHER';
-    gradeLevel: string;
+    gender: 'MALE' | 'FEMALE' | 'OTHER' | string;
+    gradeLevel?: string;
     classroomId?: string;
     streamId?: string;
-    schoolId: string;
-    academicYearId: string;
+    schoolId?: string;
+    academicYearId?: string;
     termId?: string;
     medicalConditions?: string;
     specialNeeds?: string;
+    emergencyContactName?: string;
+    emergencyContactPhone?: string;
+    admissionFee?: number;
     guardian?: {
       firstName: string;
       lastName: string;
-      email: string;
-      phone: string;
+      email?: string;
+      phone?: string;
+      phoneNumber?: string;
       nationalId?: string;
-      relationship: string;
-      emergencyContact: string;
+      relationship?: string;
+      emergencyContact?: string;
       occupation?: string;
+      [key: string]: any;
     };
+    [key: string]: any;
   }): Promise<ApiResponse<any>> => {
     return apiFetch<ApiResponse<any>>('/students', {
       method: 'POST',
@@ -587,11 +600,18 @@ const coreApiService = {
     schoolId?: string;
     gradeLevel?: string;
     search?: string;
+    limit?: number;
+    page?: number;
+    [key: string]: any;
   }): Promise<ApiResponse<DeletedStudentRecord[]>> => {
     const q = new URLSearchParams();
     if (filters?.schoolId) q.append('schoolId', filters.schoolId);
     if (filters?.gradeLevel) q.append('gradeLevel', filters.gradeLevel);
     if (filters?.search) q.append('search', filters.search);
+
+    if (filters?.limit) q.append('limit', String(filters.limit));
+
+    if (filters?.page) q.append('page', String(filters.page));
     return apiFetch<ApiResponse<DeletedStudentRecord[]>>(`/students/deleted?${q.toString()}`);
   },
 
