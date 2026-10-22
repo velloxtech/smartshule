@@ -345,7 +345,7 @@ export const PromoteStudentModal: React.FC<PromoteStudentModalProps> = ({
                 {targetGradeLevel.replace('_', ' ')}
               </div>
               <span className="text-[11px] text-outline">
-                {targetGradeLevel === 'GRADUATED' ? 'Mark as Graduated' : 'Next CBC Stage'}
+                {targetGradeLevel === 'GRADUATED' ? 'Mark as Graduated' : 'Next CBE Stage'}
               </span>
             </div>
           </div>
@@ -353,7 +353,7 @@ export const PromoteStudentModal: React.FC<PromoteStudentModalProps> = ({
           {/* Target Grade Selector */}
           <div>
             <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">
-              Target CBC Grade Level
+              Target CBE Grade Level
             </label>
             <select
               value={targetGradeLevel}
@@ -363,7 +363,7 @@ export const PromoteStudentModal: React.FC<PromoteStudentModalProps> = ({
             >
               {ALL_GRADES.map((g) => (
                 <option key={g.value} value={g.value}>
-                  {g.label} {g.value === defaultNextGrade ? '(Next CBC Grade)' : ''}
+                  {g.label} {g.value === defaultNextGrade ? '(Next CBE Grade)' : ''}
                 </option>
               ))}
             </select>

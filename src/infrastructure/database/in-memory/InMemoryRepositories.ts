@@ -59,6 +59,7 @@ import { LessonPlan } from '../../../core/domain/curriculum-plan/LessonPlan';
 import { Timetable, DayOfWeek } from '../../../core/domain/timetable/Timetable';
 import { AttendanceRegister, AttendanceType } from '../../../core/domain/attendance/Attendance';
 import { FeeStructure, StudentInvoice, Payment, Expense, OtherIncome } from '../../../core/domain/finance/Fee';
+import { FeeBannerConfig } from '../../../core/domain/finance/FeeBannerConfig';
 import { ParentHelpRequest } from '../../../core/domain/media/ParentHelpRequest';
 import { StudentProgressPhoto } from '../../../core/domain/media/StudentProgressPhoto';
 import { EDiaryEntry } from '../../../core/domain/ediary/EDiaryEntry';
@@ -950,6 +951,19 @@ export class InMemoryFeeRepository implements IFeeRepository {
 
   public async deleteOtherIncome(id: string): Promise<void> {
     this.otherIncomes.delete(id);
+  }
+
+  // Fee Deadline Notice Banner Settings
+  private feeBannerConfigs: Map<string, FeeBannerConfig> = new Map();
+
+  public async getFeeBannerConfig(schoolId?: string): Promise<FeeBannerConfig | null> {
+    const key = schoolId || 'school-001';
+    return this.feeBannerConfigs.get(key) || null;
+  }
+
+  public async saveFeeBannerConfig(config: FeeBannerConfig): Promise<void> {
+    const key = config.schoolId || 'school-001';
+    this.feeBannerConfigs.set(key, config);
   }
 }
 

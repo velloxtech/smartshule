@@ -49,6 +49,9 @@ import { InMemoryOccurrenceRepository } from './database/in-memory/InMemoryOccur
 import { CurriculumTrackerUseCases } from '../application/curriculum-tracker/CurriculumTrackerUseCases';
 import { ICurriculumTrackerRepository } from '../core/ports/repositories/ICurriculumTrackerRepository';
 import { InMemoryCurriculumTrackerRepository } from './database/in-memory/InMemoryCurriculumTrackerRepository';
+import { StudentSponsorshipUseCases } from '../application/sponsorship/StudentSponsorshipUseCases';
+import { IStudentSponsorshipRepository } from '../core/ports/repositories/IStudentSponsorshipRepository';
+import { InMemoryStudentSponsorshipRepository } from './database/in-memory/InMemoryStudentSponsorshipRepository';
 
 import {
   InMemoryUserRepository,
@@ -122,6 +125,7 @@ export class AppContainer {
   public disciplineRepository: IDisciplineRepository;
   public occurrenceRepository: IOccurrenceRepository;
   public curriculumTrackerRepository: ICurriculumTrackerRepository;
+  public studentSponsorshipRepository: IStudentSponsorshipRepository;
 
   // Services
   public readonly tokenService = new JwtAuthTokenService();
@@ -160,6 +164,7 @@ export class AppContainer {
   public broadsheetUseCases!: BroadsheetUseCases;
   public occurrenceUseCases!: OccurrenceUseCases;
   public curriculumTrackerUseCases!: CurriculumTrackerUseCases;
+  public studentSponsorshipUseCases!: StudentSponsorshipUseCases;
 
   constructor(customRepositories?: Partial<RepositoryBundle>) {
     this.userRepository = customRepositories?.userRepository || new InMemoryUserRepository();
@@ -200,6 +205,8 @@ export class AppContainer {
       customRepositories?.occurrenceRepository || new InMemoryOccurrenceRepository();
     this.curriculumTrackerRepository =
       customRepositories?.curriculumTrackerRepository || new InMemoryCurriculumTrackerRepository();
+    this.studentSponsorshipRepository =
+      customRepositories?.studentSponsorshipRepository || new InMemoryStudentSponsorshipRepository();
 
     this.initUseCases();
   }
@@ -215,7 +222,8 @@ export class AppContainer {
       this.passwordHasher,
       this.tokenService,
       this.notificationService,
-      this.guardianRepository
+      this.guardianRepository,
+      this.studentRepository
     );
     this.studentUseCases = new StudentUseCases(
       this.studentRepository,
@@ -230,7 +238,8 @@ export class AppContainer {
       this.deletedStudentRepository,
       this.complaintRepository,
       this.ediaryRepository,
-      this.mediaRepository
+      this.mediaRepository,
+      this.studentSponsorshipRepository
     );
     this.teacherUseCases = new TeacherUseCases(this.teacherRepository, this.userRepository, this.passwordHasher);
     this.academicUseCases = new AcademicUseCases(this.academicRepository);
@@ -241,7 +250,8 @@ export class AppContainer {
       this.attendanceRepository,
       this.guardianRepository,
       this.userRepository,
-      this.teacherRepository
+      this.teacherRepository,
+      this.feeRepository
     );
     this.curriculumUseCases = new CurriculumPlanUseCases(
       this.schemeOfWorkRepository,
@@ -286,7 +296,9 @@ export class AppContainer {
       this.paymentGateway,
       this.notificationService,
       this.academicRepository,
-      this.kcbBuniGateway
+      this.kcbBuniGateway,
+      this.studentSponsorshipRepository,
+      this.whatsAppClientManager
     );
     this.lunchFeeUseCases = new LunchFeeUseCases(
       this.lunchFeeRepository,
@@ -367,6 +379,11 @@ export class AppContainer {
     this.curriculumTrackerUseCases = new CurriculumTrackerUseCases(
       this.curriculumTrackerRepository,
       this.teacherRepository
+    );
+    this.studentSponsorshipUseCases = new StudentSponsorshipUseCases(
+      this.studentSponsorshipRepository,
+      this.studentRepository,
+      this.feeRepository
     );
   }
 

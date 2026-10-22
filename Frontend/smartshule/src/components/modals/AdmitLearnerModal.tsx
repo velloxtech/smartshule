@@ -31,7 +31,6 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
     UserRole.SUPER_ADMIN,
     UserRole.ADMIN,
     UserRole.SCHOOL_ADMIN,
-    UserRole.HEAD_TEACHER,
     UserRole.BURSAR,
     UserRole.ACCOUNTANT
   ].includes(user?.role as UserRole);
@@ -749,8 +748,8 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                   accessible_forward
                 </span>
                 <div>
-                  <strong className="font-semibold block">Article 54 & CBC Inclusive Education:</strong>
-                  The Constitution protects persons with disabilities. SmartShule captures Kenya Institute of Special Education (KISE) aligned accommodations to guarantee individualized learning pathways.
+                  <strong className="font-semibold block">Article 54 & CBE Inclusive Education:</strong>
+                  The Constitution protects persons with disabilities. Grace Seeds School captures Kenya Institute of Special Education (KISE) aligned accommodations to guarantee individualized learning pathways.
                 </div>
               </div>
 
@@ -1017,7 +1016,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                 </span>
                 <div>
                   <strong className="font-semibold block">Child Safeguarding Mandate (Article 53(1)(d)):</strong>
-                  Every child has the right to be protected from neglect and exploitation. SmartShule records verified parent contacts and authorized emergency guardians for safe child custody.
+                  Every child has the right to be protected from neglect and exploitation. Grace Seeds School records verified parent contacts and authorized emergency guardians for safe child custody.
                 </div>
               </div>
 
@@ -1237,7 +1236,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                     <span>Article 53(1)(b) & Article 43(1)(f)</span>
                   </div>
                   <p className="text-slate-600">
-                    Right to free & compulsory basic education. {schoolProfile?.name || 'SmartShule CBC Portal'} ensures equal access without discrimination.
+                    Right to free & compulsory basic education. {schoolProfile?.name || 'Grace Seeds School CBE Portal'} ensures equal access without discrimination.
                   </p>
                 </div>
                 <div className="p-3 bg-white border border-slate-200 rounded-xl">

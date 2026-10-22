@@ -79,7 +79,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-lg sm:text-xl font-bold tracking-tight">SmartShule Legal & Regulatory Compliance</h2>
+                <h2 className="text-lg sm:text-xl font-bold tracking-tight">Grace Seeds School Legal & Regulatory Compliance</h2>
                 <span className="text-[10px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full border border-emerald-400/30">
                   KDPA 2019 Compliant
                 </span>
@@ -158,7 +158,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
               <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex items-center justify-between">
                 <div>
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Document Reference</span>
-                  <div className="font-bold text-slate-900">SmartShule Educational Portal Terms of Service</div>
+                  <div className="font-bold text-slate-900">Grace Seeds School Educational Portal Terms of Service</div>
                 </div>
                 <div className="text-right text-[11px] text-slate-500">
                   <div>Version: {CURRENT_LEGAL_VERSION}</div>
@@ -171,7 +171,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
                   <span className="text-[#7a1228]">1.</span> Acceptance of Terms & Educational Scope
                 </h3>
                 <p>
-                  By accessing or utilizing the SmartShule platform, you agree to be bound by these Terms and Conditions. SmartShule is a Competency-Based Curriculum (CBC) management and institutional administration platform serving schools, educators, learners, and parents across the Republic of Kenya.
+                  By accessing or utilizing the Grace Seeds School platform, you agree to be bound by these Terms and Conditions. Grace Seeds School is a Competency-Based Education (CBE) management and institutional administration platform serving schools, educators, learners, and parents across the Republic of Kenya.
                 </p>
                 <p>
                   If you are accessing the system on behalf of an educational institution, you represent and warrant that you hold legitimate institutional authority to bind the school to these provisions.
@@ -209,7 +209,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
                   <span className="text-[#7a1228]">4.</span> Intellectual Property & Curriculum Materials
                 </h3>
                 <p>
-                  All lesson plans, schemes of work, records of work covered, report cards, and customized CBC rubrics created on the platform remain the intellectual property of the respective teachers and the school, safeguarded under the <em>Copyright Act (Cap 130, Laws of Kenya)</em>. The SmartShule software architecture, design, and algorithms are proprietary to Vellox Tech.
+                  All lesson plans, schemes of work, records of work covered, report cards, and customized CBE rubrics created on the platform remain the intellectual property of the respective teachers and the school, safeguarded under the <em>Copyright Act (Cap 130, Laws of Kenya)</em>. The Grace Seeds School software architecture, design, and algorithms are proprietary to Vellox Tech.
                 </p>
               </section>
 
@@ -246,7 +246,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
                   <strong>Data Controller:</strong> The respective school institution (e.g., Grace Seeds School) responsible for collecting pupil, guardian, and staff information.
                 </p>
                 <p>
-                  <strong>Data Processor:</strong> SmartShule (developed and maintained by Vellox Tech), acting strictly upon lawful instruction to process educational records, assessments, and financial accounting.
+                  <strong>Data Processor:</strong> Grace Seeds School CBE Portal (developed and maintained by Vellox Tech), acting strictly upon lawful instruction to process educational records, assessments, and financial accounting.
                 </p>
               </section>
 
@@ -257,7 +257,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
                 <p>In adherence to Section 30 of the Kenya Data Protection Act, we process personal data under:</p>
                 <ul className="list-disc pl-5 space-y-1.5">
                   <li><strong>Contractual Necessity:</strong> Delivering core primary and junior secondary education services, report cards, and fee ledgers.</li>
-                  <li><strong>Statutory Duty:</strong> Complying with Ministry of Education regulations, the Basic Education Act 2013, and Kenya National Examinations Council (KNEC) CBC assessment records.</li>
+                  <li><strong>Statutory Duty:</strong> Complying with Ministry of Education regulations, the Basic Education Act 2013, and Kenya National Examinations Council (KNEC) CBE assessment records.</li>
                   <li><strong>Explicit Parental Consent:</strong> Processing minors’ biodata, photographs, medical requirements, and Special Needs Education (SNE) profiles.</li>
                 </ul>
               </section>
@@ -322,7 +322,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
               </div>
 
               <p>
-                SmartShule utilizes cookies and modern browser storage technologies (such as <code className="bg-slate-100 px-1 py-0.5 rounded text-slate-800 font-mono text-xs">localStorage</code>) to deliver high-performance, secure school management operations. We <strong>do not</strong> use third-party advertising cookies or sell user telemetry.
+                Grace Seeds School utilizes cookies and modern browser storage technologies (such as <code className="bg-slate-100 px-1 py-0.5 rounded text-slate-800 font-mono text-xs">localStorage</code>) to deliver high-performance, secure school management operations. We <strong>do not</strong> use third-party advertising cookies or sell user telemetry.
               </p>
 
               {/* Cookie Categories Interactive Configuration */}
@@ -478,7 +478,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({
                   <span className="text-[#7a1228]">2.</span> Prohibition on Commercialization & Profiling
                 </h3>
                 <p>
-                  SmartShule firmly adheres to statutory prohibitions: <strong>Learner data is never monetized, sold, rented, or shared with commercial advertising networks</strong>. Learner assessment analytics are used solely for educational advancement, competency evaluation, and statutory reporting to the Ministry of Education.
+                  Grace Seeds School firmly adheres to statutory prohibitions: <strong>Learner data is never monetized, sold, rented, or shared with commercial advertising networks</strong>. Learner assessment analytics are used solely for educational advancement, competency evaluation, and statutory reporting to the Ministry of Education.
                 </p>
               </section>
 

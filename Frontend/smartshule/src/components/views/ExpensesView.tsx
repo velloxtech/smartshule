@@ -8,7 +8,7 @@ const VOTE_HEAD_CONFIG: Record<
   { label: string; icon: string; bg: string; text: string }
 > = {
   SALARIES_WAGES: { label: 'Salaries & Staff Wages', icon: 'badge', bg: 'bg-blue-50 dark:bg-blue-950/40', text: 'text-blue-700 dark:text-blue-300' },
-  CBC_LEARNING_MATERIALS: { label: 'CBC Materials & Lab Kits', icon: 'science', bg: 'bg-purple-50 dark:bg-purple-950/40', text: 'text-purple-700 dark:text-purple-300' },
+  CBC_LEARNING_MATERIALS: { label: 'CBE Materials & Lab Kits', icon: 'science', bg: 'bg-purple-50 dark:bg-purple-950/40', text: 'text-purple-700 dark:text-purple-300' },
   UTILITIES_BILLS: { label: 'Utilities (Power, Water, Net)', icon: 'bolt', bg: 'bg-amber-50 dark:bg-amber-950/40', text: 'text-amber-700 dark:text-amber-300' },
   MEALS_FEEDING: { label: 'Meals & Foodstock', icon: 'restaurant', bg: 'bg-orange-50 dark:bg-orange-950/40', text: 'text-orange-700 dark:text-orange-300' },
   REPAIRS_MAINTENANCE: { label: 'Repairs & Maintenance', icon: 'handyman', bg: 'bg-teal-50 dark:bg-teal-950/40', text: 'text-teal-700 dark:text-teal-300' },
@@ -167,7 +167,7 @@ export const ExpensesView: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `SmartShule_Expenses_Vouchers_${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `Grace_Seeds_School_Expenses_Vouchers_${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };

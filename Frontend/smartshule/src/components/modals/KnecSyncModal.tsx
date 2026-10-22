@@ -49,7 +49,7 @@ export const KnecSyncModal: React.FC<KnecSyncModalProps> = ({ isOpen, onClose })
 
   const studentCount = students.length;
   const institutionCode = school?.knecCode || school?.registrationNumber || 'Pending Center Code';
-  const schoolName = school?.name || 'SmartShule';
+  const schoolName = school?.name || 'Grace Seeds School';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">

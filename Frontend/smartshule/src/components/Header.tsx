@@ -250,7 +250,7 @@ export const Header: React.FC<HeaderProps> = ({
             </span>
             <input
               className="w-full bg-transparent py-1.5 text-xs text-white placeholder:text-white/60 focus:outline-none"
-              placeholder={isParent ? 'Search your child by name or Adm No...' : 'Search students, teachers, CBC strands...'}
+              placeholder={isParent ? 'Search your child by name or Adm No...' : 'Search students, teachers, CBE strands...'}
               type="text"
               value={searchQuery}
               onChange={(e) => {
@@ -300,7 +300,7 @@ export const Header: React.FC<HeaderProps> = ({
                           </div>
                         </div>
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800">
-                          CBC: {s.CBCRating}
+                          CBE: {s.CBCRating}
                         </span>
                       </div>
                     ))}
@@ -335,7 +335,7 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Right Actions: Dual-View Switcher, System Pulse, Alerts, Help, Profile */}
         <div className="flex items-center gap-2 md:gap-3">
-          {/* Dual-View Toggle for Staff with Children in Grace Seeds School */}
+          {/* Dual-View Toggle for Staff/Teachers with Children in School */}
           {isStaffWithChildren && (
             <div className="flex items-center p-0.5 rounded-xl bg-[#590000] border border-white/20 shadow-xs">
               <button
@@ -349,11 +349,11 @@ export const Header: React.FC<HeaderProps> = ({
                     ? 'bg-white text-[#800000] shadow-xs font-bold'
                     : 'text-white/80 hover:text-white hover:bg-white/10'
                 }`}
-                title="Staff Workspace: Classes, lesson plans, schemes, records"
+                title={user?.role === UserRole.TEACHER ? 'Teacher Workspace: Classes, lesson plans, schemes, records' : 'Staff Workspace'}
               >
                 <span className="material-symbols-outlined text-[16px]">badge</span>
-                <span className="hidden sm:inline">Staff Workspace</span>
-                <span className="sm:hidden">Staff</span>
+                <span className="hidden sm:inline">{user?.role === UserRole.TEACHER ? 'Teacher Workspace' : 'Staff Workspace'}</span>
+                <span className="sm:hidden">{user?.role === UserRole.TEACHER ? 'Teacher' : 'Staff'}</span>
               </button>
               <button
                 type="button"
@@ -394,7 +394,7 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             ></span>
             <span className="text-[11px] font-semibold text-white/90">
-              {backendConnected ? 'CBC Bridge' : 'Offline'}
+              {backendConnected ? 'CBE Bridge' : 'Offline'}
             </span>
           </div>
 
@@ -419,7 +419,7 @@ export const Header: React.FC<HeaderProps> = ({
               <div className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-2xl bg-white p-3 shadow-2xl border border-slate-200 text-slate-900 z-50 animate-in fade-in">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-200">
                   <span className="text-xs font-bold text-slate-900">Notifications & Alerts</span>
-                  <span className="text-[10px] font-bold text-[#800000] uppercase">SmartShule</span>
+                  <span className="text-[10px] font-bold text-[#800000] uppercase">Grace Seeds School</span>
                 </div>
                 <div className="py-4 text-center text-xs text-slate-500 flex flex-col items-center gap-1">
                   <span className="material-symbols-outlined text-slate-400 text-[24px]">notifications_active</span>
@@ -435,7 +435,7 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={() => setShowHelp(!showHelp)}
               className="p-2 rounded-xl text-white hover:bg-[#660000] transition-colors cursor-pointer border border-white/10"
               type="button"
-              title="CBC Guidelines & Rubrics"
+              title="CBE Guidelines & Rubrics"
             >
               <span className="material-symbols-outlined text-[20px]">help</span>
             </button>
@@ -444,7 +444,7 @@ export const Header: React.FC<HeaderProps> = ({
               <div className="absolute right-0 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-2xl bg-white p-4 shadow-2xl border border-slate-200 text-slate-900 z-50">
                 <div className="flex items-center gap-1.5 font-bold text-xs text-[#800000] mb-2">
                   <span className="material-symbols-outlined text-[18px]">info</span>
-                  <span>KICD CBC Rating Guide</span>
+                  <span>KICD CBE Rating Guide</span>
                 </div>
                 <div className="text-xs text-slate-600 space-y-1.5">
                   <div>
@@ -461,7 +461,7 @@ export const Header: React.FC<HeaderProps> = ({
                   </div>
                 </div>
                 <div className="mt-3 pt-2 border-t border-slate-200 text-[10px] text-slate-400">
-                  {user?.schoolName || 'Grace Seeds School'} · CBC Portal v2.0
+                  {user?.schoolName || 'Grace Seeds School'} · CBE Portal v2.0
                 </div>
               </div>
             )}
@@ -505,13 +505,13 @@ export const Header: React.FC<HeaderProps> = ({
                   {isStaffWithChildren && (
                     <div className="p-2 mb-2 rounded-xl bg-rose-50 border border-[#800000]/20">
                       <div className="text-[11px] font-bold text-[#800000] flex items-center justify-between">
-                        <span>Staff Dual Role</span>
+                        <span>{user?.role === UserRole.TEACHER ? 'Teacher & Parent Role' : 'Staff Dual Role'}</span>
                         <span className="px-1.5 py-0.5 rounded text-[10px] bg-white text-[#800000] font-bold border border-[#800000]/20">
-                          {activeViewMode === 'STAFF' ? 'Staff Workspace' : 'Parent View'}
+                          {activeViewMode === 'STAFF' ? (user?.role === UserRole.TEACHER ? 'Teacher Workspace' : 'Staff Workspace') : 'Parent View'}
                         </span>
                       </div>
                       <p className="text-[10px] text-slate-600 mt-1">
-                        Active role: {activeViewMode === 'STAFF' ? 'School Staff' : 'Parent / Guardian'}
+                        Active role: {activeViewMode === 'STAFF' ? (user?.role === UserRole.TEACHER ? 'Teacher' : 'School Staff') : 'Parent / Guardian'}
                       </p>
                       <button
                         type="button"
@@ -527,7 +527,7 @@ export const Header: React.FC<HeaderProps> = ({
                           {activeViewMode === 'STAFF' ? 'family_restroom' : 'badge'}
                         </span>
                         <span>
-                          {activeViewMode === 'STAFF' ? 'Switch to Parent View' : 'Switch to Staff Workspace'}
+                          {activeViewMode === 'STAFF' ? 'Switch to Parent View' : (user?.role === UserRole.TEACHER ? 'Switch to Teacher Workspace' : 'Switch to Staff Workspace')}
                         </span>
                       </button>
                     </div>

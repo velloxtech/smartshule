@@ -44,7 +44,89 @@ export type TabType =
   | 'discipline'
   | 'broadsheets'
   | 'occurrence-records'
-  | 'curriculum-tracker';
+  | 'curriculum-tracker'
+  | 'fee-deadline-banner'
+  | 'sponsored-students';
+
+export interface FeeBannerConfig {
+  id: string;
+  schoolId: string;
+  deadlineDate: string;
+  bannerTitle: string;
+  customMessage?: string;
+  paybillNumber?: string;
+  bankAccountNumber?: string;
+  bankName?: string;
+  isEnabled: boolean;
+  showOnlyToDefaulters: boolean;
+  academicTermId?: string;
+  academicYearId?: string;
+  updatedByUserId?: string;
+  updatedByUserName?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type SponsorshipType =
+  | 'DIRECTOR_BENEVOLENCE'
+  | 'ACADEMIC_MERIT'
+  | 'NEEDY_VULNERABLE'
+  | 'STAFF_CHILD_WAIVER'
+  | 'ORPHAN_ASSISTANCE'
+  | 'BOARD_TRUSTEE'
+  | 'SPECIAL_TALENT';
+
+export type SponsorshipStatus = 'ACTIVE' | 'SUSPENDED' | 'COMPLETED' | 'REVOKED';
+
+export interface SponsorshipCoverage {
+  tuitionCovered: boolean;
+  lunchCovered: boolean;
+  materialsCovered: boolean;
+  uniformCovered: boolean;
+  activitiesCovered: boolean;
+  percentageCovered: number;
+}
+
+export interface StudentSponsorship {
+  id: string;
+  schoolId: string;
+  studentId: string;
+  admissionNumber: string;
+  studentName: string;
+  gradeLevel: string;
+  streamName?: string;
+  gender?: string;
+  sponsorshipType: SponsorshipType;
+  sponsorshipStatus: SponsorshipStatus;
+  coverage: SponsorshipCoverage;
+  sponsorName: string;
+  sponsorContact?: string;
+  termlySubsidyAmount: number;
+  annualSubsidyAmount: number;
+  startDate: string;
+  endDate?: string;
+  academicYearId: string;
+  approvalReference: string;
+  approvedByUserId: string;
+  approvedByUserName: string;
+  reasonNotes: string;
+  confidentialNotes?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface SponsorshipStats {
+  totalSponsoredStudents: number;
+  activeCount: number;
+  suspendedCount: number;
+  completedCount: number;
+  totalTermlySubsidy: number;
+  totalAnnualSubsidy: number;
+  byType: Record<string, number>;
+  byGrade: Record<string, number>;
+  lunchCoveredCount: number;
+  tuitionCoveredCount: number;
+}
 
 export type SystemLogLevel = 'INFO' | 'WARN' | 'ERROR' | 'AUDIT';
 export type SystemLogCategory =
@@ -187,6 +269,10 @@ export interface Student {
   classroomId?: string;
   streamId?: string;
   gradeLevel?: string;
+  isSponsored?: boolean;
+  sponsorship?: StudentSponsorship | null;
+  isChargeExempt?: boolean;
+  fee?: any;
 }
 
 export interface ArchivedGuardianInfo {

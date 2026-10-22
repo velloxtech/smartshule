@@ -31,6 +31,16 @@ import {
   IDeletedStudentRepository,
   DeletedStudentFilterCriteria
 } from '../../../core/ports/repositories/IDeletedStudentRepository';
+import {
+  IStudentSponsorshipRepository,
+  SponsorshipFilterCriteria,
+  SponsorshipStats
+} from '../../../core/ports/repositories/IStudentSponsorshipRepository';
+import {
+  StudentSponsorship,
+  SponsorshipType,
+  SponsorshipStatus
+} from '../../../core/domain/sponsorship/StudentSponsorship';
 
 import { User, UserRole, UserStatus } from '../../../core/domain/user/User';
 import { Student, StudentGender, CBCGradeLevel, StudentStatus } from '../../../core/domain/user/Student';
@@ -66,6 +76,7 @@ import {
   ExpenseStatus,
   IncomeSource
 } from '../../../core/domain/finance/Fee';
+import { FeeBannerConfig } from '../../../core/domain/finance/FeeBannerConfig';
 
 // --- Mongoose Schemas ---
 const UserSchema = new Schema({
@@ -1227,6 +1238,19 @@ export class MongoFeeRepository implements IFeeRepository {
   public async deleteOtherIncome(id: string): Promise<void> {
     await OtherIncomeModel.findByIdAndDelete(id);
   }
+
+  // Fee Deadline Notice Banner Settings
+  private feeBannerConfigs: Map<string, FeeBannerConfig> = new Map();
+
+  public async getFeeBannerConfig(schoolId?: string): Promise<FeeBannerConfig | null> {
+    const key = schoolId || 'school-001';
+    return this.feeBannerConfigs.get(key) || null;
+  }
+
+  public async saveFeeBannerConfig(config: FeeBannerConfig): Promise<void> {
+    const key = config.schoolId || 'school-001';
+    this.feeBannerConfigs.set(key, config);
+  }
 }
 
 export class MongoDeletedStudentRepository implements IDeletedStudentRepository {
@@ -1277,4 +1301,136 @@ export class MongoDeletedStudentRepository implements IDeletedStudentRepository 
     await DeletedStudentModel.findByIdAndDelete(id);
   }
 }
+
+const StudentSponsorshipSchema = new Schema({
+  _id: { type: String, required: true },
+  schoolId: { type: String, required: true },
+  studentId: { type: String, required: true, unique: true },
+  admissionNumber: { type: String, required: true },
+  studentName: { type: String, required: true },
+  gradeLevel: { type: String, required: true },
+  streamName: String,
+  gender: String,
+  sponsorshipType: { type: String, required: true },
+  sponsorshipStatus: { type: String, default: 'ACTIVE' },
+  coverage: { type: Schema.Types.Mixed, default: {} },
+  sponsorName: { type: String, required: true },
+  sponsorContact: String,
+  termlySubsidyAmount: { type: Number, default: 0 },
+  annualSubsidyAmount: { type: Number, default: 0 },
+  startDate: { type: String, required: true },
+  endDate: String,
+  academicYearId: String,
+  approvalReference: { type: String, required: true },
+  approvedByUserId: { type: String, required: true },
+  approvedByUserName: { type: String, required: true },
+  reasonNotes: String,
+  confidentialNotes: String
+}, { timestamps: true });
+
+const StudentSponsorshipModel = mongoose.models.StudentSponsorship || mongoose.model('StudentSponsorship', StudentSponsorshipSchema);
+
+export class MongoStudentSponsorshipRepository implements IStudentSponsorshipRepository {
+  public async save(sponsorship: StudentSponsorship): Promise<void> {
+    await StudentSponsorshipModel.findOneAndUpdate(
+      { _id: sponsorship.id },
+      { ...sponsorship.toJSON(), _id: sponsorship.id },
+      { upsert: true }
+    );
+  }
+
+  public async update(sponsorship: StudentSponsorship): Promise<void> {
+    await this.save(sponsorship);
+  }
+
+  public async findById(id: string): Promise<StudentSponsorship | null> {
+    const doc = await StudentSponsorshipModel.findById(id).lean();
+    if (!doc) return null;
+    return StudentSponsorship.create(doc as any, doc._id, doc.createdAt, doc.updatedAt);
+  }
+
+  public async findByStudentId(studentId: string): Promise<StudentSponsorship | null> {
+    const doc = await StudentSponsorshipModel.findOne({ studentId }).lean();
+    if (!doc) return null;
+    return StudentSponsorship.create(doc as any, doc._id, doc.createdAt, doc.updatedAt);
+  }
+
+  public async findByAdmissionNumber(admissionNumber: string, schoolId?: string): Promise<StudentSponsorship | null> {
+    const query: any = { admissionNumber: new RegExp(`^${admissionNumber}$`, 'i') };
+    if (schoolId) query.schoolId = schoolId;
+    const doc = await StudentSponsorshipModel.findOne(query).lean();
+    if (!doc) return null;
+    return StudentSponsorship.create(doc as any, doc._id, doc.createdAt, doc.updatedAt);
+  }
+
+  public async findAll(filters?: SponsorshipFilterCriteria): Promise<StudentSponsorship[]> {
+    const query: any = {};
+    if (filters?.schoolId) query.schoolId = filters.schoolId;
+    if (filters?.studentId) query.studentId = filters.studentId;
+    if (filters?.gradeLevel) query.gradeLevel = filters.gradeLevel;
+    if (filters?.sponsorshipType) query.sponsorshipType = filters.sponsorshipType;
+    if (filters?.sponsorshipStatus) query.sponsorshipStatus = filters.sponsorshipStatus;
+    if (filters?.academicYearId) query.academicYearId = filters.academicYearId;
+    if (filters?.search) {
+      const q = filters.search;
+      query.$or = [
+        { studentName: { $regex: q, $options: 'i' } },
+        { admissionNumber: { $regex: q, $options: 'i' } },
+        { approvalReference: { $regex: q, $options: 'i' } },
+        { sponsorName: { $regex: q, $options: 'i' } }
+      ];
+    }
+    const docs = await StudentSponsorshipModel.find(query).sort({ createdAt: -1 }).lean();
+    return docs.map((d: any) => StudentSponsorship.create(d as any, d._id, d.createdAt, d.updatedAt));
+  }
+
+  public async delete(id: string): Promise<void> {
+    await StudentSponsorshipModel.findByIdAndDelete(id);
+  }
+
+  public async getStats(schoolId?: string): Promise<SponsorshipStats> {
+    const list = await this.findAll(schoolId ? { schoolId } : undefined);
+    const byType: Record<string, number> = {};
+    const byGrade: Record<string, number> = {};
+    let totalTermlySubsidy = 0;
+    let totalAnnualSubsidy = 0;
+    let activeCount = 0;
+    let suspendedCount = 0;
+    let completedCount = 0;
+    let lunchCoveredCount = 0;
+    let tuitionCoveredCount = 0;
+
+    for (const s of list) {
+      byType[s.sponsorshipType] = (byType[s.sponsorshipType] || 0) + 1;
+      byGrade[s.gradeLevel] = (byGrade[s.gradeLevel] || 0) + 1;
+
+      if (s.sponsorshipStatus === SponsorshipStatus.ACTIVE) {
+        activeCount++;
+        totalTermlySubsidy += s.termlySubsidyAmount;
+        totalAnnualSubsidy += s.annualSubsidyAmount;
+      } else if (s.sponsorshipStatus === SponsorshipStatus.SUSPENDED) {
+        suspendedCount++;
+      } else if (s.sponsorshipStatus === SponsorshipStatus.COMPLETED) {
+        completedCount++;
+      }
+
+      if (s.coverage.lunchCovered) lunchCoveredCount++;
+      if (s.coverage.tuitionCovered) tuitionCoveredCount++;
+    }
+
+    return {
+      totalSponsoredStudents: list.length,
+      activeCount,
+      suspendedCount,
+      completedCount,
+      totalTermlySubsidy,
+      totalAnnualSubsidy,
+      byType,
+      byGrade,
+      lunchCoveredCount,
+      tuitionCoveredCount
+    };
+  }
+}
+
 

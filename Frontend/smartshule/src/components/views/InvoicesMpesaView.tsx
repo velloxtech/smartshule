@@ -849,7 +849,7 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
             </div>
             <div className="p-5 sm:p-6 space-y-3 text-xs overflow-y-auto flex-1">
               <div className="text-center pb-2 border-b border-surface-container">
-                <div className="font-bold text-sm text-primary uppercase">{school?.name || 'SmartShule'}</div>
+                <div className="font-bold text-sm text-primary uppercase">{school?.name || 'Grace Seeds School'}</div>
                 {(school?.knecCode || school?.registrationNumber) && (
                   <div className="text-[11px] text-on-surface-variant">Code: {school?.knecCode || school?.registrationNumber}</div>
                 )}

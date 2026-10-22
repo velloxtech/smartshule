@@ -113,11 +113,11 @@ export const DeputyDashboardView: React.FC<DeputyDashboardViewProps> = ({
               <span>Timetable Grid</span>
             </button>
             <button
-              onClick={() => onNavigateTab('user-management')}
+              onClick={() => onNavigateTab('teachers')}
               className="px-4 py-2.5 rounded-xl bg-indigo-800/80 hover:bg-indigo-800 text-white font-semibold text-xs border border-indigo-400/30 flex items-center gap-2 transition-all cursor-pointer"
             >
-              <span className="material-symbols-outlined text-[18px]">manage_accounts</span>
-              <span>Faculty & User Accounts</span>
+              <span className="material-symbols-outlined text-[18px]">badge</span>
+              <span>Faculty Directory</span>
             </button>
           </div>
         </div>
@@ -188,7 +188,7 @@ export const DeputyDashboardView: React.FC<DeputyDashboardViewProps> = ({
           <div>
             <h2 className="text-base font-bold text-on-surface">Submitted Lesson Plans Awaiting Your Approval</h2>
             <p className="text-xs text-on-surface-variant">
-              Approve or return with constructive feedback to ensure CBC pedagogical standards.
+              Approve or return with constructive feedback to ensure CBE pedagogical standards.
             </p>
           </div>
           <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-900">
@@ -252,16 +252,16 @@ export const DeputyDashboardView: React.FC<DeputyDashboardViewProps> = ({
       {/* Deputy Operations Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div
-          onClick={() => onNavigateTab('user-management')}
+          onClick={() => onNavigateTab('teachers')}
           className="p-5 rounded-2xl bg-white border border-outline-variant/30 hover:border-indigo-400 hover:shadow-sm transition-all cursor-pointer flex items-center gap-4"
         >
-          <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center shrink-0">
-            <span className="material-symbols-outlined text-[26px]">manage_accounts</span>
+          <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center shrink-0">
+            <span className="material-symbols-outlined text-[26px]">badge</span>
           </div>
           <div>
-            <h3 className="font-bold text-sm text-on-surface">User Accounts</h3>
+            <h3 className="font-bold text-sm text-on-surface">Faculty Directory</h3>
             <p className="text-xs text-on-surface-variant mt-0.5">
-              Faculty credentials & access status
+              Teacher profiles & department roster
             </p>
           </div>
         </div>

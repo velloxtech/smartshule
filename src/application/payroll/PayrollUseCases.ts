@@ -20,6 +20,11 @@ export interface CustomPayrollDTO {
   commuterAllowance?: number;
   responsibilityAllowance?: number;
   otherDeductions?: number;
+  applyStatutory?: boolean;
+  applyPaye?: boolean;
+  applyShif?: boolean;
+  applyNssf?: boolean;
+  applyHousingLevy?: boolean;
   notes?: string;
 }
 
@@ -56,7 +61,6 @@ export class PayrollUseCases {
     const results: PayrollRecord[] = [];
 
     for (const teacher of teachers) {
-      // Find teacher user name
       const user = await this.userRepository.findById(teacher.userId);
       const teacherName = user ? `${user.firstName} ${user.lastName}` : 'Faculty Teacher';
 
@@ -65,7 +69,6 @@ export class PayrollUseCases {
         continue;
       }
 
-      // Default remuneration based on qualification/experience
       const basicSalary = 42000;
       const houseAllowance = 12000;
       const commuterAllowance = 4000;
@@ -80,10 +83,14 @@ export class PayrollUseCases {
         otherDeductions
       );
 
+      const effectiveTeacherId = (teacher.tscNumber && teacher.tscNumber.trim() !== '')
+        ? (teacher.tscNumber.toUpperCase().startsWith('TSC') ? teacher.tscNumber : `TSC-${teacher.tscNumber}`)
+        : (teacher.employeeNumber && teacher.employeeNumber.trim() !== '' ? teacher.employeeNumber : teacher.id);
+
       const payroll = PayrollRecord.create(
         {
           schoolId: dto.schoolId,
-          teacherId: teacher.id,
+          teacherId: effectiveTeacherId,
           teacherName,
           month: dto.month,
           basicSalary,
@@ -113,6 +120,7 @@ export class PayrollUseCases {
 
   public async createCustomPayroll(dto: CustomPayrollDTO): Promise<PayrollRecord> {
     let teacherName = dto.teacherName || 'Faculty Teacher';
+    let effectiveTeacherId = dto.teacherId;
     try {
       const teacher = await this.teacherRepository.findById(dto.teacherId);
       if (teacher) {
@@ -120,6 +128,9 @@ export class PayrollUseCases {
         if (user) {
           teacherName = `${user.firstName} ${user.lastName}`;
         }
+        effectiveTeacherId = (teacher.tscNumber && teacher.tscNumber.trim() !== '')
+          ? (teacher.tscNumber.toUpperCase().startsWith('TSC') ? teacher.tscNumber : `TSC-${teacher.tscNumber}`)
+          : (teacher.employeeNumber && teacher.employeeNumber.trim() !== '' ? teacher.employeeNumber : teacher.id);
       } else if (!dto.teacherName) {
         throw new NotFoundError('Teacher record not found.');
       }
@@ -134,18 +145,57 @@ export class PayrollUseCases {
     const responsibility = dto.responsibilityAllowance || 0;
     const otherDeductions = dto.otherDeductions || 0;
 
-    const statutory = PayrollRecord.calculateStatutory(
-      dto.basicSalary,
-      house,
-      commuter,
-      responsibility,
-      otherDeductions
-    );
+    const grossSalary = Math.round(dto.basicSalary + house + commuter + responsibility);
+    const applyStatutory = dto.applyStatutory !== false;
+
+    let nssf = 0;
+    let shif = 0;
+    let housingLevy = 0;
+    let paye = 0;
+
+    if (applyStatutory) {
+      if (dto.applyNssf !== false) {
+        nssf = Math.min(2160, Math.round(grossSalary * 0.06));
+      }
+      if (dto.applyShif !== false) {
+        shif = Math.round(grossSalary * 0.0275);
+      }
+      if (dto.applyHousingLevy !== false) {
+        housingLevy = Math.round(grossSalary * 0.015);
+      }
+      if (dto.applyPaye !== false) {
+        const taxable = Math.max(0, grossSalary - nssf);
+        let tax = 0;
+        if (taxable <= 24000) {
+          tax = taxable * 0.10;
+        } else if (taxable <= 32333) {
+          tax = (24000 * 0.10) + ((taxable - 24000) * 0.25);
+        } else if (taxable <= 500000) {
+          tax = (24000 * 0.10) + (8333 * 0.25) + ((taxable - 32333) * 0.30);
+        } else {
+          tax = (24000 * 0.10) + (8333 * 0.25) + (467667 * 0.30) + ((taxable - 500000) * 0.325);
+        }
+        paye = Math.max(0, Math.round(tax - 2400));
+      }
+    }
+
+    const totalDeductions = Math.round(nssf + shif + housingLevy + paye + otherDeductions);
+    const netSalary = Math.max(0, grossSalary - totalDeductions);
+
+    const statutory = {
+      grossSalary,
+      nssf,
+      shif,
+      housingLevy,
+      paye,
+      totalDeductions,
+      netSalary
+    };
 
     const payroll = PayrollRecord.create(
       {
         schoolId: dto.schoolId,
-        teacherId: dto.teacherId,
+        teacherId: effectiveTeacherId,
         teacherName,
         month: dto.month,
         basicSalary: dto.basicSalary,
@@ -192,12 +242,12 @@ export class PayrollUseCases {
 
   public async markPayrollPaid(
     id: string,
-    paymentMethod: 'BANK_TRANSFER' | 'MPESA' | 'CHEQUE',
+    paymentMethod: 'BANK_TRANSFER' | 'MPESA' | 'CHEQUE' | 'CASH',
     reference?: string
   ): Promise<any> {
     const p = await this.payrollRepository.findPayrollById(id);
     if (!p) throw new NotFoundError('Payroll record not found.');
-    p.markAsPaid(paymentMethod, reference);
+    p.markAsPaid(paymentMethod as any, reference);
     await this.payrollRepository.updatePayroll(p);
     return p.toJSON();
   }
@@ -207,7 +257,13 @@ export class PayrollUseCases {
     return payrolls.map(p => p.toJSON());
   }
 
-  // --- Leaves Management ---
+  public async deletePayroll(id: string): Promise<boolean> {
+    const p = await this.payrollRepository.findPayrollById(id);
+    if (!p) throw new NotFoundError('Payroll record not found.');
+    await this.payrollRepository.deletePayroll(id);
+    return true;
+  }
+
   public async applyLeave(dto: ApplyLeaveDTO): Promise<StaffLeave> {
     let teacherName = dto.teacherName || 'Faculty Teacher';
     try {
@@ -234,9 +290,7 @@ export class PayrollUseCases {
             substituteTeacherName = `${subUser.firstName} ${subUser.lastName}`;
           }
         }
-      } catch {
-        // Fallback to provided substituteTeacherName if any
-      }
+      } catch {}
     }
 
     let daysCount = dto.daysCount;

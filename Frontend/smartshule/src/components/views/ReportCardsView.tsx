@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { Student, CBCReportCardData } from '../../types';
+import { Student, CBCReportCardData, UserRole } from '../../types';
 import { apiService } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import { resolveStreamName, resolveGradeName, resolveAcademicYearName, resolveLearningAreaName, resolveLearningAreaCode } from '../../utils/formatters';
 
 interface ReportCardsViewProps {
@@ -54,35 +55,38 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const authData = (() => {
-    try {
-      const raw = localStorage.getItem('smartshule_auth');
-      return raw ? JSON.parse(raw) : null;
-    } catch {
-      return null;
-    }
-  })();
-  const isParent = authData?.user?.role === 'PARENT' || authData?.user?.role === 'GUARDIAN';
+  const { user, activeViewMode } = useAuth();
+  const isParent =
+    user?.role === UserRole.PARENT ||
+    user?.role === UserRole.GUARDIAN ||
+    activeViewMode === 'PARENT';
+  const [guardianPortalData, setGuardianPortalData] = useState<any>(null);
+  const [checkingClearance, setCheckingClearance] = useState<boolean>(isParent);
 
   // Sync propStudents or fetch from DB if empty
   useEffect(() => {
-    if (propStudents && propStudents.length > 0) {
-      setStudents(propStudents);
-      if (!selectedId) setSelectedId(propStudents[0].id);
-    } else if (isParent) {
+    if (isParent) {
+      setCheckingClearance(true);
       apiService.getGuardianPortalData().then((res) => {
         if (res?.data?.children && Array.isArray(res.data.children) && res.data.children.length > 0) {
+          setGuardianPortalData(res.data);
           const mapped = res.data.children.map((c: any) => ({
             id: c.id,
             name: `${c.firstName} ${c.lastName}`,
             admNo: c.admissionNumber,
             grade: resolveGradeName(c.gradeLevel),
             stream: resolveStreamName(c.streamId, c.streamName || c.stream?.name, c.gradeLevel) || 'Main Stream',
+            feeBalance: c.fee?.balance || 0,
+            isChargeExempt: Boolean(c.isChargeExempt),
+            fee: c.fee,
           }));
           setStudents(mapped);
           if (!selectedId) setSelectedId(mapped[0].id);
         }
-      }).catch(() => {});
+      }).catch(() => {}).finally(() => setCheckingClearance(false));
+    } else if (propStudents && propStudents.length > 0) {
+      setStudents(propStudents);
+      if (!selectedId) setSelectedId(propStudents[0].id);
     } else {
       apiService.getStudents().then((res) => {
         if (res?.data && Array.isArray(res.data) && res.data.length > 0) {
@@ -132,9 +136,17 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
   }, [initialStudent]);
 
   const student = (students || []).find((s) => s.id === selectedId) || initialStudent || students?.[0];
+  const matchedPortalChild = guardianPortalData?.children?.find((c: any) => c.id === student?.id) || guardianPortalData?.children?.[0];
+  const currentFeeBalance = matchedPortalChild?.fee?.balance ?? (student as any)?.feeBalance ?? (student as any)?.fee?.balance ?? 0;
+  const isChargeExempt = Boolean(matchedPortalChild?.isChargeExempt || (student as any)?.isChargeExempt);
+  const isFeeCleared = !isParent || isChargeExempt || currentFeeBalance <= 0;
 
   const loadReportCard = async (stdId: string, termId?: string, yearId?: string) => {
     if (!stdId) return;
+    if (isParent && !isFeeCleared) {
+      setReportCardData(null);
+      return;
+    }
     const tId = termId || selectedTermId || currentTerm?.id;
     const yId = yearId || currentYear?.id;
     if (!tId || !yId) {
@@ -157,11 +169,16 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
   };
 
   useEffect(() => {
+    if (isParent && checkingClearance) return;
+    if (isParent && !isFeeCleared) {
+      setReportCardData(null);
+      return;
+    }
     const activeTermId = selectedTermId || currentTerm?.id;
     if (student?.id && activeTermId && currentYear?.id) {
       loadReportCard(student.id, activeTermId, currentYear.id);
     }
-  }, [student?.id, selectedTermId, currentTerm?.id, currentYear?.id]);
+  }, [student?.id, selectedTermId, currentTerm?.id, currentYear?.id, isParent, isFeeCleared, checkingClearance]);
 
   const handleGenerateReportCard = async () => {
     if (!student) return;
@@ -515,7 +532,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
       `;
     }).join('');
 
-    const rightTitle = `${subjects.length} CBC Learning Areas Comparison (Term 1 & Term 2 & Term 3)`;
+    const rightTitle = `${subjects.length} CBE Learning Areas Comparison (Term 1 & Term 2 & Term 3)`;
 
     return `
       <svg viewBox="0 0 810 215" width="100%" height="auto" class="performance-graph-svg" xmlns="http://www.w3.org/2000/svg">
@@ -554,7 +571,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
           ${leftSectionHTML}
         </g>
 
-        <!-- RIGHT: CBC Learning Areas Matrix -->
+        <!-- RIGHT: CBE Learning Areas Matrix -->
         <g>
           <rect x="360" y="10" width="440" height="195" rx="6" fill="#fafafa" stroke="#e5e7eb" stroke-width="1" />
           <text x="375" y="24" font-size="8.5" font-weight="bold" fill="#800000" font-family="system-ui, sans-serif" text-transform="uppercase">${rightTitle}</text>
@@ -572,7 +589,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Grace Seeds School - CBC Report Card - ${student.name}</title>
+  <title>Grace Seeds School - CBE Report Card - ${student.name}</title>
   <style>
     @page {
       size: A4 portrait;
@@ -818,7 +835,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
     <div class="header">
       <img src="/logo.png" alt="Grace Seeds School Logo" class="logo" onerror="if(!this.src.endsWith('/logo.jpg')){this.src='/logo.jpg';}" />
       <h1 class="school-title">GRACE SEEDS SCHOOL</h1>
-      <div class="sub-title">MINISTRY OF EDUCATION · CBC SUMMATIVE EVALUATION REPORT</div>
+      <div class="sub-title">MINISTRY OF EDUCATION · CBE SUMMATIVE EVALUATION REPORT</div>
       <div class="meta-info">${schoolAddress} · Tel: ${schoolPhone} · Email: ${schoolEmail}</div>
       <div class="motto">&quot;${schoolMotto}&quot;</div>
       <div class="badge">Learner Competency Summative Dossier · ${termName} ${yearName}</div>
@@ -1071,7 +1088,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
     doc.setTextColor(71, 85, 105);
-    doc.text('Ministry of Education · Kenya Competency-Based Curriculum (CBC) Official Report Card', 36, curY + 16);
+    doc.text('Ministry of Education · Kenya Competency-Based Education (CBE) Official Report Card', 36, curY + 16);
 
     curY += 23;
     doc.setDrawColor(226, 232, 240);
@@ -1197,6 +1214,15 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
     doc.save(`Grace_Seeds_School_Report_Card_${student.admNo}_${student.name.replace(/[^a-zA-Z0-9]/g, '_')}_${termName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
   };
 
+  if (isParent && checkingClearance) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] gap-3">
+        <div className="w-10 h-10 border-4 border-[#800000] border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-xs font-semibold text-[#800000] font-body">Verifying fee clearance status with Grace Seeds School...</p>
+      </div>
+    );
+  }
+
   if (!student) {
     return (
       <div className="space-y-6 pb-12">
@@ -1227,6 +1253,102 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
 
   // Visual SVG coordinates calculation for JSX render
   const getY = (val: number) => Math.round(185 - (Math.min(100, Math.max(0, val)) / 100) * 145);
+
+  if (isParent && !isFeeCleared) {
+    const balance = currentFeeBalance;
+    const studentName = student?.name || 'Learner';
+    const admNo = student?.admNo || 'N/A';
+    const grade = student?.grade || 'Grade';
+    const waText = encodeURIComponent(
+      `Hello, I am requesting fee clearance authorization and access to the term report card for my child ${studentName} (Adm: ${admNo}, ${grade}) at Grace Seeds School.`
+    );
+
+    return (
+      <div className="max-w-2xl mx-auto py-10 px-4 space-y-6">
+        <div className="bg-surface-container-lowest p-6 sm:p-8 rounded-2xl border-2 border-amber-400/60 shadow-md text-center space-y-5">
+          <div className="w-16 h-16 rounded-2xl bg-amber-100 text-amber-900 mx-auto flex items-center justify-center shadow-xs">
+            <span className="material-symbols-outlined text-4xl">lock</span>
+          </div>
+
+          <div>
+            <span className="px-3 py-1 rounded-full text-[11px] font-extrabold bg-[#7a1228] text-white uppercase tracking-wider">
+              Fee Clearance Required
+            </span>
+            <h2 className="text-xl sm:text-2xl font-black text-on-surface mt-2.5">
+              Official CBE Term Report Card Withheld
+            </h2>
+            <p className="text-xs sm:text-sm text-on-surface-variant max-w-lg mx-auto mt-1 leading-relaxed">
+              In accordance with Grace Seeds School policy, academic term report cards are released once all term levies are settled in full or authorized by school leadership.
+            </p>
+          </div>
+
+          {students && students.length > 1 && (
+            <div className="bg-amber-100/60 p-2.5 rounded-xl border border-amber-300/60 max-w-md mx-auto">
+              <span className="text-[10px] uppercase font-bold text-amber-900 block mb-1 text-left">Switch Child:</span>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {students.map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => setSelectedId(c.id)}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      (student?.id === c.id)
+                        ? 'bg-[#7a1228] text-white shadow-xs'
+                        : 'bg-white text-amber-950 hover:bg-amber-200/50'
+                    }`}
+                  >
+                    {c.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-left space-y-2 max-w-md mx-auto">
+            <div className="flex justify-between text-xs font-bold text-on-surface">
+              <span>Learner Name:</span>
+              <span className="text-primary">{studentName}</span>
+            </div>
+            <div className="flex justify-between text-xs text-on-surface-variant">
+              <span>Admission / Grade:</span>
+              <span className="font-data-mono">{admNo} · {grade}</span>
+            </div>
+            <div className="flex justify-between text-xs font-bold pt-2 border-t border-amber-200">
+              <span className="text-amber-950">Outstanding Balance:</span>
+              <span className="font-data-mono text-base text-[#7a1228] font-black">
+                KES {balance.toLocaleString()}
+              </span>
+            </div>
+          </div>
+
+          <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <a
+              href={`https://wa.me/254745436312?text=${waText}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
+            >
+              <span className="material-symbols-outlined text-[18px]">chat</span>
+              <span>Request Clearance from Head Teacher</span>
+            </a>
+
+            <a
+              href={`https://wa.me/254745436312?text=${waText}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[#7a1228] hover:bg-[#5a1226] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all"
+            >
+              <span className="material-symbols-outlined text-[18px]">support_agent</span>
+              <span>Request Clearance from Director</span>
+            </a>
+          </div>
+
+          <div className="text-[11px] text-on-surface-variant pt-2 border-t border-outline-variant/20">
+            For direct inquiries, reach Grace Seeds School office at <strong className="text-primary">0745436312</strong> or <strong className="text-primary">schoolgraceseeds@gmail.com</strong>.
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 pb-12 font-body print:space-y-0 print:p-0 print:m-0 print:w-full">
@@ -1357,15 +1479,15 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
           <div className="flex items-center gap-2 font-label-md text-label-md text-on-surface-variant">
             <span>Home</span>
             <span>/</span>
-            <span>CBC Competencies</span>
+            <span>CBE Competencies</span>
             <span>/</span>
             <span className="text-[#800000] font-semibold">Report Cards</span>
           </div>
           <h1 className="font-headline-lg text-headline-lg text-on-surface mt-1">
-            Official CBC Learner Summative Dossier
+            Official CBE Learner Summative Dossier
           </h1>
           <p className="text-xs text-on-surface-variant mt-0.5">
-            Ministry of Education &amp; KNEC CBC format · Continuous summative compilation for Grace Seeds School
+            Ministry of Education &amp; KNEC CBE format · Continuous summative compilation for Grace Seeds School
           </p>
         </div>
 

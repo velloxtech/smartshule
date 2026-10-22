@@ -98,7 +98,7 @@ export const RecordPaymentSchema = z.object({
   transactionReference: z.string().optional(),
   mpesaPhoneNumber: z.string().optional(),
   paymentDate: z.string().optional(),
-  recordedByUserId: z.string().min(1),
+  recordedByUserId: z.string().optional(),
   notes: z.string().optional(),
   bankName: z.string().optional(),
   bankBranch: z.string().optional(),
@@ -175,6 +175,18 @@ export const RecordExpenseSchema = z.object({
 
 export const UpdateExpenseStatusSchema = z.object({
   status: z.nativeEnum(ExpenseStatus)
+}).passthrough();
+
+export const UpdateFeeBannerSchema = z.object({
+  schoolId: z.string().optional(),
+  deadlineDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Deadline date must be in YYYY-MM-DD format'),
+  bannerTitle: z.string().min(1).optional(),
+  customMessage: z.string().optional(),
+  paybillNumber: z.string().optional(),
+  bankAccountNumber: z.string().optional(),
+  bankName: z.string().optional(),
+  isEnabled: z.boolean().optional(),
+  showOnlyToDefaulters: z.boolean().optional()
 }).passthrough();
 
 export const RecordOtherIncomeSchema = z.object({
@@ -309,7 +321,11 @@ export class FinanceController {
 
   public recordPayment = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const result = await this.feeUseCases.recordPayment(req.body);
+      const recordedByUserId = req.body.recordedByUserId || (req as any).user?.userId || 'SYSTEM';
+      const result = await this.feeUseCases.recordPayment({
+        ...req.body,
+        recordedByUserId
+      });
 
       this.systemLogUseCases?.log({
         schoolId: req.body.schoolId,
@@ -344,6 +360,45 @@ export class FinanceController {
         requestingUser: req.user
       });
       return res.status(200).json({ success: true, count: payments.length, data: payments });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public reissueReceipt = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const id = String(req.params.id);
+      const result = await this.feeUseCases.reissuePaymentReceipt(id);
+
+      this.systemLogUseCases?.log({
+        schoolId: (req as any).user?.schoolId,
+        level: 'AUDIT',
+        category: 'FINANCE',
+        action: 'RECEIPT_DISPATCHED',
+        actorEmail: (req as any).user?.email,
+        actorUserId: (req as any).user?.userId,
+        actorRole: (req as any).user?.role,
+        ipAddress: req.ip || (req.socket?.remoteAddress as string),
+        status: 'SUCCESS',
+        details: `Dispatched receipt ${result.receipt?.receiptNumber} to parent via Email & WhatsApp.`,
+        metadata: { paymentId: id, receiptNumber: result.receipt?.receiptNumber, delivery: result.delivery }
+      }).catch(() => {});
+
+      return res.status(200).json({
+        success: true,
+        message: `Receipt #${result.receipt?.receiptNumber} dispatched to parent via Email & WhatsApp`,
+        data: result
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public getPaymentReceipt = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const id = String(req.params.id);
+      const result = await this.feeUseCases.getPaymentReceipt(id);
+      return res.status(200).json({ success: true, data: result });
     } catch (err) {
       next(err);
     }
@@ -775,6 +830,32 @@ export class FinanceController {
         req.user
       );
       return res.status(200).json({ success: true, data: ledger });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  // ==========================================
+  // PARENT FEE DEADLINE NOTICE BANNER SETTINGS
+  // ==========================================
+  public getFeeBanner = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const schoolId = (req.query.schoolId as string) || req.user?.schoolId;
+      const banner = await this.feeUseCases.getFeeBannerConfig(schoolId);
+      return res.status(200).json({ success: true, data: banner });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public updateFeeBanner = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const banner = await this.feeUseCases.updateFeeBannerConfig(req.body, req.user);
+      return res.status(200).json({
+        success: true,
+        message: 'Parent fee payment deadline banner updated successfully.',
+        data: banner
+      });
     } catch (err) {
       next(err);
     }

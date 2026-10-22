@@ -260,7 +260,7 @@ export const LibraryView: React.FC = () => {
             <div className="flex items-center gap-2.5">
               <h1 className="text-2xl font-black text-gray-900 tracking-tight">Library & Textbook System</h1>
               <span className="bg-[#800000]/10 text-[#800000] text-xs font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                CBC Integrated
+                CBE Integrated
               </span>
             </div>
             <p className="text-sm text-gray-500 mt-1">

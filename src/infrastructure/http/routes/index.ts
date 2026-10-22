@@ -94,7 +94,8 @@ import {
   KcbBuniConfirmationSchema,
   RecordExpenseSchema,
   UpdateExpenseStatusSchema,
-  RecordOtherIncomeSchema
+  RecordOtherIncomeSchema,
+  UpdateFeeBannerSchema
 } from '../controllers/FinanceController';
 
 import {
@@ -198,6 +199,7 @@ import {
   UpdateDailyLogSchema,
   EndorseDailyLogSchema
 } from '../controllers/CurriculumTrackerController';
+import { StudentSponsorshipController } from '../controllers/StudentSponsorshipController';
 
 export function createApiRouter(container: AppContainer): Router {
   const router = Router();
@@ -231,6 +233,7 @@ export function createApiRouter(container: AppContainer): Router {
   const broadsheetController = new BroadsheetController(container.broadsheetUseCases);
   const occurrenceController = new OccurrenceController(container.occurrenceUseCases);
   const curriculumTrackerController = new CurriculumTrackerController(container.curriculumTrackerUseCases);
+  const sponsorshipController = new StudentSponsorshipController(container.studentSponsorshipUseCases);
 
   // ==========================================
   // 1. AUTH ROUTES
@@ -253,9 +256,7 @@ export function createApiRouter(container: AppContainer): Router {
   const allowedUserManagementRoles = requireRoles(
     UserRole.SUPER_ADMIN,
     UserRole.ADMIN,
-    UserRole.SCHOOL_ADMIN,
-    UserRole.HEAD_TEACHER,
-    UserRole.DEPUTY_HEAD_TEACHER
+    UserRole.SCHOOL_ADMIN
   );
 
   userRouter.get('/', authMiddleware, allowedUserManagementRoles, authController.listUsers);
@@ -302,8 +303,8 @@ export function createApiRouter(container: AppContainer): Router {
   studentRouter.post('/:id/promote', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.ADMISSIONS), validateBody(PromoteStudentSchema), studentController.promoteStudent);
   studentRouter.get('/guardian/me', authMiddleware, studentController.getGuardianPortalData);
   studentRouter.put('/guardian/me', authMiddleware, validateBody(UpdateGuardianProfileSchema), studentController.updateGuardianProfile);
-  studentRouter.get('/deleted', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), studentController.getDeletedStudents);
-  studentRouter.get('/deleted/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), studentController.getDeletedStudentById);
+  studentRouter.get('/deleted', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN), studentController.getDeletedStudents);
+  studentRouter.get('/deleted/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN), studentController.getDeletedStudentById);
   studentRouter.post('/deleted/:id/restore', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN), studentController.restoreStudent);
   studentRouter.get('/', authMiddleware, studentController.listStudents);
   studentRouter.get('/:id', authMiddleware, studentController.getStudentById);
@@ -351,24 +352,32 @@ export function createApiRouter(container: AppContainer): Router {
   // 5. CBC CURRICULUM & ASSESSMENT ROUTES
   // ==========================================
   const CBCRouter = Router();
-  CBCRouter.post('/strands', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), validateBody(CreateStrandSchema), CBCController.createStrand);
+  
+  // ADDED UserRole.TEACHER to strand creation and deletion
+  CBCRouter.post('/strands', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), validateBody(CreateStrandSchema), CBCController.createStrand);
   CBCRouter.get('/strands/by-learning-area/:learningAreaId', authMiddleware, CBCController.getStrandsByLearningArea);
-  CBCRouter.delete('/strands/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), CBCController.deleteStrand);
-  CBCRouter.post('/sub-strands', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), validateBody(CreateSubStrandSchema), CBCController.createSubStrand);
+  CBCRouter.delete('/strands/:id', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), CBCController.deleteStrand);
+  
+  // ADDED UserRole.TEACHER to sub-strand creation and deletion
+  CBCRouter.post('/sub-strands', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), validateBody(CreateSubStrandSchema), CBCController.createSubStrand);
   CBCRouter.get('/sub-strands/by-strand/:strandId', authMiddleware, CBCController.getSubStrandsByStrand);
-  CBCRouter.delete('/sub-strands/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), CBCController.deleteSubStrand);
+  CBCRouter.delete('/sub-strands/:id', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), CBCController.deleteSubStrand);
+  
+  // Formative & Summative (Teachers already had access here)
   CBCRouter.post('/formative', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), validateBody(RecordFormativeSchema), CBCController.recordFormative);
   CBCRouter.get('/formative', authMiddleware, CBCController.listFormatives);
   CBCRouter.delete('/formative/:id', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), CBCController.deleteFormative);
+  
   CBCRouter.post('/summative', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), validateBody(RecordSummativeSchema), CBCController.recordSummative);
   CBCRouter.post('/summative/batch', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), validateBody(RecordSummativeBatchSchema), CBCController.recordSummativeBatch);
   CBCRouter.get('/summative', authMiddleware, CBCController.listSummatives);
   CBCRouter.delete('/summative/:id', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), CBCController.deleteSummative);
+  
   CBCRouter.post('/report-cards/generate', authMiddleware, requireRoles(UserRole.HEAD_TEACHER, UserRole.TEACHER, UserRole.SUPER_ADMIN), validateBody(GenerateReportCardSchema), CBCController.generateReportCard);
   CBCRouter.get('/report-cards', authMiddleware, CBCController.getReportCard);
   CBCRouter.get('/analytics', authMiddleware, CBCController.getAnalytics);
+  
   router.use('/CBC', CBCRouter);
-
   // ==========================================
   // 6. SCHEMES OF WORK & LESSON PLANS ROUTES
   // ==========================================
@@ -490,11 +499,13 @@ export function createApiRouter(container: AppContainer): Router {
   financeRouter.get('/summary', authMiddleware, financeController.getFinanceSummary); // Parent vs Admin summary
   financeRouter.post('/payments', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), validateBody(RecordPaymentSchema), financeController.recordPayment);
   financeRouter.get('/payments', authMiddleware, financeController.listPayments); // Parent isolated
+  financeRouter.get('/payments/:id/receipt', authMiddleware, financeController.getPaymentReceipt);
+  financeRouter.post('/payments/:id/issue-receipt', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), financeController.reissueReceipt);
   financeRouter.post('/payments/forward-transaction', authMiddleware, validateBody(ForwardPaymentTransactionSchema), financeController.forwardPaymentTransaction);
   financeRouter.get('/payments/forwarded', authMiddleware, financeController.getForwardedTransactions);
   financeRouter.post('/payments/forwarded/:id/verify', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), validateBody(VerifyForwardedPaymentSchema), financeController.verifyForwardedTransaction);
   financeRouter.get('/statements/:studentId', authMiddleware, financeController.getFeeStatement); // Parent isolated
-  financeRouter.get('/defaulters', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT, UserRole.HEAD_TEACHER), financeController.getDefaulters);
+  financeRouter.get('/defaulters', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT), financeController.getDefaulters);
   // Manual Fee Arrears Management
   financeRouter.post('/arrears', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), validateBody(AddManualArrearSchema), financeController.addManualArrear);
   financeRouter.post('/arrears/batch', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), validateBody(BatchAddManualArrearsSchema), financeController.batchAddManualArrears);
@@ -512,18 +523,28 @@ export function createApiRouter(container: AppContainer): Router {
   financeRouter.post('/mpesa/callback', financeController.mpesaCallback);
 
   // Cash Flow Ledger (Money In vs Money Out)
-  financeRouter.get('/cashflow-ledger', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT, UserRole.HEAD_TEACHER), financeController.getCashFlowLedger);
+  financeRouter.get('/cashflow-ledger', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT), financeController.getCashFlowLedger);
 
   // Expenses Management (Money Out)
   financeRouter.post('/expenses', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT), validateBody(RecordExpenseSchema), financeController.recordExpense);
-  financeRouter.get('/expenses', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT, UserRole.HEAD_TEACHER), financeController.listExpenses);
-  financeRouter.patch('/expenses/:id/status', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT, UserRole.HEAD_TEACHER), validateBody(UpdateExpenseStatusSchema), financeController.updateExpenseStatus);
+  financeRouter.get('/expenses', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT), financeController.listExpenses);
+  financeRouter.patch('/expenses/:id/status', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT), validateBody(UpdateExpenseStatusSchema), financeController.updateExpenseStatus);
   financeRouter.delete('/expenses/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT), financeController.deleteExpense);
 
   // Non-Fee Other Income (Money In - Capitation / Grants / Uniforms)
   financeRouter.post('/income', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT), validateBody(RecordOtherIncomeSchema), financeController.recordOtherIncome);
-  financeRouter.get('/income', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT, UserRole.HEAD_TEACHER), financeController.listOtherIncome);
+  financeRouter.get('/income', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT), financeController.listOtherIncome);
   financeRouter.delete('/income/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT), financeController.deleteOtherIncome);
+
+  // Parent Fee Payment Deadline Notice Banner (Director/Admin only for management updates)
+  financeRouter.get('/fee-banner', authMiddleware, financeController.getFeeBanner);
+  financeRouter.put(
+    '/fee-banner',
+    authMiddleware,
+    requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN),
+    validateBody(UpdateFeeBannerSchema),
+    financeController.updateFeeBanner
+  );
 
   router.use('/finance', financeRouter);
 
@@ -876,6 +897,7 @@ export function createApiRouter(container: AppContainer): Router {
   payrollRouter.post('/custom', authMiddleware, allowedPayrollAdminRoles, validateBody(CustomPayrollSchema), payrollController.createCustom);
   payrollRouter.patch('/:id/approve', authMiddleware, allowedPayrollAdminRoles, payrollController.approvePayroll);
   payrollRouter.patch('/:id/pay', authMiddleware, allowedPayrollAdminRoles, validateBody(MarkPaidSchema), payrollController.markPaid);
+  payrollRouter.delete('/:id', authMiddleware, allowedPayrollAdminRoles, payrollController.deletePayroll);
   payrollRouter.get('/teacher/:teacherId', authMiddleware, payrollController.getTeacherPayrolls);
   payrollRouter.get('/leaves/list', authMiddleware, payrollController.listLeaves);
   payrollRouter.post('/leaves/apply', authMiddleware, validateBody(ApplyLeaveSchema), payrollController.applyLeave);
@@ -1128,6 +1150,24 @@ export function createApiRouter(container: AppContainer): Router {
   });
 
   router.use('/onboarding', onboardingRouter);
+
+  // ==========================================
+  // Fully Sponsored Students (Admin/Director Only)
+  // ==========================================
+  const sponsorshipRouter = Router();
+  const requireAdminOnly = requireRoles([UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN]);
+  sponsorshipRouter.use(authMiddleware, requireAdminOnly);
+
+  sponsorshipRouter.post('/', sponsorshipController.createSponsorship);
+  sponsorshipRouter.get('/', sponsorshipController.listSponsorships);
+  sponsorshipRouter.get('/stats', sponsorshipController.getStats);
+  sponsorshipRouter.get('/student/:studentId', sponsorshipController.getSponsorshipByStudentId);
+  sponsorshipRouter.get('/:id', sponsorshipController.getSponsorshipById);
+  sponsorshipRouter.put('/:id', sponsorshipController.updateSponsorship);
+  sponsorshipRouter.patch('/:id/status', sponsorshipController.updateSponsorshipStatus);
+  sponsorshipRouter.delete('/:id', sponsorshipController.deleteSponsorship);
+
+  router.use('/sponsorships', sponsorshipRouter);
 
   return router;
 }

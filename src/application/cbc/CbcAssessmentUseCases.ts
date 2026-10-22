@@ -8,6 +8,7 @@ import { IAcademicRepository } from '../../core/ports/repositories/IAcademicRepo
 import { IAttendanceRepository } from '../../core/ports/repositories/ITimetableRepository';
 import { IGuardianRepository, ITeacherRepository } from '../../core/ports/repositories/ITeacherRepository';
 import { IUserRepository } from '../../core/ports/repositories/IUserRepository';
+import { IFeeRepository } from '../../core/ports/repositories/IFeeRepository';
 import { UserRole } from '../../core/domain/user/User';
 import {
   Strand,
@@ -99,7 +100,8 @@ export class CBCAssessmentUseCases {
     private readonly attendanceRepository: IAttendanceRepository,
     private readonly guardianRepository?: IGuardianRepository,
     private readonly userRepository?: IUserRepository,
-    private readonly teacherRepository?: ITeacherRepository
+    private readonly teacherRepository?: ITeacherRepository,
+    private readonly feeRepository?: IFeeRepository
   ) {}
 
   public async getLinkedStudentIdsForUser(userId: string): Promise<string[]> {
@@ -712,6 +714,17 @@ export class CBCAssessmentUseCases {
       const childIds = await this.getLinkedStudentIdsForUser(requestingUser.userId);
       if (!childIds.includes(studentId)) {
         throw new ForbiddenError('Access denied: You are only permitted to view report cards for your registered children.');
+      }
+
+      const student = await this.studentRepository.findById(studentId);
+      const isExempt = Boolean((student as any)?.isChargeExempt);
+      if (student && !isExempt && this.feeRepository) {
+        const invoices = await this.feeRepository.findInvoices({ studentId });
+        const activeInvoices = invoices.filter(inv => (inv.status as any) !== 'CARRIED_FORWARD' && (inv.status as any) !== 'PAID');
+        const activeBalance = activeInvoices.reduce((sum, inv) => sum + (Number(inv.balance) || 0), 0);
+        if (activeBalance > 0) {
+          throw new ForbiddenError(`Fee clearance required to access report card. Outstanding balance: KES ${activeBalance.toLocaleString()}. Please contact the Head Teacher (0745436312) or Director (schoolgraceseeds@gmail.com) for clearance authorization.`);
+        }
       }
     }
 

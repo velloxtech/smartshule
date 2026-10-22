@@ -83,7 +83,7 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({ isOpen, on
             <div className="text-xs font-bold text-secondary uppercase tracking-widest">
               Ministry of Education · Continuous Assessment Framework
             </div>
-            <h2 className="text-xl font-bold text-primary mt-1 uppercase">{schoolName} - CBC EXECUTIVE BRIEF</h2>
+            <h2 className="text-xl font-bold text-primary mt-1 uppercase">{schoolName} - CBE EXECUTIVE BRIEF</h2>
             <p className="text-xs text-on-surface-variant mt-0.5">
               {school?.address || 'KEMRI Street, Kisian, Kisumu, Kenya'} · Tel: {school?.phone || '0745436312'} · Email: {school?.email || 'schoolgraceseeds@gmail.com'}
             </p>
@@ -117,7 +117,7 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({ isOpen, on
                   <span className="text-[11px] text-on-surface-variant">of KES {totalInvoiced.toLocaleString()}</span>
                 </div>
                 <div className="p-3 bg-surface-container-low rounded-xl text-center">
-                  <span className="text-[11px] text-on-surface-variant uppercase font-medium">CBC Mastery</span>
+                  <span className="text-[11px] text-on-surface-variant uppercase font-medium">CBE Mastery</span>
                   <div className="text-xl font-bold text-primary">{CBCMasteryPct}%</div>
                   <span className="text-[11px] text-secondary font-medium">EE + ME Tier</span>
                 </div>
@@ -138,7 +138,7 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({ isOpen, on
                     <span className="font-semibold text-secondary">{totalTeachers} Teachers</span>
                   </div>
                   <div className="flex justify-between py-1">
-                    <span>CBC Formative & Summative Records Logged</span>
+                    <span>CBE Formative & Summative Records Logged</span>
                     <span className="font-bold text-primary">{totalAssessments} Rubrics</span>
                   </div>
                 </div>

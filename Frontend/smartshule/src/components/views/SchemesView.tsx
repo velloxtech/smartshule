@@ -217,7 +217,7 @@ export const SchemesView: React.FC = () => {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
     doc.setTextColor(71, 85, 105);
-    doc.text('Ministry of Education · KICD 40-Minute CBC Lesson Plan Dossier', 34, curY + 15);
+    doc.text('Ministry of Education · KICD 40-Minute CBE Lesson Plan Dossier', 34, curY + 15);
 
     curY += 21;
     doc.setDrawColor(226, 232, 240);
@@ -400,7 +400,7 @@ export const SchemesView: React.FC = () => {
       const roleName = user?.role === UserRole.DEPUTY_HEAD_TEACHER ? 'Deputy Head Teacher' : 'Principal / Administration';
       const res = await apiService.reviewScheme(schemeId, {
         approved: true,
-        remarks: `Approved by ${roleName}. Well-aligned with CBC learning outcomes.`,
+        remarks: `Approved by ${roleName}. Well-aligned with CBE learning outcomes.`,
       });
       if (res.success) {
         loadCurriculum();
@@ -427,7 +427,7 @@ export const SchemesView: React.FC = () => {
   const handleReviewLessonPlan = async (planId: string, approved: boolean, customRemarks?: string) => {
     const roleName = user?.role === UserRole.DEPUTY_HEAD_TEACHER ? 'Deputy Head Teacher' : 'Principal / Administration';
     const defaultRemarks = approved
-      ? `Approved by ${roleName}. Comprehensive CBC instructional design.`
+      ? `Approved by ${roleName}. Comprehensive CBE instructional design.`
       : `Revision requested by ${roleName}. Please enrich learner activities.`;
     const finalRemarks = customRemarks || (approved ? defaultRemarks : window.prompt('Enter revision feedback remarks:', defaultRemarks));
     if (!approved && finalRemarks === null) return; // User canceled prompt
@@ -497,7 +497,7 @@ export const SchemesView: React.FC = () => {
             <span className="text-primary font-semibold">Schemes & Lesson Plans</span>
           </div>
           <h1 className="font-headline-lg text-headline-lg text-on-surface mt-1">
-            Teacher Schemes of Work & 40-Min CBC Lesson Plans
+            Teacher Schemes of Work & 40-Min CBE Lesson Plans
           </h1>
           <p className="text-xs text-on-surface-variant mt-0.5">
             {isTeacher
@@ -645,7 +645,7 @@ export const SchemesView: React.FC = () => {
             <div className="py-16 text-center text-on-surface-variant bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-8 space-y-2">
               <span className="material-symbols-outlined text-4xl text-outline">edit_calendar</span>
               <p className="font-bold text-sm text-on-surface">No schemes of work recorded</p>
-              <p className="text-xs text-outline">Click "New Scheme of Work" to create a CBC syllabus progression plan.</p>
+              <p className="text-xs text-outline">Click "New Scheme of Work" to create a CBE syllabus progression plan.</p>
             </div>
           )}
         </div>
@@ -795,7 +795,7 @@ export const SchemesView: React.FC = () => {
             <div className="py-16 text-center text-on-surface-variant bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-8 space-y-2">
               <span className="material-symbols-outlined text-4xl text-outline">post_add</span>
               <p className="font-bold text-sm text-on-surface">No lesson plans prepared yet</p>
-              <p className="text-xs text-outline">Click "New Lesson Plan" to prepare a 40-minute CBC instructional guide.</p>
+              <p className="text-xs text-outline">Click "New Lesson Plan" to prepare a 40-minute CBE instructional guide.</p>
             </div>
           )}
         </div>

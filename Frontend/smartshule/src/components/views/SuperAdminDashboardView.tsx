@@ -253,6 +253,36 @@ export const SuperAdminDashboardView: React.FC<SuperAdminDashboardViewProps> = (
             </p>
           </div>
         </div>
+
+        <div
+          onClick={() => onNavigateTab('fee-deadline-banner')}
+          className="p-5 rounded-2xl bg-white border border-outline-variant/30 hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer flex items-center gap-4"
+        >
+          <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-800 flex items-center justify-center shrink-0">
+            <span className="material-symbols-outlined text-[26px]">notification_important</span>
+          </div>
+          <div>
+            <h3 className="font-bold text-sm text-on-surface">Fee Deadline Banner</h3>
+            <p className="text-xs text-on-surface-variant mt-0.5">
+              Configure payment deadline date & remittance notice
+            </p>
+          </div>
+        </div>
+
+        <div
+          onClick={() => onNavigateTab('sponsored-students')}
+          className="p-5 rounded-2xl bg-white border border-outline-variant/30 hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer flex items-center gap-4"
+        >
+          <div className="w-12 h-12 rounded-xl bg-rose-50 text-primary flex items-center justify-center shrink-0">
+            <span className="material-symbols-outlined text-[26px]">volunteer_activism</span>
+          </div>
+          <div>
+            <h3 className="font-bold text-sm text-on-surface">Sponsored Learners</h3>
+            <p className="text-xs text-on-surface-variant mt-0.5">
+              Admin-only 100% scholarship ledger, benefactor tracking & dossiers
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );

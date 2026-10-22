@@ -31,7 +31,8 @@ import {
   MongoTimetableRepository,
   MongoAttendanceRepository,
   MongoFeeRepository,
-  MongoDeletedStudentRepository
+  MongoDeletedStudentRepository,
+  MongoStudentSponsorshipRepository
 } from './mongodb/MongooseRepositories';
 
 import {
@@ -47,7 +48,8 @@ import {
   PostgresTimetableRepository,
   PostgresAttendanceRepository,
   PostgresFeeRepository,
-  PostgresDeletedStudentRepository
+  PostgresDeletedStudentRepository,
+  PostgresStudentSponsorshipRepository
 } from './postgres/PostgresRepositories';
 
 import { IUserRepository } from '../../core/ports/repositories/IUserRepository';
@@ -71,12 +73,14 @@ import { IAnnouncementRepository } from '../../core/ports/repositories/IAnnounce
 import { ITeacherClockInRepository } from '../../core/ports/repositories/ITeacherClockInRepository';
 import { IOccurrenceRepository } from '../../core/ports/repositories/IOccurrenceRepository';
 import { ICurriculumTrackerRepository } from '../../core/ports/repositories/ICurriculumTrackerRepository';
+import { IStudentSponsorshipRepository } from '../../core/ports/repositories/IStudentSponsorshipRepository';
 import { InMemoryTeacherClockInRepository } from './in-memory/InMemoryTeacherClockInRepository';
 import { PostgresTeacherClockInRepository } from './postgres/PostgresTeacherClockInRepository';
 import { InMemoryOccurrenceRepository } from './in-memory/InMemoryOccurrenceRepository';
 import { PostgresOccurrenceRepository } from './postgres/PostgresOccurrenceRepository';
 import { InMemoryCurriculumTrackerRepository } from './in-memory/InMemoryCurriculumTrackerRepository';
 import { PostgresCurriculumTrackerRepository } from './postgres/PostgresCurriculumTrackerRepository';
+import { InMemoryStudentSponsorshipRepository } from './in-memory/InMemoryStudentSponsorshipRepository';
 import {
   PostgresRecordOfWorkRepository,
   InMemoryRecordOfWorkRepository,
@@ -115,6 +119,7 @@ export interface RepositoryBundle {
   teacherClockInRepository?: ITeacherClockInRepository;
   occurrenceRepository?: IOccurrenceRepository;
   curriculumTrackerRepository?: ICurriculumTrackerRepository;
+  studentSponsorshipRepository?: IStudentSponsorshipRepository;
 }
 
 export class DatabaseFactory {
@@ -142,7 +147,8 @@ export class DatabaseFactory {
         attendanceRepository: new MongoAttendanceRepository(),
         feeRepository: new MongoFeeRepository(),
         systemLogRepository: new InMemorySystemLogRepository(),
-        announcementRepository: new InMemoryAnnouncementRepository()
+        announcementRepository: new InMemoryAnnouncementRepository(),
+        studentSponsorshipRepository: new MongoStudentSponsorshipRepository()
       };
     }
 
@@ -239,6 +245,7 @@ export class DatabaseFactory {
         teacherClockInRepository: new PostgresTeacherClockInRepository(pool),
         occurrenceRepository: new PostgresOccurrenceRepository(pool),
         curriculumTrackerRepository: new PostgresCurriculumTrackerRepository(pool),
+        studentSponsorshipRepository: new PostgresStudentSponsorshipRepository(pool),
       };
     }
 
@@ -268,6 +275,7 @@ export class DatabaseFactory {
       teacherClockInRepository: new InMemoryTeacherClockInRepository(),
       occurrenceRepository: new InMemoryOccurrenceRepository(),
       curriculumTrackerRepository: new InMemoryCurriculumTrackerRepository(),
+      studentSponsorshipRepository: new InMemoryStudentSponsorshipRepository(),
     };
   }
 }

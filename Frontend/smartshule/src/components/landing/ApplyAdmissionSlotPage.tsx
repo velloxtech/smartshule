@@ -208,15 +208,6 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
 
   return (
     <div className="min-h-screen bg-[#fdfaf6] text-[#1f0a10]">
-      {/* Top Notification Bar */}
-      <div className="bg-[#5a1226] text-white text-xs py-2 px-6 text-center tracking-wide flex justify-between items-center max-w-7xl mx-auto border-b border-white/10">
-        <span className="hidden sm:inline-flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-[#f5c84a]" /> Kisumu, Kisian, KEMRI Road</span>
-        <span className="mx-auto sm:mx-0 font-medium">
-          2027 Admission Applications Open — Class sizes capped at 15–18 pupils
-        </span>
-        <span className="hidden md:inline-flex items-center gap-1.5 text-white/80"><Phone className="w-3.5 h-3.5 text-[#f5c84a]" /> Hotline: 0745 436312</span>
-      </div>
-
       {/* Main Header Banner */}
       <section className="relative bg-[#7b1c35] text-white py-12 lg:py-16 px-6 lg:px-12 overflow-hidden shadow-lg">
         <div className="absolute inset-0 opacity-15 pointer-events-none">

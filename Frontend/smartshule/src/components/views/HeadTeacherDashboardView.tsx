@@ -66,7 +66,7 @@ export const HeadTeacherDashboardView: React.FC<HeadTeacherDashboardViewProps> =
               Curriculum Standards & Academic Oversight
             </h1>
             <p className="mt-1 text-sm text-purple-100 max-w-xl">
-              Supervising instructional quality, CBC rubrics fidelity, teacher curriculum delivery pace, and institutional performance.
+              Supervising instructional quality, CBE rubrics fidelity, teacher curriculum delivery pace, and institutional performance.
             </p>
           </div>
 
@@ -97,11 +97,11 @@ export const HeadTeacherDashboardView: React.FC<HeadTeacherDashboardViewProps> =
               </button>
             )}
             <button
-              onClick={() => onNavigateTab('user-management')}
+              onClick={() => onNavigateTab('teachers')}
               className="px-4 py-2.5 rounded-xl bg-purple-800/80 hover:bg-purple-800 text-white font-semibold text-xs border border-purple-400/30 flex items-center gap-2 transition-all cursor-pointer"
             >
-              <span className="material-symbols-outlined text-[18px]">manage_accounts</span>
-              <span>User & Staff Accounts</span>
+              <span className="material-symbols-outlined text-[18px]">badge</span>
+              <span>Faculty Directory</span>
             </button>
             <button
               onClick={() => onNavigateTab('geofencing')}
@@ -136,7 +136,7 @@ export const HeadTeacherDashboardView: React.FC<HeadTeacherDashboardViewProps> =
           </div>
           <div className="mt-3">
             <div className="text-2xl font-black text-on-surface">{teachers.length}</div>
-            <div className="text-[11px] text-on-surface-variant mt-1">Certified CBC subject specialists</div>
+            <div className="text-[11px] text-on-surface-variant mt-1">Certified CBE subject specialists</div>
           </div>
         </div>
 
@@ -251,7 +251,7 @@ export const HeadTeacherDashboardView: React.FC<HeadTeacherDashboardViewProps> =
               >
                 <span className="material-symbols-outlined text-purple-700 text-[22px]">article</span>
                 <div>
-                  <div className="text-xs font-bold text-on-surface">CBC Report Cards</div>
+                  <div className="text-xs font-bold text-on-surface">CBE Report Cards</div>
                   <div className="text-[11px] text-on-surface-variant">Compile term summaries & comments</div>
                 </div>
               </button>
@@ -279,13 +279,13 @@ export const HeadTeacherDashboardView: React.FC<HeadTeacherDashboardViewProps> =
               </button>
 
               <button
-                onClick={() => onNavigateTab('user-management')}
+                onClick={() => onNavigateTab('teachers')}
                 className="w-full p-3 rounded-xl border border-outline-variant/30 hover:bg-purple-50/50 hover:border-purple-300 transition-all flex items-center gap-3 text-left cursor-pointer"
               >
-                <span className="material-symbols-outlined text-purple-700 text-[22px]">manage_accounts</span>
+                <span className="material-symbols-outlined text-purple-700 text-[22px]">badge</span>
                 <div>
-                  <div className="text-xs font-bold text-on-surface">User Accounts & Access</div>
-                  <div className="text-[11px] text-on-surface-variant">Manage staff credentials & account status</div>
+                  <div className="text-xs font-bold text-on-surface">Faculty Directory</div>
+                  <div className="text-[11px] text-on-surface-variant">View teaching staff & departmental allocations</div>
                 </div>
               </button>
             </div>

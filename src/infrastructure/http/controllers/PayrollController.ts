@@ -17,11 +17,16 @@ export const CustomPayrollSchema = z.object({
   commuterAllowance: z.number().min(0).optional(),
   responsibilityAllowance: z.number().min(0).optional(),
   otherDeductions: z.number().min(0).optional(),
+  applyStatutory: z.boolean().optional(),
+  applyPaye: z.boolean().optional(),
+  applyShif: z.boolean().optional(),
+  applyNssf: z.boolean().optional(),
+  applyHousingLevy: z.boolean().optional(),
   notes: z.string().optional()
 });
 
 export const MarkPaidSchema = z.object({
-  paymentMethod: z.enum(['BANK_TRANSFER', 'MPESA', 'CHEQUE']),
+  paymentMethod: z.enum(['BANK_TRANSFER', 'MPESA', 'CHEQUE', 'CASH']),
   reference: z.string().optional()
 });
 
@@ -82,7 +87,8 @@ export class PayrollController {
 
   public listPayrolls = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const month = req.query.month as string | undefined;
+      const monthParam = req.query.month;
+      const month = typeof monthParam === 'string' ? monthParam : undefined;
       const schoolId = req.user?.schoolId;
       const list = await this.payrollUseCases.listPayrolls(month, schoolId);
       return res.status(200).json({
@@ -131,6 +137,18 @@ export class PayrollController {
         success: true,
         message: 'Payroll record marked as paid',
         data: payroll
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public deletePayroll = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      await this.payrollUseCases.deletePayroll(req.params.id as string);
+      return res.status(200).json({
+        success: true,
+        message: 'Payroll record deleted successfully'
       });
     } catch (err) {
       next(err);

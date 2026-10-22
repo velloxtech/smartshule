@@ -38,7 +38,6 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
     UserRole.SUPER_ADMIN,
     UserRole.ADMIN,
     UserRole.SCHOOL_ADMIN,
-    UserRole.HEAD_TEACHER,
     UserRole.BURSAR,
     UserRole.ACCOUNTANT
   ].includes(user?.role as UserRole);
@@ -179,7 +178,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
           </div>
           <div className="flex items-center gap-2 mt-1">
             <h1 className="font-headline-lg text-headline-lg text-on-surface">
-              CBC Learner Directory & Profiles
+              CBE Learner Directory & Profiles
             </h1>
             <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-bold">
               <span className="material-symbols-outlined text-[14px]">verified</span>
@@ -211,7 +210,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
             <button
               type="button"
               onClick={() => setIsBulkPromoteOpen(true)}
-              title="Promote selected learners or current grade cohort to the next CBC grade"
+              title="Promote selected learners or current grade cohort to the next CBE grade"
               className="inline-flex items-center gap-2 px-4 py-2.5 bg-surface-container-high text-primary hover:bg-primary/10 border border-primary/30 rounded-lg text-sm font-semibold shadow-xs transition-all cursor-pointer"
             >
               <span className="material-symbols-outlined text-[18px]">upgrade</span>
@@ -514,7 +513,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
 
                       <button
                         onClick={() => onViewReportCard(s)}
-                        title="View Official CBC Report Card"
+                        title="View Official CBE Report Card"
                         className="p-1.5 rounded-lg text-primary hover:bg-surface-container transition-colors cursor-pointer"
                       >
                         <span className="material-symbols-outlined text-[18px]">article</span>
@@ -522,7 +521,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
 
                       <button
                         onClick={() => onOpenCBCWithStudent(s)}
-                        title="Log CBC Rubric / Upload Marks"
+                        title="Log CBE Rubric / Upload Marks"
                         className="p-1.5 rounded-lg text-secondary hover:bg-surface-container transition-colors cursor-pointer"
                       >
                         <span className="material-symbols-outlined text-[18px]">rule</span>
@@ -666,7 +665,7 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                 <p className="font-medium text-on-surface">When this learner is deleted:</p>
                 <ul className="space-y-1 list-disc list-inside">
                   <li>Record will be placed in the dedicated <strong className="text-on-surface">deleted_students</strong> table.</li>
-                  <li>Everything linked (invoices, payments, CBC assessments, attendance, e-diary, photos) will be preserved in the archive.</li>
+                  <li>Everything linked (invoices, payments, CBE assessments, attendance, e-diary, photos) will be preserved in the archive.</li>
                   <li>All pending work (unpaid fee balances, lunch arrears, open concerns) will be cleared.</li>
                   <li>Guardians will be safely unlinked from this student.</li>
                 </ul>

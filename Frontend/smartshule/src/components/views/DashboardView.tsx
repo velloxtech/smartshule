@@ -292,7 +292,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   className="flex items-center gap-xs px-sm py-xs rounded-lg text-on-surface hover:bg-surface-container transition-colors text-left w-full cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-secondary text-[18px]">rule</span>
-                  <span className="font-body-md text-body-md">Record CBC Formative Log</span>
+                  <span className="font-body-md text-body-md">Record CBE Formative Log</span>
                 </button>
 
                 <button
@@ -343,11 +343,27 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </span>
             </div>
             <p className="text-xs sm:text-sm text-emerald-100/80 mt-0.5 max-w-2xl">
-              Real-time communication with parents: instant fee balance checks, online payment links, CBC digital reports, attendance notices, and AI assistance.
+              Real-time communication with parents: instant fee balance checks, online payment links, CBE digital reports, attendance notices, and AI assistance.
             </p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 self-stretch sm:self-auto shrink-0">
+          <button
+            onClick={() => onNavigateTab('sponsored-students')}
+            className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[#7a1228] hover:bg-[#5a1226] text-white font-bold text-xs sm:text-sm border border-white/20 transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer hover:shadow-[#7a1228]/25"
+            type="button"
+          >
+            <span className="material-symbols-outlined text-[18px]">volunteer_activism</span>
+            <span>Sponsored Learners</span>
+          </button>
+          <button
+            onClick={() => onNavigateTab('fee-deadline-banner')}
+            className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer hover:shadow-amber-500/25"
+            type="button"
+          >
+            <span className="material-symbols-outlined text-[18px]">notification_important</span>
+            <span>Fee Deadline Banner</span>
+          </button>
           <button
             onClick={() => onNavigateTab('user-management')}
             className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs sm:text-sm border border-white/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
@@ -619,7 +635,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <div className="flex items-center gap-xs">
                 <span className="material-symbols-outlined text-primary text-[20px]">donut_large</span>
                 <h2 className="font-headline-md text-headline-md text-on-surface font-semibold">
-                  CBC Assessment Rubrics
+                  CBE Assessment Rubrics
                 </h2>
               </div>
               <span className="font-label-md text-label-md text-secondary font-medium">

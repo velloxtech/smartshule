@@ -836,7 +836,7 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold text-rose-200 uppercase tracking-wider mb-1">
             <span className="material-symbols-outlined text-sm">school</span>
-            Academics / CBC Assessment System / Summative Marksheet
+            Academics / CBE Assessment System / Summative Marksheet
           </div>
           <h1 className="text-2xl md:text-3xl font-black tracking-tight flex items-center gap-2.5">
             <span className="material-symbols-outlined text-[32px] text-rose-200">grid_on</span>
@@ -935,7 +935,7 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
             <div className="text-2xl font-black text-indigo-700 font-data-mono mt-1">
               {effectiveSubjects.length}
             </div>
-            <span className="text-[10px] text-gray-400">CBC Learning Areas</span>
+            <span className="text-[10px] text-gray-400">CBE Learning Areas</span>
           </div>
           <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center justify-center font-bold">
             <span className="material-symbols-outlined text-xl">menu_book</span>

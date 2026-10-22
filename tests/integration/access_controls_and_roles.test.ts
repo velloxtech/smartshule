@@ -498,7 +498,7 @@ describe('Access Controls, 8 Role Accounts & Lesson Plan Approvals', () => {
   describe('5. User Management & Access Control', () => {
     let createdUserId: string;
 
-    it('allows Super Admin, Admin, Head Teacher, and Deputy to list users', async () => {
+    it('allows Super Admin and Admin to list users', async () => {
       const saRes = await request(app)
         .get('/api/v1/users')
         .set('Authorization', `Bearer ${superAdminToken}`);
@@ -509,19 +509,20 @@ describe('Access Controls, 8 Role Accounts & Lesson Plan Approvals', () => {
         .get('/api/v1/users')
         .set('Authorization', `Bearer ${adminToken}`);
       expect(adminRes.status).toBe(200);
+      expect(Array.isArray(adminRes.body.data)).toBe(true);
+    });
 
+    it('denies user management listing to non-admin roles (Head Teacher, Deputy, Teacher, Parent, Bursar)', async () => {
       const htRes = await request(app)
         .get('/api/v1/users')
         .set('Authorization', `Bearer ${headTeacherToken}`);
-      expect(htRes.status).toBe(200);
+      expect(htRes.status).toBe(403);
 
       const deputyRes = await request(app)
         .get('/api/v1/users')
         .set('Authorization', `Bearer ${deputyToken}`);
-      expect(deputyRes.status).toBe(200);
-    });
+      expect(deputyRes.status).toBe(403);
 
-    it('denies user management listing to non-admin roles (Teacher, Parent, Bursar)', async () => {
       const teacherRes = await request(app)
         .get('/api/v1/users')
         .set('Authorization', `Bearer ${teacherToken}`);
@@ -561,10 +562,23 @@ describe('Access Controls, 8 Role Accounts & Lesson Plan Approvals', () => {
       expect(updateRes.status).toBe(200);
       expect(updateRes.body.data.fullName).toBe('Brian Updated Oduor');
 
-      // 3. Suspend
-      const suspendRes = await request(app)
+      // Verify Head Teacher and Deputy cannot alter user status (403 Forbidden)
+      const htDenyStatus = await request(app)
         .patch(`/api/v1/users/${createdUserId}/status`)
         .set('Authorization', `Bearer ${headTeacherToken}`)
+        .send({ status: 'SUSPENDED' });
+      expect(htDenyStatus.status).toBe(403);
+
+      const deputyDenyStatus = await request(app)
+        .patch(`/api/v1/users/${createdUserId}/status`)
+        .set('Authorization', `Bearer ${deputyToken}`)
+        .send({ status: 'SUSPENDED' });
+      expect(deputyDenyStatus.status).toBe(403);
+
+      // 3. Suspend via Admin
+      const suspendRes = await request(app)
+        .patch(`/api/v1/users/${createdUserId}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
         .send({ status: 'SUSPENDED' });
       expect(suspendRes.status).toBe(200);
       expect(suspendRes.body.data.status).toBe('SUSPENDED');
@@ -578,10 +592,10 @@ describe('Access Controls, 8 Role Accounts & Lesson Plan Approvals', () => {
         });
       expect(failedLogin.status).toBe(401);
 
-      // Reactivate
+      // Reactivate via Super Admin
       const reactivateRes = await request(app)
         .patch(`/api/v1/users/${createdUserId}/status`)
-        .set('Authorization', `Bearer ${deputyToken}`)
+        .set('Authorization', `Bearer ${superAdminToken}`)
         .send({ status: 'ACTIVE' });
       expect(reactivateRes.status).toBe(200);
       expect(reactivateRes.body.data.status).toBe('ACTIVE');
@@ -791,6 +805,440 @@ describe('Access Controls, 8 Role Accounts & Lesson Plan Approvals', () => {
         .get('/api/v1/finance/defaulters')
         .set('Authorization', `Bearer ${parentToken}`);
       expect(res.status).toBe(403);
+    });
+  });
+
+  describe('8. Head Teacher & Deputy Head Teacher Access Restrictions (Finance & Administration)', () => {
+    it('denies HEAD_TEACHER and DEPUTY_HEAD_TEACHER from Finance module endpoints (403 Forbidden)', async () => {
+      // 1. Defaulters
+      const htDefaulters = await request(app)
+        .get('/api/v1/finance/defaulters')
+        .set('Authorization', `Bearer ${headTeacherToken}`);
+      expect(htDefaulters.status).toBe(403);
+
+      const depDefaulters = await request(app)
+        .get('/api/v1/finance/defaulters')
+        .set('Authorization', `Bearer ${deputyToken}`);
+      expect(depDefaulters.status).toBe(403);
+
+      // 2. Cash Flow Ledger
+      const htCashflow = await request(app)
+        .get('/api/v1/finance/cashflow-ledger')
+        .set('Authorization', `Bearer ${headTeacherToken}`);
+      expect(htCashflow.status).toBe(403);
+
+      const depCashflow = await request(app)
+        .get('/api/v1/finance/cashflow-ledger')
+        .set('Authorization', `Bearer ${deputyToken}`);
+      expect(depCashflow.status).toBe(403);
+
+      // 3. Operating Expenses
+      const htExpenses = await request(app)
+        .get('/api/v1/finance/expenses')
+        .set('Authorization', `Bearer ${headTeacherToken}`);
+      expect(htExpenses.status).toBe(403);
+
+      const depExpenses = await request(app)
+        .get('/api/v1/finance/expenses')
+        .set('Authorization', `Bearer ${deputyToken}`);
+      expect(depExpenses.status).toBe(403);
+
+      // 4. Other Income / Grants
+      const htIncome = await request(app)
+        .get('/api/v1/finance/income')
+        .set('Authorization', `Bearer ${headTeacherToken}`);
+      expect(htIncome.status).toBe(403);
+
+      const depIncome = await request(app)
+        .get('/api/v1/finance/income')
+        .set('Authorization', `Bearer ${deputyToken}`);
+      expect(depIncome.status).toBe(403);
+
+      // 5. Arrears Summary
+      const htArrears = await request(app)
+        .get('/api/v1/finance/arrears/summary')
+        .set('Authorization', `Bearer ${headTeacherToken}`);
+      expect(htArrears.status).toBe(403);
+
+      const depArrears = await request(app)
+        .get('/api/v1/finance/arrears/summary')
+        .set('Authorization', `Bearer ${deputyToken}`);
+      expect(depArrears.status).toBe(403);
+
+      // 6. Fee Structure Mutation
+      const htFeeStruct = await request(app)
+        .post('/api/v1/finance/structures')
+        .set('Authorization', `Bearer ${headTeacherToken}`)
+        .send({ title: 'Test Structure', academicYearId: 'yr-1', termId: 'tm-1', gradeLevel: 'PP1', totalAmount: 10000 });
+      expect(htFeeStruct.status).toBe(403);
+    });
+
+    it('denies HEAD_TEACHER and DEPUTY_HEAD_TEACHER from Administrative pages (User Mgmt, Archive Vault, System Logs)', async () => {
+      // 1. User Management Listing
+      const htUsers = await request(app)
+        .get('/api/v1/users')
+        .set('Authorization', `Bearer ${headTeacherToken}`);
+      expect(htUsers.status).toBe(403);
+
+      const depUsers = await request(app)
+        .get('/api/v1/users')
+        .set('Authorization', `Bearer ${deputyToken}`);
+      expect(depUsers.status).toBe(403);
+
+      // 2. Archived Accounts (Deleted Records Vault)
+      const htArchive = await request(app)
+        .get('/api/v1/students/deleted')
+        .set('Authorization', `Bearer ${headTeacherToken}`);
+      expect(htArchive.status).toBe(403);
+
+      const depArchive = await request(app)
+        .get('/api/v1/students/deleted')
+        .set('Authorization', `Bearer ${deputyToken}`);
+      expect(depArchive.status).toBe(403);
+
+      // 3. System Logs
+      const htLogs = await request(app)
+        .get('/api/v1/system-logs')
+        .set('Authorization', `Bearer ${headTeacherToken}`);
+      expect(htLogs.status).toBe(403);
+
+      const depLogs = await request(app)
+        .get('/api/v1/system-logs')
+        .set('Authorization', `Bearer ${deputyToken}`);
+      expect(depLogs.status).toBe(403);
+    });
+
+    it('allows ADMIN (Director) and SUPER_ADMIN to manage fee payment deadline banner, and forbids other roles', async () => {
+      // 1. Initial GET
+      const getRes = await request(app)
+        .get('/api/v1/finance/fee-banner')
+        .set('Authorization', `Bearer ${adminToken}`);
+      expect(getRes.status).toBe(200);
+      expect(getRes.body.success).toBe(true);
+      expect(getRes.body.data.deadlineDate).toBeDefined();
+
+      // 2. Admin (Director) updates banner
+      const updateRes = await request(app)
+        .put('/api/v1/finance/fee-banner')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          deadlineDate: '2026-11-20',
+          bannerTitle: 'Term 3 Final Fee Clearance Directive',
+          customMessage: 'Please clear all arrears prior to KPSEA assessment.',
+          paybillNumber: '522533',
+          bankName: 'KCB Bank',
+          bankAccountNumber: '987654321',
+          isEnabled: true,
+          showOnlyToDefaulters: true
+        });
+      expect(updateRes.status).toBe(200);
+      expect(updateRes.body.success).toBe(true);
+      expect(updateRes.body.data.deadlineDate).toBe('2026-11-20');
+      expect(updateRes.body.data.bannerTitle).toBe('Term 3 Final Fee Clearance Directive');
+      expect(updateRes.body.data.customMessage).toBe('Please clear all arrears prior to KPSEA assessment.');
+
+      // 3. Super Admin can also update banner
+      const saUpdate = await request(app)
+        .put('/api/v1/finance/fee-banner')
+        .set('Authorization', `Bearer ${superAdminToken}`)
+        .send({
+          deadlineDate: '2026-11-30',
+          bannerTitle: 'Official School Fee Notice'
+        });
+      expect(saUpdate.status).toBe(200);
+      expect(saUpdate.body.success).toBe(true);
+      expect(saUpdate.body.data.deadlineDate).toBe('2026-11-30');
+
+      // 4. Forbidden roles get 403 on PUT
+      const htForbidden = await request(app)
+        .put('/api/v1/finance/fee-banner')
+        .set('Authorization', `Bearer ${headTeacherToken}`)
+        .send({ deadlineDate: '2026-12-01' });
+      expect(htForbidden.status).toBe(403);
+
+      const depForbidden = await request(app)
+        .put('/api/v1/finance/fee-banner')
+        .set('Authorization', `Bearer ${deputyToken}`)
+        .send({ deadlineDate: '2026-12-01' });
+      expect(depForbidden.status).toBe(403);
+
+      const teacherForbidden = await request(app)
+        .put('/api/v1/finance/fee-banner')
+        .set('Authorization', `Bearer ${teacherToken}`)
+        .send({ deadlineDate: '2026-12-01' });
+      expect(teacherForbidden.status).toBe(403);
+
+      const bursarForbidden = await request(app)
+        .put('/api/v1/finance/fee-banner')
+        .set('Authorization', `Bearer ${bursarToken}`)
+        .send({ deadlineDate: '2026-12-01' });
+      expect(bursarForbidden.status).toBe(403);
+
+      const parentForbidden = await request(app)
+        .put('/api/v1/finance/fee-banner')
+        .set('Authorization', `Bearer ${parentToken}`)
+        .send({ deadlineDate: '2026-12-01' });
+      expect(parentForbidden.status).toBe(403);
+    });
+
+    it('restricts Fully Sponsored Students page and API endpoints to ADMIN (Director) and SUPER_ADMIN only', async () => {
+      // Find an active student for sponsorship
+      const allStudents = await container.studentRepository.findAll();
+      expect(allStudents.length).toBeGreaterThan(0);
+      const student = allStudents[0];
+
+      // 1. Forbidden roles cannot access GET /api/v1/sponsorships
+      for (const token of [headTeacherToken, deputyToken, teacherToken, bursarToken, parentToken]) {
+        const getRes = await request(app)
+          .get('/api/v1/sponsorships')
+          .set('Authorization', `Bearer ${token}`);
+        expect(getRes.status).toBe(403);
+      }
+
+      // 2. Forbidden roles cannot POST /api/v1/sponsorships
+      for (const token of [headTeacherToken, deputyToken, teacherToken, bursarToken, parentToken]) {
+        const postRes = await request(app)
+          .post('/api/v1/sponsorships')
+          .set('Authorization', `Bearer ${token}`)
+          .send({
+            studentId: student.id,
+            sponsorshipType: 'DIRECTOR_BENEVOLENCE',
+            sponsorName: 'Director Outreach Fund',
+            startDate: '2026-01-05',
+            reasonNotes: 'Needy learner sponsorship'
+          });
+        expect(postRes.status).toBe(403);
+      }
+
+      // 3. Admin (Director) creates sponsorship
+      const createRes = await request(app)
+        .post('/api/v1/sponsorships')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          studentId: student.id,
+          sponsorshipType: 'DIRECTOR_BENEVOLENCE',
+          sponsorName: "School Director's Benevolence Fund",
+          sponsorContact: '+254700112233',
+          coverage: {
+            tuitionCovered: true,
+            lunchCovered: true,
+            materialsCovered: true,
+            uniformCovered: false,
+            activitiesCovered: true,
+            percentageCovered: 100
+          },
+          termlySubsidyAmount: 18000,
+          annualSubsidyAmount: 54000,
+          startDate: '2026-01-05',
+          reasonNotes: 'Full tuition and lunch sponsored under Director Benevolent Trust.',
+          confidentialNotes: 'Assessed during Q1 community outreach.'
+        });
+      expect(createRes.status).toBe(201);
+      expect(createRes.body.success).toBe(true);
+      expect(createRes.body.data.studentId).toBe(student.id);
+      expect(createRes.body.data.approvalReference).toBeDefined();
+      const sponsorshipId = createRes.body.data.id;
+
+      // 4. Admin (Director) lists sponsorships
+      const listRes = await request(app)
+        .get('/api/v1/sponsorships')
+        .set('Authorization', `Bearer ${adminToken}`);
+      expect(listRes.status).toBe(200);
+      expect(listRes.body.success).toBe(true);
+      expect(listRes.body.data.length).toBeGreaterThan(0);
+
+      // 5. Admin retrieves stats
+      const statsRes = await request(app)
+        .get('/api/v1/sponsorships/stats')
+        .set('Authorization', `Bearer ${adminToken}`);
+      expect(statsRes.status).toBe(200);
+      expect(statsRes.body.data.totalSponsoredStudents).toBeGreaterThan(0);
+      expect(statsRes.body.data.lunchCoveredCount).toBeGreaterThan(0);
+
+      // 6. Super Admin can update sponsorship status
+      const statusRes = await request(app)
+        .patch(`/api/v1/sponsorships/${sponsorshipId}/status`)
+        .set('Authorization', `Bearer ${superAdminToken}`)
+        .send({ status: 'SUSPENDED', confidentialRemark: 'Pending mid-term review' });
+      expect(statusRes.status).toBe(200);
+      expect(statusRes.body.data.sponsorshipStatus).toBe('SUSPENDED');
+
+      // 7. Admin restores status to ACTIVE
+      const reactivateRes = await request(app)
+        .patch(`/api/v1/sponsorships/${sponsorshipId}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'ACTIVE', confidentialRemark: 'Review passed' });
+      expect(reactivateRes.status).toBe(200);
+      expect(reactivateRes.body.data.sponsorshipStatus).toBe('ACTIVE');
+
+      // 8. Unauthorized delete rejected
+      const htDel = await request(app)
+        .delete(`/api/v1/sponsorships/${sponsorshipId}`)
+        .set('Authorization', `Bearer ${headTeacherToken}`);
+      expect(htDel.status).toBe(403);
+
+      // 9. Admin delete succeeds
+      const adminDel = await request(app)
+        .delete(`/api/v1/sponsorships/${sponsorshipId}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+      expect(adminDel.status).toBe(200);
+      expect(adminDel.body.success).toBe(true);
+    });
+
+    it('strictly enforces that sponsored students are Charge-Exempt and cannot be charged (blocked from invoicing, arrears, and payments)', async () => {
+      const allStudents = await container.studentRepository.findAll();
+      const student = allStudents[0];
+
+      // Enroll student in sponsorship program
+      const enrollRes = await request(app)
+        .post('/api/v1/sponsorships')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          studentId: student.id,
+          sponsorshipType: 'DIRECTOR_BENEVOLENCE',
+          sponsorName: 'Equity Wings to Fly Foundation',
+          sponsorContact: '+254700998877',
+          coverage: {
+            tuitionCovered: true,
+            lunchCovered: true,
+            materialsCovered: true,
+            uniformCovered: false,
+            activitiesCovered: true,
+            percentageCovered: 100
+          },
+          startDate: '2026-01-05',
+          reasonNotes: '100% full institutional scholarship'
+        });
+      expect(enrollRes.status).toBe(201);
+      const sponsorshipId = enrollRes.body.data.id;
+
+      // 1. Invoicing a sponsored student is blocked (returns 409 Conflict)
+      const invoiceRes = await request(app)
+        .post('/api/v1/finance/invoices/generate')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          schoolId: 'school-001',
+          academicYearId: 'ay-2026',
+          termId: 'term-1',
+          studentId: student.id
+        });
+      expect(invoiceRes.status).toBe(409);
+      expect(invoiceRes.body.message).toMatch(/Scholarship|exempt|sponsored/i);
+
+      // 2. Charging manual arrears is blocked (returns 409 Conflict)
+      const arrearsRes = await request(app)
+        .post('/api/v1/finance/arrears')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          studentId: student.id,
+          amount: 5000,
+          reason: 'Arrears carryover test'
+        });
+      expect(arrearsRes.status).toBe(409);
+      expect(arrearsRes.body.message).toMatch(/sponsored|exempt/i);
+
+      // 3. Fee statement returns CHARGE_EXEMPT status and 0 balance
+      const statementRes = await request(app)
+        .get(`/api/v1/finance/statements/${student.id}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+      expect(statementRes.status).toBe(200);
+      expect(statementRes.body.data.summary.status).toBe('CHARGE_EXEMPT');
+      expect(statementRes.body.data.summary.currentBalance).toBe(0);
+
+      // 4. Defaulters report excludes this student
+      const defaultersRes = await request(app)
+        .get('/api/v1/finance/defaulters')
+        .set('Authorization', `Bearer ${adminToken}`);
+      expect(defaultersRes.status).toBe(200);
+      const defaultersList = defaultersRes.body.data?.defaulters || [];
+      const foundInDefaulters = defaultersList.some((d: any) => d.studentId === student.id || d.id === student.id);
+      expect(foundInDefaulters).toBe(false);
+
+      // Clean up sponsorship
+      await request(app)
+        .delete(`/api/v1/sponsorships/${sponsorshipId}`)
+        .set('Authorization', `Bearer ${adminToken}`);
+    });
+  });
+
+  describe('9. Fee Payment Receipt Generation, Multi-Channel Issuance & Re-issuance', () => {
+    let recordedPaymentId: string;
+    let generatedReceiptNumber: string;
+
+    it('generates an official receipt and dispatches to parent via Email & WhatsApp upon recording payment', async () => {
+      const payRes = await request(app)
+        .post('/api/v1/finance/payments')
+        .set('Authorization', `Bearer ${bursarToken}`)
+        .send({
+          schoolId: 'school-001',
+          invoiceId: 'inv-student-001',
+          amount: 5000,
+          paymentMethod: 'MPESA',
+          transactionReference: 'MPESA998877AA',
+          mpesaPhoneNumber: '+254759496975',
+          notes: 'Term 1 partial fee payment test'
+        });
+
+      expect(payRes.status).toBe(201);
+      expect(payRes.body.success).toBe(true);
+      expect(payRes.body.data).toBeDefined();
+
+      const { payment, receipt, delivery } = payRes.body.data;
+      expect(payment).toBeDefined();
+      expect(payment.receiptNumber).toMatch(/^REC-\d{4}-\d+/);
+      recordedPaymentId = payment.id;
+      generatedReceiptNumber = payment.receiptNumber;
+
+      // Verify generated receipt payload
+      expect(receipt).toBeDefined();
+      expect(receipt.receiptNumber).toBe(generatedReceiptNumber);
+      expect(receipt.amountPaid).toBe(5000);
+      expect(receipt.studentName).toContain('Kevin');
+      expect(receipt.admissionNumber).toBe('ADM-2026-001');
+      expect(receipt.schoolName).toBe('Grace Seeds School');
+
+      // Verify multi-channel delivery attempt
+      expect(delivery).toBeDefined();
+      expect(delivery.email).toBeDefined();
+      expect(delivery.whatsApp).toBeDefined();
+      expect(delivery.sms).toBeDefined();
+    });
+
+    it('retrieves the full receipt details via GET /api/v1/finance/payments/:id/receipt', async () => {
+      const receiptRes = await request(app)
+        .get(`/api/v1/finance/payments/${recordedPaymentId}/receipt`)
+        .set('Authorization', `Bearer ${bursarToken}`);
+
+      expect(receiptRes.status).toBe(200);
+      expect(receiptRes.body.success).toBe(true);
+      expect(receiptRes.body.data).toBeDefined();
+      const receiptData = receiptRes.body.data.receipt || receiptRes.body.data;
+      expect(receiptData.receiptNumber).toBe(generatedReceiptNumber);
+      expect(receiptData.amountPaid).toBe(5000);
+      expect(receiptData.transactionReference).toBe('MPESA998877AA');
+    });
+
+    it('allows re-issuing a receipt to parents via POST /api/v1/finance/payments/:id/issue-receipt', async () => {
+      const reissueRes = await request(app)
+        .post(`/api/v1/finance/payments/${recordedPaymentId}/issue-receipt`)
+        .set('Authorization', `Bearer ${bursarToken}`);
+
+      expect(reissueRes.status).toBe(200);
+      expect(reissueRes.body.success).toBe(true);
+      expect(reissueRes.body.data.receipt.receiptNumber).toBe(generatedReceiptNumber);
+      expect(reissueRes.body.data.delivery).toBeDefined();
+    });
+
+    it('denies non-financial unauthorized roles from re-issuing or managing payment receipts', async () => {
+      const htRes = await request(app)
+        .post(`/api/v1/finance/payments/${recordedPaymentId}/issue-receipt`)
+        .set('Authorization', `Bearer ${headTeacherToken}`);
+      expect(htRes.status).toBe(403);
+
+      const teacherRes = await request(app)
+        .post(`/api/v1/finance/payments/${recordedPaymentId}/issue-receipt`)
+        .set('Authorization', `Bearer ${teacherToken}`);
+      expect(teacherRes.status).toBe(403);
     });
   });
 });

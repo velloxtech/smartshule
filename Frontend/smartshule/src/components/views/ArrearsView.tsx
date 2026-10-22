@@ -23,7 +23,7 @@ export const ArrearsView: React.FC<ArrearsViewProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGrade, setSelectedGrade] = useState('All');
   const [selectedStream, setSelectedStream] = useState('All');
-  const [statusFilter, setStatusFilter] = useState<'All' | 'Has_Arrears' | 'Cleared' | 'High_Arrears'>('All');
+  const [statusFilter, setStatusFilter] = useState<'All' | 'Has_Arrears' | 'Cleared' | 'High_Arrears' | 'Sponsored'>('All');
   const [sortBy, setSortBy] = useState<'arrears_desc' | 'arrears_asc' | 'name' | 'adm'>('arrears_desc');
 
   // Arrears API Summary Data
@@ -130,7 +130,10 @@ export const ArrearsView: React.FC<ArrearsViewProps> = ({
           const matchesAdm = s.admNo.toLowerCase().includes(q);
           const matchesPhone = s.guardianPhone?.toLowerCase().includes(q);
           const matchesUpi = s.upi?.toLowerCase().includes(q);
-          if (!matchesName && !matchesAdm && !matchesPhone && !matchesUpi) {
+          const matchesScholarship =
+            (s.isSponsored ? 'scholarship sponsored 100%' : '').includes(q) ||
+            (s.sponsorship?.benefactorName?.toLowerCase().includes(q) ?? false);
+          if (!matchesName && !matchesAdm && !matchesPhone && !matchesUpi && !matchesScholarship) {
             return false;
           }
         }
@@ -147,9 +150,10 @@ export const ArrearsView: React.FC<ArrearsViewProps> = ({
 
         // Status filter
         const balance = s.feeBalance || 0;
-        if (statusFilter === 'Has_Arrears' && balance <= 0) return false;
-        if (statusFilter === 'Cleared' && balance > 0) return false;
-        if (statusFilter === 'High_Arrears' && balance < 10000) return false;
+        if (statusFilter === 'Sponsored' && !s.isSponsored) return false;
+        if (statusFilter === 'Has_Arrears' && (balance <= 0 || s.isSponsored)) return false;
+        if (statusFilter === 'Cleared' && (balance > 0 || s.isSponsored)) return false;
+        if (statusFilter === 'High_Arrears' && (balance < 10000 || s.isSponsored)) return false;
 
         return true;
       })
@@ -206,6 +210,14 @@ export const ArrearsView: React.FC<ArrearsViewProps> = ({
     e.preventDefault();
     if (!formStudentId) {
       setFeedback({ type: 'error', message: 'Please select a learner.' });
+      return;
+    }
+    const targetStudent = students.find((s) => s.id === formStudentId) || selectedStudentForArrear;
+    if (targetStudent?.isSponsored) {
+      setFeedback({
+        type: 'error',
+        message: `Cannot charge fee arrears: Learner ${targetStudent.name} is enrolled under the Institutional Scholarship Program (100% Fee Waiver) and is exempt from all fee charges.`,
+      });
       return;
     }
     const amountNum = Number(formAmount);
@@ -351,7 +363,7 @@ export const ArrearsView: React.FC<ArrearsViewProps> = ({
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `SmartShule_Arrears_Report_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `Grace_Seeds_School_Arrears_Report_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -638,6 +650,7 @@ export const ArrearsView: React.FC<ArrearsViewProps> = ({
                 <option value="Has_Arrears">Has Fee Arrears (&gt; KES 0)</option>
                 <option value="High_Arrears">High Arrears (&gt; KES 10,000)</option>
                 <option value="Cleared">Cleared (KES 0)</option>
+                <option value="Sponsored">100% Scholarship / Sponsored</option>
               </select>
             </div>
 
@@ -698,9 +711,17 @@ export const ArrearsView: React.FC<ArrearsViewProps> = ({
                               {student.name.charAt(0)}
                             </div>
                             <div className="flex flex-col min-w-0">
-                              <span className="font-semibold text-on-surface truncate">
-                                {student.name}
-                              </span>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="font-semibold text-on-surface truncate">
+                                  {student.name}
+                                </span>
+                                {student.isSponsored && (
+                                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-[#7a1228]/10 text-primary border border-[#7a1228]/25" title="Student is under institutional scholarship scheme">
+                                    <span className="material-symbols-outlined text-[12px]">workspace_premium</span>
+                                    <span>Scholarship</span>
+                                  </span>
+                                )}
+                              </div>
                               <div className="flex items-center gap-2 text-[11px] text-on-surface-variant">
                                 <span className="font-mono">Adm: {student.admNo}</span>
                                 {student.upi && student.upi !== '--' && (
@@ -738,24 +759,31 @@ export const ArrearsView: React.FC<ArrearsViewProps> = ({
                           <div className="flex flex-col items-end">
                             <span
                               className={`font-black font-data-mono text-sm ${
-                                isHigh
+                                student.isSponsored
+                                  ? 'text-[#7a1228]'
+                                  : isHigh
                                   ? 'text-rose-700'
                                   : hasArrears
                                   ? 'text-amber-800'
                                   : 'text-emerald-700'
                               }`}
                             >
-                              KES {balance.toLocaleString()}
+                              {student.isSponsored ? 'KES 0 (Waived)' : `KES ${balance.toLocaleString()}`}
                             </span>
                             <span className="text-[10px] text-outline">
-                              Billed: KES {(student.totalFee || balance).toLocaleString()}
+                              {student.isSponsored ? '100% Scholarship Subsidized' : `Billed: KES ${(student.totalFee || balance).toLocaleString()}`}
                             </span>
                           </div>
                         </td>
 
                         {/* Status Badge */}
                         <td className="py-3.5 px-4 text-center">
-                          {isHigh ? (
+                          {student.isSponsored ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-[#7a1228] text-white shadow-2xs" title="100% Scholarship · Cannot be charged fee arrears">
+                              <span className="material-symbols-outlined text-[12px]">lock</span>
+                              Charge Exempt
+                            </span>
+                          ) : isHigh ? (
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-rose-100 text-rose-800 border border-rose-200">
                               <span className="w-1.5 h-1.5 rounded-full bg-rose-600"></span>
                               High Arrears
@@ -777,14 +805,24 @@ export const ArrearsView: React.FC<ArrearsViewProps> = ({
                         <td className="py-3.5 px-4 text-right">
                           <div className="inline-flex items-center gap-1.5 justify-end">
                             {/* Add / Adjust Arrear */}
-                            <button
-                              onClick={() => handleOpenAddForStudent(student)}
-                              className="px-2.5 py-1.5 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary font-bold text-xs flex items-center gap-1 transition-colors cursor-pointer"
-                              title="Set or Add Fee Arrears"
-                            >
-                              <span className="material-symbols-outlined text-[15px]">edit_note</span>
-                              <span>Adjust</span>
-                            </button>
+                            {student.isSponsored ? (
+                              <span
+                                className="px-2.5 py-1.5 rounded-lg bg-surface-container text-on-surface-variant/70 font-bold text-xs flex items-center gap-1 cursor-not-allowed opacity-80"
+                                title="Learner is under 100% Institutional Scholarship and cannot be charged fee arrears"
+                              >
+                                <span className="material-symbols-outlined text-[15px]">lock</span>
+                                <span>Exempt</span>
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => handleOpenAddForStudent(student)}
+                                className="px-2.5 py-1.5 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary font-bold text-xs flex items-center gap-1 transition-colors cursor-pointer"
+                                title="Set or Add Fee Arrears"
+                              >
+                                <span className="material-symbols-outlined text-[15px]">edit_note</span>
+                                <span>Adjust</span>
+                              </button>
+                            )}
 
                             {/* View Statement */}
                             <button
@@ -798,13 +836,15 @@ export const ArrearsView: React.FC<ArrearsViewProps> = ({
                             </button>
 
                             {/* Record Payment */}
-                            <button
-                              onClick={() => setPaymentModalStudent(student)}
-                              className="p-1.5 rounded-lg hover:bg-emerald-50 text-emerald-700 hover:text-emerald-800 transition-colors cursor-pointer"
-                              title="Record Direct Payment Receipt"
-                            >
-                              <span className="material-symbols-outlined text-[17px]">payments</span>
-                            </button>
+                            {!student.isSponsored && (
+                              <button
+                                onClick={() => setPaymentModalStudent(student)}
+                                className="p-1.5 rounded-lg hover:bg-emerald-50 text-emerald-700 hover:text-emerald-800 transition-colors cursor-pointer"
+                                title="Record Direct Payment Receipt"
+                              >
+                                <span className="material-symbols-outlined text-[17px]">payments</span>
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -937,32 +977,57 @@ export const ArrearsView: React.FC<ArrearsViewProps> = ({
                         <td className="py-2.5 px-4 font-mono font-semibold text-on-surface">
                           {st.admNo}
                         </td>
-                        <td className="py-2.5 px-4 font-medium text-on-surface">{st.name}</td>
+                        <td className="py-2.5 px-4 font-medium text-on-surface">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span>{st.name}</span>
+                            {st.isSponsored && (
+                              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-[#7a1228]/10 text-primary border border-[#7a1228]/25" title="Student is under institutional scholarship scheme">
+                                <span className="material-symbols-outlined text-[12px]">workspace_premium</span>
+                                <span>Scholarship</span>
+                              </span>
+                            )}
+                          </div>
+                        </td>
                         <td className="py-2.5 px-4 text-on-surface-variant">{st.stream || '--'}</td>
                         <td className="py-2.5 px-4 text-right font-data-mono font-semibold text-on-surface">
                           KES {currentBal.toLocaleString()}
                         </td>
                         <td className="py-2.5 px-4 text-right">
-                          <div className="relative inline-flex items-center">
-                            <span className="absolute left-2.5 text-[11px] font-bold text-outline">
-                              KES
+                          {st.isSponsored ? (
+                            <span
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-surface-container text-on-surface-variant/70 font-mono font-bold text-xs"
+                              title="100% Scholarship - Cannot be charged arrears"
+                            >
+                              <span className="material-symbols-outlined text-[13px]">lock</span>
+                              KES 0 (Exempt)
                             </span>
-                            <input
-                              type="number"
-                              min="0"
-                              value={enteredVal === 0 && batchValues[st.id] === undefined ? '' : enteredVal}
-                              placeholder="0"
-                              onChange={(e) => {
-                                const val = e.target.value === '' ? 0 : Number(e.target.value);
-                                setBatchValues((prev) => ({ ...prev, [st.id]: val }));
-                                setSavedRowIds((prev) => ({ ...prev, [st.id]: false }));
-                              }}
-                              className="w-36 pl-10 pr-2.5 py-1 rounded-lg bg-surface-container-low border border-outline-variant/50 text-right font-data-mono font-bold text-xs focus:outline-hidden focus:border-primary focus:bg-white"
-                            />
-                          </div>
+                          ) : (
+                            <div className="relative inline-flex items-center">
+                              <span className="absolute left-2.5 text-[11px] font-bold text-outline">
+                                KES
+                              </span>
+                              <input
+                                type="number"
+                                min="0"
+                                value={enteredVal === 0 && batchValues[st.id] === undefined ? '' : enteredVal}
+                                placeholder="0"
+                                onChange={(e) => {
+                                  const val = e.target.value === '' ? 0 : Number(e.target.value);
+                                  setBatchValues((prev) => ({ ...prev, [st.id]: val }));
+                                  setSavedRowIds((prev) => ({ ...prev, [st.id]: false }));
+                                }}
+                                className="w-36 pl-10 pr-2.5 py-1 rounded-lg bg-surface-container-low border border-outline-variant/50 text-right font-data-mono font-bold text-xs focus:outline-hidden focus:border-primary focus:bg-white"
+                              />
+                            </div>
+                          )}
                         </td>
                         <td className="py-2.5 px-4 text-center">
-                          {isSaved ? (
+                          {st.isSponsored ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-primary">
+                              <span className="material-symbols-outlined text-[14px]">lock</span>
+                              Exempt
+                            </span>
+                          ) : isSaved ? (
                             <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700">
                               <span className="material-symbols-outlined text-[16px]">check_circle</span>
                               Saved
@@ -974,10 +1039,11 @@ export const ArrearsView: React.FC<ArrearsViewProps> = ({
                         <td className="py-2.5 px-4 text-right">
                           <button
                             onClick={() => handleSaveBatchRow(st)}
-                            disabled={isSavingThis}
-                            className="px-2.5 py-1 rounded-lg bg-primary text-white hover:bg-primary/95 text-xs font-bold transition-all disabled:opacity-50 cursor-pointer"
+                            disabled={isSavingThis || st.isSponsored}
+                            className="px-2.5 py-1 rounded-lg bg-primary text-white hover:bg-primary/95 text-xs font-bold transition-all disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
+                            title={st.isSponsored ? 'Learner is under 100% Scholarship and cannot be charged' : undefined}
                           >
-                            {isSavingThis ? '...' : 'Save'}
+                            {isSavingThis ? '...' : st.isSponsored ? 'Locked' : 'Save'}
                           </button>
                         </td>
                       </tr>
@@ -1027,15 +1093,23 @@ export const ArrearsView: React.FC<ArrearsViewProps> = ({
                 {selectedStudentForArrear ? (
                   <div className="p-3 rounded-xl bg-surface-container-low border border-outline-variant/30 flex items-center justify-between">
                     <div>
-                      <div className="font-bold text-on-surface text-sm">
-                        {selectedStudentForArrear.name}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-on-surface text-sm">
+                          {selectedStudentForArrear.name}
+                        </span>
+                        {selectedStudentForArrear.isSponsored && (
+                          <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-[#7a1228] text-white">
+                            <span className="material-symbols-outlined text-[12px]">workspace_premium</span>
+                            <span>100% Scholarship</span>
+                          </span>
+                        )}
                       </div>
                       <div className="text-[11px] text-on-surface-variant mt-0.5">
                         Adm: <span className="font-mono">{selectedStudentForArrear.admNo}</span> · {selectedStudentForArrear.grade}
                       </div>
                     </div>
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                      Current Bal: KES {(selectedStudentForArrear.feeBalance || 0).toLocaleString()}
+                      {selectedStudentForArrear.isSponsored ? 'KES 0 (Waived)' : `Current Bal: KES ${(selectedStudentForArrear.feeBalance || 0).toLocaleString()}`}
                     </span>
                   </div>
                 ) : (
@@ -1048,12 +1122,21 @@ export const ArrearsView: React.FC<ArrearsViewProps> = ({
                     <option value="">Select a learner...</option>
                     {students.map((s) => (
                       <option key={s.id} value={s.id}>
-                        {s.name} (Adm: {s.admNo}) - {s.grade} [Bal: KES {(s.feeBalance || 0).toLocaleString()}]
+                        {s.name} (Adm: {s.admNo}) - {s.grade} {s.isSponsored ? '[100% Scholarship]' : `[Bal: KES ${(s.feeBalance || 0).toLocaleString()}]`}
                       </option>
                     ))}
                   </select>
                 )}
               </div>
+
+              {selectedStudentObj?.isSponsored && (
+                <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-950 flex items-start gap-2.5 shadow-2xs">
+                  <span className="material-symbols-outlined text-[#7a1228] text-[20px] shrink-0 mt-0.5">lock</span>
+                  <div className="text-xs">
+                    <span className="font-extrabold text-[#7a1228]">Charge-Exempt Learner:</span> This learner is enrolled under the school&apos;s 100% Institutional Scholarship Scheme ({selectedStudentObj.sponsorship?.benefactorName || 'Institutional Sponsorship'}). The system recognizes them as fully subsidized and strictly blocks charging or adding fee arrears.
+                  </div>
+                </div>
+              )}
 
               {/* Mode Selection Toggle */}
               <div>
@@ -1268,13 +1351,18 @@ export const ArrearsView: React.FC<ArrearsViewProps> = ({
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmittingSingle}
-                  className="px-5 py-2 rounded-xl bg-primary text-white hover:bg-primary/95 text-xs font-bold shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                  disabled={isSubmittingSingle || !!selectedStudentObj?.isSponsored}
+                  className="px-5 py-2 rounded-xl bg-primary text-white hover:bg-primary/95 text-xs font-bold shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {isSubmittingSingle ? (
                     <>
                       <span className="material-symbols-outlined text-[16px] animate-spin">refresh</span>
                       <span>Saving Arrears...</span>
+                    </>
+                  ) : selectedStudentObj?.isSponsored ? (
+                    <>
+                      <span className="material-symbols-outlined text-[17px]">lock</span>
+                      <span>Cannot Charge · Learner Is Exempt</span>
                     </>
                   ) : (
                     <>

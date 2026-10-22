@@ -268,10 +268,10 @@ export const FinancialReportsView: React.FC = () => {
 
   // Handle Export CSV
   const handleExportCSV = () => {
-    const schoolName = school?.name || 'SmartShule';
+    const schoolName = school?.name || 'Grace Seeds School';
     const regNo = school?.registrationNumber || school?.code || 'N/A';
     const rows = [
-      ['SMARTSHULE FINANCIAL STATEMENT & MOE VOTE HEAD REPORT'],
+      ['GRACE SEEDS SCHOOL FINANCIAL STATEMENT & MOE VOTE HEAD REPORT'],
       [`School: ${schoolName}`, `Reg: ${regNo}`, `Period: ${selectedPeriod || 'All'}`],
       ['Generated On:', new Date().toLocaleString('en-KE')],
       [''],
@@ -322,7 +322,7 @@ export const FinancialReportsView: React.FC = () => {
       <div className="hidden print:block mb-8 text-center border-b-2 border-black pb-4">
         <h1 className="text-xl font-black uppercase tracking-wider">Republic of Kenya · Ministry of Education</h1>
         <h2 className="text-lg font-bold">BOARD OF MANAGEMENT (BOM) FINANCIAL STATEMENT</h2>
-        <p className="text-sm font-semibold uppercase">{school?.name || 'SmartShule'} · MOE CODE: {school?.registrationNumber || school?.code || 'N/A'}</p>
+        <p className="text-sm font-semibold uppercase">{school?.name || 'Grace Seeds School'} · MOE CODE: {school?.registrationNumber || school?.code || 'N/A'}</p>
         <p className="text-xs text-gray-700">
           {[
             school?.subCounty ? `Sub-County: ${school.subCounty}` : null,
@@ -629,7 +629,7 @@ export const FinancialReportsView: React.FC = () => {
                 <div className="py-3 px-4 flex items-center justify-between text-sm hover:bg-surface-variant/10 transition-colors">
                   <div>
                     <div className="font-semibold text-on-surface">Uniform, Stationery & Book Sales</div>
-                    <div className="text-xs text-on-surface-variant">School uniforms, physical education kits, CBC exercise books</div>
+                    <div className="text-xs text-on-surface-variant">School uniforms, physical education kits, CBE exercise books</div>
                   </div>
                   <div className="font-bold text-on-surface">{formatKes(incomeCategoryBreakdown.UNIFORM_SALES || 0)}</div>
                 </div>
@@ -1061,7 +1061,7 @@ export const FinancialReportsView: React.FC = () => {
                 Auditor-General & Ministry of Education Inspections
               </div>
               <p className="mt-1">
-                All entries recorded in SmartShule generate an immutable audit log storing user IDs, timestamps, payment references, and approval sequences for inspection under Section 68 of the Public Finance Management Act.
+                All entries recorded in Grace Seeds School CBE Portal generate an immutable audit log storing user IDs, timestamps, payment references, and approval sequences for inspection under Section 68 of the Public Finance Management Act.
               </p>
             </div>
           </div>

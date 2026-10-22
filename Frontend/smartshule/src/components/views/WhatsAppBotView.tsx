@@ -510,7 +510,7 @@ export const WhatsAppBotView: React.FC = () => {
               Official Meta Channel · 1,000 Free Monthly Service Conversations
             </h2>
             <p className="text-xs text-emerald-100/90 leading-relaxed">
-              Unlike unofficial libraries (Baileys/web scraping) which trigger permanent phone number bans by Meta, SmartShule connects directly to Meta's authorized Graph API servers. Every month, your school receives <strong>1,000 free user-initiated service conversations</strong>, allowing parents to query fee statements, homework, attendance, and timetables at zero cost.
+              Unlike unofficial libraries (Baileys/web scraping) which trigger permanent phone number bans by Meta, Grace Seeds School connects directly to Meta's authorized Graph API servers. Every month, your school receives <strong>1,000 free user-initiated service conversations</strong>, allowing parents to query fee statements, homework, attendance, and timetables at zero cost.
             </p>
           </div>
 
@@ -564,7 +564,7 @@ export const WhatsAppBotView: React.FC = () => {
             )}
           </div>
           <span className="text-[11px] text-on-surface-variant mt-1 block">
-            {isConnected ? connectionState.connectedName || 'SmartShule Official' : 'Add credentials in Tab 1'}
+            {isConnected ? connectionState.connectedName || 'Grace Seeds School Official' : 'Add credentials in Tab 1'}
           </span>
         </div>
 
@@ -1447,7 +1447,7 @@ export const WhatsAppBotView: React.FC = () => {
                   <li>Create an App with type <strong>"Business"</strong> and add the <strong>WhatsApp</strong> product.</li>
                   <li>Navigate to <strong>WhatsApp &gt; API Setup</strong> to find your free <strong>Phone Number ID</strong> and sandbox test number.</li>
                   <li>Under <strong>Meta Business Settings &gt; System Users</strong>, generate a permanent access token with <code>whatsapp_business_messaging</code> permissions.</li>
-                  <li>Paste the <strong>Phone Number ID</strong> and <strong>Access Token</strong> into Tab 1 of SmartShule.</li>
+                  <li>Paste the <strong>Phone Number ID</strong> and <strong>Access Token</strong> into Tab 1 of Grace Seeds School Portal.</li>
                 </ol>
               </div>
             </div>

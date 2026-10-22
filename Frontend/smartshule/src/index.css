@@ -328,7 +328,33 @@ main [class*="rounded-3xl"].bg-white:not(button):not(input):not(select):not(text
   .print-hidden,
   .term-lifecycle-banner,
   [class*="term-lifecycle"],
-  [class*="termNotice"] {
+  [class*="termNotice"],
+  button {
     display: none !important;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Thermal POS & Standard Receipt Print Container */
+  #smartshule-receipt-print {
+    max-width: 80mm !important;
+    width: 100% !important;
+    margin: 0 auto !important;
+    padding: 4mm !important;
+    color: #000000 !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+    border: none !important;
+    page-break-inside: avoid;
+  }
+
+  #smartshule-receipt-print * {
+    color: #000000 !important;
+    text-shadow: none !important;
   }
 }

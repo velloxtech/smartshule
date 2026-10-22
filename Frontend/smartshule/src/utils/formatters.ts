@@ -1,5 +1,5 @@
 /**
- * SmartShule Domain Entity & Identifier Formatters
+ * Grace Seeds School Domain Entity & Identifier Formatters
  * 
  * Provides clean, human-readable representations of Academic Years,
  * Classrooms, and Streams - preventing raw UUIDs or generated IDs

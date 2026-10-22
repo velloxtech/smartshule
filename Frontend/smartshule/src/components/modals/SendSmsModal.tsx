@@ -38,8 +38,8 @@ export const SendSmsModal: React.FC<SendSmsModalProps> = ({
     }).catch(() => {});
   }, [isOpen]);
 
-  const schoolName = school?.name || 'SmartShule';
-  const senderId = (school?.code || 'SMARTSHULE').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 11) || 'SMARTSHULE';
+  const schoolName = school?.name || 'Grace Seeds School';
+  const senderId = (school?.code || 'GRACESEEDS').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 11) || 'GRACESEEDS';
 
   useEffect(() => {
     if (target === 'absentee') {

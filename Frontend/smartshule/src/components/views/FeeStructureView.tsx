@@ -258,8 +258,8 @@ export const FeeStructureView: React.FC = () => {
     doc.setTextColor(122, 18, 40);
     const termLabel = getTermName(structure.termId);
     const badgeText = structure.termId && structure.termId !== 'ALL' && structure.termId !== 'ANNUAL'
-      ? `OFFICIAL RATIFIED CBC ${termLabel.toUpperCase()} FEE SCHEDULE`
-      : 'OFFICIAL RATIFIED CBC TERMLY FEE SCHEDULE';
+      ? `OFFICIAL RATIFIED CBE ${termLabel.toUpperCase()} FEE SCHEDULE`
+      : 'OFFICIAL RATIFIED CBE TERMLY FEE SCHEDULE';
     doc.text(badgeText, 105, curY + 4.3, { align: 'center' });
     curY += 9.5;
 
@@ -375,7 +375,7 @@ export const FeeStructureView: React.FC = () => {
     doc.setFontSize(7);
     doc.setTextColor(156, 163, 175);
     doc.text(
-      `SmartShule Verified CBC Termly Fee Schedule  |  Valid for ${yearName} (${termLabel})  |  Generated on ${new Date().toLocaleDateString('en-GB')}`,
+      `Grace Seeds School Verified CBE Termly Fee Schedule  |  Valid for ${yearName} (${termLabel})  |  Generated on ${new Date().toLocaleDateString('en-GB')}`,
       105,
       289,
       { align: 'center' }
@@ -406,7 +406,7 @@ export const FeeStructureView: React.FC = () => {
       renderFeeStructurePage(doc, s, school, logoBase64);
     });
     const dateStr = new Date().toISOString().split('T')[0];
-    doc.save(`SmartShule_All_Fee_Structures_${dateStr}.pdf`);
+    doc.save(`Grace_Seeds_School_All_Fee_Structures_${dateStr}.pdf`);
   };
 
   const downloadCSV = (structure: FeeStructure) => {
@@ -489,7 +489,7 @@ export const FeeStructureView: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `SmartShule_All_Fee_Structures_${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `Grace_Seeds_School_All_Fee_Structures_${new Date().toISOString().split('T')[0]}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -1227,7 +1227,7 @@ export const FeeStructureView: React.FC = () => {
                 </div>
                 <div className="pt-2">
                   <span className="inline-block px-3 py-1 bg-gray-100 rounded-full font-bold uppercase text-xs tracking-wider text-gray-800">
-                    Official Ratified CBC Termly Fee Schedule
+                    Official Ratified CBE Termly Fee Schedule
                   </span>
                 </div>
               </div>

@@ -137,7 +137,7 @@ export const CapitationIncomeView: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `SmartShule_Capitation_Income_Receipts_${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `Grace_Seeds_School_Capitation_Income_Receipts_${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };

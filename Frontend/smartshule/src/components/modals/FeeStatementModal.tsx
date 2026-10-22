@@ -66,6 +66,35 @@ export const FeeStatementModal: React.FC<FeeStatementModalProps> = ({
             <div className="py-12 text-center text-on-surface-variant text-sm">Loading fee ledger...</div>
           ) : (
             <>
+              {/* Institutional Scholarship Banner */}
+              {(statement?.isSponsored || statement?.sponsorship) && (
+                <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-[#7a1228] text-white flex items-center justify-center shrink-0">
+                      <span className="material-symbols-outlined text-[22px]">workspace_premium</span>
+                    </div>
+                    <div>
+                      <div className="font-extrabold text-xs text-[#7a1228]">
+                        Institutional Full Scholarship Program Active
+                      </div>
+                      <div className="text-[11px] text-amber-900 mt-0.5">
+                        Benefactor: <strong className="text-on-surface">{statement.sponsorship?.sponsorName || (statement.sponsorship as any)?.benefactorName || "Director's Benevolence Fund"}</strong>
+                        {statement.sponsorship?.approvalReference && (
+                          <span> · Ref: <strong className="font-data-mono">{statement.sponsorship.approvalReference}</strong></span>
+                        )}
+                        {statement.sponsorship?.termlySubsidyAmount && (
+                          <span> · Subsidized: <strong className="font-data-mono">KES {statement.sponsorship.termlySubsidyAmount.toLocaleString()}/term</strong></span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-[#7a1228] text-white shadow-2xs shrink-0 flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[13px]">lock</span>
+                    100% SCHOLARSHIP · CHARGE EXEMPT
+                  </span>
+                </div>
+              )}
+
               {/* Balances Summary */}
               <div className="grid grid-cols-3 gap-3">
                 <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30">
@@ -82,8 +111,8 @@ export const FeeStatementModal: React.FC<FeeStatementModalProps> = ({
                 </div>
                 <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30">
                   <span className="text-[11px] text-on-surface-variant uppercase font-semibold">Current Balance</span>
-                  <div className="text-lg font-bold font-data-mono text-error mt-1">
-                    KES {(statement?.currentBalance || 0).toLocaleString()}
+                  <div className={`text-lg font-bold font-data-mono mt-1 ${statement?.isSponsored ? 'text-primary' : 'text-error'}`}>
+                    {statement?.isSponsored ? 'KES 0 (Waived)' : `KES ${(statement?.currentBalance || 0).toLocaleString()}`}
                   </div>
                 </div>
               </div>

@@ -187,8 +187,8 @@ export const SlotApplicationsView: React.FC<SlotApplicationsViewProps> = ({
       setStepTitle('School Tour & Learner Readiness Interaction');
       setStepNotes('Please come accompanied by the child for a guided school walkthrough and early learning readiness interaction.');
     } else if (newType === 'READINESS_ASSESSMENT') {
-      setStepTitle('CBC Diagnostic Placement & Readiness Evaluation');
-      setStepNotes('Diagnostic learning evaluation session for CBC placement and developmental progress check.');
+      setStepTitle('CBE Diagnostic Placement & Readiness Evaluation');
+      setStepNotes('Diagnostic learning evaluation session for CBE placement and developmental progress check.');
     } else if (newType === 'DOCUMENT_VERIFICATION') {
       setStepTitle('Original Document Verification & Learner KYC Review');
       setStepNotes('Please present original birth certificate, clinic card, and previous school academic progress report.');
@@ -544,7 +544,7 @@ export const SlotApplicationsView: React.FC<SlotApplicationsViewProps> = ({
             onChange={(e) => setGradeFilter(e.target.value)}
             className="w-full sm:w-40 bg-surface-container-low border border-outline-variant/40 rounded-xl px-3 py-1.5 text-xs text-on-surface focus:outline-primary"
           >
-            <option value="ALL">All CBC Grades</option>
+            <option value="ALL">All CBE Grades</option>
             <option value="Playgroup">Playgroup</option>
             <option value="PP1">PP1 (Pre-Primary 1)</option>
             <option value="PP2">PP2 (Pre-Primary 2)</option>
@@ -874,7 +874,7 @@ export const SlotApplicationsView: React.FC<SlotApplicationsViewProps> = ({
                   <div><span className="text-outline block">Date of Birth:</span><span>{selectedApp.dob || 'Not provided'}</span></div>
                   <div><span className="text-outline block">NEMIS UPI:</span><span className="font-mono">{selectedApp.nemisUpi || 'Pending'}</span></div>
                   <div><span className="text-outline block">Previous School:</span><span>{selectedApp.previousSchool || 'First School'}</span></div>
-                  <div><span className="text-outline block">Target CBC Level:</span><span className="font-bold text-emerald-900">{selectedApp.targetGrade}</span></div>
+                  <div><span className="text-outline block">Target CBE Level:</span><span className="font-bold text-emerald-900">{selectedApp.targetGrade}</span></div>
                 </div>
               </div>
 
@@ -911,7 +911,7 @@ export const SlotApplicationsView: React.FC<SlotApplicationsViewProps> = ({
                         Step 02: Learner Interaction & School Tour Scheduling
                       </h5>
                       <p className="text-[11px] text-amber-900/80">
-                        Schedule CBC readiness evaluation, guided school tour, or document verification.
+                        Schedule CBE readiness evaluation, guided school tour, or document verification.
                       </p>
                     </div>
                   </div>
@@ -968,7 +968,7 @@ export const SlotApplicationsView: React.FC<SlotApplicationsViewProps> = ({
                   </div>
                 ) : (
                   <p className="text-xs text-amber-900/80 italic">
-                    No school tour or CBC placement interaction has been scheduled yet for this applicant. Click &quot;Schedule Step 02&quot; above to arrange an appointment and dispatch an automatic email invitation to {selectedApp.parentEmail}.
+                    No school tour or CBE placement interaction has been scheduled yet for this applicant. Click &quot;Schedule Step 02&quot; above to arrange an appointment and dispatch an automatic email invitation to {selectedApp.parentEmail}.
                   </p>
                 )}
               </div>

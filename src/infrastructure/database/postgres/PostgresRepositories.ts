@@ -31,6 +31,16 @@ import {
   IDeletedStudentRepository,
   DeletedStudentFilterCriteria
 } from '../../../core/ports/repositories/IDeletedStudentRepository';
+import {
+  IStudentSponsorshipRepository,
+  SponsorshipFilterCriteria,
+  SponsorshipStats
+} from '../../../core/ports/repositories/IStudentSponsorshipRepository';
+import {
+  StudentSponsorship,
+  SponsorshipType,
+  SponsorshipStatus
+} from '../../../core/domain/sponsorship/StudentSponsorship';
 
 import { User, UserRole, UserStatus } from '../../../core/domain/user/User';
 import { Student, StudentGender, CBCGradeLevel, StudentStatus } from '../../../core/domain/user/Student';
@@ -63,6 +73,7 @@ import {
   Expense,
   OtherIncome
 } from '../../../core/domain/finance/Fee';
+import { FeeBannerConfig } from '../../../core/domain/finance/FeeBannerConfig';
 
 export class PostgresDatabaseInitializer {
   public static async initializeSchema(pool: Pool): Promise<void> {
@@ -743,6 +754,59 @@ export class PostgresDatabaseInitializer {
       CREATE INDEX IF NOT EXISTS idx_curr_tracker_teacher ON curriculum_trackers(teacher_id);
       CREATE INDEX IF NOT EXISTS idx_curr_tracker_class ON curriculum_trackers(classroom_id);
       CREATE INDEX IF NOT EXISTS idx_curr_tracker_term ON curriculum_trackers(term, academic_year);
+
+      CREATE TABLE IF NOT EXISTS fee_banner_configs (
+        id VARCHAR(100) PRIMARY KEY,
+        school_id VARCHAR(100) NOT NULL UNIQUE,
+        deadline_date VARCHAR(50) NOT NULL,
+        banner_title VARCHAR(255) NOT NULL,
+        custom_message TEXT,
+        paybill_number VARCHAR(50),
+        bank_account_number VARCHAR(100),
+        bank_name VARCHAR(100),
+        is_enabled BOOLEAN DEFAULT true,
+        show_only_to_defaulters BOOLEAN DEFAULT true,
+        academic_term_id VARCHAR(100),
+        academic_year_id VARCHAR(100),
+        updated_by_user_id VARCHAR(100),
+        updated_by_user_name VARCHAR(150),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS student_sponsorships (
+        id VARCHAR(100) PRIMARY KEY,
+        school_id VARCHAR(100) NOT NULL,
+        student_id VARCHAR(100) NOT NULL UNIQUE,
+        admission_number VARCHAR(100) NOT NULL,
+        student_name VARCHAR(255) NOT NULL,
+        grade_level VARCHAR(50) NOT NULL,
+        stream_name VARCHAR(100),
+        gender VARCHAR(20),
+        sponsorship_type VARCHAR(100) NOT NULL,
+        sponsorship_status VARCHAR(50) NOT NULL DEFAULT 'ACTIVE',
+        coverage JSONB NOT NULL DEFAULT '{"tuitionCovered": true, "lunchCovered": false, "materialsCovered": true, "uniformCovered": false, "activitiesCovered": true, "percentageCovered": 100}',
+        sponsor_name VARCHAR(255) NOT NULL,
+        sponsor_contact VARCHAR(255),
+        termly_subsidy_amount NUMERIC(12,2) NOT NULL DEFAULT 0,
+        annual_subsidy_amount NUMERIC(12,2) NOT NULL DEFAULT 0,
+        start_date VARCHAR(50) NOT NULL,
+        end_date VARCHAR(50),
+        academic_year_id VARCHAR(100),
+        approval_reference VARCHAR(100) NOT NULL,
+        approved_by_user_id VARCHAR(100) NOT NULL,
+        approved_by_user_name VARCHAR(150) NOT NULL,
+        reason_notes TEXT,
+        confidential_notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_sponsorships_school ON student_sponsorships(school_id);
+      CREATE INDEX IF NOT EXISTS idx_sponsorships_student ON student_sponsorships(student_id);
+      CREATE INDEX IF NOT EXISTS idx_sponsorships_grade ON student_sponsorships(grade_level);
+      CREATE INDEX IF NOT EXISTS idx_sponsorships_status ON student_sponsorships(sponsorship_status);
+      CREATE INDEX IF NOT EXISTS idx_sponsorships_type ON student_sponsorships(sponsorship_type);
     `;
 
     await pool.query(ddl);
@@ -1244,8 +1308,22 @@ export class PostgresCBCAssessmentRepository implements ICBCAssessmentRepository
     return Strand.create({ learningAreaId: r.learning_area_id, gradeLevel: r.grade_level, code: r.code, title: r.title, description: r.description }, r.id, r.created_at, r.updated_at);
   }
   public async findStrandsByLearningArea(learningAreaId: string, gradeLevel?: CBCGradeLevel): Promise<Strand[]> {
-    const res = await this.pool.query('SELECT * FROM strands WHERE learning_area_id = $1', [learningAreaId]);
-    return res.rows.map(r => Strand.create({ learningAreaId: r.learning_area_id, gradeLevel: r.grade_level, code: r.code, title: r.title, description: r.description }, r.id, r.created_at, r.updated_at));
+    let q = 'SELECT * FROM strands WHERE learning_area_id = $1';
+    const params: any[] = [learningAreaId];
+    
+    if (gradeLevel) {
+      params.push(gradeLevel);
+      q += ' AND grade_level = $2';
+    }
+    
+    const res = await this.pool.query(q, params);
+    return res.rows.map(r => Strand.create({ 
+      learningAreaId: r.learning_area_id, 
+      gradeLevel: r.grade_level, 
+      code: r.code, 
+      title: r.title, 
+      description: r.description 
+    }, r.id, r.created_at, r.updated_at));
   }
   public async saveStrand(s: Strand): Promise<void> {
     const q = `INSERT INTO strands (id, learning_area_id, grade_level, code, title, description, created_at, updated_at)
@@ -2149,10 +2227,75 @@ export class PostgresFeeRepository implements IFeeRepository {
     ]);
   }
 
-  public async updateOtherIncome(i: OtherIncome): Promise<void> { await this.saveOtherIncome(i); }
+  public async updateOtherIncome(i: OtherIncome): Promise<void> {
+    return this.saveOtherIncome(i);
+  }
 
   public async deleteOtherIncome(id: string): Promise<void> {
     await this.pool.query('DELETE FROM other_incomes WHERE id = $1', [id]);
+  }
+
+  // Fee Deadline Notice Banner Settings
+  public async getFeeBannerConfig(schoolId?: string): Promise<FeeBannerConfig | null> {
+    const sId = schoolId || 'school-001';
+    const res = await this.pool.query('SELECT * FROM fee_banner_configs WHERE school_id = $1 LIMIT 1', [sId]);
+    if (!res.rows.length) return null;
+    const r = res.rows[0];
+    return FeeBannerConfig.create({
+      schoolId: r.school_id,
+      deadlineDate: r.deadline_date,
+      bannerTitle: r.banner_title,
+      customMessage: r.custom_message,
+      paybillNumber: r.paybill_number,
+      bankAccountNumber: r.bank_account_number,
+      bankName: r.bank_name,
+      isEnabled: r.is_enabled !== false,
+      showOnlyToDefaulters: r.show_only_to_defaulters !== false,
+      academicTermId: r.academic_term_id,
+      academicYearId: r.academic_year_id,
+      updatedByUserId: r.updated_by_user_id,
+      updatedByUserName: r.updated_by_user_name
+    }, r.id, r.created_at, r.updated_at);
+  }
+
+  public async saveFeeBannerConfig(config: FeeBannerConfig): Promise<void> {
+    const q = `INSERT INTO fee_banner_configs (
+      id, school_id, deadline_date, banner_title, custom_message,
+      paybill_number, bank_account_number, bank_name, is_enabled, show_only_to_defaulters,
+      academic_term_id, academic_year_id, updated_by_user_id, updated_by_user_name, created_at, updated_at
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+    ON CONFLICT (school_id) DO UPDATE SET
+      deadline_date = EXCLUDED.deadline_date,
+      banner_title = EXCLUDED.banner_title,
+      custom_message = EXCLUDED.custom_message,
+      paybill_number = EXCLUDED.paybill_number,
+      bank_account_number = EXCLUDED.bank_account_number,
+      bank_name = EXCLUDED.bank_name,
+      is_enabled = EXCLUDED.is_enabled,
+      show_only_to_defaulters = EXCLUDED.show_only_to_defaulters,
+      academic_term_id = EXCLUDED.academic_term_id,
+      academic_year_id = EXCLUDED.academic_year_id,
+      updated_by_user_id = EXCLUDED.updated_by_user_id,
+      updated_by_user_name = EXCLUDED.updated_by_user_name,
+      updated_at = NOW()`;
+    await this.pool.query(q, [
+      config.id,
+      config.schoolId,
+      config.deadlineDate,
+      config.bannerTitle,
+      config.customMessage || null,
+      config.paybillNumber || null,
+      config.bankAccountNumber || null,
+      config.bankName || null,
+      config.isEnabled,
+      config.showOnlyToDefaulters,
+      config.academicTermId || null,
+      config.academicYearId || null,
+      config.updatedByUserId || null,
+      config.updatedByUserName || null,
+      config.createdAt,
+      config.updatedAt
+    ]);
   }
 }
 
@@ -2265,3 +2408,221 @@ export class PostgresDeletedStudentRepository implements IDeletedStudentReposito
     await this.pool.query('DELETE FROM deleted_students WHERE id = $1', [id]);
   }
 }
+
+export class PostgresStudentSponsorshipRepository implements IStudentSponsorshipRepository {
+  constructor(private pool: Pool) {}
+
+  private mapRow(r: any): StudentSponsorship {
+    const coverage = typeof r.coverage === 'string' ? JSON.parse(r.coverage) : r.coverage || {};
+    return StudentSponsorship.create(
+      {
+        schoolId: r.school_id,
+        studentId: r.student_id,
+        admissionNumber: r.admission_number,
+        studentName: r.student_name,
+        gradeLevel: r.grade_level as CBCGradeLevel,
+        streamName: r.stream_name || undefined,
+        gender: r.gender as StudentGender || undefined,
+        sponsorshipType: r.sponsorship_type as SponsorshipType,
+        sponsorshipStatus: r.sponsorship_status as SponsorshipStatus,
+        coverage: {
+          tuitionCovered: coverage.tuitionCovered ?? true,
+          lunchCovered: coverage.lunchCovered ?? false,
+          materialsCovered: coverage.materialsCovered ?? true,
+          uniformCovered: coverage.uniformCovered ?? false,
+          activitiesCovered: coverage.activitiesCovered ?? true,
+          percentageCovered: coverage.percentageCovered ?? 100
+        },
+        sponsorName: r.sponsor_name,
+        sponsorContact: r.sponsor_contact || undefined,
+        termlySubsidyAmount: Number(r.termly_subsidy_amount) || 0,
+        annualSubsidyAmount: Number(r.annual_subsidy_amount) || 0,
+        startDate: r.start_date,
+        endDate: r.end_date || undefined,
+        academicYearId: r.academic_year_id,
+        approvalReference: r.approval_reference,
+        approvedByUserId: r.approved_by_user_id,
+        approvedByUserName: r.approved_by_user_name,
+        reasonNotes: r.reason_notes || '',
+        confidentialNotes: r.confidential_notes || undefined
+      },
+      r.id,
+      r.created_at,
+      r.updated_at
+    );
+  }
+
+  public async findById(id: string): Promise<StudentSponsorship | null> {
+    const res = await this.pool.query('SELECT * FROM student_sponsorships WHERE id = $1', [id]);
+    if (!res.rows.length) return null;
+    return this.mapRow(res.rows[0]);
+  }
+
+  public async findByStudentId(studentId: string): Promise<StudentSponsorship | null> {
+    const res = await this.pool.query('SELECT * FROM student_sponsorships WHERE student_id = $1 LIMIT 1', [studentId]);
+    if (!res.rows.length) return null;
+    return this.mapRow(res.rows[0]);
+  }
+
+  public async findByAdmissionNumber(admissionNumber: string, schoolId?: string): Promise<StudentSponsorship | null> {
+    let q = 'SELECT * FROM student_sponsorships WHERE LOWER(admission_number) = LOWER($1)';
+    const params: any[] = [admissionNumber];
+    if (schoolId) {
+      params.push(schoolId);
+      q += ` AND school_id = $${params.length}`;
+    }
+    q += ' LIMIT 1';
+    const res = await this.pool.query(q, params);
+    if (!res.rows.length) return null;
+    return this.mapRow(res.rows[0]);
+  }
+
+  public async findAll(filters?: SponsorshipFilterCriteria): Promise<StudentSponsorship[]> {
+    let q = 'SELECT * FROM student_sponsorships WHERE 1=1';
+    const params: any[] = [];
+
+    if (filters?.schoolId) {
+      params.push(filters.schoolId);
+      q += ` AND school_id = $${params.length}`;
+    }
+    if (filters?.studentId) {
+      params.push(filters.studentId);
+      q += ` AND student_id = $${params.length}`;
+    }
+    if (filters?.gradeLevel) {
+      params.push(filters.gradeLevel);
+      q += ` AND grade_level = $${params.length}`;
+    }
+    if (filters?.sponsorshipType) {
+      params.push(filters.sponsorshipType);
+      q += ` AND sponsorship_type = $${params.length}`;
+    }
+    if (filters?.sponsorshipStatus) {
+      params.push(filters.sponsorshipStatus);
+      q += ` AND sponsorship_status = $${params.length}`;
+    }
+    if (filters?.academicYearId) {
+      params.push(filters.academicYearId);
+      q += ` AND academic_year_id = $${params.length}`;
+    }
+    if (filters?.search && filters.search.trim()) {
+      params.push(`%${filters.search.trim()}%`);
+      q += ` AND (student_name ILIKE $${params.length} OR admission_number ILIKE $${params.length} OR approval_reference ILIKE $${params.length} OR sponsor_name ILIKE $${params.length})`;
+    }
+
+    q += ' ORDER BY created_at DESC';
+    const res = await this.pool.query(q, params);
+    return res.rows.map(r => this.mapRow(r));
+  }
+
+  public async save(sponsorship: StudentSponsorship): Promise<void> {
+    const q = `
+      INSERT INTO student_sponsorships (
+        id, school_id, student_id, admission_number, student_name, grade_level, stream_name, gender,
+        sponsorship_type, sponsorship_status, coverage, sponsor_name, sponsor_contact,
+        termly_subsidy_amount, annual_subsidy_amount, start_date, end_date, academic_year_id,
+        approval_reference, approved_by_user_id, approved_by_user_name, reason_notes, confidential_notes,
+        created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
+      ON CONFLICT (id) DO UPDATE SET
+        student_name = EXCLUDED.student_name,
+        grade_level = EXCLUDED.grade_level,
+        stream_name = EXCLUDED.stream_name,
+        gender = EXCLUDED.gender,
+        sponsorship_type = EXCLUDED.sponsorship_type,
+        sponsorship_status = EXCLUDED.sponsorship_status,
+        coverage = EXCLUDED.coverage,
+        sponsor_name = EXCLUDED.sponsor_name,
+        sponsor_contact = EXCLUDED.sponsor_contact,
+        termly_subsidy_amount = EXCLUDED.termly_subsidy_amount,
+        annual_subsidy_amount = EXCLUDED.annual_subsidy_amount,
+        start_date = EXCLUDED.start_date,
+        end_date = EXCLUDED.end_date,
+        academic_year_id = EXCLUDED.academic_year_id,
+        approval_reference = EXCLUDED.approval_reference,
+        reason_notes = EXCLUDED.reason_notes,
+        confidential_notes = EXCLUDED.confidential_notes,
+        updated_at = NOW();
+    `;
+    await this.pool.query(q, [
+      sponsorship.id,
+      sponsorship.schoolId,
+      sponsorship.studentId,
+      sponsorship.admissionNumber,
+      sponsorship.studentName,
+      sponsorship.gradeLevel,
+      sponsorship.streamName || null,
+      sponsorship.gender || null,
+      sponsorship.sponsorshipType,
+      sponsorship.sponsorshipStatus,
+      JSON.stringify(sponsorship.coverage),
+      sponsorship.sponsorName,
+      sponsorship.sponsorContact || null,
+      sponsorship.termlySubsidyAmount,
+      sponsorship.annualSubsidyAmount,
+      sponsorship.startDate,
+      sponsorship.endDate || null,
+      sponsorship.academicYearId,
+      sponsorship.approvalReference,
+      sponsorship.approvedByUserId,
+      sponsorship.approvedByUserName,
+      sponsorship.reasonNotes,
+      sponsorship.confidentialNotes || null,
+      sponsorship.createdAt,
+      sponsorship.updatedAt
+    ]);
+  }
+
+  public async update(sponsorship: StudentSponsorship): Promise<void> {
+    return this.save(sponsorship);
+  }
+
+  public async delete(id: string): Promise<void> {
+    await this.pool.query('DELETE FROM student_sponsorships WHERE id = $1', [id]);
+  }
+
+  public async getStats(schoolId?: string): Promise<SponsorshipStats> {
+    const list = await this.findAll(schoolId ? { schoolId } : undefined);
+    const byType: Record<string, number> = {};
+    const byGrade: Record<string, number> = {};
+    let totalTermlySubsidy = 0;
+    let totalAnnualSubsidy = 0;
+    let activeCount = 0;
+    let suspendedCount = 0;
+    let completedCount = 0;
+    let lunchCoveredCount = 0;
+    let tuitionCoveredCount = 0;
+
+    for (const s of list) {
+      byType[s.sponsorshipType] = (byType[s.sponsorshipType] || 0) + 1;
+      byGrade[s.gradeLevel] = (byGrade[s.gradeLevel] || 0) + 1;
+
+      if (s.sponsorshipStatus === SponsorshipStatus.ACTIVE) {
+        activeCount++;
+        totalTermlySubsidy += s.termlySubsidyAmount;
+        totalAnnualSubsidy += s.annualSubsidyAmount;
+      } else if (s.sponsorshipStatus === SponsorshipStatus.SUSPENDED) {
+        suspendedCount++;
+      } else if (s.sponsorshipStatus === SponsorshipStatus.COMPLETED) {
+        completedCount++;
+      }
+
+      if (s.coverage.lunchCovered) lunchCoveredCount++;
+      if (s.coverage.tuitionCovered) tuitionCoveredCount++;
+    }
+
+    return {
+      totalSponsoredStudents: list.length,
+      activeCount,
+      suspendedCount,
+      completedCount,
+      totalTermlySubsidy,
+      totalAnnualSubsidy,
+      byType,
+      byGrade,
+      lunchCoveredCount,
+      tuitionCoveredCount
+    };
+  }
+}
+

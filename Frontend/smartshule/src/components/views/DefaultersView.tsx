@@ -36,11 +36,13 @@ export const DefaultersView: React.FC<DefaultersViewProps> = ({
     loadDefaulters();
   }, []);
 
-  const backendDefaulters = defaultersReport?.defaulters || [];
-  const localDefaulters = students.filter((s) => s.feeBalance > 0);
+  const backendDefaulters = (defaultersReport?.defaulters || []).filter(
+    (d: any) => !d.isSponsored && !students.find((s) => s.id === d.studentId)?.isSponsored
+  );
+  const localDefaulters = students.filter((s) => (s.feeBalance || 0) > 0 && !s.isSponsored);
 
   const totalOutstanding = defaultersReport?.totalOutstandingBalance || localDefaulters.reduce((acc, curr) => acc + curr.feeBalance, 0);
-  const count = defaultersReport?.totalDefaulters || localDefaulters.length;
+  const count = backendDefaulters.length > 0 ? backendDefaulters.length : localDefaulters.length;
 
   return (
     <div className="space-y-6 pb-12">
@@ -147,7 +149,17 @@ export const DefaultersView: React.FC<DefaultersViewProps> = ({
                   const studentMatch = students.find((s) => s.id === d.studentId);
                   return (
                     <tr key={d.invoiceId} className="hover:bg-surface-container-low/50">
-                      <td className="py-3 px-4 font-bold text-on-surface">{d.studentName}</td>
+                      <td className="py-3 px-4 font-bold text-on-surface">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span>{d.studentName}</span>
+                          {(d.isSponsored || studentMatch?.isSponsored) && (
+                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-[#7a1228]/10 text-primary border border-[#7a1228]/25" title="Student is under institutional scholarship scheme">
+                              <span className="material-symbols-outlined text-[12px]">workspace_premium</span>
+                              <span>100% Scholarship</span>
+                            </span>
+                          )}
+                        </div>
+                      </td>
                       <td className="py-3 px-4 font-data-mono text-outline">{d.admissionNumber}</td>
                       <td className="py-3 px-4 font-semibold text-primary">{d.gradeLevel?.replace('_', ' ')}</td>
                       <td className="py-3 px-4 text-on-surface">{d.guardianContact?.name || studentMatch?.guardianName || 'N/A'}</td>
@@ -164,29 +176,39 @@ export const DefaultersView: React.FC<DefaultersViewProps> = ({
                           >
                             Statement
                           </button>
-                          <button
-                            onClick={() => onOpenMpesaWithStudent(studentMatch || {
-                              id: d.studentId,
-                              admNo: d.admissionNumber,
-                              upi: studentMatch?.upi || '',
-                              nemis: studentMatch?.nemis || '',
-                              name: d.studentName,
-                              gender: studentMatch?.gender || 'Boy',
-                              grade: d.gradeLevel,
-                              stream: studentMatch?.stream || '',
-                              guardianName: d.guardianContact?.name || 'Parent',
-                              guardianPhone: d.guardianContact?.phone || '',
-                              feeBalance: d.balance,
-                              totalFee: d.amountPayable,
-                              attendanceRate: 100,
-                              CBCRating: 'ME',
-                              status: 'Active',
-                            })}
-                            className="px-2.5 py-1 rounded bg-[#006a40] hover:bg-[#005a36] text-white font-bold text-xs transition-colors cursor-pointer inline-flex items-center gap-1"
-                          >
-                            <span className="material-symbols-outlined text-[13px]">point_of_sale</span>
-                            <span>Record Payment</span>
-                          </button>
+                          {(d.isSponsored || studentMatch?.isSponsored) ? (
+                            <span
+                              className="px-2.5 py-1 rounded bg-surface-container text-primary font-bold text-xs inline-flex items-center gap-1 cursor-not-allowed opacity-80"
+                              title="Learner is under 100% Scholarship and cannot be charged fees"
+                            >
+                              <span className="material-symbols-outlined text-[13px]">lock</span>
+                              <span>Charge Exempt</span>
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => onOpenMpesaWithStudent(studentMatch || {
+                                id: d.studentId,
+                                admNo: d.admissionNumber,
+                                upi: studentMatch?.upi || '',
+                                nemis: studentMatch?.nemis || '',
+                                name: d.studentName,
+                                gender: studentMatch?.gender || 'Boy',
+                                grade: d.gradeLevel,
+                                stream: studentMatch?.stream || '',
+                                guardianName: d.guardianContact?.name || 'Parent',
+                                guardianPhone: d.guardianContact?.phone || '',
+                                feeBalance: d.balance,
+                                totalFee: d.amountPayable,
+                                attendanceRate: 100,
+                                CBCRating: 'ME',
+                                status: 'Active',
+                              })}
+                              className="px-2.5 py-1 rounded bg-[#006a40] hover:bg-[#005a36] text-white font-bold text-xs transition-colors cursor-pointer inline-flex items-center gap-1"
+                            >
+                              <span className="material-symbols-outlined text-[13px]">point_of_sale</span>
+                              <span>Record Payment</span>
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -195,7 +217,17 @@ export const DefaultersView: React.FC<DefaultersViewProps> = ({
               ) : localDefaulters.length > 0 ? (
                 localDefaulters.map((s) => (
                   <tr key={s.id} className="hover:bg-surface-container-low/50">
-                    <td className="py-3 px-4 font-bold text-on-surface">{s.name}</td>
+                    <td className="py-3 px-4 font-bold text-on-surface">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span>{s.name}</span>
+                        {s.isSponsored && (
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-[#7a1228]/10 text-primary border border-[#7a1228]/25" title="Student is under institutional scholarship scheme">
+                            <span className="material-symbols-outlined text-[12px]">workspace_premium</span>
+                            <span>100% Scholarship</span>
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td className="py-3 px-4 font-data-mono text-outline">{s.admNo}</td>
                     <td className="py-3 px-4 font-semibold text-primary">{s.grade}</td>
                     <td className="py-3 px-4 text-on-surface">{s.guardianName}</td>

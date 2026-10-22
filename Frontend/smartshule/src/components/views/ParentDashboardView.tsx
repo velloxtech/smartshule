@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { FeeBannerConfig } from '../../types';
 import { EditStudentModal } from '../modals/EditStudentModal';
 import { ForwardPaymentModal } from '../modals/ForwardPaymentModal';
+import { ReceiptViewModal } from '../modals/ReceiptViewModal';
 import { resolveStreamName, resolveGradeName, resolveLearningAreaName } from '../../utils/formatters';
 
 interface ParentDashboardViewProps {
@@ -25,6 +27,9 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
   const [loading, setLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isForwardPaymentModalOpen, setIsForwardPaymentModalOpen] = useState(false);
+  const [isClearanceModalOpen, setIsClearanceModalOpen] = useState(false);
+  const [clearanceModalTarget, setClearanceModalTarget] = useState<'REPORT_CARD' | 'FORMATIVE'>('REPORT_CARD');
+  const [selectedPaymentForReceipt, setSelectedPaymentForReceipt] = useState<any | null>(null);
   const [activeCbcTab, setActiveCbcTab] = useState<'formative' | 'summative'>('formative');
   const [selectedFormativeRating, setSelectedFormativeRating] = useState<string>('All');
   const [selectedFormativeSubject, setSelectedFormativeSubject] = useState<string>('All');
@@ -63,8 +68,10 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
 
   const currentChildFee = currentChild?.fee;
   const feeBalance = currentChildFee?.balance || 0;
+  const isFeeCleared = Boolean(currentChild?.isChargeExempt) || feeBalance <= 0;
   const arrearsAmount = currentChildFee?.arrearsAmount || 0;
-  const rawDueDate = currentChildFee?.dueDate || currentChildFee?.invoices?.[0]?.dueDate || null;
+  const feeBannerConfig: FeeBannerConfig | null = portalData?.feeBanner || null;
+  const rawDueDate = feeBannerConfig?.deadlineDate || currentChildFee?.dueDate || currentChildFee?.invoices?.[0]?.dueDate || null;
 
   const formatDueDate = (dateStr: string | null) => {
     if (!dateStr) return '30th October 2026';
@@ -241,25 +248,41 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                 <span>Full Profile & Edit Records</span>
               </button>
 
-              <button
-                onClick={() => onViewReportCard({
-                  id: currentChild.id,
-                  name: currentChild.fullName || `${currentChild.firstName} ${currentChild.lastName}`,
-                  admNo: currentChild.admissionNumber,
-                  upi: currentChild.upiNumber || 'NEMIS-K9281A',
-                  grade: resolveGradeName(currentChild.gradeLevel),
-                  stream: resolveStreamName(currentChild.streamId, currentChild.streamName || currentChild.stream?.name, currentChild.gradeLevel) || 'Main Stream',
-                  feeBalance: currentChild.fee?.balance || 0,
-                  totalFee: currentChild.fee?.totalBilled || 0,
-                  attendanceRate: currentChild.attendance?.attendanceRate || 100,
-                  CBCRating: 'ME',
-                  status: currentChild.status || 'Active'
-                })}
-                className="inline-flex items-center gap-1.5 px-3 py-2 bg-surface-container hover:bg-surface-container-high text-primary rounded-lg text-xs font-bold border border-outline-variant/30 transition-all cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[16px]">description</span>
-                <span>Term Report Card</span>
-              </button>
+              {isFeeCleared ? (
+                <button
+                  onClick={() => onViewReportCard({
+                    id: currentChild.id,
+                    name: currentChild.fullName || `${currentChild.firstName} ${currentChild.lastName}`,
+                    admNo: currentChild.admissionNumber,
+                    upi: currentChild.upiNumber || 'NEMIS-K9281A',
+                    grade: resolveGradeName(currentChild.gradeLevel),
+                    stream: resolveStreamName(currentChild.streamId, currentChild.streamName || currentChild.stream?.name, currentChild.gradeLevel) || 'Main Stream',
+                    feeBalance: currentChild.fee?.balance || 0,
+                    totalFee: currentChild.fee?.totalBilled || 0,
+                    isChargeExempt: currentChild.isChargeExempt,
+                    attendanceRate: currentChild.attendance?.attendanceRate || 100,
+                    CBCRating: 'ME',
+                    status: currentChild.status || 'Active'
+                  })}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-surface-container hover:bg-surface-container-high text-primary rounded-lg text-xs font-bold border border-outline-variant/30 transition-all cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[16px]">description</span>
+                  <span>Term Report Card</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setClearanceModalTarget('REPORT_CARD');
+                    setIsClearanceModalOpen(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-amber-500/15 hover:bg-amber-500/25 text-amber-950 rounded-lg text-xs font-bold border border-amber-600/30 transition-all cursor-pointer shadow-2xs"
+                  title="Report Card Withheld · Outstanding Fee Balance Required"
+                >
+                  <span className="material-symbols-outlined text-[16px] text-amber-800">lock</span>
+                  <span>Report Card (Uncleared)</span>
+                </button>
+              )}
 
               {onNavigateTab && (
                 <button
@@ -282,7 +305,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
           </div>
 
           {/* Prominent Fee Payment Notice & Remittance Instructions */}
-          {feeBalance > 0 ? (
+          {feeBannerConfig?.isEnabled !== false && (feeBalance > 0 || !feeBannerConfig?.showOnlyToDefaulters) ? (
             <div className="bg-gradient-to-r from-amber-500/15 via-rose-500/10 to-amber-500/15 border-2 border-amber-500/50 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 animate-fade-in">
               <div className="flex items-start sm:items-center gap-3.5">
                 <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-900 border border-amber-500/30 flex items-center justify-center font-bold shrink-0 shadow-2xs">
@@ -291,7 +314,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="text-sm sm:text-base font-extrabold text-amber-950 tracking-tight">
-                      School Fee Payment Notice
+                      {feeBannerConfig?.bannerTitle || 'School Fee Payment Notice'}
                     </h3>
                     <span className="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-[#7a1228] text-white shadow-2xs">
                       Due: {formattedDueDate}
@@ -323,7 +346,15 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                       <span> (including <strong className="text-rose-950 font-bold">KES {arrearsAmount.toLocaleString()}</strong> in prior fee arrears)</span>
                     ) : ''} for{' '}
                     <strong>{currentChild.firstName} {currentChild.lastName}</strong> is due on or before{' '}
-                    <strong className="text-slate-900">{formattedDueDate}</strong>. Pay via Lipa na M-Pesa Paybill <strong className="font-data-mono text-emerald-800">522533</strong> (Account: <strong className="font-data-mono text-[#7a1228]">8048859#{currentChild.firstName} {currentChild.lastName} ({resolveGradeName(currentChild.gradeLevel)})</strong> — kindly use child’s name &amp; grade, not admission number) or KCB Bank (A/C: 1234567890), then forward your confirmation message.
+                    <strong className="text-slate-900">{formattedDueDate}</strong>.
+                    {feeBannerConfig?.customMessage ? (
+                      <span className="block my-1 font-semibold text-rose-950 bg-amber-500/10 p-1.5 rounded-lg border border-amber-500/20">
+                        {feeBannerConfig.customMessage}
+                      </span>
+                    ) : null}
+                    <span className="block mt-0.5">
+                      Pay via Lipa na M-Pesa Paybill <strong className="font-data-mono text-emerald-800">{feeBannerConfig?.paybillNumber || '522533'}</strong> (Account: <strong className="font-data-mono text-[#7a1228]">8048859#{currentChild.firstName} {currentChild.lastName} ({resolveGradeName(currentChild.gradeLevel)})</strong> — kindly use child’s name &amp; grade, not admission number) or {feeBannerConfig?.bankName || 'KCB Bank'} (A/C: {feeBannerConfig?.bankAccountNumber || '1234567890'}), then forward your confirmation message.
+                    </span>
                   </p>
                 </div>
               </div>
@@ -338,7 +369,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                 </button>
               </div>
             </div>
-          ) : (
+          ) : feeBalance <= 0 ? (
             <div className="bg-emerald-500/10 border-2 border-emerald-500/30 rounded-2xl p-4 sm:p-5 shadow-xs flex items-center justify-between gap-4 animate-fade-in">
               <div className="flex items-center gap-3.5">
                 <div className="w-11 h-11 rounded-2xl bg-emerald-500/20 text-emerald-900 border border-emerald-500/30 flex items-center justify-center font-bold shrink-0">
@@ -363,7 +394,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                 <span className="text-base font-black font-data-mono text-emerald-800">KES 0</span>
               </div>
             </div>
-          )}
+          ) : null}
 
           {/* Quick Shortcuts for Parent Portal */}
           {onNavigateTab && (
@@ -438,7 +469,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
 
             <div className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs">
               <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
-                CBC Formative Rubrics
+                CBE Formative Rubrics
               </span>
               <div className="text-2xl font-bold font-data-mono text-primary mt-1">
                 {currentChild.CBC?.formativesCount ?? formativeAssessments.length ?? currentChild.CBC?.assessmentsCount ?? 0}
@@ -542,15 +573,25 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                       {currentChild.fee.payments.map((pay: any) => {
                         const isPending = pay.status === 'PENDING' || pay.receiptNumber?.startsWith('FWD-');
                         return (
-                          <div key={pay.id} className={`p-2.5 rounded-lg border flex items-center justify-between text-xs ${
-                            isPending ? 'bg-amber-50/70 border-amber-300' : 'bg-secondary/5 border-secondary/20'
-                          }`}>
+                          <div
+                            key={pay.id}
+                            onClick={() => !isPending && setSelectedPaymentForReceipt(pay)}
+                            className={`p-2.5 rounded-lg border flex items-center justify-between text-xs transition-colors ${
+                              isPending
+                                ? 'bg-amber-50/70 border-amber-300'
+                                : 'bg-secondary/5 border-secondary/20 hover:bg-secondary/15 hover:border-secondary/40 cursor-pointer'
+                            }`}
+                          >
                             <div>
                               <div className="font-bold text-primary font-data-mono flex items-center gap-1.5">
                                 <span>{pay.receiptNumber}</span>
-                                {isPending && (
+                                {isPending ? (
                                   <span className="px-1.5 py-0.2 rounded bg-amber-200 text-amber-950 text-[10px] font-bold">
                                     Pending Verification
+                                  </span>
+                                ) : (
+                                  <span className="px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold flex items-center gap-0.5">
+                                    <span className="material-symbols-outlined text-[11px]">print</span> View / Print
                                   </span>
                                 )}
                               </div>
@@ -585,10 +626,16 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
             <div className="bg-surface-container-lowest rounded-xl p-5 shadow-xs border border-outline-variant/30 space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-surface-container pb-3 gap-2">
                 <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-secondary text-[20px]">grading</span>
-                  <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider">CBC Assessment Portfolio</h3>
+                  <span className={`material-symbols-outlined ${isFeeCleared ? 'text-secondary' : 'text-amber-800'} text-[20px]`}>
+                    {isFeeCleared ? 'grading' : 'lock'}
+                  </span>
+                  <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider">CBE Assessment Portfolio</h3>
                 </div>
-                {onNavigateTab && (
+                {!isFeeCleared ? (
+                  <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
+                    Fee Clearance Required
+                  </span>
+                ) : onNavigateTab ? (
                   <button
                     onClick={() => onNavigateTab('formative-assessments')}
                     className="text-xs font-bold text-primary hover:underline flex items-center gap-1 self-start sm:self-auto cursor-pointer"
@@ -596,11 +643,55 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                     <span>Full Formative Rubric Records</span>
                     <span className="material-symbols-outlined text-sm">arrow_forward</span>
                   </button>
-                )}
+                ) : null}
               </div>
 
-              {/* Sub-tab navigation: Formative vs Summative */}
-              <div className="flex items-center gap-2 border-b border-outline-variant/20 pb-2">
+              {!isFeeCleared ? (
+                <div className="p-4 sm:p-5 rounded-xl bg-amber-50/70 border border-amber-300/80 space-y-3">
+                  <div className="flex items-start gap-3.5">
+                    <div className="w-11 h-11 rounded-2xl bg-amber-200 text-amber-900 flex items-center justify-center shrink-0 shadow-2xs">
+                      <span className="material-symbols-outlined text-[24px]">lock_person</span>
+                    </div>
+                    <div className="space-y-1">
+                      <h4 className="font-bold text-sm text-amber-950">
+                        Formative Progress &amp; Rubric Records Withheld
+                      </h4>
+                      <p className="text-xs text-amber-900/90 leading-relaxed">
+                        Continuous classroom observation rubrics, CAT scores, and strand competency evaluations for <strong>{currentChild.firstName} {currentChild.lastName}</strong> are withheld pending fee clearance. The outstanding ledger balance is <strong className="font-data-mono text-[#7a1228] font-bold">KES {feeBalance.toLocaleString()}</strong>.
+                      </p>
+                      <p className="text-xs text-amber-900/80">
+                        Kindly clear the balance or request clearance details and authorization from the <strong>Head Teacher</strong> or <strong>School Director</strong> below.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-amber-200/80">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setClearanceModalTarget('FORMATIVE');
+                        setIsClearanceModalOpen(true);
+                      }}
+                      className="px-3.5 py-2 rounded-lg bg-[#7a1228] hover:bg-[#5a1226] text-white text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    >
+                      <span className="material-symbols-outlined text-sm">support_agent</span>
+                      <span>Request Clearance / Contact Leadership</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsForwardPaymentModalOpen(true)}
+                      className="px-3.5 py-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-bold border border-outline-variant/30 transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    >
+                      <span className="material-symbols-outlined text-sm text-emerald-700">forward_to_inbox</span>
+                      <span>Forward Payment Confirmation</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* Sub-tab navigation: Formative vs Summative */}
+                  <div className="flex items-center gap-2 border-b border-outline-variant/20 pb-2">
                 <button
                   type="button"
                   onClick={() => setActiveCbcTab('formative')}
@@ -829,7 +920,9 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                   )}
                 </div>
               )}
-            </div>
+            </>
+          )}
+        </div>
           </div>
 
           {/* School Lunch & Catering Program Section - ONLY VISIBLE IF CHILD IS ON THE LUNCH LIST */}
@@ -975,6 +1068,227 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
             loadPortalData();
           }}
         />
+      )}
+
+      {selectedPaymentForReceipt && (
+        <ReceiptViewModal
+          isOpen={!!selectedPaymentForReceipt}
+          onClose={() => setSelectedPaymentForReceipt(null)}
+          paymentId={selectedPaymentForReceipt.id}
+          initialReceipt={{
+            receiptNumber: selectedPaymentForReceipt.receiptNumber,
+            paymentDate: selectedPaymentForReceipt.paymentDate,
+            amountPaid: selectedPaymentForReceipt.amount,
+            paymentMethod: selectedPaymentForReceipt.paymentMethod,
+            transactionReference: selectedPaymentForReceipt.transactionReference,
+            studentName: currentChild?.fullName || currentChild?.name,
+            admissionNumber: currentChild?.admissionNumber || currentChild?.admNo,
+            gradeLevel: currentChild?.gradeLevel || currentChild?.grade,
+            streamName: currentChild?.streamName,
+            remainingBalance: currentChild?.fee?.balance ?? currentChild?.fee?.currentBalance,
+            notes: selectedPaymentForReceipt.notes,
+          }}
+        />
+      )}
+      {/* Fee Clearance Authorization & Leadership Contact Modal */}
+      {isClearanceModalOpen && currentChild && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fade-in">
+          <div className="bg-surface-container-lowest w-full max-w-xl rounded-2xl shadow-2xl border border-outline-variant/30 overflow-hidden flex flex-col max-h-[90vh]">
+            {/* Modal Header */}
+            <div className="p-5 bg-gradient-to-r from-[#7a1228] to-[#500b1a] text-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-2xl text-amber-300">lock_reset</span>
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base leading-tight">
+                    Fee Clearance Authorization Required
+                  </h3>
+                  <p className="text-xs text-white/80">
+                    {clearanceModalTarget === 'REPORT_CARD'
+                      ? 'Official CBE Term Report Card Withheld'
+                      : 'Formative Assessment & CAT Rubric Portfolio Withheld'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsClearanceModalOpen(false)}
+                className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-white cursor-pointer transition-colors"
+              >
+                <span className="material-symbols-outlined text-[18px]">close</span>
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5 space-y-4 overflow-y-auto">
+              {/* Learner & Ledger Snapshot Card */}
+              <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-300/80 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider block">
+                      Learner Account
+                    </span>
+                    <strong className="text-sm font-bold text-on-surface">
+                      {currentChild.fullName || `${currentChild.firstName} ${currentChild.lastName}`}
+                    </strong>
+                    <div className="text-xs text-on-surface-variant font-data-mono">
+                      Adm: {currentChild.admissionNumber} · {resolveGradeName(currentChild.gradeLevel)}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider block">
+                      Outstanding Fee Balance
+                    </span>
+                    <span className="text-lg font-black font-data-mono text-[#7a1228]">
+                      KES {feeBalance.toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+                <p className="text-xs text-amber-950/90 pt-1 border-t border-amber-200/80 leading-relaxed">
+                  In accordance with Grace Seeds School financial policies, academic dossiers and formative competency rubrics are accessible once fees are fully cleared or authorized by leadership.
+                </p>
+              </div>
+
+              {/* Leadership Contact Cards */}
+              <div className="space-y-3">
+                <div className="text-xs font-bold text-on-surface uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-sm text-primary">support_agent</span>
+                  <span>Request Authorization from Leadership</span>
+                </div>
+
+                {/* 1. Head Teacher */}
+                <div className="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                      <span className="material-symbols-outlined text-xl">school</span>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-xs text-on-surface">Head Teacher&apos;s Office</h4>
+                      <p className="text-[11px] text-on-surface-variant">
+                        For academic progress clearance and permission
+                      </p>
+                      <div className="text-[11px] text-primary font-bold mt-0.5">
+                        0745436312 · headteacher@smartshule.ac.ke
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <a
+                      href={`https://wa.me/254745436312?text=${encodeURIComponent(
+                        `Hello Head Teacher, I am requesting fee clearance details and authorization to access the ${
+                          clearanceModalTarget === 'REPORT_CARD' ? 'report card' : 'formative progress records'
+                        } for my child ${currentChild.fullName || currentChild.firstName} (Adm: ${currentChild.admissionNumber}, Grade: ${resolveGradeName(currentChild.gradeLevel)}) at Grace Seeds School.`
+                      )}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1 shadow-xs transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">chat</span>
+                      <span>WhatsApp</span>
+                    </a>
+                    <a
+                      href={`mailto:headteacher@smartshule.ac.ke?subject=${encodeURIComponent(
+                        `Fee Clearance Request - ${currentChild.fullName || currentChild.firstName} (${currentChild.admissionNumber})`
+                      )}&body=${encodeURIComponent(
+                        `Dear Head Teacher,\n\nI am requesting fee clearance authorization and access to the ${
+                          clearanceModalTarget === 'REPORT_CARD' ? 'term report card' : 'formative progress records'
+                        } for my child ${currentChild.fullName || currentChild.firstName} (Adm: ${currentChild.admissionNumber}, Grade: ${resolveGradeName(currentChild.gradeLevel)}) at Grace Seeds School.\n\nThank you,\n${guardianUser?.name || 'Parent'}`
+                      )}`}
+                      className="px-3 py-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-bold border border-outline-variant/30 flex items-center gap-1 transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">mail</span>
+                      <span>Email</span>
+                    </a>
+                  </div>
+                </div>
+
+                {/* 2. School Director */}
+                <div className="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-900 flex items-center justify-center shrink-0">
+                      <span className="material-symbols-outlined text-xl">admin_panel_settings</span>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-xs text-on-surface">School Director</h4>
+                      <p className="text-[11px] text-on-surface-variant">
+                        For fee balance arrangements, bursaries &amp; clearances
+                      </p>
+                      <div className="text-[11px] text-[#7a1228] font-bold mt-0.5">
+                        0745436312 · schoolgraceseeds@gmail.com
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <a
+                      href={`https://wa.me/254745436312?text=${encodeURIComponent(
+                        `Hello Director, I am requesting fee clearance details and authorization to access the ${
+                          clearanceModalTarget === 'REPORT_CARD' ? 'report card' : 'formative progress records'
+                        } for my child ${currentChild.fullName || currentChild.firstName} (Adm: ${currentChild.admissionNumber}, Grade: ${resolveGradeName(currentChild.gradeLevel)}) at Grace Seeds School.`
+                      )}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1 shadow-xs transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">chat</span>
+                      <span>WhatsApp</span>
+                    </a>
+                    <a
+                      href={`mailto:schoolgraceseeds@gmail.com?subject=${encodeURIComponent(
+                        `Fee Clearance Request - ${currentChild.fullName || currentChild.firstName} (${currentChild.admissionNumber})`
+                      )}&body=${encodeURIComponent(
+                        `Dear School Director,\n\nI am requesting fee clearance authorization and access to the ${
+                          clearanceModalTarget === 'REPORT_CARD' ? 'term report card' : 'formative progress records'
+                        } for my child ${currentChild.fullName || currentChild.firstName} (Adm: ${currentChild.admissionNumber}, Grade: ${resolveGradeName(currentChild.gradeLevel)}) at Grace Seeds School.\n\nThank you,\n${guardianUser?.name || 'Parent'}`
+                      )}`}
+                      className="px-3 py-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-bold border border-outline-variant/30 flex items-center gap-1 transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">mail</span>
+                      <span>Email</span>
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              {/* Remittance Option */}
+              <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="space-y-0.5">
+                  <div className="font-bold text-xs text-emerald-950 flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[16px] text-emerald-700">payments</span>
+                    <span>Already made a fee payment?</span>
+                  </div>
+                  <p className="text-[11px] text-emerald-900/80">
+                    Forward your M-Pesa or bank slip message to clear your ledger instantly.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsClearanceModalOpen(false);
+                    setIsForwardPaymentModalOpen(true);
+                  }}
+                  className="px-3.5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold flex items-center justify-center gap-1 shadow-xs shrink-0 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[16px]">forward_to_inbox</span>
+                  <span>Forward Payment</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 bg-surface-container-low border-t border-outline-variant/20 flex items-center justify-end">
+              <button
+                type="button"
+                onClick={() => setIsClearanceModalOpen(false)}
+                className="px-4 py-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-bold border border-outline-variant/30 cursor-pointer transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

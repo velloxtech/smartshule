@@ -457,7 +457,7 @@ export const OccurrenceBookView: React.FC = () => {
             <span>•</span>
             <span className="inline-flex items-center gap-1">
               <span className="material-symbols-outlined text-xs">badge</span>
-              Logged by Duty Master / CBC Staff
+              Logged by Duty Master / CBE Staff
             </span>
           </div>
         </div>
@@ -1060,7 +1060,7 @@ export const OccurrenceBookView: React.FC = () => {
                         className="rounded text-[#7a1228] focus:ring-[#7a1228]"
                       />
                       <label htmlFor="sendSmsGateway" className="text-gray-700">
-                        Dispatch SMS via SmartShule Gateway
+                        Dispatch SMS via Grace Seeds School Gateway
                       </label>
                     </div>
                   </div>

@@ -289,7 +289,7 @@ export const LearningAreasView: React.FC = () => {
           <span className="text-2xl font-black text-[#800000] mt-1 block">
             {learningAreas.filter((la) => !la.isElective).length}
           </span>
-          <span className="text-[10px] text-slate-500 mt-1 block">Mandatory KICD CBC</span>
+          <span className="text-[10px] text-slate-500 mt-1 block">Mandatory KICD CBE</span>
         </div>
 
         <div className="bg-[#F8F5F5] rounded-2xl p-4 border border-slate-200 shadow-xs">
@@ -353,7 +353,7 @@ export const LearningAreasView: React.FC = () => {
             <span className="material-symbols-outlined text-[18px] text-[#800000]">menu_book</span>
             <span>Curriculum Subjects ({filteredAreas.length})</span>
           </h2>
-          <span className="text-xs text-slate-500">Live KICD CBC Database Records</span>
+          <span className="text-xs text-slate-500">Live KICD CBE Database Records</span>
         </div>
 
         {loading ? (
@@ -402,7 +402,7 @@ export const LearningAreasView: React.FC = () => {
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-slate-500">Standard Framework:</span>
-                      <span className="font-semibold text-emerald-800">KICD CBC Accredited</span>
+                      <span className="font-semibold text-emerald-800">KICD CBE Accredited</span>
                     </div>
                   </div>
                 </div>

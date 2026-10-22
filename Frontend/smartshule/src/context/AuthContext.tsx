@@ -30,18 +30,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 
   const isStaffRole = user?.role && ![UserRole.PARENT, UserRole.GUARDIAN, UserRole.STUDENT].includes(user.role);
-  const isStaffWithChildren = Boolean(
-    isStaffRole && (
-      user?.hasEnrolledChildren ||
-      (user?.enrolledChildIds && user.enrolledChildIds.length > 0) ||
-      user?.role === UserRole.TEACHER ||
-      user?.email === 'sarah.mwangi@smartshule.ac.ke' ||
-      (user?.email && user.email.includes('teacher')) ||
-      localStorage.getItem('smartshule_staff_has_children') === 'true'
-    )
+  // Only staff/teachers who the system has explicitly recognised as having an admitted/enrolled child in the school
+  const hasEnrolledChildren = Boolean(
+    user?.hasEnrolledChildren ||
+    (user?.enrolledChildIds && user.enrolledChildIds.length > 0)
   );
+  const isStaffWithChildren = Boolean(isStaffRole && hasEnrolledChildren);
 
-  const enrolledChildrenCount = user?.enrolledChildIds?.length || (isStaffWithChildren ? 1 : 0);
+  const enrolledChildrenCount = user?.enrolledChildIds?.length || (hasEnrolledChildren ? 1 : 0);
+
+  // If the active view was set to PARENT but this user is not recognized as having children, revert to STAFF
+  useEffect(() => {
+    if (!isStaffWithChildren && activeViewMode === 'PARENT') {
+      setActiveViewModeState('STAFF');
+      localStorage.removeItem('smartshule_active_view_mode');
+    }
+  }, [isStaffWithChildren, activeViewMode]);
 
   const setActiveViewMode = (mode: 'STAFF' | 'PARENT') => {
     setActiveViewModeState(mode);

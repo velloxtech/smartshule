@@ -203,11 +203,11 @@ export const DisciplineClubsView: React.FC = () => {
  <div>
  <div className="flex items-center gap-2 text-rose-200 text-xs font-semibold uppercase tracking-wider mb-1">
  <span className="material-symbols-outlined text-base">military_tech</span>
- CBC Core Values & Character Formation
+ CBE Core Values & Character Formation
  </div>
  <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Clubs, Societies & Discipline Log</h1>
  <p className="text-rose-100/90 text-sm mt-1 max-w-2xl">
- Promoting holistic CBC competencies through scouting, STEM, drama, and positive behavior commendations and counseling.
+ Promoting holistic CBE competencies through scouting, STEM, drama, and positive behavior commendations and counseling.
  </p>
  </div>
 
@@ -246,7 +246,7 @@ export const DisciplineClubsView: React.FC = () => {
  <span className="material-symbols-outlined text-emerald-600 text-lg">thumb_up</span>
  </div>
  <p className="text-2xl font-bold text-emerald-600 mt-2">+{stats.merits}</p>
- <p className="text-xs text-slate-500 mt-1">Exemplary CBC values recognized</p>
+ <p className="text-xs text-slate-500 mt-1">Exemplary CBE values recognized</p>
  </div>
 
  <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
@@ -550,7 +550,7 @@ export const DisciplineClubsView: React.FC = () => {
  <label className="block text-xs font-medium text-slate-600 mb-1">Description / Core Mandate</label>
  <textarea
  rows={2}
- placeholder="Goals, activities, and CBC competencies nurtured..."
+ placeholder="Goals, activities, and CBE competencies nurtured..."
  value={clubForm.description}
  onChange={(e) => setClubForm({ ...clubForm, description: e.target.value })}
  className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm text-slate-900 "
@@ -581,7 +581,7 @@ export const DisciplineClubsView: React.FC = () => {
  {isLogIncidentModalOpen && (
  <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
  <div className="bg-white border border-slate-200 rounded-2xl max-w-lg w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
- <h3 className="text-lg font-bold text-slate-900 mb-3">Log CBC Value Commendation or Incident</h3>
+ <h3 className="text-lg font-bold text-slate-900 mb-3">Log CBE Value Commendation or Incident</h3>
  <form onSubmit={handleLogIncident} className="space-y-3">
  <div className="grid grid-cols-2 gap-3">
  <div>
