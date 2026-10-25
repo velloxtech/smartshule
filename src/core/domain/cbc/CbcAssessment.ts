@@ -79,6 +79,15 @@ export class Strand extends Entity<StrandProps> {
     return this._props.description;
   }
 
+  public updateDetails(props: Partial<StrandProps>): void {
+    if (props.learningAreaId !== undefined) this._props.learningAreaId = props.learningAreaId;
+    if (props.gradeLevel !== undefined) this._props.gradeLevel = props.gradeLevel;
+    if (props.code !== undefined) this._props.code = props.code;
+    if (props.title !== undefined) this._props.title = props.title;
+    if (props.description !== undefined) this._props.description = props.description;
+    this._updatedAt = new Date();
+  }
+
   public toJSON() {
     return {
       id: this.id,
@@ -125,6 +134,15 @@ export class SubStrand extends Entity<SubStrandProps> {
 
   public get suggestedExperiences(): string[] | undefined {
     return this._props.suggestedExperiences;
+  }
+
+  public updateDetails(props: Partial<SubStrandProps>): void {
+    if (props.strandId !== undefined) this._props.strandId = props.strandId;
+    if (props.code !== undefined) this._props.code = props.code;
+    if (props.title !== undefined) this._props.title = props.title;
+    if (props.specificLearningOutcomes !== undefined) this._props.specificLearningOutcomes = props.specificLearningOutcomes;
+    if (props.suggestedExperiences !== undefined) this._props.suggestedExperiences = props.suggestedExperiences;
+    this._updatedAt = new Date();
   }
 
   public toJSON() {

@@ -608,14 +608,14 @@ export class AuthUseCases {
       if (user.email) {
         this.notificationService.sendEmail(
           user.email,
-          'SmartShule Password Successfully Reset',
-          `Dear ${user.fullName},\n\nYour SmartShule CBC Portal password has been successfully updated.\n\nGrace Seeds School · "The future Begins Here"`
+          'Grace Seeds School - Password Successfully Reset',
+          `Dear ${user.fullName},\n\nYour Grace Seeds School CBE Portal password has been successfully updated.\n\nGrace Seeds School · "The future Begins Here"`
         ).catch(() => null);
       }
       if (user.phone) {
         this.notificationService.sendSms(
           user.phone,
-          `Dear ${user.fullName}, your SmartShule CBC Portal password has been successfully reset.`
+          `Dear ${user.fullName}, your Grace Seeds School CBE Portal password has been successfully reset.`
         ).catch(() => null);
       }
     }

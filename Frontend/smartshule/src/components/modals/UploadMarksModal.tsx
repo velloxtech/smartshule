@@ -346,8 +346,8 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
 
   const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
   const [terms, setTerms] = useState<AcademicTerm[]>([]);
-  const [academicYearId, setAcademicYearId] = useState<string>('year-2026');
-  const [termId, setTermId] = useState<string>('term-2026-t1');
+  const [academicYearId, setAcademicYearId] = useState<string>('');
+  const [termId, setTermId] = useState<string>('');
 
   const [classes, setClasses] = useState<ClassRoom[]>([]);
   const [streams, setStreams] = useState<StreamItem[]>([]);
@@ -506,12 +506,14 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
           setClasses(cRes.data);
         }
 
+        const curCalYear = new Date().getFullYear();
+        const prevCalYear = curCalYear - 1;
         if (yrRes?.data && Array.isArray(yrRes.data) && yrRes.data.length > 0) {
           setAcademicYears(yrRes.data);
         } else {
           setAcademicYears([
-            { id: 'year-2026', name: '2026', startDate: '2026-01-05', endDate: '2026-11-28', isCurrent: true },
-            { id: 'year-2025', name: '2025', startDate: '2025-01-06', endDate: '2025-11-28', isCurrent: false },
+            { id: `year-${curCalYear}`, name: `${curCalYear}`, startDate: `${curCalYear}-01-05`, endDate: `${curCalYear}-11-28`, isCurrent: true },
+            { id: `year-${prevCalYear}`, name: `${prevCalYear}`, startDate: `${prevCalYear}-01-06`, endDate: `${prevCalYear}-11-28`, isCurrent: false },
           ]);
         }
 
@@ -529,11 +531,11 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
           }
         } else {
           setTerms([
-            { id: 'term-2026-t1', academicYearId: 'year-2026', name: 'Term 1', termNumber: 1, startDate: '2026-01-05', endDate: '2026-04-05', isCurrent: false },
-            { id: 'term-2026-t2', academicYearId: 'year-2026', name: 'Term 2', termNumber: 2, startDate: '2026-05-04', endDate: '2026-08-07', isCurrent: false },
-            { id: 'term-2026-t3', academicYearId: 'year-2026', name: 'Term 3', termNumber: 3, startDate: '2026-08-31', endDate: '2026-11-28', isCurrent: true },
+            { id: `term-${curCalYear}-t1`, academicYearId: `year-${curCalYear}`, name: 'Term 1', termNumber: 1, startDate: `${curCalYear}-01-05`, endDate: `${curCalYear}-04-05`, isCurrent: false },
+            { id: `term-${curCalYear}-t2`, academicYearId: `year-${curCalYear}`, name: 'Term 2', termNumber: 2, startDate: `${curCalYear}-05-04`, endDate: `${curCalYear}-08-07`, isCurrent: false },
+            { id: `term-${curCalYear}-t3`, academicYearId: `year-${curCalYear}`, name: 'Term 3', termNumber: 3, startDate: `${curCalYear}-08-31`, endDate: `${curCalYear}-11-28`, isCurrent: true },
           ]);
-          setTermId('term-2026-t3');
+          setTermId(`term-${curCalYear}-t1`);
         }
 
         if (stRes?.data && Array.isArray(stRes.data)) {
@@ -756,8 +758,8 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
     let isCancelled = false;
     setLoadingExistingMarks(true);
 
-    const effYear = academicYearId || 'year-2026';
-    const effTerm = termId || 'term-2026-t1';
+    const effYear = academicYearId || `year-${new Date().getFullYear()}`;
+    const effTerm = termId || `term-${effYear}-t1`;
 
     apiService
       .listSummatives({
@@ -1055,8 +1057,8 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
       return;
     }
 
-    const effectiveYearId = academicYearId || 'year-2026';
-    const effectiveTermId = termId || 'term-2026-t1';
+    const effectiveYearId = academicYearId || `year-${new Date().getFullYear()}`;
+    const effectiveTermId = termId || `term-${effectiveYearId}-t1`;
     const effectiveTeacherId = (user?.id && user.id.trim() !== '') ? user.id : 'tch-default-01';
 
     try {

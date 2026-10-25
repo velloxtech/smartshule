@@ -17,10 +17,21 @@ export interface PayrollProps {
   otherDeductions: number;
   totalDeductions: number;
   netSalary: number;
-  status: 'DRAFT' | 'APPROVED' | 'PAID';
+  status: 'DRAFT' | 'APPROVED' | 'PARTIALLY_PAID' | 'PAID' | 'REVERSED';
+  amountPaid?: number;
+  balance?: number;
   paymentMethod?: 'BANK_TRANSFER' | 'MPESA' | 'CHEQUE' | 'CASH';
   paymentReference?: string;
+  fundingAccount?: string; // 'BANK' | 'MPESA' | 'CASH' or specific account descriptor
   paidAt?: Date;
+  expenseId?: string; // Linked Expense ID in financial records
+  voucherNumber?: string; // Payment voucher number (e.g. PV-SAL-2026-...)
+  approvedByUserId?: string;
+  approvedAt?: Date;
+  paidByUserId?: string;
+  reversedByUserId?: string;
+  reversedAt?: Date;
+  reversalReason?: string;
   notes?: string;
 }
 
@@ -71,7 +82,18 @@ export class PayrollRecord extends Entity<PayrollProps> {
   }
 
   public static create(props: PayrollProps, id: string, createdAt?: Date, updatedAt?: Date): PayrollRecord {
-    return new PayrollRecord(props, id, createdAt, updatedAt);
+    const defaultAmountPaid = props.amountPaid ?? (props.status === 'PAID' ? props.netSalary : 0);
+    const defaultBalance = props.balance ?? Math.max(0, props.netSalary - defaultAmountPaid);
+    return new PayrollRecord(
+      {
+        ...props,
+        amountPaid: defaultAmountPaid,
+        balance: defaultBalance
+      },
+      id,
+      createdAt,
+      updatedAt
+    );
   }
 
   public get schoolId(): string { return this._props.schoolId; }
@@ -79,20 +101,93 @@ export class PayrollRecord extends Entity<PayrollProps> {
   public get teacherName(): string { return this._props.teacherName; }
   public get month(): string { return this._props.month; }
   public get basicSalary(): number { return this._props.basicSalary; }
+  public get houseAllowance(): number { return this._props.houseAllowance; }
+  public get commuterAllowance(): number { return this._props.commuterAllowance; }
+  public get responsibilityAllowance(): number { return this._props.responsibilityAllowance; }
+  public get otherDeductions(): number { return this._props.otherDeductions; }
+  public get nssf(): number { return this._props.nssf; }
+  public get shif(): number { return this._props.shif; }
+  public get housingLevy(): number { return this._props.housingLevy; }
+  public get paye(): number { return this._props.paye; }
+  public get totalDeductions(): number { return this._props.totalDeductions; }
   public get grossSalary(): number { return this._props.grossSalary; }
   public get netSalary(): number { return this._props.netSalary; }
-  public get status(): 'DRAFT' | 'APPROVED' | 'PAID' { return this._props.status; }
+  public get status(): 'DRAFT' | 'APPROVED' | 'PARTIALLY_PAID' | 'PAID' | 'REVERSED' { return this._props.status; }
+  public get amountPaid(): number { return this._props.amountPaid ?? 0; }
+  public get balance(): number { return this._props.balance ?? Math.max(0, this.netSalary - this.amountPaid); }
+  public get paymentMethod(): 'BANK_TRANSFER' | 'MPESA' | 'CHEQUE' | 'CASH' | undefined { return this._props.paymentMethod; }
+  public get paymentReference(): string | undefined { return this._props.paymentReference; }
+  public get fundingAccount(): string | undefined { return this._props.fundingAccount; }
+  public get paidAt(): Date | undefined { return this._props.paidAt; }
+  public get expenseId(): string | undefined { return this._props.expenseId; }
+  public get voucherNumber(): string | undefined { return this._props.voucherNumber; }
+  public get approvedByUserId(): string | undefined { return this._props.approvedByUserId; }
+  public get approvedAt(): Date | undefined { return this._props.approvedAt; }
+  public get paidByUserId(): string | undefined { return this._props.paidByUserId; }
+  public get reversedByUserId(): string | undefined { return this._props.reversedByUserId; }
+  public get reversedAt(): Date | undefined { return this._props.reversedAt; }
+  public get reversalReason(): string | undefined { return this._props.reversalReason; }
 
-  public approve(): void {
+  public approve(approvedByUserId?: string): void {
     this._props.status = 'APPROVED';
+    if (approvedByUserId) {
+      this._props.approvedByUserId = approvedByUserId;
+    }
+    this._props.approvedAt = new Date();
+    this.touch();
+  }
+
+  public recordPayment(
+    amount: number,
+    method: 'BANK_TRANSFER' | 'MPESA' | 'CHEQUE' | 'CASH',
+    reference: string,
+    expenseId?: string,
+    voucherNumber?: string,
+    paidByUserId?: string,
+    fundingAccount?: string,
+    paymentDate?: string
+  ): void {
+    const cleanAmount = Math.round(Number(amount) * 100) / 100;
+    if (cleanAmount <= 0) {
+      throw new Error('Salary payment amount must be greater than zero.');
+    }
+    const currentPaid = this._props.amountPaid || 0;
+    const newPaid = Math.round((currentPaid + cleanAmount) * 100) / 100;
+    const newBalance = Math.max(0, Math.round((this.netSalary - newPaid) * 100) / 100);
+
+    this._props.amountPaid = newPaid;
+    this._props.balance = newBalance;
+    this._props.paymentMethod = method;
+    this._props.paymentReference = reference;
+    if (expenseId) this._props.expenseId = expenseId;
+    if (voucherNumber) this._props.voucherNumber = voucherNumber;
+    if (paidByUserId) this._props.paidByUserId = paidByUserId;
+    this._props.fundingAccount = fundingAccount || (method === 'MPESA' ? 'MPESA' : method === 'CASH' ? 'CASH' : 'BANK');
+    this._props.paidAt = paymentDate ? new Date(paymentDate) : new Date();
+
+    if (newBalance <= 0.001) {
+      this._props.status = 'PAID';
+      this._props.balance = 0;
+    } else {
+      this._props.status = 'PARTIALLY_PAID';
+    }
     this.touch();
   }
 
   public markAsPaid(method: 'BANK_TRANSFER' | 'MPESA' | 'CHEQUE' | 'CASH', ref?: string): void {
-    this._props.status = 'PAID';
-    this._props.paymentMethod = method;
-    this._props.paymentReference = ref;
-    this._props.paidAt = new Date();
+    const remaining = this.balance > 0 ? this.balance : this.netSalary;
+    this.recordPayment(remaining, method, ref || `TX-SAL-${Date.now()}`);
+  }
+
+  public reversePayment(reversalReason: string, reversedByUserId?: string): void {
+    this._props.amountPaid = 0;
+    this._props.balance = this.netSalary;
+    this._props.status = 'APPROVED';
+    this._props.reversedByUserId = reversedByUserId;
+    this._props.reversedAt = new Date();
+    this._props.reversalReason = reversalReason;
+    this._props.paidAt = undefined;
+    this._props.paymentReference = undefined;
     this.touch();
   }
 
@@ -100,6 +195,8 @@ export class PayrollRecord extends Entity<PayrollProps> {
     return {
       id: this.id,
       ...this._props,
+      amountPaid: this.amountPaid,
+      balance: this.balance,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt
     };

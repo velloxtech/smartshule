@@ -38,10 +38,13 @@ const GRADE_LEVELS = [
   { value: 'Grade 6', label: 'Grade 6 (CBC Upper Primary)', ageHint: '11 years' },
 ];
 
+const currentCalYear = new Date().getFullYear();
+const nextCalYear = currentCalYear + 1;
+
 const INTAKE_TERMS = [
-  'Term 1 (Jan 2027) — Main Intake',
-  'Term 2 (May 2027)',
-  'Term 3 (Sep 2027)',
+  `Term 1 (Jan ${nextCalYear}) — Main Intake`,
+  `Term 2 (May ${nextCalYear})`,
+  `Term 3 (Sep ${nextCalYear})`,
   'Immediate Mid-Year Transfer',
 ];
 
@@ -877,7 +880,7 @@ export const ApplyAdmissionSlotPage: React.FC<ApplyAdmissionSlotPageProps> = ({
               <input
                 type="text"
                 required
-                placeholder="e.g. TRK-2027-482190 or 0722345678"
+                placeholder={`e.g. TRK-${nextCalYear}-123456 or 0722345678`}
                 value={trackingQuery}
                 onChange={(e) => setTrackingQuery(e.target.value)}
                 className="flex-1 bg-[#fdfaf6] border border-[#f0d8df] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#7b1c35]"

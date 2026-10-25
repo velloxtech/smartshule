@@ -71,7 +71,10 @@ import {
   PaymentStatus,
   InvoiceStatus,
   Expense,
-  OtherIncome
+  OtherIncome,
+  StudentFeeCredit,
+  FeeCreditApplication,
+  CreditStatus
 } from '../../../core/domain/finance/Fee';
 import { FeeBannerConfig } from '../../../core/domain/finance/FeeBannerConfig';
 
@@ -807,6 +810,265 @@ export class PostgresDatabaseInitializer {
       CREATE INDEX IF NOT EXISTS idx_sponsorships_grade ON student_sponsorships(grade_level);
       CREATE INDEX IF NOT EXISTS idx_sponsorships_status ON student_sponsorships(sponsorship_status);
       CREATE INDEX IF NOT EXISTS idx_sponsorships_type ON student_sponsorships(sponsorship_type);
+
+      CREATE TABLE IF NOT EXISTS student_fee_credits (
+        id VARCHAR(100) PRIMARY KEY,
+        school_id VARCHAR(100) NOT NULL,
+        student_id VARCHAR(100) NOT NULL,
+        originating_payment_id VARCHAR(100),
+        originating_receipt_number VARCHAR(100),
+        academic_year_id VARCHAR(100) NOT NULL,
+        term_id VARCHAR(100) NOT NULL,
+        amount NUMERIC(12,2) NOT NULL,
+        amount_used NUMERIC(12,2) DEFAULT 0,
+        balance NUMERIC(12,2) NOT NULL,
+        status VARCHAR(50) DEFAULT 'AVAILABLE',
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_fee_credits_student ON student_fee_credits(student_id);
+      CREATE INDEX IF NOT EXISTS idx_fee_credits_school ON student_fee_credits(school_id);
+      CREATE INDEX IF NOT EXISTS idx_fee_credits_status ON student_fee_credits(status);
+
+      CREATE TABLE IF NOT EXISTS fee_credit_applications (
+        id VARCHAR(100) PRIMARY KEY,
+        credit_id VARCHAR(100) NOT NULL,
+        student_id VARCHAR(100) NOT NULL,
+        invoice_id VARCHAR(100) NOT NULL,
+        academic_year_id VARCHAR(100) NOT NULL,
+        term_id VARCHAR(100) NOT NULL,
+        amount_applied NUMERIC(12,2) NOT NULL,
+        applied_by_user_id VARCHAR(100),
+        applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_credit_apps_credit ON fee_credit_applications(credit_id);
+      CREATE INDEX IF NOT EXISTS idx_credit_apps_student ON fee_credit_applications(student_id);
+      CREATE INDEX IF NOT EXISTS idx_credit_apps_invoice ON fee_credit_applications(invoice_id);
+
+      CREATE TABLE IF NOT EXISTS payroll_records (
+        id VARCHAR(100) PRIMARY KEY,
+        school_id VARCHAR(100) NOT NULL,
+        teacher_id VARCHAR(100) NOT NULL,
+        teacher_name VARCHAR(255) NOT NULL,
+        month VARCHAR(20) NOT NULL,
+        basic_salary NUMERIC(12, 2) NOT NULL,
+        house_allowance NUMERIC(12, 2) NOT NULL DEFAULT 0,
+        commuter_allowance NUMERIC(12, 2) NOT NULL DEFAULT 0,
+        responsibility_allowance NUMERIC(12, 2) NOT NULL DEFAULT 0,
+        gross_salary NUMERIC(12, 2) NOT NULL,
+        nssf NUMERIC(12, 2) NOT NULL DEFAULT 0,
+        shif NUMERIC(12, 2) NOT NULL DEFAULT 0,
+        housing_levy NUMERIC(12, 2) NOT NULL DEFAULT 0,
+        paye NUMERIC(12, 2) NOT NULL DEFAULT 0,
+        other_deductions NUMERIC(12, 2) NOT NULL DEFAULT 0,
+        total_deductions NUMERIC(12, 2) NOT NULL DEFAULT 0,
+        net_salary NUMERIC(12, 2) NOT NULL,
+        status VARCHAR(50) NOT NULL DEFAULT 'DRAFT',
+        amount_paid NUMERIC(12, 2) NOT NULL DEFAULT 0,
+        balance NUMERIC(12, 2) NOT NULL DEFAULT 0,
+        payment_method VARCHAR(50),
+        payment_reference VARCHAR(100),
+        funding_account VARCHAR(50),
+        expense_id VARCHAR(100),
+        voucher_number VARCHAR(100),
+        paid_at TIMESTAMP,
+        approved_by_user_id VARCHAR(100),
+        approved_at TIMESTAMP,
+        paid_by_user_id VARCHAR(100),
+        reversed_by_user_id VARCHAR(100),
+        reversed_at TIMESTAMP,
+        reversal_reason TEXT,
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS staff_leaves (
+        id VARCHAR(100) PRIMARY KEY,
+        school_id VARCHAR(100) NOT NULL,
+        teacher_id VARCHAR(100) NOT NULL,
+        teacher_name VARCHAR(255) NOT NULL,
+        leave_type VARCHAR(50) NOT NULL,
+        start_date VARCHAR(50) NOT NULL,
+        end_date VARCHAR(50) NOT NULL,
+        days_count INT NOT NULL,
+        reason TEXT NOT NULL,
+        status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
+        approved_by VARCHAR(255),
+        approval_remarks TEXT,
+        substitute_teacher_id VARCHAR(100),
+        substitute_teacher_name VARCHAR(255),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_payroll_school_month ON payroll_records(school_id, month);
+      CREATE INDEX IF NOT EXISTS idx_payroll_teacher ON payroll_records(teacher_id);
+      CREATE INDEX IF NOT EXISTS idx_payroll_expense ON payroll_records(expense_id);
+      CREATE INDEX IF NOT EXISTS idx_staff_leaves_school ON staff_leaves(school_id);
+
+      CREATE TABLE IF NOT EXISTS inventory_items (
+        id VARCHAR(64) PRIMARY KEY,
+        school_id VARCHAR(64) NOT NULL DEFAULT 'school-001',
+        item_name VARCHAR(255) NOT NULL,
+        category VARCHAR(64) NOT NULL,
+        unit VARCHAR(64) NOT NULL,
+        quantity_in_stock NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+        reorder_level NUMERIC(12,2) NOT NULL DEFAULT 10.00,
+        unit_cost NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+        supplier VARCHAR(255),
+        notes TEXT,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_inventory_items_school ON inventory_items(school_id);
+      CREATE INDEX IF NOT EXISTS idx_inventory_items_cat ON inventory_items(category);
+
+      CREATE TABLE IF NOT EXISTS inventory_purchase_requests (
+        id VARCHAR(64) PRIMARY KEY,
+        school_id VARCHAR(64) NOT NULL DEFAULT 'school-001',
+        request_number VARCHAR(64) NOT NULL UNIQUE,
+        item_id VARCHAR(64) NOT NULL REFERENCES inventory_items(id) ON DELETE RESTRICT,
+        item_name VARCHAR(255) NOT NULL,
+        category VARCHAR(64) NOT NULL,
+        quantity_requested NUMERIC(12,2) NOT NULL,
+        estimated_unit_cost NUMERIC(12,2) NOT NULL,
+        total_estimated_cost NUMERIC(12,2) NOT NULL,
+        requested_by_user_id VARCHAR(64) NOT NULL,
+        requested_by_name VARCHAR(128) NOT NULL,
+        requested_by_email VARCHAR(128),
+        reason TEXT NOT NULL,
+        supporting_document_url TEXT,
+        status VARCHAR(32) NOT NULL DEFAULT 'REQUESTED',
+        approved_by_user_id VARCHAR(64),
+        approved_by_name VARCHAR(128),
+        approved_at TIMESTAMP WITH TIME ZONE,
+        approval_notes TEXT,
+        rejection_reason TEXT,
+        delivered_quantity NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+        supplier_name VARCHAR(255),
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_inv_pr_school_status ON inventory_purchase_requests(school_id, status);
+      CREATE INDEX IF NOT EXISTS idx_inv_pr_item ON inventory_purchase_requests(item_id);
+      CREATE INDEX IF NOT EXISTS idx_inv_pr_requester ON inventory_purchase_requests(requested_by_user_id);
+
+      CREATE TABLE IF NOT EXISTS goods_received_notes (
+        id VARCHAR(64) PRIMARY KEY,
+        school_id VARCHAR(64) NOT NULL DEFAULT 'school-001',
+        grn_number VARCHAR(64) NOT NULL UNIQUE,
+        purchase_request_id VARCHAR(64) NOT NULL REFERENCES inventory_purchase_requests(id) ON DELETE RESTRICT,
+        item_id VARCHAR(64) NOT NULL REFERENCES inventory_items(id) ON DELETE RESTRICT,
+        item_name VARCHAR(255) NOT NULL,
+        delivery_note_ref VARCHAR(128),
+        quantity_ordered NUMERIC(12,2) NOT NULL,
+        quantity_delivered NUMERIC(12,2) NOT NULL,
+        quantity_accepted NUMERIC(12,2) NOT NULL,
+        quantity_rejected NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+        rejection_reason TEXT,
+        received_by_user_id VARCHAR(64) NOT NULL,
+        received_by_name VARCHAR(128) NOT NULL,
+        received_date DATE NOT NULL,
+        delivery_status VARCHAR(32) NOT NULL DEFAULT 'FULL',
+        notes TEXT,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_grn_school ON goods_received_notes(school_id);
+      CREATE INDEX IF NOT EXISTS idx_grn_pr ON goods_received_notes(purchase_request_id);
+      CREATE INDEX IF NOT EXISTS idx_grn_item ON goods_received_notes(item_id);
+
+      CREATE TABLE IF NOT EXISTS inventory_supplier_invoices (
+        id VARCHAR(64) PRIMARY KEY,
+        school_id VARCHAR(64) NOT NULL DEFAULT 'school-001',
+        supplier_name VARCHAR(255) NOT NULL,
+        invoice_number VARCHAR(128) NOT NULL,
+        purchase_request_id VARCHAR(64) REFERENCES inventory_purchase_requests(id) ON DELETE SET NULL,
+        invoice_date DATE NOT NULL,
+        due_date DATE,
+        total_amount NUMERIC(12,2) NOT NULL,
+        tax_amount NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+        amount_paid NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+        balance NUMERIC(12,2) NOT NULL,
+        payment_status VARCHAR(32) NOT NULL DEFAULT 'UNPAID',
+        funding_account VARCHAR(32),
+        expense_id VARCHAR(64) REFERENCES expenses(id) ON DELETE SET NULL,
+        voucher_number VARCHAR(64),
+        payment_method VARCHAR(32),
+        payment_reference VARCHAR(128),
+        paid_by_user_id VARCHAR(64),
+        paid_at TIMESTAMP WITH TIME ZONE,
+        verified_by_user_id VARCHAR(64),
+        verified_at TIMESTAMP WITH TIME ZONE,
+        document_url TEXT,
+        notes TEXT,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+        CONSTRAINT uq_inv_supplier_invoice UNIQUE (school_id, supplier_name, invoice_number)
+      );
+      CREATE INDEX IF NOT EXISTS idx_supp_inv_school ON inventory_supplier_invoices(school_id);
+      CREATE INDEX IF NOT EXISTS idx_supp_inv_status ON inventory_supplier_invoices(payment_status);
+      CREATE INDEX IF NOT EXISTS idx_supp_inv_pr ON inventory_supplier_invoices(purchase_request_id);
+
+      CREATE TABLE IF NOT EXISTS inventory_stock_movements (
+        id VARCHAR(64) PRIMARY KEY,
+        school_id VARCHAR(64) NOT NULL DEFAULT 'school-001',
+        item_id VARCHAR(64) NOT NULL REFERENCES inventory_items(id) ON DELETE RESTRICT,
+        item_name VARCHAR(255) NOT NULL,
+        movement_type VARCHAR(32) NOT NULL,
+        quantity NUMERIC(12,2) NOT NULL,
+        balance_before NUMERIC(12,2) NOT NULL,
+        balance_after NUMERIC(12,2) NOT NULL,
+        reference_id VARCHAR(64),
+        reference_type VARCHAR(64),
+        issued_to VARCHAR(128),
+        purpose TEXT,
+        reason TEXT NOT NULL,
+        recorded_by_user_id VARCHAR(64) NOT NULL,
+        recorded_by_name VARCHAR(128) NOT NULL,
+        authorized_by_user_id VARCHAR(64) NOT NULL,
+        authorized_by_name VARCHAR(128) NOT NULL,
+        date DATE NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_inv_movement_item ON inventory_stock_movements(item_id);
+      CREATE INDEX IF NOT EXISTS idx_inv_movement_type ON inventory_stock_movements(movement_type);
+
+      CREATE TABLE IF NOT EXISTS fixed_assets (
+        id VARCHAR(64) PRIMARY KEY,
+        school_id VARCHAR(64) NOT NULL DEFAULT 'school-001',
+        asset_name VARCHAR(255) NOT NULL,
+        asset_tag VARCHAR(128) NOT NULL UNIQUE,
+        category VARCHAR(64) NOT NULL,
+        purchase_date DATE NOT NULL,
+        purchase_cost NUMERIC(12,2) NOT NULL,
+        location VARCHAR(255) NOT NULL,
+        condition VARCHAR(32) NOT NULL DEFAULT 'EXCELLENT',
+        assigned_to VARCHAR(128),
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_fixed_assets_school ON fixed_assets(school_id);
+      CREATE INDEX IF NOT EXISTS idx_fixed_assets_tag ON fixed_assets(asset_tag);
+
+      CREATE TABLE IF NOT EXISTS stock_transactions (
+        id VARCHAR(64) PRIMARY KEY,
+        school_id VARCHAR(64) NOT NULL DEFAULT 'school-001',
+        item_id VARCHAR(64) NOT NULL,
+        item_name VARCHAR(255) NOT NULL,
+        type VARCHAR(32) NOT NULL,
+        quantity NUMERIC(12,2) NOT NULL,
+        issued_to VARCHAR(128),
+        authorized_by VARCHAR(128) NOT NULL,
+        date DATE NOT NULL,
+        notes TEXT,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+      );
     `;
 
     await pool.query(ddl);
@@ -821,6 +1083,7 @@ export class PostgresDatabaseInitializer {
       ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS reflection TEXT;
       ALTER TABLE students ADD COLUMN IF NOT EXISTS classroom_id VARCHAR(100);
       ALTER TABLE users ALTER COLUMN email DROP NOT NULL;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN DEFAULT false;
       ALTER TABLE schools ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION;
       ALTER TABLE schools ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION;
       ALTER TABLE schools ADD COLUMN IF NOT EXISTS geofence_radius DOUBLE PRECISION DEFAULT 250;
@@ -859,6 +1122,11 @@ export class PostgresDatabaseInitializer {
       ALTER TABLE schemes_of_work DROP CONSTRAINT IF EXISTS fk_schemes_teacher;
       ALTER TABLE lesson_plans DROP CONSTRAINT IF EXISTS fk_lesson_plans_teacher;
       ALTER TABLE payments DROP CONSTRAINT IF EXISTS fk_payments_invoice;
+
+      CREATE UNIQUE INDEX IF NOT EXISTS uq_strands_area_grade_code ON strands (learning_area_id, grade_level, code);
+      CREATE UNIQUE INDEX IF NOT EXISTS uq_strands_area_grade_title ON strands (learning_area_id, grade_level, LOWER(title));
+      CREATE UNIQUE INDEX IF NOT EXISTS uq_sub_strands_strand_code ON sub_strands (strand_id, code);
+      CREATE UNIQUE INDEX IF NOT EXISTS uq_sub_strands_strand_title ON sub_strands (strand_id, LOWER(title));
     `).catch(() => {});
 
     console.log('[PostgreSQL] Database tables initialized successfully.');
@@ -871,14 +1139,14 @@ export class PostgresUserRepository implements IUserRepository {
     const res = await this.pool.query('SELECT * FROM users WHERE id = $1', [id]);
     if (res.rows.length === 0) return null;
     const r = res.rows[0];
-    return User.create({ email: r.email, passwordHash: r.password_hash, firstName: r.first_name, lastName: r.last_name, role: r.role, phone: r.phone, status: r.status, schoolId: r.school_id }, r.id, r.created_at, r.updated_at);
+    return User.create({ email: r.email, passwordHash: r.password_hash, firstName: r.first_name, lastName: r.last_name, role: r.role, phone: r.phone, status: r.status, schoolId: r.school_id, mustChangePassword: r.must_change_password ?? false }, r.id, r.created_at, r.updated_at);
   }
   public async findByEmail(email: string): Promise<User | null> {
     if (!email || email.trim() === '') return null;
     const res = await this.pool.query('SELECT * FROM users WHERE LOWER(email) = LOWER($1)', [email.trim()]);
     if (res.rows.length === 0) return null;
     const r = res.rows[0];
-    return User.create({ email: r.email, passwordHash: r.password_hash, firstName: r.first_name, lastName: r.last_name, role: r.role, phone: r.phone, status: r.status, schoolId: r.school_id }, r.id, r.created_at, r.updated_at);
+    return User.create({ email: r.email, passwordHash: r.password_hash, firstName: r.first_name, lastName: r.last_name, role: r.role, phone: r.phone, status: r.status, schoolId: r.school_id, mustChangePassword: r.must_change_password ?? false }, r.id, r.created_at, r.updated_at);
   }
   public async findByPhone(phone: string): Promise<User | null> {
     if (!phone || phone.trim() === '') return null;
@@ -890,13 +1158,13 @@ export class PostgresUserRepository implements IUserRepository {
       );
       if (res.rows.length > 0) {
         const r = res.rows[0];
-        return User.create({ email: r.email, passwordHash: r.password_hash, firstName: r.first_name, lastName: r.last_name, role: r.role, phone: r.phone, status: r.status, schoolId: r.school_id }, r.id, r.created_at, r.updated_at);
+        return User.create({ email: r.email, passwordHash: r.password_hash, firstName: r.first_name, lastName: r.last_name, role: r.role, phone: r.phone, status: r.status, schoolId: r.school_id, mustChangePassword: r.must_change_password ?? false }, r.id, r.created_at, r.updated_at);
       }
     }
     const res = await this.pool.query('SELECT * FROM users WHERE phone = $1 LIMIT 1', [phone.trim()]);
     if (res.rows.length === 0) return null;
     const r = res.rows[0];
-    return User.create({ email: r.email, passwordHash: r.password_hash, firstName: r.first_name, lastName: r.last_name, role: r.role, phone: r.phone, status: r.status, schoolId: r.school_id }, r.id, r.created_at, r.updated_at);
+    return User.create({ email: r.email, passwordHash: r.password_hash, firstName: r.first_name, lastName: r.last_name, role: r.role, phone: r.phone, status: r.status, schoolId: r.school_id, mustChangePassword: r.must_change_password ?? false }, r.id, r.created_at, r.updated_at);
   }
   public async findAll(filters?: { schoolId?: string; role?: string }): Promise<User[]> {
     let q = 'SELECT * FROM users WHERE 1=1';
@@ -904,12 +1172,12 @@ export class PostgresUserRepository implements IUserRepository {
     if (filters?.schoolId) { params.push(filters.schoolId); q += ` AND school_id = $${params.length}`; }
     if (filters?.role) { params.push(filters.role); q += ` AND role = $${params.length}`; }
     const res = await this.pool.query(q, params);
-    return res.rows.map(r => User.create({ email: r.email, passwordHash: r.password_hash, firstName: r.first_name, lastName: r.last_name, role: r.role, phone: r.phone, status: r.status, schoolId: r.school_id }, r.id, r.created_at, r.updated_at));
+    return res.rows.map(r => User.create({ email: r.email, passwordHash: r.password_hash, firstName: r.first_name, lastName: r.last_name, role: r.role, phone: r.phone, status: r.status, schoolId: r.school_id, mustChangePassword: r.must_change_password ?? false }, r.id, r.created_at, r.updated_at));
   }
   public async save(user: User): Promise<void> {
-    const q = `INSERT INTO users (id, email, password_hash, first_name, last_name, role, phone, status, school_id, created_at, updated_at)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-               ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, password_hash = EXCLUDED.password_hash, first_name = EXCLUDED.first_name, last_name = EXCLUDED.last_name, role = EXCLUDED.role, phone = EXCLUDED.phone, status = EXCLUDED.status, school_id = EXCLUDED.school_id, updated_at = NOW()`;
+    const q = `INSERT INTO users (id, email, password_hash, first_name, last_name, role, phone, status, school_id, must_change_password, created_at, updated_at)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+               ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, password_hash = EXCLUDED.password_hash, first_name = EXCLUDED.first_name, last_name = EXCLUDED.last_name, role = EXCLUDED.role, phone = EXCLUDED.phone, status = EXCLUDED.status, school_id = EXCLUDED.school_id, must_change_password = EXCLUDED.must_change_password, updated_at = NOW()`;
     const cleanEmail = (user.email && user.email.trim() !== '') ? user.email.trim().toLowerCase() : null;
     await this.pool.query(q, [
       user.id,
@@ -921,6 +1189,7 @@ export class PostgresUserRepository implements IUserRepository {
       user.phone || null,
       user.status,
       (user.schoolId && user.schoolId.trim() !== '') ? user.schoolId : null,
+      user.mustChangePassword,
       user.createdAt,
       user.updatedAt
     ]);
@@ -1138,7 +1407,11 @@ export class PostgresAcademicRepository implements IAcademicRepository {
                  name = EXCLUDED.name,
                  motto = EXCLUDED.motto,
                  phone = EXCLUDED.phone,
+                 email = EXCLUDED.email,
                  address = EXCLUDED.address,
+                 logo_url = EXCLUDED.logo_url,
+                 currency = EXCLUDED.currency,
+                 center_code = EXCLUDED.center_code,
                  latitude = EXCLUDED.latitude,
                  longitude = EXCLUDED.longitude,
                  geofence_radius = EXCLUDED.geofence_radius,
@@ -1328,7 +1601,13 @@ export class PostgresCBCAssessmentRepository implements ICBCAssessmentRepository
   public async saveStrand(s: Strand): Promise<void> {
     const q = `INSERT INTO strands (id, learning_area_id, grade_level, code, title, description, created_at, updated_at)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-               ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, updated_at = NOW()`;
+               ON CONFLICT (id) DO UPDATE SET 
+                 learning_area_id = EXCLUDED.learning_area_id,
+                 grade_level = EXCLUDED.grade_level,
+                 code = EXCLUDED.code,
+                 title = EXCLUDED.title, 
+                 description = EXCLUDED.description, 
+                 updated_at = NOW()`;
     await this.pool.query(q, [s.id, s.learningAreaId, s.gradeLevel, s.code, s.title, s.description, s.createdAt, s.updatedAt]);
   }
   public async deleteStrand(id: string): Promise<void> {
@@ -1348,7 +1627,13 @@ export class PostgresCBCAssessmentRepository implements ICBCAssessmentRepository
   public async saveSubStrand(sub: SubStrand): Promise<void> {
     const q = `INSERT INTO sub_strands (id, strand_id, code, title, specific_learning_outcomes, suggested_experiences, created_at, updated_at)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-               ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, specific_learning_outcomes = EXCLUDED.specific_learning_outcomes, updated_at = NOW()`;
+               ON CONFLICT (id) DO UPDATE SET 
+                 strand_id = EXCLUDED.strand_id,
+                 code = EXCLUDED.code,
+                 title = EXCLUDED.title, 
+                 specific_learning_outcomes = EXCLUDED.specific_learning_outcomes, 
+                 suggested_experiences = EXCLUDED.suggested_experiences, 
+                 updated_at = NOW()`;
     await this.pool.query(q, [sub.id, sub.strandId, sub.code, sub.title, JSON.stringify(sub.specificLearningOutcomes), JSON.stringify(sub.suggestedExperiences || []), sub.createdAt, sub.updatedAt]);
   }
   public async deleteSubStrand(id: string): Promise<void> {
@@ -1441,7 +1726,8 @@ export class PostgresCBCAssessmentRepository implements ICBCAssessmentRepository
   public async saveSummative(s: SummativeAssessment): Promise<void> {
     const q = `INSERT INTO summative_assessments (id, student_id, teacher_id, learning_area_id, term_id, academic_year_id, strand_scores, overall_performance_level, teacher_remarks, evaluation_date, created_at, updated_at)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-               ON CONFLICT (id) DO UPDATE SET overall_performance_level = EXCLUDED.overall_performance_level, strand_scores = EXCLUDED.strand_scores, teacher_remarks = EXCLUDED.teacher_remarks, evaluation_date = EXCLUDED.evaluation_date, updated_at = NOW()`;
+               ON CONFLICT (student_id, learning_area_id, term_id, academic_year_id)
+               DO UPDATE SET overall_performance_level = EXCLUDED.overall_performance_level, strand_scores = EXCLUDED.strand_scores, teacher_remarks = EXCLUDED.teacher_remarks, evaluation_date = EXCLUDED.evaluation_date, teacher_id = EXCLUDED.teacher_id, updated_at = NOW()`;
     await this.pool.query(q, [
       s.id,
       s.studentId,
@@ -1474,9 +1760,11 @@ export class PostgresCBCAssessmentRepository implements ICBCAssessmentRepository
     const termCandidates = [termId];
     if (termId.includes('-t')) termCandidates.push(termId.replace('-t', '-'));
     else if (/-\d+$/.test(termId)) termCandidates.push(termId.replace(/-(\d+)$/, '-t$1'));
-    if (termId.toLowerCase().includes('term-3') || termId.toLowerCase().includes('term-2026-3')) termCandidates.push('term-2026-t3', 'term-2026-3');
-    if (termId.toLowerCase().includes('term-2') || termId.toLowerCase().includes('term-2026-2')) termCandidates.push('term-2026-t2', 'term-2026-2');
-    if (termId.toLowerCase().includes('term-1') || termId.toLowerCase().includes('term-2026-1')) termCandidates.push('term-2026-t1', 'term-2026-1');
+    const yearMatch = termId.match(/20\d{2}/);
+    const yr = yearMatch ? yearMatch[0] : new Date().getFullYear().toString();
+    if (/term[_-]?3\b|3$/i.test(termId)) termCandidates.push(`term-${yr}-t3`, `term-${yr}-3`);
+    if (/term[_-]?2\b|2$/i.test(termId)) termCandidates.push(`term-${yr}-t2`, `term-${yr}-2`);
+    if (/term[_-]?1\b|1$/i.test(termId)) termCandidates.push(`term-${yr}-t1`, `term-${yr}-1`);
 
     const yearCandidates = [academicYearId];
     if (academicYearId.startsWith('year-')) yearCandidates.push(academicYearId.replace('year-', ''));
@@ -1506,9 +1794,11 @@ export class PostgresCBCAssessmentRepository implements ICBCAssessmentRepository
     const termCandidates = [termId];
     if (termId.includes('-t')) termCandidates.push(termId.replace('-t', '-'));
     else if (/-\d+$/.test(termId)) termCandidates.push(termId.replace(/-(\d+)$/, '-t$1'));
-    if (termId.toLowerCase().includes('term-3') || termId.toLowerCase().includes('term-2026-3')) termCandidates.push('term-2026-t3', 'term-2026-3');
-    if (termId.toLowerCase().includes('term-2') || termId.toLowerCase().includes('term-2026-2')) termCandidates.push('term-2026-t2', 'term-2026-2');
-    if (termId.toLowerCase().includes('term-1') || termId.toLowerCase().includes('term-2026-1')) termCandidates.push('term-2026-t1', 'term-2026-1');
+    const yearMatch = termId.match(/20\d{2}/);
+    const yr = yearMatch ? yearMatch[0] : new Date().getFullYear().toString();
+    if (/term[_-]?3\b|3$/i.test(termId)) termCandidates.push(`term-${yr}-t3`, `term-${yr}-3`);
+    if (/term[_-]?2\b|2$/i.test(termId)) termCandidates.push(`term-${yr}-t2`, `term-${yr}-2`);
+    if (/term[_-]?1\b|1$/i.test(termId)) termCandidates.push(`term-${yr}-t1`, `term-${yr}-1`);
 
     let q = 'SELECT * FROM CBC_report_cards WHERE term_id = ANY($1)';
     const params: any[] = [Array.from(new Set(termCandidates))];
@@ -1993,7 +2283,7 @@ export class PostgresFeeRepository implements IFeeRepository {
   public async saveFeeStructure(fs: FeeStructure): Promise<void> {
     const q = `INSERT INTO fee_structures (id, school_id, academic_year_id, term_id, grade_level, title, items, due_date, created_at, updated_at)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-               ON CONFLICT (id) DO UPDATE SET items = EXCLUDED.items, title = EXCLUDED.title, due_date = EXCLUDED.due_date, updated_at = NOW()`;
+               ON CONFLICT (id) DO UPDATE SET items = EXCLUDED.items, title = EXCLUDED.title, due_date = EXCLUDED.due_date, grade_level = EXCLUDED.grade_level, term_id = EXCLUDED.term_id, academic_year_id = EXCLUDED.academic_year_id, updated_at = NOW()`;
     const termVal = fs.termId && fs.termId !== 'ALL' && fs.termId !== 'ANNUAL' ? fs.termId : null;
     await this.pool.query(q, [fs.id, fs.schoolId, fs.academicYearId, termVal, fs.gradeLevel, fs.title, JSON.stringify(fs.items), fs.dueDate, fs.createdAt, fs.updatedAt]);
   }
@@ -2296,6 +2586,134 @@ export class PostgresFeeRepository implements IFeeRepository {
       config.createdAt,
       config.updatedAt
     ]);
+  }
+
+  // Student Fee Credits (Overpayment / Advance Payment Ledger)
+  public async findCreditById(id: string): Promise<StudentFeeCredit | null> {
+    const res = await this.pool.query('SELECT * FROM student_fee_credits WHERE id = $1', [id]);
+    if (!res.rows.length) return null;
+    return this.mapCreditRow(res.rows[0]);
+  }
+
+  public async findCredits(filters: { studentId?: string; schoolId?: string; status?: string }): Promise<StudentFeeCredit[]> {
+    const conditions: string[] = [];
+    const values: any[] = [];
+    let idx = 1;
+
+    if (filters.studentId) {
+      conditions.push(`student_id = $${idx++}`);
+      values.push(filters.studentId);
+    }
+    if (filters.schoolId) {
+      conditions.push(`school_id = $${idx++}`);
+      values.push(filters.schoolId);
+    }
+    if (filters.status) {
+      conditions.push(`status = $${idx++}`);
+      values.push(filters.status);
+    }
+
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const res = await this.pool.query(`SELECT * FROM student_fee_credits ${where} ORDER BY created_at DESC`, values);
+    return res.rows.map(r => this.mapCreditRow(r));
+  }
+
+  public async saveCredit(credit: StudentFeeCredit): Promise<void> {
+    const q = `INSERT INTO student_fee_credits (
+      id, school_id, student_id, originating_payment_id, originating_receipt_number,
+      academic_year_id, term_id, amount, amount_used, balance, status, notes, created_at, updated_at
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+    ON CONFLICT (id) DO UPDATE SET
+      amount = EXCLUDED.amount,
+      amount_used = EXCLUDED.amount_used,
+      balance = EXCLUDED.balance,
+      status = EXCLUDED.status,
+      notes = EXCLUDED.notes,
+      updated_at = NOW()`;
+    await this.pool.query(q, [
+      credit.id,
+      credit.schoolId,
+      credit.studentId,
+      credit.originatingPaymentId || null,
+      credit.originatingReceiptNumber || null,
+      credit.academicYearId,
+      credit.termId,
+      credit.amount,
+      credit.amountUsed,
+      credit.balance,
+      credit.status,
+      credit.notes || null,
+      credit.createdAt,
+      credit.updatedAt
+    ]);
+  }
+
+  public async updateCredit(credit: StudentFeeCredit): Promise<void> {
+    await this.saveCredit(credit);
+  }
+
+  public async saveCreditApplication(app: FeeCreditApplication): Promise<void> {
+    const q = `INSERT INTO fee_credit_applications (
+      id, credit_id, student_id, invoice_id, academic_year_id, term_id, amount_applied, applied_by_user_id, applied_at, created_at
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+    ON CONFLICT (id) DO NOTHING`;
+    await this.pool.query(q, [
+      app.id,
+      app.creditId,
+      app.studentId,
+      app.invoiceId,
+      app.academicYearId,
+      app.termId,
+      app.amountApplied,
+      app.appliedByUserId || null
+    ]);
+  }
+
+  public async findCreditApplications(filters: { studentId?: string; invoiceId?: string; creditId?: string }): Promise<FeeCreditApplication[]> {
+    const conditions: string[] = [];
+    const values: any[] = [];
+    let idx = 1;
+
+    if (filters.studentId) {
+      conditions.push(`student_id = $${idx++}`);
+      values.push(filters.studentId);
+    }
+    if (filters.invoiceId) {
+      conditions.push(`invoice_id = $${idx++}`);
+      values.push(filters.invoiceId);
+    }
+    if (filters.creditId) {
+      conditions.push(`credit_id = $${idx++}`);
+      values.push(filters.creditId);
+    }
+
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const res = await this.pool.query(`SELECT * FROM fee_credit_applications ${where} ORDER BY applied_at DESC`, values);
+    return res.rows.map(r => FeeCreditApplication.create({
+      creditId: r.credit_id,
+      studentId: r.student_id,
+      invoiceId: r.invoice_id,
+      academicYearId: r.academic_year_id,
+      termId: r.term_id,
+      amountApplied: Number(r.amount_applied),
+      appliedByUserId: r.applied_by_user_id
+    }, r.id, r.created_at, r.applied_at));
+  }
+
+  private mapCreditRow(r: any): StudentFeeCredit {
+    return StudentFeeCredit.create({
+      schoolId: r.school_id,
+      studentId: r.student_id,
+      originatingPaymentId: r.originating_payment_id,
+      originatingReceiptNumber: r.originating_receipt_number,
+      academicYearId: r.academic_year_id,
+      termId: r.term_id,
+      amount: Number(r.amount),
+      amountUsed: Number(r.amount_used || 0),
+      balance: Number(r.balance),
+      status: r.status as CreditStatus,
+      notes: r.notes
+    }, r.id, r.created_at, r.updated_at);
   }
 }
 

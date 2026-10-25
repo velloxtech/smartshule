@@ -15,7 +15,7 @@ export class SmsNotificationAdapter implements INotificationService {
     this.provider = process.env.SMS_PROVIDER || 'africastalking';
     this.atApiKey = process.env.AFRICASTALKING_API_KEY || '';
     this.atUsername = process.env.AFRICASTALKING_USERNAME || 'sandbox';
-    this.atSenderId = process.env.AFRICASTALKING_SENDER_ID || 'SMARTSHULE';
+    this.atSenderId = process.env.AFRICASTALKING_SENDER_ID || 'GRACESEEDS';
     this.twilioAccountSid = process.env.TWILIO_ACCOUNT_SID || '';
     this.twilioAuthToken = process.env.TWILIO_AUTH_TOKEN || '';
     this.twilioFromNumber = process.env.TWILIO_PHONE_NUMBER || '';

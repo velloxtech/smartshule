@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { AcademicUseCases } from '../../../application/academics/AcademicUseCases';
+import { SystemLogUseCases } from '../../../application/system-logs/SystemLogUseCases';
 import { CBCGradeLevel } from '../../../core/domain/user/Student';
 import { EducationLevel } from '../../../core/domain/academic/ClassRoom';
 
@@ -32,6 +33,16 @@ export const CreateTermSchema = z.object({
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   isCurrent: z.boolean().default(false)
 });
+
+export const InitializeTermSchema = z.object({
+  academicYearId: z.string().min(1, 'Academic year is required'),
+  termNumber: z.number().int().min(1).max(3),
+  name: z.string().min(1, 'Term name is required'),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Start date must be in YYYY-MM-DD format'),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'End date must be in YYYY-MM-DD format'),
+  isCurrent: z.boolean().optional().default(true),
+  schoolId: z.string().optional()
+}).passthrough();
 
 export const UpdateTermSchema = z.object({
   name: z.string().min(1).optional(),
@@ -68,7 +79,10 @@ export const CreateLearningAreaSchema = z.object({
 
 
 export class AcademicController {
-  constructor(private readonly academicUseCases: AcademicUseCases) {}
+  constructor(
+    private readonly academicUseCases: AcademicUseCases,
+    private readonly systemLogUseCases?: SystemLogUseCases
+  ) {}
 
   public setupSchool = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -106,9 +120,57 @@ export class AcademicController {
     }
   };
 
+  public initializeTerm = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const requestingUser = (req as any).user;
+      const result = await this.academicUseCases.initializeAcademicTerm(req.body, requestingUser);
+
+      this.systemLogUseCases?.log({
+        schoolId: result.academicYear?.schoolId || requestingUser?.schoolId || 'school-001',
+        level: 'AUDIT',
+        category: 'ACADEMICS',
+        action: 'TERM_INITIALIZED',
+        actorEmail: requestingUser?.email,
+        actorUserId: requestingUser?.userId,
+        actorRole: requestingUser?.role,
+        ipAddress: req.ip || (req.socket?.remoteAddress as string),
+        details: `Initialized ${result.data?.name} (Term ${result.data?.termNumber}) for Academic Year ${result.academicYear?.name} (${result.data?.startDate} to ${result.data?.endDate})`,
+        metadata: {
+          termId: result.data?.id,
+          academicYearId: result.academicYear?.id,
+          termNumber: result.data?.termNumber,
+          termName: result.data?.name,
+          startDate: result.data?.startDate,
+          endDate: result.data?.endDate,
+          actor: requestingUser?.email,
+          role: requestingUser?.role
+        }
+      }).catch(() => {});
+
+      return res.status(201).json(result);
+    } catch (err) {
+      next(err);
+    }
+  };
+
   public createTerm = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const term = await this.academicUseCases.createAcademicTerm(req.body);
+      const requestingUser = (req as any).user;
+      const term = await this.academicUseCases.createAcademicTerm(req.body, requestingUser);
+
+      this.systemLogUseCases?.log({
+        schoolId: req.body.schoolId || requestingUser?.schoolId || 'school-001',
+        level: 'AUDIT',
+        category: 'ACADEMICS',
+        action: 'TERM_CREATED',
+        actorEmail: requestingUser?.email,
+        actorUserId: requestingUser?.userId,
+        actorRole: requestingUser?.role,
+        ipAddress: req.ip || (req.socket?.remoteAddress as string),
+        details: `Created term: ${term.name} (Term ${term.termNumber})`,
+        metadata: { termId: term.id, academicYearId: term.academicYearId }
+      }).catch(() => {});
+
       return res.status(201).json({ success: true, data: term });
     } catch (err) {
       next(err);
@@ -154,7 +216,22 @@ export class AcademicController {
 
   public transitionTerm = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const term = await this.academicUseCases.transitionTerm(req.query.schoolId as string);
+      const requestingUser = (req as any).user;
+      const term = await this.academicUseCases.transitionTerm(req.query.schoolId as string, requestingUser);
+
+      this.systemLogUseCases?.log({
+        schoolId: (req.query.schoolId as string) || requestingUser?.schoolId || 'school-001',
+        level: 'AUDIT',
+        category: 'ACADEMICS',
+        action: 'TERM_TRANSITIONED',
+        actorEmail: requestingUser?.email,
+        actorUserId: requestingUser?.userId,
+        actorRole: requestingUser?.role,
+        ipAddress: req.ip || (req.socket?.remoteAddress as string),
+        details: `Concluded and transitioned to academic session: ${term?.name}`,
+        metadata: { termId: term?.id, termName: term?.name }
+      }).catch(() => {});
+
       return res.status(200).json({ success: true, data: term });
     } catch (err) {
       next(err);

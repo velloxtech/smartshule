@@ -70,6 +70,11 @@ import {
   StudentMedicalProfile,
   ClinicVisit,
   InventoryItem,
+  InventoryPurchaseRequest,
+  GoodsReceivedNote,
+  SupplierInvoice,
+  StockMovement,
+  InventoryStats,
   StockTransaction,
   FixedAsset,
   CoCurricularClub,
@@ -415,6 +420,21 @@ const coreApiService = {
     });
   },
 
+  initializeTerm: async (data: {
+    academicYearId: string;
+    termNumber: number;
+    name: string;
+    startDate: string;
+    endDate: string;
+    isCurrent?: boolean;
+    schoolId?: string;
+  }): Promise<ApiResponse<AcademicTerm>> => {
+    return apiFetch<ApiResponse<AcademicTerm>>('/academics/terms/initialize', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
   createTerm: async (data: {
     academicYearId: string;
     termNumber: number;
@@ -514,6 +534,9 @@ const coreApiService = {
     streamId?: string;
     academicYearId?: string;
     search?: string;
+    limit?: number;
+    offset?: number;
+    page?: number;
   }): Promise<ApiResponse<any[]>> => {
     const q = new URLSearchParams();
     if (filters?.schoolId) q.append('schoolId', filters.schoolId);
@@ -522,6 +545,9 @@ const coreApiService = {
     if (filters?.streamId) q.append('streamId', filters.streamId);
     if (filters?.academicYearId) q.append('academicYearId', filters.academicYearId);
     if (filters?.search) q.append('search', filters.search);
+    if (filters?.limit) q.append('limit', String(filters.limit));
+    if (filters?.offset) q.append('offset', String(filters.offset));
+    if (filters?.page) q.append('page', String(filters.page));
     return apiFetch<ApiResponse<any[]>>(`/students?${q.toString()}`);
   },
 
@@ -751,6 +777,22 @@ const coreApiService = {
     });
   },
 
+  updateStrand: async (
+    id: string,
+    data: Partial<{
+      learningAreaId: string;
+      gradeLevel: string;
+      code: string;
+      title: string;
+      description: string;
+    }>
+  ): Promise<ApiResponse<BackendStrand>> => {
+    return apiFetch<ApiResponse<BackendStrand>>(`/CBC/strands/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
   getStrandsByLearningArea: async (
     learningAreaId: string,
     gradeLevel?: string
@@ -774,6 +816,22 @@ const coreApiService = {
   }): Promise<ApiResponse<BackendSubStrand>> => {
     return apiFetch<ApiResponse<BackendSubStrand>>('/CBC/sub-strands', {
       method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateSubStrand: async (
+    id: string,
+    data: Partial<{
+      strandId: string;
+      code: string;
+      title: string;
+      specificLearningOutcomes: string[];
+      suggestedExperiences?: string[];
+    }>
+  ): Promise<ApiResponse<BackendSubStrand>> => {
+    return apiFetch<ApiResponse<BackendSubStrand>>(`/CBC/sub-strands/${id}`, {
+      method: 'PUT',
       body: JSON.stringify(data),
     });
   },
@@ -1136,6 +1194,7 @@ const coreApiService = {
     academicYearId?: string;
     startDate?: string;
     endDate?: string;
+    date?: string;
   }): Promise<ApiResponse<any>> => {
     const q = new URLSearchParams();
     Object.entries(params).forEach(([k, v]) => {
@@ -1192,6 +1251,13 @@ const coreApiService = {
   createFeeStructure: async (data: any): Promise<ApiResponse<FeeStructure>> => {
     return apiFetch<ApiResponse<FeeStructure>>('/finance/structures', {
       method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateFeeStructure: async (id: string, data: any): Promise<ApiResponse<FeeStructure>> => {
+    return apiFetch<ApiResponse<FeeStructure>>(`/finance/structures/${id}`, {
+      method: 'PUT',
       body: JSON.stringify(data),
     });
   },
@@ -1274,6 +1340,13 @@ const coreApiService = {
     });
   },
 
+  reversePayment: async (paymentId: string, reason: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/finance/payments/${encodeURIComponent(paymentId)}/reverse`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  },
+
   // Parent Payment Forwarding & Verification
   forwardPaymentTransaction: async (data: {
     studentId: string;
@@ -1351,6 +1424,37 @@ const coreApiService = {
 
   getFeeStatement: async (studentId: string): Promise<ApiResponse<any>> => {
     return apiFetch<ApiResponse<any>>(`/finance/statements/${studentId}`);
+  },
+
+  getStudentFeeAccounts: async (params?: {
+    schoolId?: string;
+    termId?: string;
+    academicYearId?: string;
+    gradeLevel?: string;
+  }): Promise<ApiResponse<any>> => {
+    const q = new URLSearchParams();
+    if (params?.schoolId) q.append('schoolId', params.schoolId);
+    if (params?.termId) q.append('termId', params.termId);
+    if (params?.academicYearId) q.append('academicYearId', params.academicYearId);
+    if (params?.gradeLevel) q.append('gradeLevel', params.gradeLevel);
+    const qs = q.toString() ? `?${q.toString()}` : '';
+    return apiFetch<ApiResponse<any>>(`/finance/student-accounts${qs}`);
+  },
+
+  getStudentCredits: async (studentId: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/finance/credits/${studentId}`);
+  },
+
+  applyCreditToInvoice: async (data: {
+    creditId?: string;
+    studentId?: string;
+    invoiceId: string;
+    amount?: number;
+  }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/finance/credits/apply', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   },
 
   getFeeBannerConfig: async (schoolId?: string): Promise<ApiResponse<FeeBannerConfig>> => {
@@ -2468,11 +2572,71 @@ export const libraryApi = {
     });
   },
 
-  markPayrollPaid: async (id: string, paymentMethod: string, reference?: string): Promise<ApiResponse<PayrollRecord>> => {
+  markPayrollPaid: async (
+    id: string,
+    paymentMethod: string,
+    reference?: string,
+    options?: { amount?: number; paymentDate?: string; fundingAccount?: string; notes?: string }
+  ): Promise<ApiResponse<PayrollRecord>> => {
     return apiFetch<ApiResponse<PayrollRecord>>(`/payroll/${id}/pay`, {
       method: 'PATCH',
-      body: JSON.stringify({ paymentMethod, reference }),
+      body: JSON.stringify({
+        paymentMethod,
+        reference,
+        amount: options?.amount,
+        paymentDate: options?.paymentDate,
+        fundingAccount: options?.fundingAccount,
+        notes: options?.notes,
+      }),
     });
+  },
+
+  recordSalaryPayment: async (
+    id: string,
+    data: {
+      amount?: number;
+      paymentMethod: string;
+      paymentReference: string;
+      paymentDate?: string;
+      fundingAccount?: string;
+      voucherNumber?: string;
+      notes?: string;
+    }
+  ): Promise<ApiResponse<{ payroll: PayrollRecord; expense: any }>> => {
+    return apiFetch<ApiResponse<{ payroll: PayrollRecord; expense: any }>>(`/payroll/${id}/disburse`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  payPayrollBatch: async (data: {
+    month: string;
+    paymentMethod: string;
+    payrollIds?: string[];
+    batchReference?: string;
+    paymentDate?: string;
+    fundingAccount?: string;
+    notes?: string;
+  }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/payroll/batch/pay', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  reverseSalaryPayment: async (
+    id: string,
+    reversalReason: string
+  ): Promise<ApiResponse<{ message: string; payroll: PayrollRecord; reversedExpenseVoucher?: string }>> => {
+    return apiFetch<ApiResponse<{ message: string; payroll: PayrollRecord; reversedExpenseVoucher?: string }>>(`/payroll/${id}/reverse`, {
+      method: 'POST',
+      body: JSON.stringify({ reversalReason }),
+    });
+  },
+
+  getPayrollReconciliation: async (month?: string): Promise<ApiResponse<any>> => {
+    const params = month ? `?month=${month}` : '';
+    return apiFetch<ApiResponse<any>>(`/payroll/reconciliation${params}`);
   },
 
   deletePayroll: async (id: string): Promise<ApiResponse<any>> => {
@@ -2546,6 +2710,10 @@ export const libraryApi = {
     return apiFetch<ApiResponse<any>>('/inventory/stats');
   },
 
+  getInventoryReports: async (): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/inventory/reports');
+  },
+
   getInventoryItems: async (category?: string): Promise<ApiResponse<InventoryItem[]>> => {
     const params = category ? `?category=${category}` : '';
     return apiFetch<ApiResponse<InventoryItem[]>>(`/inventory/items${params}`);
@@ -2573,6 +2741,109 @@ export const libraryApi = {
 
   getLowStockAlerts: async (): Promise<ApiResponse<InventoryItem[]>> => {
     return apiFetch<ApiResponse<InventoryItem[]>>('/inventory/low-stock');
+  },
+
+  // Purchase Requests & Approvals
+  getPurchaseRequests: async (filters?: { status?: string; itemId?: string }): Promise<ApiResponse<InventoryPurchaseRequest[]>> => {
+    const query = new URLSearchParams();
+    if (filters?.status) query.append('status', filters.status);
+    if (filters?.itemId) query.append('itemId', filters.itemId);
+    const qs = query.toString() ? `?${query.toString()}` : '';
+    return apiFetch<ApiResponse<InventoryPurchaseRequest[]>>(`/inventory/purchase-requests${qs}`);
+  },
+
+  createPurchaseRequest: async (data: any): Promise<ApiResponse<InventoryPurchaseRequest>> => {
+    return apiFetch<ApiResponse<InventoryPurchaseRequest>>('/inventory/purchase-requests', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  approvePurchaseRequest: async (id: string, notes?: string): Promise<ApiResponse<InventoryPurchaseRequest>> => {
+    return apiFetch<ApiResponse<InventoryPurchaseRequest>>(`/inventory/purchase-requests/${id}/approve`, {
+      method: 'POST',
+      body: JSON.stringify({ notes }),
+    });
+  },
+
+  rejectPurchaseRequest: async (id: string, reason: string): Promise<ApiResponse<InventoryPurchaseRequest>> => {
+    return apiFetch<ApiResponse<InventoryPurchaseRequest>>(`/inventory/purchase-requests/${id}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  },
+
+  // Goods Received Notes (GRN)
+  receiveGoods: async (data: any): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/inventory/grn', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  getGoodsReceivedNotes: async (purchaseRequestId?: string): Promise<ApiResponse<GoodsReceivedNote[]>> => {
+    const params = purchaseRequestId ? `?purchaseRequestId=${purchaseRequestId}` : '';
+    return apiFetch<ApiResponse<GoodsReceivedNote[]>>(`/inventory/grn${params}`);
+  },
+
+  // Supplier Invoices & Accounts Payable
+  getSupplierInvoices: async (filters?: { paymentStatus?: string; supplierName?: string }): Promise<ApiResponse<SupplierInvoice[]>> => {
+    const query = new URLSearchParams();
+    if (filters?.paymentStatus) query.append('paymentStatus', filters.paymentStatus);
+    if (filters?.supplierName) query.append('supplierName', filters.supplierName);
+    const qs = query.toString() ? `?${query.toString()}` : '';
+    return apiFetch<ApiResponse<SupplierInvoice[]>>(`/inventory/supplier-invoices${qs}`);
+  },
+
+  recordSupplierInvoice: async (data: any): Promise<ApiResponse<SupplierInvoice>> => {
+    return apiFetch<ApiResponse<SupplierInvoice>>('/inventory/supplier-invoices', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  disburseSupplierPayment: async (id: string, data: any): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/inventory/supplier-invoices/${id}/pay`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  reverseSupplierPayment: async (id: string, reason: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/inventory/supplier-invoices/${id}/reverse`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  },
+
+  // Stock Movements & Operations
+  issueStock: async (data: any): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/inventory/issue', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  adjustStock: async (data: any): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/inventory/adjust', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  disposeStock: async (data: any): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/inventory/dispose', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  getStockMovements: async (filters?: { itemId?: string; movementType?: string }): Promise<ApiResponse<StockMovement[]>> => {
+    const query = new URLSearchParams();
+    if (filters?.itemId) query.append('itemId', filters.itemId);
+    if (filters?.movementType) query.append('movementType', filters.movementType);
+    const qs = query.toString() ? `?${query.toString()}` : '';
+    return apiFetch<ApiResponse<StockMovement[]>>(`/inventory/movements${qs}`);
   },
 
   recordStockTransaction: async (data: any): Promise<ApiResponse<any>> => {
@@ -3007,6 +3278,23 @@ export const updateCurriculumDailyLog = libraryApi.updateCurriculumDailyLog;
 export const endorseCurriculumDailyLog = libraryApi.endorseCurriculumDailyLog;
 export const deleteCurriculumDailyLog = libraryApi.deleteCurriculumDailyLog;
 export const getCurriculumDailyLogs = libraryApi.getCurriculumDailyLogs;
+
+// Inventory Control & Audit named exports
+export const getInventoryReports = libraryApi.getInventoryReports;
+export const getPurchaseRequests = libraryApi.getPurchaseRequests;
+export const createPurchaseRequest = libraryApi.createPurchaseRequest;
+export const approvePurchaseRequest = libraryApi.approvePurchaseRequest;
+export const rejectPurchaseRequest = libraryApi.rejectPurchaseRequest;
+export const receiveGoods = libraryApi.receiveGoods;
+export const getGoodsReceivedNotes = libraryApi.getGoodsReceivedNotes;
+export const getSupplierInvoices = libraryApi.getSupplierInvoices;
+export const recordSupplierInvoice = libraryApi.recordSupplierInvoice;
+export const disburseSupplierPayment = libraryApi.disburseSupplierPayment;
+export const reverseSupplierPayment = libraryApi.reverseSupplierPayment;
+export const issueStock = libraryApi.issueStock;
+export const adjustStock = libraryApi.adjustStock;
+export const disposeStock = libraryApi.disposeStock;
+export const getStockMovements = libraryApi.getStockMovements;
 
 export default apiService;
 

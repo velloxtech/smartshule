@@ -10,6 +10,7 @@ dist
 Frontend/smartshule/dist
 build
 out
+*.tsbuildinfo
 
 # Git and IDE
 .git
@@ -19,13 +20,14 @@ out
 .idea
 *.swp
 *.swo
+.DS_Store
 
-# Environment files
+# Environment and secrets
 .env
 .env.*
 !.env.example
 
-# Local storage and persistent data
+# Local storage and persistent data (keep structure, exclude actual uploads/session tokens)
 data/uploads/*
 data/whatsapp_session/*
 !data/uploads/.gitkeep
@@ -39,6 +41,20 @@ yarn-debug.log*
 yarn-error.log*
 coverage
 .nyc_output
-tests
 *.pdf
+
+# Tests and Test Fixtures
+tests
+*.test.ts
+*.test.js
+*.spec.ts
+*.spec.js
 jest.config.js
+
+# Development-only Demo Seed Scripts
+scripts/seed-broadsheet-data.ts
+
+# Documentation and temporary brain artifacts
+brain
+docs
+*.tmp

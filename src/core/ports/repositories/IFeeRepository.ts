@@ -7,7 +7,9 @@ import {
   OtherIncome,
   ExpenseCategory,
   ExpenseStatus,
-  IncomeSource
+  IncomeSource,
+  StudentFeeCredit,
+  FeeCreditApplication
 } from '../../domain/finance/Fee';
 import { FeeBannerConfig } from '../../domain/finance/FeeBannerConfig';
 import { CBCGradeLevel } from '../../domain/user/Student';
@@ -93,5 +95,15 @@ export interface IFeeRepository {
   // Fee Deadline Notice Banner Settings
   getFeeBannerConfig(schoolId?: string): Promise<FeeBannerConfig | null>;
   saveFeeBannerConfig(config: FeeBannerConfig): Promise<void>;
+
+  // Student Fee Credits (Overpayment / Advance Payment Ledger)
+  findCreditById(id: string): Promise<StudentFeeCredit | null>;
+  findCredits(filters: { studentId?: string; schoolId?: string; status?: string }): Promise<StudentFeeCredit[]>;
+  saveCredit(credit: StudentFeeCredit): Promise<void>;
+  updateCredit(credit: StudentFeeCredit): Promise<void>;
+
+  // Credit Applications (Audit Trail of Credits Applied to Invoices)
+  saveCreditApplication(application: FeeCreditApplication): Promise<void>;
+  findCreditApplications(filters: { studentId?: string; invoiceId?: string; creditId?: string }): Promise<FeeCreditApplication[]>;
 }
 

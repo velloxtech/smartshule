@@ -200,8 +200,6 @@ export const ArrearsView: React.FC<ArrearsViewProps> = ({
         amount,
         mode: 'SET',
         reason: batchReason,
-        academicYearId: 'year-2026',
-        termId: 'term-2026-t1',
       });
 
       if (res.success) {
@@ -233,8 +231,6 @@ export const ArrearsView: React.FC<ArrearsViewProps> = ({
     try {
       const res = await apiService.batchAddManualArrears({
         entries,
-        academicYearId: 'year-2026',
-        termId: 'term-2026-t1',
       });
 
       if (res.success) {

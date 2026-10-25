@@ -28,6 +28,21 @@ export function isBillingAuthorizedRole(role?: string | UserRole): boolean {
   return BILLING_AUTHORIZED_ROLES.includes(role as UserRole);
 }
 
+export const TERM_INITIALIZATION_AUTHORIZED_ROLES: UserRole[] = [
+  UserRole.SUPER_ADMIN,
+  UserRole.ADMIN,
+  UserRole.SCHOOL_ADMIN,
+  UserRole.HEAD_TEACHER
+];
+
+export function isTermInitializationAuthorizedRole(role?: string | UserRole): boolean {
+  if (!role) return false;
+  const normalized = String(role).toUpperCase().replace(/\s+/g, '_');
+  if (normalized === 'HEADTEACHER' || normalized === 'HEAD_TEACHER') return true;
+  if (normalized === 'ADMIN' || normalized === 'SCHOOL_ADMIN' || normalized === 'SUPER_ADMIN') return true;
+  return TERM_INITIALIZATION_AUTHORIZED_ROLES.includes(role as UserRole);
+}
+
 export enum UserStatus {
   ACTIVE = 'ACTIVE',
   INACTIVE = 'INACTIVE',

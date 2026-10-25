@@ -27,7 +27,39 @@ export const CustomPayrollSchema = z.object({
 
 export const MarkPaidSchema = z.object({
   paymentMethod: z.enum(['BANK_TRANSFER', 'MPESA', 'CHEQUE', 'CASH']),
-  reference: z.string().optional()
+  reference: z.string().optional(),
+  amount: z.number().min(0.01).optional(),
+  paymentDate: z.string().optional(),
+  fundingAccount: z.string().optional(),
+  voucherNumber: z.string().optional(),
+  notes: z.string().optional()
+});
+
+export const RecordSalaryPaymentSchema = z.object({
+  amount: z.number().min(0.01).optional(),
+  paymentMethod: z.enum(['BANK_TRANSFER', 'MPESA', 'CHEQUE', 'CASH']),
+  paymentReference: z.string().min(1),
+  paymentDate: z.string().optional(),
+  fundingAccount: z.string().optional(),
+  voucherNumber: z.string().optional(),
+  notes: z.string().optional()
+});
+
+export const PayPayrollBatchSchema = z.object({
+  month: z.string().min(7),
+  payrollIds: z.array(z.string()).optional(),
+  paymentMethod: z.enum(['BANK_TRANSFER', 'MPESA', 'CHEQUE', 'CASH']),
+  batchReference: z.string().optional(),
+  paymentDate: z.string().optional(),
+  fundingAccount: z.string().optional(),
+  notes: z.string().optional()
+});
+
+export const ReverseSalaryPaymentSchema = z.object({
+  reversalReason: z.string().optional(),
+  reason: z.string().optional()
+}).refine(data => !!(data.reversalReason || data.reason), {
+  message: 'Reversal reason must be provided.'
 });
 
 export const ApplyLeaveSchema = z.object({
@@ -113,12 +145,12 @@ export class PayrollController {
     }
   };
 
-  public approvePayroll = async (req: Request, res: Response, next: NextFunction) => {
+  public approvePayroll = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const payroll = await this.payrollUseCases.approvePayroll(req.params.id as string);
+      const payroll = await this.payrollUseCases.approvePayroll(req.params.id as string, req.user);
       return res.status(200).json({
         success: true,
-        message: 'Payroll record approved',
+        message: 'Payroll record approved successfully',
         data: payroll
       });
     } catch (err) {
@@ -126,17 +158,122 @@ export class PayrollController {
     }
   };
 
-  public markPaid = async (req: Request, res: Response, next: NextFunction) => {
+  public markPaid = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const payroll = await this.payrollUseCases.markPayrollPaid(
-        req.params.id as string,
-        req.body.paymentMethod,
-        req.body.reference
+      const result = await this.payrollUseCases.recordSalaryPayment(
+        {
+          payrollId: req.params.id as string,
+          amount: req.body.amount,
+          paymentMethod: req.body.paymentMethod,
+          paymentReference: req.body.reference || req.body.paymentReference || `TX-SAL-${Date.now()}`,
+          paymentDate: req.body.paymentDate,
+          fundingAccount: req.body.fundingAccount,
+          voucherNumber: req.body.voucherNumber,
+          notes: req.body.notes
+        },
+        req.user
       );
       return res.status(200).json({
         success: true,
-        message: 'Payroll record marked as paid',
-        data: payroll
+        message: 'Salary payment recorded and financial expense voucher posted',
+        data: result.payroll,
+        expense: result.expense
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public recordSalaryPayment = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const result = await this.payrollUseCases.recordSalaryPayment(
+        {
+          payrollId: req.params.id as string,
+          amount: req.body.amount,
+          paymentMethod: req.body.paymentMethod,
+          paymentReference: req.body.paymentReference || req.body.reference,
+          paymentDate: req.body.paymentDate,
+          fundingAccount: req.body.fundingAccount,
+          voucherNumber: req.body.voucherNumber,
+          notes: req.body.notes
+        },
+        req.user
+      );
+      return res.status(200).json({
+        success: true,
+        message: 'Salary payment recorded and financial expense voucher posted',
+        data: {
+          ...result.payroll,
+          payroll: result.payroll,
+          expense: result.expense
+        },
+        expense: result.expense
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public payBatch = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const schoolId = req.body.schoolId || req.user?.schoolId || 'school-001';
+      const result = await this.payrollUseCases.payPayrollBatch(
+        {
+          schoolId,
+          month: req.body.month,
+          payrollIds: req.body.payrollIds,
+          paymentMethod: req.body.paymentMethod,
+          batchReference: req.body.batchReference,
+          paymentDate: req.body.paymentDate,
+          fundingAccount: req.body.fundingAccount,
+          notes: req.body.notes
+        },
+        req.user
+      );
+      return res.status(200).json({
+        success: true,
+        message: `Bulk payroll batch processed: Disbursed KES ${result.totalDisbursed.toLocaleString()} across ${result.count} staff records`,
+        data: result
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public reverseSalaryPayment = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const reason = req.body.reversalReason || req.body.reason;
+      const result = await this.payrollUseCases.reverseSalaryPayment(
+        {
+          payrollId: req.params.id as string,
+          reversalReason: reason
+        },
+        req.user
+      );
+      return res.status(200).json({
+        success: true,
+        message: result.message,
+        data: {
+          ...result.payroll,
+          payroll: result.payroll,
+          expense: result.expense
+        },
+        reversedExpenseVoucher: result.reversedExpenseVoucher
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public getReconciliation = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const monthParam = req.query.month;
+      const month = typeof monthParam === 'string' ? monthParam : new Date().toISOString().substring(0, 7);
+      const schoolId = req.user?.schoolId;
+      const report = await this.payrollUseCases.getPayrollReconciliation(month, schoolId, req.user);
+      return res.status(200).json({
+        success: true,
+        data: report
       });
     } catch (err) {
       next(err);

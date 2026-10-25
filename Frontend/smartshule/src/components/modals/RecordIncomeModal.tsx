@@ -10,8 +10,6 @@ interface RecordIncomeModalProps {
 
 const SOURCE_OPTIONS: { value: IncomeSourceType; label: string; icon: string }[] = [
   { value: 'FEES_COLLECTION', label: 'Student Fees Collection (Direct Inflow)', icon: 'payments' },
-  { value: 'GOVERNMENT_CAPITATION_JSS', label: 'MoE Junior Secondary Capitation Grant (JSS)', icon: 'account_balance' },
-  { value: 'GOVERNMENT_CAPITATION_FPE', label: 'MoE Free Primary Capitation Grant (FPE)', icon: 'school' },
   { value: 'UNIFORM_SALES', label: 'School Uniform Store & Merchandise Sales', icon: 'checkroom' },
   { value: 'BUS_FACILITY_HIRE', label: 'School Bus, Hall & Grounds / Facility Hire', icon: 'directions_bus' },
   { value: 'DONATIONS_GRANTS', label: 'Donations, Alumni & Development Grants', icon: 'volunteer_activism' },
@@ -25,7 +23,7 @@ export const RecordIncomeModal: React.FC<RecordIncomeModalProps> = ({
   onIncomeRecorded,
 }) => {
   const [title, setTitle] = useState('');
-  const [source, setSource] = useState<IncomeSourceType>('GOVERNMENT_CAPITATION_JSS');
+  const [source, setSource] = useState<IncomeSourceType>('UNIFORM_SALES');
   const [amount, setAmount] = useState('');
   const [receivedFrom, setReceivedFrom] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<

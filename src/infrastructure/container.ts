@@ -197,9 +197,11 @@ export class AppContainer {
       customRepositories?.announcementRepository || new InMemoryAnnouncementRepository();
     this.teacherClockInRepository =
       customRepositories?.teacherClockInRepository || new InMemoryTeacherClockInRepository();
-    this.payrollRepository = new InMemoryPayrollRepository();
+    this.payrollRepository =
+      customRepositories?.payrollRepository || new InMemoryPayrollRepository();
     this.clinicRepository = new InMemoryClinicRepository();
-    this.inventoryRepository = new InMemoryInventoryRepository();
+    this.inventoryRepository =
+      customRepositories?.inventoryRepository || new InMemoryInventoryRepository();
     this.disciplineRepository = new InMemoryDisciplineRepository();
     this.occurrenceRepository =
       customRepositories?.occurrenceRepository || new InMemoryOccurrenceRepository();
@@ -350,7 +352,9 @@ export class AppContainer {
       this.payrollRepository,
       this.teacherRepository,
       this.userRepository,
-      this.teacherClockInRepository
+      this.teacherClockInRepository,
+      this.feeRepository,
+      this.systemLogRepository
     );
     this.clinicUseCases = new ClinicUseCases(
       this.clinicRepository,
@@ -358,7 +362,11 @@ export class AppContainer {
       this.guardianRepository,
       this.notificationService
     );
-    this.inventoryUseCases = new InventoryUseCases(this.inventoryRepository);
+    this.inventoryUseCases = new InventoryUseCases(
+      this.inventoryRepository,
+      this.feeRepository,
+      this.systemLogRepository
+    );
     this.disciplineUseCases = new DisciplineUseCases(
       this.disciplineRepository,
       this.studentRepository,

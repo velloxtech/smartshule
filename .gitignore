@@ -38,3 +38,4 @@ Thumbs.db
 # Uploads & local data storage
 data/
 uploads/
+backups/

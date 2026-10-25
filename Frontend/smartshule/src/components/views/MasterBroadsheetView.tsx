@@ -31,14 +31,21 @@ const GRADE_ORDER: Record<string, number> = {
 const getSubjectInitials = (nameOrCode: string): string => {
   if (!nameOrCode) return 'SUB';
   const clean = nameOrCode.trim().toUpperCase();
+  if (['MAT', 'LIT', 'LAN', 'ENV', 'CRE', 'SRE', 'ENG', 'KIS', 'SCI', 'SOC', 'AGR', 'ART', 'PTECH', 'FRE', 'GER', 'ARA', 'IND'].includes(clean)) {
+    return clean;
+  }
   if (clean.includes('MATH')) return 'MAT';
+  if (clean.includes('LIT') || clean.includes('READING') || clean.includes('KUSOMA')) return 'LIT';
+  if (clean.includes('LANG')) return 'LAN';
+  if (clean.includes('ENV')) return 'ENV';
+  if (clean.includes('CREATIVE') || clean.includes('CREA') || clean.includes('PSYCHOMOTOR')) return 'CRE';
+  if (clean.includes('SRE') || clean.includes('SPIRITUAL') || clean.includes('RELIGIOUS') || clean === 'CRE' || clean.includes('IRE')) return 'SRE';
   if (clean.includes('ENG')) return 'ENG';
   if (clean.includes('KISW') || clean.includes('SWAHILI')) return 'KIS';
   if (clean.includes('INTEGRATED SCIENCE') || clean.includes('SCIENCE') || clean.includes('SCI')) return 'SCI';
   if (clean.includes('SOCIAL')) return 'SOC';
-  if (clean.includes('RELIGIOUS') || clean.includes('CRE') || clean.includes('IRE')) return 'CRE';
   if (clean.includes('AGRI') || clean.includes('NUTRITION')) return 'AGR';
-  if (clean.includes('CREATIVE') || clean.includes('ARTS') || clean.includes('MUSIC')) return 'ART';
+  if (clean.includes('ARTS') || clean.includes('MUSIC')) return 'ART';
   if (clean.includes('PRE-TECH') || clean.includes('TECHNICAL')) return 'PTECH';
   if (clean.includes('FRENCH')) return 'FRE';
   if (clean.includes('GERMAN')) return 'GER';
@@ -1112,6 +1119,9 @@ export const MasterBroadsheetView: React.FC = () => {
     doc.setFontSize(9);
     doc.setTextColor(30, 41, 59);
     doc.text('CONSOLIDATED MASTER BROADSHEET & CBC ACADEMIC DOSSIER', 32, curY + 14);
+
+    const termDisplay = broadsheet.termName || academicTerms.find((t) => t.id === selectedTerm)?.name || selectedTerm || 'Term 3';
+    const yearDisplay = broadsheet.yearName || academicYears.find((y) => y.id === selectedYear)?.name || selectedYear || '2026';
 
     // Calculate genuine Class Mean Score directly from rows or streamMeanScore
     const validRows = (broadsheet.rows || []).filter(

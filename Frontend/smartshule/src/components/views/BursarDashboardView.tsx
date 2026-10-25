@@ -73,7 +73,7 @@ export const BursarDashboardView: React.FC<BursarDashboardViewProps> = ({
           <div>
             <div className="flex items-center gap-2 mb-2">
               <span className="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-white/20 text-white border border-white/30">
-                Treasury & Accounts Desk
+                {user?.schoolName || 'Grace Seeds School'} · Treasury & Accounts Desk
               </span>
               <span className="flex items-center gap-1 text-xs text-amber-200 font-medium">
                 <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
@@ -84,7 +84,7 @@ export const BursarDashboardView: React.FC<BursarDashboardViewProps> = ({
               Bursar Financial & Liquidity Command Center
             </h1>
             <p className="mt-1 text-sm text-amber-100 max-w-xl">
-              Strictly managing school fee billing, verified fee receipts, operating expenditures, MoE capitation, and liquidity reconciliation.
+              Strictly managing school fee billing, verified fee receipts, operating expenditures, student account balances, and liquidity reconciliation.
             </p>
           </div>
 
@@ -94,7 +94,7 @@ export const BursarDashboardView: React.FC<BursarDashboardViewProps> = ({
               className="px-4 py-2.5 rounded-xl bg-white text-amber-950 font-bold text-xs hover:bg-white/95 shadow-md flex items-center gap-2 transition-all cursor-pointer"
             >
               <span className="material-symbols-outlined text-[18px] text-amber-900">person_search</span>
-              <span>Check Student Fee</span>
+              <span>Student Fee Accounts</span>
             </button>
             <button
               onClick={onOpenMpesa}
@@ -108,14 +108,14 @@ export const BursarDashboardView: React.FC<BursarDashboardViewProps> = ({
               className="px-4 py-2.5 rounded-xl bg-amber-700/80 hover:bg-amber-700 text-white font-semibold text-xs border border-amber-300/40 flex items-center gap-2 transition-all cursor-pointer shadow-xs"
             >
               <span className="material-symbols-outlined text-[18px]">assignment_late</span>
-              <span>Fee Arrears Ledger</span>
+              <span>Fee Arrears Ledger ({safeDefaulters.length})</span>
             </button>
             <button
-              onClick={() => onNavigateTab('defaulters-receipts')}
+              onClick={() => onNavigateTab('financial-reports')}
               className="px-4 py-2.5 rounded-xl bg-amber-800/60 hover:bg-amber-800 text-white font-semibold text-xs border border-amber-400/30 flex items-center gap-2 transition-all cursor-pointer"
             >
-              <span className="material-symbols-outlined text-[18px]">receipt_long</span>
-              <span>Defaulters Roster ({safeDefaulters.length})</span>
+              <span className="material-symbols-outlined text-[18px]">analytics</span>
+              <span>Financial Reports</span>
             </button>
             <button
               onClick={() => onNavigateTab('forwarded-payments')}
@@ -198,7 +198,7 @@ export const BursarDashboardView: React.FC<BursarDashboardViewProps> = ({
               </p>
             </div>
             <button
-              onClick={() => onNavigateTab('defaulters-receipts')}
+              onClick={() => onNavigateTab('arrears')}
               className="text-xs font-bold text-amber-800 hover:text-amber-950 flex items-center gap-1 cursor-pointer"
             >
               <span>View Full Ledger</span>
@@ -276,17 +276,6 @@ export const BursarDashboardView: React.FC<BursarDashboardViewProps> = ({
               </button>
 
               <button
-                onClick={() => onNavigateTab('cashflow-ledger')}
-                className="w-full p-3 rounded-xl border border-outline-variant/30 hover:bg-amber-50/50 hover:border-amber-300 transition-all flex items-center gap-3 text-left cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-amber-700 text-[22px]">account_balance_wallet</span>
-                <div>
-                  <div className="text-xs font-bold text-on-surface">Cash Flow & Ledger</div>
-                  <div className="text-[11px] text-on-surface-variant">Money In vs Money Out tracking</div>
-                </div>
-              </button>
-
-              <button
                 onClick={() => onNavigateTab('expenses-management')}
                 className="w-full p-3 rounded-xl border border-outline-variant/30 hover:bg-amber-50/50 hover:border-amber-300 transition-all flex items-center gap-3 text-left cursor-pointer"
               >
@@ -294,17 +283,6 @@ export const BursarDashboardView: React.FC<BursarDashboardViewProps> = ({
                 <div>
                   <div className="text-xs font-bold text-on-surface">Operating Expenses</div>
                   <div className="text-[11px] text-on-surface-variant">Utilities, supplies, salaries & repairs</div>
-                </div>
-              </button>
-
-              <button
-                onClick={() => onNavigateTab('capitation-income')}
-                className="w-full p-3 rounded-xl border border-outline-variant/30 hover:bg-amber-50/50 hover:border-amber-300 transition-all flex items-center gap-3 text-left cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-amber-700 text-[22px]">domain_add</span>
-                <div>
-                  <div className="text-xs font-bold text-on-surface">Capitation & MoE Grants</div>
-                  <div className="text-[11px] text-on-surface-variant">NEMIS funding & government grants</div>
                 </div>
               </button>
 
@@ -325,8 +303,19 @@ export const BursarDashboardView: React.FC<BursarDashboardViewProps> = ({
               >
                 <span className="material-symbols-outlined text-amber-700 text-[22px]">analytics</span>
                 <div>
-                  <div className="text-xs font-bold text-on-surface">Financial Reports & P&L</div>
-                  <div className="text-[11px] text-on-surface-variant">Profit & Loss statements and export</div>
+                  <div className="text-xs font-bold text-on-surface">Financial Reports & Statements</div>
+                  <div className="text-[11px] text-on-surface-variant">Income statements, cash flow & fee analytics</div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => onNavigateTab('fee-deadline-banner')}
+                className="w-full p-3 rounded-xl border border-outline-variant/30 hover:bg-amber-50/50 hover:border-amber-300 transition-all flex items-center gap-3 text-left cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-amber-700 text-[22px]">settings_suggest</span>
+                <div>
+                  <div className="text-xs font-bold text-on-surface">Finance Settings & Notices</div>
+                  <div className="text-[11px] text-on-surface-variant">School bank details, Paybill & fee deadlines</div>
                 </div>
               </button>
             </div>

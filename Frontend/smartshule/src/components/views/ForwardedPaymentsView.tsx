@@ -269,7 +269,7 @@ export const ForwardedPaymentsView: React.FC<ForwardedPaymentsViewProps> = ({
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `SmartShule_Forwarded_Payments_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `Grace_Seeds_School_Forwarded_Payments_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

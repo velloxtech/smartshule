@@ -289,10 +289,13 @@ export function resolveLearningAreaName(
 export function resolveLearningAreaCode(nameOrCodeOrId: string): string {
   if (!nameOrCodeOrId) return 'SUBJ';
   const clean = nameOrCodeOrId.toUpperCase();
-  if (clean.includes('CREATIVE') || clean.includes('CREA')) return 'CREA';
-  if (clean.includes('READING') || clean.includes('REA')) return 'REA';
+  if (['MAT', 'LIT', 'LAN', 'ENV', 'CRE', 'SRE'].includes(clean)) return clean;
+  if (clean.includes('LIT') || clean.includes('READING') || clean.includes('REA')) return 'LIT';
+  if (clean.includes('LANG') || clean === 'LAN') return 'LAN';
+  if (clean.includes('SRE') || clean.includes('SPIRITUAL')) return 'SRE';
+  if (clean.includes('CREATIVE') || clean.includes('CREA')) return 'CRE';
   if (clean.includes('KUSOMA') || clean.includes('WKU') || clean.includes('KUSO')) return 'KUSO';
-  if (clean.includes('ENVIRONMENT') || clean.includes('SENV') || clean.includes('ENVI')) return 'ENVI';
+  if (clean.includes('ENVIRONMENT') || clean.includes('SENV') || clean.includes('ENVI')) return 'ENV';
   if (clean.includes('ENG')) return 'ENG';
   if (clean.includes('KIS')) return 'KIS';
   if (clean.includes('MAT')) return 'MAT';

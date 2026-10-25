@@ -37,10 +37,8 @@ import { TimetableView } from './components/views/TimetableView';
 import { AttendanceRegisterView } from './components/views/AttendanceRegisterView';
 import { FeeStructureView } from './components/views/FeeStructureView';
 import { InvoicesMpesaView } from './components/views/InvoicesMpesaView';
-import { DefaultersView } from './components/views/DefaultersView';
 import { CashFlowLedgerView } from './components/views/CashFlowLedgerView';
 import { ExpensesView } from './components/views/ExpensesView';
-import { CapitationIncomeView } from './components/views/CapitationIncomeView';
 import { FinancialReportsView } from './components/views/FinancialReportsView';
 import { EDiaryView } from './components/views/EDiaryView';
 import { VisualCBCView } from './components/views/VisualCBCView';
@@ -131,6 +129,7 @@ export default function App() {
   const [uploadMarksModalOpen, setUploadMarksModalOpen] = useState(false);
   const [uploadMarksInitialStudent, setUploadMarksInitialStudent] = useState<Student | undefined>(undefined);
   const [uploadMarksInitialType, setUploadMarksInitialType] = useState<'SUMMATIVE' | 'FORMATIVE'>('SUMMATIVE');
+  const [marksRefreshTrigger, setMarksRefreshTrigger] = useState(0);
   const [createLessonPlanModalOpen, setCreateLessonPlanModalOpen] = useState(false);
   const [createSchemeModalOpen, setCreateSchemeModalOpen] = useState(false);
   const [backendConnected, setBackendConnected] = useState(false);
@@ -232,8 +231,12 @@ export default function App() {
       if (studentData?.data && Array.isArray(studentData.data)) {
         const mappedStudents: Student[] = studentData.data.map((st: any) => {
           const fee = feeMap.get(st.id);
-          const feeBalance = fee !== undefined ? fee.balance : (Number(st.feeBalance) || 0);
-          const totalFee = fee !== undefined ? fee.billed : (Number(st.totalFee) || 0);
+          const feeBalance = st.feeBalance !== undefined && st.feeBalance !== null
+            ? Number(st.feeBalance)
+            : (fee !== undefined ? fee.balance : 0);
+          const totalFee = st.totalFee !== undefined && st.totalFee !== null
+            ? Number(st.totalFee)
+            : (fee !== undefined ? fee.billed : 0);
           const fullName =
             st.name ||
             st.fullName ||
@@ -242,11 +245,13 @@ export default function App() {
           return {
             id: st.id,
             admNo: st.admissionNumber || st.admNo || 'N/A',
+            admissionNumber: st.admissionNumber || st.admNo,
             upi: st.upiNumber || st.upi || '--',
             nemis: st.upiNumber || st.nemis || '--',
             name: fullName,
             gender: st.gender === 'FEMALE' || st.gender === 'Girl' ? 'Girl' : 'Boy',
             grade: resolveGradeName(st.grade || st.gradeLevel),
+            gradeLevel: st.gradeLevel || st.grade,
             stream: resolveStreamName(st.streamId, st.stream?.name || st.streamName || st.stream),
             guardianName:
               st.guardian && (st.guardian.firstName || st.guardian.lastName)
@@ -255,6 +260,13 @@ export default function App() {
             guardianPhone: st.guardian?.phone || st.guardianPhone || st.emergencyContactPhone || '--',
             feeBalance,
             totalFee,
+            priorArrears: Number(st.priorArrears) || 0,
+            totalPaid: Number(st.totalPaid) || 0,
+            creditBalance: Number(st.creditBalance) || 0,
+            totalDue: Number(st.totalDue) || 0,
+            arrearsDue: Number(st.arrearsDue) || 0,
+            isSponsored: Boolean(st.isSponsored || st.sponsorship),
+            sponsorship: st.sponsorship || null,
             attendanceRate: st.attendanceRate ?? 0,
             CBCRating: st.CBCRating || '--',
             status: st.status === 'ACTIVE' || st.status === 'Active' ? 'Active' : (st.status || 'Active'),
@@ -1108,6 +1120,7 @@ export default function App() {
           {currentTab === 'summative-assessments' && (
             <SummativeAssessmentsView
               students={students}
+              refreshTrigger={marksRefreshTrigger}
               onOpenUploadMarks={() => {
                 setUploadMarksInitialType('SUMMATIVE');
                 setUploadMarksModalOpen(true);
@@ -1152,7 +1165,7 @@ export default function App() {
             />
           )}
 
-          {currentTab === 'arrears' && (
+          {(currentTab === 'arrears' || (currentTab as string) === 'defaulters-receipts') && (
             <ArrearsView
               students={students}
               onRefreshStudents={refreshStudentsAndFees}
@@ -1179,14 +1192,6 @@ export default function App() {
             )
           )}
 
-          {currentTab === 'defaulters-receipts' && (
-            <DefaultersView
-              students={students}
-              onOpenMpesaWithStudent={handleOpenMpesa}
-              onOpenSmsModal={handleOpenSms}
-            />
-          )}
-
           {currentTab === 'student-fee-search' && (
             <StudentFeeCheckerView
               students={students}
@@ -1196,7 +1201,6 @@ export default function App() {
 
           {currentTab === 'cashflow-ledger' && <CashFlowLedgerView />}
           {currentTab === 'expenses-management' && <ExpensesView />}
-          {currentTab === 'capitation-income' && <CapitationIncomeView />}
           {currentTab === 'financial-reports' && <FinancialReportsView />}
           {currentTab === 'payroll' && <PayrollManagementView />}
 
@@ -1383,6 +1387,7 @@ export default function App() {
           setUploadMarksInitialStudent(undefined);
         }}
         onMarksUploaded={() => {
+          setMarksRefreshTrigger((prev) => prev + 1);
           refreshStudentsAndFees();
         }}
         initialStudent={uploadMarksInitialStudent}
@@ -1422,6 +1427,7 @@ export default function App() {
           user?.role === UserRole.SCHOOL_ADMIN ||
           user?.role === UserRole.HEAD_TEACHER
         }
+        userRole={user?.role}
       />
 
       <ChangePasswordModal

@@ -309,8 +309,9 @@ export const TimetableView: React.FC = () => {
     setSaveSuccessMsg(null);
 
     const activeSchoolId = user?.schoolId || schoolInfo?.id || 'school-001';
-    const activeAcademicYearId = currentContext?.currentYear?.id || 'year-2026';
-    const activeTermId = currentContext?.currentTerm?.id || 'term-2026-t1';
+    const curYear = new Date().getFullYear();
+    const activeAcademicYearId = currentContext?.currentYear?.id || `year-${curYear}`;
+    const activeTermId = currentContext?.currentTerm?.id || `term-${activeAcademicYearId}-t1`;
 
     try {
       const res = await apiService.saveTimetableGrid({
@@ -1586,7 +1587,7 @@ export const TimetableView: React.FC = () => {
             </div>
             <div>
               <span className="text-gray-500 font-semibold block text-[10px] uppercase">Academic Year:</span>
-              <span className="font-bold text-gray-900">{currentContext?.currentYear?.name || '2026'}</span>
+              <span className="font-bold text-gray-900">{currentContext?.currentYear?.name || new Date().getFullYear().toString()}</span>
             </div>
           </div>
         </div>

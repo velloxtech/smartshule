@@ -5,8 +5,8 @@ import { DayOfWeek } from '../../../core/domain/timetable/Timetable';
 
 export const CreateTimetableSchema = z.object({
   schoolId: z.string().optional().default('school-001'),
-  academicYearId: z.string().optional().default('year-2026'),
-  termId: z.string().optional().default('term-2026-t1'),
+  academicYearId: z.string().optional(),
+  termId: z.string().optional(),
   classRoomId: z.string().min(1),
   streamId: z.string().optional().default('')
 });
@@ -35,7 +35,7 @@ export const SaveGridSchema = z.object({
   streamId: z.string().optional(),
   termId: z.string().optional(),
   schoolId: z.string().optional().default('school-001'),
-  academicYearId: z.string().optional().default('year-2026'),
+  academicYearId: z.string().optional(),
   classRoomId: z.string().optional(),
   periods: z.array(z.any()).optional(),
   days: z.array(z.any()).optional(),

@@ -75,7 +75,7 @@ export const env = {
     africasTalking: {
       apiKey: process.env.AFRICASTALKING_API_KEY || '',
       username: process.env.AFRICASTALKING_USERNAME || 'sandbox',
-      senderId: process.env.AFRICASTALKING_SENDER_ID || 'SMARTSHULE',
+      senderId: process.env.AFRICASTALKING_SENDER_ID || 'GRACESEEDS',
     },
     twilio: {
       accountSid: process.env.TWILIO_ACCOUNT_SID || '',

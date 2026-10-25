@@ -3,8 +3,15 @@ import { School, SchoolProps } from '../../core/domain/academic/School';
 import { AcademicYear, AcademicTerm } from '../../core/domain/academic/AcademicYear';
 import { ClassRoom, Stream, LearningArea, EducationLevel } from '../../core/domain/academic/ClassRoom';
 import { CBCGradeLevel } from '../../core/domain/user/Student';
-import { UserRole } from '../../core/domain/user/User';
-import { IdGenerator, NotFoundError, ForbiddenError } from '../../core/domain/shared/Errors';
+import { UserRole, isTermInitializationAuthorizedRole, TERM_INITIALIZATION_AUTHORIZED_ROLES } from '../../core/domain/user/User';
+import { IdGenerator, NotFoundError, ForbiddenError, ValidationError, ConflictError } from '../../core/domain/shared/Errors';
+
+export interface UserContext {
+  userId: string;
+  email: string;
+  role: UserRole | string;
+  schoolId?: string;
+}
 
 export class AcademicUseCases {
   constructor(private readonly academicRepository: IAcademicRepository) {}
@@ -41,6 +48,9 @@ export class AcademicUseCases {
       await this.academicRepository.saveSchool(school);
     } else if (
       school.name === 'SmartShule CBC Academy' ||
+      school.name === 'SmartShule Academy' ||
+      school.name === 'SmartShule' ||
+      school.name !== 'Grace Seeds School' ||
       !school.motto ||
       school.motto !== 'The future Begins Here' ||
       school.email !== 'schoolgraceseeds@gmail.com' ||
@@ -151,9 +161,150 @@ export class AcademicUseCases {
   }
 
   // Academic Term
-  public async createAcademicTerm(dto: { academicYearId: string; termNumber: number; name: string; startDate: string; endDate: string; isCurrent: boolean }) {
+  public async initializeAcademicTerm(
+    dto: {
+      academicYearId: string;
+      termNumber: number;
+      name: string;
+      startDate: string;
+      endDate: string;
+      isCurrent?: boolean;
+      schoolId?: string;
+    },
+    requestingUser?: UserContext
+  ) {
+    // 1. Role-Based Access Control Defense-in-Depth
+    if (!requestingUser || !isTermInitializationAuthorizedRole(requestingUser.role)) {
+      throw new ForbiddenError(
+        'Access denied: Only Super Admin, Admin, and Headteacher accounts may initialize a new academic term.'
+      );
+    }
+
+    // 2. Validate Academic Year
+    if (!dto.academicYearId || !dto.academicYearId.trim()) {
+      throw new ValidationError('Academic year identifier is required.');
+    }
+    const year = await this.academicRepository.findYearById(dto.academicYearId.trim());
+    if (!year) {
+      throw new NotFoundError('Academic Year', dto.academicYearId);
+    }
+
+    // 3. Validate Term Number and Name
+    const termNum = Number(dto.termNumber);
+    if (!termNum || isNaN(termNum) || termNum < 1 || termNum > 3) {
+      throw new ValidationError('Term number must be an integer between 1 and 3.');
+    }
+    const termName = dto.name?.trim();
+    if (!termName) {
+      throw new ValidationError('Term name is required (e.g. "Term 1", "Term 2", "Term 3").');
+    }
+
+    // 4. Validate Dates
+    const isoDateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dto.startDate || !isoDateRegex.test(dto.startDate.trim())) {
+      throw new ValidationError('Start date must be in YYYY-MM-DD format.');
+    }
+    if (!dto.endDate || !isoDateRegex.test(dto.endDate.trim())) {
+      throw new ValidationError('End date must be in YYYY-MM-DD format.');
+    }
+    const startDate = dto.startDate.trim();
+    const endDate = dto.endDate.trim();
+    if (startDate >= endDate) {
+      throw new ValidationError(`Term end date (${endDate}) must be strictly after the start date (${startDate}).`);
+    }
+
+    // Validate date consistency with Academic Year
+    if (year.startDate && year.endDate) {
+      const yearStart = year.startDate.split('T')[0];
+      const yearEnd = year.endDate.split('T')[0];
+      if (startDate > yearEnd || endDate < yearStart) {
+        throw new ValidationError(
+          `Term dates (${startDate} to ${endDate}) must be within or aligned with Academic Year ${year.name} (${yearStart} to ${yearEnd}).`
+        );
+      }
+    }
+
+    // 5. Prevent Duplicate Initialization (Application Check)
+    const existingTerms = await this.academicRepository.findTermsByYear(year.id);
+    const duplicateByNumber = existingTerms.find(t => t.termNumber === termNum);
+    if (duplicateByNumber) {
+      throw new ConflictError(
+        `Term ${termNum} has already been initialized for Academic Year ${year.name} (Existing: "${duplicateByNumber.name}"). Duplicate initialization is prevented.`
+      );
+    }
+    const duplicateByName = existingTerms.find(
+      t => t.name.trim().toLowerCase() === termName.toLowerCase()
+    );
+    if (duplicateByName) {
+      throw new ConflictError(
+        `An academic term named "${termName}" has already been initialized for Academic Year ${year.name}. Duplicate initialization is prevented.`
+      );
+    }
+
+    // 6. Safe Activation: If new term is current, deactivate only previous terms
+    // All previous examination results, attendance, fee transactions, and receipts remain completely intact
+    const shouldBeCurrent = dto.isCurrent !== undefined ? Boolean(dto.isCurrent) : true;
+    if (shouldBeCurrent) {
+      for (const t of existingTerms) {
+        if (t.isCurrent) {
+          t.setCurrent(false);
+          await this.academicRepository.updateTerm(t);
+        }
+      }
+    }
+
+    // 7. Persist New Term
+    const newTerm = AcademicTerm.create(
+      {
+        academicYearId: year.id,
+        termNumber: termNum,
+        name: termName,
+        startDate,
+        endDate,
+        isCurrent: shouldBeCurrent
+      },
+      IdGenerator.generate()
+    );
+
+    try {
+      await this.academicRepository.saveTerm(newTerm);
+    } catch (dbErr: any) {
+      if (dbErr.code === '23505' || dbErr.message?.includes('uq_academic_terms')) {
+        throw new ConflictError(
+          `Term ${termNum} for Academic Year ${year.name} has already been initialized by another concurrent operation.`
+        );
+      }
+      throw dbErr;
+    }
+
+    return {
+      success: true,
+      message: `Academic ${termName} successfully initialized for Academic Year ${year.name}. All existing historical data preserved.`,
+      data: newTerm.toJSON(),
+      academicYear: year.toJSON()
+    };
+  }
+
+  public async createAcademicTerm(
+    dto: { academicYearId: string; termNumber: number; name: string; startDate: string; endDate: string; isCurrent: boolean },
+    requestingUser?: UserContext
+  ) {
+    if (requestingUser && !isTermInitializationAuthorizedRole(requestingUser.role)) {
+      throw new ForbiddenError(
+        'Access denied: Only Super Admin, Admin, and Headteacher accounts may create or initialize an academic term.'
+      );
+    }
+    if (dto.startDate && dto.endDate && dto.startDate >= dto.endDate) {
+      throw new ValidationError(`Term end date (${dto.endDate}) must be after start date (${dto.startDate}).`);
+    }
+
+    const existingTerms = await this.academicRepository.findTermsByYear(dto.academicYearId);
+    const duplicate = existingTerms.find(t => t.termNumber === dto.termNumber || t.name.trim().toLowerCase() === dto.name.trim().toLowerCase());
+    if (duplicate) {
+      throw new ConflictError(`Term ${dto.termNumber} ("${dto.name}") already exists for this academic year.`);
+    }
+
     if (dto.isCurrent) {
-      const existingTerms = await this.academicRepository.findTermsByYear(dto.academicYearId);
       for (const t of existingTerms) {
         if (t.isCurrent) {         
           t.setCurrent(false);
@@ -206,7 +357,12 @@ export class AcademicUseCases {
     return term.toJSON();
   }
 
-  public async transitionTerm(schoolId?: string) {
+  public async transitionTerm(schoolId?: string, requestingUser?: UserContext) {
+    if (requestingUser && !isTermInitializationAuthorizedRole(requestingUser.role)) {
+      throw new ForbiddenError(
+        'Access denied: Only Super Admin, Admin, and Headteacher accounts may transition academic terms.'
+      );
+    }
     const context = await this.getCurrentAcademicContext(schoolId);
     if (!context.currentYear) throw new NotFoundError('Active academic year');
 
@@ -298,51 +454,68 @@ export class AcademicUseCases {
     const allYears = await this.academicRepository.findAllYears(schoolId);
 
     if (!currentYear && allYears.length === 0) {
-      // Auto-provision 2026 Academic Calendar with Kenyan Terms 1, 2, 3
+      const curCalYear = new Date().getFullYear();
+      const yearName = `${curCalYear}`;
+      const yearId = `year-${curCalYear}`;
+
+      // Auto-provision Academic Calendar with Kenyan Terms 1, 2, 3
       currentYear = AcademicYear.create(
         {
-          name: '2026',
-          startDate: '2026-01-05',
-          endDate: '2026-11-20',
+          name: yearName,
+          startDate: `${curCalYear}-01-05`,
+          endDate: `${curCalYear}-11-20`,
           isCurrent: true,
           schoolId: schoolId || 'school-001'
         },
-        'year-2026'
+        yearId
       );
       await this.academicRepository.saveYear(currentYear);
+
+      const now = new Date();
+      const t1Start = new Date(`${curCalYear}-01-05`);
+      const t1End = new Date(`${curCalYear}-04-03`);
+      const t2Start = new Date(`${curCalYear}-05-04`);
+      const t2End = new Date(`${curCalYear}-08-07`);
+      const t3Start = new Date(`${curCalYear}-08-24`);
+      const t3End = new Date(`${curCalYear}-10-23`);
+
+      const isT1 = now >= t1Start && now <= t1End;
+      const isT2 = now >= t2Start && now <= t2End;
+      const isT3 = now >= t3Start && now <= t3End;
+      const defaultCurrent = !isT1 && !isT2 && !isT3;
 
       const term1 = AcademicTerm.create(
         {
           academicYearId: currentYear.id,
           termNumber: 1,
-          name: 'Term 1 - 2026',
-          startDate: '2026-01-05',
-          endDate: '2026-04-03',
-          isCurrent: false
+          name: `Term 1 - ${yearName}`,
+          startDate: `${curCalYear}-01-05`,
+          endDate: `${curCalYear}-04-03`,
+          isCurrent: isT1 || defaultCurrent
         },
-        'term-2026-t1'
+        `term-${curCalYear}-t1`
       );
       const term2 = AcademicTerm.create(
         {
           academicYearId: currentYear.id,
           termNumber: 2,
-          name: 'Term 2 - 2026',
-          startDate: '2026-05-04',
-          endDate: '2026-08-07',
-          isCurrent: false
+          name: `Term 2 - ${yearName}`,
+          startDate: `${curCalYear}-05-04`,
+          endDate: `${curCalYear}-08-07`,
+          isCurrent: isT2
         },
-        'term-2026-t2'
+        `term-${curCalYear}-t2`
       );
       const term3 = AcademicTerm.create(
         {
           academicYearId: currentYear.id,
           termNumber: 3,
-          name: 'Term 3 - 2026',
-          startDate: '2026-08-24',
-          endDate: '2026-10-23',
-          isCurrent: true
+          name: `Term 3 - ${yearName}`,
+          startDate: `${curCalYear}-08-24`,
+          endDate: `${curCalYear}-10-23`,
+          isCurrent: isT3
         },
-        'term-2026-t3'
+        `term-${curCalYear}-t3`
       );
 
       await this.academicRepository.saveTerm(term1);

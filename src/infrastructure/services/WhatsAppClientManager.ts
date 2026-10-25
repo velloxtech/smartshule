@@ -527,7 +527,7 @@ export class WhatsAppClientManager {
         const outLog: WhatsAppMessageLog = {
           id: result?.key?.id || `out-${Date.now()}`,
           direction: 'OUTBOUND',
-          from: this.connectedPhone || 'SmartShule Account',
+          from: this.connectedPhone || 'Grace Seeds School Official',
           to: displayPhone,
           text,
           status: 'SENT',
@@ -789,7 +789,7 @@ export class WhatsAppClientManager {
           const userJid = socket.user?.id || '';
           const phoneClean = userJid.split(':')[0].split('@')[0];
           this.connectedPhone = phoneClean ? (phoneClean.startsWith('+') ? phoneClean : `+${phoneClean}`) : null;
-          this.connectedName = socket.user?.name || 'SmartShule Account';
+          this.connectedName = socket.user?.name || 'Grace Seeds School Official';
 
           console.log(`[WhatsApp Account] Connected: ${this.connectedPhone}`);
         }
@@ -842,7 +842,7 @@ export class WhatsAppClientManager {
             id: msg.key.id || `in-${Date.now()}`,
             direction: 'INBOUND',
             from: senderPhone,
-            to: this.connectedPhone || 'SmartShule Account',
+            to: this.connectedPhone || 'Grace Seeds School Official',
             text: text.trim(),
             status: 'RECEIVED',
             timestamp: new Date().toISOString(),

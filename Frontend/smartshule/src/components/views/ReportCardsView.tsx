@@ -1198,11 +1198,11 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
     const activeTerm = availableTerms.find((t) => t.id === selectedTermId) || currentTerm;
     const termName = activeTerm?.name || 'Term 3';
     const yearName = resolveAcademicYearName(currentYear?.name || currentYear?.year || currentYear?.id);
-    const logoBase64 = await getSchoolLogoBase64(school?.logoUrl);
+    const logoBase64 = await getSchoolLogoBase64(schoolInfo?.logoUrl);
 
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    const schoolName = school?.name || 'Grace Seeds School';
-    const motto = school?.motto || 'The Future Begins Here';
+    const schoolName = schoolInfo?.name || 'Grace Seeds School';
+    const motto = schoolInfo?.motto || 'The Future Begins Here';
 
     // Top burgundy bar
     doc.setFillColor(122, 18, 40);
@@ -1327,7 +1327,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7.5);
     doc.setTextColor(31, 41, 55);
-    doc.text(teacherRemarks || 'Consistently demonstrates good understanding of CBC competencies and participates actively.', 18, finalY + 10.5);
+    doc.text(reportCardData?.classTeacherRemarks || 'Consistently demonstrates good understanding of CBC competencies and participates actively.', 18, finalY + 10.5);
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
@@ -1336,7 +1336,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7.5);
     doc.setTextColor(31, 41, 55);
-    doc.text(principalRemarks || 'Commendable academic effort. Encouraged to sustain reading habit and inquiry skills next term.', 18, finalY + 24);
+    doc.text(reportCardData?.headTeacherRemarks || 'Commendable academic effort. Encouraged to sustain reading habit and inquiry skills next term.', 18, finalY + 24);
 
     finalY += 40;
     if (isEndTerm) {

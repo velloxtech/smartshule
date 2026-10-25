@@ -94,6 +94,12 @@ import { PostgresLunchFeeRepository } from './postgres/PostgresLunchFeeRepositor
 import { PostgresLibraryRepository } from './postgres/PostgresLibraryRepository';
 import { InMemoryLibraryRepository } from './in-memory/InMemoryLibraryRepository';
 import { InMemoryAnnouncementRepository } from './in-memory/InMemoryAnnouncementRepository';
+import { IPayrollRepository } from '../../core/ports/repositories/IPayrollRepository';
+import { PostgresPayrollRepository } from './postgres/PostgresPayrollRepository';
+import { InMemoryPayrollRepository } from './in-memory/InMemoryPayrollRepository';
+import { IInventoryRepository } from '../../core/ports/repositories/IInventoryRepository';
+import { PostgresInventoryRepository } from './postgres/PostgresInventoryRepository';
+import { InMemoryInventoryRepository } from './in-memory/InMemoryInventoryRepository';
 
 export interface RepositoryBundle {
   userRepository: IUserRepository;
@@ -120,6 +126,8 @@ export interface RepositoryBundle {
   occurrenceRepository?: IOccurrenceRepository;
   curriculumTrackerRepository?: ICurriculumTrackerRepository;
   studentSponsorshipRepository?: IStudentSponsorshipRepository;
+  payrollRepository?: IPayrollRepository;
+  inventoryRepository?: IInventoryRepository;
 }
 
 export class DatabaseFactory {
@@ -148,7 +156,8 @@ export class DatabaseFactory {
         feeRepository: new MongoFeeRepository(),
         systemLogRepository: new InMemorySystemLogRepository(),
         announcementRepository: new InMemoryAnnouncementRepository(),
-        studentSponsorshipRepository: new MongoStudentSponsorshipRepository()
+        studentSponsorshipRepository: new MongoStudentSponsorshipRepository(),
+        inventoryRepository: new InMemoryInventoryRepository()
       };
     }
 
@@ -246,6 +255,8 @@ export class DatabaseFactory {
         occurrenceRepository: new PostgresOccurrenceRepository(pool),
         curriculumTrackerRepository: new PostgresCurriculumTrackerRepository(pool),
         studentSponsorshipRepository: new PostgresStudentSponsorshipRepository(pool),
+        payrollRepository: new PostgresPayrollRepository(pool),
+        inventoryRepository: new PostgresInventoryRepository(pool),
       };
     }
 
@@ -276,6 +287,8 @@ export class DatabaseFactory {
       occurrenceRepository: new InMemoryOccurrenceRepository(),
       curriculumTrackerRepository: new InMemoryCurriculumTrackerRepository(),
       studentSponsorshipRepository: new InMemoryStudentSponsorshipRepository(),
+      payrollRepository: new InMemoryPayrollRepository(),
+      inventoryRepository: new InMemoryInventoryRepository(),
     };
   }
 }

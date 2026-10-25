@@ -480,6 +480,7 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
                   >
                     <option value="ACTIVE">ACTIVE (Enrolled)</option>
                     <option value="INACTIVE">INACTIVE (Dormant)</option>
+                    <option value="WITHDRAWN">WITHDRAWN (Parent / Official Withdrawal)</option>
                     <option value="TRANSFERRED">TRANSFERRED (Nemis Released)</option>
                     <option value="GRADUATED">GRADUATED (Alumni)</option>
                     <option value="SUSPENDED">SUSPENDED</option>

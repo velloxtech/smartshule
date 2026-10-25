@@ -51,10 +51,19 @@ export class TimetableUseCases {
       return existing.toJSON();
     }
 
+    let yearId = dto.academicYearId;
+    if (!yearId && this.academicRepository) {
+      const curYear = await this.academicRepository.findCurrentYear(dto.schoolId || 'school-001');
+      yearId = curYear?.id;
+    }
+    if (!yearId) {
+      yearId = `year-${new Date().getFullYear()}`;
+    }
+
     const timetable = Timetable.create(
       {
         schoolId: dto.schoolId || 'school-001',
-        academicYearId: dto.academicYearId || 'year-2026',
+        academicYearId: yearId,
         termId: dto.termId,
         classRoomId: dto.classRoomId,
         streamId: dto.streamId || '',
@@ -92,8 +101,22 @@ export class TimetableUseCases {
     if (!timetable) {
       // Auto-create timetable
       const schoolId = dto.schoolId || 'school-001';
-      const academicYearId = dto.academicYearId || 'year-2026';
-      const termId = dto.termId || 'term-2026-t1';
+      let academicYearId = dto.academicYearId;
+      if (!academicYearId && this.academicRepository) {
+        const curYear = await this.academicRepository.findCurrentYear(schoolId);
+        academicYearId = curYear?.id;
+      }
+      if (!academicYearId) {
+        academicYearId = `year-${new Date().getFullYear()}`;
+      }
+      let termId = dto.termId;
+      if (!termId && this.academicRepository) {
+        const curTerm = await this.academicRepository.findCurrentTerm(academicYearId);
+        termId = curTerm?.id;
+      }
+      if (!termId) {
+        termId = `term-${academicYearId}-t1`;
+      }
       let classRoomId = dto.classRoomId || (dto.timetableId && !dto.timetableId.startsWith('timetable-') ? dto.timetableId : undefined);
       if (!classRoomId) {
         const classes = await this.academicRepository.findAllClasses(schoolId);
@@ -227,7 +250,16 @@ export class TimetableUseCases {
     const targetClassRoomId = timetable?.classRoomId || dto.classRoomId || '';
     const targetStreamId = timetable?.streamId || dto.streamId || '';
     const targetTimetableId = timetable?.id || dto.timetableId || '';
-    const effectiveTermId = timetable?.termId || dto.termId || 'term-2026-t1';
+    let effectiveTermId = timetable?.termId || dto.termId;
+    if (!effectiveTermId && this.academicRepository) {
+      try {
+        const curTerm = await this.academicRepository.findCurrentTerm();
+        effectiveTermId = curTerm?.id;
+      } catch {}
+    }
+    if (!effectiveTermId) {
+      effectiveTermId = 'term-t1';
+    }
 
     // Conflict Check 1: Intra-grid conflict (same teacher scheduled multiple times in this grid at same day & period)
     const seenTeacherSlots = new Map<string, string>();
@@ -298,8 +330,22 @@ export class TimetableUseCases {
     }
 
     const schoolId = dto.schoolId || 'school-001';
-    const academicYearId = dto.academicYearId || 'year-2026';
-    const termId = dto.termId || 'term-2026-t1';
+    let academicYearId = dto.academicYearId;
+    if (!academicYearId && this.academicRepository) {
+      const curYear = await this.academicRepository.findCurrentYear(schoolId);
+      academicYearId = curYear?.id;
+    }
+    if (!academicYearId) {
+      academicYearId = `year-${new Date().getFullYear()}`;
+    }
+    let termId = dto.termId;
+    if (!termId && this.academicRepository) {
+      const curTerm = await this.academicRepository.findCurrentTerm(academicYearId);
+      termId = curTerm?.id;
+    }
+    if (!termId) {
+      termId = `term-${academicYearId}-t1`;
+    }
     const classRoomId = dto.classRoomId;
 
     if (!classRoomId) {

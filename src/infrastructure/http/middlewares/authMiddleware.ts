@@ -64,6 +64,10 @@ export function requireRoles(...allowedRoles: (UserRole | UserRole[])[]) {
         expandedAllowed.add(UserRole.ADMIN);
         expandedAllowed.add(UserRole.SCHOOL_ADMIN);
       }
+      if (r === UserRole.HEAD_TEACHER || (r as string) === 'HEADTEACHER') {
+        expandedAllowed.add(UserRole.HEAD_TEACHER);
+        expandedAllowed.add('HEADTEACHER');
+      }
       if (r === UserRole.BURSAR || r === UserRole.ACCOUNTANT) {
         expandedAllowed.add(UserRole.BURSAR);
         expandedAllowed.add(UserRole.ACCOUNTANT);
@@ -74,7 +78,8 @@ export function requireRoles(...allowedRoles: (UserRole | UserRole[])[]) {
       }
     }
 
-    if (!expandedAllowed.has(req.user.role)) {
+    const userRoleStr = req.user.role ? String(req.user.role).toUpperCase().replace(/\s+/g, '_') : '';
+    if (!expandedAllowed.has(req.user.role) && !expandedAllowed.has(userRoleStr)) {
       return next(new ForbiddenError(`Required role: ${flatRoles.join(' or ')}`));
     }
 

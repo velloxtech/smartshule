@@ -54,7 +54,7 @@ export class AttendanceUseCases {
           if (u && u.phone) {
             await this.notificationService.sendSms(
               u.phone,
-              `SmartShule Alert: Dear Parent, please note that ${student.fullName} (Adm: ${student.admissionNumber}) was marked ABSENT today (${dto.date}).`
+              `Grace Seeds School Alert: Dear Parent, please note that ${student.fullName} (Adm: ${student.admissionNumber}) was marked ABSENT today (${dto.date}).`
             );
             parentNotified = true;
           }

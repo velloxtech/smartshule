@@ -1309,10 +1309,10 @@ export const OccurrenceBookView: React.FC = () => {
             <div className="p-6 bg-white border border-gray-300 rounded-xl space-y-4 text-xs font-serif print:border-none print:p-0">
               {/* Official School Header */}
               <div className="text-center border-b-2 border-black pb-3 space-y-1">
-                <h2 className="text-xl font-bold uppercase tracking-wide">SMARTSHULE ACADEMY</h2>
+                <h2 className="text-xl font-bold uppercase tracking-wide">{user?.schoolName || 'GRACE SEEDS SCHOOL'}</h2>
                 <h3 className="text-sm font-semibold tracking-wider">DAILY OCCURRENCE BOOK REGISTER (O.B.)</h3>
                 <p className="text-xs text-gray-600">
-                  Date: <strong>{selectedDate || todayStr}</strong> | Term: Term 3 • 2026 | Duty Master Daily Handover Sheet
+                  Date: <strong>{selectedDate || todayStr}</strong> | Academic Session: <strong>{new Date().getFullYear()}</strong> | Duty Master Daily Handover Sheet
                 </p>
               </div>
 
