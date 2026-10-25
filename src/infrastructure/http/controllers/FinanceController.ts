@@ -51,6 +51,12 @@ export const CreateFeeStructureSchema = z.object({
   ).min(1)
 });
 
+export const UpdateFeeStructureSchema = CreateFeeStructureSchema.partial();
+
+export const ReversePaymentSchema = z.object({
+  reason: z.string().min(3, 'Reversal reason must be at least 3 characters')
+});
+
 export const GenerateInvoicesSchema = z.object({
   schoolId: z.string().min(1),
   academicYearId: z.string().min(1),
@@ -216,6 +222,20 @@ export class FinanceController {
       return res.status(201).json({
         success: true,
         message: 'Fee structure created successfully',
+        data: structure
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public updateFeeStructure = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const user = (req as AuthenticatedRequest).user;
+      const structure = await this.feeUseCases.updateFeeStructure(req.params.id as string, req.body, user);
+      return res.status(200).json({
+        success: true,
+        message: 'Fee structure updated successfully',
         data: structure
       });
     } catch (err) {
@@ -399,6 +419,35 @@ export class FinanceController {
       const id = String(req.params.id);
       const result = await this.feeUseCases.getPaymentReceipt(id);
       return res.status(200).json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public reversePayment = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const paymentId = String(req.params.id);
+      const { reason } = req.body;
+      const result = await this.feeUseCases.reversePayment(paymentId, reason, req.user);
+
+      this.systemLogUseCases?.log({
+        schoolId: (req as any).user?.schoolId || 'school-001',
+        level: 'WARN',
+        category: 'FINANCE',
+        action: 'PAYMENT_REVERSED',
+        actorUserId: (req as any).user?.userId,
+        actorEmail: (req as any).user?.email,
+        actorRole: (req as any).user?.role,
+        status: 'SUCCESS',
+        details: result.message,
+        metadata: {
+          paymentId,
+          reason,
+          updatedInvoiceBalance: result.updatedInvoiceBalance
+        }
+      }).catch(() => {});
+
+      return res.status(200).json(result);
     } catch (err) {
       next(err);
     }
@@ -856,6 +905,44 @@ export class FinanceController {
         message: 'Parent fee payment deadline banner updated successfully.',
         data: banner
       });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  // ==========================================
+  // UNIFIED STUDENT FEE ACCOUNTS & CREDIT LEDGER
+  // ==========================================
+  public getStudentFeeAccounts = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const { schoolId, termId, academicYearId, gradeLevel } = req.query;
+      const result = await this.feeUseCases.getStudentFeeAccounts({
+        schoolId: schoolId as string,
+        termId: termId as string,
+        academicYearId: academicYearId as string,
+        gradeLevel: gradeLevel as string,
+        requestingUser: req.user
+      });
+      return res.status(200).json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public getStudentCredits = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const studentId = req.params.studentId as string;
+      const result = await this.feeUseCases.getStudentCredits(studentId, req.user);
+      return res.status(200).json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public applyCreditToInvoice = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const result = await this.feeUseCases.applyCreditToInvoice(req.body, req.user);
+      return res.status(200).json(result);
     } catch (err) {
       next(err);
     }

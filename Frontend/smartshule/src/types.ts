@@ -47,7 +47,8 @@ export type TabType =
   | 'occurrence-records'
   | 'curriculum-tracker'
   | 'fee-deadline-banner'
-  | 'sponsored-students';
+  | 'sponsored-students'
+  | 'digital-signature';
 
 export interface FeeBannerConfig {
   id: string;
@@ -201,6 +202,18 @@ export enum UserRole {
   STUDENT = 'STUDENT',
 }
 
+export function isTermInitializationAuthorized(role?: string | UserRole): boolean {
+  if (!role) return false;
+  const normalized = String(role).toUpperCase().replace(/\s+/g, '_');
+  return (
+    normalized === UserRole.SUPER_ADMIN ||
+    normalized === UserRole.ADMIN ||
+    normalized === UserRole.SCHOOL_ADMIN ||
+    normalized === UserRole.HEAD_TEACHER ||
+    normalized === 'HEADTEACHER'
+  );
+}
+
 export interface AuthUser {
   id: string;
   userId?: string;
@@ -247,12 +260,12 @@ export interface Student {
   id: string;
   admNo: string;
   admissionNumber?: string;
-  firstName?: string;
-  middleName?: string;
-  lastName?: string;
   upi: string;
   nemis: string;
   name: string;
+  firstName?: string;
+  middleName?: string;
+  lastName?: string;
   gender: 'Boy' | 'Girl' | 'MALE' | 'FEMALE';
   grade: string;
   stream: string;
@@ -262,7 +275,7 @@ export interface Student {
   totalFee: number;
   attendanceRate: number;
   CBCRating: CBCRubric;
-  status: 'Active' | 'Transferred' | 'Suspended' | 'ACTIVE';
+  status: 'Active' | 'Transferred' | 'Suspended' | 'ACTIVE' | 'INACTIVE' | 'WITHDRAWN' | 'GRADUATED' | string;
   dateOfBirth?: string;
   medicalConditions?: string;
   specialNeeds?: string;
@@ -274,6 +287,11 @@ export interface Student {
   sponsorship?: StudentSponsorship | null;
   isChargeExempt?: boolean;
   fee?: any;
+  priorArrears?: number;
+  totalPaid?: number;
+  creditBalance?: number;
+  totalDue?: number;
+  arrearsDue?: number;
 }
 
 export interface ArchivedGuardianInfo {
@@ -1699,10 +1717,21 @@ export interface PayrollRecord {
   otherDeductions: number;
   totalDeductions: number;
   netSalary: number;
-  status: 'DRAFT' | 'APPROVED' | 'PAID';
+  status: 'DRAFT' | 'APPROVED' | 'PARTIALLY_PAID' | 'PAID' | 'REVERSED';
+  amountPaid?: number;
+  balance?: number;
   paymentMethod?: 'BANK_TRANSFER' | 'MPESA' | 'CHEQUE' | 'CASH';
   paymentReference?: string;
+  fundingAccount?: string;
+  expenseId?: string;
+  voucherNumber?: string;
   paidAt?: string;
+  approvedByUserId?: string;
+  approvedAt?: string;
+  paidByUserId?: string;
+  reversedByUserId?: string;
+  reversedAt?: string;
+  reversalReason?: string;
   notes?: string;
   createdAt: string;
   updatedAt: string;
@@ -1769,11 +1798,20 @@ export interface ClinicVisit {
 // ==========================================
 // INVENTORY & ASSETS
 // ==========================================
+export type InventoryCategory =
+  | 'STATIONERY'
+  | 'TEXTBOOKS'
+  | 'LAB_EQUIPMENT'
+  | 'KITCHEN_FOOD'
+  | 'CLEANING'
+  | 'UNIFORMS'
+  | 'GENERAL_SUPPLIES';
+
 export interface InventoryItem {
   id: string;
   schoolId: string;
   itemName: string;
-  category: 'STATIONERY' | 'TEXTBOOKS' | 'LAB_EQUIPMENT' | 'KITCHEN_FOOD' | 'CLEANING' | 'UNIFORMS';
+  category: InventoryCategory;
   unit: string;
   quantityInStock: number;
   reorderLevel: number;
@@ -1783,6 +1821,136 @@ export interface InventoryItem {
   isLowStock?: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export type PurchaseRequestStatus =
+  | 'REQUESTED'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'ORDERED'
+  | 'PARTIALLY_DELIVERED'
+  | 'DELIVERED'
+  | 'CANCELLED';
+
+export interface InventoryPurchaseRequest {
+  id: string;
+  schoolId: string;
+  requestNumber: string;
+  itemId: string;
+  itemName: string;
+  category: string;
+  quantityRequested: number;
+  estimatedUnitCost: number;
+  totalEstimatedCost: number;
+  requestedByUserId: string;
+  requestedByName: string;
+  requestedByEmail?: string;
+  reason: string;
+  supportingDocumentUrl?: string;
+  status: PurchaseRequestStatus;
+  approvedByUserId?: string;
+  approvedByName?: string;
+  approvedAt?: string;
+  approvalNotes?: string;
+  rejectionReason?: string;
+  deliveredQuantity: number;
+  outstandingQuantity: number;
+  supplierName?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GoodsReceivedNote {
+  id: string;
+  schoolId: string;
+  grnNumber: string;
+  purchaseRequestId: string;
+  itemId: string;
+  itemName: string;
+  deliveryNoteRef?: string;
+  quantityOrdered: number;
+  quantityDelivered: number;
+  quantityAccepted: number;
+  quantityRejected: number;
+  rejectionReason?: string;
+  receivedByUserId: string;
+  receivedByName: string;
+  receivedDate: string;
+  deliveryStatus: 'FULL' | 'PARTIAL' | 'REJECTED';
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type SupplierInvoiceStatus = 'UNPAID' | 'PARTIALLY_PAID' | 'PAID' | 'REVERSED';
+
+export interface SupplierInvoice {
+  id: string;
+  schoolId: string;
+  supplierName: string;
+  invoiceNumber: string;
+  purchaseRequestId?: string;
+  invoiceDate: string;
+  dueDate?: string;
+  totalAmount: number;
+  taxAmount: number;
+  amountPaid: number;
+  balance: number;
+  paymentStatus: SupplierInvoiceStatus;
+  fundingAccount?: 'BANK' | 'MPESA' | 'CASH' | 'CHEQUE';
+  expenseId?: string;
+  voucherNumber?: string;
+  paymentMethod?: string;
+  paymentReference?: string;
+  paidByUserId?: string;
+  paidAt?: string;
+  verifiedByUserId?: string;
+  verifiedAt?: string;
+  documentUrl?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type StockMovementType =
+  | 'GOODS_RECEIVED'
+  | 'STOCK_ISSUE'
+  | 'STOCK_ADJUSTMENT'
+  | 'DAMAGED_LOST'
+  | 'DISPOSAL';
+
+export interface StockMovement {
+  id: string;
+  schoolId: string;
+  itemId: string;
+  itemName: string;
+  movementType: StockMovementType;
+  quantity: number;
+  balanceBefore: number;
+  balanceAfter: number;
+  referenceId?: string;
+  referenceType?: string;
+  issuedTo?: string;
+  purpose?: string;
+  reason: string;
+  recordedByUserId: string;
+  recordedByName: string;
+  authorizedByUserId: string;
+  authorizedByName: string;
+  date: string;
+  createdAt: string;
+}
+
+export interface InventoryStats {
+  totalItemsCount: number;
+  lowStockCount: number;
+  totalSuppliesValue: number;
+  totalAssetsCount: number;
+  totalAssetsValue: number;
+  pendingRequestsCount: number;
+  activeApprovedRequestsCount: number;
+  unpaidInvoicesCount: number;
+  totalPayableBalance: number;
 }
 
 export interface StockTransaction {

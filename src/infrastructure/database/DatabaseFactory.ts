@@ -49,7 +49,8 @@ import {
   PostgresAttendanceRepository,
   PostgresFeeRepository,
   PostgresDeletedStudentRepository,
-  PostgresStudentSponsorshipRepository
+  PostgresStudentSponsorshipRepository,
+  PostgresSignatureRepository
 } from './postgres/PostgresRepositories';
 
 import { IUserRepository } from '../../core/ports/repositories/IUserRepository';
@@ -94,6 +95,14 @@ import { PostgresLunchFeeRepository } from './postgres/PostgresLunchFeeRepositor
 import { PostgresLibraryRepository } from './postgres/PostgresLibraryRepository';
 import { InMemoryLibraryRepository } from './in-memory/InMemoryLibraryRepository';
 import { InMemoryAnnouncementRepository } from './in-memory/InMemoryAnnouncementRepository';
+import { IPayrollRepository } from '../../core/ports/repositories/IPayrollRepository';
+import { PostgresPayrollRepository } from './postgres/PostgresPayrollRepository';
+import { InMemoryPayrollRepository } from './in-memory/InMemoryPayrollRepository';
+import { IInventoryRepository } from '../../core/ports/repositories/IInventoryRepository';
+import { PostgresInventoryRepository } from './postgres/PostgresInventoryRepository';
+import { InMemoryInventoryRepository } from './in-memory/InMemoryInventoryRepository';
+import { ISignatureRepository } from '../../core/ports/repositories/ISignatureRepository';
+import { InMemorySignatureRepository } from './in-memory/InMemorySignatureRepository';
 
 export interface RepositoryBundle {
   userRepository: IUserRepository;
@@ -120,6 +129,9 @@ export interface RepositoryBundle {
   occurrenceRepository?: IOccurrenceRepository;
   curriculumTrackerRepository?: ICurriculumTrackerRepository;
   studentSponsorshipRepository?: IStudentSponsorshipRepository;
+  payrollRepository?: IPayrollRepository;
+  inventoryRepository?: IInventoryRepository;
+  signatureRepository?: ISignatureRepository;
 }
 
 export class DatabaseFactory {
@@ -148,7 +160,9 @@ export class DatabaseFactory {
         feeRepository: new MongoFeeRepository(),
         systemLogRepository: new InMemorySystemLogRepository(),
         announcementRepository: new InMemoryAnnouncementRepository(),
-        studentSponsorshipRepository: new MongoStudentSponsorshipRepository()
+        studentSponsorshipRepository: new MongoStudentSponsorshipRepository(),
+        inventoryRepository: new InMemoryInventoryRepository(),
+        signatureRepository: new InMemorySignatureRepository()
       };
     }
 
@@ -246,6 +260,9 @@ export class DatabaseFactory {
         occurrenceRepository: new PostgresOccurrenceRepository(pool),
         curriculumTrackerRepository: new PostgresCurriculumTrackerRepository(pool),
         studentSponsorshipRepository: new PostgresStudentSponsorshipRepository(pool),
+        payrollRepository: new PostgresPayrollRepository(pool),
+        inventoryRepository: new PostgresInventoryRepository(pool),
+        signatureRepository: new PostgresSignatureRepository(pool),
       };
     }
 
@@ -276,6 +293,9 @@ export class DatabaseFactory {
       occurrenceRepository: new InMemoryOccurrenceRepository(),
       curriculumTrackerRepository: new InMemoryCurriculumTrackerRepository(),
       studentSponsorshipRepository: new InMemoryStudentSponsorshipRepository(),
+      payrollRepository: new InMemoryPayrollRepository(),
+      inventoryRepository: new InMemoryInventoryRepository(),
+      signatureRepository: new InMemorySignatureRepository(),
     };
   }
 }

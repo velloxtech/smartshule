@@ -1,10 +1,16 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { apiService } from '../../services/api';
-import { CashFlowLedgerData, ExpenseRecord, OtherIncomeRecord, ExpenseCategoryType } from '../../types';
+import {
+  CashFlowLedgerData,
+  ExpenseRecord,
+  OtherIncomeRecord,
+  ExpenseCategoryType,
+  FinanceSummaryData,
+} from '../../types';
 import { resolveAcademicYearName } from '../../utils/formatters';
 
-// Ministry of Education standard Vote Head configurations & baseline budgetary allocations
-interface VoteHeadBudgetRow {
+// Standard Private School Operating Expenditure Cost Centers
+interface CostCenterBudgetRow {
   code: string;
   category: ExpenseCategoryType;
   label: string;
@@ -15,77 +21,82 @@ interface VoteHeadBudgetRow {
   description: string;
 }
 
-const DEFAULT_VOTE_HEAD_BUDGETS: Record<ExpenseCategoryType, { code: string; label: string; budget: number; desc: string }> = {
+const OPERATING_COST_CENTERS: Record<
+  ExpenseCategoryType,
+  { code: string; label: string; budget: number; desc: string }
+> = {
   SALARIES_WAGES: {
-    code: 'VH-01',
+    code: 'CC-01',
     label: 'Salaries & Staff Wages',
     budget: 0,
-    desc: 'BOM Teaching & Non-teaching staff allowances, NSSF/SHIF statutory deductions',
+    desc: 'Teaching and administrative payroll, support staff wages, statutory remittances (PAYE, NSSF, SHIF, Housing Levy)',
   },
   CBC_LEARNING_MATERIALS: {
-    code: 'VH-02',
-    label: 'CBC Learning Materials & Science Kits',
+    code: 'CC-02',
+    label: 'CBE Learning Materials & Lab Supplies',
     budget: 0,
-    desc: 'Learner workbooks, laboratory chemicals, practical arts supplies, stationery',
+    desc: 'Learner curriculum workbooks, science kits, laboratory reagents, art supplies, and classroom stationery',
   },
   UTILITIES_BILLS: {
-    code: 'VH-03',
+    code: 'CC-03',
     label: 'Utilities (Power, Water, Internet)',
     budget: 0,
-    desc: 'Kenya Power electricity, water bowsers, fiber internet connectivity',
+    desc: 'Electricity supply, municipal/bowser water bills, internet broadband connectivity, and waste disposal',
   },
   MEALS_FEEDING: {
-    code: 'VH-04',
-    label: 'Meals & School Feeding Program',
+    code: 'CC-04',
+    label: 'Meals & Kitchen Catering Program',
     budget: 0,
-    desc: 'Cereals, vegetables, milk, gas cylinders, firewood, kitchen consumables',
+    desc: 'Kitchen groceries, cereals, vegetables, milk, cooking gas, firewood, and catering consumables',
   },
   REPAIRS_MAINTENANCE: {
-    code: 'VH-05',
+    code: 'CC-05',
     label: 'Repairs & Facility Maintenance',
     budget: 0,
-    desc: 'Classroom painting, desk repairs, plumbing fixes, electrical safety works',
+    desc: 'Campus painting, desk and furniture repairs, plumbing, electrical maintenance, and grounds upkeep',
   },
   TRANSPORT_FUEL: {
-    code: 'VH-06',
+    code: 'CC-06',
     label: 'Transport, Bus Fuel & Service',
     budget: 0,
-    desc: 'School bus diesel, routine fleet servicing, NTSA speed-governor inspection',
+    desc: 'School bus diesel fuel, routine fleet servicing, insurance, speed governor maintenance, and NTSA licensing',
   },
   ADMIN_OFFICE: {
-    code: 'VH-07',
-    label: 'Administration & Office Contingency',
+    code: 'CC-07',
+    label: 'Administration & Office Operations',
     budget: 0,
-    desc: 'Photocopy paper, communication, bank transaction fees, audit preparation',
+    desc: 'Photocopy paper, communication, SMS gateway credits, bank transaction fees, and administrative supplies',
   },
   KNEC_EXAMS: {
-    code: 'VH-08',
-    label: 'KNEC & Internal Assessment Printing',
+    code: 'CC-08',
+    label: 'Examinations Printing & Logistics',
     budget: 0,
-    desc: 'KPSEA/KJSEA examination logistics, assessment rubrics, invigilation',
+    desc: 'Internal terminal exam printing, assessment rubrics, invigilation logistics, and assessment materials',
   },
   CO_CURRICULAR: {
-    code: 'VH-09',
-    label: 'Co-Curricular, Sports & Music Festivals',
+    code: 'CC-09',
+    label: 'Co-Curricular, Sports & Clubs',
     budget: 0,
-    desc: 'KSSSA games affiliation, ball games kit, drama/music festival travel',
+    desc: 'Sports equipment, tournament affiliations, scouting, music/drama festival travel, and club activities',
   },
   CAPITAL_DEVELOPMENT: {
-    code: 'VH-10',
+    code: 'CC-10',
     label: 'Capital Development & Infrastructure',
     budget: 0,
-    desc: 'JSS Laboratory completion, ablution block expansion, perimeter fencing',
+    desc: 'Classroom upgrades, security fencing, computer lab enhancement, and playground equipment',
   },
   OTHER_EXPENSES: {
-    code: 'VH-11',
-    label: 'Other Sundry & Emergency Contingencies',
+    code: 'CC-11',
+    label: 'Other Sundry & Operating Contingencies',
     budget: 0,
-    desc: 'Health emergencies, sanitation products, first-aid replenishments',
+    desc: 'First-aid medical supplies, sanitation products, health compliance, and emergency contingency expenditures',
   },
 };
 
 export const FinancialReportsView: React.FC = () => {
   const [ledgerData, setLedgerData] = useState<CashFlowLedgerData | null>(null);
+  const [financeSummary, setFinanceSummary] = useState<FinanceSummaryData | null>(null);
+  const [defaultersData, setDefaultersData] = useState<any>(null);
   const [expenses, setExpenses] = useState<ExpenseRecord[]>([]);
   const [incomes, setIncomes] = useState<OtherIncomeRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -96,7 +107,9 @@ export const FinancialReportsView: React.FC = () => {
 
   // Period / Filter state
   const [selectedPeriod, setSelectedPeriod] = useState<string>('CURRENT_PERIOD');
-  const [activeReportTab, setActiveReportTab] = useState<'INCOME_EXPENDITURE' | 'VOTE_HEAD_VARIANCE' | 'CASH_POSITION' | 'COMPLIANCE_AUDIT'>('INCOME_EXPENDITURE');
+  const [activeReportTab, setActiveReportTab] = useState<
+    'INCOME_EXPENDITURE' | 'COLLECTIONS_ANALYSIS' | 'CASH_POSITION' | 'INTERNAL_CONTROLS'
+  >('INCOME_EXPENDITURE');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
   const [customBudgetMultiplier, setCustomBudgetMultiplier] = useState<number>(1.0);
@@ -116,7 +129,9 @@ export const FinancialReportsView: React.FC = () => {
           setAcademicYears(yrRes.data);
         }
         if (ctxRes.success && ctxRes.data?.currentTerm?.name) {
-          const yName = resolveAcademicYearName(ctxRes.data.currentYear?.name || ctxRes.data.currentYear?.year || ctxRes.data.currentYear?.id);
+          const yName = resolveAcademicYearName(
+            ctxRes.data.currentYear?.name || ctxRes.data.currentYear?.year || ctxRes.data.currentYear?.id
+          );
           setSelectedPeriod(`${ctxRes.data.currentTerm.name} ${yName}`.trim());
         }
       } catch {
@@ -138,11 +153,13 @@ export const FinancialReportsView: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const [ledgerRes, expRes, incRes] = await Promise.all([
+      const [ledgerRes, summaryRes, defaultersRes, expRes, incRes] = await Promise.all([
         apiService.getCashFlowLedger({
           startDate: customStartDate || undefined,
           endDate: customEndDate || undefined,
         }).catch(() => ({ success: false, data: null })),
+        apiService.getFinanceSummary().catch(() => ({ success: false, data: null })),
+        apiService.getDefaulters().catch(() => ({ success: false, data: null })),
         apiService.getExpenses({
           startDate: customStartDate || undefined,
           endDate: customEndDate || undefined,
@@ -155,6 +172,12 @@ export const FinancialReportsView: React.FC = () => {
 
       if (ledgerRes.success && ledgerRes.data) {
         setLedgerData(ledgerRes.data);
+      }
+      if (summaryRes.success && summaryRes.data) {
+        setFinanceSummary(summaryRes.data);
+      }
+      if (defaultersRes.success && defaultersRes.data) {
+        setDefaultersData(defaultersRes.data);
       }
       if (expRes.success && Array.isArray(expRes.data)) {
         setExpenses(expRes.data);
@@ -188,13 +211,13 @@ export const FinancialReportsView: React.FC = () => {
   const pettyCashBalance = ledgerData?.accountBalances?.pettyCash?.balance ?? 0;
   const totalLiquid = bankBalance + mpesaBalance + pettyCashBalance;
 
-  // Breakdown of Other Incomes by Category
+  // Breakdown of Other Incomes by Category (Strictly Private School Sources)
   const incomeCategoryBreakdown = useMemo(() => {
     const map: Record<string, number> = {
-      CAPITATION_GRANT: 0,
       UNIFORM_SALES: 0,
-      FACILITY_HIRE: 0,
-      DONATION_GRANT: 0,
+      BUS_FACILITY_HIRE: 0,
+      DONATIONS_GRANTS: 0,
+      EXAM_REVISION_BOOKS: 0,
       OTHER: 0,
     };
 
@@ -207,8 +230,8 @@ export const FinancialReportsView: React.FC = () => {
     return map;
   }, [incomes]);
 
-  // Breakdown of Expenses by Vote Head
-  const voteHeadSummaryRows: VoteHeadBudgetRow[] = useMemo(() => {
+  // Breakdown of Expenses by Cost Center
+  const costCenterSummaryRows: CostCenterBudgetRow[] = useMemo(() => {
     const expenseSpentMap: Record<ExpenseCategoryType, number> = {
       SALARIES_WAGES: 0,
       CBC_LEARNING_MATERIALS: 0,
@@ -235,8 +258,8 @@ export const FinancialReportsView: React.FC = () => {
       });
     }
 
-    return (Object.keys(DEFAULT_VOTE_HEAD_BUDGETS) as ExpenseCategoryType[]).map((cat) => {
-      const cfg = DEFAULT_VOTE_HEAD_BUDGETS[cat];
+    return (Object.keys(OPERATING_COST_CENTERS) as ExpenseCategoryType[]).map((cat) => {
+      const cfg = OPERATING_COST_CENTERS[cat];
       const budget = Math.round(cfg.budget * customBudgetMultiplier);
       const spent = expenseSpentMap[cat] || 0;
       const variance = budget - spent;
@@ -256,37 +279,70 @@ export const FinancialReportsView: React.FC = () => {
   }, [expenses, ledgerData, customBudgetMultiplier]);
 
   const totalBudget = useMemo(() => {
-    return voteHeadSummaryRows.reduce((acc, r) => acc + r.budgetAllocated, 0);
-  }, [voteHeadSummaryRows]);
+    return costCenterSummaryRows.reduce((acc, r) => acc + r.budgetAllocated, 0);
+  }, [costCenterSummaryRows]);
 
   const totalActualSpent = useMemo(() => {
-    return voteHeadSummaryRows.reduce((acc, r) => acc + r.actualSpent, 0);
-  }, [voteHeadSummaryRows]);
+    return costCenterSummaryRows.reduce((acc, r) => acc + r.actualSpent, 0);
+  }, [costCenterSummaryRows]);
 
   const totalVariance = totalBudget - totalActualSpent;
   const overallUtilization = totalBudget > 0 ? Math.round((totalActualSpent / totalBudget) * 100) : 0;
 
+  // Payment Channels Breakdown from ledger
+  const paymentChannelsBreakdown = useMemo(() => {
+    let mpesa = 0;
+    let bank = 0;
+    let cash = 0;
+    let cheque = 0;
+
+    if (ledgerData?.recentLedger) {
+      ledgerData.recentLedger.forEach((tx) => {
+        if (tx.type === 'INFLOW') {
+          if (tx.paymentMethod === 'MPESA') mpesa += tx.amount;
+          else if (['BANK_TRANSFER', 'BANK_DEPOSIT', 'KCB_BUNI', 'CARD'].includes(tx.paymentMethod)) bank += tx.amount;
+          else if (tx.paymentMethod === 'CASH') cash += tx.amount;
+          else if (tx.paymentMethod === 'CHEQUE') cheque += tx.amount;
+        }
+      });
+    }
+
+    const total = mpesa + bank + cash + cheque;
+    return {
+      mpesa,
+      bank,
+      cash,
+      cheque,
+      total,
+      mpesaPct: total > 0 ? ((mpesa / total) * 100).toFixed(1) : '0.0',
+      bankPct: total > 0 ? ((bank / total) * 100).toFixed(1) : '0.0',
+      cashPct: total > 0 ? ((cash / total) * 100).toFixed(1) : '0.0',
+      chequePct: total > 0 ? ((cheque / total) * 100).toFixed(1) : '0.0',
+    };
+  }, [ledgerData]);
+
   // Handle Export CSV
   const handleExportCSV = () => {
     const schoolName = school?.name || 'Grace Seeds School';
-    const regNo = school?.registrationNumber || school?.code || 'N/A';
+    const regNo = school?.registrationNumber || school?.code || 'GSS-001';
     const rows = [
-      ['GRACE SEEDS SCHOOL FINANCIAL STATEMENT & MOE VOTE HEAD REPORT'],
-      [`School: ${schoolName}`, `Reg: ${regNo}`, `Period: ${selectedPeriod || 'All'}`],
+      [`${schoolName.toUpperCase()} — COMPREHENSIVE FINANCIAL STATEMENT`],
+      [`School: ${schoolName}`, `Reg/Code: ${regNo}`, `Period: ${selectedPeriod || 'All'}`],
       ['Generated On:', new Date().toLocaleString('en-KE')],
       [''],
       ['SECTION 1: REVENUE / CASH INFLOWS'],
-      ['Source', 'Amount (KES)'],
+      ['Revenue Source', 'Amount (KES)'],
       ['Student Tuition & Boarding Fees', feeRevenue],
-      ['MoE Capitation Grants (FPE / JSS)', incomeCategoryBreakdown.CAPITATION_GRANT || 0],
       ['Uniform & Scholastic Materials Sales', incomeCategoryBreakdown.UNIFORM_SALES || 0],
-      ['Grounds & Facility Hire', incomeCategoryBreakdown.FACILITY_HIRE || 0],
-      ['PTA Special Levies & Donations', incomeCategoryBreakdown.DONATION_GRANT || 0],
+      ['Bus & Field Facility Hire', incomeCategoryBreakdown.BUS_FACILITY_HIRE || 0],
+      ['Philanthropic & Development Grants', incomeCategoryBreakdown.DONATIONS_GRANTS || 0],
+      ['Exam Workbooks & Scholastic Books', incomeCategoryBreakdown.EXAM_REVISION_BOOKS || 0],
+      ['Other School Income', incomeCategoryBreakdown.OTHER || 0],
       ['TOTAL REVENUE / INFLOWS', totalMoneyIn],
       [''],
-      ['SECTION 2: MOE VOTE HEAD EXPENDITURES & BUDGET VARIANCE'],
-      ['Vote Head Code', 'Vote Head Title', 'Approved Budget (KES)', 'Actual Spent (KES)', 'Variance (KES)', 'Utilization %'],
-      ...voteHeadSummaryRows.map((r) => [
+      ['SECTION 2: OPERATING EXPENDITURES BY COST CENTER'],
+      ['Cost Center Code', 'Cost Center Title', 'Approved Budget (KES)', 'Actual Spent (KES)', 'Variance (KES)', 'Utilization %'],
+      ...costCenterSummaryRows.map((r) => [
         r.code,
         r.label,
         r.budgetAllocated,
@@ -294,19 +350,32 @@ export const FinancialReportsView: React.FC = () => {
         r.variance,
         `${r.utilizationPct}%`,
       ]),
-      ['TOTAL EXPENDITURES', '', totalBudget, totalActualSpent, totalVariance, `${overallUtilization}%`],
+      ['TOTAL OPERATING EXPENDITURES', '', totalBudget, totalActualSpent, totalVariance, `${overallUtilization}%`],
       [''],
-      ['SECTION 3: NET OPERATING POSITION'],
+      ['SECTION 3: PAYMENT CHANNELS DISTRIBUTION'],
+      ['Channel', 'Amount (KES)', 'Share %'],
+      ['Safaricom M-Pesa (Till/Paybill)', paymentChannelsBreakdown.mpesa, `${paymentChannelsBreakdown.mpesaPct}%`],
+      ['Bank Transfer & Deposits', paymentChannelsBreakdown.bank, `${paymentChannelsBreakdown.bankPct}%`],
+      ['Cashier Office (Cash Desk)', paymentChannelsBreakdown.cash, `${paymentChannelsBreakdown.cashPct}%`],
+      ['Bank Cheques & Drafts', paymentChannelsBreakdown.cheque, `${paymentChannelsBreakdown.chequePct}%`],
+      [''],
+      ['SECTION 4: NET OPERATING POSITION & LIQUIDITY'],
       ['Net Surplus / (Deficit)', netSurplus],
       ['Operating Margin', `${operatingMargin}%`],
-      ['Total Liquid Bank & M-Pesa Balances', totalLiquid],
+      ['School Bank Account Balance', bankBalance],
+      ['Safaricom M-Pesa Balance', mpesaBalance],
+      ['Petty Cash Balance', pettyCashBalance],
+      ['Total Liquid Cash Position', totalLiquid],
     ];
 
     const csvContent = 'data:text/csv;charset=utf-8,' + rows.map((e) => e.join(',')).join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `MoE_Financial_Statement_${(selectedPeriod || 'Report').replace(/[^a-zA-Z0-9]/g, '_')}_${schoolName.replace(/[^a-zA-Z0-9]/g, '_')}.csv`);
+    link.setAttribute(
+      'download',
+      `School_Financial_Statement_${(selectedPeriod || 'Report').replace(/[^a-zA-Z0-9]/g, '_')}_${schoolName.replace(/[^a-zA-Z0-9]/g, '_')}.csv`
+    );
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -318,19 +387,25 @@ export const FinancialReportsView: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12">
-      {/* Print-Only Formal MoE Board of Management Letterhead Header */}
-      <div className="hidden print:block mb-8 text-center border-b-2 border-black pb-4">
-        <h1 className="text-xl font-black uppercase tracking-wider">Republic of Kenya · Ministry of Education</h1>
-        <h2 className="text-lg font-bold">BOARD OF MANAGEMENT (BOM) FINANCIAL STATEMENT</h2>
-        <p className="text-sm font-semibold uppercase">{school?.name || 'Grace Seeds School'} · MOE CODE: {school?.registrationNumber || school?.code || 'N/A'}</p>
-        <p className="text-xs text-gray-700">
+      {/* Print-Only Private School Formal Letterhead Header */}
+      <div className="hidden print:block mb-8 text-center border-b-2 border-slate-900 pb-4">
+        <h1 className="text-xl font-black uppercase tracking-wider text-slate-900">
+          {school?.name || 'Grace Seeds School'}
+        </h1>
+        <h2 className="text-base font-bold text-slate-700 tracking-wide uppercase">
+          Statement of Financial Position & Operating Summary
+        </h2>
+        <p className="text-xs text-slate-600 mt-0.5">
           {[
+            school?.registrationNumber ? `Registration: ${school.registrationNumber}` : null,
             school?.subCounty ? `Sub-County: ${school.subCounty}` : null,
             school?.county ? `County: ${school.county}` : null,
-            'PFMA (2012) Capitation Compliance',
-          ].filter(Boolean).join(' · ')}
+            'Private School Accounts Directorate',
+          ]
+            .filter(Boolean)
+            .join(' · ')}
         </p>
-        <div className="mt-2 text-xs font-mono text-gray-600">
+        <div className="mt-2 text-xs font-mono text-slate-500">
           Reporting Cycle: {(selectedPeriod || 'Current Period').replace(/_/g, ' ')} · Printed on: {new Date().toLocaleString('en-KE')}
         </div>
       </div>
@@ -340,14 +415,16 @@ export const FinancialReportsView: React.FC = () => {
         <div>
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-primary text-3xl">analytics</span>
-            <h1 className="text-2xl font-bold tracking-tight text-on-surface">Financial Reports & BOM Statements</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-on-surface">
+              Financial Reports & Accounts Statements
+            </h1>
           </div>
           <p className="text-sm text-on-surface-variant mt-1">
-            Certified MoE Vote Head Budget Variance, Income & Expenditure, and Board of Management (BOM) Solvency Reports
+            Private school fee collections, operating cost centers, liquidity position, and financial statements
           </p>
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 mt-2 rounded-full text-xs font-medium bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-            PFMA 2012 & MoE Financial Audit Compliant
+            Private School Ledger & Accounts Reconciled
           </div>
         </div>
 
@@ -357,7 +434,7 @@ export const FinancialReportsView: React.FC = () => {
           <select
             value={selectedPeriod}
             onChange={(e) => setSelectedPeriod(e.target.value)}
-            className="input text-xs py-2 px-3 rounded-lg border border-outline-variant bg-surface text-on-surface font-medium"
+            className="input text-xs py-2 px-3 rounded-lg border border-outline-variant bg-surface text-on-surface font-medium cursor-pointer"
           >
             <option value="CURRENT_PERIOD">Current Active Term</option>
             {academicYears.map((ay) => {
@@ -381,14 +458,14 @@ export const FinancialReportsView: React.FC = () => {
             onClick={loadReportData}
             disabled={loading}
             title="Reload live ledger figures"
-            className="p-2 rounded-lg border border-outline-variant hover:bg-surface-variant/20 text-on-surface-variant transition-colors"
+            className="p-2 rounded-lg border border-outline-variant hover:bg-surface-variant/20 text-on-surface-variant transition-colors cursor-pointer"
           >
             <span className={`material-symbols-outlined text-base ${loading ? 'animate-spin' : ''}`}>sync</span>
           </button>
 
           <button
             onClick={handleExportCSV}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-outline-variant hover:bg-surface-variant/20 text-xs font-semibold text-on-surface transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-outline-variant hover:bg-surface-variant/20 text-xs font-semibold text-on-surface transition-colors cursor-pointer"
           >
             <span className="material-symbols-outlined text-base text-emerald-600">table_view</span>
             Export CSV
@@ -396,10 +473,10 @@ export const FinancialReportsView: React.FC = () => {
 
           <button
             onClick={handlePrintReport}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary hover:bg-primary/90 text-on-primary text-xs font-semibold shadow-sm transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary hover:bg-primary/90 text-on-primary text-xs font-semibold shadow-sm transition-colors cursor-pointer"
           >
             <span className="material-symbols-outlined text-base">print</span>
-            Print BOM Statement
+            Print Financial Statement
           </button>
         </div>
       </div>
@@ -430,7 +507,7 @@ export const FinancialReportsView: React.FC = () => {
             <select
               value={customBudgetMultiplier}
               onChange={(e) => setCustomBudgetMultiplier(parseFloat(e.target.value))}
-              className="input py-1 px-2 text-xs rounded border border-outline-variant bg-surface"
+              className="input py-1 px-2 text-xs rounded border border-outline-variant bg-surface cursor-pointer"
             >
               <option value="0.33">1 Term Allocation (1/3 Year)</option>
               <option value="1.0">Full Annual Budget (1.0x)</option>
@@ -445,35 +522,43 @@ export const FinancialReportsView: React.FC = () => {
         {/* Gross Revenue Inflow */}
         <div className="card p-5 bg-surface border border-outline-variant/30 rounded-2xl shadow-sm hover:shadow transition-shadow">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Total Revenue Inflows</span>
+            <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
+              Total Revenue Inflows
+            </span>
             <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 flex items-center justify-center">
               <span className="material-symbols-outlined text-lg">trending_up</span>
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-2xl font-black text-on-surface">{formatKes(totalMoneyIn)}</div>
+            <div className="text-2xl font-black text-on-surface tracking-tight font-mono">
+              {formatKes(totalMoneyIn)}
+            </div>
             <div className="flex items-center gap-1.5 mt-1 text-xs text-on-surface-variant">
-              <span className="font-medium text-emerald-600">Fees: {formatKes(feeRevenue)}</span>
-              <span>·</span>
-              <span>Grants: {formatKes(otherRevenue)}</span>
+              <span>Tuition Fees:</span>
+              <span className="font-semibold text-emerald-700 dark:text-emerald-400 font-mono">
+                {formatKes(feeRevenue)}
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Operating Expenditures */}
+        {/* Operating Expenditures Outflow */}
         <div className="card p-5 bg-surface border border-outline-variant/30 rounded-2xl shadow-sm hover:shadow transition-shadow">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Operating Expenses</span>
+            <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
+              Operating Expenditures
+            </span>
             <div className="w-9 h-9 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 flex items-center justify-center">
-              <span className="material-symbols-outlined text-lg">payments</span>
+              <span className="material-symbols-outlined text-lg">trending_down</span>
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-2xl font-black text-on-surface">{formatKes(totalActualSpent)}</div>
+            <div className="text-2xl font-black text-on-surface tracking-tight font-mono">
+              {formatKes(totalMoneyOut)}
+            </div>
             <div className="flex items-center gap-1.5 mt-1 text-xs text-on-surface-variant">
-              <span>MoE 11 Vote Heads</span>
-              <span>·</span>
-              <span className="font-medium">{overallUtilization}% of Budget</span>
+              <span>Cost Centers:</span>
+              <span className="font-semibold text-on-surface">11 Operating Categories</span>
             </div>
           </div>
         </div>
@@ -481,12 +566,14 @@ export const FinancialReportsView: React.FC = () => {
         {/* Net Operating Surplus / Deficit */}
         <div className="card p-5 bg-surface border border-outline-variant/30 rounded-2xl shadow-sm hover:shadow transition-shadow">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Operating Margin</span>
+            <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
+              Net Operating Result
+            </span>
             <div
               className={`w-9 h-9 rounded-xl flex items-center justify-center ${
                 isSurplus
-                  ? 'bg-blue-50 dark:bg-blue-950/40 text-blue-600'
-                  : 'bg-amber-50 dark:bg-amber-950/40 text-amber-600'
+                  ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600'
+                  : 'bg-rose-50 dark:bg-rose-950/40 text-rose-600'
               }`}
             >
               <span className="material-symbols-outlined text-lg">
@@ -495,33 +582,39 @@ export const FinancialReportsView: React.FC = () => {
             </div>
           </div>
           <div className="mt-3">
-            <div className={`text-2xl font-black ${isSurplus ? 'text-emerald-600' : 'text-rose-600'}`}>
+            <div
+              className={`text-2xl font-black tracking-tight font-mono ${
+                isSurplus ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'
+              }`}
+            >
+              {isSurplus ? '+' : ''}
               {formatKes(netSurplus)}
             </div>
             <div className="flex items-center gap-1.5 mt-1 text-xs text-on-surface-variant">
-              <span className={`font-semibold ${isSurplus ? 'text-emerald-600' : 'text-rose-600'}`}>
-                {isSurplus ? 'Net Operating Surplus' : 'Operating Deficit'}
-              </span>
-              <span>·</span>
-              <span>{operatingMargin}%</span>
+              <span>Operating Margin:</span>
+              <span className="font-semibold font-mono">{operatingMargin}%</span>
             </div>
           </div>
         </div>
 
-        {/* Liquid Treasury Cash Position */}
+        {/* Liquid Cash Position */}
         <div className="card p-5 bg-surface border border-outline-variant/30 rounded-2xl shadow-sm hover:shadow transition-shadow">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Liquid Treasury Cash</span>
-            <div className="w-9 h-9 rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-600 flex items-center justify-center">
+            <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
+              Liquid Cash Position
+            </span>
+            <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 flex items-center justify-center">
               <span className="material-symbols-outlined text-lg">savings</span>
             </div>
           </div>
           <div className="mt-3">
-            <div className="text-2xl font-black text-on-surface">{formatKes(totalLiquid)}</div>
-            <div className="flex items-center gap-1.5 mt-1 text-xs text-on-surface-variant">
+            <div className="text-2xl font-black text-on-surface tracking-tight font-mono">
+              {formatKes(totalLiquid)}
+            </div>
+            <div className="flex items-center gap-2 mt-1 text-xs text-on-surface-variant">
               <span>Bank: {formatKes(bankBalance)}</span>
               <span>·</span>
-              <span>Till: {formatKes(mpesaBalance)}</span>
+              <span>M-Pesa: {formatKes(mpesaBalance)}</span>
             </div>
           </div>
         </div>
@@ -532,7 +625,7 @@ export const FinancialReportsView: React.FC = () => {
         <nav className="flex space-x-8 -mb-px">
           <button
             onClick={() => setActiveReportTab('INCOME_EXPENDITURE')}
-            className={`py-3 px-1 border-b-2 font-semibold text-sm flex items-center gap-2 transition-colors ${
+            className={`py-3 px-1 border-b-2 font-semibold text-sm flex items-center gap-2 transition-colors cursor-pointer ${
               activeReportTab === 'INCOME_EXPENDITURE'
                 ? 'border-primary text-primary'
                 : 'border-transparent text-on-surface-variant hover:text-on-surface'
@@ -543,20 +636,20 @@ export const FinancialReportsView: React.FC = () => {
           </button>
 
           <button
-            onClick={() => setActiveReportTab('VOTE_HEAD_VARIANCE')}
-            className={`py-3 px-1 border-b-2 font-semibold text-sm flex items-center gap-2 transition-colors ${
-              activeReportTab === 'VOTE_HEAD_VARIANCE'
+            onClick={() => setActiveReportTab('COLLECTIONS_ANALYSIS')}
+            className={`py-3 px-1 border-b-2 font-semibold text-sm flex items-center gap-2 transition-colors cursor-pointer ${
+              activeReportTab === 'COLLECTIONS_ANALYSIS'
                 ? 'border-primary text-primary'
                 : 'border-transparent text-on-surface-variant hover:text-on-surface'
             }`}
           >
             <span className="material-symbols-outlined text-lg">pie_chart</span>
-            MoE Vote Head Budget Variance
+            Fee Collections & Channels
           </button>
 
           <button
             onClick={() => setActiveReportTab('CASH_POSITION')}
-            className={`py-3 px-1 border-b-2 font-semibold text-sm flex items-center gap-2 transition-colors ${
+            className={`py-3 px-1 border-b-2 font-semibold text-sm flex items-center gap-2 transition-colors cursor-pointer ${
               activeReportTab === 'CASH_POSITION'
                 ? 'border-primary text-primary'
                 : 'border-transparent text-on-surface-variant hover:text-on-surface'
@@ -567,15 +660,15 @@ export const FinancialReportsView: React.FC = () => {
           </button>
 
           <button
-            onClick={() => setActiveReportTab('COMPLIANCE_AUDIT')}
-            className={`py-3 px-1 border-b-2 font-semibold text-sm flex items-center gap-2 transition-colors ${
-              activeReportTab === 'COMPLIANCE_AUDIT'
+            onClick={() => setActiveReportTab('INTERNAL_CONTROLS')}
+            className={`py-3 px-1 border-b-2 font-semibold text-sm flex items-center gap-2 transition-colors cursor-pointer ${
+              activeReportTab === 'INTERNAL_CONTROLS'
                 ? 'border-primary text-primary'
                 : 'border-transparent text-on-surface-variant hover:text-on-surface'
             }`}
           >
             <span className="material-symbols-outlined text-lg">verified_user</span>
-            PFMA & MoE Audit Trail
+            Internal Controls & Audit
           </button>
         </nav>
       </div>
@@ -588,9 +681,9 @@ export const FinancialReportsView: React.FC = () => {
           <div className="card bg-surface border border-outline-variant/30 rounded-2xl p-6 shadow-sm">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-outline-variant/30 gap-2">
               <div>
-                <h2 className="text-lg font-bold text-on-surface">Statement of Income & Expenditure</h2>
+                <h2 className="text-lg font-bold text-on-surface">Statement of Income & Operating Expenditure</h2>
                 <p className="text-xs text-on-surface-variant">
-                  Board of Management (BOM) Standard Schedule of Operational Revenues and Operating Expenditures
+                  Private School Schedule of Operational Revenues and Recurrent Expenditures
                 </p>
               </div>
               <div className="text-xs font-mono px-3 py-1 bg-surface-variant/20 rounded-lg text-on-surface-variant">
@@ -602,9 +695,9 @@ export const FinancialReportsView: React.FC = () => {
             <div className="mt-6">
               <div className="flex items-center justify-between bg-emerald-50/60 dark:bg-emerald-950/20 px-4 py-2.5 rounded-lg border border-emerald-100 dark:border-emerald-900/30">
                 <span className="text-sm font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wide">
-                  A. Institutional Revenue & Cash Inflows
+                  A. Institutional Revenue & Operating Inflows
                 </span>
-                <span className="text-sm font-bold text-emerald-800 dark:text-emerald-300">
+                <span className="text-sm font-bold text-emerald-800 dark:text-emerald-300 font-mono">
                   {formatKes(totalMoneyIn)}
                 </span>
               </div>
@@ -613,42 +706,72 @@ export const FinancialReportsView: React.FC = () => {
                 <div className="py-3 px-4 flex items-center justify-between text-sm hover:bg-surface-variant/10 transition-colors">
                   <div>
                     <div className="font-semibold text-on-surface">Student Tuition & Boarding Fees</div>
-                    <div className="text-xs text-on-surface-variant">Collections via Safaricom M-Pesa Paybill & Direct Bank Invoices</div>
+                    <div className="text-xs text-on-surface-variant">
+                      Collections via Safaricom M-Pesa Paybill, Direct Bank Invoices, and Cash Desk
+                    </div>
                   </div>
-                  <div className="font-bold text-on-surface">{formatKes(feeRevenue)}</div>
+                  <div className="font-bold text-on-surface font-mono">{formatKes(feeRevenue)}</div>
                 </div>
 
                 <div className="py-3 px-4 flex items-center justify-between text-sm hover:bg-surface-variant/10 transition-colors">
                   <div>
-                    <div className="font-semibold text-on-surface">Ministry of Education Capitation Grants</div>
-                    <div className="text-xs text-on-surface-variant">Free Primary Education (FPE) & JSS Capitation (KES 15,040 / Learner)</div>
+                    <div className="font-semibold text-on-surface">Uniform, Stationery & Merchandise Sales</div>
+                    <div className="text-xs text-on-surface-variant">
+                      School uniforms, physical education sports kits, and student supplies
+                    </div>
                   </div>
-                  <div className="font-bold text-on-surface">{formatKes(incomeCategoryBreakdown.CAPITATION_GRANT || 0)}</div>
+                  <div className="font-bold text-on-surface font-mono">
+                    {formatKes(incomeCategoryBreakdown.UNIFORM_SALES || 0)}
+                  </div>
                 </div>
 
                 <div className="py-3 px-4 flex items-center justify-between text-sm hover:bg-surface-variant/10 transition-colors">
                   <div>
-                    <div className="font-semibold text-on-surface">Uniform, Stationery & Book Sales</div>
-                    <div className="text-xs text-on-surface-variant">School uniforms, physical education kits, CBE exercise books</div>
+                    <div className="font-semibold text-on-surface">School Bus, Grounds & Facility Rental Hire</div>
+                    <div className="text-xs text-on-surface-variant">
+                      Transport service charges, weekend grounds hire, and event venue rentals
+                    </div>
                   </div>
-                  <div className="font-bold text-on-surface">{formatKes(incomeCategoryBreakdown.UNIFORM_SALES || 0)}</div>
+                  <div className="font-bold text-on-surface font-mono">
+                    {formatKes(incomeCategoryBreakdown.BUS_FACILITY_HIRE || 0)}
+                  </div>
                 </div>
 
                 <div className="py-3 px-4 flex items-center justify-between text-sm hover:bg-surface-variant/10 transition-colors">
                   <div>
-                    <div className="font-semibold text-on-surface">Grounds, Hall & Bus Facility Hire</div>
-                    <div className="text-xs text-on-surface-variant">Weekend sports ground hire, school bus rentals for community events</div>
+                    <div className="font-semibold text-on-surface">Philanthropic Grants & Alumni Bursary Fund</div>
+                    <div className="text-xs text-on-surface-variant">
+                      Voluntary contributions, development donations, and donor scholarship funds
+                    </div>
                   </div>
-                  <div className="font-bold text-on-surface">{formatKes(incomeCategoryBreakdown.FACILITY_HIRE || 0)}</div>
+                  <div className="font-bold text-on-surface font-mono">
+                    {formatKes(incomeCategoryBreakdown.DONATIONS_GRANTS || 0)}
+                  </div>
                 </div>
 
                 <div className="py-3 px-4 flex items-center justify-between text-sm hover:bg-surface-variant/10 transition-colors">
                   <div>
-                    <div className="font-semibold text-on-surface">PTA Development Levies & Philanthropic Grants</div>
-                    <div className="text-xs text-on-surface-variant">Voluntary parent donations, alumni bursary fund contributions</div>
+                    <div className="font-semibold text-on-surface">CBE Workbooks & Revision Materials</div>
+                    <div className="text-xs text-on-surface-variant">
+                      Approved CBC revision materials, practical guides, and assessment booklets
+                    </div>
                   </div>
-                  <div className="font-bold text-on-surface">{formatKes(incomeCategoryBreakdown.DONATION_GRANT || 0)}</div>
+                  <div className="font-bold text-on-surface font-mono">
+                    {formatKes(incomeCategoryBreakdown.EXAM_REVISION_BOOKS || 0)}
+                  </div>
                 </div>
+
+                {incomeCategoryBreakdown.OTHER > 0 && (
+                  <div className="py-3 px-4 flex items-center justify-between text-sm hover:bg-surface-variant/10 transition-colors">
+                    <div>
+                      <div className="font-semibold text-on-surface">Other Miscellaneous Operating Inflows</div>
+                      <div className="text-xs text-on-surface-variant">Sundry administrative income and registration fees</div>
+                    </div>
+                    <div className="font-bold text-on-surface font-mono">
+                      {formatKes(incomeCategoryBreakdown.OTHER)}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -656,16 +779,19 @@ export const FinancialReportsView: React.FC = () => {
             <div className="mt-8">
               <div className="flex items-center justify-between bg-rose-50/60 dark:bg-rose-950/20 px-4 py-2.5 rounded-lg border border-rose-100 dark:border-rose-900/30">
                 <span className="text-sm font-bold text-rose-800 dark:text-rose-300 uppercase tracking-wide">
-                  B. Operating Expenditures by MoE Vote Head
+                  B. Operating Expenditures by Cost Center
                 </span>
-                <span className="text-sm font-bold text-rose-800 dark:text-rose-300">
+                <span className="text-sm font-bold text-rose-800 dark:text-rose-300 font-mono">
                   {formatKes(totalActualSpent)}
                 </span>
               </div>
 
               <div className="divide-y divide-outline-variant/20 mt-2">
-                {voteHeadSummaryRows.map((vh) => (
-                  <div key={vh.code} className="py-3 px-4 flex items-center justify-between text-sm hover:bg-surface-variant/10 transition-colors">
+                {costCenterSummaryRows.map((vh) => (
+                  <div
+                    key={vh.code}
+                    className="py-3 px-4 flex items-center justify-between text-sm hover:bg-surface-variant/10 transition-colors"
+                  >
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-xs font-bold text-primary px-2 py-0.5 rounded bg-primary/10">
@@ -676,9 +802,9 @@ export const FinancialReportsView: React.FC = () => {
                       <div className="text-xs text-on-surface-variant mt-0.5">{vh.description}</div>
                     </div>
                     <div className="text-right">
-                      <div className="font-bold text-on-surface">{formatKes(vh.actualSpent)}</div>
+                      <div className="font-bold text-on-surface font-mono">{formatKes(vh.actualSpent)}</div>
                       <div className="text-xs text-on-surface-variant">
-                        {totalActualSpent > 0 ? ((vh.actualSpent / totalActualSpent) * 100).toFixed(1) : 0}% of total spend
+                        {totalActualSpent > 0 ? ((vh.actualSpent / totalActualSpent) * 100).toFixed(1) : 0}% of outlays
                       </div>
                     </div>
                   </div>
@@ -686,48 +812,24 @@ export const FinancialReportsView: React.FC = () => {
               </div>
             </div>
 
-            {/* Net Operating Position Box */}
-            <div className="mt-8 p-5 rounded-xl bg-surface-variant/10 border-2 border-outline-variant/50">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-base font-bold text-on-surface">Net Operating Surplus / (Deficit)</h3>
-                  <p className="text-xs text-on-surface-variant">
-                    Formula: Total Revenue (A) - Total Operating Expenditures (B)
-                  </p>
-                </div>
-                <div className="text-right">
-                  <div className={`text-2xl font-black ${isSurplus ? 'text-emerald-600' : 'text-rose-600'}`}>
-                    {formatKes(netSurplus)}
-                  </div>
-                  <div className="text-xs font-semibold mt-0.5">
-                    {isSurplus ? (
-                      <span className="text-emerald-700 dark:text-emerald-400">SURPLUS TRANSFERRED TO GENERAL RESERVE</span>
-                    ) : (
-                      <span className="text-rose-700 dark:text-rose-400">OPERATIONAL DEFICIT REQUIRING BOM INTERVENTION</span>
-                    )}
-                  </div>
+            {/* Net Operating Position Footer */}
+            <div className="mt-8 p-4 rounded-xl bg-surface-variant/20 border border-outline-variant/40 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div>
+                <span className="text-xs uppercase tracking-wider text-on-surface-variant font-bold">
+                  Net Operating Position (Surplus / Deficit)
+                </span>
+                <div
+                  className={`text-xl font-black font-mono mt-0.5 ${
+                    isSurplus ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'
+                  }`}
+                >
+                  {isSurplus ? '+' : ''}
+                  {formatKes(netSurplus)}
                 </div>
               </div>
-            </div>
-
-            {/* Official Verification / Sign-off Block for Print and Audit */}
-            <div className="mt-12 pt-8 border-t-2 border-outline-variant/40 grid grid-cols-1 md:grid-cols-3 gap-8 text-center text-xs text-on-surface">
-              <div>
-                <div className="border-b border-outline-variant pb-8 mb-2"></div>
-                <div className="font-bold">Prepared by: School Bursar / Accountant</div>
-                <div className="text-on-surface-variant">CPA-K No: 28412 · Date: _________________</div>
-              </div>
-
-              <div>
-                <div className="border-b border-outline-variant pb-8 mb-2"></div>
-                <div className="font-bold">Approved by: Principal / Head Teacher</div>
-                <div className="text-on-surface-variant">TSC No: 418290 · Secretary to BOM</div>
-              </div>
-
-              <div>
-                <div className="border-b border-outline-variant pb-8 mb-2"></div>
-                <div className="font-bold">Certified by: BOM Chairperson</div>
-                <div className="text-on-surface-variant">Board of Management · Official School Stamp</div>
+              <div className="text-right">
+                <span className="text-xs text-on-surface-variant block">Operating Efficiency Margin</span>
+                <span className="text-base font-bold text-on-surface font-mono">{operatingMargin}%</span>
               </div>
             </div>
           </div>
@@ -735,124 +837,152 @@ export const FinancialReportsView: React.FC = () => {
       )}
 
       {/* =========================================================================
-          TAB 2: MOE VOTE HEAD BUDGET VARIANCE ANALYSIS
+          TAB 2: FEE COLLECTIONS & REVENUE ANALYSIS
           ========================================================================= */}
-      {activeReportTab === 'VOTE_HEAD_VARIANCE' && (
+      {activeReportTab === 'COLLECTIONS_ANALYSIS' && (
         <div className="space-y-6">
+          {/* Fee Collection Summary Header */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="card p-5 bg-surface border border-outline-variant/30 rounded-2xl shadow-sm">
+              <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
+                Total Invoiced Fees
+              </span>
+              <div className="text-2xl font-black text-on-surface font-mono mt-2">
+                {formatKes(financeSummary?.totalInvoiced ?? feeRevenue)}
+              </div>
+              <p className="text-xs text-on-surface-variant mt-1">Expected term fee billings</p>
+            </div>
+
+            <div className="card p-5 bg-surface border border-outline-variant/30 rounded-2xl shadow-sm">
+              <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
+                Collected Tuition & Fees
+              </span>
+              <div className="text-2xl font-black text-emerald-700 dark:text-emerald-400 font-mono mt-2">
+                {formatKes(financeSummary?.totalCollected ?? feeRevenue)}
+              </div>
+              <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-1">
+                Collection Rate: {financeSummary?.collectionRatePercentage ?? (totalMoneyIn > 0 ? 100 : 0)}%
+              </p>
+            </div>
+
+            <div className="card p-5 bg-surface border border-outline-variant/30 rounded-2xl shadow-sm">
+              <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
+                Outstanding Fee Arrears
+              </span>
+              <div className="text-2xl font-black text-rose-700 dark:text-rose-400 font-mono mt-2">
+                {formatKes(financeSummary?.totalOutstanding ?? defaultersData?.totalOutstandingBalance ?? 0)}
+              </div>
+              <p className="text-xs text-rose-700 dark:text-rose-400 mt-1">
+                {defaultersData?.totalDefaulters ?? 0} learners with pending balance
+              </p>
+            </div>
+          </div>
+
+          {/* Payment Channels Breakdown Card */}
           <div className="card bg-surface border border-outline-variant/30 rounded-2xl p-6 shadow-sm">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-4 border-b border-outline-variant/30 gap-2">
+            <h3 className="text-base font-bold text-on-surface mb-1">
+              Payment Channels Distribution & Clearing Methods
+            </h3>
+            <p className="text-xs text-on-surface-variant mb-6">
+              Breakdown of fee inflows across electronic and banking channels
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="p-4 rounded-xl border border-outline-variant/30 bg-surface">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-on-surface">Safaricom M-Pesa</span>
+                  <span className="material-symbols-outlined text-emerald-600">smartphone</span>
+                </div>
+                <div className="text-lg font-black font-mono text-on-surface">
+                  {formatKes(paymentChannelsBreakdown.mpesa)}
+                </div>
+                <div className="text-xs text-on-surface-variant mt-1 font-mono">
+                  {paymentChannelsBreakdown.mpesaPct}% of total inflows
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl border border-outline-variant/30 bg-surface">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-on-surface">Bank Transfer / KCB</span>
+                  <span className="material-symbols-outlined text-blue-600">account_balance</span>
+                </div>
+                <div className="text-lg font-black font-mono text-on-surface">
+                  {formatKes(paymentChannelsBreakdown.bank)}
+                </div>
+                <div className="text-xs text-on-surface-variant mt-1 font-mono">
+                  {paymentChannelsBreakdown.bankPct}% of total inflows
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl border border-outline-variant/30 bg-surface">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-on-surface">Cash Desk (Cashier)</span>
+                  <span className="material-symbols-outlined text-amber-600">payments</span>
+                </div>
+                <div className="text-lg font-black font-mono text-on-surface">
+                  {formatKes(paymentChannelsBreakdown.cash)}
+                </div>
+                <div className="text-xs text-on-surface-variant mt-1 font-mono">
+                  {paymentChannelsBreakdown.cashPct}% of total inflows
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl border border-outline-variant/30 bg-surface">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-on-surface">Cheques & Drafts</span>
+                  <span className="material-symbols-outlined text-purple-600">receipt</span>
+                </div>
+                <div className="text-lg font-black font-mono text-on-surface">
+                  {formatKes(paymentChannelsBreakdown.cheque)}
+                </div>
+                <div className="text-xs text-on-surface-variant mt-1 font-mono">
+                  {paymentChannelsBreakdown.chequePct}% of total inflows
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Operating Cost Centers Summary Table */}
+          <div className="card bg-surface border border-outline-variant/30 rounded-2xl p-6 shadow-sm">
+            <div className="flex items-center justify-between pb-4 border-b border-outline-variant/30">
               <div>
-                <h2 className="text-lg font-bold text-on-surface">MoE Vote Head Budget Variance Analysis</h2>
+                <h3 className="text-base font-bold text-on-surface">Operating Cost Centers Performance</h3>
                 <p className="text-xs text-on-surface-variant">
-                  Comparison of approved budgetary cost centers against actual disbursements (PFMA Act 2012)
+                  Recurrent expenditure monitoring across private school operational areas
                 </p>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-on-surface-variant">Overall Utilization:</span>
-                <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-                  overallUtilization > 100
-                    ? 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300'
-                    : overallUtilization >= 85
-                    ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300'
-                    : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300'
-                }`}>
-                  {overallUtilization}% Consumed
-                </span>
+              <div className="text-xs font-bold text-primary font-mono">
+                Total Outflows: {formatKes(totalActualSpent)}
               </div>
             </div>
 
-            {/* Table */}
-            <div className="overflow-x-auto mt-6">
+            <div className="overflow-x-auto mt-4">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="border-b border-outline-variant/30 bg-surface-variant/20 text-on-surface-variant uppercase tracking-wider font-semibold">
-                    <th className="py-3.5 px-4">Code</th>
-                    <th className="py-3.5 px-4">MoE Vote Head</th>
-                    <th className="py-3.5 px-4 text-right">Approved Budget</th>
-                    <th className="py-3.5 px-4 text-right">Actual Spent</th>
-                    <th className="py-3.5 px-4 text-right">Variance (KES)</th>
-                    <th className="py-3.5 px-4 text-center">Utilization</th>
-                    <th className="py-3.5 px-4 text-center">Audit Status</th>
+                    <th className="py-3 px-4">Code</th>
+                    <th className="py-3 px-4">Cost Center</th>
+                    <th className="py-3 px-4 text-right">Actual Spent</th>
+                    <th className="py-3 px-4 text-right">Share of Outflows</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-outline-variant/20">
-                  {voteHeadSummaryRows.map((r) => {
-                    const isOverBudget = r.variance < 0;
-                    const isNearLimit = r.utilizationPct >= 85 && r.utilizationPct <= 100;
-                    return (
-                      <tr key={r.code} className="hover:bg-surface-variant/10 transition-colors">
-                        <td className="py-3.5 px-4 font-mono font-bold text-primary">{r.code}</td>
-                        <td className="py-3.5 px-4">
-                          <div className="font-semibold text-on-surface">{r.label}</div>
-                          <div className="text-[11px] text-on-surface-variant">{r.description}</div>
-                        </td>
-                        <td className="py-3.5 px-4 text-right font-medium text-on-surface">
-                          {formatKes(r.budgetAllocated)}
-                        </td>
-                        <td className="py-3.5 px-4 text-right font-bold text-on-surface">
-                          {formatKes(r.actualSpent)}
-                        </td>
-                        <td className="py-3.5 px-4 text-right font-mono font-semibold">
-                          <span className={isOverBudget ? 'text-rose-600 font-bold' : 'text-emerald-600'}>
-                            {isOverBudget ? '-' : '+'}
-                            {formatKes(Math.abs(r.variance))}
-                          </span>
-                        </td>
-                        <td className="py-3.5 px-4">
-                          <div className="w-32 mx-auto">
-                            <div className="flex justify-between text-[10px] mb-1 font-medium">
-                              <span>{r.utilizationPct}%</span>
-                            </div>
-                            <div className="h-1.5 w-full bg-outline-variant/30 rounded-full overflow-hidden">
-                              <div
-                                className={`h-full rounded-full ${
-                                  isOverBudget
-                                    ? 'bg-rose-500'
-                                    : isNearLimit
-                                    ? 'bg-amber-500'
-                                    : 'bg-emerald-500'
-                                }`}
-                                style={{ width: `${Math.min(r.utilizationPct, 100)}%` }}
-                              />
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-3.5 px-4 text-center">
-                          <span
-                            className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
-                              isOverBudget
-                                ? 'bg-rose-100 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300'
-                                : isNearLimit
-                                ? 'bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300'
-                                : 'bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300'
-                            }`}
-                          >
-                            {isOverBudget ? 'Over Budget' : isNearLimit ? 'Near Limit' : 'Within Budget'}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {costCenterSummaryRows.map((r) => (
+                    <tr key={r.code} className="hover:bg-surface-variant/10 transition-colors">
+                      <td className="py-3 px-4 font-mono font-bold text-primary">{r.code}</td>
+                      <td className="py-3 px-4">
+                        <div className="font-semibold text-on-surface">{r.label}</div>
+                        <div className="text-[11px] text-on-surface-variant">{r.description}</div>
+                      </td>
+                      <td className="py-3 px-4 text-right font-bold text-on-surface font-mono">
+                        {formatKes(r.actualSpent)}
+                      </td>
+                      <td className="py-3 px-4 text-right font-mono text-on-surface-variant">
+                        {totalActualSpent > 0 ? ((r.actualSpent / totalActualSpent) * 100).toFixed(1) : 0}%
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
-                <tfoot>
-                  <tr className="border-t-2 border-outline-variant font-bold text-on-surface bg-surface-variant/20">
-                    <td className="py-4 px-4 uppercase" colSpan={2}>
-                      Grand Total Summary
-                    </td>
-                    <td className="py-4 px-4 text-right font-mono">{formatKes(totalBudget)}</td>
-                    <td className="py-4 px-4 text-right font-mono">{formatKes(totalActualSpent)}</td>
-                    <td className="py-4 px-4 text-right font-mono">
-                      <span className={totalVariance < 0 ? 'text-rose-600' : 'text-emerald-600'}>
-                        {totalVariance < 0 ? '-' : '+'}
-                        {formatKes(Math.abs(totalVariance))}
-                      </span>
-                    </td>
-                    <td className="py-4 px-4 text-center">{overallUtilization}%</td>
-                    <td className="py-4 px-4 text-center">
-                      <span className="text-xs text-primary font-bold">PFMA Monitored</span>
-                    </td>
-                  </tr>
-                </tfoot>
               </table>
             </div>
           </div>
@@ -860,7 +990,7 @@ export const FinancialReportsView: React.FC = () => {
       )}
 
       {/* =========================================================================
-          TAB 3: STATEMENT OF FINANCIAL POSITION (ASSETS & SOLVENCY)
+          TAB 3: STATEMENT OF FINANCIAL POSITION (ASSETS & LIQUIDITY)
           ========================================================================= */}
       {activeReportTab === 'CASH_POSITION' && (
         <div className="space-y-6">
@@ -869,120 +999,120 @@ export const FinancialReportsView: React.FC = () => {
             <div className="card bg-surface border border-outline-variant/30 rounded-2xl p-6 shadow-sm">
               <div className="flex items-center justify-between pb-4 border-b border-outline-variant/30">
                 <div>
-                  <h3 className="text-base font-bold text-on-surface">Liquid Treasury & Bank Accounts</h3>
-                  <p className="text-xs text-on-surface-variant">Reconciled school cash registers & banking institutions</p>
+                  <h3 className="text-base font-bold text-on-surface">Operating Liquid Cash & Bank Accounts</h3>
+                  <p className="text-xs text-on-surface-variant">
+                    Reconciled liquid balances available across institutional clearing accounts
+                  </p>
                 </div>
-                <span className="material-symbols-outlined text-primary text-2xl">account_balance</span>
-              </div>
-
-              <div className="space-y-3 mt-4">
-                <div className="p-4 rounded-xl border border-outline-variant/30 bg-surface-variant/5 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-950/50 text-blue-700 flex items-center justify-center font-bold">
-                      KCB
-                    </div>
-                    <div>
-                      <div className="font-semibold text-sm text-on-surface">KCB School Operations Bank Account</div>
-                      <div className="text-xs text-on-surface-variant">A/C: 1284920491 · Moi Avenue Branch</div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-bold text-on-surface">{formatKes(bankBalance)}</div>
-                    <span className="text-[10px] text-emerald-600 font-semibold">Audited & Reconciled</span>
-                  </div>
-                </div>
-
-                <div className="p-4 rounded-xl border border-outline-variant/30 bg-surface-variant/5 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 flex items-center justify-center font-bold">
-                      M-PESA
-                    </div>
-                    <div>
-                      <div className="font-semibold text-sm text-on-surface">Safaricom School Paybill / Till</div>
-                      <div className="text-xs text-on-surface-variant">Business No: 522522 · Account: FEES</div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-bold text-on-surface">{formatKes(mpesaBalance)}</div>
-                    <span className="text-[10px] text-emerald-600 font-semibold">Auto-Settled to Bank</span>
-                  </div>
-                </div>
-
-                <div className="p-4 rounded-xl border border-outline-variant/30 bg-surface-variant/5 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-amber-100 dark:bg-amber-950/50 text-amber-700 flex items-center justify-center font-bold">
-                      CASH
-                    </div>
-                    <div>
-                      <div className="font-semibold text-sm text-on-surface">Bursar's Petty Cash Vault</div>
-                      <div className="text-xs text-on-surface-variant">Safe Drawer · Imprest System (Max KES 50,000)</div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-bold text-on-surface">{formatKes(pettyCashBalance)}</div>
-                    <span className="text-[10px] text-primary font-semibold">Under Imprest Limit</span>
-                  </div>
+                <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-lg">account_balance</span>
                 </div>
               </div>
 
-              <div className="mt-5 pt-4 border-t border-outline-variant/30 flex items-center justify-between">
-                <span className="font-bold text-sm text-on-surface">Total Liquid Capital</span>
-                <span className="text-lg font-black text-primary">{formatKes(totalLiquid)}</span>
+              <div className="space-y-4 mt-6">
+                <div className="p-4 rounded-xl border border-outline-variant/30 bg-surface-variant/10 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 flex items-center justify-center">
+                      <span className="material-symbols-outlined">account_balance</span>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-on-surface">School Bank Account</h4>
+                      <p className="text-xs text-on-surface-variant">Operating Account (Tuition, Invoices & BOM)</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-base font-black text-on-surface font-mono">{formatKes(bankBalance)}</div>
+                    <span className="text-[10px] text-emerald-600 font-semibold">Active & Reconciled</span>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl border border-outline-variant/30 bg-surface-variant/10 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 flex items-center justify-center">
+                      <span className="material-symbols-outlined">smartphone</span>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-on-surface">Safaricom M-Pesa Paybill / Till</h4>
+                      <p className="text-xs text-on-surface-variant">Mobile Money Collections & Disbursements</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-base font-black text-on-surface font-mono">{formatKes(mpesaBalance)}</div>
+                    <span className="text-[10px] text-emerald-600 font-semibold">Live Gateway</span>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl border border-outline-variant/30 bg-surface-variant/10 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 flex items-center justify-center">
+                      <span className="material-symbols-outlined">payments</span>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-on-surface">Petty Cash Office Float</h4>
+                      <p className="text-xs text-on-surface-variant">Cashier Imprest Float for Minor Expenses</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-base font-black text-on-surface font-mono">{formatKes(pettyCashBalance)}</div>
+                    <span className="text-[10px] text-amber-600 font-semibold">Imprest Float</span>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-outline-variant/30 flex items-center justify-between">
+                  <span className="text-sm font-bold text-on-surface">Total Liquid Funds Available</span>
+                  <span className="text-lg font-black text-primary font-mono">{formatKes(totalLiquid)}</span>
+                </div>
               </div>
             </div>
 
-            {/* Receivables & Payables (Working Capital) */}
+            {/* Operating Receivables & Fee Balances */}
             <div className="card bg-surface border border-outline-variant/30 rounded-2xl p-6 shadow-sm">
               <div className="flex items-center justify-between pb-4 border-b border-outline-variant/30">
                 <div>
-                  <h3 className="text-base font-bold text-on-surface">Receivables & Commitments</h3>
-                  <p className="text-xs text-on-surface-variant">Student fee arrears & outstanding supplier vouchers</p>
+                  <h3 className="text-base font-bold text-on-surface">Fee Receivables & Liquidity Ratios</h3>
+                  <p className="text-xs text-on-surface-variant">Short-term assets and learner account balances</p>
                 </div>
-                <span className="material-symbols-outlined text-amber-600 text-2xl">pending_actions</span>
+                <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-lg">assessment</span>
+                </div>
               </div>
 
-              <div className="space-y-4 mt-4">
-                <div className="p-4 rounded-xl border border-outline-variant/30 bg-rose-50/20 dark:bg-rose-950/10">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="text-xs font-semibold text-rose-700 dark:text-rose-300 uppercase">
-                        Fee Arrears (Accounts Receivable)
-                      </span>
-                      <div className="text-xl font-bold text-gray-400 mt-1">KES --</div>
-                      <p className="text-xs text-on-surface-variant mt-0.5">
-                        Cumulative fee balances across active learner accounts
-                      </p>
-                    </div>
-                    <span className="material-symbols-outlined text-3xl text-rose-400">person_alert</span>
+              <div className="space-y-4 mt-6">
+                <div className="p-4 rounded-xl border border-outline-variant/30 bg-surface-variant/10">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-bold text-on-surface uppercase">Uncollected Fee Arrears</span>
+                    <span className="text-base font-black text-rose-700 dark:text-rose-400 font-mono">
+                      {formatKes(financeSummary?.totalOutstanding ?? defaultersData?.totalOutstandingBalance ?? 0)}
+                    </span>
                   </div>
+                  <p className="text-[11px] text-on-surface-variant mt-1">
+                    Outstanding receivables owed by enrolled student guardians.
+                  </p>
                 </div>
 
-                <div className="p-4 rounded-xl border border-outline-variant/30 bg-amber-50/20 dark:bg-amber-950/10">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="text-xs font-semibold text-amber-700 dark:text-amber-300 uppercase">
-                        Pending Payment Vouchers (Accounts Payable)
-                      </span>
-                      <div className="text-xl font-bold text-gray-400 mt-1">KES --</div>
-                      <p className="text-xs text-on-surface-variant mt-0.5">
-                        Approved vouchers awaiting bursar cheque / EFT clearance
-                      </p>
-                    </div>
-                    <span className="material-symbols-outlined text-3xl text-amber-400">receipt</span>
+                <div className="p-4 rounded-xl border border-outline-variant/30 bg-surface-variant/10">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-bold text-on-surface uppercase">Net Solvency Position</span>
+                    <span className="text-base font-black text-emerald-700 dark:text-emerald-400 font-mono">
+                      {formatKes(totalLiquid + (financeSummary?.totalOutstanding ?? 0))}
+                    </span>
                   </div>
+                  <p className="text-[11px] text-on-surface-variant mt-1">
+                    Combined total of liquid reserves and collectible fee receivables.
+                  </p>
                 </div>
 
-                <div className="p-4 rounded-xl bg-emerald-50/30 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-emerald-800 dark:text-emerald-300">
-                      Total Liquid Operating Position:
+                <div className="p-4 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-emerald-900 dark:text-emerald-200 uppercase">
+                      Working Capital Status
                     </span>
                     <span className="font-black text-sm text-emerald-700 dark:text-emerald-300">
-                      {formatKes(totalLiquid)}
+                      {isSurplus ? 'Healthy Surplus' : 'Operating Deficit'}
                     </span>
                   </div>
                   <p className="text-[11px] text-emerald-700 dark:text-emerald-400 mt-1">
-                    Institution liquid cash balances across all active bank and petty cash accounts.
+                    Institution operating revenues adequately cover recurrent cost commitments.
                   </p>
                 </div>
               </div>
@@ -992,23 +1122,23 @@ export const FinancialReportsView: React.FC = () => {
       )}
 
       {/* =========================================================================
-          TAB 4: PFMA & MOE AUDIT TRAIL
+          TAB 4: INTERNAL CONTROLS & AUDIT
           ========================================================================= */}
-      {activeReportTab === 'COMPLIANCE_AUDIT' && (
+      {activeReportTab === 'INTERNAL_CONTROLS' && (
         <div className="space-y-6">
           <div className="card bg-surface border border-outline-variant/30 rounded-2xl p-6 shadow-sm">
             <div className="flex items-center justify-between pb-4 border-b border-outline-variant/30">
               <div>
                 <h3 className="text-base font-bold text-on-surface">
-                  Ministry of Education & PFMA Audit Compliance Verification
+                  Private School Financial Internal Controls & Audit Trail
                 </h3>
                 <p className="text-xs text-on-surface-variant">
-                  Statutory checklist based on the Public Finance Management Act (2012) and Basic Education Regulations
+                  Standard operating procedures for fee billing, manual payment recording, and expenditure governance
                 </p>
               </div>
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300">
-                <span className="material-symbols-outlined text-sm">check_circle</span>
-                Audit Grade: Compliant (100%)
+                <span className="material-symbols-outlined text-sm">verified</span>
+                Controls Active (100%)
               </div>
             </div>
 
@@ -1016,9 +1146,9 @@ export const FinancialReportsView: React.FC = () => {
               <div className="p-4 rounded-xl border border-outline-variant/30 bg-surface flex items-start gap-3">
                 <span className="material-symbols-outlined text-emerald-600 text-xl mt-0.5">check_circle</span>
                 <div>
-                  <h4 className="text-sm font-semibold text-on-surface">3-Way Payment Voucher Matching</h4>
+                  <h4 className="text-sm font-semibold text-on-surface">Dual-Verification for Forwarded Payments</h4>
                   <p className="text-xs text-on-surface-variant mt-0.5">
-                    All payment vouchers contain Local Purchase Order (LPO), supplier invoice, and delivery note before disbursement.
+                    Parent M-Pesa SMS and bank transaction confirmations must be explicitly verified and approved by authorized bursary personnel before student fee ledgers are credited.
                   </p>
                 </div>
               </div>
@@ -1026,9 +1156,9 @@ export const FinancialReportsView: React.FC = () => {
               <div className="p-4 rounded-xl border border-outline-variant/30 bg-surface flex items-start gap-3">
                 <span className="material-symbols-outlined text-emerald-600 text-xl mt-0.5">check_circle</span>
                 <div>
-                  <h4 className="text-sm font-semibold text-on-surface">A.I.E Holder Authorizations</h4>
+                  <h4 className="text-sm font-semibold text-on-surface">Tamper-Proof Receipt Sequencing</h4>
                   <p className="text-xs text-on-surface-variant mt-0.5">
-                    Authority to Incur Expenditure granted exclusively by Principal with counter-signature by BOM Chairperson.
+                    Every manual and electronic fee payment automatically generates a sequential official receipt number stamped with the recording officer ID and transaction timestamp.
                   </p>
                 </div>
               </div>
@@ -1036,9 +1166,9 @@ export const FinancialReportsView: React.FC = () => {
               <div className="p-4 rounded-xl border border-outline-variant/30 bg-surface flex items-start gap-3">
                 <span className="material-symbols-outlined text-emerald-600 text-xl mt-0.5">check_circle</span>
                 <div>
-                  <h4 className="text-sm font-semibold text-on-surface">FPE / JSS Capitation Ring-Fencing</h4>
+                  <h4 className="text-sm font-semibold text-on-surface">Auditable Payment Reversals</h4>
                   <p className="text-xs text-on-surface-variant mt-0.5">
-                    Government capitation grants are strictly deposited in the Operations Account without unauthorized virement.
+                    Payment reversals require mandatory justification notes, update student invoice balances atomically, and preserve immutable reversal audit records.
                   </p>
                 </div>
               </div>
@@ -1046,9 +1176,9 @@ export const FinancialReportsView: React.FC = () => {
               <div className="p-4 rounded-xl border border-outline-variant/30 bg-surface flex items-start gap-3">
                 <span className="material-symbols-outlined text-emerald-600 text-xl mt-0.5">check_circle</span>
                 <div>
-                  <h4 className="text-sm font-semibold text-on-surface">Petty Cash Ceiling Compliance</h4>
+                  <h4 className="text-sm font-semibold text-on-surface">Petty Cash Imprest Governance</h4>
                   <p className="text-xs text-on-surface-variant mt-0.5">
-                    Cash on hand ({formatKes(pettyCashBalance)}) is within the MoE regulatory maximum of KES 50,000.
+                    Cashier float ({formatKes(pettyCashBalance)}) is managed on an imprest system with receipts and expense vouchers required for all cash disbursements.
                   </p>
                 </div>
               </div>
@@ -1058,10 +1188,10 @@ export const FinancialReportsView: React.FC = () => {
             <div className="mt-6 p-4 rounded-xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/30 text-xs text-blue-900 dark:text-blue-300">
               <div className="font-semibold flex items-center gap-1.5">
                 <span className="material-symbols-outlined text-base">info</span>
-                Auditor-General & Ministry of Education Inspections
+                Directorate Governance & System Audit Log
               </div>
               <p className="mt-1">
-                All entries recorded in Grace Seeds School CBE Portal generate an immutable audit log storing user IDs, timestamps, payment references, and approval sequences for inspection under Section 68 of the Public Finance Management Act.
+                All financial actions in SmartShule generate an immutable audit trail recording user identifiers, IP addresses, transaction timestamps, receipt numbers, and fee structure modifications to ensure full institutional accountability.
               </p>
             </div>
           </div>

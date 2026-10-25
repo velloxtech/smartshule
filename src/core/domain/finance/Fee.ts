@@ -14,7 +14,9 @@ export enum PaymentMethod {
 export enum PaymentStatus {
   COMPLETED = 'COMPLETED',
   PENDING = 'PENDING',
-  FAILED = 'FAILED'
+  FAILED = 'FAILED',
+  REVERSED = 'REVERSED',
+  REFUNDED = 'REFUNDED'
 }
 
 export enum InvoiceStatus {
@@ -389,6 +391,22 @@ export class StudentInvoice extends Entity<StudentInvoiceProps> {
     this.touch();
   }
 
+  public reversePayment(amount: number): void {
+    const cleanAmount = Number(amount) || 0;
+    this._props.amountPaid = Math.max(0, Math.round((this._props.amountPaid - cleanAmount) * 100) / 100);
+    const rawBalance = this._props.amountPayable - this._props.amountPaid;
+    this._props.balance = rawBalance <= 0.001 ? 0 : Math.round(rawBalance * 100) / 100;
+
+    if (this._props.balance === 0) {
+      this._props.status = InvoiceStatus.PAID;
+    } else if (this._props.amountPaid > 0) {
+      this._props.status = InvoiceStatus.PARTIALLY_PAID;
+    } else {
+      this._props.status = InvoiceStatus.UNPAID;
+    }
+    this.touch();
+  }
+
   public applyDiscount(discount: number): void {
     const cleanDiscount = Number(discount) || 0;
     this._props.discountAmount = Math.round(cleanDiscount * 100) / 100;
@@ -401,6 +419,23 @@ export class StudentInvoice extends Entity<StudentInvoiceProps> {
       this._props.status = InvoiceStatus.PARTIALLY_PAID;
     }
     this.touch();
+  }
+
+  public applyCredit(amount: number): number {
+    const cleanAmount = Number(amount) || 0;
+    if (cleanAmount <= 0) return 0;
+    const applicable = Math.min(cleanAmount, this._props.balance);
+    this._props.amountPaid = Math.round((this._props.amountPaid + applicable) * 100) / 100;
+    const rawBalance = this._props.amountPayable - this._props.amountPaid;
+    this._props.balance = rawBalance <= 0.001 ? 0 : Math.round(rawBalance * 100) / 100;
+
+    if (this._props.balance === 0) {
+      this._props.status = InvoiceStatus.PAID;
+    } else if (this._props.amountPaid > 0) {
+      this._props.status = InvoiceStatus.PARTIALLY_PAID;
+    }
+    this.touch();
+    return applicable;
   }
 
   public markCarriedForward(): void {
@@ -517,6 +552,11 @@ export class Payment extends Entity<PaymentProps> {
 
   public setStatus(status: PaymentStatus): void {
     this._props.status = status;
+    this.touch();
+  }
+
+  public setNotes(notes: string): void {
+    this._props.notes = notes;
     this.touch();
   }
 
@@ -761,6 +801,179 @@ export class OtherIncome extends Entity<OtherIncomeProps> {
       incomeDate: this.incomeDate,
       notes: this.notes,
       recordedByUserId: this.recordedByUserId,
+      createdAt: this.createdAt,
+      updatedAt: this.updatedAt
+    };
+  }
+}
+
+// 6. Student Fee Credit Entity (Overpayment / Advance Payment Ledger)
+export type CreditStatus = 'AVAILABLE' | 'PARTIALLY_USED' | 'FULLY_USED' | 'REVERSED';
+
+export interface StudentFeeCreditProps {
+  schoolId: string;
+  studentId: string;
+  originatingPaymentId?: string;
+  originatingReceiptNumber?: string;
+  academicYearId: string;
+  termId: string;
+  amount: number;
+  amountUsed: number;
+  balance: number;
+  status: CreditStatus;
+  notes?: string;
+}
+
+export class StudentFeeCredit extends Entity<StudentFeeCreditProps> {
+  public static create(
+    props: StudentFeeCreditProps,
+    id: string,
+    createdAt?: Date,
+    updatedAt?: Date
+  ): StudentFeeCredit {
+    return new StudentFeeCredit(props, id, createdAt, updatedAt);
+  }
+
+  public get schoolId(): string {
+    return this._props.schoolId;
+  }
+
+  public get studentId(): string {
+    return this._props.studentId;
+  }
+
+  public get originatingPaymentId(): string | undefined {
+    return this._props.originatingPaymentId;
+  }
+
+  public get originatingReceiptNumber(): string | undefined {
+    return this._props.originatingReceiptNumber;
+  }
+
+  public get academicYearId(): string {
+    return this._props.academicYearId;
+  }
+
+  public get termId(): string {
+    return this._props.termId;
+  }
+
+  public get amount(): number {
+    return this._props.amount;
+  }
+
+  public get amountUsed(): number {
+    return this._props.amountUsed;
+  }
+
+  public get balance(): number {
+    return this._props.balance;
+  }
+
+  public get status(): CreditStatus {
+    return this._props.status;
+  }
+
+  public get notes(): string | undefined {
+    return this._props.notes;
+  }
+
+  public useCredit(amountToUse: number): number {
+    const usable = Math.min(amountToUse, this._props.balance);
+    if (usable <= 0) return 0;
+    this._props.amountUsed = Math.round((this._props.amountUsed + usable) * 100) / 100;
+    const rawBalance = this._props.amount - this._props.amountUsed;
+    this._props.balance = rawBalance <= 0.001 ? 0 : Math.round(rawBalance * 100) / 100;
+    this._props.status = this._props.balance <= 0.001 ? 'FULLY_USED' : 'PARTIALLY_USED';
+    this.touch();
+    return usable;
+  }
+
+  public reverse(): void {
+    this._props.status = 'REVERSED';
+    this._props.balance = 0;
+    this.touch();
+  }
+
+  public toJSON() {
+    return {
+      id: this.id,
+      schoolId: this.schoolId,
+      studentId: this.studentId,
+      originatingPaymentId: this.originatingPaymentId,
+      originatingReceiptNumber: this.originatingReceiptNumber,
+      academicYearId: this.academicYearId,
+      termId: this.termId,
+      amount: this.amount,
+      amountUsed: this.amountUsed,
+      balance: this.balance,
+      status: this.status,
+      notes: this.notes,
+      createdAt: this.createdAt,
+      updatedAt: this.updatedAt
+    };
+  }
+}
+
+// 7. Fee Credit Application Entity (Audit log linking credit to invoice)
+export interface FeeCreditApplicationProps {
+  creditId: string;
+  studentId: string;
+  invoiceId: string;
+  academicYearId: string;
+  termId: string;
+  amountApplied: number;
+  appliedByUserId?: string;
+}
+
+export class FeeCreditApplication extends Entity<FeeCreditApplicationProps> {
+  public static create(
+    props: FeeCreditApplicationProps,
+    id: string,
+    createdAt?: Date,
+    updatedAt?: Date
+  ): FeeCreditApplication {
+    return new FeeCreditApplication(props, id, createdAt, updatedAt);
+  }
+
+  public get creditId(): string {
+    return this._props.creditId;
+  }
+
+  public get studentId(): string {
+    return this._props.studentId;
+  }
+
+  public get invoiceId(): string {
+    return this._props.invoiceId;
+  }
+
+  public get academicYearId(): string {
+    return this._props.academicYearId;
+  }
+
+  public get termId(): string {
+    return this._props.termId;
+  }
+
+  public get amountApplied(): number {
+    return this._props.amountApplied;
+  }
+
+  public get appliedByUserId(): string | undefined {
+    return this._props.appliedByUserId;
+  }
+
+  public toJSON() {
+    return {
+      id: this.id,
+      creditId: this.creditId,
+      studentId: this.studentId,
+      invoiceId: this.invoiceId,
+      academicYearId: this.academicYearId,
+      termId: this.termId,
+      amountApplied: this.amountApplied,
+      appliedByUserId: this.appliedByUserId,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt
     };

@@ -58,7 +58,15 @@ import { SchemeOfWork } from '../../../core/domain/curriculum-plan/SchemeOfWork'
 import { LessonPlan } from '../../../core/domain/curriculum-plan/LessonPlan';
 import { Timetable, DayOfWeek } from '../../../core/domain/timetable/Timetable';
 import { AttendanceRegister, AttendanceType } from '../../../core/domain/attendance/Attendance';
-import { FeeStructure, StudentInvoice, Payment, Expense, OtherIncome } from '../../../core/domain/finance/Fee';
+import {
+  FeeStructure,
+  StudentInvoice,
+  Payment,
+  Expense,
+  OtherIncome,
+  StudentFeeCredit,
+  FeeCreditApplication
+} from '../../../core/domain/finance/Fee';
 import { FeeBannerConfig } from '../../../core/domain/finance/FeeBannerConfig';
 import { ParentHelpRequest } from '../../../core/domain/media/ParentHelpRequest';
 import { StudentProgressPhoto } from '../../../core/domain/media/StudentProgressPhoto';
@@ -310,6 +318,15 @@ export class InMemoryAcademicRepository implements IAcademicRepository {
   }
 
   public async saveTerm(term: AcademicTerm): Promise<void> {
+    for (const existing of this.terms.values()) {
+      if (existing.id !== term.id && existing.academicYearId === term.academicYearId) {
+        if (existing.termNumber === term.termNumber || existing.name.trim().toLowerCase() === term.name.trim().toLowerCase()) {
+          const err: any = new Error('duplicate key value violates unique constraint "uq_academic_terms_year_number"');
+          err.code = '23505';
+          throw err;
+        }
+      }
+    }
     this.terms.set(term.id, term);
   }
 
@@ -509,9 +526,11 @@ export class InMemoryCBCAssessmentRepository implements ICBCAssessmentRepository
     const termCandidates = [termId];
     if (termId.includes('-t')) termCandidates.push(termId.replace('-t', '-'));
     else if (/-\d+$/.test(termId)) termCandidates.push(termId.replace(/-(\d+)$/, '-t$1'));
-    if (termId.toLowerCase().includes('term-3') || termId.toLowerCase().includes('term-2026-3')) termCandidates.push('term-2026-t3', 'term-2026-3');
-    if (termId.toLowerCase().includes('term-2') || termId.toLowerCase().includes('term-2026-2')) termCandidates.push('term-2026-t2', 'term-2026-2');
-    if (termId.toLowerCase().includes('term-1') || termId.toLowerCase().includes('term-2026-1')) termCandidates.push('term-2026-t1', 'term-2026-1');
+    const yearMatch = termId.match(/20\d{2}/);
+    const yr = yearMatch ? yearMatch[0] : new Date().getFullYear().toString();
+    if (/term[_-]?3\b|3$/i.test(termId)) termCandidates.push(`term-${yr}-t3`, `term-${yr}-3`);
+    if (/term[_-]?2\b|2$/i.test(termId)) termCandidates.push(`term-${yr}-t2`, `term-${yr}-2`);
+    if (/term[_-]?1\b|1$/i.test(termId)) termCandidates.push(`term-${yr}-t1`, `term-${yr}-1`);
 
     const yearCandidates = [academicYearId];
     if (academicYearId.startsWith('year-')) yearCandidates.push(academicYearId.replace('year-', ''));
@@ -539,7 +558,9 @@ export class InMemoryCBCAssessmentRepository implements ICBCAssessmentRepository
     const termCandidates = [termId];
     if (termId.includes('-t')) termCandidates.push(termId.replace('-t', '-'));
     else if (/-\d+$/.test(termId)) termCandidates.push(termId.replace(/-(\d+)$/, '-t$1'));
-    if (termId.toLowerCase().includes('term-3') || termId.toLowerCase().includes('term-2026-3')) termCandidates.push('term-2026-t3', 'term-2026-3');
+    const yearMatch = termId.match(/20\d{2}/);
+    const yr = yearMatch ? yearMatch[0] : new Date().getFullYear().toString();
+    if (/term[_-]?3\b|3$/i.test(termId)) termCandidates.push(`term-${yr}-t3`, `term-${yr}-3`);
 
     let result = Array.from(this.reportCards.values()).filter(rc => termCandidates.includes(rc.termId));
     if (streamId) result = result.filter(rc => rc.streamId === streamId);
@@ -964,6 +985,42 @@ export class InMemoryFeeRepository implements IFeeRepository {
   public async saveFeeBannerConfig(config: FeeBannerConfig): Promise<void> {
     const key = config.schoolId || 'school-001';
     this.feeBannerConfigs.set(key, config);
+  }
+
+  // Student Fee Credits
+  private credits: Map<string, StudentFeeCredit> = new Map();
+  private creditApplications: Map<string, FeeCreditApplication> = new Map();
+
+  public async findCreditById(id: string): Promise<StudentFeeCredit | null> {
+    return this.credits.get(id) || null;
+  }
+
+  public async findCredits(filters: { studentId?: string; schoolId?: string; status?: string }): Promise<StudentFeeCredit[]> {
+    let result = Array.from(this.credits.values());
+    if (filters.studentId) result = result.filter(c => c.studentId === filters.studentId);
+    if (filters.schoolId) result = result.filter(c => c.schoolId === filters.schoolId);
+    if (filters.status) result = result.filter(c => c.status === filters.status);
+    return result;
+  }
+
+  public async saveCredit(credit: StudentFeeCredit): Promise<void> {
+    this.credits.set(credit.id, credit);
+  }
+
+  public async updateCredit(credit: StudentFeeCredit): Promise<void> {
+    this.credits.set(credit.id, credit);
+  }
+
+  public async saveCreditApplication(application: FeeCreditApplication): Promise<void> {
+    this.creditApplications.set(application.id, application);
+  }
+
+  public async findCreditApplications(filters: { studentId?: string; invoiceId?: string; creditId?: string }): Promise<FeeCreditApplication[]> {
+    let result = Array.from(this.creditApplications.values());
+    if (filters.studentId) result = result.filter(a => a.studentId === filters.studentId);
+    if (filters.invoiceId) result = result.filter(a => a.invoiceId === filters.invoiceId);
+    if (filters.creditId) result = result.filter(a => a.creditId === filters.creditId);
+    return result;
   }
 }
 

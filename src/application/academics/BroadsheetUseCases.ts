@@ -270,10 +270,11 @@ export class BroadsheetUseCases {
       year = await this.academicRepository.findCurrentYear();
     }
     if (!year && allYears.length > 0) {
-      year = allYears.find(y => y.isCurrent) || allYears.find(y => y.name.includes('2026')) || allYears[0];
+      year = allYears.find(y => y.isCurrent) || allYears[0];
     }
-    const academicYearId = year?.id || 'year-2026';
-    const yearName = year?.name || '2026';
+    const curCalYear = new Date().getFullYear().toString();
+    const academicYearId = year?.id || `year-${curCalYear}`;
+    const yearName = year?.name || curCalYear;
 
     // 2. Robust Academic Term Resolution (by ID, by name e.g. 'Term 3', by termNumber e.g. 3, or current)
     let term: any = null;
@@ -322,10 +323,10 @@ export class BroadsheetUseCases {
       term = await this.academicRepository.findCurrentTerm(year?.id);
     }
     if (!term && allTermsForYear.length > 0) {
-      term = allTermsForYear[allTermsForYear.length - 1];
+      term = allTermsForYear.find(t => t.isCurrent) || allTermsForYear[0];
     }
-    const termId = term?.id || 'term-2026-t3';
-    const termName = term?.name || 'Term 3';
+    const termId = term?.id || `term-${academicYearId}-t1`;
+    const termName = term?.name || 'Term 1';
 
     // Fetch learning areas strictly from database for this specific gradeLevel
     const allLearningAreas = await this.academicRepository.findAllLearningAreas({ gradeLevel });
@@ -608,12 +609,6 @@ export class BroadsheetUseCases {
     if (!summatives || summatives.length === 0) {
       summatives = await this.CBCAssessmentRepository.findSummatives({ termId: altTermId });
     }
-    if (!summatives || summatives.length === 0) {
-      summatives = await this.CBCAssessmentRepository.findSummatives({ termId: 'term-2026-t3' });
-    }
-    if (!summatives || summatives.length === 0) {
-      summatives = await this.CBCAssessmentRepository.findSummatives({ termId: 'term-2026-3' });
-    }
 
     let reportCards = await this.CBCAssessmentRepository.findReportCardsByTerm(termId, stream.id);
     if (!reportCards || reportCards.length === 0) {
@@ -624,12 +619,6 @@ export class BroadsheetUseCases {
     }
     if (!reportCards || reportCards.length === 0) {
       reportCards = await this.CBCAssessmentRepository.findReportCardsByTerm(altTermId);
-    }
-    if (!reportCards || reportCards.length === 0) {
-      reportCards = await this.CBCAssessmentRepository.findReportCardsByTerm('term-2026-t3', stream.id);
-    }
-    if (!reportCards || reportCards.length === 0) {
-      reportCards = await this.CBCAssessmentRepository.findReportCardsByTerm('term-2026-3', stream.id);
     }
     const reportCardsByStudent = new Map(reportCards.map(rc => [rc.studentId, rc]));
 

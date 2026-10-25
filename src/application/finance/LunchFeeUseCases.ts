@@ -696,7 +696,7 @@ export class LunchFeeUseCases {
       throw new ValidationError('Vendor, supplier, or payee name is required.');
     }
 
-    const schoolId = dto.schoolId || requestingUser?.schoolId || 'default-school';
+    const schoolId = dto.schoolId || requestingUser?.schoolId || 'school-001';
     const expenseDate = dto.expenseDate || new Date().toISOString().split('T')[0];
     const receiptVoucherNumber = dto.receiptVoucherNumber?.trim() || `VCH-LCH-${Date.now().toString().slice(-6)}`;
 

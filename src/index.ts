@@ -22,7 +22,7 @@ async function bootstrap() {
     console.log(`Database:       ${dbType}${dbTarget}`);
     console.log(`Fee Collection: PAYBILL ${process.env.KCB_BUNI_SHORTCODE || '522533'} (Direct Settlements & Manual Reconciliation)`);
     console.log(`WhatsApp API:   ${process.env.WHATSAPP_ACCESS_TOKEN ? 'META CLOUD API' : 'REAL WHATSAPP QR MULTI-DEVICE'}`);
-    console.log(`SMS Gateway:    ${process.env.SMS_PROVIDER || 'africastalking'} (${process.env.AFRICASTALKING_SENDER_ID || 'SMARTSHULE'})`);
+    console.log(`SMS Gateway:    ${process.env.SMS_PROVIDER || 'africastalking'} (${process.env.AFRICASTALKING_SENDER_ID || 'GRACESEEDS'})`);
     console.log(`Gemini AI API:  ${process.env.GEMINI_API_KEY ? 'CONFIGURED' : 'OPTIONAL'}`);
     console.log('====================================================');
   });

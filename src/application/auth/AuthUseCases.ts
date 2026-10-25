@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { IUserRepository } from '../../core/ports/repositories/IUserRepository';
 import { IGuardianRepository } from '../../core/ports/repositories/ITeacherRepository';
 import { IStudentRepository } from '../../core/ports/repositories/IStudentRepository';
@@ -6,6 +7,8 @@ import { IAuthTokenService, IPasswordHasher, INotificationService } from '../../
 import { User, UserRole, UserStatus } from '../../core/domain/user/User';
 import { IdGenerator, ConflictError, UnauthorizedError, NotFoundError, ForbiddenError, ValidationError } from '../../core/domain/shared/Errors';
 import { PhoneUtils } from '../../infrastructure/utils/PhoneUtils';
+import { EmailTemplateEngine } from '../../infrastructure/services/email/EmailTemplateEngine';
+import { env } from '../../infrastructure/config/env';
 
 export interface RegisterUserDTO {
   email?: string;
@@ -449,7 +452,7 @@ export class AuthUseCases {
     return { success: true, message: 'Password changed successfully.', user: user.toJSON() };
   }
 
-  public async requestPasswordReset(emailOrPhone: string): Promise<{ success: boolean; message: string; debugCode?: string }> {
+  public async requestPasswordReset(emailOrPhone: string): Promise<{ success: boolean; message: string; debugCode?: string; debugToken?: string }> {
     let lookupEmail = emailOrPhone.toLowerCase().trim();
     const aliasMap: Record<string, string> = {
       superadmin: 'superadmin@smartshule.ac.ke',
@@ -483,45 +486,35 @@ export class AuthUseCases {
       // Safe response to prevent account enumeration
       return {
         success: true,
-        message: 'If an account is associated with this identifier, a 6-digit password reset code has been sent.'
+        message: 'If an account is associated with this identifier, password reset instructions and a verification code have been sent.'
       };
     }
 
-    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
+    // Generate cryptographically secure token & 6-digit numeric verification code
+    const numericCode = crypto.randomInt(100000, 1000000).toString();
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const expiryMinutes = env.email.resetExpiryMinutes || 15;
+    const expires = new Date(Date.now() + expiryMinutes * 60 * 1000);
 
-    user.setResetPasswordToken(resetCode, expires);
+    // Persist composite token format `${numericCode}:${rawToken}` for dual verification
+    user.setResetPasswordToken(`${numericCode}:${rawToken}`, expires);
     this.resetCodeAttempts.delete(user.id);
     await this.userRepository.update(user);
 
+    const baseUrl = (env.server.frontendUrl || env.server.appUrl || 'http://localhost:3000').replace(/\/+$/, '');
+    const resetUrl = `${baseUrl}/?view=reset-password&token=${encodeURIComponent(rawToken)}&email=${encodeURIComponent(user.email || lookupEmail)}`;
+
     if (this.notificationService) {
       if (user.email) {
-        const subject = `SmartShule Password Reset Code: ${resetCode}`;
-        const body = `Dear ${user.fullName},\n\nYour 6-digit SmartShule CBC Portal password reset verification code is:\n\n    ${resetCode}\n\nThis code expires in 15 minutes.\n\nGrace Seeds School · Kisumu County\n"The future Begins Here"\nTel: 0745436312 | schoolgraceseeds@gmail.com`;
+        const rendered = EmailTemplateEngine.renderPasswordResetEmail({
+          to: user.email,
+          recipientName: user.fullName,
+          resetUrl,
+          resetCode: numericCode,
+          expiryMinutes
+        });
 
-        const html = `
-          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 580px; margin: 0 auto; padding: 24px; border: 1px solid #e5e7eb; border-radius: 16px;">
-            <div style="background: #7a1228; padding: 20px; border-radius: 12px; text-align: center; color: white;">
-              <h2 style="margin: 0; font-size: 22px; font-weight: bold;">SmartShule CBC Portal</h2>
-              <p style="margin: 4px 0 0; font-size: 13px; color: #fecdd3;">Grace Seeds School · Kisumu County</p>
-            </div>
-            <div style="padding: 24px 8px; color: #1f2937;">
-              <p style="font-size: 14px; margin: 0 0 16px;">Dear <strong>${user.fullName}</strong>,</p>
-              <p style="font-size: 14px; line-height: 1.5; color: #4b5563;">You requested to reset your password for your account. Use the verification code below to set a new password:</p>
-              <div style="background-color: #fff1f2; border: 2px dashed #7a1228; border-radius: 12px; padding: 18px; text-align: center; margin: 24px 0;">
-                <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #9f1239; font-weight: bold;">Your 6-Digit Verification Code</div>
-                <div style="font-size: 34px; font-weight: 800; letter-spacing: 8px; color: #7a1228; margin-top: 6px; font-family: monospace;">${resetCode}</div>
-              </div>
-              <p style="font-size: 13px; color: #6b7280; line-height: 1.5;">This code will expire in <strong>15 minutes</strong>. If you did not request a password reset, you can safely ignore this email.</p>
-            </div>
-            <div style="border-top: 1px solid #f3f4f6; padding-top: 16px; text-align: center; font-size: 12px; color: #9ca3af;">
-              <p style="margin: 0 0 4px;">Grace Seeds School · "The future Begins Here"</p>
-              <p style="margin: 0;">Tel: 0745436312 · Email: schoolgraceseeds@gmail.com</p>
-            </div>
-          </div>
-        `;
-
-        await this.notificationService.sendEmail(user.email, subject, body, html).catch((err) => {
+        await this.notificationService.sendEmail(user.email, rendered.subject, rendered.text, rendered.html).catch((err) => {
           console.warn(`[Auth] Email dispatch error: ${err.message}`);
         });
       }
@@ -534,23 +527,80 @@ export class AuthUseCases {
       if (phoneToSend) {
         await this.notificationService.sendSms(
           phoneToSend,
-          `SmartShule reset code: ${resetCode}. Valid for 15 mins. Do not share.`
+          `Grace Seeds School reset code: ${numericCode}. Valid for ${expiryMinutes} mins. Do not share.`
         ).catch(() => null);
       }
     }
 
     const resetMessage = user.email
-      ? 'A 6-digit password reset verification code has been sent to your email and/or phone number.'
+      ? `A password reset link and ${expiryMinutes}-minute verification code have been dispatched to your registered address.`
       : 'A 6-digit password reset verification code has been sent to your phone number via SMS.';
 
     return {
       success: true,
       message: resetMessage,
-      debugCode: process.env.NODE_ENV === 'test' ? resetCode : undefined
+      debugCode: process.env.NODE_ENV === 'test' ? numericCode : undefined,
+      debugToken: process.env.NODE_ENV === 'test' ? rawToken : undefined
     };
   }
 
-  public async resetPasswordWithCode(dto: { email: string; resetCode: string; newPassword: string }): Promise<{ success: boolean; message: string }> {
+  private isTokenMatching(storedToken: string | undefined, providedCodeOrToken: string): boolean {
+    if (!storedToken || !providedCodeOrToken) return false;
+    const cleanProvided = providedCodeOrToken.trim();
+    if (storedToken === cleanProvided) return true;
+    if (storedToken.includes(':')) {
+      const [storedCode, storedHex] = storedToken.split(':');
+      if (storedCode && storedCode === cleanProvided) return true;
+      if (storedHex && storedHex === cleanProvided) return true;
+    }
+    return false;
+  }
+
+  public async verifyResetToken(emailOrPhone: string, codeOrToken: string): Promise<{ valid: boolean; email?: string; message?: string }> {
+    let lookupEmail = emailOrPhone.toLowerCase().trim();
+    const aliasMap: Record<string, string> = {
+      superadmin: 'superadmin@smartshule.ac.ke',
+      admin: 'admin@smartshule.ac.ke',
+      headteacher: 'headteacher@smartshule.ac.ke',
+      deputy: 'deputy@smartshule.ac.ke',
+      admissions: 'admissions@smartshule.ac.ke',
+      bursar: 'bursar@smartshule.ac.ke',
+      teacher: 'teacher@smartshule.ac.ke',
+      parent: 'parent@smartshule.ac.ke',
+      guardian: 'parent@smartshule.ac.ke'
+    };
+    if (aliasMap[lookupEmail]) lookupEmail = aliasMap[lookupEmail];
+
+    let user = await this.userRepository.findByEmail(lookupEmail);
+    if (!user) {
+      user = await this.userRepository.findByPhone(emailOrPhone.trim());
+    }
+    if (!user && this.guardianRepository) {
+      const g = await this.guardianRepository.findByPhone(emailOrPhone.trim());
+      if (g) {
+        user = await this.userRepository.findById(g.userId);
+      }
+    }
+    if (!user || !user.resetPasswordToken) {
+      return { valid: false, message: 'Invalid or missing reset token.' };
+    }
+
+    if (!this.isTokenMatching(user.resetPasswordToken, codeOrToken)) {
+      return { valid: false, message: 'Invalid verification code or token.' };
+    }
+
+    if (!user.resetPasswordExpires || user.resetPasswordExpires < new Date()) {
+      return { valid: false, message: 'Password reset link or code has expired. Please request a new one.' };
+    }
+
+    return {
+      valid: true,
+      email: user.email,
+      message: 'Token is valid and active.'
+    };
+  }
+
+  public async resetPasswordWithCode(dto: { email: string; resetCode?: string; token?: string; newPassword: string }): Promise<{ success: boolean; message: string }> {
     let lookupEmail = dto.email.toLowerCase().trim();
     const aliasMap: Record<string, string> = {
       superadmin: 'superadmin@smartshule.ac.ke',
@@ -579,12 +629,13 @@ export class AuthUseCases {
       throw new UnauthorizedError('Invalid email, phone number, or reset code.');
     }
 
+    const providedCode = (dto.resetCode || dto.token || '').trim();
     const currentAttempts = (this.resetCodeAttempts.get(user.id) || 0) + 1;
 
-    if (!user.resetPasswordToken || user.resetPasswordToken !== dto.resetCode.trim()) {
+    if (!user.resetPasswordToken || !this.isTokenMatching(user.resetPasswordToken, providedCode)) {
       this.resetCodeAttempts.set(user.id, currentAttempts);
       if (currentAttempts >= 5) {
-        user.setResetPasswordToken(undefined, undefined);
+        user.clearResetPasswordToken();
         this.resetCodeAttempts.delete(user.id);
         await this.userRepository.update(user);
         throw new UnauthorizedError('Too many failed verification attempts. This reset code has been invalidated. Please request a new code.');
@@ -601,21 +652,27 @@ export class AuthUseCases {
     const newHash = await this.passwordHasher.hash(dto.newPassword);
     user.updatePassword(newHash);
     user.setMustChangePassword(false);
-    user.setResetPasswordToken(undefined, undefined);
+    user.clearResetPasswordToken();
     await this.userRepository.update(user);
 
     if (this.notificationService) {
       if (user.email) {
+        const rendered = EmailTemplateEngine.renderPasswordChangedEmail({
+          to: user.email,
+          recipientName: user.fullName,
+          changeTime: new Date()
+        });
         this.notificationService.sendEmail(
           user.email,
-          'SmartShule Password Successfully Reset',
-          `Dear ${user.fullName},\n\nYour SmartShule CBC Portal password has been successfully updated.\n\nGrace Seeds School · "The future Begins Here"`
+          rendered.subject,
+          rendered.text,
+          rendered.html
         ).catch(() => null);
       }
       if (user.phone) {
         this.notificationService.sendSms(
           user.phone,
-          `Dear ${user.fullName}, your SmartShule CBC Portal password has been successfully reset.`
+          `Dear ${user.fullName}, your Grace Seeds School CBE Portal password has been successfully reset.`
         ).catch(() => null);
       }
     }

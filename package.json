@@ -6,6 +6,7 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
+    "bootstrap": "ts-node scripts/bootstrap-production.ts",
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "dev:frontend": "npm --prefix Frontend/smartshule run dev",
     "build:frontend": "npm --prefix Frontend/smartshule run build",

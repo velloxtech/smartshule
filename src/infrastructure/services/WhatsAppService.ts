@@ -112,7 +112,7 @@ export class WhatsAppService {
     address: string;
     centerCode: string;
   }> {
-    let name = 'SmartShule';
+    let name = 'Grace Seeds School';
     let motto = 'The future Begins Here';
     let phone = '0745436312';
     let email = 'schoolgraceseeds@gmail.com';

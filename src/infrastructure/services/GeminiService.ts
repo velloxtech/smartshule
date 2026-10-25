@@ -142,11 +142,11 @@ export class GeminiService {
       ? `Homework: ${ediarySummary.recentHomework || 'Review daily class notes'}. Remarks: ${ediarySummary.teacherRemarks || 'All tasks on schedule'}. Tomorrow's requirements: ${ediarySummary.requirementsTomorrow || 'Standard books and kit'}.`
       : 'eDiary homework not requested.';
 
-    const schoolName = params.schoolName || 'SmartShule CBC Portal';
+    const schoolName = params.schoolName || 'Grace Seeds School';
     const schoolPhone = params.schoolPhone || '';
 
     const prompt = `
-You are the official SmartShule School Communications Assistant for ${schoolName}.
+You are the official School Communications Assistant for ${schoolName}.
 Your task is to draft a personalized, accurate, polite, and professional WhatsApp message to a real parent/guardian based on the school administrator's command and verified student database records.
 
 COMMAND / INSTRUCTION:
@@ -198,7 +198,7 @@ MANDATORY RULES:
     const guardianName = guardian.fullName || 'Parent/Guardian';
     const learner = student.fullName;
     const adm = student.admissionNumber;
-    const schoolName = params.schoolName || 'SmartShule CBC Portal';
+    const schoolName = params.schoolName || 'Grace Seeds School';
     const schoolPhone = params.schoolPhone || '';
     const contactLine = schoolPhone ? `_Contact: ${schoolPhone}_` : '';
 

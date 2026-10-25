@@ -74,7 +74,9 @@ import {
   OtherIncome,
   ExpenseCategory,
   ExpenseStatus,
-  IncomeSource
+  IncomeSource,
+  StudentFeeCredit,
+  FeeCreditApplication
 } from '../../../core/domain/finance/Fee';
 import { FeeBannerConfig } from '../../../core/domain/finance/FeeBannerConfig';
 
@@ -1250,6 +1252,42 @@ export class MongoFeeRepository implements IFeeRepository {
   public async saveFeeBannerConfig(config: FeeBannerConfig): Promise<void> {
     const key = config.schoolId || 'school-001';
     this.feeBannerConfigs.set(key, config);
+  }
+
+  // Student Fee Credits
+  private credits: Map<string, StudentFeeCredit> = new Map();
+  private creditApplications: Map<string, FeeCreditApplication> = new Map();
+
+  public async findCreditById(id: string): Promise<StudentFeeCredit | null> {
+    return this.credits.get(id) || null;
+  }
+
+  public async findCredits(filters: { studentId?: string; schoolId?: string; status?: string }): Promise<StudentFeeCredit[]> {
+    let result = Array.from(this.credits.values());
+    if (filters.studentId) result = result.filter(c => c.studentId === filters.studentId);
+    if (filters.schoolId) result = result.filter(c => c.schoolId === filters.schoolId);
+    if (filters.status) result = result.filter(c => c.status === filters.status);
+    return result;
+  }
+
+  public async saveCredit(credit: StudentFeeCredit): Promise<void> {
+    this.credits.set(credit.id, credit);
+  }
+
+  public async updateCredit(credit: StudentFeeCredit): Promise<void> {
+    this.credits.set(credit.id, credit);
+  }
+
+  public async saveCreditApplication(application: FeeCreditApplication): Promise<void> {
+    this.creditApplications.set(application.id, application);
+  }
+
+  public async findCreditApplications(filters: { studentId?: string; invoiceId?: string; creditId?: string }): Promise<FeeCreditApplication[]> {
+    let result = Array.from(this.creditApplications.values());
+    if (filters.studentId) result = result.filter(a => a.studentId === filters.studentId);
+    if (filters.invoiceId) result = result.filter(a => a.invoiceId === filters.invoiceId);
+    if (filters.creditId) result = result.filter(a => a.creditId === filters.creditId);
+    return result;
   }
 }
 

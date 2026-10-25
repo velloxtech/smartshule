@@ -28,6 +28,21 @@ export function isBillingAuthorizedRole(role?: string | UserRole): boolean {
   return BILLING_AUTHORIZED_ROLES.includes(role as UserRole);
 }
 
+export const TERM_INITIALIZATION_AUTHORIZED_ROLES: UserRole[] = [
+  UserRole.SUPER_ADMIN,
+  UserRole.ADMIN,
+  UserRole.SCHOOL_ADMIN,
+  UserRole.HEAD_TEACHER
+];
+
+export function isTermInitializationAuthorizedRole(role?: string | UserRole): boolean {
+  if (!role) return false;
+  const normalized = String(role).toUpperCase().replace(/\s+/g, '_');
+  if (normalized === 'HEADTEACHER' || normalized === 'HEAD_TEACHER') return true;
+  if (normalized === 'ADMIN' || normalized === 'SCHOOL_ADMIN' || normalized === 'SUPER_ADMIN') return true;
+  return TERM_INITIALIZATION_AUTHORIZED_ROLES.includes(role as UserRole);
+}
+
 export enum UserStatus {
   ACTIVE = 'ACTIVE',
   INACTIVE = 'INACTIVE',
@@ -46,6 +61,7 @@ export interface UserProps {
   mustChangePassword?: boolean;
   resetPasswordToken?: string;
   resetPasswordExpires?: Date;
+  resetPasswordAttempts?: number;
 }
 
 export class User extends Entity<UserProps> {
@@ -101,6 +117,10 @@ export class User extends Entity<UserProps> {
     return this._props.resetPasswordExpires;
   }
 
+  public get resetPasswordAttempts(): number {
+    return this._props.resetPasswordAttempts ?? 0;
+  }
+
   public setMustChangePassword(mustChange: boolean): void {
     this._props.mustChangePassword = mustChange;
     this.touch();
@@ -109,6 +129,21 @@ export class User extends Entity<UserProps> {
   public setResetPasswordToken(token?: string, expires?: Date): void {
     this._props.resetPasswordToken = token;
     this._props.resetPasswordExpires = expires;
+    this._props.resetPasswordAttempts = 0;
+    this.touch();
+  }
+
+  public incrementResetAttempts(): number {
+    const current = (this._props.resetPasswordAttempts ?? 0) + 1;
+    this._props.resetPasswordAttempts = current;
+    this.touch();
+    return current;
+  }
+
+  public clearResetPasswordToken(): void {
+    this._props.resetPasswordToken = undefined;
+    this._props.resetPasswordExpires = undefined;
+    this._props.resetPasswordAttempts = 0;
     this.touch();
   }
 
@@ -124,6 +159,7 @@ export class User extends Entity<UserProps> {
     this._props.mustChangePassword = false;
     this._props.resetPasswordToken = undefined;
     this._props.resetPasswordExpires = undefined;
+    this._props.resetPasswordAttempts = 0;
     this.touch();
   }
 

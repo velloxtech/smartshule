@@ -87,9 +87,10 @@ const IssueBookModal: React.FC<IssueBookModalProps> = ({
 
   const handleSelectStudent = (stud: Student) => {
     setBorrowerId(stud.id);
-    setBorrowerName(`${stud.firstName} ${stud.middleName ? stud.middleName + ' ' : ''}${stud.lastName}`);
-    setBorrowerAdmissionOrNumber(stud.admissionNumber);
-    setBorrowerGradeOrClass(stud.gradeLevel || '');
+    const fullName = stud.name || `${stud.firstName || ''} ${stud.middleName ? stud.middleName + ' ' : ''}${stud.lastName || ''}`.trim() || 'Learner';
+    setBorrowerName(fullName);
+    setBorrowerAdmissionOrNumber(stud.admNo || stud.admissionNumber || '');
+    setBorrowerGradeOrClass(stud.gradeLevel || stud.grade || '');
     setMemberSearch('');
   };
 
@@ -97,17 +98,20 @@ const IssueBookModal: React.FC<IssueBookModalProps> = ({
     setBorrowerId(teach.id);
     setBorrowerName(teach.name || teach.tscNumber || 'Teacher');
     setBorrowerAdmissionOrNumber(teach.tscNumber || teach.employeeNumber || '');
+const specStr = Array.isArray(teach.specialization)
+      ? teach.specialization.join(', ')
+      : (teach.specialization || '');
     setBorrowerGradeOrClass(
-      Array.isArray(teach.specialization)
-        ? teach.specialization.join(', ')
-        : (teach.specialization || 'Teaching Staff')
+      specStr ||
+      (Array.isArray(teach.learningAreas) ? teach.learningAreas.join(', ') : '') ||
+      'Teaching Staff'
     );
     setMemberSearch('');
   };
 
   const filteredStudents = memberSearch.trim()
     ? students.filter(s =>
-        `${s.firstName} ${s.lastName} ${s.admissionNumber}`
+        `${s.name || ''} ${s.firstName || ''} ${s.lastName || ''} ${s.admNo || ''} ${s.admissionNumber || ''}`
           .toLowerCase()
           .includes(memberSearch.toLowerCase())
       )

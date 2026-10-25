@@ -97,7 +97,7 @@ const RecordsOfWorkView: React.FC = () => {
   }, [records]);
 
   const uniqueWeeks = useMemo(() => {
-    const weeks = Array.from(new Set(records.map((r) => r.week))).sort((a, b) => a - b);
+    const weeks = Array.from(new Set(records.map((r) => r.week))).sort((a: any, b: any) => Number(a) - Number(b));
     return weeks;
   }, [records]);
 

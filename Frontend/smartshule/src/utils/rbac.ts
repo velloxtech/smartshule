@@ -341,7 +341,7 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
     items: [
       {
         id: 'student-fee-search',
-        label: 'Student Fee Checker',
+        label: 'Student Fee Accounts',
         icon: 'person_search',
         allowedRoles: [
           UserRole.SUPER_ADMIN,
@@ -354,56 +354,8 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
         ],
       },
       {
-        id: 'cashflow-ledger',
-        label: 'Cash Flow & Ledger (In/Out)',
-        icon: 'account_balance_wallet',
-        allowedRoles: [
-          UserRole.SUPER_ADMIN,
-          UserRole.ADMIN,
-          UserRole.SCHOOL_ADMIN,
-          UserRole.BURSAR,
-          UserRole.ACCOUNTANT,
-        ],
-      },
-      {
-        id: 'expenses-management',
-        label: 'Operating Expenses (Money Out)',
-        icon: 'payments',
-        allowedRoles: [
-          UserRole.SUPER_ADMIN,
-          UserRole.ADMIN,
-          UserRole.SCHOOL_ADMIN,
-          UserRole.BURSAR,
-          UserRole.ACCOUNTANT,
-        ],
-      },
-      {
-        id: 'capitation-income',
-        label: 'Capitation & Grants (Money In)',
-        icon: 'domain_add',
-        allowedRoles: [
-          UserRole.SUPER_ADMIN,
-          UserRole.ADMIN,
-          UserRole.SCHOOL_ADMIN,
-          UserRole.BURSAR,
-          UserRole.ACCOUNTANT,
-        ],
-      },
-      {
-        id: 'financial-reports',
-        label: 'Financial Reports & P&L',
-        icon: 'analytics',
-        allowedRoles: [
-          UserRole.SUPER_ADMIN,
-          UserRole.ADMIN,
-          UserRole.SCHOOL_ADMIN,
-          UserRole.BURSAR,
-          UserRole.ACCOUNTANT,
-        ],
-      },
-      {
         id: 'fee-structure',
-        label: 'Fee Structure',
+        label: 'Fee Structures',
         icon: 'table_chart',
         allowedRoles: [
           UserRole.SUPER_ADMIN,
@@ -414,29 +366,9 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
         ],
       },
       {
-        id: 'sponsored-students',
-        label: 'Sponsored Learners',
-        icon: 'volunteer_activism',
-        allowedRoles: [
-          UserRole.SUPER_ADMIN,
-          UserRole.ADMIN,
-          UserRole.SCHOOL_ADMIN,
-        ],
-      },
-      {
-        id: 'fee-deadline-banner',
-        label: 'Fee Deadline Banner',
-        icon: 'notification_important',
-        allowedRoles: [
-          UserRole.SUPER_ADMIN,
-          UserRole.ADMIN,
-          UserRole.SCHOOL_ADMIN,
-        ],
-      },
-      {
         id: 'invoices-mpesa',
-        label: 'Bank & KCB Invoices',
-        icon: 'account_balance',
+        label: 'Payments & Receipts',
+        icon: 'payments',
         allowedRoles: [
           UserRole.SUPER_ADMIN,
           UserRole.ADMIN,
@@ -448,20 +380,8 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
         ],
       },
       {
-        id: 'arrears',
-        label: 'Fee Arrears',
-        icon: 'assignment_late',
-        allowedRoles: [
-          UserRole.SUPER_ADMIN,
-          UserRole.ADMIN,
-          UserRole.SCHOOL_ADMIN,
-          UserRole.BURSAR,
-          UserRole.ACCOUNTANT,
-        ],
-      },
-      {
         id: 'forwarded-payments',
-        label: 'Forwarded Payments',
+        label: 'Forwarded Payments Queue',
         icon: 'forward_to_inbox',
         allowedRoles: [
           UserRole.SUPER_ADMIN,
@@ -472,9 +392,9 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
         ],
       },
       {
-        id: 'defaulters-receipts',
-        label: 'Defaulters & SMS Alerts',
-        icon: 'point_of_sale',
+        id: 'arrears',
+        label: 'Fee Arrears & Defaulters',
+        icon: 'assignment_late',
         allowedRoles: [
           UserRole.SUPER_ADMIN,
           UserRole.ADMIN,
@@ -484,9 +404,33 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
         ],
       },
       {
-        id: 'lunch-fee-management',
-        label: 'Lunch Fee Management',
-        icon: 'lunch_dining',
+        id: 'expenses-management',
+        label: 'Operating Expenses',
+        icon: 'receipt_long',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.BURSAR,
+          UserRole.ACCOUNTANT,
+        ],
+      },
+      {
+        id: 'financial-reports',
+        label: 'Financial Reports & Statements',
+        icon: 'analytics',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.BURSAR,
+          UserRole.ACCOUNTANT,
+        ],
+      },
+      {
+        id: 'fee-deadline-banner',
+        label: 'Finance Settings & Notices',
+        icon: 'settings_suggest',
         allowedRoles: [
           UserRole.SUPER_ADMIN,
           UserRole.ADMIN,
@@ -497,8 +441,32 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
       },
       {
         id: 'payroll',
-        label: 'Staff Payroll & Leaves',
-        icon: 'payments',
+        label: 'Staff Payroll',
+        icon: 'badge',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.BURSAR,
+          UserRole.ACCOUNTANT,
+        ],
+      },
+      {
+        id: 'sponsored-students',
+        label: 'Scholarships & Waivers',
+        icon: 'volunteer_activism',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.BURSAR,
+          UserRole.ACCOUNTANT,
+        ],
+      },
+      {
+        id: 'lunch-fee-management',
+        label: 'Lunch Fee Program',
+        icon: 'lunch_dining',
         allowedRoles: [
           UserRole.SUPER_ADMIN,
           UserRole.ADMIN,
@@ -680,6 +648,22 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
           UserRole.SUPER_ADMIN,
           UserRole.ADMIN,
           UserRole.SCHOOL_ADMIN,
+        ],
+      },
+      {
+        id: 'digital-signature',
+        label: 'My Digital Signature',
+        icon: 'draw',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.HEAD_TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
+          UserRole.TEACHER,
+          UserRole.BURSAR,
+          UserRole.ACCOUNTANT,
+          UserRole.ADMISSIONS,
         ],
       },
     ],

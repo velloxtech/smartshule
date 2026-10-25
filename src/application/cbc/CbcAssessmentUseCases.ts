@@ -28,7 +28,8 @@ import {
   TermTrendEntry
 } from '../../core/domain/cbc/CbcAssessment';
 import { CBCGradeLevel } from '../../core/domain/user/Student';
-import { IdGenerator, NotFoundError, ValidationError, ForbiddenError } from '../../core/domain/shared/Errors';
+import { EducationLevel, LearningArea } from '../../core/domain/academic/ClassRoom';
+import { IdGenerator, NotFoundError, ValidationError, ForbiddenError, ConflictError } from '../../core/domain/shared/Errors';
 
 export interface UserContext {
   userId: string;
@@ -45,11 +46,27 @@ export interface CreateStrandDTO {
   description?: string;
 }
 
+export interface UpdateStrandDTO {
+  learningAreaId?: string;
+  gradeLevel?: CBCGradeLevel;
+  code?: string;
+  title?: string;
+  description?: string;
+}
+
 export interface CreateSubStrandDTO {
   strandId: string;
   code: string;
   title: string;
   specificLearningOutcomes: string[];
+  suggestedExperiences?: string[];
+}
+
+export interface UpdateSubStrandDTO {
+  strandId?: string;
+  code?: string;
+  title?: string;
+  specificLearningOutcomes?: string[];
   suggestedExperiences?: string[];
 }
 
@@ -157,7 +174,38 @@ export class CBCAssessmentUseCases {
 
   // 1. Strands and SubStrands
   public async createStrand(dto: CreateStrandDTO) {
+    const existingStrands = await this.CBCRepository.findStrandsByLearningArea(dto.learningAreaId, dto.gradeLevel);
+    const dup = existingStrands.find(
+      s => s.code.trim().toUpperCase() === dto.code.trim().toUpperCase() ||
+           s.title.trim().toLowerCase() === dto.title.trim().toLowerCase()
+    );
+    if (dup) {
+      throw new ConflictError(`Strand with code '${dto.code}' or title '${dto.title}' already exists for this learning area and grade.`);
+    }
+
     const strand = Strand.create(dto, IdGenerator.generate());
+    await this.CBCRepository.saveStrand(strand);
+    return strand.toJSON();
+  }
+
+  public async updateStrand(id: string, dto: UpdateStrandDTO) {
+    const strand = await this.CBCRepository.findStrandById(id);
+    if (!strand) throw new NotFoundError('Strand', id);
+
+    const targetAreaId = dto.learningAreaId || strand.learningAreaId;
+    const targetGrade = dto.gradeLevel || strand.gradeLevel;
+    const existingStrands = await this.CBCRepository.findStrandsByLearningArea(targetAreaId, targetGrade);
+    const dup = existingStrands.find(
+      s => s.id !== id && (
+        (dto.code && s.code.trim().toUpperCase() === dto.code.trim().toUpperCase()) ||
+        (dto.title && s.title.trim().toLowerCase() === dto.title.trim().toLowerCase())
+      )
+    );
+    if (dup) {
+      throw new ConflictError(`Another strand with code '${dto.code || strand.code}' or title '${dto.title || strand.title}' already exists for this learning area and grade.`);
+    }
+
+    strand.updateDetails(dto);
     await this.CBCRepository.saveStrand(strand);
     return strand.toJSON();
   }
@@ -171,7 +219,37 @@ export class CBCAssessmentUseCases {
     const strand = await this.CBCRepository.findStrandById(dto.strandId);
     if (!strand) throw new NotFoundError('Strand', dto.strandId);
 
+    const existingSubs = await this.CBCRepository.findSubStrandsByStrand(dto.strandId);
+    const dup = existingSubs.find(
+      sub => sub.code.trim().toUpperCase() === dto.code.trim().toUpperCase() ||
+             sub.title.trim().toLowerCase() === dto.title.trim().toLowerCase()
+    );
+    if (dup) {
+      throw new ConflictError(`Sub-strand with code '${dto.code}' or title '${dto.title}' already exists under this strand.`);
+    }
+
     const subStrand = SubStrand.create(dto, IdGenerator.generate());
+    await this.CBCRepository.saveSubStrand(subStrand);
+    return subStrand.toJSON();
+  }
+
+  public async updateSubStrand(id: string, dto: UpdateSubStrandDTO) {
+    const subStrand = await this.CBCRepository.findSubStrandById(id);
+    if (!subStrand) throw new NotFoundError('SubStrand', id);
+
+    const targetStrandId = dto.strandId || subStrand.strandId;
+    const existingSubs = await this.CBCRepository.findSubStrandsByStrand(targetStrandId);
+    const dup = existingSubs.find(
+      sub => sub.id !== id && (
+        (dto.code && sub.code.trim().toUpperCase() === dto.code.trim().toUpperCase()) ||
+        (dto.title && sub.title.trim().toLowerCase() === dto.title.trim().toLowerCase())
+      )
+    );
+    if (dup) {
+      throw new ConflictError(`Another sub-strand with code '${dto.code || subStrand.code}' or title '${dto.title || subStrand.title}' already exists under this strand.`);
+    }
+
+    subStrand.updateDetails(dto);
     await this.CBCRepository.saveSubStrand(subStrand);
     return subStrand.toJSON();
   }
@@ -309,8 +387,67 @@ export class CBCAssessmentUseCases {
     );
   }
 
-  // 3. Summative Assessment (with robust Learning Area ID resolution to prevent foreign key errors)
-  private async resolveValidLearningAreaId(incomingIdOrCode: string): Promise<string> {
+  private getCanonicalSubjectKey(str: string): string {
+    if (!str) return 'OTHER';
+    const clean = str.trim().toUpperCase();
+    if (clean.includes('CREATIVE') || clean.includes('CREA') || clean.includes('PSYCHOMOTOR') || clean.includes('CRA')) return 'CREA';
+    if (clean.includes('READING') || clean.includes('REA') || clean.includes('LITERACY') || clean.includes('LIT')) return 'REA';
+    if (clean.includes('KUSOMA') || clean.includes('KUSO') || clean.includes('WKU')) return 'KUSO';
+    if (clean.includes('ENVIRONMENT') || clean.includes('ENVI') || clean.includes('SENV') || clean === 'ENV') return 'ENV';
+    if (clean.includes('LANG') || clean === 'LAN') return 'LAN';
+    if (clean.includes('ENG') || clean.includes('ENGLISH')) return 'ENG';
+    if (clean.includes('KISW') || clean.includes('SWAHILI') || clean === 'KIS') return 'KISW';
+    if (clean.includes('MATH') || clean === 'MAT') return 'MATH';
+    if (clean.includes('SPIRITUAL') || clean === 'SRE') return 'SRE';
+    if (clean.includes('RELIGIOUS') || clean.includes('CRE') || clean.includes('IRE') || clean.includes('HRE')) return 'CRE';
+    if (clean.includes('INTEGRATED SCIENCE') || clean.includes('INTSCI') || clean.includes('SCI_TECH') || clean.includes('SCIENCE') || clean.includes('SCI')) return 'SCI';
+    if (clean.includes('HEALTH') || clean.includes('HLTH')) return 'HLTH';
+    if (clean.includes('SOCIAL') || clean.includes('SST') || clean.includes('SOC')) return 'SST';
+    if (clean.includes('AGRI') || clean.includes('NUTRITION') || clean.includes('AGR')) return 'AGRI';
+    if (clean.includes('PRE-TECH') || clean.includes('PRETECH') || clean.includes('TECHNICAL') || clean.includes('PTECH') || clean.includes('PRET')) return 'PRETECH';
+    if (clean.includes('BUSINESS') || clean.includes('BUS')) return 'BUS';
+    if (clean.includes('COMPUTER') || clean.includes('COMP')) return 'COMP';
+    if (clean.includes('ARTS') || clean.includes('SPORT') || clean.includes('MUSIC')) return 'ARTS';
+    if (clean.includes('INDIGENOUS') || clean.includes('IND')) return 'IND';
+    return clean;
+  }
+
+  private getCanonicalSubjectName(key: string): string {
+    switch (key) {
+      case 'MATH': return 'Mathematics';
+      case 'ENG': return 'English Language';
+      case 'KISW': return 'Kiswahili Language';
+      case 'REA': return 'English Reading / Literacy Activities';
+      case 'KUSO': return 'Kusoma Activities';
+      case 'ENV': return 'Environmental Activities';
+      case 'LAN': return 'Language Activities';
+      case 'CREA': return 'Creative Activities';
+      case 'ARTS': return 'Creative Arts & Sports';
+      case 'SCI': return 'Science and Technology';
+      case 'SST': return 'Social Studies';
+      case 'CRE': return 'Christian Religious Education';
+      case 'SRE': return 'Religious Education Activities';
+      case 'AGRI': return 'Agriculture & Nutrition';
+      case 'PRETECH': return 'Pre-Technical Studies';
+      case 'HLTH': return 'Health Education';
+      case 'BUS': return 'Business Studies';
+      case 'COMP': return 'Computer Science';
+      case 'IND': return 'Indigenous Language Activities';
+      default: return key;
+    }
+  }
+
+  private getEducationLevelForGrade(grade?: string): EducationLevel {
+    if (!grade) return EducationLevel.UPPER_PRIMARY;
+    const g = String(grade).toUpperCase();
+    if (g.includes('PLAYGROUP') || g.includes('PP1') || g.includes('PP2')) return EducationLevel.PRE_PRIMARY;
+    if (g.includes('GRADE_1') || g.includes('GRADE_2') || g.includes('GRADE_3')) return EducationLevel.LOWER_PRIMARY;
+    if (g.includes('GRADE_4') || g.includes('GRADE_5') || g.includes('GRADE_6')) return EducationLevel.UPPER_PRIMARY;
+    return EducationLevel.JUNIOR_SCHOOL;
+  }
+
+  // 3. Summative Assessment (with robust Learning Area ID resolution scoped to student grade level)
+  private async resolveValidLearningAreaId(incomingIdOrCode: string, studentGradeLevel?: string, schoolId?: string): Promise<string> {
     if (!incomingIdOrCode) {
       throw new ValidationError('Learning area ID is required.');
     }
@@ -324,35 +461,87 @@ export class CBCAssessmentUseCases {
     }
 
     const allAreas = await this.academicRepository.findAllLearningAreas().catch(() => []);
-    
-    // 2. Try matching by code or id
-    let match = allAreas.find(
-      (a) =>
-        a.code?.toLowerCase() === incomingIdOrCode.toLowerCase() ||
-        a.id === incomingIdOrCode
-    );
-    if (match) return match.id;
+    const targetKey = this.getCanonicalSubjectKey(incomingIdOrCode);
+    const targetName = this.getCanonicalSubjectName(targetKey).toLowerCase();
 
-    // 3. Try matching by name
-    match = allAreas.find(
-      (a) => a.name?.toLowerCase().includes(incomingIdOrCode.toLowerCase())
-    );
-    if (match) return match.id;
-
-    // 4. Fallback to first available learning area if present
-    if (allAreas.length > 0) {
-      return allAreas[0].id;
+    // 2. Try finding within the student's grade level
+    const gradeClean = studentGradeLevel ? String(studentGradeLevel).toUpperCase().replace(/[\s-]/g, '_') : '';
+    if (gradeClean && allAreas.length > 0) {
+      const gradeAreas = allAreas.filter(a => a.gradeLevel && a.gradeLevel.toUpperCase().replace(/[\s-]/g, '_') === gradeClean);
+      const matchInGrade = gradeAreas.find(a =>
+        a.id.toLowerCase() === incomingIdOrCode.toLowerCase() ||
+        a.code?.toUpperCase() === incomingIdOrCode.toUpperCase() ||
+        this.getCanonicalSubjectKey(a.code) === targetKey ||
+        this.getCanonicalSubjectKey(a.name) === targetKey ||
+        this.getCanonicalSubjectKey(a.id) === targetKey
+      );
+      if (matchInGrade) return matchInGrade.id;
     }
 
-    return incomingIdOrCode; // Return original if no repository method is available to query further
+    // 3. Try finding across all learning areas by matching canonical subject key
+    const matchAny = allAreas.find(a =>
+      a.id.toLowerCase() === incomingIdOrCode.toLowerCase() ||
+      a.code?.toUpperCase() === incomingIdOrCode.toUpperCase() ||
+      this.getCanonicalSubjectKey(a.code) === targetKey ||
+      this.getCanonicalSubjectKey(a.name) === targetKey
+    );
+    if (matchAny) return matchAny.id;
+
+    // 4. Try matching by name substring
+    const matchName = allAreas.find(a =>
+      a.name?.toLowerCase().includes(targetName) ||
+      targetName.includes(a.name?.toLowerCase() || '')
+    );
+    if (matchName) return matchName.id;
+
+    // 5. Automatically create the missing learning area for this grade level with safe unique ID
+    const finalGrade = (studentGradeLevel as CBCGradeLevel) || CBCGradeLevel.GRADE_4;
+    const cleanPfx = String(finalGrade).toLowerCase().replace(/grade_/, 'g').replace(/_/g, '');
+    const newId = `la-${cleanPfx}-${targetKey.toLowerCase()}`;
+    const subjectName = this.getCanonicalSubjectName(targetKey);
+    const educationLevel = this.getEducationLevelForGrade(finalGrade);
+
+    try {
+      const newArea = LearningArea.create({
+        name: subjectName,
+        code: targetKey,
+        gradeLevel: finalGrade,
+        educationLevel,
+        isElective: false,
+        schoolId: schoolId || 'school-001'
+      }, newId);
+      await this.academicRepository.saveLearningArea(newArea);
+      return newArea.id;
+    } catch {
+      return incomingIdOrCode;
+    }
   }
 
   public async recordSummativeAssessment(dto: RecordSummativeDTO) {
     const student = await this.studentRepository.findById(dto.studentId);
     if (!student) throw new NotFoundError('Student', dto.studentId);
 
-    // Resolve robust learning area ID to prevent fk_summative_learning_area violation
-    const validLearningAreaId = await this.resolveValidLearningAreaId(dto.learningAreaId);
+    // Enforce marks validation
+    if (dto.strandScores && Array.isArray(dto.strandScores)) {
+      for (const item of dto.strandScores) {
+        if (item && item.rawScore !== undefined) {
+          if (item.rawScore < 0) {
+            throw new ValidationError('Assessment score cannot be negative.');
+          }
+          const max = item.maxScore !== undefined && item.maxScore > 0 ? item.maxScore : 100;
+          if (item.rawScore > max) {
+            throw new ValidationError(`Assessment score (${item.rawScore}) cannot exceed maximum allowed marks (${max}).`);
+          }
+        }
+      }
+    }
+
+    // Resolve robust learning area ID scoped to the student's grade level
+    const validLearningAreaId = await this.resolveValidLearningAreaId(
+      dto.learningAreaId,
+      student.gradeLevel,
+      student.schoolId
+    );
 
     let termId = dto.termId;
     let academicYearId = dto.academicYearId;

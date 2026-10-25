@@ -27,9 +27,10 @@ export interface StudentFinancials {
 export const getStudentFinancials = (
   s: Student,
   selectedTerm: 'term-1' | 'term-2' | 'term-3' | 'ALL' = 'term-3',
-  feeStructures: FeeStructure[] = []
+  feeStructures: FeeStructure[] = [],
+  backendAccount?: any
 ): StudentFinancials => {
-  const isSponsored = Boolean(s.isSponsored || (s as any).sponsorship);
+  const isSponsored = Boolean(s.isSponsored || (s as any).sponsorship || backendAccount?.isSponsored);
   if (isSponsored) {
     return {
       isSponsored: true,
@@ -44,14 +45,39 @@ export const getStudentFinancials = (
     };
   }
 
+  if (backendAccount) {
+    const billed = Number(backendAccount.billedFees) || 0;
+    const priorArrears = Number(backendAccount.priorArrears) || 0;
+    const totalDue = Number(backendAccount.totalDue) || 0;
+    const paid = Number(backendAccount.paidFees) || 0;
+    const balance = Math.max(0, Number(backendAccount.balance) || 0);
+    const overpayment = Number(backendAccount.overpaymentCredit) || 0;
+    const status = backendAccount.status || (overpayment > 0 && balance === 0 ? 'OVERPAID' : balance === 0 ? 'CLEARED' : paid > 0 ? 'PARTIAL' : 'ARREARS');
+    return {
+      isSponsored: false,
+      billed,
+      priorArrears,
+      totalDue,
+      paid,
+      balance,
+      arrearsDue: balance,
+      overpayment,
+      status,
+    };
+  }
+
   // 1. Resolve Fee Billed from Fee Structure according to the term
-  // If the student was already billed by an active invoice, use the exact billed amount
   let billed = 0;
-  if (s.totalFee !== undefined && s.totalFee !== null && Number(s.totalFee) > 0) {
-    billed = Number(s.totalFee);
-  } else if (feeStructures && feeStructures.length > 0) {
+  if (feeStructures && feeStructures.length > 0) {
     const sGrade = (s.grade || (s as any).gradeLevel || '').toUpperCase();
     const matchFs = feeStructures.find((fs) => {
+      const fsGrade = (fs.gradeLevel || '').toUpperCase();
+      const gradeMatch = fsGrade === sGrade || fsGrade.replace(/_/g, ' ') === sGrade.replace(/_/g, ' ');
+      if (!gradeMatch) return false;
+      const fsTerm = String(fs.termId || '').toLowerCase();
+      const selTermStr = String(selectedTerm).toLowerCase();
+      return fsTerm === selTermStr || (selectedTerm !== 'ALL' && (fsTerm.includes(selTermStr.replace('term-', 't')) || fsTerm.includes(selTermStr)));
+    }) || feeStructures.find((fs) => {
       const fsGrade = (fs.gradeLevel || '').toUpperCase();
       return fsGrade === sGrade || fsGrade.replace(/_/g, ' ') === sGrade.replace(/_/g, ' ');
     });
@@ -79,13 +105,15 @@ export const getStudentFinancials = (
     }
   }
 
+  if (billed === 0 && s.totalFee !== undefined && s.totalFee !== null && Number(s.totalFee) > 0) {
+    billed = Number(s.totalFee);
+  }
+
   // 2. Prior Arrears (opening/carried forward arrears, distinct from term fee structure billed fee)
   const priorArrears = Math.max(0, Number((s as any).priorArrears) || 0);
 
   // 3. Total Due (Billed Fees + Prior Arrears)
-  const totalDue = (s as any).totalDue !== undefined && (s as any).totalDue !== null && Number((s as any).totalDue) > 0
-    ? Number((s as any).totalDue)
-    : Math.max(0, billed + priorArrears);
+  const totalDue = Math.max(0, Math.round((billed + priorArrears) * 100) / 100);
 
   // 4. Paid Fees
   let paid = 0;
@@ -102,27 +130,21 @@ export const getStudentFinancials = (
     }
   }
 
-  // 5. Balance (formerly Arrears Due) & Overpayment / Prepayment Credit
+  // 5. Balance (Amount still owed) & Overpayment / Prepayment Credit
   let balance = 0;
-  let arrearsDue = 0;
-  let overpayment = 0;
+  let overpayment = (s as any).creditBalance ? Number((s as any).creditBalance) : 0;
 
   if (paid > totalDue) {
-    overpayment = Math.round((paid - totalDue) * 100) / 100;
-    balance = -overpayment; // exact overpayment as -(overpayment)
-    arrearsDue = 0;
+    const excess = Math.round((paid - totalDue) * 100) / 100;
+    overpayment = Math.round((overpayment + excess) * 100) / 100;
+    balance = 0;
   } else {
     balance = Math.round((totalDue - paid) * 100) / 100;
-    arrearsDue = balance;
-    overpayment = (s as any).creditBalance ? Number((s as any).creditBalance) : 0;
-    if (overpayment > 0 && balance === 0) {
-      balance = -overpayment;
-    }
   }
 
   // 6. Financial Status
   let status: StudentFinancials['status'];
-  if (balance < 0 || overpayment > 0) {
+  if (overpayment > 0 && balance === 0) {
     status = 'OVERPAID';
   } else if (balance === 0 && (paid > 0 || totalDue > 0)) {
     status = 'CLEARED';
@@ -141,7 +163,7 @@ export const getStudentFinancials = (
     totalDue,
     paid,
     balance,
-    arrearsDue,
+    arrearsDue: balance,
     overpayment,
     status,
   };
@@ -166,18 +188,27 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
     'balance_desc' | 'overpaid_desc' | 'billed_desc' | 'name' | 'adm'
   >('balance_desc');
 
-  // Fee Structures State
+  // Fee Structures & Academic Context State
   const [feeStructures, setFeeStructures] = useState<FeeStructure[]>([]);
+  const [currentContext, setCurrentContext] = useState<any>(null);
+  const [studentAccounts, setStudentAccounts] = useState<Map<string, any>>(new Map());
+  const [accountsSummary, setAccountsSummary] = useState<any | null>(null);
+  const [isLoadingAccounts, setIsLoadingAccounts] = useState(false);
+  const [isApplyingCredit, setIsApplyingCredit] = useState(false);
+  const [creditActionFeedback, setCreditActionFeedback] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
     apiService.getCurrentContext()
       .then((res) => {
-        if (isMounted && res?.success && res.data?.currentTerm) {
-          const tNum = res.data.currentTerm.termNumber;
-          if (tNum === 1) setSelectedTerm('term-1');
-          else if (tNum === 2) setSelectedTerm('term-2');
-          else if (tNum === 3) setSelectedTerm('term-3');
+        if (isMounted && res?.success && res.data) {
+          setCurrentContext(res.data);
+          if (res.data.currentTerm) {
+            const tNum = res.data.currentTerm.termNumber;
+            if (tNum === 1) setSelectedTerm('term-1');
+            else if (tNum === 2) setSelectedTerm('term-2');
+            else if (tNum === 3) setSelectedTerm('term-3');
+          }
         }
       })
       .catch(() => {});
@@ -194,6 +225,30 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
     };
   }, []);
 
+  // Fetch Authoritative Backend Student Fee Accounts for selected term
+  const loadStudentAccounts = async () => {
+    try {
+      setIsLoadingAccounts(true);
+      const res = await apiService.getStudentFeeAccounts({ termId: selectedTerm });
+      if (res?.success && res.data) {
+        const map = new Map<string, any>();
+        if (Array.isArray(res.data.accounts)) {
+          res.data.accounts.forEach((acc: any) => map.set(acc.studentId, acc));
+        }
+        setStudentAccounts(map);
+        setAccountsSummary(res.data.summary || null);
+      }
+    } catch (err) {
+      console.warn('Could not load student fee accounts for term', err);
+    } finally {
+      setIsLoadingAccounts(false);
+    }
+  };
+
+  useEffect(() => {
+    loadStudentAccounts();
+  }, [selectedTerm]);
+
   // Modals & Active Student State
   const [isRecordPaymentOpen, setIsRecordPaymentOpen] = useState(false);
   const [selectedStudentForPayment, setSelectedStudentForPayment] = useState<Student | null>(null);
@@ -204,7 +259,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
   const [statementData, setStatementData] = useState<any | null>(null);
   const [isLoadingStatement, setIsLoadingStatement] = useState(false);
   const [statementError, setStatementError] = useState<string | null>(null);
-  const [statementTab, setStatementTab] = useState<'invoices' | 'payments' | 'statement'>('invoices');
+  const [statementTab, setStatementTab] = useState<'invoices' | 'payments' | 'statement' | 'credits'>('invoices');
   const [expandedInvoiceId, setExpandedInvoiceId] = useState<string | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
@@ -295,11 +350,11 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
         }
 
         // Status Filter
-        const fin = getStudentFinancials(s, selectedTerm, feeStructures);
+        const fin = getStudentFinancials(s, selectedTerm, feeStructures, studentAccounts.get(s.id));
         if (selectedStatus === 'Has_Balance' && fin.balance <= 0) {
           return false;
         }
-        if (selectedStatus === 'Overpaid' && fin.balance >= 0) {
+        if (selectedStatus === 'Overpaid' && fin.overpayment <= 0) {
           return false;
         }
         if (selectedStatus === 'Cleared') {
@@ -315,8 +370,8 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
         return true;
       })
       .sort((a, b) => {
-        const aFin = getStudentFinancials(a, selectedTerm, feeStructures);
-        const bFin = getStudentFinancials(b, selectedTerm, feeStructures);
+        const aFin = getStudentFinancials(a, selectedTerm, feeStructures, studentAccounts.get(a.id));
+        const bFin = getStudentFinancials(b, selectedTerm, feeStructures, studentAccounts.get(b.id));
 
         if (sortBy === 'balance_desc') return bFin.balance - aFin.balance;
         if (sortBy === 'overpaid_desc') return bFin.overpayment - aFin.overpayment;
@@ -325,7 +380,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
         if (sortBy === 'adm') return (a.admNo || '').localeCompare(b.admNo || '');
         return 0;
       });
-  }, [students, searchQuery, selectedGrade, selectedStream, selectedTerm, selectedStatus, sortBy, feeStructures]);
+  }, [students, searchQuery, selectedGrade, selectedStream, selectedTerm, selectedStatus, sortBy, feeStructures, studentAccounts]);
 
   // Aggregate Ledger Totals
   const stats = useMemo(() => {
@@ -341,7 +396,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
     let sponsoredCount = 0;
 
     filteredStudents.forEach((s) => {
-      const fin = getStudentFinancials(s, selectedTerm, feeStructures);
+      const fin = getStudentFinancials(s, selectedTerm, feeStructures, studentAccounts.get(s.id));
       totalBilled += fin.billed;
       totalPriorArrears += fin.priorArrears;
       totalDue += fin.totalDue;
@@ -349,8 +404,9 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
       if (fin.balance > 0) {
         totalArrears += fin.balance;
         arrearsCount++;
-      } else if (fin.balance < 0) {
-        totalOverpayment += Math.abs(fin.balance);
+      }
+      if (fin.overpayment > 0) {
+        totalOverpayment += fin.overpayment;
         overpaidCount++;
       }
 
@@ -373,7 +429,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
       sponsoredCount,
       collectionRate,
     };
-  }, [filteredStudents, selectedTerm, feeStructures]);
+  }, [filteredStudents, selectedTerm, feeStructures, studentAccounts]);
 
   // Copy helper
   const handleCopy = (text: string, label: string) => {
@@ -414,6 +470,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
     if (onRefreshStudents) {
       await onRefreshStudents();
     }
+    await loadStudentAccounts();
     if (statementStudent) {
       apiService.getFeeStatement(statementStudent.id).then((res) => {
         if (res?.success && res.data) setStatementData(res.data);
@@ -427,14 +484,27 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
     setIsAuthorizingBilling(true);
     setBillingAuthFeedback(null);
     try {
+      const yearId = currentContext?.currentYear?.id;
+      let termId = currentContext?.currentTerm?.id;
+      if (selectedTerm === 'term-1') {
+        const found = currentContext?.yearTerms?.find((t: any) => t.termNumber === 1 || t.id.includes('t1') || t.id.includes('term-1'));
+        termId = found ? found.id : 'term-1';
+      } else if (selectedTerm === 'term-2') {
+        const found = currentContext?.yearTerms?.find((t: any) => t.termNumber === 2 || t.id.includes('t2') || t.id.includes('term-2'));
+        termId = found ? found.id : 'term-2';
+      } else if (selectedTerm === 'term-3') {
+        const found = currentContext?.yearTerms?.find((t: any) => t.termNumber === 3 || t.id.includes('t3') || t.id.includes('term-3'));
+        termId = found ? found.id : 'term-3';
+      }
+
       const res = await apiService.generateInvoices({
         studentId: statementStudent.id,
         schoolId: (statementStudent as any).schoolId || 'school-001',
-        academicYearId: 'year-2026',
-        termId: 'term-2026-t1',
+        academicYearId: yearId,
+        termId: termId,
       });
       if (res.success) {
-        setBillingAuthFeedback('Student successfully authorized and billed for Term 1.');
+        setBillingAuthFeedback(`Student successfully authorized and billed for ${selectedTerm.toUpperCase()}.`);
         const statementRes = await apiService.getFeeStatement(statementStudent.id).catch(() => null);
         if (statementRes?.success && statementRes.data) {
           setStatementData(statementRes.data);
@@ -442,6 +512,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
         if (onRefreshStudents) {
           await onRefreshStudents();
         }
+        await loadStudentAccounts();
         setTimeout(() => setBillingAuthFeedback(null), 5000);
       } else {
         setBillingAuthFeedback(res.message || 'Failed to authorize billing for student.');
@@ -450,6 +521,39 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
       setBillingAuthFeedback(err.message || 'Error authorizing student billing.');
     } finally {
       setIsAuthorizingBilling(false);
+    }
+  };
+
+  // Apply Traceable Overpayment Credit to Invoice Handler
+  const handleApplyCredit = async (creditId: string, invoiceId: string, amount?: number) => {
+    if (!statementStudent) return;
+    setIsApplyingCredit(true);
+    setCreditActionFeedback(null);
+    try {
+      const res = await apiService.applyCreditToInvoice({
+        creditId,
+        studentId: statementStudent.id,
+        invoiceId,
+        amount
+      });
+      if (res.success) {
+        setCreditActionFeedback(res.message || 'Credit applied successfully to invoice.');
+        const statementRes = await apiService.getFeeStatement(statementStudent.id).catch(() => null);
+        if (statementRes?.success && statementRes.data) {
+          setStatementData(statementRes.data);
+        }
+        if (onRefreshStudents) {
+          await onRefreshStudents();
+        }
+        await loadStudentAccounts();
+        setTimeout(() => setCreditActionFeedback(null), 6000);
+      } else {
+        setCreditActionFeedback(res.message || 'Failed to apply credit to invoice.');
+      }
+    } catch (err: any) {
+      setCreditActionFeedback(err.message || 'Error applying credit.');
+    } finally {
+      setIsApplyingCredit(false);
     }
   };
 
@@ -630,7 +734,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
       },
     });
 
-    doc.save(`SmartShule_Student_Finances_Ledger_${new Date().toISOString().split('T')[0]}.pdf`);
+    doc.save(`Grace_Seeds_School_Student_Finances_Ledger_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   // --------------------------------------------------------------------------
@@ -736,6 +840,13 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
 
   const invoicesList: StudentInvoice[] = statementData?.invoices || [];
   const paymentsList: any[] = statementData?.payments || [];
+  const creditsList: any[] = statementData?.credits || [];
+  const applicationsList: any[] = statementData?.creditApplications || [];
+  const availableCreditAmount: number = statementData?.summary?.availableCredit ?? (
+    creditsList
+      .filter((c: any) => c.status === 'AVAILABLE' || c.status === 'PARTIALLY_USED')
+      .reduce((sum: number, c: any) => sum + (Number(c.balance) || 0), 0)
+  );
   const activeSponsorship = statementData?.sponsorship || (statementStudent as any)?.sponsorship || null;
 
   return (
@@ -934,9 +1045,9 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                 className="w-full py-2 pl-7 pr-2.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#7a1228] cursor-pointer"
                 title="Distinguish fee billed from fee structure according to term"
               >
-                <option value="term-3">Term 3 (Active Term)</option>
-                <option value="term-1">Term 1 Schedule</option>
-                <option value="term-2">Term 2 Schedule</option>
+                <option value="term-1">Term 1 Schedule{currentContext?.currentTerm?.termNumber === 1 ? ' (Active Term)' : ''}</option>
+                <option value="term-2">Term 2 Schedule{currentContext?.currentTerm?.termNumber === 2 ? ' (Active Term)' : ''}</option>
+                <option value="term-3">Term 3 Schedule{currentContext?.currentTerm?.termNumber === 3 ? ' (Active Term)' : ''}</option>
                 <option value="ALL">Whole Year (Annual Total)</option>
               </select>
               <span className="material-symbols-outlined absolute left-2 top-2 text-[#7a1228] text-[15px] pointer-events-none">
@@ -1137,7 +1248,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
               {/* Table Rows with Explicit Cell Borders (Gridlines) & Self-Adjusting Dimensions */}
               <tbody className="divide-y divide-slate-200 bg-white">
                 {filteredStudents.map((st, idx) => {
-                  const fin = getStudentFinancials(st, selectedTerm, feeStructures);
+                  const fin = getStudentFinancials(st, selectedTerm, feeStructures, studentAccounts.get(st.id));
                   const rowNumber = idx + 1;
 
                   return (
@@ -1215,43 +1326,37 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                         {fin.paid.toLocaleString()}
                       </td>
 
-                      {/* 10. Balance (Negative if Overpaid: -(overpayment)) */}
+                      {/* 10. Balance (Amount still owed; KSh 0 when settled or overpaid) */}
                       <td className={`px-2 py-1 border border-slate-300 text-right font-bold text-[11px] whitespace-nowrap ${
                         fin.isSponsored
                           ? 'bg-emerald-50/20 text-emerald-800'
-                          : fin.balance < 0
-                          ? 'bg-teal-50/40 text-teal-800'
                           : fin.balance > 0
                           ? 'bg-rose-50/20 text-rose-700'
-                          : 'text-slate-500'
+                          : 'text-emerald-700'
                       }`}>
                         {fin.isSponsored ? (
                           <span className="text-emerald-700 font-extrabold inline-flex items-center gap-0.5">
                             <span className="material-symbols-outlined text-[12px]">check_circle</span>
                             0
                           </span>
-                        ) : fin.balance < 0 ? (
-                          <span className="text-teal-800 font-extrabold font-mono" title={`Exact Overpayment Credit: KES ${Math.abs(fin.balance).toLocaleString()}`}>
-                            -{Math.abs(fin.balance).toLocaleString()}
-                          </span>
                         ) : fin.balance > 0 ? (
                           <span className="text-rose-700 font-extrabold font-mono">
                             {fin.balance.toLocaleString()}
                           </span>
                         ) : (
-                          <span className="text-emerald-700 font-semibold font-mono">0</span>
+                          <span className="text-emerald-700 font-bold font-mono">0</span>
                         )}
                       </td>
 
                       {/* 11. Overpayment / Prepayment Credit */}
                       <td className="px-2 py-1 border border-slate-300 text-right font-bold text-[11px] whitespace-nowrap bg-teal-50/30">
                         {fin.overpayment > 0 ? (
-                          <span className="text-teal-800 font-extrabold inline-flex items-center gap-0.5">
+                          <span className="text-teal-800 font-extrabold inline-flex items-center gap-0.5" title={`Available Credit: KES ${fin.overpayment.toLocaleString()}`}>
                             <span className="material-symbols-outlined text-[13px]">savings</span>
                             +{fin.overpayment.toLocaleString()}
                           </span>
                         ) : (
-                          <span className="text-slate-400">--</span>
+                          <span className="text-slate-400 font-normal">--</span>
                         )}
                       </td>
 
@@ -1265,7 +1370,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                         ) : fin.status === 'OVERPAID' ? (
                           <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-teal-100 text-teal-900 border border-teal-300">
                             <span className="material-symbols-outlined text-[12px] text-teal-700">savings</span>
-                            OVERPAID (-KES {Math.abs(fin.balance).toLocaleString()})
+                            OVERPAID (+KES {fin.overpayment.toLocaleString()})
                           </span>
                         ) : fin.status === 'CLEARED' ? (
                           <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
@@ -1545,12 +1650,12 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                 );
               })()}
 
-              {/* Sub-Tabs: Invoices / Payments / Printable Statement */}
-              <div className="flex border-b border-slate-200 gap-2 pt-1">
+              {/* Sub-Tabs: Invoices / Payments / Credits / Printable Statement */}
+              <div className="flex border-b border-slate-200 gap-2 pt-1 overflow-x-auto">
                 <button
                   type="button"
                   onClick={() => setStatementTab('invoices')}
-                  className={`pb-2 px-3 text-xs font-bold flex items-center gap-1.5 border-b-2 transition-all cursor-pointer ${
+                  className={`pb-2 px-3 text-xs font-bold flex items-center gap-1.5 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
                     statementTab === 'invoices'
                       ? 'border-[#7a1228] text-[#7a1228]'
                       : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -1563,7 +1668,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setStatementTab('payments')}
-                  className={`pb-2 px-3 text-xs font-bold flex items-center gap-1.5 border-b-2 transition-all cursor-pointer ${
+                  className={`pb-2 px-3 text-xs font-bold flex items-center gap-1.5 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
                     statementTab === 'payments'
                       ? 'border-[#7a1228] text-[#7a1228]'
                       : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -1575,8 +1680,26 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
 
                 <button
                   type="button"
+                  onClick={() => setStatementTab('credits')}
+                  className={`pb-2 px-3 text-xs font-bold flex items-center gap-1.5 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+                    statementTab === 'credits'
+                      ? 'border-[#7a1228] text-[#7a1228]'
+                      : 'border-transparent text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[15px]">savings</span>
+                  <span>Credit Ledger ({creditsList.length})</span>
+                  {availableCreditAmount > 0 && (
+                    <span className="ml-1 px-1.5 py-0.2 rounded-full text-[9px] font-black bg-teal-100 text-teal-800 border border-teal-300">
+                      +KES {availableCreditAmount.toLocaleString()}
+                    </span>
+                  )}
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => setStatementTab('statement')}
-                  className={`pb-2 px-3 text-xs font-bold flex items-center gap-1.5 border-b-2 transition-all cursor-pointer ${
+                  className={`pb-2 px-3 text-xs font-bold flex items-center gap-1.5 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
                     statementTab === 'statement'
                       ? 'border-[#7a1228] text-[#7a1228]'
                       : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -1864,6 +1987,204 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                             <span>Download Statement PDF</span>
                           </button>
                         </div>
+                      </div>
+                    )}
+
+                    {/* 4. PREPAYMENT CREDITS & OVERPAYMENT LEDGER TAB */}
+                    {statementTab === 'credits' && (
+                      <div className="space-y-4">
+                        {creditActionFeedback && (
+                          <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-xl flex items-center justify-between font-semibold">
+                            <div className="flex items-center gap-2">
+                              <span className="material-symbols-outlined text-[18px] text-emerald-700">check_circle</span>
+                              <span>{creditActionFeedback}</span>
+                            </div>
+                            <button onClick={() => setCreditActionFeedback(null)} className="text-emerald-700 hover:text-emerald-900 cursor-pointer">
+                              <span className="material-symbols-outlined text-sm">close</span>
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Credit Summary Cards */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Total Credit Generated</span>
+                            <div className="text-base font-black font-mono text-slate-900 mt-1">
+                              KES {creditsList.reduce((sum: number, c: any) => sum + (c.status !== 'REVERSED' ? Number(c.amount) || 0 : 0), 0).toLocaleString()}
+                            </div>
+                            <span className="text-[10px] text-slate-500 mt-0.5 block">{creditsList.length} overpayment / advance record(s)</span>
+                          </div>
+
+                          <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Total Credit Applied</span>
+                            <div className="text-base font-black font-mono text-emerald-700 mt-1">
+                              KES {creditsList.reduce((sum: number, c: any) => sum + (c.status !== 'REVERSED' ? Number(c.amountUsed) || 0 : 0), 0).toLocaleString()}
+                            </div>
+                            <span className="text-[10px] text-emerald-600 mt-0.5 block">{applicationsList.length} invoice application(s)</span>
+                          </div>
+
+                          <div className="p-3.5 bg-teal-50 border border-teal-200 rounded-xl">
+                            <span className="text-[10px] font-bold text-teal-800 uppercase tracking-wider block flex items-center gap-1">
+                              <span className="material-symbols-outlined text-[14px]">savings</span>
+                              Available Credit Balance
+                            </span>
+                            <div className="text-lg font-black font-mono text-teal-900 mt-1">
+                              +KES {availableCreditAmount.toLocaleString()}
+                            </div>
+                            <span className="text-[10px] text-teal-700 font-semibold mt-0.5 block">Ready to apply to incoming fees</span>
+                          </div>
+                        </div>
+
+                        {/* Quick Offset Action Banner if student has unpaid invoices and available credit */}
+                        {availableCreditAmount > 0 && invoicesList.some(inv => (inv.balance || 0) > 0) && (
+                          <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                            <div className="flex items-center gap-2.5">
+                              <span className="material-symbols-outlined text-amber-700 text-xl">info</span>
+                              <div>
+                                <span className="font-bold text-amber-900">Unsettled Fee Invoices Found</span>
+                                <p className="text-[11px] text-amber-800">
+                                  This learner has available credit of KES {availableCreditAmount.toLocaleString()} that can offset outstanding fees.
+                                </p>
+                              </div>
+                            </div>
+                            {isBillingAuthorized && (
+                              <button
+                                type="button"
+                                disabled={isApplyingCredit}
+                                onClick={() => {
+                                  const targetInvoice = invoicesList.find(inv => (inv.balance || 0) > 0);
+                                  const availableCredit = creditsList.find((c: any) => (c.balance || 0) > 0 && c.status !== 'REVERSED');
+                                  if (targetInvoice && availableCredit) {
+                                    handleApplyCredit(availableCredit.id, targetInvoice.id);
+                                  }
+                                }}
+                                className="px-3.5 py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50 shrink-0 flex items-center gap-1"
+                              >
+                                <span className="material-symbols-outlined text-sm">price_check</span>
+                                <span>{isApplyingCredit ? 'Applying...' : 'Apply Credit to Earliest Invoice'}</span>
+                              </button>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Credits List Table */}
+                        <div className="space-y-2">
+                          <h4 className="font-bold text-xs uppercase tracking-wider text-slate-800 flex items-center gap-1">
+                            <span className="material-symbols-outlined text-sm text-[#7a1228]">account_balance_wallet</span>
+                            <span>Credit &amp; Overpayment Ledger</span>
+                          </h4>
+
+                          {creditsList.length === 0 ? (
+                            <div className="p-8 text-center text-xs text-slate-500 bg-slate-50 rounded-xl border border-dashed border-slate-300">
+                              <span className="material-symbols-outlined text-3xl text-slate-400 mb-1">savings</span>
+                              <p className="font-semibold text-slate-700">No advance credits or overpayments recorded.</p>
+                              <p className="text-[11px] text-slate-400 mt-0.5">
+                                Overpayments recorded against invoices or advance deposits are automatically tracked here.
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="border border-slate-200 rounded-xl overflow-hidden bg-white">
+                              <table className="w-full text-left text-xs font-mono">
+                                <thead className="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200">
+                                  <tr>
+                                    <th className="p-2.5">Credit ID</th>
+                                    <th className="p-2.5">Origin Receipt #</th>
+                                    <th className="p-2.5 text-right">Credit Amount</th>
+                                    <th className="p-2.5 text-right">Amount Used</th>
+                                    <th className="p-2.5 text-right font-bold text-teal-800">Remaining Balance</th>
+                                    <th className="p-2.5 text-center font-sans">Status</th>
+                                    {isBillingAuthorized && <th className="p-2.5 text-center font-sans">Action</th>}
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                  {creditsList.map((c: any, cIdx: number) => {
+                                    const canApply = (c.balance || 0) > 0 && c.status !== 'REVERSED' && invoicesList.some(inv => (inv.balance || 0) > 0);
+                                    return (
+                                      <tr key={c.id || cIdx} className="hover:bg-slate-50">
+                                        <td className="p-2.5 text-slate-700 font-bold">{c.id ? c.id.slice(0, 12) : `CR-${cIdx + 1}`}</td>
+                                        <td className="p-2.5 font-bold text-[#7a1228]">{c.originatingReceiptNumber || '--'}</td>
+                                        <td className="p-2.5 text-right font-bold text-slate-900">KES {(Number(c.amount) || 0).toLocaleString()}</td>
+                                        <td className="p-2.5 text-right text-emerald-700">KES {(Number(c.amountUsed) || 0).toLocaleString()}</td>
+                                        <td className="p-2.5 text-right font-black text-teal-800 bg-teal-50/40">
+                                          +KES {(Number(c.balance) || 0).toLocaleString()}
+                                        </td>
+                                        <td className="p-2.5 text-center font-sans">
+                                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                            c.status === 'AVAILABLE'
+                                              ? 'bg-teal-100 text-teal-900 border border-teal-300'
+                                              : c.status === 'PARTIALLY_USED'
+                                              ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                                              : c.status === 'FULLY_USED'
+                                              ? 'bg-slate-100 text-slate-600'
+                                              : 'bg-rose-100 text-rose-800'
+                                          }`}>
+                                            {c.status}
+                                          </span>
+                                        </td>
+                                        {isBillingAuthorized && (
+                                          <td className="p-2.5 text-center font-sans">
+                                            {canApply ? (
+                                              <button
+                                                type="button"
+                                                disabled={isApplyingCredit}
+                                                onClick={() => {
+                                                  const targetInvoice = invoicesList.find(inv => (inv.balance || 0) > 0);
+                                                  if (targetInvoice) {
+                                                    handleApplyCredit(c.id, targetInvoice.id);
+                                                  }
+                                                }}
+                                                className="px-2 py-1 bg-teal-700 hover:bg-teal-800 text-white rounded text-[10px] font-bold cursor-pointer transition-all disabled:opacity-50"
+                                                title="Apply this credit to unpaid invoice"
+                                              >
+                                                Apply
+                                              </button>
+                                            ) : (
+                                              <span className="text-slate-400 text-[10px]">--</span>
+                                            )}
+                                          </td>
+                                        )}
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Credit Applications Audit Trail */}
+                        {applicationsList.length > 0 && (
+                          <div className="space-y-2 pt-2">
+                            <h4 className="font-bold text-xs uppercase tracking-wider text-slate-800 flex items-center gap-1">
+                              <span className="material-symbols-outlined text-sm text-emerald-700">history</span>
+                              <span>Credit Application History (Audit Trail)</span>
+                            </h4>
+                            <div className="border border-slate-200 rounded-xl overflow-hidden bg-white">
+                              <table className="w-full text-left text-xs font-mono">
+                                <thead className="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200">
+                                  <tr>
+                                    <th className="p-2.5">Applied Date</th>
+                                    <th className="p-2.5">Credit Ref</th>
+                                    <th className="p-2.5">Target Invoice</th>
+                                    <th className="p-2.5 text-right">Amount Applied</th>
+                                    <th className="p-2.5 font-sans">Applied By</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                  {applicationsList.map((app: any, aIdx: number) => (
+                                    <tr key={app.id || aIdx} className="hover:bg-slate-50">
+                                      <td className="p-2.5 text-slate-600">{app.createdAt ? new Date(app.createdAt).toLocaleDateString() : 'Recent'}</td>
+                                      <td className="p-2.5 text-slate-700 font-bold">{app.creditId ? app.creditId.slice(0, 10) : '--'}</td>
+                                      <td className="p-2.5 font-bold text-[#7a1228]">{app.invoiceId ? app.invoiceId.slice(0, 14) : '--'}</td>
+                                      <td className="p-2.5 text-right font-black text-emerald-800">+KES {(Number(app.amountApplied) || 0).toLocaleString()}</td>
+                                      <td className="p-2.5 font-sans text-slate-600 text-[11px]">{app.appliedByUserId || 'ADMIN'}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </>

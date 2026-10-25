@@ -16,7 +16,7 @@ export const RegisterStudentSchema = z.object({
   classroomId: z.string().optional(),
   streamId: z.string().optional(),
   schoolId: z.string().optional().default('school-001'),
-  academicYearId: z.string().optional().default('year-2026'),
+  academicYearId: z.string().optional(),
   termId: z.string().optional(),
   medicalConditions: z.string().optional(),
   specialNeeds: z.string().optional(),

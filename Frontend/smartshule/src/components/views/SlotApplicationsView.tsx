@@ -283,7 +283,7 @@ export const SlotApplicationsView: React.FC<SlotApplicationsViewProps> = ({
         classId: matchedClass?.id,
         streamId: matchedClass?.streams?.[0]?.id,
         schoolId: user?.schoolId || matchedClass?.schoolId || 'school-001',
-        academicYearId: 'year-2026',
+        academicYearId: `year-${new Date().getFullYear()}`,
         county: app.county || 'Kisumu',
         subCounty: app.subCounty || 'Kisumu West',
         medicalConditions: app.medicalConditions || undefined,

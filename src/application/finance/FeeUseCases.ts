@@ -35,7 +35,9 @@ import {
   OtherIncome,
   ExpenseCategory,
   ExpenseStatus,
-  IncomeSource
+  IncomeSource,
+  StudentFeeCredit,
+  FeeCreditApplication
 } from '../../core/domain/finance/Fee';
 import { FeeBannerConfig } from '../../core/domain/finance/FeeBannerConfig';
 import { IStudentSponsorshipRepository } from '../../core/ports/repositories/IStudentSponsorshipRepository';
@@ -128,6 +130,18 @@ export interface CreateFeeStructureDTO {
   title: string;
   items: Omit<FeeItem, 'id'>[];
   dueDate: string;
+  termPercentages?: any;
+}
+
+export interface UpdateFeeStructureDTO {
+  schoolId?: string;
+  academicYearId?: string;
+  termId?: string;
+  gradeLevel?: CBCGradeLevel;
+  title?: string;
+  items?: (Omit<FeeItem, 'id'> & { id?: string })[];
+  dueDate?: string;
+  termPercentages?: any;
 }
 
 export interface GenerateInvoicesDTO {
@@ -252,9 +266,12 @@ export class FeeUseCases {
       }
     }
     const lower = termId.toLowerCase();
-    if (lower.includes('term-3') || lower.includes('term 3') || lower.includes('t3') || lower.endsWith('3')) return 3;
-    if (lower.includes('term-2') || lower.includes('term 2') || lower.includes('t2') || lower.endsWith('2')) return 2;
-    if (lower.includes('term-1') || lower.includes('term 1') || lower.includes('t1') || lower.endsWith('1')) return 1;
+    if (/(?:^|[^0-9])(?:term[_\s-]?|t)3(?:[^0-9]|$)/i.test(lower) || /[-_]3$/.test(lower) || lower === '3' || lower.includes('three')) return 3;
+    if (/(?:^|[^0-9])(?:term[_\s-]?|t)2(?:[^0-9]|$)/i.test(lower) || /[-_]2$/.test(lower) || lower === '2' || lower.includes('two')) return 2;
+    if (/(?:^|[^0-9])(?:term[_\s-]?|t)1(?:[^0-9]|$)/i.test(lower) || /[-_]1$/.test(lower) || lower === '1' || lower.includes('one')) return 1;
+    if (lower.endsWith('3')) return 3;
+    if (lower.endsWith('2')) return 2;
+    if (lower.endsWith('1')) return 1;
     return 1;
   }
 
@@ -353,6 +370,39 @@ export class FeeUseCases {
 
     await this.feeRepository.saveFeeStructure(feeStructure);
     return feeStructure.toJSON();
+  }
+
+  public async updateFeeStructure(id: string, dto: UpdateFeeStructureDTO, requestingUser?: UserContext) {
+    const existing = await this.feeRepository.findFeeStructureById(id);
+    if (!existing) throw new NotFoundError('FeeStructure', id);
+
+    let items = existing.items;
+    if (dto.items && Array.isArray(dto.items)) {
+      items = dto.items.map(item => ({
+        ...item,
+        amount: Number(item.amount) || 0,
+        id: item.id || IdGenerator.generate()
+      }));
+    }
+
+    const updated = FeeStructure.create(
+      {
+        schoolId: dto.schoolId || existing.schoolId,
+        academicYearId: dto.academicYearId || existing.academicYearId,
+        termId: dto.termId !== undefined ? dto.termId : existing.termId,
+        gradeLevel: dto.gradeLevel || existing.gradeLevel,
+        title: dto.title || existing.title,
+        items,
+        dueDate: dto.dueDate || existing.dueDate,
+        termPercentages: dto.termPercentages || existing.props.termPercentages
+      },
+      existing.id,
+      existing.createdAt,
+      new Date()
+    );
+
+    await this.feeRepository.updateFeeStructure(updated);
+    return updated.toJSON();
   }
 
   public getGraceSeedsTermItemsForGrade(gradeLevel: CBCGradeLevel, termNumber: number): FeeItem[] {
@@ -483,7 +533,14 @@ export class FeeUseCases {
 
   public async initializeGraceSeedsFeeStructures(schoolId?: string, academicYearId?: string) {
     const targetSchoolId = schoolId || 'school-001';
-    const targetYearId = academicYearId || 'year-2026';
+    let targetYearId = academicYearId;
+    if (!targetYearId && this.academicRepository) {
+      const curYear = await this.academicRepository.findCurrentYear(targetSchoolId);
+      targetYearId = curYear?.id;
+    }
+    if (!targetYearId) {
+      targetYearId = `year-${new Date().getFullYear()}`;
+    }
     const dueDate = `${new Date().getFullYear()}-12-31`;
 
     const grades: { grade: CBCGradeLevel; label: string }[] = [
@@ -498,11 +555,19 @@ export class FeeUseCases {
       { grade: CBCGradeLevel.GRADE_6, label: 'Grade 6' },
     ];
 
-    const terms = [
-      { termId: 'term-2026-t1', termNumber: 1, name: 'Term 1' },
-      { termId: 'term-2026-t2', termNumber: 2, name: 'Term 2' },
-      { termId: 'term-2026-t3', termNumber: 3, name: 'Term 3' },
-    ];
+    let dbTerms: any[] = [];
+    if (this.academicRepository) {
+      try {
+        dbTerms = await this.academicRepository.findTermsByYear(targetYearId);
+      } catch {}
+    }
+    const terms = (dbTerms && dbTerms.length > 0)
+      ? dbTerms.map(t => ({ termId: t.id, termNumber: t.termNumber, name: t.name }))
+      : [
+          { termId: `term-${targetYearId}-t1`, termNumber: 1, name: 'Term 1' },
+          { termId: `term-${targetYearId}-t2`, termNumber: 2, name: 'Term 2' },
+          { termId: `term-${targetYearId}-t3`, termNumber: 3, name: 'Term 3' },
+        ];
 
     const results: any[] = [];
 
@@ -790,15 +855,19 @@ export class FeeUseCases {
 
     if (!academicYearId && this.academicRepository) {
       const currentYear = await this.academicRepository.findCurrentYear(schoolId);
-      academicYearId = currentYear?.id || 'year-2026';
+      academicYearId = currentYear?.id;
     }
-    if (!academicYearId) academicYearId = 'year-2026';
+    if (!academicYearId) {
+      academicYearId = `year-${new Date().getFullYear()}`;
+    }
 
     if (!termId && this.academicRepository) {
       const currentTerm = await this.academicRepository.findCurrentTerm(academicYearId);
       termId = currentTerm?.id;
     }
-    if (!termId) termId = 'term-2026-t1';
+    if (!termId) {
+      termId = `term-${academicYearId}-t1`;
+    }
 
     const filter: any = { schoolId };
     if (dto.gradeLevel) filter.gradeLevel = dto.gradeLevel;
@@ -835,7 +904,7 @@ export class FeeUseCases {
         feeStructure = FeeStructure.create(
           {
             schoolId,
-            academicYearId: academicYearId || 'year-2026',
+            academicYearId: academicYearId || `year-${new Date().getFullYear()}`,
             termId,
             gradeLevel: student.gradeLevel,
             title: `${gradeName} CBC Term ${termNum} Fee Schedule`,
@@ -1008,6 +1077,20 @@ export class FeeUseCases {
       } else {
         txRef = `PAY-${Date.now().toString().slice(-6)}`;
       }
+    } else {
+      // Validate duplicate reference before proceeding
+      const existingPayment = await this.feeRepository.findPaymentByReference(txRef);
+      if (existingPayment) {
+        if (existingPayment.status === PaymentStatus.COMPLETED) {
+          throw new ConflictError(
+            `A payment record with transaction reference '${txRef}' has already been registered (Receipt #${existingPayment.receiptNumber}, Amount: KES ${existingPayment.amount.toLocaleString()}).`
+          );
+        } else if (existingPayment.status === PaymentStatus.PENDING) {
+          throw new ConflictError(
+            `A forwarded payment notice with reference '${txRef}' is currently pending verification in the Forwarded Payments queue. Please review and approve it from the verification queue.`
+          );
+        }
+      }
     }
 
     // Build rich notes combining bank or cash details
@@ -1066,27 +1149,51 @@ export class FeeUseCases {
       }
     }
 
-    // If remainingToAllocate is still > 0 (advance overpayment beyond all invoices),
-    // record the remaining credit on the target invoice
-    if (remainingToAllocate > 0) {
-      invoice.recordPayment(remainingToAllocate);
-      await this.feeRepository.updateInvoice(invoice);
-    }
-
     await this.feeRepository.savePayment(payment);
+
+    // If remainingToAllocate is still > 0 (advance overpayment beyond all invoices),
+    // record as StudentFeeCredit in traceable credit ledger
+    let feeCredit: StudentFeeCredit | null = null;
+    if (remainingToAllocate > 0) {
+      feeCredit = StudentFeeCredit.create(
+        {
+          schoolId: invoice.schoolId,
+          studentId: invoice.studentId,
+          originatingPaymentId: payment.id,
+          originatingReceiptNumber: payment.receiptNumber,
+          academicYearId: invoice.academicYearId,
+          termId: invoice.termId,
+          amount: remainingToAllocate,
+          amountUsed: 0,
+          balance: remainingToAllocate,
+          status: 'AVAILABLE',
+          notes: `Advance overpayment of KES ${remainingToAllocate.toLocaleString()} on receipt #${receiptNumber} (Payment Ref: ${txRef})`
+        },
+        IdGenerator.generate()
+      );
+      await this.feeRepository.saveCredit(feeCredit);
+    }
 
     // Compute student's true overall remaining balance across all active invoices
     const allStudentInvoices = await this.feeRepository.findInvoices({ studentId: invoice.studentId });
     const activeStudentInvoices = allStudentInvoices.filter(
       i => (i.status as any) !== 'CARRIED_FORWARD' && (i.status as any) !== InvoiceStatus.CARRIED_FORWARD
     );
-    const totalRemainingBalance = activeStudentInvoices.reduce((sum, i) => sum + (Number(i.balance) || 0), 0);
-    const totalBilledAcrossAll = activeStudentInvoices.reduce((sum, i) => sum + (Number(i.amountPayable) || Number(i.amountBilled) || 0), 0);
-    const totalPaidAcrossAll = activeStudentInvoices.reduce((sum, i) => sum + (Number(i.amountPaid) || 0), 0);
-    const overpaymentAmount = totalPaidAcrossAll > totalBilledAcrossAll ? Math.round((totalPaidAcrossAll - totalBilledAcrossAll) * 100) / 100 : 0;
+    const totalRemainingBalance = Math.round(
+      activeStudentInvoices.reduce((sum, i) => sum + (Number(i.balance) || 0), 0) * 100
+    ) / 100;
+
+    // Retrieve active available credits
+    const studentCredits = await this.feeRepository.findCredits({ studentId: invoice.studentId });
+    const totalAvailableCredit = Math.round(
+      studentCredits
+        .filter(c => c.status === 'AVAILABLE' || c.status === 'PARTIALLY_USED')
+        .reduce((sum, c) => sum + (Number(c.balance) || 0), 0) * 100
+    ) / 100;
+
     const studentTotalBalance = totalRemainingBalance > 0
-      ? Math.round(totalRemainingBalance * 100) / 100
-      : (overpaymentAmount > 0 ? -overpaymentAmount : 0);
+      ? totalRemainingBalance
+      : (totalAvailableCredit > 0 ? -totalAvailableCredit : 0);
 
     // Generate official receipt and issue to guardian via Email, WhatsApp, and SMS
     let receiptResult: any = null;
@@ -1107,8 +1214,8 @@ export class FeeUseCases {
       payment: payment.toJSON(),
       updatedInvoice: invoice.toJSON(),
       studentTotalBalance,
-      overpaymentAmount,
-      creditBalance: overpaymentAmount,
+      overpaymentAmount: totalAvailableCredit,
+      creditBalance: totalAvailableCredit,
       hasArrears: studentTotalBalance > 0,
       receipt: receiptResult?.receipt,
       delivery: receiptResult?.delivery
@@ -1393,6 +1500,76 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
     return { receipt };
   }
 
+  // 3.1 Auditable Payment Reversal / Refund
+  public async reversePayment(paymentId: string, reason: string, requestingUser?: UserContext) {
+    if (requestingUser) {
+      const allowedRoles = [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.BURSAR, UserRole.ACCOUNTANT, UserRole.SCHOOL_ADMIN];
+      if (!allowedRoles.includes(requestingUser.role as UserRole)) {
+        throw new ForbiddenError('Access denied: Only Finance Administrators and Bursars can reverse payment transactions.');
+      }
+    }
+
+    if (!reason || reason.trim().length < 3) {
+      throw new ValidationError('A meaningful reason for transaction reversal is required (minimum 3 characters).');
+    }
+
+    const payment = await this.feeRepository.findPaymentById(paymentId);
+    if (!payment) {
+      throw new NotFoundError('Payment', paymentId);
+    }
+
+    if (payment.status === PaymentStatus.REVERSED) {
+      throw new ConflictError(`Payment receipt ${payment.receiptNumber} has already been reversed.`);
+    }
+
+    // Check if an overpayment credit was generated by this payment
+    const studentCredits = await this.feeRepository.findCredits({ studentId: payment.studentId });
+    const linkedCredits = studentCredits.filter(c => c.originatingPaymentId === payment.id && c.status !== 'REVERSED');
+    let reversedCreditAmount = 0;
+    for (const credit of linkedCredits) {
+      if (credit.amountUsed > 0) {
+        throw new ValidationError(
+          `Cannot reverse payment receipt ${payment.receiptNumber}. An overpayment credit of KES ${credit.amount.toLocaleString()} was generated from this payment, and KES ${credit.amountUsed.toLocaleString()} has already been applied to student invoices. Please reverse the applied fee credit before reversing this payment.`
+        );
+      }
+      reversedCreditAmount += credit.amount;
+      credit.reverse();
+      await this.feeRepository.updateCredit(credit);
+    }
+
+    // 1. Roll back the payment amount from the linked invoice
+    let invoice = payment.invoiceId ? await this.feeRepository.findInvoiceById(payment.invoiceId) : null;
+    if (!invoice) {
+      const studentInvoices = await this.feeRepository.findInvoices({ studentId: payment.studentId });
+      if (studentInvoices.length > 0) {
+        invoice = studentInvoices[0];
+      }
+    }
+
+    if (invoice) {
+      const amountToReverseFromInvoice = Math.max(0, payment.amount - reversedCreditAmount);
+      if (amountToReverseFromInvoice > 0) {
+        invoice.reversePayment(amountToReverseFromInvoice);
+        await this.feeRepository.updateInvoice(invoice);
+      }
+    }
+
+    // 2. Mark payment as REVERSED and append audit notes
+    payment.setStatus(PaymentStatus.REVERSED);
+    const existingNotes = payment.notes || '';
+    const reversalNote = `[REVERSED on ${new Date().toISOString()} by ${requestingUser?.userId || 'ADMIN'} | Reason: ${reason.trim()}]`;
+    payment.setNotes(existingNotes ? `${existingNotes} | ${reversalNote}` : reversalNote);
+
+    await this.feeRepository.updatePayment(payment);
+
+    return {
+      success: true,
+      message: `Payment receipt ${payment.receiptNumber} of KES ${payment.amount.toLocaleString()} was successfully reversed.`,
+      payment: payment.toJSON(),
+      updatedInvoiceBalance: invoice ? invoice.balance : null
+    };
+  }
+
   // 4. KCB Buni M-Pesa Express STK Push
   public async initiateKcbBuniStkPush(dto: KcbBuniStkDTO) {
     let invoice = await this.feeRepository.findInvoiceById(dto.invoiceId);
@@ -1506,10 +1683,9 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
         }
       }
 
-      // 4. Fallback: any invoice with balance > 0
+      // 4. Do not credit a random student's invoice when identity is unknown
       if (!invoice) {
-        const allInvoices = await this.feeRepository.findInvoices({});
-        invoice = allInvoices.find(i => i.balance > 0) || allInvoices[0] || null;
+        console.warn(`[KCB Buni Webhook] No student or invoice match found for payment from ${callbackData.phoneNumber || 'unknown'}. Recording as unallocated transaction.`);
       }
 
       const paidAmount = (callbackData.amount !== undefined && callbackData.amount > 0)
@@ -1563,8 +1739,24 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
         }
 
         if (remainingToApply > 0) {
-          invoice.recordPayment(remainingToApply);
-          await this.feeRepository.updateInvoice(invoice);
+          const feeCredit = StudentFeeCredit.create(
+            {
+              schoolId: invoice.schoolId,
+              studentId: invoice.studentId,
+              originatingPaymentId: payment.id,
+              originatingReceiptNumber: payment.receiptNumber,
+              academicYearId: invoice.academicYearId,
+              termId: invoice.termId,
+              amount: remainingToApply,
+              amountUsed: 0,
+              balance: remainingToApply,
+              status: 'AVAILABLE',
+              notes: `KCB Buni M-Pesa Advance Overpayment Credit. Ref: ${transactionCode}`
+            },
+            IdGenerator.generate()
+          );
+          await this.feeRepository.saveCredit(feeCredit);
+          console.log(`[KCB Buni Webhook] Created overpayment credit of KES ${remainingToApply} for student ${invoice.studentId}`);
         }
         console.log(`[KCB Buni Webhook] Updated invoice ${invoice.invoiceNumber}. New balance: KES ${invoice.balance}`);
       }
@@ -2035,16 +2227,16 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
 
       if (!academicYearName && inv.academicYearId) {
         const m = String(inv.academicYearId).match(/(20\d{2})/);
-        academicYearName = m ? m[1] : '2026';
+        academicYearName = m ? m[1] : new Date().getFullYear().toString();
       }
 
       if (!termName && inv.termId) {
         const tid = String(inv.termId).toLowerCase();
-        if (tid.includes('t1') || tid.includes('term1') || tid.includes('term-1') || tid.includes('one')) {
+        if (/(?:^|[^0-9])(?:term[_\s-]?|t)1(?:[^0-9]|$)/i.test(tid) || /[-_]1$/.test(tid) || tid.includes('one')) {
           termName = 'Term 1';
-        } else if (tid.includes('t2') || tid.includes('term2') || tid.includes('term-2') || tid.includes('two')) {
+        } else if (/(?:^|[^0-9])(?:term[_\s-]?|t)2(?:[^0-9]|$)/i.test(tid) || /[-_]2$/.test(tid) || tid.includes('two')) {
           termName = 'Term 2';
-        } else if (tid.includes('t3') || tid.includes('term3') || tid.includes('term-3') || tid.includes('three')) {
+        } else if (/(?:^|[^0-9])(?:term[_\s-]?|t)3(?:[^0-9]|$)/i.test(tid) || /[-_]3$/.test(tid) || tid.includes('three')) {
           termName = 'Term 3';
         } else if (tid === 'all' || tid === 'annual') {
           termName = 'Whole Year';
@@ -2056,8 +2248,8 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
         studentName: student ? student.fullName : 'Unknown Learner',
         admissionNumber: student ? student.admissionNumber : 'N/A',
         gradeLevel: student ? student.gradeLevel : 'N/A',
-        academicYearName: academicYearName || '2026',
-        academicYear: academicYearName || '2026',
+        academicYearName: academicYearName || new Date().getFullYear().toString(),
+        academicYear: academicYearName || new Date().getFullYear().toString(),
         termName: termName || (inv.termId === 'ALL' ? 'Annual' : undefined)
       });
     }
@@ -2153,16 +2345,16 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
 
         if (!academicYearName && i.academicYearId) {
           const m = String(i.academicYearId).match(/(20\d{2})/);
-          academicYearName = m ? m[1] : '2026';
+          academicYearName = m ? m[1] : new Date().getFullYear().toString();
         }
 
         if (!termName && i.termId) {
           const tid = String(i.termId).toLowerCase();
-          if (tid.includes('t1') || tid.includes('term1') || tid.includes('term-1') || tid.includes('one')) {
+          if (/(?:^|[^0-9])(?:term[_\s-]?|t)1(?:[^0-9]|$)/i.test(tid) || /[-_]1$/.test(tid) || tid.includes('one')) {
             termName = 'Term 1';
-          } else if (tid.includes('t2') || tid.includes('term2') || tid.includes('term-2') || tid.includes('two')) {
+          } else if (/(?:^|[^0-9])(?:term[_\s-]?|t)2(?:[^0-9]|$)/i.test(tid) || /[-_]2$/.test(tid) || tid.includes('two')) {
             termName = 'Term 2';
-          } else if (tid.includes('t3') || tid.includes('term3') || tid.includes('term-3') || tid.includes('three')) {
+          } else if (/(?:^|[^0-9])(?:term[_\s-]?|t)3(?:[^0-9]|$)/i.test(tid) || /[-_]3$/.test(tid) || tid.includes('three')) {
             termName = 'Term 3';
           } else if (tid === 'all' || tid === 'annual') {
             termName = 'Whole Year';
@@ -2171,8 +2363,8 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
 
         return {
           ...json,
-          academicYearName: academicYearName || '2026',
-          academicYear: academicYearName || '2026',
+          academicYearName: academicYearName || new Date().getFullYear().toString(),
+          academicYear: academicYearName || new Date().getFullYear().toString(),
           termName: termName || (i.termId === 'ALL' ? 'Annual' : undefined)
         };
       })
@@ -2188,8 +2380,15 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
       } catch {}
     }
 
+    const credits = await this.feeRepository.findCredits({ studentId });
+    const creditApplications = await this.feeRepository.findCreditApplications({ studentId });
+    const availableCredit = credits
+      .filter(c => c.status === 'AVAILABLE' || c.status === 'PARTIALLY_USED')
+      .reduce((sum, c) => sum + (Number(c.balance) || 0), 0);
+
     const overpaymentAmount = !sponsorshipJson && totalPaid > totalBilled ? Math.round((totalPaid - totalBilled) * 100) / 100 : 0;
-    const effectiveBalance = sponsorshipJson ? 0 : (currentBalance > 0 ? currentBalance : (overpaymentAmount > 0 ? -overpaymentAmount : 0));
+    const totalOverpaid = Math.round(Math.max(overpaymentAmount, availableCredit) * 100) / 100;
+    const effectiveBalance = sponsorshipJson ? 0 : (currentBalance > 0 ? currentBalance : (totalOverpaid > 0 ? -totalOverpaid : 0));
 
     return {
       student: {
@@ -2205,14 +2404,472 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
         currentBalance: effectiveBalance,
         arrearsBalance: sponsorshipJson ? 0 : arrearsBalance,
         hasArrears: sponsorshipJson ? false : currentBalance > 0,
-        overpaymentAmount,
-        creditBalance: overpaymentAmount,
-        status: sponsorshipJson ? 'CHARGE_EXEMPT' : overpaymentAmount > 0 ? 'OVERPAID' : currentBalance <= 0 ? 'CLEARED' : 'PENDING_BALANCE',
-        statusLabel: sponsorshipJson ? '100% Scholarship (Charge Exempt)' : overpaymentAmount > 0 ? `Advance Credit (+KES ${overpaymentAmount.toLocaleString()})` : currentBalance <= 0 ? 'Cleared' : 'Pending Payment',
+        overpaymentAmount: totalOverpaid,
+        creditBalance: totalOverpaid,
+        availableCredit: Math.round(availableCredit * 100) / 100,
+        status: sponsorshipJson ? 'CHARGE_EXEMPT' : totalOverpaid > 0 ? 'OVERPAID' : currentBalance <= 0 ? 'CLEARED' : 'PENDING_BALANCE',
+        statusLabel: sponsorshipJson ? '100% Scholarship (Charge Exempt)' : totalOverpaid > 0 ? `Advance Credit (+KES ${totalOverpaid.toLocaleString()})` : currentBalance <= 0 ? 'Cleared' : 'Pending Payment',
         isSponsored: !!sponsorshipJson
       },
       invoices: enrichedInvoices,
-      payments: payments.map(p => p.toJSON())
+      payments: payments.map(p => p.toJSON()),
+      credits: credits.map(c => c.toJSON()),
+      creditApplications: creditApplications.map(a => a.toJSON())
+    };
+  }
+
+  // 7b. Apply Traceable Fee Credit / Overpayment to Unpaid Invoice
+  public async applyCreditToInvoice(
+    dto: { creditId?: string; studentId?: string; invoiceId: string; amount?: number },
+    requestingUser?: any
+  ): Promise<{
+    success: boolean;
+    message: string;
+    application: any;
+    updatedCredit: any;
+    updatedInvoice: any;
+  }> {
+    if (requestingUser) {
+      const allowedRoles = [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.BURSAR, UserRole.ACCOUNTANT];
+      if (!allowedRoles.includes(requestingUser.role)) {
+        throw new ForbiddenError('Only finance administrators, bursars, or school heads can apply fee credits to invoices.');
+      }
+    }
+
+    const invoice = await this.feeRepository.findInvoiceById(dto.invoiceId);
+    if (!invoice) {
+      throw new NotFoundError('Invoice', dto.invoiceId);
+    }
+
+    if (invoice.balance <= 0) {
+      throw new ValidationError(`Invoice #${invoice.invoiceNumber} has zero outstanding balance (already fully settled).`);
+    }
+
+    let credit: StudentFeeCredit | null = null;
+    if (dto.creditId) {
+      credit = await this.feeRepository.findCreditById(dto.creditId);
+      if (!credit) {
+        throw new NotFoundError('StudentFeeCredit', dto.creditId);
+      }
+      if (credit.studentId !== invoice.studentId) {
+        throw new ValidationError('The specified credit does not belong to the student on this invoice.');
+      }
+      if (credit.balance <= 0 || credit.status === 'FULLY_USED' || credit.status === 'REVERSED') {
+        throw new ValidationError(`Credit record #${credit.id} has no available balance to apply.`);
+      }
+    } else {
+      // Find available credits for this student
+      const studentCredits = await this.feeRepository.findCredits({
+        studentId: invoice.studentId,
+        status: 'AVAILABLE'
+      });
+      const partialCredits = await this.feeRepository.findCredits({
+        studentId: invoice.studentId,
+        status: 'PARTIALLY_USED'
+      });
+      const availableCredits = [...studentCredits, ...partialCredits].filter(c => c.balance > 0);
+      if (availableCredits.length === 0) {
+        throw new ValidationError('No available fee credits or overpayments found for this student.');
+      }
+      credit = availableCredits[0]; // use earliest available
+    }
+
+    const requestedAmount = dto.amount !== undefined ? Number(dto.amount) : credit.balance;
+    if (isNaN(requestedAmount) || requestedAmount <= 0) {
+      throw new ValidationError('Amount to apply must be a positive number.');
+    }
+
+    const maxApplicable = Math.min(requestedAmount, credit.balance, invoice.balance);
+    if (maxApplicable <= 0) {
+      throw new ValidationError('No valid credit amount can be applied to this invoice.');
+    }
+
+    // Apply to credit
+    credit.useCredit(maxApplicable);
+    await this.feeRepository.updateCredit(credit);
+
+    // Apply to invoice
+    invoice.applyCredit(maxApplicable);
+    await this.feeRepository.updateInvoice(invoice);
+
+    // Record application audit log
+    const application = FeeCreditApplication.create(
+      {
+        creditId: credit.id,
+        studentId: invoice.studentId,
+        invoiceId: invoice.id,
+        academicYearId: invoice.academicYearId,
+        termId: invoice.termId,
+        amountApplied: maxApplicable,
+        appliedByUserId: requestingUser?.userId || 'SYSTEM'
+      },
+      IdGenerator.generate()
+    );
+    await this.feeRepository.saveCreditApplication(application);
+
+    return {
+      success: true,
+      message: `Successfully applied KES ${maxApplicable.toLocaleString()} credit to invoice #${invoice.invoiceNumber}. New invoice balance: KES ${invoice.balance.toLocaleString()}. Remaining credit: KES ${credit.balance.toLocaleString()}.`,
+      application: application.toJSON(),
+      updatedCredit: credit.toJSON(),
+      updatedInvoice: invoice.toJSON()
+    };
+  }
+
+  // 7c. Retrieve Student Credit Ledger and Application History
+  public async getStudentCredits(studentId: string, requestingUser?: UserContext) {
+    if (requestingUser?.role === UserRole.GUARDIAN || requestingUser?.role === UserRole.PARENT) {
+      const childIds = await this.getLinkedStudentIdsForUser(requestingUser.userId);
+      if (!childIds.includes(studentId)) {
+        throw new ForbiddenError('Access denied: You are only authorized to view credits for your linked children.');
+      }
+    }
+
+    const credits = await this.feeRepository.findCredits({ studentId });
+    const applications = await this.feeRepository.findCreditApplications({ studentId });
+
+    const totalCredit = credits.reduce((sum, c) => sum + (c.status !== 'REVERSED' ? Number(c.amount) || 0 : 0), 0);
+    const totalUsed = credits.reduce((sum, c) => sum + (c.status !== 'REVERSED' ? Number(c.amountUsed) || 0 : 0), 0);
+    const availableBalance = credits.reduce((sum, c) => sum + (c.status === 'AVAILABLE' || c.status === 'PARTIALLY_USED' ? Number(c.balance) || 0 : 0), 0);
+
+    return {
+      studentId,
+      totalCredit: Math.round(totalCredit * 100) / 100,
+      totalUsed: Math.round(totalUsed * 100) / 100,
+      availableBalance: Math.round(availableBalance * 100) / 100,
+      credits: credits.map(c => c.toJSON()),
+      applications: applications.map(a => a.toJSON())
+    };
+  }
+
+  // 7d. Unified Student Fee Accounts (Term-isolated billing, prior arrears, credits, and balances)
+  public async getStudentFeeAccounts(criteria: {
+    schoolId?: string;
+    termId?: string;
+    academicYearId?: string;
+    gradeLevel?: string;
+    requestingUser?: UserContext;
+  }) {
+    // 1. Resolve Academic Year and Term
+    let targetYearId = criteria.academicYearId;
+    let targetTermId = criteria.termId;
+    let activeYear: any = null;
+    let activeTerm: any = null;
+
+    if (this.academicRepository) {
+      try {
+        activeYear = await this.academicRepository.findCurrentYear();
+        if (activeYear) {
+          if (!targetYearId) {
+            targetYearId = activeYear.id;
+          }
+          const terms = await this.academicRepository.findTermsByYear(activeYear.id);
+          activeTerm = terms.find(t => t.isCurrent) || terms[0];
+        }
+      } catch {}
+    }
+
+    if (!targetYearId) {
+      targetYearId = activeYear ? activeYear.id : `year-${new Date().getFullYear()}`;
+    }
+    if (!targetTermId) {
+      targetTermId = activeTerm ? activeTerm.id : `term-${targetYearId}-t1`;
+    }
+
+    // Map 'term-1', 'term-2', 'term-3' alias to actual term id or term number
+    let targetTermNum: number | null = null;
+    if (targetTermId === 'term-1' || targetTermId === '1') {
+      targetTermNum = 1;
+    } else if (targetTermId === 'term-2' || targetTermId === '2') {
+      targetTermNum = 2;
+    } else if (targetTermId === 'term-3' || targetTermId === '3') {
+      targetTermNum = 3;
+    } else if (targetTermId === 'ALL') {
+      targetTermNum = null;
+    } else {
+      targetTermNum = await this.resolveTermNumber(targetTermId);
+    }
+
+    // 2. Fetch Students
+    const isParent = criteria.requestingUser?.role === UserRole.PARENT || criteria.requestingUser?.role === UserRole.GUARDIAN;
+    let students: Student[] = [];
+    if (isParent && criteria.requestingUser) {
+      const childIds = await this.getLinkedStudentIdsForUser(criteria.requestingUser.userId);
+      if (childIds.length === 0) return { accounts: [], summary: {} };
+      students = await this.studentRepository.findByIds(childIds);
+    } else {
+      students = await this.studentRepository.findAll({
+        schoolId: criteria.schoolId,
+        gradeLevel: criteria.gradeLevel as any
+      });
+    }
+
+    // 3. Fetch Fee Structures
+    let feeStructures: FeeStructure[] = [];
+    try {
+      feeStructures = await this.feeRepository.findAllFeeStructures();
+    } catch {}
+
+    // 4. Fetch Invoices and Credits
+    const studentIds = students.map(s => s.id);
+    const invoices = await this.feeRepository.findInvoices({
+      studentIds: studentIds.length > 1 ? studentIds : undefined,
+      studentId: studentIds.length === 1 ? studentIds[0] : undefined
+    });
+
+    const studentInvoicesMap = new Map<string, StudentInvoice[]>();
+    for (const inv of invoices) {
+      const list = studentInvoicesMap.get(inv.studentId) || [];
+      list.push(inv);
+      studentInvoicesMap.set(inv.studentId, list);
+    }
+
+    // 5. Build Student Accounts
+    const accounts = [];
+    let sumBilled = 0;
+    let sumPriorArrears = 0;
+    let sumTotalDue = 0;
+    let sumPaid = 0;
+    let sumOutstandingBalance = 0;
+    let sumOverpayments = 0;
+    let clearedCount = 0;
+    let partialCount = 0;
+    let arrearsCount = 0;
+    let sponsoredCount = 0;
+
+    for (const student of students) {
+      // Check sponsorship
+      let isSponsored = false;
+      if (this.studentSponsorshipRepository) {
+        try {
+          const sp = await this.studentSponsorshipRepository.findByStudentId(student.id);
+          if (sp && sp.sponsorshipStatus === 'ACTIVE') {
+            isSponsored = true;
+          }
+        } catch {}
+      }
+
+      if (isSponsored) {
+        sponsoredCount++;
+        accounts.push({
+          studentId: student.id,
+          admissionNumber: student.admissionNumber,
+          studentName: student.fullName,
+          gradeLevel: student.gradeLevel,
+          streamName: (student as any).streamName || (student as any).streamId,
+          isSponsored: true,
+          academicYearId: targetYearId,
+          termId: targetTermId,
+          billedFees: 0,
+          priorArrears: 0,
+          totalDue: 0,
+          paidFees: 0,
+          balance: 0,
+          arrearsDue: 0,
+          overpaymentCredit: 0,
+          status: 'SPONSORED'
+        });
+        continue;
+      }
+
+      const stInvoices = studentInvoicesMap.get(student.id) || [];
+      // Fetch available credits
+      const credits = await this.feeRepository.findCredits({ studentId: student.id });
+      const availableCredits = credits
+        .filter(c => c.status === 'AVAILABLE' || c.status === 'PARTIALLY_USED')
+        .reduce((sum, c) => sum + (Number(c.balance) || 0), 0);
+
+      // Helper for accurate term matching without cross-matching years or numbers
+      const termMatches = (termIdToCheck?: string): boolean => {
+        if (!termIdToCheck) return false;
+        if (termIdToCheck === targetTermId) return true;
+        if (targetTermId === 'ALL') return true;
+
+        const lowerToCheck = termIdToCheck.toLowerCase();
+        const lowerTarget = String(targetTermId).toLowerCase();
+
+        // If both contain 4-digit years (e.g. 2026), ensure the years match
+        const checkYear = lowerToCheck.match(/20\d\d/)?.[0];
+        const targetYear = lowerTarget.match(/20\d\d/)?.[0];
+        if (checkYear && targetYear && checkYear !== targetYear) {
+          return false;
+        }
+
+        if (targetTermNum !== null) {
+          const numPattern = new RegExp(`(?:^|[^0-9])(?:term[_\s-]?|t)${targetTermNum}(?:[^0-9]|$)`, 'i');
+          const endPattern = new RegExp(`[-_]${targetTermNum}$`);
+          return numPattern.test(lowerToCheck) || endPattern.test(lowerToCheck) || lowerToCheck === String(targetTermNum);
+        }
+        return false;
+      };
+
+      // Separate current term invoice vs prior invoices
+      let currentTermInv: StudentInvoice | null = null;
+      const priorInvoices: StudentInvoice[] = [];
+
+      for (const inv of stInvoices) {
+        if ((inv.status as any) === 'CARRIED_FORWARD' || (inv.status as any) === InvoiceStatus.CARRIED_FORWARD) {
+          continue;
+        }
+
+        const isCurrentMatch = termMatches(inv.termId);
+        const isManualArrear = inv.feeStructureId === 'MANUAL_ARREARS' || inv.invoiceNumber.includes('ARR');
+
+        if (isCurrentMatch && !isManualArrear && !currentTermInv) {
+          currentTermInv = inv;
+        } else {
+          priorInvoices.push(inv);
+        }
+      }
+
+      // 1. Current Term Billed Fees (Current term only, never arrears)
+      let billedFees = 0;
+      let cfArrearsFromInvoice = 0;
+
+      if (currentTermInv) {
+        if (Array.isArray(currentTermInv.items) && currentTermInv.items.length > 0) {
+          for (const it of currentTermInv.items) {
+            const amt = Number(it.amount) || 0;
+            const itName = (it.name || '').toLowerCase();
+            const isArrearItem = itName.includes('arrear') || itName.includes('carried forward') || itName.includes('previous balance');
+            if (isArrearItem) {
+              cfArrearsFromInvoice += amt;
+            } else {
+              billedFees += amt;
+            }
+          }
+        } else {
+          billedFees = Number(currentTermInv.amountPayable) || Number(currentTermInv.amountBilled) || 0;
+        }
+      } else {
+        // Fallback to Fee Structure for this student's grade and target term
+        const sGrade = (student.gradeLevel || '').toUpperCase();
+        const matchFs = feeStructures.find(fs => {
+          const fsGrade = (fs.gradeLevel || '').toUpperCase();
+          const gradeMatch = fsGrade === sGrade || fsGrade.replace(/_/g, ' ') === sGrade.replace(/_/g, ' ');
+          if (!gradeMatch) return false;
+          return termMatches(fs.termId);
+        }) || feeStructures.find(fs => {
+          const fsGrade = (fs.gradeLevel || '').toUpperCase();
+          return fsGrade === sGrade || fsGrade.replace(/_/g, ' ') === sGrade.replace(/_/g, ' ');
+        });
+
+        if (matchFs) {
+          const isTermStructure = matchFs.termId && matchFs.termId !== 'ALL' && matchFs.termId !== 'ANNUAL';
+          if (isTermStructure) {
+            billedFees = matchFs.totalAmount || (Array.isArray(matchFs.items) ? matchFs.items.reduce((acc, it) => acc + (Number(it.amount) || 0), 0) : 0);
+          } else if (targetTermNum === 1) {
+            billedFees = matchFs.term1Total ?? matchFs.termBreakdown?.term1 ?? (matchFs.totalAmount || 0);
+          } else if (targetTermNum === 2) {
+            billedFees = matchFs.term2Total ?? matchFs.termBreakdown?.term2 ?? (matchFs.totalAmount || 0);
+          } else if (targetTermNum === 3) {
+            billedFees = matchFs.term3Total ?? matchFs.termBreakdown?.term3 ?? (matchFs.totalAmount || 0);
+          } else {
+            billedFees = matchFs.totalAmount || 0;
+          }
+        }
+      }
+      billedFees = Math.round(billedFees * 100) / 100;
+
+      // 2. Prior Arrears
+      let priorArrears = cfArrearsFromInvoice;
+      for (const pInv of priorInvoices) {
+        if (pInv.balance > 0) {
+          priorArrears += Number(pInv.balance);
+        }
+      }
+      priorArrears = Math.round(priorArrears * 100) / 100;
+
+      // 3. Total Due = Billed Fees + Prior Arrears
+      const totalDue = Math.round((billedFees + priorArrears) * 100) / 100;
+
+      // 4. Paid Fees
+      let paidFees = 0;
+      if (targetTermId === 'ALL') {
+        paidFees = stInvoices.reduce((sum, inv) => sum + (Number(inv.amountPaid) || 0), 0);
+      } else {
+        if (currentTermInv) {
+          paidFees = Number(currentTermInv.amountPaid) || 0;
+        }
+      }
+      paidFees = Math.round(paidFees * 100) / 100;
+
+      // 5. Balance and Overpayment / Credit
+      let balance = 0;
+      let overpaymentCredit = availableCredits;
+
+      if (paidFees > totalDue) {
+        const excess = Math.round((paidFees - totalDue) * 100) / 100;
+        overpaymentCredit = Math.round((overpaymentCredit + excess) * 100) / 100;
+        balance = 0;
+      } else {
+        balance = Math.round((totalDue - paidFees) * 100) / 100;
+      }
+
+      // Status determination
+      let status: 'SPONSORED' | 'OVERPAID' | 'CLEARED' | 'PARTIAL' | 'ARREARS' | 'UNBILLED' = 'ARREARS';
+      if (overpaymentCredit > 0 && balance === 0) {
+        status = 'OVERPAID';
+      } else if (balance === 0 && (paidFees > 0 || totalDue > 0)) {
+        status = 'CLEARED';
+        clearedCount++;
+      } else if (billedFees === 0 && priorArrears === 0 && balance === 0) {
+        status = 'UNBILLED';
+      } else if (paidFees > 0 && balance > 0) {
+        status = 'PARTIAL';
+        partialCount++;
+      } else {
+        status = 'ARREARS';
+        arrearsCount++;
+      }
+
+      sumBilled += billedFees;
+      sumPriorArrears += priorArrears;
+      sumTotalDue += totalDue;
+      sumPaid += paidFees;
+      sumOutstandingBalance += balance;
+      sumOverpayments += overpaymentCredit;
+
+      accounts.push({
+        studentId: student.id,
+        admissionNumber: student.admissionNumber,
+        studentName: student.fullName,
+        gradeLevel: student.gradeLevel,
+        streamName: (student as any).streamName || (student as any).streamId,
+        isSponsored: false,
+        academicYearId: targetYearId,
+        termId: targetTermId,
+        billedFees,
+        priorArrears,
+        totalDue,
+        paidFees,
+        balance,
+        arrearsDue: balance,
+        overpaymentCredit,
+        status,
+        currentInvoiceId: currentTermInv?.id,
+        currentInvoiceNumber: currentTermInv?.invoiceNumber
+      });
+    }
+
+    return {
+      academicYearId: targetYearId,
+      termId: targetTermId,
+      termNumber: targetTermNum,
+      summary: {
+        totalStudents: students.length,
+        totalBilled: Math.round(sumBilled * 100) / 100,
+        totalPriorArrears: Math.round(sumPriorArrears * 100) / 100,
+        totalDue: Math.round(sumTotalDue * 100) / 100,
+        totalPaid: Math.round(sumPaid * 100) / 100,
+        totalOutstandingBalance: Math.round(sumOutstandingBalance * 100) / 100,
+        totalOverpayments: Math.round(sumOverpayments * 100) / 100,
+        clearedCount,
+        partialCount,
+        arrearsCount,
+        sponsoredCount
+      },
+      accounts
     };
   }
 
@@ -2557,7 +3214,9 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
     });
 
     // Disbursed / committed expenses
-    const recognizedExpenses = allExpenses.filter(e => e.status === ExpenseStatus.PAID || e.status === ExpenseStatus.APPROVED);
+    // Actual cash outflows must strictly reflect PAID expenses; APPROVED expenses are pending obligations
+    const paidExpenses = allExpenses.filter(e => e.status === ExpenseStatus.PAID);
+    const approvedExpenses = allExpenses.filter(e => e.status === ExpenseStatus.APPROVED);
 
     // Sums
     const completedPayments = payments.filter(p => p.status === PaymentStatus.COMPLETED);
@@ -2565,10 +3224,11 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
     const otherInflow = otherIncomes.reduce((acc, i) => acc + i.amount, 0);
     const totalMoneyIn = feeInflow + otherInflow;
 
-    const totalMoneyOut = recognizedExpenses.reduce((acc, e) => acc + e.amount, 0);
+    const totalMoneyOut = paidExpenses.reduce((acc, e) => acc + e.amount, 0);
+    const totalApprovedObligations = approvedExpenses.reduce((acc, e) => acc + e.amount, 0);
     const netCashFlow = totalMoneyIn - totalMoneyOut;
 
-    // Account Balances by payment channel
+    // Account Balances by payment channel (actual cash movements)
     let bankIn = 0, bankOut = 0;
     let mpesaIn = 0, mpesaOut = 0;
     let cashIn = 0, cashOut = 0;
@@ -2593,12 +3253,22 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
       }
     }
 
-    for (const exp of recognizedExpenses) {
-      if ([PaymentMethod.BANK_TRANSFER, PaymentMethod.CHEQUE, PaymentMethod.CARD].includes(exp.paymentMethod)) {
+    for (const exp of paidExpenses) {
+      const isBank =
+        [PaymentMethod.BANK_TRANSFER, PaymentMethod.CHEQUE, PaymentMethod.CARD, 'BANK' as any].includes(exp.paymentMethod) ||
+        (exp.notes && exp.notes.includes('Funding Account: BANK'));
+      const isMpesa =
+        exp.paymentMethod === PaymentMethod.MPESA ||
+        (exp.notes && exp.notes.includes('Funding Account: MPESA'));
+      const isCash =
+        exp.paymentMethod === PaymentMethod.CASH ||
+        (exp.notes && exp.notes.includes('Funding Account: CASH'));
+
+      if (isBank) {
         bankOut += exp.amount;
-      } else if (exp.paymentMethod === PaymentMethod.MPESA) {
+      } else if (isMpesa) {
         mpesaOut += exp.amount;
-      } else if (exp.paymentMethod === PaymentMethod.CASH) {
+      } else if (isCash) {
         cashOut += exp.amount;
       }
     }
@@ -2617,7 +3287,7 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
     for (const cat of Object.values(ExpenseCategory)) {
       voteHeadMap[cat] = { total: 0, count: 0 };
     }
-    for (const exp of recognizedExpenses) {
+    for (const exp of paidExpenses) {
       if (!voteHeadMap[exp.category]) {
         voteHeadMap[exp.category] = { total: 0, count: 0 };
       }
@@ -2718,6 +3388,7 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
     return {
       totalMoneyIn,
       totalMoneyOut,
+      totalApprovedObligations,
       netCashFlow,
       isSurplus: netCashFlow >= 0,
       feeInflow,
@@ -2782,8 +3453,24 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
     }
 
     const schoolId = student.schoolId || 'school-001';
-    const targetYear = dto.academicYearId || student.academicYearId || 'year-2026';
-    const targetTerm = dto.termId || 'term-2026-t1';
+    let targetYear: string | undefined = dto.academicYearId || student.academicYearId;
+    let targetTerm: string | undefined = dto.termId;
+
+    if (!targetYear && this.academicRepository) {
+      const curYear = await this.academicRepository.findCurrentYear(schoolId);
+      targetYear = curYear?.id;
+    }
+    if (!targetYear) {
+      targetYear = `year-${new Date().getFullYear()}`;
+    }
+
+    if (!targetTerm && this.academicRepository) {
+      const curTerm = await this.academicRepository.findCurrentTerm(targetYear);
+      targetTerm = curTerm?.id;
+    }
+    if (!targetTerm) {
+      targetTerm = `term-${targetYear}-t1`;
+    }
     const mode = dto.mode || 'ADD';
     const arrearName = dto.reason?.trim() || 'Opening Fee Arrears / Prior Balance';
     const dueDate = dto.dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
@@ -3308,7 +3995,7 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
       config = FeeBannerConfig.create(
         {
           schoolId: targetSchoolId,
-          deadlineDate: '2026-11-15',
+          deadlineDate: `${new Date().getFullYear()}-11-15`,
           bannerTitle: 'School Fee Payment Notice',
           customMessage: '',
           paybillNumber: '522533',

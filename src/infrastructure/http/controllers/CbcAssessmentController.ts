@@ -19,11 +19,27 @@ export const CreateStrandSchema = z.object({
   description: z.string().optional()
 });
 
+export const UpdateStrandSchema = z.object({
+  learningAreaId: z.string().optional(),
+  gradeLevel: z.nativeEnum(CBCGradeLevel).optional(),
+  code: z.string().optional(),
+  title: z.string().optional(),
+  description: z.string().optional()
+});
+
 export const CreateSubStrandSchema = z.object({
   strandId: z.string().min(1),
   code: z.string().min(1),
   title: z.string().min(1),
   specificLearningOutcomes: z.array(z.string()).min(1),
+  suggestedExperiences: z.array(z.string()).optional()
+});
+
+export const UpdateSubStrandSchema = z.object({
+  strandId: z.string().optional(),
+  code: z.string().optional(),
+  title: z.string().optional(),
+  specificLearningOutcomes: z.array(z.string()).optional(),
   suggestedExperiences: z.array(z.string()).optional()
 });
 
@@ -92,6 +108,15 @@ export class CBCAssessmentController {
     }
   };
 
+  public updateStrand = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const strand = await this.CBCUseCases.updateStrand(req.params.id as string, req.body);
+      return res.status(200).json({ success: true, data: strand });
+    } catch (err) {
+      next(err);
+    }
+  };
+
   public getStrandsByLearningArea = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const learningAreaId = req.params.learningAreaId as string;
@@ -110,6 +135,15 @@ export class CBCAssessmentController {
     try {
       const subStrand = await this.CBCUseCases.createSubStrand(req.body);
       return res.status(201).json({ success: true, data: subStrand });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public updateSubStrand = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const subStrand = await this.CBCUseCases.updateSubStrand(req.params.id as string, req.body);
+      return res.status(200).json({ success: true, data: subStrand });
     } catch (err) {
       next(err);
     }

@@ -119,7 +119,7 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
                   Money Out
                 </span>
               </div>
-              <p className="text-xs text-rose-100/90 mt-0.5">MoE Vote Head Accounting & Payment Voucher (PV)</p>
+              <p className="text-xs text-rose-100/90 mt-0.5">Private School Operational Ledger &amp; Payment Voucher (PV)</p>
             </div>
           </div>
           <button
@@ -131,10 +131,10 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
           </button>
         </div>
 
-        {/* Regulatory Banner */}
+        {/* Audit Trail Banner */}
         <div className="bg-rose-50 dark:bg-rose-950/30 px-5 py-2.5 border-b border-rose-200/50 dark:border-rose-900/40 flex items-center gap-2 text-xs text-rose-900 dark:text-rose-200">
           <span className="material-symbols-outlined text-[18px] text-rose-600 shrink-0">verified_user</span>
-          <span>Compliant with Kenyan Public Finance Management Act (PFMA) and Ministry of Education audit vouchers.</span>
+          <span>Verified disbursement recorded into the double-entry school expense ledger with full staff audit trail.</span>
         </div>
 
         {/* Form Body */}

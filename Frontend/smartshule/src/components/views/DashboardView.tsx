@@ -288,7 +288,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
           <div className="flex items-center gap-sm flex-wrap">
             <h1 className="font-headline-lg text-headline-lg text-on-surface tracking-tight">
-              School Executive Dashboard
+              {user?.schoolName || 'Grace Seeds School'} · Executive Dashboard
             </h1>
             <div className="inline-flex items-center gap-xs px-sm py-xs rounded-full bg-secondary-container text-on-secondary-container">
               <span className="w-2 h-2 rounded-full bg-secondary"></span>
@@ -519,7 +519,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
         {/* 4. Fee Arrears (Outstanding) */}
         <div
-          onClick={() => onNavigateTab('defaulters-receipts')}
+          onClick={() => onNavigateTab('arrears')}
           className="rounded-xl bg-surface-container-lowest p-3 flex flex-col justify-between shadow-xs relative overflow-hidden group hover:shadow-md transition-all cursor-pointer border border-outline-variant/30 hover:border-rose-500/40"
         >
           <div className="flex items-center justify-between">
@@ -982,7 +982,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 Highest Outstanding Fee Balances
               </span>
               <button
-                onClick={() => onNavigateTab('defaulters-receipts')}
+                onClick={() => onNavigateTab('arrears')}
                 className="text-xs font-semibold text-primary hover:underline"
               >
                 View All Defaulters →
@@ -997,7 +997,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 dynamicFeeDefaultersByGrade.map((fd) => (
                   <div
                     key={fd.grade}
-                    onClick={() => onNavigateTab('defaulters-receipts')}
+                    onClick={() => onNavigateTab('arrears')}
                     className="p-sm rounded-lg bg-surface-container-low flex flex-col hover:bg-surface-container transition-colors cursor-pointer"
                   >
                     <div className="flex justify-between items-center">

@@ -45,8 +45,6 @@ services:
       POSTGRES_USER: smartshule_user
       POSTGRES_PASSWORD: smartshule_pass
       POSTGRES_DB: smartshule_db
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:

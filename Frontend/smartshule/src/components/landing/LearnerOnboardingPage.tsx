@@ -44,8 +44,10 @@ export default function LearnerOnboardingPage({
     onboardingService.fetchEmailConfig().catch(() => {})
   }, [])
 
+  const nextIntakeYear = new Date().getFullYear() + 1
+
   const [targetGrade, setTargetGrade] = useState('PP1 (Pre-Primary 1)')
-  const [entryTerm, setEntryTerm] = useState('Term 1 (Jan 2027)')
+  const [entryTerm, setEntryTerm] = useState(`Term 1 (Jan ${nextIntakeYear})`)
 
   const [firstName, setFirstName] = useState('')
   const [middleName, setMiddleName] = useState('')
@@ -361,7 +363,7 @@ export default function LearnerOnboardingPage({
                 Track Onboarding Approval
               </h2>
               <p className="text-[#8a6470] text-xs mt-1">
-                Enter your Auto-Generated Tracking Number (e.g. TRK-2027-482190) or Parent Phone Number / Email.
+                Enter your Auto-Generated Tracking Number (e.g. TRK-{nextIntakeYear}-123456) or Parent Phone Number / Email.
               </p>
             </div>
 
@@ -371,7 +373,7 @@ export default function LearnerOnboardingPage({
                 required
                 value={searchTrackingCode}
                 onChange={e => setSearchTrackingCode(e.target.value)}
-                placeholder="e.g. TRK-2027-482190 or 0722345678"
+                placeholder={`e.g. TRK-${nextIntakeYear}-123456 or 0722345678`}
                 className="flex-1 bg-[#fdfaf6] border border-[#f0d8df] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#7b1c35]"
               />
               <button
@@ -564,9 +566,9 @@ export default function LearnerOnboardingPage({
                       onChange={e => setEntryTerm(e.target.value)}
                       className="w-full bg-[#fdfaf6] border border-[#f0d8df] rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#7b1c35]"
                     >
-                      <option value="Term 1 (Jan 2027)">Term 1 (Jan 2027)</option>
-                      <option value="Term 2 (May 2027)">Term 2 (May 2027)</option>
-                      <option value="Term 3 (Sep 2027)">Term 3 (Sep 2027)</option>
+                      <option value={`Term 1 (Jan ${nextIntakeYear})`}>Term 1 (Jan {nextIntakeYear})</option>
+                      <option value={`Term 2 (May ${nextIntakeYear})`}>Term 2 (May {nextIntakeYear})</option>
+                      <option value={`Term 3 (Sep ${nextIntakeYear})`}>Term 3 (Sep {nextIntakeYear})</option>
                       <option value="Immediate Transfer">Immediate Transfer</option>
                     </select>
                   </div>

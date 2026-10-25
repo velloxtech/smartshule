@@ -56,36 +56,12 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
     return 1;
   };
 
-  const getDefaultAmountsForGrade = (grade: string) => {
-    const g = grade.toUpperCase();
-    if (g.includes('PLAYGROUP') || g.includes('PP1') || g.includes('PP2')) {
-      return { tuition: '4500', assessment: '300', activity: '300' };
-    }
-    if (g.includes('GRADE_4') || g.includes('GRADE_5') || g.includes('GRADE_6') || g === 'GRADE 4' || g === 'GRADE 5' || g === 'GRADE 6') {
-      return { tuition: '5700', assessment: '300', activity: '500' };
-    }
-    return { tuition: '5000', assessment: '300', activity: '500' };
-  };
-
-  const generateDefaultItems = (termNum: number, grade: string): FeeLineItemState[] => {
-    const rates = getDefaultAmountsForGrade(grade);
-    const base: FeeLineItemState[] = [
-      { id: `tuition-${Date.now()}`, name: 'Tuition Fee', category: 'TUITION', isOptional: false, amount: '', expectedAmount: rates.tuition },
-      { id: `assessment-${Date.now() + 1}`, name: 'Assessment Fee', category: 'ASSESSMENT', isOptional: false, amount: '', expectedAmount: rates.assessment },
+  const generateDefaultItems = (): FeeLineItemState[] => {
+    return [
+      { id: `tuition-${Date.now()}`, name: 'Tuition Fee', category: 'TUITION', isOptional: false, amount: '' },
+      { id: `assessment-${Date.now() + 1}`, name: 'Assessment & Exam Fee', category: 'ASSESSMENT', isOptional: false, amount: '' },
+      { id: `activity-${Date.now() + 2}`, name: 'Activity & Sports Fee', category: 'ACTIVITY', isOptional: false, amount: '' },
     ];
-
-    if (termNum !== 3) {
-      base.push({
-        id: `activity-${Date.now() + 2}`,
-        name: 'Activity Fee',
-        category: 'ACTIVITY',
-        isOptional: false,
-        amount: '',
-        expectedAmount: rates.activity,
-      });
-    }
-
-    return base;
   };
 
   // Synchronize terms and pre-fill data whenever modal opens
@@ -160,7 +136,6 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
         }
 
         if (initialData?.items && Array.isArray(initialData.items) && initialData.items.length > 0) {
-          const defaultRates = getDefaultAmountsForGrade(g);
           let loadedItems: FeeLineItemState[] = initialData.items.map((it: any, idx: number) => {
             const val = Number(it.amount);
             return {
@@ -169,17 +144,11 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
               category: it.category || 'TUITION',
               isOptional: !!it.isOptional,
               amount: val > 0 ? String(val) : '',
-              expectedAmount: String(val > 0 ? val : (defaultRates as any)[it.category?.toLowerCase()] || '500'),
             };
           });
-
-          if (tNum === 3) {
-            loadedItems = loadedItems.filter((it) => it.category !== 'ACTIVITY' && !it.name.toLowerCase().includes('activity'));
-          }
-
           setItems(loadedItems);
         } else {
-          setItems(generateDefaultItems(tNum, g));
+          setItems(generateDefaultItems());
         }
       } catch (err) {
         console.error('Failed to initialize fee schedule modal:', err);
@@ -211,8 +180,6 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
         if (!isCustomTitleEdited.current) {
           setTitle(`${gradeDisplay} ${newTermLabel} Fee Schedule`);
         }
-
-        setItems(generateDefaultItems(tNum, gradeLevel));
       } else {
         setTerms([]);
       }
@@ -221,7 +188,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
     }
   };
 
-  // Handle changing Academic Term: sync label, title, and activity fee row
+  // Handle changing Academic Term: sync label and title
   const handleTermSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newTermId = e.target.value;
     const selectedOptionText = e.target.options[e.target.selectedIndex]?.text || '';
@@ -242,34 +209,6 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
         return `${gradeDisplay} ${newTermLabel} Fee Schedule`;
       });
     }
-
-    setItems((prevItems) => {
-      const rates = getDefaultAmountsForGrade(gradeLevel);
-
-      if (tNum === 3) {
-        return prevItems.filter(
-          (it) => it.category !== 'ACTIVITY' && !it.name.toLowerCase().includes('activity')
-        );
-      } else {
-        const hasActivity = prevItems.some(
-          (it) => it.category === 'ACTIVITY' || it.name.toLowerCase().includes('activity')
-        );
-        if (!hasActivity) {
-          return [
-            ...prevItems,
-            {
-              id: `activity-${Date.now()}`,
-              name: 'Activity Fee',
-              category: 'ACTIVITY',
-              isOptional: false,
-              amount: '',
-              expectedAmount: rates.activity,
-            },
-          ];
-        }
-        return prevItems;
-      }
-    });
   };
 
   const handleGradeSelect = (newGrade: string) => {
@@ -278,50 +217,12 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
     if (!isCustomTitleEdited.current) {
       setTitle(`${gradeDisplay} ${termLabel} Fee Schedule`);
     }
-
-    const rates = getDefaultAmountsForGrade(newGrade);
-    setItems((prevItems) =>
-      prevItems.map((it) => {
-        if (it.category === 'TUITION' || it.name.toLowerCase().includes('tuition')) {
-          return { ...it, expectedAmount: rates.tuition };
-        }
-        if (it.category === 'ACTIVITY' || it.name.toLowerCase().includes('activity')) {
-          return { ...it, expectedAmount: rates.activity };
-        }
-        return it;
-      })
-    );
-  };
-
-  const applyOfficialPreset = (level: 'PRE_PRIMARY' | 'LOWER_PRIMARY' | 'UPPER_PRIMARY') => {
-    const tNum = parseTermNumber(termLabel);
-    const isT3 = tNum === 3;
-
-    if (level === 'PRE_PRIMARY') {
-      setItems([
-        { id: `ps-${Date.now()}-1`, name: 'Tuition Fee', category: 'TUITION', isOptional: false, amount: '', expectedAmount: '4500' },
-        { id: `ps-${Date.now()}-2`, name: 'Assessment Fee', category: 'ASSESSMENT', isOptional: false, amount: '', expectedAmount: '300' },
-        ...(!isT3 ? [{ id: `ps-${Date.now()}-3`, name: 'Activity Fee', category: 'ACTIVITY', isOptional: false, amount: '', expectedAmount: '300' } as FeeLineItemState] : []),
-      ]);
-    } else if (level === 'LOWER_PRIMARY') {
-      setItems([
-        { id: `ps-${Date.now()}-1`, name: 'Tuition Fee', category: 'TUITION', isOptional: false, amount: '', expectedAmount: '5000' },
-        { id: `ps-${Date.now()}-2`, name: 'Assessment Fee', category: 'ASSESSMENT', isOptional: false, amount: '', expectedAmount: '300' },
-        ...(!isT3 ? [{ id: `ps-${Date.now()}-3`, name: 'Activity Fee', category: 'ACTIVITY', isOptional: false, amount: '', expectedAmount: '500' } as FeeLineItemState] : []),
-      ]);
-    } else if (level === 'UPPER_PRIMARY') {
-      setItems([
-        { id: `ps-${Date.now()}-1`, name: 'Tuition Fee', category: 'TUITION', isOptional: false, amount: '', expectedAmount: '5700' },
-        { id: `ps-${Date.now()}-2`, name: 'Assessment Fee', category: 'ASSESSMENT', isOptional: false, amount: '', expectedAmount: '300' },
-        ...(!isT3 ? [{ id: `ps-${Date.now()}-3`, name: 'Activity Fee', category: 'ACTIVITY', isOptional: false, amount: '', expectedAmount: '500' } as FeeLineItemState] : []),
-      ]);
-    }
   };
 
   const handleAddItem = () => {
     setItems((prev) => [
       ...prev,
-      { id: `item-${Date.now()}`, name: '', category: 'ACTIVITY', isOptional: false, amount: '', expectedAmount: '500' },
+      { id: `item-${Date.now()}`, name: '', category: 'ACTIVITY', isOptional: false, amount: '' },
     ]);
   };
 
@@ -333,20 +234,13 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
     setItems((prev) => prev.filter((it) => it.id !== id));
   };
 
-  const getEffectiveAmount = (it: FeeLineItemState): number => {
-    if (it.amount.trim() !== '') return Number(it.amount) || 0;
-    return Number(it.expectedAmount) || 0;
-  };
-
   const totalTermlyAmount = useMemo(() => {
-    return items.reduce((sum, it) => sum + getEffectiveAmount(it), 0);
+    return items.reduce((sum, it) => sum + (Number(it.amount) || 0), 0);
   }, [items]);
 
   const mandatoryTotal = useMemo(() => {
-    return items.filter((it) => !it.isOptional).reduce((sum, it) => sum + getEffectiveAmount(it), 0);
+    return items.filter((it) => !it.isOptional).reduce((sum, it) => sum + (Number(it.amount) || 0), 0);
   }, [items]);
-
-  const isTerm3Active = parseTermNumber(termLabel) === 3;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -362,6 +256,12 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
     const unNamedItems = items.filter((it) => !it.name.trim());
     if (unNamedItems.length > 0) {
       setError('Please provide a valid description for all line items.');
+      return;
+    }
+
+    const invalidAmountItem = items.find((it) => !it.isOptional && (isNaN(Number(it.amount)) || Number(it.amount) <= 0));
+    if (invalidAmountItem) {
+      setError(`Please specify a valid amount for required component: "${invalidAmountItem.name || 'Untitled item'}".`);
       return;
     }
 
@@ -382,7 +282,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
       totalAmount: totalTermlyAmount,
       items: items.map((it) => ({
         name: it.name.trim(),
-        amount: getEffectiveAmount(it),
+        amount: Number(it.amount) || 0,
         isOptional: it.isOptional,
         category: it.category,
       })),
@@ -540,46 +440,12 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
             </div>
           </div>
 
-          {/* Rate Presets (Tied to active term label) */}
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
-              1-Click Rate Presets ({termLabel}):
-            </span>
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <button
-                type="button"
-                onClick={() => applyOfficialPreset('PRE_PRIMARY')}
-                className="px-2.5 py-1 rounded-lg bg-gray-100 hover:bg-[#7a1228] hover:text-white text-gray-700 font-bold text-[11px] transition-colors cursor-pointer"
-              >
-                Pre-Primary ({isTerm3Active ? 'KES 4,800' : 'KES 5,100'})
-              </button>
-              <button
-                type="button"
-                onClick={() => applyOfficialPreset('LOWER_PRIMARY')}
-                className="px-2.5 py-1 rounded-lg bg-gray-100 hover:bg-[#7a1228] hover:text-white text-gray-700 font-bold text-[11px] transition-colors cursor-pointer"
-              >
-                Lower Primary ({isTerm3Active ? 'KES 5,300' : 'KES 5,800'})
-              </button>
-              <button
-                type="button"
-                onClick={() => applyOfficialPreset('UPPER_PRIMARY')}
-                className="px-2.5 py-1 rounded-lg bg-gray-100 hover:bg-[#7a1228] hover:text-white text-gray-700 font-bold text-[11px] transition-colors cursor-pointer"
-              >
-                Upper Primary ({isTerm3Active ? 'KES 6,000' : 'KES 6,500'})
-              </button>
-            </div>
-          </div>
-
           {/* Line Items Table */}
           <div className="border border-gray-200 rounded-xl overflow-hidden shadow-2xs">
             <div className="px-3.5 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="font-bold text-gray-800">Fee Components ({items.length})</span>
-                {isTerm3Active && (
-                  <span className="text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.2 rounded-full">
-                    Term 3: Activity Fee Excluded
-                  </span>
-                )}
+                <span className="text-[10px] text-gray-500">Configure amounts per school fee schedule</span>
               </div>
               <button
                 type="button"
@@ -635,7 +501,7 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
                       type="number"
                       min="0"
                       value={it.amount}
-                      placeholder={it.expectedAmount || '0'}
+                      placeholder="0"
                       onChange={(e) =>
                         setItems((prev) =>
                           prev.map((item) => (item.id === it.id ? { ...item, amount: e.target.value } : item))

@@ -135,7 +135,7 @@ export class CurriculumTrackerUseCases {
     }
 
     const totalWeeks = dto.totalWeeks && dto.totalWeeks > 0 ? dto.totalWeeks : 12;
-    const academicYear = dto.academicYear || '2026';
+    const academicYear = dto.academicYear || new Date().getFullYear().toString();
     const term = dto.term || 'Term 1';
 
     // Generate weeks 1 to totalWeeks

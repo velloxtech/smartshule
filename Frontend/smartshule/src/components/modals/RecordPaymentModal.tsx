@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { apiService } from '../../services/api';
-import { Student, StudentInvoice } from '../../types';
+import { Student, StudentInvoice, AcademicYear, AcademicTerm } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import {
   detectReceiptPrinter,
@@ -104,6 +104,14 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
   const [mpesaPhoneNumber, setMpesaPhoneNumber] = useState('');
   const [paymentNotes, setPaymentNotes] = useState('');
 
+  // Forwarded message / SMS extraction state
+  const [forwardedSmsText, setForwardedSmsText] = useState('');
+  const [isForwardedBoxOpen, setIsForwardedBoxOpen] = useState(false);
+  const [extractedSmsSummary, setExtractedSmsSummary] = useState<string | null>(null);
+  const [suggestedStudent, setSuggestedStudent] = useState<Student | null>(null);
+  const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
+  const [isStaffVerified, setIsStaffVerified] = useState(false);
+
   // Payment UI state
   const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
   const [recordedResult, setRecordedResult] = useState<any | null>(null);
@@ -124,11 +132,31 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
   const [arrearMode, setArrearMode] = useState<'ADD' | 'SET'>('ADD');
   const [arrearReason, setArrearReason] = useState('Opening Fee Arrears / Prior Balance');
   const [arrearCustomReason, setArrearCustomReason] = useState('');
-  const [arrearYear, setArrearYear] = useState('year-2026');
-  const [arrearTerm, setArrearTerm] = useState('term-2026-t1');
+  const [arrearYear, setArrearYear] = useState('');
+  const [arrearTerm, setArrearTerm] = useState('');
+  const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
+  const [academicTerms, setAcademicTerms] = useState<AcademicTerm[]>([]);
   const [arrearDueDate, setArrearDueDate] = useState('');
   const [arrearNotes, setArrearNotes] = useState('');
   const [isSubmittingArrear, setIsSubmittingArrear] = useState(false);
+
+  const handleArrearYearChange = async (yearId: string) => {
+    setArrearYear(yearId);
+    try {
+      const res = await apiService.getTerms(yearId);
+      if (res.success && res.data && res.data.length > 0) {
+        setAcademicTerms(res.data);
+        const activeT = res.data.find(t => t.isCurrent) || res.data[0];
+        setArrearTerm(activeT.id);
+      } else {
+        setAcademicTerms([]);
+        setArrearTerm('');
+      }
+    } catch {
+      setAcademicTerms([]);
+      setArrearTerm('');
+    }
+  };
 
   // Detect connected receipt printers on modal open
   useEffect(() => {
@@ -136,6 +164,21 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
       detectReceiptPrinter().then((status) => {
         setPrinterStatus(status);
       });
+
+      // Load active academic year and terms for arrears
+      apiService.getYears().then(async (yRes) => {
+        if (yRes?.success && Array.isArray(yRes.data) && yRes.data.length > 0) {
+          setAcademicYears(yRes.data);
+          const activeY = yRes.data.find(y => y.isCurrent) || yRes.data[0];
+          setArrearYear(activeY.id);
+          const tRes = await apiService.getTerms(activeY.id).catch(() => null);
+          if (tRes?.success && Array.isArray(tRes.data) && tRes.data.length > 0) {
+            setAcademicTerms(tRes.data);
+            const activeT = tRes.data.find(t => t.isCurrent) || tRes.data[0];
+            setArrearTerm(activeT.id);
+          }
+        }
+      }).catch(() => {});
     }
   }, [isOpen]);
 
@@ -170,6 +213,12 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
       setArrearCustomReason('');
       setArrearDueDate('');
       setArrearNotes('');
+      setForwardedSmsText('');
+      setIsForwardedBoxOpen(false);
+      setExtractedSmsSummary(null);
+      setSuggestedStudent(null);
+      setDuplicateWarning(null);
+      setIsStaffVerified(false);
       setFeedback(null);
       setRecordedResult(null);
     }
@@ -268,6 +317,122 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
   );
 
   // ----------------------------------------------------------------------
+  // PARSER: INTELLIGENT EXTRACTION FROM FORWARDED PAYMENT MESSAGE
+  // ----------------------------------------------------------------------
+  const handleExtractFromForwardedSms = async (text: string) => {
+    setForwardedSmsText(text);
+    if (!text.trim()) {
+      setExtractedSmsSummary(null);
+      setSuggestedStudent(null);
+      setDuplicateWarning(null);
+      return;
+    }
+
+    let extractedCode = '';
+    let extractedAmount = '';
+    let extractedDate = '';
+    let extractedPhone = '';
+    let detectedChannel: PaymentChannel = 'MPESA';
+
+    // 1. Transaction Code (e.g. QK7823LM91, 10 alphanumeric uppercase chars)
+    const codeMatch = text.match(/\b([A-Z0-9]{10})\b/);
+    if (codeMatch) {
+      extractedCode = codeMatch[1];
+      setTransactionReference(extractedCode);
+    }
+
+    // 2. Amount Paid (e.g. Ksh15,000.00, KES 15000, Ksh 5,500)
+    const amountMatch = text.match(/(?:Ksh|KES|KSH)\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{2})?|[0-9]+(?:\.[0-9]{2})?)/i);
+    if (amountMatch) {
+      const cleanNum = amountMatch[1].replace(/,/g, '');
+      extractedAmount = cleanNum;
+      setAmount(cleanNum);
+    }
+
+    // 3. Date (e.g. 24/10/26, 24/10/2026, 2026-10-24)
+    const dateMatch = text.match(/\b(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})\b/);
+    if (dateMatch) {
+      const day = dateMatch[1].padStart(2, '0');
+      const month = dateMatch[2].padStart(2, '0');
+      let year = dateMatch[3];
+      if (year.length === 2) year = `20${year}`;
+      extractedDate = `${year}-${month}-${day}`;
+      setPaymentDate(extractedDate);
+    }
+
+    // 4. Phone number if present
+    const phoneMatch = text.match(/\b(254\d{9}|07\d{8}|01\d{8})\b/);
+    if (phoneMatch) {
+      extractedPhone = phoneMatch[1];
+      setMpesaPhoneNumber(extractedPhone);
+    }
+
+    // 5. Channel detection
+    if (/bank|deposit|slip|teller|cheque|branch/i.test(text)) {
+      detectedChannel = /cheque/i.test(text) ? 'CHEQUE' : 'BANK_DEPOSIT';
+    } else {
+      detectedChannel = 'MPESA';
+    }
+    setPaymentChannel(detectedChannel);
+
+    // 6. Match student reliably or suggest
+    let matched: Student | null = null;
+    const lower = text.toLowerCase();
+    for (const st of students) {
+      const adm = (st.admNo || st.admissionNumber || '').toLowerCase();
+      if (adm && adm.length >= 3 && lower.includes(adm)) {
+        matched = st;
+        break;
+      }
+      const names = (st.name || '').toLowerCase().split(/\s+/).filter((n: string) => n.length >= 3);
+      if (names.length >= 2 && names.every((n: string) => lower.includes(n))) {
+        matched = st;
+        break;
+      }
+    }
+    if (matched) {
+      setSuggestedStudent(matched);
+      if (!selectedStudentId) {
+        setSelectedStudentId(matched.id);
+      }
+    } else {
+      setSuggestedStudent(null);
+    }
+
+    // 7. Retain original message in notes for audit trail
+    const auditNote = `Forwarded Payment Confirmation Evidence: "${text.trim().replace(/\s+/g, ' ')}"`;
+    setPaymentNotes((prev) => (prev ? `${prev} | ${auditNote}` : auditNote));
+
+    // 8. Check for duplicate reference
+    if (extractedCode) {
+      try {
+        const paymentsRes = await apiService.getPayments(schoolId || undefined);
+        if (paymentsRes.success && Array.isArray(paymentsRes.data)) {
+          const dup = paymentsRes.data.find(
+            (p: any) => p.transactionReference?.toUpperCase() === extractedCode.toUpperCase()
+          );
+          if (dup) {
+            setDuplicateWarning(
+              `WARNING: Transaction reference '${extractedCode}' has already been recorded (Receipt #${dup.receiptNumber || 'N/A'}, Amount: KES ${Number(dup.amount || 0).toLocaleString()}).`
+            );
+          } else {
+            setDuplicateWarning(null);
+          }
+        }
+      } catch {
+        // silent check fallback
+      }
+    }
+
+    const summaryParts: string[] = [];
+    if (extractedCode) summaryParts.push(`Code: ${extractedCode}`);
+    if (extractedAmount) summaryParts.push(`Amount: KES ${Number(extractedAmount).toLocaleString()}`);
+    if (extractedDate) summaryParts.push(`Date: ${extractedDate}`);
+    if (extractedPhone) summaryParts.push(`Phone: ${extractedPhone}`);
+    setExtractedSmsSummary(summaryParts.join(' | '));
+  };
+
+  // ----------------------------------------------------------------------
   // SUBMIT HANDLER: RECORD MANUAL PAYMENT
   // ----------------------------------------------------------------------
   const handlePaymentSubmit = async (e: React.FormEvent) => {
@@ -304,6 +469,11 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
         setFeedback({ type: 'error', message: 'Please enter the Bank Deposit Slip / Teller Reference number.' });
         return;
       }
+    }
+
+    if (!isStaffVerified) {
+      setFeedback({ type: 'error', message: 'Please confirm the verification checkbox below before recording this payment.' });
+      return;
     }
 
     setIsSubmittingPayment(true);
@@ -943,6 +1113,69 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
           {/* ================================================================= */}
           {activeTab === 'PAYMENT' && (
             <form onSubmit={handlePaymentSubmit} className="space-y-4 animate-fade-in">
+              {/* Forwarded Confirmation Message Extractor */}
+              <div className="bg-gradient-to-r from-purple-50/80 to-indigo-50/80 rounded-xl p-3 border border-purple-200 shadow-xs">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[18px] text-purple-700">mark_chat_read</span>
+                    <div>
+                      <span className="text-xs font-bold text-purple-950 block">Forwarded Payment Message / SMS Extractor</span>
+                      <span className="text-[10px] text-purple-700">Extracts code, amount, date & matches learner</span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsForwardedBoxOpen(!isForwardedBoxOpen)}
+                    className="text-[11px] font-bold text-purple-700 hover:text-purple-900 bg-white/80 hover:bg-white px-2.5 py-1 rounded-lg border border-purple-200 transition-colors flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>{isForwardedBoxOpen ? 'Hide Box' : 'Paste Forwarded SMS'}</span>
+                    <span className="material-symbols-outlined text-sm">{isForwardedBoxOpen ? 'expand_less' : 'expand_more'}</span>
+                  </button>
+                </div>
+
+                {isForwardedBoxOpen && (
+                  <div className="mt-2.5 space-y-2 pt-2 border-t border-purple-200/60">
+                    <p className="text-[11px] text-purple-800">
+                      Paste the M-Pesa or Bank confirmation message forwarded by the parent. Details will be populated into the verified fields:
+                    </p>
+                    <textarea
+                      rows={2}
+                      value={forwardedSmsText}
+                      onChange={(e) => handleExtractFromForwardedSms(e.target.value)}
+                      placeholder="e.g. QK7823LM91 Confirmed. Ksh15,000.00 paid to Grace Seeds School on 24/10/26 at 11:32 AM..."
+                      className="w-full bg-white border border-purple-300 rounded-lg p-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-600 font-mono text-[11px]"
+                    />
+                    {extractedSmsSummary && (
+                      <div className="bg-emerald-50 text-emerald-900 border border-emerald-300 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-sm text-emerald-700">check_circle</span>
+                        <span>{extractedSmsSummary}</span>
+                      </div>
+                    )}
+                    {suggestedStudent && (
+                      <div className="bg-indigo-50 text-indigo-900 border border-indigo-300 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold flex items-center justify-between gap-1.5">
+                        <div className="flex items-center gap-1.5">
+                          <span className="material-symbols-outlined text-sm text-indigo-700">person</span>
+                          <span>Matched Learner: <strong>{suggestedStudent.name}</strong> (Adm: {suggestedStudent.admNo})</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedStudentId(suggestedStudent.id)}
+                          className="px-2 py-0.5 bg-indigo-700 text-white rounded text-[10px] font-bold hover:bg-indigo-800 cursor-pointer"
+                        >
+                          Select Learner
+                        </button>
+                      </div>
+                    )}
+                    {duplicateWarning && (
+                      <div className="bg-rose-50 text-rose-900 border border-rose-300 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-sm text-rose-700">warning</span>
+                        <span>{duplicateWarning}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
               {/* Payment Channel Selector */}
               <div>
                 <label className="block text-xs font-bold uppercase text-slate-600 mb-1.5">
@@ -1418,11 +1651,26 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
                 </button>
               </div>
 
+              {/* Staff Verification Declaration */}
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isStaffVerified}
+                    onChange={(e) => setIsStaffVerified(e.target.checked)}
+                    className="rounded text-[#7a1228] focus:ring-[#7a1228] w-4 h-4 mt-0.5 cursor-pointer shrink-0"
+                  />
+                  <span className="text-[11px] font-medium text-slate-700 leading-relaxed">
+                    I confirm that I have verified the transaction reference, payment channel, amount, and payer details against the school's official bank statement / M-Pesa till settlement portal before crediting this fee account.
+                  </span>
+                </label>
+              </div>
+
               {/* Submit Payment Button */}
               <div className="pt-2">
                 <button
                   type="submit"
-                  disabled={isSubmittingPayment || !selectedInvoiceId || numAmount <= 0 || !!currentStudent?.isSponsored}
+                  disabled={isSubmittingPayment || !selectedInvoiceId || numAmount <= 0 || !!currentStudent?.isSponsored || !isStaffVerified}
                   className="w-full py-3 bg-[#7a1228] text-white font-bold rounded-xl hover:bg-[#600e1f] text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <span className="material-symbols-outlined text-[20px]">
@@ -1575,20 +1823,45 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
               </div>
 
               {/* Term & Academic Year Row */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
-                    Academic Term & Year
+                    Academic Year
+                  </label>
+                  <select
+                    value={arrearYear}
+                    onChange={(e) => handleArrearYearChange(e.target.value)}
+                    className="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#7a1228] font-medium"
+                  >
+                    {academicYears.length > 0 ? (
+                      academicYears.map((y) => (
+                        <option key={y.id} value={y.id}>
+                          {y.name} {y.isCurrent ? '(Active)' : ''}
+                        </option>
+                      ))
+                    ) : (
+                      <option value={arrearYear}>{arrearYear || 'Current Year'}</option>
+                    )}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
+                    Academic Term
                   </label>
                   <select
                     value={arrearTerm}
                     onChange={(e) => setArrearTerm(e.target.value)}
                     className="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#7a1228] font-medium"
                   >
-                    <option value="term-2026-t1">2026 — Term 1</option>
-                    <option value="term-2026-t2">2026 — Term 2</option>
-                    <option value="term-2026-t3">2026 — Term 3</option>
-                    <option value="term-2025-t3">2025 — Term 3 (Prior Year)</option>
+                    {academicTerms.length > 0 ? (
+                      academicTerms.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name} {t.isCurrent ? '(Current)' : ''}
+                        </option>
+                      ))
+                    ) : (
+                      <option value={arrearTerm}>{arrearTerm || 'Term 1'}</option>
+                    )}
                   </select>
                 </div>
                 <div>

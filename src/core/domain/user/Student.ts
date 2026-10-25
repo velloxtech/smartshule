@@ -8,6 +8,8 @@ export enum StudentGender {
 
 export enum StudentStatus {
   ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE',
+  WITHDRAWN = 'WITHDRAWN',
   TRANSFERRED = 'TRANSFERRED',
   GRADUATED = 'GRADUATED',
   SUSPENDED = 'SUSPENDED'

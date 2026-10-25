@@ -363,21 +363,24 @@ export class StudentUseCases {
     if (shouldBillOnAdmission && this.feeRepository) {
       try {
         const schoolId = student.schoolId || dto.schoolId || 'school-001';
-        let academicYearId = student.academicYearId || dto.academicYearId;
-        let termId = dto.termId;
+        let academicYearId: string | undefined = student.academicYearId || dto.academicYearId;
+        let termId: string | undefined = dto.termId;
 
         if (!academicYearId && this.academicRepository) {
           const currentYear = await this.academicRepository.findCurrentYear(schoolId);
-          academicYearId = currentYear?.id || 'year-2026';
+          academicYearId = currentYear?.id;
+        }
+        if (!academicYearId) {
+          academicYearId = `year-${new Date().getFullYear()}`;
         }
 
         if (!termId && this.academicRepository) {
-          const currentTerm = await this.academicRepository.findCurrentTerm(academicYearId || 'year-2026');
+          const currentTerm = await this.academicRepository.findCurrentTerm(academicYearId);
           termId = currentTerm?.id;
         }
 
         if (!termId) {
-          termId = 'term-2026-t1';
+          termId = `term-${academicYearId}-t1`;
         }
 
         // Try exact match by gradeLevel, termId, academicYearId
@@ -436,7 +439,7 @@ export class StudentUseCases {
           feeStructure = FeeStructure.create(
             {
               schoolId,
-              academicYearId: academicYearId || 'year-2026',
+              academicYearId: academicYearId || `year-${new Date().getFullYear()}`,
               termId,
               gradeLevel: student.gradeLevel,
               title: `${gradeName} CBC Term ${termNum} Fee Schedule`,
@@ -454,10 +457,10 @@ export class StudentUseCases {
           // A student invoice MUST always be attached to a concrete academic term in academic_terms (never 'ALL' or 'ANNUAL')
           let targetTermId = (termId && termId !== 'ALL' && termId !== 'ANNUAL')
             ? termId
-            : (!isWholeYearStructure && feeStructure.termId ? feeStructure.termId : 'term-2026-t1');
+            : (!isWholeYearStructure && feeStructure.termId ? feeStructure.termId : `term-${academicYearId}-t1`);
 
           // Ensure academicYearId matches the term's academic year for foreign key integrity
-          let invoiceYear = academicYearId || 'year-2026';
+          let invoiceYear = academicYearId || `year-${new Date().getFullYear()}`;
           if (this.academicRepository) {
             try {
               const termObj = await this.academicRepository.findTermById(targetTermId);
@@ -1066,7 +1069,7 @@ export class StudentUseCases {
     const studentFeeMap = new Map<string, { balance: number; billed: number; paid: number; priorArrears: number }>();
     let feeStructures: any[] = [];
     let currentTermNum = 1;
-    let currentTermId = 'term-2026-t1';
+    let currentTermId = '';
 
     if (this.feeRepository) {
       try {
@@ -1667,15 +1670,15 @@ export class StudentUseCases {
 
     if (!targetAcademicYearId && this.academicRepository) {
       const currentYear = await this.academicRepository.findCurrentYear(student.schoolId);
-      targetAcademicYearId = currentYear?.id || student.academicYearId || 'year-2026';
+      targetAcademicYearId = currentYear?.id || student.academicYearId;
     }
-    if (!targetAcademicYearId) targetAcademicYearId = student.academicYearId || 'year-2026';
+    if (!targetAcademicYearId) targetAcademicYearId = student.academicYearId || `year-${new Date().getFullYear()}`;
 
     if (!targetTermId && this.academicRepository) {
       const currentTerm = await this.academicRepository.findCurrentTerm(targetAcademicYearId);
-      targetTermId = currentTerm?.id || 'term-2026-t1';
+      targetTermId = currentTerm?.id;
     }
-    if (!targetTermId) targetTermId = 'term-2026-t1';
+    if (!targetTermId) targetTermId = `term-${targetAcademicYearId}-t1`;
 
     // Update student's grade, stream, classroom, academic year
     student.promoteOrTransfer(

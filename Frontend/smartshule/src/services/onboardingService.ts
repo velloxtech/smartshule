@@ -156,75 +156,7 @@ const getEnvSenderName = (): string => {
   return (import.meta as any).env?.VITE_EMAIL_SENDER_NAME || 'Grace Seeds School Admissions';
 };
 
-const DEFAULT_ONBOARDINGS: AdmittedLearnerOnboarding[] = [
-  {
-    id: 'onb-001',
-    trackingCode: 'TRK-2027-482190',
-    submittedAt: '2026-10-15T09:30:00.000Z',
-    status: 'PENDING',
-    targetGrade: 'PP1 (Pre-Primary 1)',
-    entryTerm: 'Term 1 (Jan 2027)',
-    firstName: 'Liam',
-    middleName: 'Kiprono',
-    lastName: 'Cheruiyot',
-    gender: 'Boy',
-    dob: '2022-04-12',
-    birthCertNo: 'BC-2022-89410',
-    nemisUpi: 'UPI-984120',
-    county: 'Kisumu',
-    subCounty: 'Kisumu West',
-    previousSchool: 'Little Angels Daycare Kisumu',
-    medicalConditions: 'Mild peanut allergy',
-    specialNeeds: 'None',
-    emergencyClinic: 'Aga Khan Hospital Kisumu',
-    dietaryRequirements: 'Nut-free diet',
-    parentName: 'Mercy Chebet Cheruiyot',
-    parentRelationship: 'Mother',
-    parentNationalId: '28471932',
-    parentPhone: '0722345678',
-    parentEmail: 'mercy.chebet@example.com',
-    parentOccupation: 'Accountant, KEMRI Kisumu',
-    residentialAddress: 'Milimani Estate, House 4B',
-    emergencyContactName: 'David Cheruiyot',
-    emergencyContactRelationship: 'Father',
-    emergencyContactPhone: '0733456789',
-    clubPreferences: ['Art & Craft', 'Music & Movement'],
-    emailsSent: [
-      {
-        id: 'eml-mock-001',
-        type: 'ONBOARDING_RECEIVED',
-        to: 'mercy.chebet@example.com',
-        from: `${getEnvSenderName()} <${getEnvSenderEmail()}>`,
-        recipientName: 'Mercy Chebet Cheruiyot',
-        subject: 'Grace Seeds School — Onboarding Received & Tracking Code [TRK-2027-482190]',
-        sentAt: '2026-10-15T09:30:05.000Z',
-        body: `Dear Mercy Chebet Cheruiyot,
-
-Thank you for submitting the official onboarding dossier for Liam Cheruiyot into PP1 (Pre-Primary 1) for Academic Year 2027 (Term 1 (Jan 2027)).
-
-Your confidential learner details have been safely received and queued for official institutional review.
-
-==============================================
-YOUR TRACKING NUMBER: TRK-2027-482190
-==============================================
-
-WHAT HAPPENS NEXT:
-1. Multi-Tier Administrative Review:
-   Your application will be examined and ratified by the Admissions Desk, Headteacher, or School Director.
-
-2. Tracking Your Status:
-   You can visit our website anytime, navigate to the "Admitted Learner Onboarding" page, and enter your Tracking Number (TRK-2027-482190) in the "Track Onboarding Approval" tab to check real-time progress.
-
-3. Official Admission Letter:
-   Upon ratification, you will receive an official Admission Letter by email containing your child's assigned School Admission Number, class stream, and reporting day instructions.
-
-Grace Seeds School
-Admissions Directorate: ${getEnvSenderEmail()}
-Kisumu, Kenya`,
-      },
-    ],
-  },
-];
+const DEFAULT_ONBOARDINGS: AdmittedLearnerOnboarding[] = [];
 
 export const onboardingService = {
   fetchEmailConfig: syncSenderConfig,
@@ -245,12 +177,15 @@ export const onboardingService = {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_ONBOARDINGS));
-        return DEFAULT_ONBOARDINGS;
+        return [];
       }
-      return JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed.filter(item => item.id !== 'onb-001' && item.trackingCode !== 'TRK-2027-482190');
+      }
+      return [];
     } catch {
-      return DEFAULT_ONBOARDINGS;
+      return [];
     }
   },
 
@@ -258,8 +193,9 @@ export const onboardingService = {
     data: Omit<AdmittedLearnerOnboarding, 'id' | 'trackingCode' | 'submittedAt' | 'status' | 'emailsSent'>
   ): { record: AdmittedLearnerOnboarding; initialEmail: OnboardingEmailLog } => {
     const existing = onboardingService.getOnboardings();
+    const nextYear = new Date().getFullYear() + 1;
     const randomCode = Math.floor(100000 + Math.random() * 900000);
-    const trackingCode = `TRK-2027-${randomCode}`;
+    const trackingCode = `TRK-${nextYear}-${randomCode}`;
     const senderEmail = getEnvSenderEmail();
     const senderFull = `${getEnvSenderName()} <${senderEmail}>`;
 

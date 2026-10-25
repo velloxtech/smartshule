@@ -14,6 +14,7 @@ interface SummativeAssessmentsViewProps {
   learningAreas?: BackendLearningArea[];
   onOpenUploadMarks: () => void;
   onNavigateTab?: (tab: string) => void;
+  refreshTrigger?: number;
 }
 
 export interface CanonicalSubjectItem {
@@ -177,6 +178,7 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
   learningAreas = [],
   onOpenUploadMarks,
   onNavigateTab,
+  refreshTrigger,
 }) => {
   const [summatives, setSummatives] = useState<BackendSummativeAssessment[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -351,7 +353,7 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
 
   useEffect(() => {
     fetchSummatives();
-  }, [selectedYearId, selectedTermId]);
+  }, [selectedYearId, selectedTermId, refreshTrigger]);
 
   const effectiveSubjects: CanonicalSubjectItem[] = useMemo(() => {
     let sourceList: BackendLearningArea[] = [];

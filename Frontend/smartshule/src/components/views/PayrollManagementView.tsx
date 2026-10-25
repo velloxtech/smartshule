@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { apiService } from '../../services/api';
-import { PayrollRecord, StaffLeave } from '../../types';
+import { PayrollRecord, StaffLeave, SchoolInfo } from '../../types';
 
 export interface StaffMember {
   id: string;
@@ -65,10 +65,11 @@ export const getStaffDisplayId = (
 };
 
 export const PayrollManagementView: React.FC = () => {
-  const [activeSubTab, setActiveSubTab] = useState<'payroll' | 'leaves'>('payroll');
+  const [activeSubTab, setActiveSubTab] = useState<'payroll' | 'reconciliation' | 'leaves'>('payroll');
   const [payrolls, setPayrolls] = useState<PayrollRecord[]>([]);
   const [leaves, setLeaves] = useState<StaffLeave[]>([]);
   const [staffList, setStaffList] = useState<StaffMember[]>([]);
+  const [school, setSchool] = useState<SchoolInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState<string>(() => {
     const d = new Date();
@@ -85,8 +86,25 @@ export const PayrollManagementView: React.FC = () => {
   const [isPayModalOpen, setIsPayModalOpen] = useState(false);
   const [selectedPayrollForPay, setSelectedPayrollForPay] = useState<PayrollRecord | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'BANK_TRANSFER' | 'MPESA' | 'CHEQUE' | 'CASH'>('BANK_TRANSFER');
+  const [fundingAccount, setFundingAccount] = useState<'BANK' | 'MPESA' | 'CASH' | 'CHEQUE'>('BANK');
+  const [disburseAmount, setDisburseAmount] = useState<number | ''>('');
   const [paymentRef, setPaymentRef] = useState('');
   const [paymentDate, setPaymentDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+
+  // Bulk Payment Modal State
+  const [isBulkPayModalOpen, setIsBulkPayModalOpen] = useState(false);
+  const [bulkPaymentMethod, setBulkPaymentMethod] = useState<'BANK_TRANSFER' | 'MPESA' | 'CHEQUE' | 'CASH'>('BANK_TRANSFER');
+  const [bulkPaymentDate, setBulkPaymentDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+  const [bulkReference, setBulkReference] = useState('');
+
+  // Payment Reversal Modal State
+  const [isReverseModalOpen, setIsReverseModalOpen] = useState(false);
+  const [payrollToReverse, setPayrollToReverse] = useState<PayrollRecord | null>(null);
+  const [reversalReason, setReversalReason] = useState('');
+
+  // Financial Reconciliation State
+  const [reconciliationData, setReconciliationData] = useState<any | null>(null);
+  const [reconciliationLoading, setReconciliationLoading] = useState(false);
 
   // Staff Dropdown & Custom Payslip States
   const [selectedStaffId, setSelectedStaffId] = useState<string>('');
@@ -105,11 +123,11 @@ export const PayrollManagementView: React.FC = () => {
     teacherId: '',
     teacherName: '',
     month: selectedMonth,
-    basicSalary: 45000,
-    houseAllowance: 12000,
-    commuterAllowance: 4000,
-    responsibilityAllowance: 3500,
-    otherDeductions: 0,
+    basicSalary: '' as number | '',
+    houseAllowance: '' as number | '',
+    commuterAllowance: '' as number | '',
+    responsibilityAllowance: '' as number | '',
+    otherDeductions: '' as number | '',
     applyPaye: true,
     applyShif: true,
     applyNssf: true,
@@ -134,16 +152,37 @@ export const PayrollManagementView: React.FC = () => {
     setTimeout(() => setNotification(null), 4000);
   };
 
+  const getSchoolLogoBase64 = async (customUrl?: string): Promise<string | null> => {
+    const urlsToTry = [customUrl, '/logo.png', '/logo.jpg'].filter(Boolean) as string[];
+    for (const url of urlsToTry) {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) continue;
+        const blob = await res.blob();
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+        if (base64 && base64.startsWith('data:image')) return base64;
+      } catch {}
+    }
+    return null;
+  };
+
   const loadData = async () => {
     setLoading(true);
     try {
-      const [payrollRes, leaveRes, teacherRes] = await Promise.all([
+      const [payrollRes, leaveRes, teacherRes, schoolRes] = await Promise.all([
         apiService.getPayrolls(selectedMonth),
         apiService.getLeaves(),
         apiService.getTeachers().catch(() => null),
+        apiService.getSchool().catch(() => null),
       ]);
       if (payrollRes?.data) setPayrolls(payrollRes.data);
       if (leaveRes?.data) setLeaves(leaveRes.data);
+      if (schoolRes?.data) setSchool(schoolRes.data);
 
       if (teacherRes?.data && Array.isArray(teacherRes.data)) {
         const mapped: StaffMember[] = teacherRes.data.map((t: any) => ({
@@ -172,7 +211,10 @@ export const PayrollManagementView: React.FC = () => {
 
   useEffect(() => {
     loadData();
-  }, [selectedMonth]);
+    if (activeSubTab === 'reconciliation') {
+      loadReconciliation();
+    }
+  }, [selectedMonth, activeSubTab]);
 
   // Aggregate Calculations for Ledger Totals
   const stats = useMemo(() => {
@@ -189,7 +231,12 @@ export const PayrollManagementView: React.FC = () => {
     const totalOther = payrolls.reduce((acc, p) => acc + (p.otherDeductions || 0), 0);
     const totalDeductions = payrolls.reduce((acc, p) => acc + (p.totalDeductions || 0), 0);
     const pendingApproval = payrolls.filter((p) => p.status === 'DRAFT').length;
+    const approvedCount = payrolls.filter((p) => p.status === 'APPROVED').length;
+    const partialCount = payrolls.filter((p) => p.status === 'PARTIALLY_PAID').length;
     const paidCount = payrolls.filter((p) => p.status === 'PAID').length;
+    const totalApprovedNet = payrolls.filter((p) => p.status === 'APPROVED').reduce((acc, p) => acc + (p.balance != null ? p.balance : p.netSalary), 0);
+    const totalDisbursedAmount = payrolls.reduce((acc, p) => acc + (p.amountPaid || 0), 0);
+    const totalOutstandingObligations = payrolls.filter(p => p.status !== 'PAID').reduce((acc, p) => acc + (p.balance != null ? p.balance : p.netSalary), 0);
     const pendingLeaves = leaves.filter((l) => l.status === 'PENDING').length;
 
     return {
@@ -206,7 +253,12 @@ export const PayrollManagementView: React.FC = () => {
       totalOther,
       totalDeductions,
       pendingApproval,
+      approvedCount,
+      partialCount,
       paidCount,
+      totalApprovedNet,
+      totalDisbursedAmount,
+      totalOutstandingObligations,
       pendingLeaves,
     };
   }, [payrolls, leaves]);
@@ -317,11 +369,11 @@ export const PayrollManagementView: React.FC = () => {
       teacherId: '',
       teacherName: '',
       month: selectedMonth,
-      basicSalary: 45000,
-      houseAllowance: 12000,
-      commuterAllowance: 4000,
-      responsibilityAllowance: 3500,
-      otherDeductions: 0,
+      basicSalary: '',
+      houseAllowance: '',
+      commuterAllowance: '',
+      responsibilityAllowance: '',
+      otherDeductions: '',
       applyPaye: true,
       applyShif: true,
       applyNssf: true,
@@ -335,7 +387,17 @@ export const PayrollManagementView: React.FC = () => {
     setSelectedStaffId(staffId);
     if (!staffId) {
       setIsCustomStaff(false);
-      setCustomForm(prev => ({ ...prev, teacherId: '', teacherName: '' }));
+      setCustomForm(prev => ({
+        ...prev,
+        teacherId: '',
+        teacherName: '',
+        basicSalary: '',
+        houseAllowance: '',
+        commuterAllowance: '',
+        responsibilityAllowance: '',
+        otherDeductions: '',
+        notes: '',
+      }));
       return;
     }
 
@@ -345,11 +407,11 @@ export const PayrollManagementView: React.FC = () => {
         ...prev,
         teacherId: '',
         teacherName: '',
-        basicSalary: 45000,
-        houseAllowance: 12000,
-        commuterAllowance: 4000,
-        responsibilityAllowance: 3500,
-        otherDeductions: 0,
+        basicSalary: '',
+        houseAllowance: '',
+        commuterAllowance: '',
+        responsibilityAllowance: '',
+        otherDeductions: '',
         applyPaye: true,
         applyShif: true,
         applyNssf: true,
@@ -369,26 +431,23 @@ export const PayrollManagementView: React.FC = () => {
     const staffIdValue = hasTsc ? staff.tscNumber : (hasEmp ? staff.employeeNumber : staff.id);
 
     const priorRecord = payrolls.find(p => p.teacherId === staff.id || p.teacherId === staff.tscNumber || p.teacherId === staff.employeeNumber || (p.teacherName && p.teacherName.toLowerCase() === staff.name.toLowerCase()));
-    const isLeadership = staff.role.toLowerCase().includes('head') || staff.role.toLowerCase().includes('director');
-    const isStreamTeacher = staff.assignedClasses && !staff.assignedClasses.includes('General');
-    const defaultRespAllowance = isLeadership ? 6000 : (isStreamTeacher ? 3500 : 0);
 
     setCustomForm(prev => ({
       ...prev,
       teacherId: staffIdValue,
       teacherName: staff.name,
-      basicSalary: priorRecord?.basicSalary ?? 45000,
-      houseAllowance: priorRecord?.houseAllowance ?? 12000,
-      commuterAllowance: priorRecord?.commuterAllowance ?? 4000,
-      responsibilityAllowance: priorRecord?.responsibilityAllowance ?? defaultRespAllowance,
-      otherDeductions: priorRecord?.otherDeductions ?? 0,
+      basicSalary: priorRecord ? priorRecord.basicSalary : '',
+      houseAllowance: priorRecord ? priorRecord.houseAllowance : '',
+      commuterAllowance: priorRecord ? priorRecord.commuterAllowance : '',
+      responsibilityAllowance: priorRecord ? priorRecord.responsibilityAllowance : '',
+      otherDeductions: priorRecord ? priorRecord.otherDeductions : '',
       applyPaye: true,
       applyShif: true,
       applyNssf: true,
       applyHousingLevy: true,
       notes: priorRecord
-        ? `Auto-populated from previous payroll history for ${staff.name}`
-        : `Standard monthly remuneration schedule for ${staff.name}`,
+        ? `Pre-filled from previous payroll record (${priorRecord.month}) for ${staff.name}`
+        : `New payroll record for ${staff.name}`,
     }));
   };
 
@@ -450,10 +509,21 @@ export const PayrollManagementView: React.FC = () => {
       alert('Please select a staff member or enter their full name');
       return;
     }
+    const basic = Number(customForm.basicSalary) || 0;
+    if (basic <= 0) {
+      alert('Please enter a valid Basic Salary greater than 0');
+      return;
+    }
+
     try {
       const payload = {
         ...customForm,
         teacherId: customForm.teacherId || `staff-${Date.now()}`,
+        basicSalary: basic,
+        houseAllowance: Number(customForm.houseAllowance) || 0,
+        commuterAllowance: Number(customForm.commuterAllowance) || 0,
+        responsibilityAllowance: Number(customForm.responsibilityAllowance) || 0,
+        otherDeductions: Number(customForm.otherDeductions) || 0,
       };
       const res = await apiService.createCustomPayroll(payload);
       if (res.success) {
@@ -482,25 +552,110 @@ export const PayrollManagementView: React.FC = () => {
     }
   };
 
+  const loadReconciliation = async () => {
+    setReconciliationLoading(true);
+    try {
+      const res = await apiService.getPayrollReconciliation(selectedMonth);
+      if (res.success) {
+        setReconciliationData(res.data);
+      }
+    } catch (err: any) {
+      console.error('Failed to load payroll reconciliation:', err);
+    } finally {
+      setReconciliationLoading(false);
+    }
+  };
+
   const handleMarkPaid = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedPayrollForPay) return;
     try {
       const referenceText = paymentRef.trim()
-        ? `${paymentRef} (Paid: ${paymentDate})`
-        : `DISBURSED-${paymentDate}`;
-      const res = await apiService.markPayrollPaid(selectedPayrollForPay.id, paymentMethod, referenceText);
+        ? paymentRef.trim()
+        : `SAL-${selectedPayrollForPay.month}-${selectedPayrollForPay.teacherId}-${Date.now().toString().slice(-4)}`;
+      const amountToPay = typeof disburseAmount === 'number' && disburseAmount > 0
+        ? disburseAmount
+        : (selectedPayrollForPay.balance != null && selectedPayrollForPay.balance > 0 ? selectedPayrollForPay.balance : selectedPayrollForPay.netSalary);
+
+      const res = await apiService.recordSalaryPayment(selectedPayrollForPay.id, {
+        amount: amountToPay,
+        paymentMethod,
+        paymentReference: referenceText,
+        paymentDate,
+        fundingAccount,
+        notes: `Disbursement from Payroll module for ${selectedPayrollForPay.month} (${selectedPayrollForPay.teacherName})`
+      });
+
       if (res.success) {
-        showNotification(`Payment recorded for ${selectedPayrollForPay.teacherName} via ${paymentMethod}!`);
+        const voucher = (res.data as any)?.expense?.voucherNumber || 'PV-SAL';
+        showNotification(`Payment of KES ${amountToPay.toLocaleString()} recorded for ${selectedPayrollForPay.teacherName}! Financial Expense Voucher ${voucher} created.`);
         setIsPayModalOpen(false);
         setSelectedPayrollForPay(null);
         setPaymentRef('');
+        setDisburseAmount('');
         loadData();
+        if (activeSubTab === 'reconciliation') {
+          loadReconciliation();
+        }
       } else {
         alert(res.message || 'Failed to record payment');
       }
     } catch (err: any) {
       alert(`Error recording payment: ${err.message}`);
+    }
+  };
+
+  const handleBulkPaySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const ref = bulkReference.trim() || `BATCH-${selectedMonth}-${Date.now().toString().slice(-4)}`;
+      const res = await apiService.payPayrollBatch({
+        month: selectedMonth,
+        paymentMethod: bulkPaymentMethod,
+        batchReference: ref,
+        paymentDate: bulkPaymentDate,
+        fundingAccount: bulkPaymentMethod === 'MPESA' ? 'MPESA' : bulkPaymentMethod === 'CASH' ? 'CASH' : 'BANK',
+        notes: `Bulk batch salary disbursement for ${selectedMonth}`
+      });
+
+      if (res.success) {
+        showNotification(`Bulk payroll disbursement complete! Disbursed KES ${res.data.totalDisbursed.toLocaleString()} across ${res.data.count} staff records.`);
+        setIsBulkPayModalOpen(false);
+        setBulkReference('');
+        loadData();
+        if (activeSubTab === 'reconciliation') {
+          loadReconciliation();
+        }
+      } else {
+        alert(res.message || 'Failed to process bulk payroll payment');
+      }
+    } catch (err: any) {
+      alert(`Error processing bulk payroll: ${err.message}`);
+    }
+  };
+
+  const handleReversePaymentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!payrollToReverse) return;
+    try {
+      const res = await apiService.reverseSalaryPayment(
+        payrollToReverse.id,
+        reversalReason.trim() || 'Payment reversal requested by authorized administrator'
+      );
+      if (res.success) {
+        showNotification(`Payment reversed for ${payrollToReverse.teacherName}. Financial expense voucher cancelled and account balance restored.`);
+        setIsReverseModalOpen(false);
+        setPayrollToReverse(null);
+        setReversalReason('');
+        loadData();
+        if (activeSubTab === 'reconciliation') {
+          loadReconciliation();
+        }
+      } else {
+        alert(res.message || 'Failed to reverse payment');
+      }
+    } catch (err: any) {
+      alert(`Error reversing payment: ${err.message}`);
     }
   };
 
@@ -537,7 +692,8 @@ export const PayrollManagementView: React.FC = () => {
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(13);
-    doc.text('SMARTSHULE ACADEMY / GRACE SEEDS EDUCATION CENTRE', 14, 9);
+    const schoolName = school?.name || 'Grace Seeds School';
+    doc.text(`${schoolName.toUpperCase()} — FACULTY & STAFF REMUNERATION LEDGER`, 14, 9);
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8.5);
@@ -660,51 +816,95 @@ export const PayrollManagementView: React.FC = () => {
         doc.setFontSize(7);
         doc.setTextColor(150, 150, 150);
         doc.text(
-          `Page ${data.pageNumber} of ${pageCount} — SmartShule Remuneration Ledger — Confidential School Record`,
+          `Page ${data.pageNumber} of ${pageCount} — Grace Seeds School Remuneration Ledger — Confidential School Record`,
           14,
           204
         );
       },
     });
 
-    doc.save(`SmartShule_Payroll_Ledger_${selectedMonth}.pdf`);
-    showNotification(`Payroll ledger PDF downloaded: SmartShule_Payroll_Ledger_${selectedMonth}.pdf`);
+    doc.save(`Grace_Seeds_School_Payroll_Ledger_${selectedMonth}.pdf`);
+    showNotification(`Payroll ledger PDF downloaded: Grace_Seeds_School_Payroll_Ledger_${selectedMonth}.pdf`);
   };
 
   // PDF DOWNLOAD: Single Staff Payslip Advice
-  const handleDownloadPayslipPdf = (p: PayrollRecord) => {
+  const handleDownloadPayslipPdf = async (p: PayrollRecord) => {
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const logoBase64 = await getSchoolLogoBase64(school?.logoUrl);
 
-    // Header
+    const schoolName = school?.name || 'Grace Seeds School';
+    const address = school?.address || 'KEMRI Street, Kisian, Kisumu, Kenya';
+    const phone = school?.phone || '0745436312';
+
+    // Top burgundy accent band
     doc.setFillColor(122, 18, 40);
-    doc.rect(0, 0, 210, 26, 'F');
+    doc.rect(0, 0, 210, 4, 'F');
 
-    doc.setTextColor(255, 255, 255);
+    let curY = 10;
+    const hasLogo = !!logoBase64;
+    if (hasLogo) {
+      try {
+        doc.addImage(logoBase64, 'PNG', 14, curY, 16, 16);
+      } catch {}
+    }
+
+    const textX = hasLogo ? 33 : 14;
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(14);
-    doc.text('SMARTSHULE ACADEMY', 14, 11);
+    doc.setFontSize(13);
+    doc.setTextColor(122, 18, 40);
+    doc.text(schoolName.toUpperCase(), textX, curY + 4);
 
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.text('Official Faculty & Staff Payslip Advice', 14, 17);
-    doc.text(`Period: ${p.month}`, 160, 17);
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`${address} · Tel: ${phone}${school?.email ? ` · Email: ${school.email}` : ''}`, textX, curY + 9);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor(30, 41, 59);
+    doc.text(`OFFICIAL FACULTY & STAFF PAYSLIP ADVICE — PERIOD: ${p.month}`, textX, curY + 14);
+
+    curY += 20;
+
+    // Matched Staff Profile
+    const matchedStaff = staffList.find(s =>
+      s.id === p.teacherId ||
+      s.tscNumber === p.teacherId ||
+      s.employeeNumber === p.teacherId ||
+      (p.teacherName && s.name.trim().toLowerCase() === p.teacherName.trim().toLowerCase())
+    );
 
     // Employee Box
     doc.setFillColor(248, 250, 252);
-    doc.roundedRect(14, 32, 182, 22, 2, 2, 'F');
+    doc.roundedRect(14, curY, 182, 24, 2, 2, 'F');
     doc.setDrawColor(226, 232, 240);
-    doc.roundedRect(14, 32, 182, 22, 2, 2, 'S');
+    doc.roundedRect(14, curY, 182, 24, 2, 2, 'S');
 
     doc.setTextColor(71, 85, 105);
-    doc.setFontSize(8.5);
-    doc.text('Employee Name:', 18, 39);
-    doc.text('Staff ID (TSC / Emp No):', 110, 39);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.text('Employee Name:', 18, curY + 6);
+    doc.text('Staff ID (TSC / Emp No):', 110, curY + 6);
 
     doc.setTextColor(15, 23, 42);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
-    doc.text(p.teacherName || 'Faculty Member', 18, 47);
-    doc.text(getStaffDisplayId(p, staffList), 110, 47);
+    doc.setFontSize(9.5);
+    doc.text(p.teacherName || 'Faculty Member', 18, curY + 11.5);
+    doc.text(getStaffDisplayId(p, staffList), 110, curY + 11.5);
+
+    doc.setTextColor(71, 85, 105);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.text('Designation / Role:', 18, curY + 17);
+    doc.text('Status & Disbursal:', 110, curY + 17);
+
+    doc.setTextColor(15, 23, 42);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.text(matchedStaff?.role || 'Faculty & Teaching Staff', 18, curY + 22);
+    doc.text(`${p.status} ${p.paymentMethod ? `via ${p.paymentMethod}` : ''}`, 110, curY + 22);
+
+    curY += 28;
 
     // Earnings Table
     const earningsRows = [
@@ -716,7 +916,7 @@ export const PayrollManagementView: React.FC = () => {
     ];
 
     autoTable(doc, {
-      startY: 58,
+      startY: curY,
       margin: { left: 14, right: 110 },
       head: [['Earnings Category', 'Amount (KES)']],
       body: earningsRows,
@@ -737,7 +937,7 @@ export const PayrollManagementView: React.FC = () => {
     ];
 
     autoTable(doc, {
-      startY: 58,
+      startY: curY,
       margin: { left: 110, right: 14 },
       head: [['Statutory & Deductions', 'Amount (KES)']],
       body: deductionsRows,
@@ -748,29 +948,54 @@ export const PayrollManagementView: React.FC = () => {
     });
 
     // Net Pay Banner
-    const netY = (doc as any).lastAutoTable ? (doc as any).lastAutoTable.finalY + 10 : 120;
+    const netY = (doc as any).lastAutoTable ? (doc as any).lastAutoTable.finalY + 8 : curY + 60;
     doc.setFillColor(236, 253, 245);
-    doc.roundedRect(14, netY, 182, 22, 2, 2, 'F');
+    doc.roundedRect(14, netY, 182, 20, 2, 2, 'F');
     doc.setDrawColor(167, 243, 208);
-    doc.roundedRect(14, netY, 182, 22, 2, 2, 'S');
+    doc.roundedRect(14, netY, 182, 20, 2, 2, 'S');
 
     doc.setTextColor(6, 95, 70);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.text('NET SALARY PAYABLE:', 20, netY + 9);
+    doc.setFontSize(8.5);
+    doc.text('NET SALARY PAYABLE:', 20, netY + 8);
 
-    doc.setFontSize(14);
-    doc.text(`KES ${(p.netSalary || 0).toLocaleString()}`, 20, netY + 17);
+    doc.setFontSize(13);
+    doc.text(`KES ${(p.netSalary || 0).toLocaleString()}`, 20, netY + 16);
 
     if (p.status === 'PAID') {
-      doc.setFontSize(8.5);
-      doc.text(`Disbursed via: ${p.paymentMethod || 'BANK'}`, 120, netY + 9);
+      doc.setFontSize(8);
+      doc.text(`Disbursed via: ${p.paymentMethod || 'BANK'}`, 110, netY + 8);
       if (p.paymentReference) {
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(7.5);
-        doc.text(`Ref: ${p.paymentReference}`, 120, netY + 16);
+        doc.text(`Ref: ${p.paymentReference}`, 110, netY + 15);
       }
     }
+
+    // Signatory & Stamp Section
+    const signY = netY + 28;
+    doc.setDrawColor(203, 213, 225);
+    doc.setLineWidth(0.3);
+
+    // Sign line
+    doc.line(18, signY + 12, 85, signY + 12);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(100, 116, 139);
+    doc.text('Authorized Signatory (Finance / Bursar)', 18, signY + 16);
+
+    // Stamp box
+    doc.roundedRect(125, signY - 2, 70, 22, 1, 1, 'S');
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(7.5);
+    doc.setTextColor(148, 163, 184);
+    doc.text('Official School Stamp / Seal', 135, signY + 10);
+
+    // Footer note
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.setTextColor(148, 163, 184);
+    doc.text('This is an official computer-generated payslip advice issued under the Employment Act of Kenya. Valid without alteration.', 14, 285);
 
     doc.save(`Payslip_${(p.teacherName || 'Staff').replace(/[^a-zA-Z0-9]/g, '_')}_${p.month}.pdf`);
     showNotification(`Payslip PDF downloaded for ${p.teacherName}`);
@@ -850,6 +1075,16 @@ export const PayrollManagementView: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          {stats.approvedCount > 0 && (
+            <button
+              onClick={() => setIsBulkPayModalOpen(true)}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 shadow-md animate-pulse"
+              title="Bulk disburse all approved payroll records with financial posting"
+            >
+              <span className="material-symbols-outlined text-lg">bolt</span>
+              Bulk Disburse Approved ({stats.approvedCount})
+            </button>
+          )}
           <button
             onClick={handleDownloadLedgerPdf}
             className="bg-white/10 hover:bg-white/20 text-white border border-white/20 backdrop-blur-sm px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 shadow-sm"
@@ -890,10 +1125,25 @@ export const PayrollManagementView: React.FC = () => {
         </button>
 
         <button
+          onClick={() => {
+            setActiveSubTab('reconciliation');
+            loadReconciliation();
+          }}
+          className={`px-5 py-3 text-sm font-semibold border-b-2 flex items-center gap-2 transition-colors ${
+            activeSubTab === 'reconciliation'
+              ? 'border-[#7a1228] text-[#7a1228] font-bold'
+              : 'border-transparent text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <span className="material-symbols-outlined text-lg">account_balance_wallet</span>
+          Financial Reconciliation
+        </button>
+
+        <button
           onClick={() => setActiveSubTab('leaves')}
           className={`px-5 py-3 text-sm font-semibold border-b-2 flex items-center gap-2 transition-colors ${
             activeSubTab === 'leaves'
-              ? 'border-[#7a1228] text-[#7a1228]'
+              ? 'border-[#7a1228] text-[#7a1228] font-bold'
               : 'border-transparent text-slate-600 hover:text-slate-900'
           }`}
         >
@@ -1097,27 +1347,51 @@ export const PayrollManagementView: React.FC = () => {
                         {/* Payment Tracking / Status */}
                         <td className="px-2 py-1 border border-slate-300 font-sans whitespace-nowrap">
                           {isPaid ? (
-                            <div className="flex items-center gap-1.5">
-                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
-                                PAID{p.paymentMethod ? ` · ${p.paymentMethod}` : ''}
-                              </span>
+                            <div className="flex flex-col gap-0.5">
+                              <div className="flex items-center gap-1">
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                                  PAID{p.paymentMethod ? ` · ${p.paymentMethod}` : ''}
+                                </span>
+                                {p.voucherNumber && (
+                                  <span className="text-[9.5px] text-[#7a1228] font-bold font-mono">
+                                    {p.voucherNumber}
+                                  </span>
+                                )}
+                              </div>
                               {p.paymentReference && (
-                                <span className="text-[10px] text-slate-500 font-mono truncate max-w-[80px]" title={p.paymentReference}>
-                                  {p.paymentReference}
+                                <span className="text-[9.5px] text-slate-500 font-mono truncate max-w-[120px]" title={p.paymentReference}>
+                                  Ref: {p.paymentReference}
                                 </span>
                               )}
+                            </div>
+                          ) : p.status === 'PARTIALLY_PAID' ? (
+                            <div className="flex flex-col gap-0.5">
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
+                                PARTIAL · Bal: KES {(p.balance || 0).toLocaleString()}
+                              </span>
+                              <span className="text-[9.5px] text-slate-500 font-mono">
+                                Paid: KES {(p.amountPaid || 0).toLocaleString()}
+                              </span>
                             </div>
                           ) : p.status === 'APPROVED' ? (
                             <div className="flex items-center gap-1">
                               <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800">
                                 Approved
                               </span>
-                              <span className="text-[10px] text-slate-400">Await</span>
+                              <span className="text-[10px] text-blue-600 font-medium">Ready</span>
+                            </div>
+                          ) : p.status === 'REVERSED' ? (
+                            <div className="flex items-center gap-1">
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800">
+                                Reversed
+                              </span>
+                              <span className="text-[10px] text-purple-600">Refunded</span>
                             </div>
                           ) : (
                             <div className="flex items-center gap-1">
-                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">
                                 Draft
                               </span>
                               <button
@@ -1137,18 +1411,40 @@ export const PayrollManagementView: React.FC = () => {
                             <button
                               onClick={() => {
                                 setSelectedPayrollForPay(p);
+                                const remaining = p.balance != null && p.balance > 0 ? p.balance : (p.status === 'PAID' ? 0 : p.netSalary);
+                                setDisburseAmount(remaining > 0 ? remaining : '');
+                                setPaymentRef(p.paymentReference || '');
                                 setIsPayModalOpen(true);
                               }}
-                              title={isPaid ? 'Update payment tracking details' : 'Issue Payment / Record Disbursal'}
+                              title={isPaid ? 'Payment details recorded' : 'Issue Payment / Disburse Funds'}
                               className={`px-2 py-0.5 rounded text-[11px] font-bold flex items-center gap-1 shadow-sm transition-all ${
                                 isPaid
                                   ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-300'
-                                  : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                                  : p.status === 'PARTIALLY_PAID'
+                                  ? 'bg-amber-600 hover:bg-amber-700 text-white'
+                                  : p.status === 'APPROVED'
+                                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                                  : 'bg-slate-500 hover:bg-slate-600 text-white'
                               }`}
                             >
                               <span className="material-symbols-outlined text-[13px]">payments</span>
-                              <span>{isPaid ? 'Paid' : 'Issue Pay'}</span>
+                              <span>{isPaid ? 'Paid' : p.status === 'PARTIALLY_PAID' ? 'Pay Bal' : 'Issue Pay'}</span>
                             </button>
+
+                            {/* Payment Reversal Button (Only for Paid / Partially Paid) */}
+                            {(p.status === 'PAID' || p.status === 'PARTIALLY_PAID') && (
+                              <button
+                                onClick={() => {
+                                  setPayrollToReverse(p);
+                                  setReversalReason('');
+                                  setIsReverseModalOpen(true);
+                                }}
+                                title="Reverse Salary Payment (Restores School Financial Account Balance)"
+                                className="p-1 text-amber-600 hover:text-white hover:bg-amber-600 rounded transition-colors"
+                              >
+                                <span className="material-symbols-outlined text-[15px]">undo</span>
+                              </button>
+                            )}
 
                             {/* View / Print Payslip Button */}
                             <button
@@ -1250,7 +1546,165 @@ export const PayrollManagementView: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 2: STAFF LEAVES */}
+      {/* TAB 2: FINANCIAL RECONCILIATION */}
+      {activeSubTab === 'reconciliation' && (
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 space-y-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-4">
+            <div>
+              <div className="flex items-center gap-2 text-[#7a1228] text-xs font-bold uppercase tracking-wider mb-1">
+                <span className="material-symbols-outlined text-base">account_balance</span>
+                School Finance & Payroll Integrity
+              </div>
+              <h2 className="text-xl font-black text-slate-900">Payroll vs. Financial Expense Reconciliation</h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Verifies exact 1:1 agreement between payroll disbursements and financial outflow expense vouchers for {selectedMonth}.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={loadReconciliation}
+                disabled={reconciliationLoading}
+                className="px-3.5 py-2 border border-slate-300 text-slate-700 hover:bg-slate-100 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all"
+              >
+                <span className={`material-symbols-outlined text-sm ${reconciliationLoading ? 'animate-spin' : ''}`}>sync</span>
+                Re-check Alignment
+              </button>
+            </div>
+          </div>
+
+          {/* 4 KPI Summary Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl">
+              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Total Net Payroll</p>
+              <p className="text-xl font-black text-slate-900 font-mono mt-1">
+                KES {(reconciliationData?.totalNetSalaries ?? stats.totalNet).toLocaleString()}
+              </p>
+              <p className="text-[11px] text-slate-400 mt-1">All {payrolls.length} scheduled staff records</p>
+            </div>
+
+            <div className="bg-emerald-50/60 border border-emerald-200 p-4 rounded-xl">
+              <p className="text-xs font-medium text-emerald-800 uppercase tracking-wide">Disbursed Salaries</p>
+              <p className="text-xl font-black text-emerald-700 font-mono mt-1">
+                KES {(reconciliationData?.totalDisbursedSalaries ?? stats.totalDisbursedAmount).toLocaleString()}
+              </p>
+              <p className="text-[11px] text-emerald-600 mt-1">{stats.paidCount} paid · {stats.partialCount} partial</p>
+            </div>
+
+            <div className="bg-blue-50/60 border border-blue-200 p-4 rounded-xl">
+              <p className="text-xs font-medium text-blue-800 uppercase tracking-wide">Financial Cash Outflows</p>
+              <p className="text-xl font-black text-blue-700 font-mono mt-1">
+                KES {(reconciliationData?.totalFinancialExpenseAmount ?? stats.totalDisbursedAmount).toLocaleString()}
+              </p>
+              <p className="text-[11px] text-blue-600 mt-1">Expense category: SALARIES_WAGES</p>
+            </div>
+
+            <div className={`p-4 rounded-xl border ${
+              reconciliationData?.isReconciled !== false
+                ? 'bg-emerald-50 border-emerald-300'
+                : 'bg-rose-50 border-rose-300'
+            }`}>
+              <p className="text-xs font-medium text-slate-700 uppercase tracking-wide">Reconciliation Status</p>
+              <div className="flex items-center gap-1.5 mt-1">
+                <span className={`material-symbols-outlined text-lg ${
+                  reconciliationData?.isReconciled !== false ? 'text-emerald-600' : 'text-rose-600'
+                }`}>
+                  {reconciliationData?.isReconciled !== false ? 'check_circle' : 'warning'}
+                </span>
+                <span className={`text-base font-black ${
+                  reconciliationData?.isReconciled !== false ? 'text-emerald-800' : 'text-rose-800'
+                }`}>
+                  {reconciliationData?.isReconciled !== false ? 'FULLY BALANCED' : 'VARIANCE DETECTED'}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 mt-1">
+                {reconciliationData?.variance === 0 || !reconciliationData?.variance
+                  ? 'KES 0.00 discrepancy with finance ledger'
+                  : `Variance: KES ${Math.abs(reconciliationData?.variance || 0).toLocaleString()}`}
+              </p>
+            </div>
+          </div>
+
+          {/* Traceability Table */}
+          <div className="border border-slate-200 rounded-xl overflow-hidden">
+            <div className="bg-slate-100 px-4 py-2.5 border-b border-slate-200 font-bold text-xs text-slate-700 flex justify-between items-center">
+              <span>Payroll Disbursement & Financial Ledger Traceability</span>
+              <span className="text-[11px] text-slate-500">Auto-audited against General Cash Flow Ledger</span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs text-left">
+                <thead className="bg-slate-50 text-slate-600 font-bold border-b text-[11px] uppercase">
+                  <tr>
+                    <th className="px-3 py-2">Staff Member</th>
+                    <th className="px-3 py-2 text-right">Net Payable</th>
+                    <th className="px-3 py-2 text-right">Amount Disbursed</th>
+                    <th className="px-3 py-2 text-right">Remaining Balance</th>
+                    <th className="px-3 py-2">Funding Account</th>
+                    <th className="px-3 py-2">Expense Voucher</th>
+                    <th className="px-3 py-2">Financial Outflow</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-mono">
+                  {payrolls.map((p) => {
+                    const balance = p.balance != null ? p.balance : (p.status === 'PAID' ? 0 : p.netSalary);
+                    return (
+                      <tr key={p.id} className="hover:bg-slate-50">
+                        <td className="px-3 py-2 font-sans font-medium text-slate-900">
+                          {p.teacherName}
+                          <div className="text-[10px] text-slate-400 font-mono">{getStaffDisplayId(p, staffList)}</div>
+                        </td>
+                        <td className="px-3 py-2 text-right font-medium text-slate-800">
+                          KES {p.netSalary?.toLocaleString()}
+                        </td>
+                        <td className="px-3 py-2 text-right font-bold text-emerald-700">
+                          KES {(p.amountPaid || (p.status === 'PAID' ? p.netSalary : 0)).toLocaleString()}
+                        </td>
+                        <td className="px-3 py-2 text-right font-medium text-slate-600">
+                          KES {balance.toLocaleString()}
+                        </td>
+                        <td className="px-3 py-2 font-sans">
+                          {p.fundingAccount ? (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">
+                              {p.fundingAccount}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 text-[10px]">—</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-slate-700 text-[11px]">
+                          {p.voucherNumber ? (
+                            <span className="text-[#7a1228] font-bold">{p.voucherNumber}</span>
+                          ) : (
+                            <span className="text-slate-400">—</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2 font-sans">
+                          {p.status === 'PAID' ? (
+                            <span className="inline-flex items-center gap-1 text-emerald-700 font-bold text-[11px]">
+                              <span className="material-symbols-outlined text-xs">check_circle</span> Deducted from Ledger
+                            </span>
+                          ) : p.status === 'PARTIALLY_PAID' ? (
+                            <span className="inline-flex items-center gap-1 text-amber-700 font-bold text-[11px]">
+                              <span className="material-symbols-outlined text-xs">timelapse</span> Partial Outflow
+                            </span>
+                          ) : p.status === 'APPROVED' ? (
+                            <span className="text-blue-600 font-medium text-[11px]">Approved Commitment (Undeducted)</span>
+                          ) : p.status === 'REVERSED' ? (
+                            <span className="text-purple-700 font-medium text-[11px]">Reversed & Refunded</span>
+                          ) : (
+                            <span className="text-slate-400 text-[11px]">Draft Preparation</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: STAFF LEAVES */}
       {activeSubTab === 'leaves' && (
         <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-5 space-y-4">
           <div className="flex items-center justify-between">
@@ -1468,10 +1922,29 @@ export const PayrollManagementView: React.FC = () => {
                         </div>
                       )}
                     </div>
-                    <p className="text-[11px] text-emerald-700 font-medium mt-1.5 flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[13px]">auto_awesome</span>
-                      Salary figures automatically pre-filled from staff records. Adjust below if necessary.
-                    </p>
+                    {(() => {
+                      const priorRecord = selectedStaff ? payrolls.find(p =>
+                        p.teacherId === selectedStaff.id ||
+                        p.teacherId === selectedStaff.tscNumber ||
+                        p.teacherId === selectedStaff.employeeNumber ||
+                        (p.teacherName && p.teacherName.toLowerCase() === selectedStaff.name.toLowerCase())
+                      ) : null;
+
+                      if (priorRecord) {
+                        return (
+                          <p className="text-[11px] text-emerald-700 font-medium mt-1.5 flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[13px]">history</span>
+                            Salary figures pre-filled from previous payroll record ({priorRecord.month}). Adjust below if necessary.
+                          </p>
+                        );
+                      }
+                      return (
+                        <p className="text-[11px] text-amber-700 font-medium mt-1.5 flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[13px]">edit_note</span>
+                          No previous payroll record found for this staff member. Please enter contracted salary amounts below.
+                        </p>
+                      );
+                    })()}
                   </div>
                 </div>
               )}
@@ -1524,13 +1997,15 @@ export const PayrollManagementView: React.FC = () => {
               {/* Salary Breakdown Inputs */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">Basic Salary (KES)</label>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">Basic Salary (KES) *</label>
                   <input
                     type="number"
                     min="0"
+                    step="1"
                     required
+                    placeholder="0"
                     value={customForm.basicSalary}
-                    onChange={(e) => setCustomForm({ ...customForm, basicSalary: Number(e.target.value) })}
+                    onChange={(e) => setCustomForm({ ...customForm, basicSalary: e.target.value === '' ? '' : Number(e.target.value) })}
                     className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm text-slate-900 focus:ring-2 focus:ring-[#7a1228]/20 focus:border-[#7a1228]"
                   />
                 </div>
@@ -1539,8 +2014,10 @@ export const PayrollManagementView: React.FC = () => {
                   <input
                     type="number"
                     min="0"
+                    step="1"
+                    placeholder="0"
                     value={customForm.houseAllowance}
-                    onChange={(e) => setCustomForm({ ...customForm, houseAllowance: Number(e.target.value) })}
+                    onChange={(e) => setCustomForm({ ...customForm, houseAllowance: e.target.value === '' ? '' : Number(e.target.value) })}
                     className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm text-slate-900 focus:ring-2 focus:ring-[#7a1228]/20 focus:border-[#7a1228]"
                   />
                 </div>
@@ -1552,8 +2029,10 @@ export const PayrollManagementView: React.FC = () => {
                   <input
                     type="number"
                     min="0"
+                    step="1"
+                    placeholder="0"
                     value={customForm.commuterAllowance}
-                    onChange={(e) => setCustomForm({ ...customForm, commuterAllowance: Number(e.target.value) })}
+                    onChange={(e) => setCustomForm({ ...customForm, commuterAllowance: e.target.value === '' ? '' : Number(e.target.value) })}
                     className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm text-slate-900 focus:ring-2 focus:ring-[#7a1228]/20 focus:border-[#7a1228]"
                   />
                 </div>
@@ -1562,8 +2041,10 @@ export const PayrollManagementView: React.FC = () => {
                   <input
                     type="number"
                     min="0"
+                    step="1"
+                    placeholder="0"
                     value={customForm.responsibilityAllowance}
-                    onChange={(e) => setCustomForm({ ...customForm, responsibilityAllowance: Number(e.target.value) })}
+                    onChange={(e) => setCustomForm({ ...customForm, responsibilityAllowance: e.target.value === '' ? '' : Number(e.target.value) })}
                     className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm text-slate-900 focus:ring-2 focus:ring-[#7a1228]/20 focus:border-[#7a1228]"
                   />
                 </div>
@@ -1574,8 +2055,10 @@ export const PayrollManagementView: React.FC = () => {
                 <input
                   type="number"
                   min="0"
+                  step="1"
+                  placeholder="0"
                   value={customForm.otherDeductions}
-                  onChange={(e) => setCustomForm({ ...customForm, otherDeductions: Number(e.target.value) })}
+                  onChange={(e) => setCustomForm({ ...customForm, otherDeductions: e.target.value === '' ? '' : Number(e.target.value) })}
                   className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm text-slate-900 focus:ring-2 focus:ring-[#7a1228]/20 focus:border-[#7a1228]"
                 />
               </div>
@@ -1736,40 +2219,182 @@ export const PayrollManagementView: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL: DISBURSE / RECORD PAYMENT (TRACK PAYMENT METHOD, REF, DATE) */}
-      {isPayModalOpen && selectedPayrollForPay && (
+      {/* MODAL: DISBURSE / RECORD PAYMENT (TRACK PAYMENT METHOD, REF, DATE, FUNDING ACCOUNT, PARTIAL AMOUNTS) */}
+      {isPayModalOpen && selectedPayrollForPay && (() => {
+        const remaining = selectedPayrollForPay.balance != null ? selectedPayrollForPay.balance : (selectedPayrollForPay.status === 'PAID' ? 0 : selectedPayrollForPay.netSalary);
+        const currentDisburse = typeof disburseAmount === 'number' && disburseAmount > 0 ? disburseAmount : remaining;
+        return (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 shadow-2xl">
+              <div className="flex items-center gap-2.5 text-emerald-700 mb-2">
+                <span className="material-symbols-outlined text-2xl">payments</span>
+                <h3 className="text-lg font-bold text-slate-900">Issue Payment & Record Disbursal</h3>
+              </div>
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs mb-4 space-y-1">
+                <div className="flex justify-between text-slate-600">
+                  <span>Faculty Member:</span>
+                  <span className="font-bold text-slate-900">{selectedPayrollForPay.teacherName}</span>
+                </div>
+                <div className="flex justify-between text-slate-600">
+                  <span>Total Net Salary:</span>
+                  <span className="font-mono font-semibold text-slate-900">KES {selectedPayrollForPay.netSalary.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-slate-600">
+                  <span>Already Disbursed:</span>
+                  <span className="font-mono text-emerald-700 font-bold">KES {(selectedPayrollForPay.amountPaid || 0).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-slate-600 border-t pt-1">
+                  <span className="font-bold text-slate-700">Remaining Balance:</span>
+                  <span className="font-mono font-extrabold text-[#7a1228]">KES {remaining.toLocaleString()}</span>
+                </div>
+              </div>
+
+              <form onSubmit={handleMarkPaid} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Disbursement Amount (KES)</label>
+                  <input
+                    type="number"
+                    required
+                    min={1}
+                    max={remaining > 0 ? remaining : undefined}
+                    value={disburseAmount}
+                    onChange={(e) => setDisburseAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                    placeholder={`e.g., ${remaining}`}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-sm text-slate-900 font-mono font-bold focus:ring-2 focus:ring-emerald-500"
+                  />
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    Enter full or partial payment amount to disburse and deduct from school accounts.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">School Funding Account (Deduction Source)</label>
+                  <select
+                    value={fundingAccount}
+                    onChange={(e: any) => setFundingAccount(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-sm text-slate-900 font-medium focus:ring-2 focus:ring-emerald-500"
+                  >
+                    <option value="BANK">Bank Account (School Operating Bank Account)</option>
+                    <option value="MPESA">M-Pesa Account (School Remittance Paybill / Till)</option>
+                    <option value="CASH">School Cash Office (Petty / Liquid Cash)</option>
+                    <option value="CHEQUE">School Cheque Account</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Disbursement Channel / Method</label>
+                  <select
+                    value={paymentMethod}
+                    onChange={(e: any) => setPaymentMethod(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-sm text-slate-900 font-medium focus:ring-2 focus:ring-emerald-500"
+                  >
+                    <option value="BANK_TRANSFER">Bank Transfer (EFT / RTGS / KCB Buni / Pesalink)</option>
+                    <option value="MPESA">M-Pesa B2C / Paybill Remittance</option>
+                    <option value="CHEQUE">Bank Cheque</option>
+                    <option value="CASH">Cash Payment / School Cash Voucher</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Transaction Reference / Voucher Code</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., MPESA-QK892348 or KCB-RTGS-991204"
+                    value={paymentRef}
+                    onChange={(e) => setPaymentRef(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-sm text-slate-900 font-mono focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Payment Date</label>
+                  <input
+                    type="date"
+                    required
+                    value={paymentDate}
+                    onChange={(e) => setPaymentDate(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-sm text-slate-900 focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+
+                <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-[11px] text-amber-800 flex items-start gap-2">
+                  <span className="material-symbols-outlined text-sm mt-0.5 shrink-0">info</span>
+                  <span>
+                    Saving will record an official <strong>Financial Expense Voucher</strong> under <em>Salaries & Wages</em> and immediately reduce your school's <strong>{fundingAccount}</strong> account balance by <strong>KES {(currentDisburse || 0).toLocaleString()}</strong>.
+                  </span>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-3 border-t">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsPayModalOpen(false);
+                      setSelectedPayrollForPay(null);
+                    }}
+                    className="px-4 py-2 border rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-emerald-600 text-white font-bold text-xs rounded-xl hover:bg-emerald-700 flex items-center gap-1.5 shadow-md"
+                  >
+                    <span className="material-symbols-outlined text-sm">check_circle</span>
+                    Confirm & Deduct Funds
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* MODAL: BULK DISBURSE APPROVED SALARIES */}
+      {isBulkPayModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 shadow-2xl">
             <div className="flex items-center gap-2.5 text-emerald-700 mb-2">
-              <span className="material-symbols-outlined text-2xl">payments</span>
-              <h3 className="text-lg font-bold text-slate-900">Issue Payment & Record Disbursal</h3>
+              <span className="material-symbols-outlined text-2xl">bolt</span>
+              <h3 className="text-lg font-bold text-slate-900">Bulk Disburse Approved Salaries</h3>
             </div>
-            <p className="text-xs text-slate-600 mb-4">
-              Recording payment disbursement of <strong className="text-emerald-700 font-mono text-sm">KES {selectedPayrollForPay.netSalary.toLocaleString()}</strong> to <strong>{selectedPayrollForPay.teacherName}</strong> for {selectedPayrollForPay.month}.
+            <p className="text-xs text-slate-600 mb-3">
+              Disbursing <strong>{stats.approvedCount} approved payroll records</strong> for {selectedMonth} simultaneously with automatic financial postings.
             </p>
 
-            <form onSubmit={handleMarkPaid} className="space-y-4">
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs mb-4 flex justify-between items-center">
+              <div>
+                <p className="text-[11px] text-emerald-800 font-medium">TOTAL DISBURSEMENT AMOUNT</p>
+                <p className="text-xl font-black text-emerald-700 font-mono">
+                  KES {stats.totalApprovedNet.toLocaleString()}
+                </p>
+              </div>
+              <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded-lg font-bold text-[11px]">
+                {stats.approvedCount} Staff
+              </span>
+            </div>
+
+            <form onSubmit={handleBulkPaySubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Disbursement Channel / Method</label>
                 <select
-                  value={paymentMethod}
-                  onChange={(e: any) => setPaymentMethod(e.target.value)}
+                  value={bulkPaymentMethod}
+                  onChange={(e: any) => setBulkPaymentMethod(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-sm text-slate-900 font-medium focus:ring-2 focus:ring-emerald-500"
                 >
-                  <option value="BANK_TRANSFER">Bank Transfer (EFT / RTGS / KCB Buni / Pesalink)</option>
-                  <option value="MPESA">M-Pesa B2C / Paybill Remittance</option>
-                  <option value="CHEQUE">Bank Cheque</option>
-                  <option value="CASH">Cash Payment / School Cash Voucher</option>
+                  <option value="BANK_TRANSFER">Bank Transfer (Batch EFT / RTGS)</option>
+                  <option value="MPESA">M-Pesa B2C Bulk Disbursement</option>
+                  <option value="CHEQUE">Bank Cheques</option>
+                  <option value="CASH">Cash Office</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Transaction Reference / Voucher Code</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Batch Payment Reference</label>
                 <input
                   type="text"
-                  placeholder="e.g., MPESA-QK892348 or KCB-RTGS-991204"
-                  value={paymentRef}
-                  onChange={(e) => setPaymentRef(e.target.value)}
+                  placeholder="e.g., BATCH-OCT26-SALARIES"
+                  value={bulkReference}
+                  onChange={(e) => setBulkReference(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-sm text-slate-900 font-mono focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
@@ -1779,16 +2404,20 @@ export const PayrollManagementView: React.FC = () => {
                 <input
                   type="date"
                   required
-                  value={paymentDate}
-                  onChange={(e) => setPaymentDate(e.target.value)}
+                  value={bulkPaymentDate}
+                  onChange={(e) => setBulkPaymentDate(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-sm text-slate-900 focus:ring-2 focus:ring-emerald-500"
                 />
+              </div>
+
+              <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-[11px] text-amber-800">
+                <strong>Attention:</strong> An expense voucher will be posted for each staff member, and KES {stats.totalApprovedNet.toLocaleString()} will be deducted from your school's operating account.
               </div>
 
               <div className="flex justify-end gap-3 pt-3 border-t">
                 <button
                   type="button"
-                  onClick={() => setIsPayModalOpen(false)}
+                  onClick={() => setIsBulkPayModalOpen(false)}
                   className="px-4 py-2 border rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100"
                 >
                   Cancel
@@ -1797,8 +2426,70 @@ export const PayrollManagementView: React.FC = () => {
                   type="submit"
                   className="px-4 py-2 bg-emerald-600 text-white font-bold text-xs rounded-xl hover:bg-emerald-700 flex items-center gap-1.5 shadow-md"
                 >
-                  <span className="material-symbols-outlined text-sm">check_circle</span>
-                  Confirm Payment Disbursed
+                  <span className="material-symbols-outlined text-sm">payments</span>
+                  Confirm Bulk Disbursal
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: REVERSE SALARY PAYMENT */}
+      {isReverseModalOpen && payrollToReverse && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <div className="flex items-center gap-2.5 text-rose-700 mb-2">
+              <span className="material-symbols-outlined text-2xl">undo</span>
+              <h3 className="text-lg font-bold text-slate-900">Reverse Salary Payment</h3>
+            </div>
+            <p className="text-xs text-slate-600 mb-4">
+              Reversing salary disbursement of <strong className="text-slate-900 font-mono">KES {(payrollToReverse.amountPaid || payrollToReverse.netSalary).toLocaleString()}</strong> to <strong>{payrollToReverse.teacherName}</strong>.
+            </p>
+
+            <form onSubmit={handleReversePaymentSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Reason for Reversal</label>
+                <textarea
+                  required
+                  rows={3}
+                  placeholder="Explain why this disbursement is being reversed (e.g., Wrong bank account entered, payment bounced, administrative recalculation)..."
+                  value={reversalReason}
+                  onChange={(e) => setReversalReason(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white text-sm text-slate-900 focus:ring-2 focus:ring-rose-500"
+                />
+              </div>
+
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-900 space-y-1">
+                <p className="font-bold flex items-center gap-1">
+                  <span className="material-symbols-outlined text-sm">warning</span>
+                  Reversal Actions:
+                </p>
+                <ul className="list-disc list-inside text-[11px] text-rose-800 space-y-0.5">
+                  <li>Cancels financial expense voucher <strong>{payrollToReverse.voucherNumber || 'PV-SAL'}</strong>.</li>
+                  <li>Restores <strong>KES {(payrollToReverse.amountPaid || payrollToReverse.netSalary).toLocaleString()}</strong> back to the school's financial account.</li>
+                  <li>Reverts payroll record back to <strong>APPROVED</strong> so it can be re-issued.</li>
+                  <li>Logs an immutable audit event for financial accountability.</li>
+                </ul>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3 border-t">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsReverseModalOpen(false);
+                    setPayrollToReverse(null);
+                  }}
+                  className="px-4 py-2 border rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-rose-700 text-white font-bold text-xs rounded-xl hover:bg-rose-800 flex items-center gap-1.5 shadow-md"
+                >
+                  <span className="material-symbols-outlined text-sm">check</span>
+                  Confirm Reversal
                 </button>
               </div>
             </form>
@@ -1807,150 +2498,248 @@ export const PayrollManagementView: React.FC = () => {
       )}
 
       {/* MODAL: VIEW / PRINT / DOWNLOAD PAYSLIP */}
-      {selectedPayslip && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-2xl max-w-2xl w-full p-6 shadow-2xl max-h-[95vh] overflow-y-auto">
-            {/* Payslip Header */}
-            <div className="flex items-center justify-between border-b pb-4 mb-4">
-              <div>
-                <h2 className="text-xl font-extrabold text-[#7a1228]">SMARTSHULE ACADEMY</h2>
-                <p className="text-xs text-slate-500">Official Faculty & Staff Payslip Advice</p>
-                <p className="text-xs font-semibold text-slate-800 mt-1">Period: {selectedPayslip.month}</p>
-              </div>
-              <div className="text-right">
-                <span className="text-xs px-2.5 py-1 rounded-full font-bold bg-slate-100 text-slate-800">
-                  Status: {selectedPayslip.status}
-                </span>
-                <p className="text-[11px] text-slate-400 mt-1">Ref: {selectedPayslip.id.slice(0, 8)}</p>
-              </div>
-            </div>
+      {selectedPayslip && (() => {
+        const matchedStaff = staffList.find(s =>
+          s.id === selectedPayslip.teacherId ||
+          s.tscNumber === selectedPayslip.teacherId ||
+          s.employeeNumber === selectedPayslip.teacherId ||
+          (selectedPayslip.teacherName && s.name.trim().toLowerCase() === selectedPayslip.teacherName.trim().toLowerCase())
+        );
 
-            {/* Employee Details */}
-            <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl text-xs mb-4">
-              <div>
-                <p className="text-slate-500">Employee Name:</p>
-                <p className="font-bold text-slate-900 text-sm">{selectedPayslip.teacherName}</p>
-              </div>
-              <div>
-                <p className="text-slate-500">Staff ID (TSC / Emp No):</p>
-                <p className="font-bold text-slate-900 text-sm font-mono">{getStaffDisplayId(selectedPayslip, staffList)}</p>
-              </div>
-            </div>
+        return (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+            {/* Scoped Print Style: ensures only the payslip is printed cleanly on A4 */}
+            <style>{`
+              @media print {
+                @page {
+                  size: A4 portrait;
+                  margin: 12mm 15mm;
+                }
+                body * {
+                  visibility: hidden !important;
+                }
+                #smartshule-payslip-advice, #smartshule-payslip-advice * {
+                  visibility: visible !important;
+                }
+                #smartshule-payslip-advice {
+                  position: absolute !important;
+                  left: 0 !important;
+                  top: 0 !important;
+                  width: 100% !important;
+                  max-width: 100% !important;
+                  margin: 0 !important;
+                  padding: 0 !important;
+                  box-shadow: none !important;
+                  border: none !important;
+                  background: white !important;
+                  color: black !important;
+                }
+                .no-print {
+                  display: none !important;
+                }
+              }
+            `}</style>
 
-            {/* Earnings & Deductions Breakdown */}
-            <div className="grid grid-cols-2 gap-6 mb-6">
-              {/* Earnings */}
-              <div>
-                <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider border-b pb-1 mb-2 text-emerald-700">
-                  Earnings
-                </h4>
-                <div className="space-y-1.5 text-xs">
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">Basic Salary</span>
-                    <span className="font-semibold font-mono">KES {selectedPayslip.basicSalary?.toLocaleString()}</span>
+            <div className="bg-white border border-slate-200 rounded-2xl max-w-2xl w-full p-6 shadow-2xl max-h-[95vh] overflow-y-auto">
+              <div id="smartshule-payslip-advice" className="space-y-4">
+                {/* Payslip Header */}
+                <div className="flex items-start justify-between border-b pb-4">
+                  <div className="flex items-start gap-3">
+                    {school?.logoUrl && (
+                      <img src={school.logoUrl} alt="Logo" className="w-12 h-12 object-contain rounded-lg border border-slate-200" />
+                    )}
+                    <div>
+                      <h2 className="text-xl font-extrabold text-[#7a1228] uppercase tracking-wide">
+                        {school?.name || 'Grace Seeds School'}
+                      </h2>
+                      <p className="text-xs text-slate-500 font-medium">
+                        {school?.address ? `${school.address} · ` : 'KEMRI Street, Kisian, Kisumu, Kenya · '}{school?.phone ? `Tel: ${school.phone}` : 'Tel: 0745436312'}{school?.email ? ` · ${school.email}` : ' · schoolgraceseeds@gmail.com'}
+                      </p>
+                      <p className="text-[11px] font-bold text-slate-700 uppercase tracking-wider mt-1">
+                        Official Faculty & Staff Payslip Advice
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">House Allowance</span>
-                    <span className="font-semibold font-mono">KES {selectedPayslip.houseAllowance?.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">Commuter Allowance</span>
-                    <span className="font-semibold font-mono">KES {selectedPayslip.commuterAllowance?.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">Responsibility Allowance</span>
-                    <span className="font-semibold font-mono">KES {selectedPayslip.responsibilityAllowance?.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between border-t pt-1 font-bold text-slate-900">
-                    <span>Gross Earnings</span>
-                    <span className="font-mono">KES {selectedPayslip.grossSalary?.toLocaleString()}</span>
+                  <div className="text-right">
+                    <span className={`text-xs px-2.5 py-1 rounded-full font-bold ${
+                      selectedPayslip.status === 'PAID'
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : selectedPayslip.status === 'APPROVED'
+                        ? 'bg-blue-100 text-blue-800'
+                        : 'bg-slate-100 text-slate-800'
+                    }`}>
+                      Status: {selectedPayslip.status}
+                    </span>
+                    <p className="text-[11px] font-semibold text-slate-700 mt-1">Period: {selectedPayslip.month}</p>
+                    <p className="text-[10px] text-slate-400 font-mono">Ref: {selectedPayslip.id.slice(0, 8).toUpperCase()}</p>
                   </div>
                 </div>
-              </div>
 
-              {/* Deductions */}
-              <div>
-                <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider border-b pb-1 mb-2 text-rose-700">
-                  Deductions (Statutory & Voluntary)
-                </h4>
-                <div className="space-y-1.5 text-xs">
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">KRA PAYE Tax</span>
-                    <span className="font-semibold font-mono text-rose-600">KES {selectedPayslip.paye?.toLocaleString()}</span>
+                {/* Employee Details */}
+                <div className="grid grid-cols-2 gap-3 bg-slate-50 p-4 rounded-xl text-xs border border-slate-200">
+                  <div>
+                    <p className="text-slate-500 font-medium">Employee Name:</p>
+                    <p className="font-bold text-slate-900 text-sm">{selectedPayslip.teacherName}</p>
+                    <p className="text-[11px] text-slate-500 mt-1 font-medium">Designation / Role:</p>
+                    <p className="font-semibold text-slate-800">{matchedStaff?.role || 'Teaching Staff / Faculty'}</p>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">SHIF (2.75%)</span>
-                    <span className="font-semibold font-mono text-rose-600">KES {selectedPayslip.shif?.toLocaleString()}</span>
+                  <div>
+                    <p className="text-slate-500 font-medium">Staff ID (TSC / Emp No):</p>
+                    <p className="font-bold text-slate-900 text-sm font-mono">{getStaffDisplayId(selectedPayslip, staffList)}</p>
+                    <p className="text-[11px] text-slate-500 mt-1 font-medium">Assignment / Stream:</p>
+                    <p className="font-semibold text-slate-800 truncate">{matchedStaff?.assignedClasses || matchedStaff?.specialization?.join(', ') || 'General Faculty'}</p>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">NSSF (Tier 1 & 2)</span>
-                    <span className="font-semibold font-mono text-rose-600">KES {selectedPayslip.nssf?.toLocaleString()}</span>
+                </div>
+
+                {/* Earnings & Deductions Breakdown */}
+                <div className="grid grid-cols-2 gap-6">
+                  {/* Earnings */}
+                  <div className="border border-emerald-100 bg-emerald-50/20 rounded-xl p-3">
+                    <h4 className="text-xs font-bold text-emerald-800 uppercase tracking-wider border-b border-emerald-200 pb-1 mb-2 flex items-center gap-1">
+                      <span className="material-symbols-outlined text-sm">add_circle</span>
+                      Earnings
+                    </h4>
+                    <div className="space-y-1.5 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">Basic Salary</span>
+                        <span className="font-semibold font-mono">KES {selectedPayslip.basicSalary?.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">House Allowance</span>
+                        <span className="font-semibold font-mono">KES {selectedPayslip.houseAllowance?.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">Commuter Allowance</span>
+                        <span className="font-semibold font-mono">KES {selectedPayslip.commuterAllowance?.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">Responsibility Allowance</span>
+                        <span className="font-semibold font-mono">KES {selectedPayslip.responsibilityAllowance?.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between border-t border-emerald-200 pt-1 font-bold text-slate-900">
+                        <span>Gross Earnings</span>
+                        <span className="font-mono text-emerald-800">KES {selectedPayslip.grossSalary?.toLocaleString()}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-600">Housing Levy (1.5%)</span>
-                    <span className="font-semibold font-mono text-rose-600">KES {selectedPayslip.housingLevy?.toLocaleString()}</span>
+
+                  {/* Deductions */}
+                  <div className="border border-rose-100 bg-rose-50/20 rounded-xl p-3">
+                    <h4 className="text-xs font-bold text-rose-800 uppercase tracking-wider border-b border-rose-200 pb-1 mb-2 flex items-center gap-1">
+                      <span className="material-symbols-outlined text-sm">remove_circle</span>
+                      Deductions
+                    </h4>
+                    <div className="space-y-1.5 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">KRA PAYE Tax</span>
+                        <span className="font-semibold font-mono text-rose-600">KES {selectedPayslip.paye?.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">SHIF (2.75%)</span>
+                        <span className="font-semibold font-mono text-rose-600">KES {selectedPayslip.shif?.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">NSSF (Tier 1 & 2)</span>
+                        <span className="font-semibold font-mono text-rose-600">KES {selectedPayslip.nssf?.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">Housing Levy (1.5%)</span>
+                        <span className="font-semibold font-mono text-rose-600">KES {selectedPayslip.housingLevy?.toLocaleString()}</span>
+                      </div>
+                      {selectedPayslip.otherDeductions > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">Other Deductions</span>
+                          <span className="font-semibold font-mono text-rose-600">KES {selectedPayslip.otherDeductions?.toLocaleString()}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between border-t border-rose-200 pt-1 font-bold text-rose-700">
+                        <span>Total Deductions</span>
+                        <span className="font-mono">- KES {selectedPayslip.totalDeductions?.toLocaleString()}</span>
+                      </div>
+                    </div>
                   </div>
-                  {selectedPayslip.otherDeductions > 0 && (
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Other Deductions</span>
-                      <span className="font-semibold font-mono text-rose-600">KES {selectedPayslip.otherDeductions?.toLocaleString()}</span>
+                </div>
+
+                {/* Net Salary Banner */}
+                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-emerald-800">NET SALARY PAYABLE</p>
+                    <p className="text-2xl font-black text-emerald-700 font-mono">
+                      KES {selectedPayslip.netSalary?.toLocaleString()}
+                    </p>
+                  </div>
+                  {selectedPayslip.status === 'PAID' ? (
+                    <div className="text-right text-xs text-emerald-800">
+                      <p className="font-bold flex items-center justify-end gap-1">
+                        <span className="material-symbols-outlined text-sm">check_circle</span>
+                        Disbursed via {selectedPayslip.paymentMethod || 'BANK'}
+                      </p>
+                      {selectedPayslip.paymentReference && (
+                        <p className="font-mono text-[11px] text-emerald-900 mt-0.5">Ref: {selectedPayslip.paymentReference}</p>
+                      )}
+                      {selectedPayslip.paidAt && (
+                        <p className="text-[10px] text-emerald-600">
+                          Date: {new Date(selectedPayslip.paidAt).toLocaleDateString('en-KE', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-right text-xs text-amber-800">
+                      <p className="font-bold">Payment Status: {selectedPayslip.status}</p>
+                      <p className="text-[11px] text-amber-700">Pending final disbursement</p>
                     </div>
                   )}
-                  <div className="flex justify-between border-t pt-1 font-bold text-rose-700">
-                    <span>Total Deductions</span>
-                    <span className="font-mono">- KES {selectedPayslip.totalDeductions?.toLocaleString()}</span>
+                </div>
+
+                {/* Sign-off & Stamp Section */}
+                <div className="grid grid-cols-2 gap-4 pt-3 border-t border-slate-200 text-xs">
+                  <div>
+                    <div className="h-8 border-b border-dashed border-slate-400 mb-1"></div>
+                    <p className="text-[11px] font-semibold text-slate-700">Authorized Signatory (Finance / Bursar)</p>
+                    <p className="text-[10px] text-slate-400">Date: {new Date().toLocaleDateString('en-KE')}</p>
+                  </div>
+                  <div className="border border-dashed border-slate-300 rounded-lg p-2.5 text-center text-slate-400 text-[10px] flex items-center justify-center">
+                    Official School Stamp / Seal
                   </div>
                 </div>
-              </div>
-            </div>
 
-            {/* Net Salary Banner */}
-            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-center justify-between mb-4">
-              <div>
-                <p className="text-xs font-medium text-emerald-800">NET SALARY PAYABLE</p>
-                <p className="text-2xl font-black text-emerald-700 font-mono">
-                  KES {selectedPayslip.netSalary?.toLocaleString()}
+                <p className="text-[9.5px] text-slate-400 text-center italic pt-1">
+                  This is an official computer-generated payslip advice issued under the Employment Act of Kenya.
                 </p>
               </div>
-              {selectedPayslip.paymentReference && (
-                <div className="text-right text-xs text-emerald-800">
-                  <p className="font-bold">Paid via {selectedPayslip.paymentMethod}</p>
-                  <p className="font-mono text-[10px]">{selectedPayslip.paymentReference}</p>
-                </div>
-              )}
-            </div>
 
-            {/* Actions */}
-            <div className="flex justify-between items-center pt-3 border-t">
-              <div className="flex items-center gap-2">
+              {/* Modal Action Buttons (hidden in print) */}
+              <div className="flex justify-between items-center pt-4 border-t mt-4 no-print">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleDownloadPayslipPdf(selectedPayslip)}
+                    className="px-4 py-2 bg-[#7a1228] text-white rounded-xl text-xs font-bold hover:bg-[#600e1f] flex items-center gap-1.5 shadow-sm transition-all"
+                  >
+                    <span className="material-symbols-outlined text-base">picture_as_pdf</span>
+                    Download PDF
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="px-3.5 py-2 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100 flex items-center gap-1.5 transition-all"
+                  >
+                    <span className="material-symbols-outlined text-base">print</span>
+                    Print
+                  </button>
+                </div>
                 <button
                   type="button"
-                  onClick={() => handleDownloadPayslipPdf(selectedPayslip)}
-                  className="px-4 py-2 bg-[#7a1228] text-white rounded-xl text-xs font-bold hover:bg-[#600e1f] flex items-center gap-1.5 shadow-sm"
+                  onClick={() => setSelectedPayslip(null)}
+                  className="px-4 py-2 border border-slate-300 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-all"
                 >
-                  <span className="material-symbols-outlined text-base">picture_as_pdf</span>
-                  Download PDF
-                </button>
-                <button
-                  type="button"
-                  onClick={() => window.print()}
-                  className="px-3.5 py-2 border rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100 flex items-center gap-1.5"
-                >
-                  <span className="material-symbols-outlined text-base">print</span>
-                  Print
+                  Close
                 </button>
               </div>
-              <button
-                type="button"
-                onClick={() => setSelectedPayslip(null)}
-                className="px-4 py-2 border rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100"
-              >
-                Close
-              </button>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* MODAL: APPLY FOR LEAVE */}
       {isApplyLeaveModalOpen && (

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AcademicTerm, AcademicYear, AcademicContext } from '../../types';
+import { AcademicTerm, AcademicYear, AcademicContext, UserRole, isTermInitializationAuthorized } from '../../types';
 import { apiService } from '../../services/api';
 
 interface AcademicTermsModalProps {
@@ -8,6 +8,7 @@ interface AcademicTermsModalProps {
   academicContext: AcademicContext | null;
   onTermUpdated: () => void;
   canManageTerms?: boolean;
+  userRole?: string;
 }
 
 export const AcademicTermsModal: React.FC<AcademicTermsModalProps> = ({
@@ -16,7 +17,9 @@ export const AcademicTermsModal: React.FC<AcademicTermsModalProps> = ({
   academicContext,
   onTermUpdated,
   canManageTerms = true,
+  userRole,
 }) => {
+  const isAuthorizedToManage = canManageTerms && (!userRole || isTermInitializationAuthorized(userRole));
   const [terms, setTerms] = useState<AcademicTerm[]>([]);
   const [years, setYears] = useState<AcademicYear[]>([]);
   const [selectedYearId, setSelectedYearId] = useState<string>('ALL');
@@ -24,6 +27,20 @@ export const AcademicTermsModal: React.FC<AcademicTermsModalProps> = ({
   const [savingId, setSavingId] = useState<string | null>(null);
   const [transitioning, setTransitioning] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Dedicated Initialize New Term Modal state
+  const [showInitModal, setShowInitModal] = useState(false);
+  const [initStep, setInitStep] = useState<'CONFIG' | 'CONFIRM' | 'SUCCESS'>('CONFIG');
+  const [initializingTerm, setInitializingTerm] = useState(false);
+  const [initializedTermData, setInitializedTermData] = useState<AcademicTerm | null>(null);
+  const [initForm, setInitForm] = useState({
+    academicYearId: '',
+    termNumber: 1,
+    name: 'Term 1',
+    startDate: '',
+    endDate: '',
+    isCurrent: true,
+  });
 
   // Editable dates map: termId -> { startDate, endDate, name, termNumber }
   const [editDates, setEditDates] = useState<
@@ -208,6 +225,87 @@ export const AcademicTermsModal: React.FC<AcademicTermsModalProps> = ({
       setFeedback({ type: 'error', message: err.message || 'Error transitioning term.' });
     } finally {
       setTransitioning(false);
+    }
+  };
+
+  const handleProceedToConfirmInit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!initForm.academicYearId) {
+      setFeedback({ type: 'error', message: 'Please select an academic year.' });
+      return;
+    }
+    if (!initForm.name || !initForm.startDate || !initForm.endDate) {
+      setFeedback({ type: 'error', message: 'Please fill in all term fields.' });
+      return;
+    }
+    if (initForm.startDate >= initForm.endDate) {
+      setFeedback({ type: 'error', message: 'Term end date must be strictly after the start date.' });
+      return;
+    }
+    const year = years.find((y) => y.id === initForm.academicYearId);
+    if (year?.startDate && year?.endDate) {
+      const yStart = year.startDate.split('T')[0];
+      const yEnd = year.endDate.split('T')[0];
+      if (initForm.startDate > yEnd || initForm.endDate < yStart) {
+        setFeedback({
+          type: 'error',
+          message: `Term dates (${initForm.startDate} to ${initForm.endDate}) must align with Academic Year ${year.name} (${yStart} to ${yEnd}).`,
+        });
+        return;
+      }
+    }
+
+    const existing = terms.find(
+      (t) =>
+        t.academicYearId === initForm.academicYearId &&
+        (t.termNumber === Number(initForm.termNumber) ||
+          t.name.trim().toLowerCase() === initForm.name.trim().toLowerCase())
+    );
+    if (existing) {
+      setFeedback({
+        type: 'error',
+        message: `Term ${initForm.termNumber} ("${initForm.name}") has already been initialized for this academic year (Duplicate prevented).`,
+      });
+      return;
+    }
+
+    setFeedback(null);
+    setInitStep('CONFIRM');
+  };
+
+  const handleConfirmInitializeTerm = async () => {
+    setInitializingTerm(true);
+    setFeedback(null);
+    try {
+      const res = await apiService.initializeTerm({
+        academicYearId: initForm.academicYearId,
+        termNumber: Number(initForm.termNumber),
+        name: initForm.name.trim(),
+        startDate: initForm.startDate,
+        endDate: initForm.endDate,
+        isCurrent: initForm.isCurrent,
+      });
+
+      if (res.success && res.data) {
+        setInitializedTermData(res.data);
+        setInitStep('SUCCESS');
+        await loadYearsAndTerms();
+        onTermUpdated();
+      } else {
+        setFeedback({
+          type: 'error',
+          message: res.error?.message || 'Failed to initialize academic term.',
+        });
+        setInitStep('CONFIG');
+      }
+    } catch (err: any) {
+      setFeedback({
+        type: 'error',
+        message: err.message || 'Error initializing academic term.',
+      });
+      setInitStep('CONFIG');
+    } finally {
+      setInitializingTerm(false);
     }
   };
 
@@ -578,8 +676,29 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
               </select>
             </div>
 
-            {canManageTerms && (
-              <div className="flex items-center gap-2">
+            {isAuthorizedToManage ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => {
+                    const activeY = years.find((y) => y.isCurrent) || years[0];
+                    setInitForm({
+                      academicYearId: activeY ? activeY.id : '',
+                      termNumber: 1,
+                      name: activeY ? `Term 1 - ${activeY.name}` : 'Term 1',
+                      startDate: activeY ? activeY.startDate.split('T')[0] : '',
+                      endDate: '',
+                      isCurrent: true,
+                    });
+                    setInitStep('CONFIG');
+                    setShowInitModal(true);
+                  }}
+                  className="px-4 py-2 bg-[#800000] hover:bg-[#600000] text-white text-xs font-bold rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer ring-2 ring-[#800000]/20 hover:ring-[#800000]/40"
+                  title="Initialize a new academic term (Restricted to Super Admin, Admin, and Headteacher)"
+                >
+                  <span className="material-symbols-outlined text-[18px]">verified_user</span>
+                  <span>Initialize New Term</span>
+                </button>
+
                 <button
                   onClick={() => {
                     setShowCreateYearForm(true);
@@ -592,21 +711,6 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                 </button>
 
                 <button
-                  onClick={() => {
-                    setShowCreateTermForm(true);
-                    setShowCreateYearForm(false);
-                    if (years.length > 0 && !newTerm.academicYearId) {
-                      const cur = years.find((y) => y.isCurrent) || years[0];
-                      setNewTerm((prev) => ({ ...prev, academicYearId: cur.id }));
-                    }
-                  }}
-                  className="px-3.5 py-1.5 bg-[#800000] hover:bg-[#660000] text-white text-xs font-bold rounded-lg shadow-xs transition-colors flex items-center gap-1 cursor-pointer"
-                >
-                  <span className="material-symbols-outlined text-[16px]">add</span>
-                  <span>+ New Academic Term</span>
-                </button>
-
-                <button
                   onClick={() => openReopenNotificationModal()}
                   className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
                   title="Broadcast official school reopening date and directives to all parents"
@@ -614,6 +718,11 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                   <span className="material-symbols-outlined text-[16px]">campaign</span>
                   <span>📢 Broadcast School Opening Date</span>
                 </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
+                <span className="material-symbols-outlined text-[16px] text-slate-400">lock</span>
+                <span>Term initialization is restricted to Super Admin, Admin, and Headteacher.</span>
               </div>
             )}
           </div>
@@ -1199,6 +1308,315 @@ Tel: 0745 436312 | Email: schoolgraceseeds@gmail.com`;
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Dedicated Initialize New Term Modal with Confirmation Step and Post-Success Details */}
+        {showInitModal && (
+          <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 animate-in fade-in">
+            <div className="w-full max-w-xl rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+              {/* Header */}
+              <div className="bg-[#800000] text-white px-5 py-3.5 flex items-center justify-between shadow-xs">
+                <div className="flex items-center gap-2.5">
+                  <span className="material-symbols-outlined text-[22px]">verified_user</span>
+                  <div>
+                    <h3 className="font-bold text-sm tracking-tight">Initialize New Academic Term</h3>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded text-white font-semibold">
+                        SUPER ADMIN • ADMIN • HEADTEACHER ONLY
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowInitModal(false);
+                    setInitStep('CONFIG');
+                  }}
+                  className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[18px]">close</span>
+                </button>
+              </div>
+
+              {/* Step 1: Configuration */}
+              {initStep === 'CONFIG' && (
+                <form onSubmit={handleProceedToConfirmInit} className="p-5 overflow-y-auto space-y-4">
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-start gap-2.5">
+                    <span className="material-symbols-outlined text-[20px] text-amber-700 shrink-0">shield</span>
+                    <div>
+                      <span className="font-bold block text-amber-950">Safe Session Initialization & Historical Preservation:</span>
+                      <span>
+                        Previous terms' examination marks, report cards, fee transactions, receipts, and student attendance records are preserved completely and will remain fully accessible in historical ledgers.
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Academic Year <span className="text-rose-600">*</span>
+                      </label>
+                      <select
+                        required
+                        value={initForm.academicYearId}
+                        onChange={(e) => {
+                          const yId = e.target.value;
+                          const foundY = years.find((y) => y.id === yId);
+                          setInitForm({
+                            ...initForm,
+                            academicYearId: yId,
+                            name: foundY ? `Term ${initForm.termNumber} - ${foundY.name}` : `Term ${initForm.termNumber}`,
+                          });
+                        }}
+                        className="w-full px-3 py-2 text-xs bg-[#F8F5F5] border border-slate-300 rounded-xl focus:ring-1 focus:ring-[#800000] font-semibold text-slate-800"
+                      >
+                        <option value="" disabled>-- Select Academic Year --</option>
+                        {years.map((y) => (
+                          <option key={y.id} value={y.id}>
+                            Academic Year {y.name} {y.isCurrent ? '(Current Active)' : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Term Number <span className="text-rose-600">*</span>
+                      </label>
+                      <select
+                        value={initForm.termNumber}
+                        onChange={(e) => {
+                          const num = Number(e.target.value);
+                          const foundY = years.find((y) => y.id === initForm.academicYearId);
+                          setInitForm({
+                            ...initForm,
+                            termNumber: num,
+                            name: foundY ? `Term ${num} - ${foundY.name}` : `Term ${num}`,
+                          });
+                        }}
+                        className="w-full px-3 py-2 text-xs bg-[#F8F5F5] border border-slate-300 rounded-xl focus:ring-1 focus:ring-[#800000] font-semibold text-slate-800"
+                      >
+                        <option value={1}>Term 1</option>
+                        <option value={2}>Term 2</option>
+                        <option value={3}>Term 3</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Term Display Name <span className="text-rose-600">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={initForm.name}
+                        onChange={(e) => setInitForm({ ...initForm, name: e.target.value })}
+                        placeholder="Term 1 - 2026"
+                        className="w-full px-3 py-2 text-xs bg-[#F8F5F5] border border-slate-300 rounded-xl focus:ring-1 focus:ring-[#800000] font-semibold text-slate-800"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Term Start Date <span className="text-rose-600">*</span>
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        value={initForm.startDate}
+                        onChange={(e) => setInitForm({ ...initForm, startDate: e.target.value })}
+                        className="w-full px-3 py-2 text-xs bg-[#F8F5F5] border border-slate-300 rounded-xl focus:ring-1 focus:ring-[#800000] font-semibold text-slate-800"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Term Closing Date <span className="text-rose-600">*</span>
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        value={initForm.endDate}
+                        onChange={(e) => setInitForm({ ...initForm, endDate: e.target.value })}
+                        className="w-full px-3 py-2 text-xs bg-[#F8F5F5] border border-slate-300 rounded-xl focus:ring-1 focus:ring-[#800000] font-semibold text-slate-800"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-200">
+                    <label className="flex items-center gap-2 text-xs font-semibold text-slate-800 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={initForm.isCurrent}
+                        onChange={(e) => setInitForm({ ...initForm, isCurrent: e.target.checked })}
+                        className="rounded text-[#800000] focus:ring-[#800000]"
+                      />
+                      <span>Set as Current Active Session for Grace Seeds School</span>
+                    </label>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => setShowInitModal(false)}
+                      className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-5 py-2 bg-[#800000] hover:bg-[#600000] text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <span>Proceed to Confirmation</span>
+                      <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* Step 2: Confirmation Step */}
+              {initStep === 'CONFIRM' && (
+                <div className="p-5 space-y-4">
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+                    <h4 className="font-bold text-xs uppercase tracking-wider text-[#800000] flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[18px]">verified</span>
+                      <span>Review Term Initialization Details</span>
+                    </h4>
+
+                    <div className="grid grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <span className="text-slate-500 block">Academic Year:</span>
+                        <span className="font-bold text-slate-900">
+                          {years.find((y) => y.id === initForm.academicYearId)?.name || 'Selected Year'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block">Session Name:</span>
+                        <span className="font-bold text-slate-900">{initForm.name} (Term {initForm.termNumber})</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block">Start Date:</span>
+                        <span className="font-semibold text-slate-800">{initForm.startDate}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block">Closing Date:</span>
+                        <span className="font-semibold text-slate-800">{initForm.endDate}</span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-slate-500 block">Active Term Status:</span>
+                        <span className="font-bold text-emerald-700">
+                          {initForm.isCurrent ? 'Will become current active session' : 'Will be created as upcoming'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-900 flex items-start gap-2">
+                    <span className="material-symbols-outlined text-[18px] text-rose-700 shrink-0">warning</span>
+                    <span>
+                      Please confirm that these dates and term sequence are authorized by school management. An audit log capturing your identity, role, and client network will be permanently registered.
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-200">
+                    <button
+                      type="button"
+                      onClick={() => setInitStep('CONFIG')}
+                      disabled={initializingTerm}
+                      className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+                    >
+                      Back to Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleConfirmInitializeTerm}
+                      disabled={initializingTerm}
+                      className="px-5 py-2.5 bg-[#800000] hover:bg-[#600000] text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">
+                        {initializingTerm ? 'progress_activity' : 'check_circle'}
+                      </span>
+                      <span>{initializingTerm ? 'Initializing Term...' : 'Confirm & Initialize Term'}</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 3: Success Screen with Created Term Details */}
+              {initStep === 'SUCCESS' && (
+                <div className="p-6 text-center space-y-4">
+                  <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto">
+                    <span className="material-symbols-outlined text-[32px]">check_circle</span>
+                  </div>
+
+                  <div>
+                    <h4 className="text-base font-bold text-slate-900">Academic Term Initialized Successfully!</h4>
+                    <p className="text-xs text-slate-600 mt-1">
+                      The new academic term is now live for Grace Seeds School with full historical preservation.
+                    </p>
+                  </div>
+
+                  {initializedTermData && (
+                    <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-left text-xs space-y-2">
+                      <div className="flex justify-between border-b border-slate-200 pb-1.5">
+                        <span className="text-slate-500 font-semibold">Term Name:</span>
+                        <span className="font-bold text-slate-900">{initializedTermData.name}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-slate-200 pb-1.5">
+                        <span className="text-slate-500 font-semibold">Term Number:</span>
+                        <span className="font-bold text-slate-900">Term {initializedTermData.termNumber}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-slate-200 pb-1.5">
+                        <span className="text-slate-500 font-semibold">Term ID:</span>
+                        <span className="font-mono text-slate-700">{initializedTermData.id}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-slate-200 pb-1.5">
+                        <span className="text-slate-500 font-semibold">Duration:</span>
+                        <span className="font-semibold text-slate-800">
+                          {initializedTermData.startDate ? initializedTermData.startDate.split('T')[0] : '—'} to{' '}
+                          {initializedTermData.endDate ? initializedTermData.endDate.split('T')[0] : '—'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500 font-semibold">Active Session Status:</span>
+                        <span className="font-bold text-emerald-700">
+                          {initializedTermData.isCurrent ? 'ACTIVE / CURRENT SESSION' : 'UPCOMING'}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowInitModal(false);
+                        setInitStep('CONFIG');
+                      }}
+                      className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-xl text-xs transition-colors cursor-pointer"
+                    >
+                      Done
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowInitModal(false);
+                        setInitStep('CONFIG');
+                        if (initializedTermData) {
+                          openReopenNotificationModal(initializedTermData.id);
+                        }
+                      }}
+                      className="px-5 py-2.5 bg-[#800000] hover:bg-[#600000] text-white font-bold rounded-xl text-xs shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">campaign</span>
+                      <span>📢 Broadcast School Reopening Notice</span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

@@ -8,11 +8,10 @@ import { StationeryRequirementsModal } from '../modals/StationeryRequirementsMod
 import { resolveGradeName, resolveAcademicYearName } from '../../utils/formatters';
 
 const OTHER_CHARGES = [
-  { item: 'Admission Fee (New students on enrollment)', amount: 'KES 1,500', frequency: 'One-time on admission' },
-  { item: 'School Lunch Program', amount: 'KES 1,000', frequency: 'Monthly' },
-  { item: 'Official Track Suit & T-Shirt', amount: 'KES 2,100', frequency: 'Uniform Requirement' },
-  { item: 'School Assessment Book', amount: 'KES 300', frequency: 'In School' },
-  { item: 'Official School Diary', amount: 'KES 250', frequency: 'In School' },
+  { item: 'Admission Fee (New students on enrollment)', amount: 'Per school admission schedule', frequency: 'One-time on admission' },
+  { item: 'School Lunch Program', amount: 'Optional enrollment', frequency: 'Per Term / Monthly' },
+  { item: 'Official Track Suit & Uniform', amount: 'Per school store inventory', frequency: 'Uniform Requirement' },
+  { item: 'School Diary & Assessment Materials', amount: 'Per termly schedule', frequency: 'Annual / Termly' },
 ];
 
 export const FeeStructureView: React.FC = () => {
@@ -181,7 +180,7 @@ export const FeeStructureView: React.FC = () => {
     const logoBase64 = await getSchoolLogoBase64(school?.logoUrl);
 
     const schoolName = school?.name || 'GRACE SEEDS SCHOOL';
-    const address = school?.address || 'P.O BOX 12-20123, KISUMU';
+    const address = school?.address || 'KEMRI Street, Kisian, Kisumu, Kenya';
     const phone = school?.phone || '0745436312';
     const motto = school?.motto || 'The Future Begins Here';
 
@@ -682,10 +681,9 @@ export const FeeStructureView: React.FC = () => {
             <span className="material-symbols-outlined text-[16px]">account_balance_wallet</span>
             <span>Official Payment Channel</span>
           </div>
-          <h3 className="text-lg font-bold tracking-tight text-white">M-Pesa Paybill &amp; Direct Deposit</h3>
+          <h3 className="text-lg font-bold tracking-tight text-white">{school?.name || 'School'} Fee Payment Verification</h3>
           <p className="text-xs text-rose-100/80 mt-0.5 leading-relaxed">
-            Paybill: <strong className="text-white font-mono">522533</strong> | Account Format:{' '}
-            <strong className="text-amber-300 font-mono">8048859#&lt;Learner Name and Grade&gt;</strong>
+            School Code: <strong className="text-white font-mono">{school?.code || 'SMART-001'}</strong> | Bursar Contact: <strong className="text-amber-300 font-mono">{school?.phone || school?.email || 'School Administration'}</strong>
           </p>
         </div>
 
