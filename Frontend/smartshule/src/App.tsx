@@ -65,6 +65,7 @@ import { OccurrenceBookView } from './components/views/OccurrenceBookView';
 import { CurriculumTrackerView } from './components/views/CurriculumTrackerView';
 import { FeeDeadlineBannerManagementView } from './components/views/FeeDeadlineBannerManagementView';
 import { SponsoredStudentsView } from './components/views/SponsoredStudentsView';
+import { MyDigitalSignatureView } from './components/views/MyDigitalSignatureView';
 
 // Modals
 import { RecordPaymentModal } from './components/modals/RecordPaymentModal';
@@ -686,6 +687,10 @@ export default function App() {
     const checkHashRoute = () => {
       const hash = window.location.hash;
       const search = window.location.search;
+      if (search.includes('view=reset-password') || search.includes('token=') || hash.includes('reset-password')) {
+        setAppView('login');
+        return;
+      }
       if (hash === '#/geofencing' || hash === '#/geofence' || search.includes('view=geofencing')) {
         if (isAuthenticated) {
           setCurrentTab('geofencing');
@@ -1281,6 +1286,7 @@ export default function App() {
           {currentTab === 'system-logs' && <SystemLogsView />}
           {currentTab === 'fee-deadline-banner' && <FeeDeadlineBannerManagementView />}
           {currentTab === 'sponsored-students' && <SponsoredStudentsView />}
+          {currentTab === 'digital-signature' && <MyDigitalSignatureView />}
           {(currentTab === 'concerns' || currentTab === 'complaints') && <ConcernsView />}
           {currentTab === 'lunch-fee-management' && <LunchFeeManagementView />}
           {currentTab === 'parent-profile' && (

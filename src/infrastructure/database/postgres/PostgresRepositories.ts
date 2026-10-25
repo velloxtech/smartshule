@@ -41,6 +41,10 @@ import {
   SponsorshipType,
   SponsorshipStatus
 } from '../../../core/domain/sponsorship/StudentSponsorship';
+import { ISignatureRepository } from '../../../core/ports/repositories/ISignatureRepository';
+import { DigitalSignatureProfile, SignatureType } from '../../../core/domain/signature/DigitalSignatureProfile';
+import { DocumentSigningChallenge } from '../../../core/domain/signature/DocumentSigningChallenge';
+import { DocumentSignatureRecord } from '../../../core/domain/signature/DocumentSignatureRecord';
 
 import { User, UserRole, UserStatus } from '../../../core/domain/user/User';
 import { Student, StudentGender, CBCGradeLevel, StudentStatus } from '../../../core/domain/user/Student';
@@ -1069,6 +1073,63 @@ export class PostgresDatabaseInitializer {
         notes TEXT,
         created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
       );
+
+      CREATE TABLE IF NOT EXISTS signature_profiles (
+        id VARCHAR(64) PRIMARY KEY,
+        user_id VARCHAR(64) NOT NULL UNIQUE,
+        signature_type VARCHAR(32) NOT NULL,
+        signature_data TEXT NOT NULL,
+        font_style VARCHAR(64),
+        consent_given BOOLEAN NOT NULL DEFAULT TRUE,
+        consent_given_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+        is_active BOOLEAN NOT NULL DEFAULT TRUE,
+        version INTEGER NOT NULL DEFAULT 1,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_sig_profiles_user ON signature_profiles(user_id);
+
+      CREATE TABLE IF NOT EXISTS document_signing_challenges (
+        id VARCHAR(64) PRIMARY KEY,
+        user_id VARCHAR(64) NOT NULL,
+        document_id VARCHAR(128) NOT NULL,
+        document_type VARCHAR(64) NOT NULL,
+        document_version VARCHAR(64) NOT NULL,
+        document_hash VARCHAR(128) NOT NULL,
+        otp_hash VARCHAR(128) NOT NULL,
+        salt VARCHAR(64) NOT NULL,
+        attempts INTEGER NOT NULL DEFAULT 0,
+        max_attempts INTEGER NOT NULL DEFAULT 5,
+        expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+        resend_cooldown_until TIMESTAMP WITH TIME ZONE NOT NULL,
+        is_consumed BOOLEAN NOT NULL DEFAULT FALSE,
+        consumed_at TIMESTAMP WITH TIME ZONE,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_doc_sig_challenges_user_doc ON document_signing_challenges(user_id, document_id);
+
+      CREATE TABLE IF NOT EXISTS document_signature_records (
+        id VARCHAR(64) PRIMARY KEY,
+        document_id VARCHAR(128) NOT NULL,
+        document_type VARCHAR(64) NOT NULL,
+        document_version VARCHAR(64) NOT NULL,
+        document_hash VARCHAR(128) NOT NULL,
+        signature_profile_id VARCHAR(64) NOT NULL,
+        signature_profile_version INTEGER NOT NULL,
+        signature_data_snapshot TEXT NOT NULL,
+        signature_type VARCHAR(32) NOT NULL,
+        signer_user_id VARCHAR(64) NOT NULL,
+        signer_name VARCHAR(255) NOT NULL,
+        signer_role VARCHAR(64) NOT NULL,
+        signer_email VARCHAR(255) NOT NULL,
+        otp_challenge_id VARCHAR(64) NOT NULL,
+        signed_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+        ip_address VARCHAR(64),
+        user_agent TEXT,
+        audit_metadata JSONB
+      );
+      CREATE INDEX IF NOT EXISTS idx_doc_sig_records_doc ON document_signature_records(document_id);
+      CREATE INDEX IF NOT EXISTS idx_doc_sig_records_signer ON document_signature_records(signer_user_id);
     `;
 
     await pool.query(ddl);
@@ -1084,6 +1145,10 @@ export class PostgresDatabaseInitializer {
       ALTER TABLE students ADD COLUMN IF NOT EXISTS classroom_id VARCHAR(100);
       ALTER TABLE users ALTER COLUMN email DROP NOT NULL;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN DEFAULT false;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_password_token VARCHAR(255);
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_password_expires TIMESTAMP;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_password_attempts INT DEFAULT 0;
+      CREATE INDEX IF NOT EXISTS idx_users_reset_token ON users(reset_password_token);
       ALTER TABLE schools ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION;
       ALTER TABLE schools ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION;
       ALTER TABLE schools ADD COLUMN IF NOT EXISTS geofence_radius DOUBLE PRECISION DEFAULT 250;
@@ -1135,19 +1200,37 @@ export class PostgresDatabaseInitializer {
 
 export class PostgresUserRepository implements IUserRepository {
   constructor(private pool: Pool) {}
+
+  private mapRow(r: any): User {
+    return User.create({
+      email: r.email,
+      passwordHash: r.password_hash,
+      firstName: r.first_name,
+      lastName: r.last_name,
+      role: r.role,
+      phone: r.phone,
+      status: r.status,
+      schoolId: r.school_id,
+      mustChangePassword: r.must_change_password ?? false,
+      resetPasswordToken: r.reset_password_token || undefined,
+      resetPasswordExpires: r.reset_password_expires ? new Date(r.reset_password_expires) : undefined,
+      resetPasswordAttempts: r.reset_password_attempts !== undefined && r.reset_password_attempts !== null ? Number(r.reset_password_attempts) : 0,
+    }, r.id, r.created_at, r.updated_at);
+  }
+
   public async findById(id: string): Promise<User | null> {
     const res = await this.pool.query('SELECT * FROM users WHERE id = $1', [id]);
     if (res.rows.length === 0) return null;
-    const r = res.rows[0];
-    return User.create({ email: r.email, passwordHash: r.password_hash, firstName: r.first_name, lastName: r.last_name, role: r.role, phone: r.phone, status: r.status, schoolId: r.school_id, mustChangePassword: r.must_change_password ?? false }, r.id, r.created_at, r.updated_at);
+    return this.mapRow(res.rows[0]);
   }
+
   public async findByEmail(email: string): Promise<User | null> {
     if (!email || email.trim() === '') return null;
     const res = await this.pool.query('SELECT * FROM users WHERE LOWER(email) = LOWER($1)', [email.trim()]);
     if (res.rows.length === 0) return null;
-    const r = res.rows[0];
-    return User.create({ email: r.email, passwordHash: r.password_hash, firstName: r.first_name, lastName: r.last_name, role: r.role, phone: r.phone, status: r.status, schoolId: r.school_id, mustChangePassword: r.must_change_password ?? false }, r.id, r.created_at, r.updated_at);
+    return this.mapRow(res.rows[0]);
   }
+
   public async findByPhone(phone: string): Promise<User | null> {
     if (!phone || phone.trim() === '') return null;
     const subscriber = PhoneUtils.getSubscriberDigits(phone);
@@ -1157,27 +1240,44 @@ export class PostgresUserRepository implements IUserRepository {
         [subscriber]
       );
       if (res.rows.length > 0) {
-        const r = res.rows[0];
-        return User.create({ email: r.email, passwordHash: r.password_hash, firstName: r.first_name, lastName: r.last_name, role: r.role, phone: r.phone, status: r.status, schoolId: r.school_id, mustChangePassword: r.must_change_password ?? false }, r.id, r.created_at, r.updated_at);
+        return this.mapRow(res.rows[0]);
       }
     }
     const res = await this.pool.query('SELECT * FROM users WHERE phone = $1 LIMIT 1', [phone.trim()]);
     if (res.rows.length === 0) return null;
-    const r = res.rows[0];
-    return User.create({ email: r.email, passwordHash: r.password_hash, firstName: r.first_name, lastName: r.last_name, role: r.role, phone: r.phone, status: r.status, schoolId: r.school_id, mustChangePassword: r.must_change_password ?? false }, r.id, r.created_at, r.updated_at);
+    return this.mapRow(res.rows[0]);
   }
+
   public async findAll(filters?: { schoolId?: string; role?: string }): Promise<User[]> {
     let q = 'SELECT * FROM users WHERE 1=1';
     const params: any[] = [];
     if (filters?.schoolId) { params.push(filters.schoolId); q += ` AND school_id = $${params.length}`; }
     if (filters?.role) { params.push(filters.role); q += ` AND role = $${params.length}`; }
     const res = await this.pool.query(q, params);
-    return res.rows.map(r => User.create({ email: r.email, passwordHash: r.password_hash, firstName: r.first_name, lastName: r.last_name, role: r.role, phone: r.phone, status: r.status, schoolId: r.school_id, mustChangePassword: r.must_change_password ?? false }, r.id, r.created_at, r.updated_at));
+    return res.rows.map(r => this.mapRow(r));
   }
+
   public async save(user: User): Promise<void> {
-    const q = `INSERT INTO users (id, email, password_hash, first_name, last_name, role, phone, status, school_id, must_change_password, created_at, updated_at)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-               ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, password_hash = EXCLUDED.password_hash, first_name = EXCLUDED.first_name, last_name = EXCLUDED.last_name, role = EXCLUDED.role, phone = EXCLUDED.phone, status = EXCLUDED.status, school_id = EXCLUDED.school_id, must_change_password = EXCLUDED.must_change_password, updated_at = NOW()`;
+    const q = `INSERT INTO users (
+                 id, email, password_hash, first_name, last_name, role, phone, status, school_id, 
+                 must_change_password, reset_password_token, reset_password_expires, reset_password_attempts, 
+                 created_at, updated_at
+               )
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+               ON CONFLICT (id) DO UPDATE SET 
+                 email = EXCLUDED.email, 
+                 password_hash = EXCLUDED.password_hash, 
+                 first_name = EXCLUDED.first_name, 
+                 last_name = EXCLUDED.last_name, 
+                 role = EXCLUDED.role, 
+                 phone = EXCLUDED.phone, 
+                 status = EXCLUDED.status, 
+                 school_id = EXCLUDED.school_id, 
+                 must_change_password = EXCLUDED.must_change_password,
+                 reset_password_token = EXCLUDED.reset_password_token,
+                 reset_password_expires = EXCLUDED.reset_password_expires,
+                 reset_password_attempts = EXCLUDED.reset_password_attempts,
+                 updated_at = NOW()`;
     const cleanEmail = (user.email && user.email.trim() !== '') ? user.email.trim().toLowerCase() : null;
     await this.pool.query(q, [
       user.id,
@@ -1190,10 +1290,14 @@ export class PostgresUserRepository implements IUserRepository {
       user.status,
       (user.schoolId && user.schoolId.trim() !== '') ? user.schoolId : null,
       user.mustChangePassword,
+      user.resetPasswordToken || null,
+      user.resetPasswordExpires || null,
+      user.resetPasswordAttempts,
       user.createdAt,
       user.updatedAt
     ]);
   }
+
   public async update(user: User): Promise<void> { await this.save(user); }
   public async delete(id: string): Promise<void> { await this.pool.query('DELETE FROM users WHERE id = $1', [id]); }
 }
@@ -3043,4 +3147,238 @@ export class PostgresStudentSponsorshipRepository implements IStudentSponsorship
     };
   }
 }
+
+export class PostgresSignatureRepository implements ISignatureRepository {
+  constructor(private pool: Pool) {}
+
+  public async findProfileByUserId(userId: string): Promise<DigitalSignatureProfile | null> {
+    const res = await this.pool.query(
+      'SELECT * FROM signature_profiles WHERE user_id = $1 LIMIT 1',
+      [userId]
+    );
+    if (res.rows.length === 0) return null;
+    const row = res.rows[0];
+    return new DigitalSignatureProfile({
+      id: row.id,
+      userId: row.user_id,
+      signatureType: row.signature_type as SignatureType,
+      signatureData: row.signature_data,
+      fontStyle: row.font_style || undefined,
+      consentGiven: row.consent_given,
+      consentGivenAt: new Date(row.consent_given_at),
+      isActive: row.is_active,
+      version: row.version,
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at)
+    });
+  }
+
+  public async saveProfile(profile: DigitalSignatureProfile): Promise<DigitalSignatureProfile> {
+    await this.pool.query(
+      `INSERT INTO signature_profiles (
+        id, user_id, signature_type, signature_data, font_style,
+        consent_given, consent_given_at, is_active, version, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      ON CONFLICT (user_id) DO UPDATE SET
+        signature_type = EXCLUDED.signature_type,
+        signature_data = EXCLUDED.signature_data,
+        font_style = EXCLUDED.font_style,
+        consent_given = EXCLUDED.consent_given,
+        consent_given_at = EXCLUDED.consent_given_at,
+        is_active = EXCLUDED.is_active,
+        version = EXCLUDED.version,
+        updated_at = EXCLUDED.updated_at`,
+      [
+        profile.id,
+        profile.userId,
+        profile.signatureType,
+        profile.signatureData,
+        profile.fontStyle || null,
+        profile.consentGiven,
+        profile.consentGivenAt,
+        profile.isActive,
+        profile.version,
+        profile.createdAt,
+        profile.updatedAt
+      ]
+    );
+    return profile;
+  }
+
+  public async findChallengeById(challengeId: string): Promise<DocumentSigningChallenge | null> {
+    const res = await this.pool.query(
+      'SELECT * FROM document_signing_challenges WHERE id = $1 LIMIT 1',
+      [challengeId]
+    );
+    if (res.rows.length === 0) return null;
+    const row = res.rows[0];
+    return new DocumentSigningChallenge({
+      id: row.id,
+      userId: row.user_id,
+      documentId: row.document_id,
+      documentType: row.document_type,
+      documentVersion: row.document_version,
+      documentHash: row.document_hash,
+      otpHash: row.otp_hash,
+      salt: row.salt,
+      attempts: row.attempts,
+      maxAttempts: row.max_attempts,
+      expiresAt: new Date(row.expires_at),
+      resendCooldownUntil: new Date(row.resend_cooldown_until),
+      isConsumed: row.is_consumed,
+      consumedAt: row.consumed_at ? new Date(row.consumed_at) : undefined,
+      createdAt: new Date(row.created_at)
+    });
+  }
+
+  public async findActiveChallenge(userId: string, documentId: string): Promise<DocumentSigningChallenge | null> {
+    const res = await this.pool.query(
+      `SELECT * FROM document_signing_challenges 
+       WHERE user_id = $1 AND document_id = $2 AND is_consumed = FALSE AND expires_at > NOW()
+       ORDER BY created_at DESC LIMIT 1`,
+      [userId, documentId]
+    );
+    if (res.rows.length === 0) return null;
+    const row = res.rows[0];
+    return new DocumentSigningChallenge({
+      id: row.id,
+      userId: row.user_id,
+      documentId: row.document_id,
+      documentType: row.document_type,
+      documentVersion: row.document_version,
+      documentHash: row.document_hash,
+      otpHash: row.otp_hash,
+      salt: row.salt,
+      attempts: row.attempts,
+      maxAttempts: row.max_attempts,
+      expiresAt: new Date(row.expires_at),
+      resendCooldownUntil: new Date(row.resend_cooldown_until),
+      isConsumed: row.is_consumed,
+      consumedAt: row.consumed_at ? new Date(row.consumed_at) : undefined,
+      createdAt: new Date(row.created_at)
+    });
+  }
+
+  public async saveChallenge(challenge: DocumentSigningChallenge): Promise<DocumentSigningChallenge> {
+    await this.pool.query(
+      `INSERT INTO document_signing_challenges (
+        id, user_id, document_id, document_type, document_version,
+        document_hash, otp_hash, salt, attempts, max_attempts,
+        expires_at, resend_cooldown_until, is_consumed, consumed_at, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+      ON CONFLICT (id) DO UPDATE SET
+        attempts = EXCLUDED.attempts,
+        is_consumed = EXCLUDED.is_consumed,
+        consumed_at = EXCLUDED.consumed_at`,
+      [
+        challenge.id,
+        challenge.userId,
+        challenge.documentId,
+        challenge.documentType,
+        challenge.documentVersion,
+        challenge.documentHash,
+        challenge.otpHash,
+        challenge.salt,
+        challenge.attempts,
+        challenge.maxAttempts,
+        challenge.expiresAt,
+        challenge.resendCooldownUntil,
+        challenge.isConsumed,
+        challenge.consumedAt || null,
+        challenge.createdAt
+      ]
+    );
+    return challenge;
+  }
+
+  public async invalidateChallenges(userId: string, documentId: string): Promise<void> {
+    await this.pool.query(
+      `UPDATE document_signing_challenges 
+       SET is_consumed = TRUE, consumed_at = NOW() 
+       WHERE user_id = $1 AND document_id = $2 AND is_consumed = FALSE`,
+      [userId, documentId]
+    );
+  }
+
+  public async saveSignatureRecord(record: DocumentSignatureRecord): Promise<DocumentSignatureRecord> {
+    await this.pool.query(
+      `INSERT INTO document_signature_records (
+        id, document_id, document_type, document_version, document_hash,
+        signature_profile_id, signature_profile_version, signature_data_snapshot,
+        signature_type, signer_user_id, signer_name, signer_role, signer_email,
+        otp_challenge_id, signed_at, ip_address, user_agent, audit_metadata
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
+      [
+        record.id,
+        record.documentId,
+        record.documentType,
+        record.documentVersion,
+        record.documentHash,
+        record.signatureProfileId,
+        record.signatureProfileVersion,
+        record.signatureDataSnapshot,
+        record.signatureType,
+        record.signerUserId,
+        record.signerName,
+        record.signerRole,
+        record.signerEmail,
+        record.otpChallengeId,
+        record.signedAt,
+        record.ipAddress || null,
+        record.userAgent || null,
+        record.auditMetadata ? JSON.stringify(record.auditMetadata) : null
+      ]
+    );
+    return record;
+  }
+
+  public async findSignatureRecordsByDocumentId(documentId: string): Promise<DocumentSignatureRecord[]> {
+    const res = await this.pool.query(
+      `SELECT * FROM document_signature_records WHERE document_id = $1 ORDER BY signed_at ASC`,
+      [documentId]
+    );
+    return res.rows.map(row => this.mapRecord(row));
+  }
+
+  public async findSignatureRecordById(recordId: string): Promise<DocumentSignatureRecord | null> {
+    const res = await this.pool.query(
+      `SELECT * FROM document_signature_records WHERE id = $1 LIMIT 1`,
+      [recordId]
+    );
+    if (res.rows.length === 0) return null;
+    return this.mapRecord(res.rows[0]);
+  }
+
+  public async findSignatureRecordsBySignerId(userId: string): Promise<DocumentSignatureRecord[]> {
+    const res = await this.pool.query(
+      `SELECT * FROM document_signature_records WHERE signer_user_id = $1 ORDER BY signed_at DESC`,
+      [userId]
+    );
+    return res.rows.map(row => this.mapRecord(row));
+  }
+
+  private mapRecord(row: any): DocumentSignatureRecord {
+    return new DocumentSignatureRecord({
+      id: row.id,
+      documentId: row.document_id,
+      documentType: row.document_type,
+      documentVersion: row.document_version,
+      documentHash: row.document_hash,
+      signatureProfileId: row.signature_profile_id,
+      signatureProfileVersion: row.signature_profile_version,
+      signatureDataSnapshot: row.signature_data_snapshot,
+      signatureType: row.signature_type,
+      signerUserId: row.signer_user_id,
+      signerName: row.signer_name,
+      signerRole: row.signer_role,
+      signerEmail: row.signer_email,
+      otpChallengeId: row.otp_challenge_id,
+      signedAt: new Date(row.signed_at),
+      ipAddress: row.ip_address || undefined,
+      userAgent: row.user_agent || undefined,
+      auditMetadata: typeof row.audit_metadata === 'string' ? JSON.parse(row.audit_metadata) : (row.audit_metadata || undefined)
+    });
+  }
+}
+
 

@@ -218,6 +218,7 @@ import {
   EndorseDailyLogSchema
 } from '../controllers/CurriculumTrackerController';
 import { StudentSponsorshipController } from '../controllers/StudentSponsorshipController';
+import { SignatureController } from '../controllers/SignatureController';
 
 export function createApiRouter(container: AppContainer): Router {
   const router = Router();
@@ -252,6 +253,7 @@ export function createApiRouter(container: AppContainer): Router {
   const occurrenceController = new OccurrenceController(container.occurrenceUseCases);
   const curriculumTrackerController = new CurriculumTrackerController(container.curriculumTrackerUseCases);
   const sponsorshipController = new StudentSponsorshipController(container.studentSponsorshipUseCases);
+  const signatureController = new SignatureController(container.signatureUseCases);
 
   // ==========================================
   // 1. AUTH ROUTES
@@ -264,6 +266,7 @@ export function createApiRouter(container: AppContainer): Router {
   authRouter.get('/profile', authMiddleware, authController.getProfile);
   authRouter.post('/change-password', authMiddleware, validateBody(ChangePasswordSchema), authController.changePassword);
   authRouter.post('/forgot-password', validateBody(ForgotPasswordSchema), authController.forgotPassword);
+  authRouter.get('/verify-reset-token', authController.verifyResetToken);
   authRouter.post('/reset-password', validateBody(ResetPasswordSchema), authController.resetPassword);
   router.use('/auth', authRouter);
 
@@ -1281,6 +1284,22 @@ export function createApiRouter(container: AppContainer): Router {
   sponsorshipRouter.delete('/:id', sponsorshipController.deleteSponsorship);
 
   router.use('/sponsorships', sponsorshipRouter);
+
+  // ==========================================
+  // Digital Signature Vault & OTP Authorization (Phase B)
+  // ==========================================
+  const signatureRouter = Router();
+  signatureRouter.use(authMiddleware);
+
+  signatureRouter.get('/me', signatureController.getMySignature);
+  signatureRouter.post('/me', signatureController.saveMySignature);
+  signatureRouter.delete('/me', signatureController.deactivateMySignature);
+  signatureRouter.post('/challenge', signatureController.initiateChallenge);
+  signatureRouter.post('/verify-and-sign', signatureController.verifyAndSign);
+  signatureRouter.get('/records/:documentId', signatureController.getDocumentSignatures);
+  signatureRouter.post('/verify-document', signatureController.verifyDocumentIntegrity);
+
+  router.use('/signatures', signatureRouter);
 
   return router;
 }

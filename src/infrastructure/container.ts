@@ -52,6 +52,9 @@ import { InMemoryCurriculumTrackerRepository } from './database/in-memory/InMemo
 import { StudentSponsorshipUseCases } from '../application/sponsorship/StudentSponsorshipUseCases';
 import { IStudentSponsorshipRepository } from '../core/ports/repositories/IStudentSponsorshipRepository';
 import { InMemoryStudentSponsorshipRepository } from './database/in-memory/InMemoryStudentSponsorshipRepository';
+import { ISignatureRepository } from '../core/ports/repositories/ISignatureRepository';
+import { InMemorySignatureRepository } from './database/in-memory/InMemorySignatureRepository';
+import { SignatureUseCases } from '../application/signature/SignatureUseCases';
 
 import {
   InMemoryUserRepository,
@@ -75,6 +78,7 @@ import { JwtAuthTokenService } from './services/JwtAuthTokenService';
 import { BcryptPasswordHasher } from './services/BcryptPasswordHasher';
 import { KcbBuniPaymentAdapter } from './services/KcbBuniPaymentAdapter';
 import { SmsNotificationAdapter } from './services/SmsNotificationAdapter';
+import { EmailService } from './services/email/EmailService';
 import { ImageProcessingService } from './services/ImageProcessingService';
 import { WhatsAppService } from './services/WhatsAppService';
 import { WhatsAppClientManager } from './services/WhatsAppClientManager';
@@ -126,13 +130,15 @@ export class AppContainer {
   public occurrenceRepository: IOccurrenceRepository;
   public curriculumTrackerRepository: ICurriculumTrackerRepository;
   public studentSponsorshipRepository: IStudentSponsorshipRepository;
+  public signatureRepository: ISignatureRepository;
 
   // Services
   public readonly tokenService = new JwtAuthTokenService();
   public readonly passwordHasher = new BcryptPasswordHasher();
   public readonly kcbBuniGateway = new KcbBuniPaymentAdapter();
   public readonly paymentGateway = this.kcbBuniGateway; // KCB Buni API platform integration
-  public readonly notificationService = new SmsNotificationAdapter();
+  public readonly emailService = new EmailService();
+  public readonly notificationService = new SmsNotificationAdapter(this.emailService);
   public readonly imageProcessingService = new ImageProcessingService();
   public readonly whatsAppClientManager = new WhatsAppClientManager();
   public whatsAppService!: WhatsAppService;
@@ -165,6 +171,7 @@ export class AppContainer {
   public occurrenceUseCases!: OccurrenceUseCases;
   public curriculumTrackerUseCases!: CurriculumTrackerUseCases;
   public studentSponsorshipUseCases!: StudentSponsorshipUseCases;
+  public signatureUseCases!: SignatureUseCases;
 
   constructor(customRepositories?: Partial<RepositoryBundle>) {
     this.userRepository = customRepositories?.userRepository || new InMemoryUserRepository();
@@ -209,6 +216,8 @@ export class AppContainer {
       customRepositories?.curriculumTrackerRepository || new InMemoryCurriculumTrackerRepository();
     this.studentSponsorshipRepository =
       customRepositories?.studentSponsorshipRepository || new InMemoryStudentSponsorshipRepository();
+    this.signatureRepository =
+      customRepositories?.signatureRepository || new InMemorySignatureRepository();
 
     this.initUseCases();
   }
@@ -392,6 +401,11 @@ export class AppContainer {
       this.studentSponsorshipRepository,
       this.studentRepository,
       this.feeRepository
+    );
+    this.signatureUseCases = new SignatureUseCases(
+      this.signatureRepository,
+      this.userRepository,
+      this.emailService
     );
   }
 

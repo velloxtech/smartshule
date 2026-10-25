@@ -6,11 +6,19 @@ interface LoginPageProps {
   onSuccess: () => void;
   onNavigateLanding: () => void;
   onOpenLegalModal?: (tab: 'terms' | 'privacy' | 'cookies' | 'child_protection') => void;
+  initialResetToken?: string;
+  initialResetEmail?: string;
 }
 
 type AuthMode = 'login' | 'forgot_request' | 'forgot_verify' | 'initial_setup' | 'register';
 
-export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLanding, onOpenLegalModal }) => {
+export const LoginPage: React.FC<LoginPageProps> = ({
+  onSuccess,
+  onNavigateLanding,
+  onOpenLegalModal,
+  initialResetToken,
+  initialResetEmail
+}) => {
   const { login, isLoading, error: authError } = useAuth();
   const [authMode, setAuthMode] = useState<AuthMode>('login');
 
@@ -67,6 +75,23 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLandi
       isMounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    try {
+      const searchParams = new URLSearchParams(window.location.search);
+      const tokenFromUrl = initialResetToken || searchParams.get('token') || searchParams.get('resetCode');
+      const emailFromUrl = initialResetEmail || searchParams.get('email');
+
+      if (tokenFromUrl) {
+        setResetCode(tokenFromUrl);
+        if (emailFromUrl) setForgotEmail(emailFromUrl);
+        setAuthMode('forgot_verify');
+        setForgotSuccess('Secure password reset link verified. Please enter your new password below.');
+      }
+    } catch {
+      // safe fallback
+    }
+  }, [initialResetToken, initialResetEmail]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -171,8 +196,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLandi
     setForgotError(null);
     setForgotSuccess(null);
 
-    if (!resetCode.trim() || resetCode.trim().length !== 6) {
-      setForgotError('Please enter the 6-digit verification code sent to your email or phone.');
+    if (!resetCode.trim() || resetCode.trim().length < 4) {
+      setForgotError('Please enter the verification code or link token sent to your email or phone.');
       return;
     }
 
@@ -191,6 +216,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLandi
       const res = await apiService.resetPassword({
         email: forgotEmail.trim(),
         resetCode: resetCode.trim(),
+        token: resetCode.trim(),
         newPassword: newResetPassword.trim(),
       });
 
@@ -540,20 +566,19 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess, onNavigateLandi
 
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-gray-600 mb-1.5">
-                    6-Digit Verification Code
+                    {resetCode.length > 6 ? 'Security Verification Token' : 'Verification Code or Token'}
                   </label>
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 material-symbols-outlined text-[18px]">
-                      pin
+                      {resetCode.length > 6 ? 'verified_user' : 'pin'}
                     </span>
                     <input
                       type="text"
                       required
-                      maxLength={6}
                       value={resetCode}
-                      onChange={(e) => setResetCode(e.target.value.replace(/\D/g, ''))}
-                      placeholder="e.g. 123456"
-                      className="w-full pl-9 pr-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-mono tracking-widest text-center text-gray-900 focus:outline-[#7a1228] focus:bg-white transition-colors"
+                      onChange={(e) => setResetCode(e.target.value.trim())}
+                      placeholder="e.g. 123456 or paste reset token"
+                      className="w-full pl-9 pr-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-mono text-center text-gray-900 focus:outline-[#7a1228] focus:bg-white transition-colors"
                     />
                   </div>
                 </div>

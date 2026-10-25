@@ -650,6 +650,22 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
           UserRole.SCHOOL_ADMIN,
         ],
       },
+      {
+        id: 'digital-signature',
+        label: 'My Digital Signature',
+        icon: 'draw',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.HEAD_TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
+          UserRole.TEACHER,
+          UserRole.BURSAR,
+          UserRole.ACCOUNTANT,
+          UserRole.ADMISSIONS,
+        ],
+      },
     ],
   },
 ];

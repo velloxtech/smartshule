@@ -47,7 +47,8 @@ export type TabType =
   | 'occurrence-records'
   | 'curriculum-tracker'
   | 'fee-deadline-banner'
-  | 'sponsored-students';
+  | 'sponsored-students'
+  | 'digital-signature';
 
 export interface FeeBannerConfig {
   id: string;

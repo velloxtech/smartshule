@@ -49,7 +49,8 @@ import {
   PostgresAttendanceRepository,
   PostgresFeeRepository,
   PostgresDeletedStudentRepository,
-  PostgresStudentSponsorshipRepository
+  PostgresStudentSponsorshipRepository,
+  PostgresSignatureRepository
 } from './postgres/PostgresRepositories';
 
 import { IUserRepository } from '../../core/ports/repositories/IUserRepository';
@@ -100,6 +101,8 @@ import { InMemoryPayrollRepository } from './in-memory/InMemoryPayrollRepository
 import { IInventoryRepository } from '../../core/ports/repositories/IInventoryRepository';
 import { PostgresInventoryRepository } from './postgres/PostgresInventoryRepository';
 import { InMemoryInventoryRepository } from './in-memory/InMemoryInventoryRepository';
+import { ISignatureRepository } from '../../core/ports/repositories/ISignatureRepository';
+import { InMemorySignatureRepository } from './in-memory/InMemorySignatureRepository';
 
 export interface RepositoryBundle {
   userRepository: IUserRepository;
@@ -128,6 +131,7 @@ export interface RepositoryBundle {
   studentSponsorshipRepository?: IStudentSponsorshipRepository;
   payrollRepository?: IPayrollRepository;
   inventoryRepository?: IInventoryRepository;
+  signatureRepository?: ISignatureRepository;
 }
 
 export class DatabaseFactory {
@@ -157,7 +161,8 @@ export class DatabaseFactory {
         systemLogRepository: new InMemorySystemLogRepository(),
         announcementRepository: new InMemoryAnnouncementRepository(),
         studentSponsorshipRepository: new MongoStudentSponsorshipRepository(),
-        inventoryRepository: new InMemoryInventoryRepository()
+        inventoryRepository: new InMemoryInventoryRepository(),
+        signatureRepository: new InMemorySignatureRepository()
       };
     }
 
@@ -257,6 +262,7 @@ export class DatabaseFactory {
         studentSponsorshipRepository: new PostgresStudentSponsorshipRepository(pool),
         payrollRepository: new PostgresPayrollRepository(pool),
         inventoryRepository: new PostgresInventoryRepository(pool),
+        signatureRepository: new PostgresSignatureRepository(pool),
       };
     }
 
@@ -289,6 +295,7 @@ export class DatabaseFactory {
       studentSponsorshipRepository: new InMemoryStudentSponsorshipRepository(),
       payrollRepository: new InMemoryPayrollRepository(),
       inventoryRepository: new InMemoryInventoryRepository(),
+      signatureRepository: new InMemorySignatureRepository(),
     };
   }
 }

@@ -290,13 +290,19 @@ const coreApiService = {
 
   resetPassword: async (data: {
     email: string;
-    resetCode: string;
+    resetCode?: string;
+    token?: string;
     newPassword: string;
   }): Promise<ApiResponse<{ message?: string }>> => {
     return apiFetch<ApiResponse<{ message?: string }>>('/auth/reset-password', {
       method: 'POST',
       body: JSON.stringify(data),
     });
+  },
+
+  verifyResetToken: async (email: string, token: string): Promise<ApiResponse<{ valid: boolean; email?: string; message?: string }>> => {
+    const params = new URLSearchParams({ email, token });
+    return apiFetch<ApiResponse<{ valid: boolean; email?: string; message?: string }>>(`/auth/verify-reset-token?${params.toString()}`);
   },
 
   // 1b. User Management & Access Control Endpoints
@@ -3195,10 +3201,126 @@ export const libraryApi = {
   },
 };
 
+export const signatureApi = {
+  getMySignature: async (): Promise<ApiResponse<{
+    isConfigured: boolean;
+    emailVerified: boolean;
+    email: string | null;
+    profile?: {
+      id: string;
+      userId: string;
+      signatureType: 'DRAWN' | 'TYPED' | 'UPLOADED';
+      signatureData: string;
+      fontStyle?: string;
+      consentGiven: boolean;
+      consentGivenAt: string;
+      isActive: boolean;
+      version: number;
+      createdAt: string;
+      updatedAt: string;
+    };
+  }>> => {
+    return apiFetch<ApiResponse<any>>('/signatures/me');
+  },
+
+  saveMySignature: async (payload: {
+    signatureType: 'DRAWN' | 'TYPED' | 'UPLOADED';
+    signatureData: string;
+    fontStyle?: string;
+    consentConfirmed: boolean;
+  }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/signatures/me', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  deactivateMySignature: async (): Promise<ApiResponse<{ message: string }>> => {
+    return apiFetch<ApiResponse<any>>('/signatures/me', {
+      method: 'DELETE',
+    });
+  },
+
+  initiateSigningChallenge: async (payload: {
+    documentId: string;
+    documentType: string;
+    documentVersion: string;
+    documentTitle: string;
+    documentContent: string;
+  }): Promise<ApiResponse<{
+    challengeId: string;
+    documentId: string;
+    documentVersion: string;
+    documentHash: string;
+    expiresAt: string;
+    resendAvailableInSeconds: number;
+    maskedEmail: string;
+    debugOtp?: string;
+  }>> => {
+    return apiFetch<ApiResponse<any>>('/signatures/challenge', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  verifyAndSignDocument: async (payload: {
+    challengeId: string;
+    otpCode: string;
+    documentId: string;
+    documentType: string;
+    documentVersion: string;
+    documentContent: string;
+    auditMetadata?: Record<string, any>;
+  }): Promise<ApiResponse<{
+    signatureRecord: {
+      id: string;
+      documentId: string;
+      documentType: string;
+      documentVersion: string;
+      documentHash: string;
+      signatureProfileId: string;
+      signatureProfileVersion: number;
+      signatureDataSnapshot: string;
+      signatureType: string;
+      signerUserId: string;
+      signerName: string;
+      signerRole: string;
+      signerEmail: string;
+      otpChallengeId: string;
+      signedAt: string;
+    };
+  }>> => {
+    return apiFetch<ApiResponse<any>>('/signatures/verify-and-sign', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  getDocumentSignatures: async (documentId: string): Promise<ApiResponse<any[]>> => {
+    return apiFetch<ApiResponse<any[]>>(`/signatures/records/${encodeURIComponent(documentId)}`);
+  },
+
+  verifyDocumentIntegrity: async (payload: {
+    signatureRecordId: string;
+    documentContent: string;
+  }): Promise<ApiResponse<{
+    isValid: boolean;
+    recordedHash: string;
+    currentHash: string;
+    signatureRecord: any;
+  }>> => {
+    return apiFetch<ApiResponse<any>>('/signatures/verify-document', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+};
+
 // Unified apiService containing core and extended domain endpoints
 export const apiService = {
   ...coreApiService,
   ...libraryApi,
+  ...signatureApi,
 };
 
 // Named exports for static binding & resilient importing
@@ -3295,6 +3417,15 @@ export const issueStock = libraryApi.issueStock;
 export const adjustStock = libraryApi.adjustStock;
 export const disposeStock = libraryApi.disposeStock;
 export const getStockMovements = libraryApi.getStockMovements;
+
+// Digital Signature Vault & OTP named exports
+export const getMySignature = signatureApi.getMySignature;
+export const saveMySignature = signatureApi.saveMySignature;
+export const deactivateMySignature = signatureApi.deactivateMySignature;
+export const initiateSigningChallenge = signatureApi.initiateSigningChallenge;
+export const verifyAndSignDocument = signatureApi.verifyAndSignDocument;
+export const getDocumentSignatures = signatureApi.getDocumentSignatures;
+export const verifyDocumentIntegrity = signatureApi.verifyDocumentIntegrity;
 
 export default apiService;
 

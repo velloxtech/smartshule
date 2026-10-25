@@ -74,11 +74,12 @@ export const ResetPasswordSchema = z.object({
   identifier: z.string().optional(),
   resetCode: z.string().min(4, 'Reset verification code is required').optional(),
   code: z.string().min(4).optional(),
+  token: z.string().min(4).optional(),
   newPassword: z.string().min(6, 'New password must be at least 6 characters long')
 }).refine(data => !!((data.email && data.email.trim()) || (data.phone && data.phone.trim()) || (data.identifier && data.identifier.trim())), {
   message: 'Email or phone number is required'
-}).refine(data => !!((data.resetCode && data.resetCode.trim()) || (data.code && data.code.trim())), {
-  message: 'Reset verification code is required'
+}).refine(data => !!((data.resetCode && data.resetCode.trim()) || (data.code && data.code.trim()) || (data.token && data.token.trim())), {
+  message: 'Reset verification code or token is required'
 });
 
 import { SystemLogUseCases } from '../../../application/system-logs/SystemLogUseCases';
@@ -210,7 +211,31 @@ export class AuthController {
       return res.status(200).json({
         success: true,
         message: result.message,
-        debugCode: result.debugCode
+        debugCode: result.debugCode,
+        debugToken: result.debugToken
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public verifyResetToken = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const email = String(req.query.email || req.query.identifier || '').trim();
+      const token = String(req.query.token || req.query.resetCode || req.query.code || '').trim();
+      if (!email || !token) {
+        return res.status(400).json({
+          success: false,
+          valid: false,
+          message: 'Email and reset token are required.'
+        });
+      }
+      const result = await this.authUseCases.verifyResetToken(email, token);
+      return res.status(200).json({
+        success: result.valid,
+        valid: result.valid,
+        email: result.email,
+        message: result.message
       });
     } catch (err) {
       next(err);
@@ -223,6 +248,7 @@ export class AuthController {
       const result = await this.authUseCases.resetPasswordWithCode({
         email: identifier,
         resetCode: req.body.resetCode || req.body.code,
+        token: req.body.token,
         newPassword: req.body.newPassword
       });
       return res.status(200).json({
