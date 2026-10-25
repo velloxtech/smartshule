@@ -460,6 +460,18 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
         ],
       },
       {
+        id: 'forwarded-payments',
+        label: 'Forwarded Payments',
+        icon: 'forward_to_inbox',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.BURSAR,
+          UserRole.ACCOUNTANT,
+        ],
+      },
+      {
         id: 'defaulters-receipts',
         label: 'Defaulters & SMS Alerts',
         icon: 'point_of_sale',

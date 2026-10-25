@@ -1,14 +1,151 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Student, StudentInvoice, UserRole } from '../../types';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { Student, StudentInvoice, UserRole, FeeStructure } from '../../types';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { RecordPaymentModal } from '../modals/RecordPaymentModal';
 
-interface StudentFeeCheckerViewProps {
+export interface StudentFeeCheckerViewProps {
   students: Student[];
   onRefreshStudents?: () => void | Promise<void>;
   initialStudentId?: string;
 }
+
+export interface StudentFinancials {
+  isSponsored: boolean;
+  billed: number;
+  priorArrears: number;
+  totalDue: number;
+  paid: number;
+  balance: number;
+  arrearsDue: number;
+  overpayment: number;
+  status: 'SPONSORED' | 'OVERPAID' | 'CLEARED' | 'PARTIAL' | 'ARREARS' | 'UNBILLED';
+}
+
+export const getStudentFinancials = (
+  s: Student,
+  selectedTerm: 'term-1' | 'term-2' | 'term-3' | 'ALL' = 'term-3',
+  feeStructures: FeeStructure[] = []
+): StudentFinancials => {
+  const isSponsored = Boolean(s.isSponsored || (s as any).sponsorship);
+  if (isSponsored) {
+    return {
+      isSponsored: true,
+      billed: 0,
+      priorArrears: 0,
+      totalDue: 0,
+      paid: 0,
+      balance: 0,
+      arrearsDue: 0,
+      overpayment: 0,
+      status: 'SPONSORED',
+    };
+  }
+
+  // 1. Resolve Fee Billed from Fee Structure according to the term
+  // If the student was already billed by an active invoice, use the exact billed amount
+  let billed = 0;
+  if (s.totalFee !== undefined && s.totalFee !== null && Number(s.totalFee) > 0) {
+    billed = Number(s.totalFee);
+  } else if (feeStructures && feeStructures.length > 0) {
+    const sGrade = (s.grade || (s as any).gradeLevel || '').toUpperCase();
+    const matchFs = feeStructures.find((fs) => {
+      const fsGrade = (fs.gradeLevel || '').toUpperCase();
+      return fsGrade === sGrade || fsGrade.replace(/_/g, ' ') === sGrade.replace(/_/g, ' ');
+    });
+
+    if (matchFs) {
+      const isTermStructure = matchFs.termId && matchFs.termId !== 'ALL' && matchFs.termId !== 'ANNUAL';
+      if (isTermStructure) {
+        billed = matchFs.totalAmount || matchFs.items?.reduce((acc: number, it: any) => acc + (Number(it.amount) || 0), 0) || 0;
+      } else if (selectedTerm === 'term-1') {
+        billed = matchFs.term1Total !== undefined
+          ? matchFs.term1Total
+          : (matchFs.termBreakdown?.term1 !== undefined ? matchFs.termBreakdown.term1 : (matchFs.totalAmount || 0));
+      } else if (selectedTerm === 'term-2') {
+        billed = matchFs.term2Total !== undefined
+          ? matchFs.term2Total
+          : (matchFs.termBreakdown?.term2 !== undefined ? matchFs.termBreakdown.term2 : (matchFs.totalAmount || 0));
+      } else if (selectedTerm === 'term-3') {
+        billed = matchFs.term3Total !== undefined
+          ? matchFs.term3Total
+          : (matchFs.termBreakdown?.term3 !== undefined ? matchFs.termBreakdown.term3 : (matchFs.totalAmount || 0));
+      } else {
+        // Whole Year (All terms)
+        billed = matchFs.totalAmount || matchFs.items.reduce((acc, it) => acc + (Number(it.amount) || 0), 0);
+      }
+    }
+  }
+
+  // 2. Prior Arrears (opening/carried forward arrears, distinct from term fee structure billed fee)
+  const priorArrears = Math.max(0, Number((s as any).priorArrears) || 0);
+
+  // 3. Total Due (Billed Fees + Prior Arrears)
+  const totalDue = (s as any).totalDue !== undefined && (s as any).totalDue !== null && Number((s as any).totalDue) > 0
+    ? Number((s as any).totalDue)
+    : Math.max(0, billed + priorArrears);
+
+  // 4. Paid Fees
+  let paid = 0;
+  if ((s as any).totalPaid !== undefined && (s as any).totalPaid !== null) {
+    paid = Number((s as any).totalPaid) || 0;
+  } else if ((s as any).amountPaid !== undefined && (s as any).amountPaid !== null) {
+    paid = Number((s as any).amountPaid) || 0;
+  } else {
+    const rawBalance = Number(s.feeBalance) || 0;
+    if (rawBalance < 0) {
+      paid = totalDue + Math.abs(rawBalance);
+    } else {
+      paid = Math.max(0, totalDue - rawBalance);
+    }
+  }
+
+  // 5. Balance (formerly Arrears Due) & Overpayment / Prepayment Credit
+  let balance = 0;
+  let arrearsDue = 0;
+  let overpayment = 0;
+
+  if (paid > totalDue) {
+    overpayment = Math.round((paid - totalDue) * 100) / 100;
+    balance = -overpayment; // exact overpayment as -(overpayment)
+    arrearsDue = 0;
+  } else {
+    balance = Math.round((totalDue - paid) * 100) / 100;
+    arrearsDue = balance;
+    overpayment = (s as any).creditBalance ? Number((s as any).creditBalance) : 0;
+    if (overpayment > 0 && balance === 0) {
+      balance = -overpayment;
+    }
+  }
+
+  // 6. Financial Status
+  let status: StudentFinancials['status'];
+  if (balance < 0 || overpayment > 0) {
+    status = 'OVERPAID';
+  } else if (balance === 0 && (paid > 0 || totalDue > 0)) {
+    status = 'CLEARED';
+  } else if (billed === 0 && priorArrears === 0 && balance === 0) {
+    status = 'UNBILLED';
+  } else if (paid > 0 && balance > 0) {
+    status = 'PARTIAL';
+  } else {
+    status = 'ARREARS';
+  }
+
+  return {
+    isSponsored: false,
+    billed,
+    priorArrears,
+    totalDue,
+    paid,
+    balance,
+    arrearsDue,
+    overpayment,
+    status,
+  };
+};
 
 export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
   students = [],
@@ -16,25 +153,62 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
   initialStudentId,
 }) => {
   const { user } = useAuth();
+
+  // Search & Filter States
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGrade, setSelectedGrade] = useState('All');
-  const [selectedStatus, setSelectedStatus] = useState<'All' | 'Has_Balance' | 'Cleared' | 'Sponsored'>('All');
-  const [sortBy, setSortBy] = useState<'name' | 'balance_desc' | 'balance_asc' | 'adm'>('balance_desc');
+  const [selectedStream, setSelectedStream] = useState('All');
+  const [selectedTerm, setSelectedTerm] = useState<'term-1' | 'term-2' | 'term-3' | 'ALL'>('term-3');
+  const [selectedStatus, setSelectedStatus] = useState<
+    'All' | 'Has_Balance' | 'Overpaid' | 'Cleared' | 'Sponsored'
+  >('All');
+  const [sortBy, setSortBy] = useState<
+    'balance_desc' | 'overpaid_desc' | 'billed_desc' | 'name' | 'adm'
+  >('balance_desc');
 
-  // Selected student for detailed fee inspection
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  // Fee Structures State
+  const [feeStructures, setFeeStructures] = useState<FeeStructure[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    apiService.getCurrentContext()
+      .then((res) => {
+        if (isMounted && res?.success && res.data?.currentTerm) {
+          const tNum = res.data.currentTerm.termNumber;
+          if (tNum === 1) setSelectedTerm('term-1');
+          else if (tNum === 2) setSelectedTerm('term-2');
+          else if (tNum === 3) setSelectedTerm('term-3');
+        }
+      })
+      .catch(() => {});
+
+    apiService.getFeeStructures()
+      .then((res) => {
+        if (isMounted && res?.success && Array.isArray(res.data)) {
+          setFeeStructures(res.data);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Modals & Active Student State
+  const [isRecordPaymentOpen, setIsRecordPaymentOpen] = useState(false);
+  const [selectedStudentForPayment, setSelectedStudentForPayment] = useState<Student | null>(null);
+
+  // Statement Inspection Modal State
+  const [isStatementModalOpen, setIsStatementModalOpen] = useState(false);
+  const [statementStudent, setStatementStudent] = useState<Student | null>(null);
   const [statementData, setStatementData] = useState<any | null>(null);
   const [isLoadingStatement, setIsLoadingStatement] = useState(false);
   const [statementError, setStatementError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'invoices' | 'payments' | 'statement'>('invoices');
-
-  // Modals
-  const [isRecordPaymentOpen, setIsRecordPaymentOpen] = useState(false);
-  const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [statementTab, setStatementTab] = useState<'invoices' | 'payments' | 'statement'>('invoices');
   const [expandedInvoiceId, setExpandedInvoiceId] = useState<string | null>(null);
-  const [smsSentSuccess, setSmsSentSuccess] = useState<string | null>(null);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
 
-  // Hanging Invoice Deletion & Billing Authorization state
+  // Billing Authorization & Deletion State (Inside Statement Modal)
   const isGuardian = user?.role === UserRole.GUARDIAN || user?.role === UserRole.PARENT;
   const canManageInvoices = !isGuardian;
   const isBillingAuthorized = [
@@ -48,21 +222,220 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
 
   const [isAuthorizingBilling, setIsAuthorizingBilling] = useState(false);
   const [billingAuthFeedback, setBillingAuthFeedback] = useState<string | null>(null);
+  const [invoiceToDelete, setInvoiceToDelete] = useState<StudentInvoice | null>(null);
+  const [isDeletingInvoice, setIsDeletingInvoice] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteSuccess, setDeleteSuccess] = useState<string | null>(null);
 
+  // Distinct grades & streams for filtering
+  const distinctGrades = useMemo(() => {
+    const grades = new Set<string>();
+    students.forEach((s) => {
+      if (s.grade) grades.add(s.grade);
+    });
+    return Array.from(grades).sort();
+  }, [students]);
+
+  const distinctStreams = useMemo(() => {
+    const streams = new Set<string>();
+    students.forEach((s) => {
+      if (s.stream) streams.add(s.stream);
+    });
+    return Array.from(streams).sort();
+  }, [students]);
+
+  // Handle Initial Student Selection if provided
+  useEffect(() => {
+    if (initialStudentId && students.length > 0) {
+      const found = students.find((s) => s.id === initialStudentId);
+      if (found) {
+        handleOpenStatementModal(found);
+      }
+    }
+  }, [initialStudentId, students]);
+
+  // Filtered & Sorted Student List
+  const filteredStudents = useMemo(() => {
+    return students
+      .filter((s) => {
+        // Text Search across multiple fields
+        const query = searchQuery.trim().toLowerCase();
+        if (query) {
+          const nameMatch = s.name.toLowerCase().includes(query);
+          const admMatch = (s.admNo || '').toLowerCase().includes(query);
+          const upiMatch = (s.upi || '').toLowerCase().includes(query);
+          const nemisMatch = (s.nemis || '').toLowerCase().includes(query);
+          const gradeMatch = (s.grade || '').toLowerCase().includes(query);
+          const streamMatch = (s.stream || '').toLowerCase().includes(query);
+          const guardianNameMatch = (s.guardianName || '').toLowerCase().includes(query);
+          const guardianPhoneMatch = (s.guardianPhone || '').replace(/\s+/g, '').includes(query);
+
+          if (
+            !nameMatch &&
+            !admMatch &&
+            !upiMatch &&
+            !nemisMatch &&
+            !gradeMatch &&
+            !streamMatch &&
+            !guardianNameMatch &&
+            !guardianPhoneMatch
+          ) {
+            return false;
+          }
+        }
+
+        // Grade Filter
+        if (selectedGrade !== 'All' && s.grade !== selectedGrade) {
+          return false;
+        }
+
+        // Stream Filter
+        if (selectedStream !== 'All' && s.stream !== selectedStream) {
+          return false;
+        }
+
+        // Status Filter
+        const fin = getStudentFinancials(s, selectedTerm, feeStructures);
+        if (selectedStatus === 'Has_Balance' && fin.balance <= 0) {
+          return false;
+        }
+        if (selectedStatus === 'Overpaid' && fin.balance >= 0) {
+          return false;
+        }
+        if (selectedStatus === 'Cleared') {
+          // Show cleared students as well as scholarship program learners whose fees are clear
+          if (!fin.isSponsored && fin.status !== 'CLEARED') {
+            return false;
+          }
+        }
+        if (selectedStatus === 'Sponsored' && !fin.isSponsored) {
+          return false;
+        }
+
+        return true;
+      })
+      .sort((a, b) => {
+        const aFin = getStudentFinancials(a, selectedTerm, feeStructures);
+        const bFin = getStudentFinancials(b, selectedTerm, feeStructures);
+
+        if (sortBy === 'balance_desc') return bFin.balance - aFin.balance;
+        if (sortBy === 'overpaid_desc') return bFin.overpayment - aFin.overpayment;
+        if (sortBy === 'billed_desc') return bFin.billed - aFin.billed;
+        if (sortBy === 'name') return a.name.localeCompare(b.name);
+        if (sortBy === 'adm') return (a.admNo || '').localeCompare(b.admNo || '');
+        return 0;
+      });
+  }, [students, searchQuery, selectedGrade, selectedStream, selectedTerm, selectedStatus, sortBy, feeStructures]);
+
+  // Aggregate Ledger Totals
+  const stats = useMemo(() => {
+    let totalBilled = 0;
+    let totalPriorArrears = 0;
+    let totalDue = 0;
+    let totalPaid = 0;
+    let totalArrears = 0;
+    let totalOverpayment = 0;
+    let clearedCount = 0;
+    let overpaidCount = 0;
+    let arrearsCount = 0;
+    let sponsoredCount = 0;
+
+    filteredStudents.forEach((s) => {
+      const fin = getStudentFinancials(s, selectedTerm, feeStructures);
+      totalBilled += fin.billed;
+      totalPriorArrears += fin.priorArrears;
+      totalDue += fin.totalDue;
+      totalPaid += fin.paid;
+      if (fin.balance > 0) {
+        totalArrears += fin.balance;
+        arrearsCount++;
+      } else if (fin.balance < 0) {
+        totalOverpayment += Math.abs(fin.balance);
+        overpaidCount++;
+      }
+
+      if (fin.status === 'CLEARED' || fin.isSponsored) clearedCount++;
+      if (fin.isSponsored) sponsoredCount++;
+    });
+
+    const collectionRate = totalDue > 0 ? Math.min(100, Math.round((totalPaid / totalDue) * 100)) : 0;
+
+    return {
+      totalBilled,
+      totalPriorArrears,
+      totalDue,
+      totalPaid,
+      totalArrears,
+      totalOverpayment,
+      clearedCount,
+      overpaidCount,
+      arrearsCount,
+      sponsoredCount,
+      collectionRate,
+    };
+  }, [filteredStudents, selectedTerm, feeStructures]);
+
+  // Copy helper
+  const handleCopy = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(label);
+    setTimeout(() => setCopiedField(null), 2000);
+  };
+
+  // Open Statement Modal
+  const handleOpenStatementModal = (st: Student) => {
+    setStatementStudent(st);
+    setIsStatementModalOpen(true);
+    setStatementTab('invoices');
+    setIsLoadingStatement(true);
+    setStatementError(null);
+    setStatementData(null);
+
+    apiService
+      .getFeeStatement(st.id)
+      .then((res) => {
+        if (res?.success && res.data) {
+          setStatementData(res.data);
+        }
+      })
+      .catch((err) => {
+        console.warn('Could not load detailed statement, fallback to student data:', err);
+        setStatementError('Could not fetch real-time invoice breakdown. Showing basic student balance data.');
+      })
+      .finally(() => {
+        setIsLoadingStatement(false);
+      });
+  };
+
+  // Payment Recording Success Callback
+  const handlePaymentSuccess = async () => {
+    setIsRecordPaymentOpen(false);
+    setSelectedStudentForPayment(null);
+    if (onRefreshStudents) {
+      await onRefreshStudents();
+    }
+    if (statementStudent) {
+      apiService.getFeeStatement(statementStudent.id).then((res) => {
+        if (res?.success && res.data) setStatementData(res.data);
+      }).catch(() => {});
+    }
+  };
+
+  // Authorize Billing Handler
   const handleAuthorizeBilling = async () => {
-    if (!selectedStudent) return;
+    if (!statementStudent) return;
     setIsAuthorizingBilling(true);
     setBillingAuthFeedback(null);
     try {
       const res = await apiService.generateInvoices({
-        studentId: selectedStudent.id,
-        schoolId: (selectedStudent as any).schoolId || 'school-001',
+        studentId: statementStudent.id,
+        schoolId: (statementStudent as any).schoolId || 'school-001',
         academicYearId: 'year-2026',
         termId: 'term-2026-t1',
       });
       if (res.success) {
         setBillingAuthFeedback('Student successfully authorized and billed for Term 1.');
-        const statementRes = await apiService.getFeeStatement(selectedStudent.id).catch(() => null);
+        const statementRes = await apiService.getFeeStatement(statementStudent.id).catch(() => null);
         if (statementRes?.success && statementRes.data) {
           setStatementData(statementRes.data);
         }
@@ -80,11 +453,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
     }
   };
 
-  const [invoiceToDelete, setInvoiceToDelete] = useState<StudentInvoice | null>(null);
-  const [isDeletingInvoice, setIsDeletingInvoice] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [deleteSuccess, setDeleteSuccess] = useState<string | null>(null);
-
+  // Delete Hanging Invoice Handler
   const isHangingInvoice = (inv: StudentInvoice): boolean => {
     const paid = Number(inv.amountPaid) || 0;
     return paid === 0 && inv.status !== 'PAID' && inv.status !== 'PARTIALLY_PAID';
@@ -101,8 +470,8 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
       }
       setDeleteSuccess(`Invoice #${invoiceToDelete.invoiceNumber} deleted successfully.`);
       setInvoiceToDelete(null);
-      if (selectedStudent) {
-        const statementRes = await apiService.getFeeStatement(selectedStudent.id).catch(() => null);
+      if (statementStudent) {
+        const statementRes = await apiService.getFeeStatement(statementStudent.id).catch(() => null);
         if (statementRes?.success && statementRes.data) {
           setStatementData(statementRes.data);
         }
@@ -119,307 +488,471 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
     }
   };
 
-  // Initialize selected student if initialStudentId is provided or on first mount
-  useEffect(() => {
-    if (initialStudentId && students.length > 0) {
-      const found = students.find((s) => s.id === initialStudentId);
-      if (found) setSelectedStudent(found);
-    }
-  }, [initialStudentId, students]);
-
-  // Load detailed fee statement whenever a student is selected
-  useEffect(() => {
-    if (!selectedStudent) {
-      setStatementData(null);
-      return;
-    }
-
-    let isMounted = true;
-    setIsLoadingStatement(true);
-    setStatementError(null);
-
-    apiService
-      .getFeeStatement(selectedStudent.id)
-      .then((res) => {
-        if (isMounted) {
-          if (res?.success && res.data) {
-            setStatementData(res.data);
-          } else {
-            setStatementData(null);
-          }
-        }
-      })
-      .catch((err) => {
-        if (isMounted) {
-          console.warn('Could not load detailed statement, using student summary:', err);
-          setStatementError('Could not fetch real-time invoice breakdown. Showing basic balance data.');
-        }
-      })
-      .finally(() => {
-        if (isMounted) setIsLoadingStatement(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [selectedStudent?.id]);
-
-  // Distinct grades for filtering
-  const distinctGrades = useMemo(() => {
-    const grades = new Set<string>();
-    students.forEach((s) => {
-      if (s.grade) grades.add(s.grade);
+  // --------------------------------------------------------------------------
+  // PDF EXPORT 1: FULL ROSTER / LEDGER PDF (LANDSCAPE A4 with Accounting Grid)
+  // --------------------------------------------------------------------------
+  const handleDownloadLedgerPdf = () => {
+    const doc = new jsPDF({
+      orientation: 'landscape',
+      unit: 'mm',
+      format: 'a4',
     });
-    return Array.from(grades).sort();
-  }, [students]);
 
-  // Filtered & sorted student list
-  const filteredStudents = useMemo(() => {
-    return students
-      .filter((s) => {
-        // Text Search across multiple fields
-        const query = searchQuery.trim().toLowerCase();
-        if (query) {
-          const nameMatch = s.name.toLowerCase().includes(query);
-          const admMatch = (s.admNo || '').toLowerCase().includes(query);
-          const upiMatch = (s.upi || '').toLowerCase().includes(query);
-          const nemisMatch = (s.nemis || '').toLowerCase().includes(query);
-          const gradeMatch = (s.grade || '').toLowerCase().includes(query);
-          const streamMatch = (s.stream || '').toLowerCase().includes(query);
-          const guardianNameMatch = (s.guardianName || '').toLowerCase().includes(query);
-          const guardianPhoneMatch = (s.guardianPhone || '').replace(/\s+/g, '').includes(query);
-          const sponsorMatch = (s.isSponsored ? 'scholarship sponsored bursary' : '').includes(query) ||
-            ((s as any).sponsorship?.sponsorName || '').toLowerCase().includes(query) ||
-            ((s as any).sponsorship?.approvalReference || '').toLowerCase().includes(query);
+    // Burgundy Header Bar
+    doc.setFillColor(122, 18, 40); // #7a1228
+    doc.rect(0, 0, 297, 18, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.text('GRACE SEEDS SCHOOL — STUDENT FINANCES & FEE LEDGER', 14, 11);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    const termLabel = selectedTerm === 'term-1' ? 'Term 1' : selectedTerm === 'term-2' ? 'Term 2' : selectedTerm === 'term-3' ? 'Term 3' : 'Whole Year';
+    doc.text(
+      `Official Institutional Fee Register | Grade: ${selectedGrade} | Term: ${termLabel} | Generated: ${new Date().toLocaleDateString()} | Audited Ledger`,
+      14,
+      15
+    );
 
-          if (
-            !nameMatch &&
-            !admMatch &&
-            !upiMatch &&
-            !nemisMatch &&
-            !gradeMatch &&
-            !streamMatch &&
-            !guardianNameMatch &&
-            !guardianPhoneMatch &&
-            !sponsorMatch
-          ) {
-            return false;
-          }
-        }
+    const head = [[
+      '#',
+      'Adm No',
+      'Learner Name',
+      'Grade',
+      'Stream',
+      'Billed Fees (KES)',
+      'Prior Arrears (KES)',
+      'Total Due (KES)',
+      'Paid Fees (KES)',
+      'Balance (KES)',
+      'Overpayment / Credit (KES)',
+      'Financial Status'
+    ]];
 
-        // Grade Filter
-        if (selectedGrade !== 'All' && s.grade !== selectedGrade) {
-          return false;
-        }
+    const body = filteredStudents.map((s, idx) => {
+      const fin = getStudentFinancials(s, selectedTerm, feeStructures);
+      return [
+        idx + 1,
+        s.admNo || '--',
+        s.name + (fin.isSponsored ? ' [100% SCHOLARSHIP · FEE CLEARED]' : ''),
+        s.grade || '--',
+        s.stream || '--',
+        fin.isSponsored ? '0 (Waived)' : fin.billed.toLocaleString(),
+        fin.isSponsored ? '0' : fin.priorArrears.toLocaleString(),
+        fin.isSponsored ? '0' : fin.totalDue.toLocaleString(),
+        fin.paid.toLocaleString(),
+        fin.isSponsored ? '0 (Cleared)' : fin.balance < 0 ? `-${Math.abs(fin.balance).toLocaleString()}` : fin.balance.toLocaleString(),
+        fin.overpayment > 0 ? `+${fin.overpayment.toLocaleString()}` : '--',
+        fin.isSponsored
+          ? 'CLEARED · 100% SCHOLARSHIP'
+          : fin.status === 'OVERPAID'
+          ? `OVERPAID (-KES ${Math.abs(fin.balance).toLocaleString()})`
+          : fin.status === 'CLEARED'
+          ? 'CLEARED'
+          : fin.status === 'PARTIAL'
+          ? 'PARTIALLY PAID'
+          : 'ARREARS DUE'
+      ];
+    });
 
-        // Status Filter
-        if (selectedStatus === 'Has_Balance' && (s.feeBalance || 0) <= 0) {
-          return false;
-        }
-        if (selectedStatus === 'Cleared' && ((s.feeBalance || 0) > 0 || (s.totalFee || 0) <= 0)) {
-          return false;
-        }
-        if (selectedStatus === 'Sponsored' && !s.isSponsored && !(s as any).sponsorship) {
-          return false;
-        }
+    const foot = [[
+      '∑',
+      'TOTALS',
+      `${filteredStudents.length} Learners`,
+      '--',
+      '--',
+      `KES ${stats.totalBilled.toLocaleString()}`,
+      `KES ${stats.totalPriorArrears.toLocaleString()}`,
+      `KES ${stats.totalDue.toLocaleString()}`,
+      `KES ${stats.totalPaid.toLocaleString()}`,
+      `KES ${stats.totalArrears.toLocaleString()}`,
+      `+KES ${stats.totalOverpayment.toLocaleString()}`,
+      `Rate: ${stats.collectionRate}% | Cleared: ${stats.clearedCount}`
+    ]];
 
-        return true;
-      })
-      .sort((a, b) => {
-        if (sortBy === 'name') return a.name.localeCompare(b.name);
-        if (sortBy === 'adm') return (a.admNo || '').localeCompare(b.admNo || '');
-        if (sortBy === 'balance_desc') return (b.feeBalance || 0) - (a.feeBalance || 0);
-        if (sortBy === 'balance_asc') return (a.feeBalance || 0) - (b.feeBalance || 0);
-        return 0;
-      });
-  }, [students, searchQuery, selectedGrade, selectedStatus, sortBy]);
+    autoTable(doc, {
+      startY: 22,
+      head,
+      body,
+      foot,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [122, 18, 40],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        fontSize: 7,
+        halign: 'center',
+        cellPadding: 2,
+        lineWidth: 0.1,
+        lineColor: [180, 180, 180],
+      },
+      bodyStyles: {
+        fontSize: 6.5,
+        textColor: [31, 41, 55],
+        cellPadding: 2,
+        lineWidth: 0.1,
+        lineColor: [209, 213, 219],
+      },
+      alternateRowStyles: {
+        fillColor: [250, 250, 250],
+      },
+      footStyles: {
+        fillColor: [243, 244, 246],
+        textColor: [122, 18, 40],
+        fontStyle: 'bold',
+        fontSize: 7,
+        lineWidth: 0.2,
+        lineColor: [100, 100, 100],
+      },
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 8 },
+        1: { cellWidth: 16 },
+        2: { cellWidth: 36, fontStyle: 'bold' },
+        3: { cellWidth: 18 },
+        4: { cellWidth: 16 },
+        5: { halign: 'right' },
+        6: { halign: 'right', textColor: [180, 83, 9] },
+        7: { halign: 'right', fontStyle: 'bold' },
+        8: { halign: 'right', fontStyle: 'bold', textColor: [4, 120, 87] },
+        9: { halign: 'right', fontStyle: 'bold', textColor: [185, 28, 28] },
+        10: { halign: 'right', fontStyle: 'bold', textColor: [13, 148, 136] },
+        11: { cellWidth: 26 },
+      },
+      didDrawPage: (data) => {
+        const pageCount = (doc as any).internal.getNumberOfPages();
+        doc.setFontSize(7);
+        doc.setTextColor(120, 120, 120);
+        doc.text(
+          `Page ${data.pageNumber} of ${pageCount} — Grace Seeds School · KCB Paybill: 522533 · Official Confidential Ledger`,
+          14,
+          205
+        );
+      },
+    });
 
-  // Overall School Statistics
-  const overallStats = useMemo(() => {
-    const totalStudents = students.length;
-    const withBalance = students.filter((s) => (s.feeBalance || 0) > 0);
-    const totalOutstanding = students.reduce((acc, s) => acc + (s.feeBalance || 0), 0);
-    const totalBilled = students.reduce((acc, s) => acc + (s.totalFee || 0), 0);
-    const totalCollected = Math.max(0, totalBilled - totalOutstanding);
-    return {
-      totalStudents,
-      defaultersCount: withBalance.length,
-      totalOutstanding,
-      totalBilled,
-      totalCollected,
-    };
-  }, [students]);
-
-  const handleCopy = (text: string, label: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedField(label);
-    setTimeout(() => setCopiedField(null), 2000);
+    doc.save(`SmartShule_Student_Finances_Ledger_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
-  const handlePaymentSuccess = async () => {
-    setIsRecordPaymentOpen(false);
-    if (onRefreshStudents) {
-      await onRefreshStudents();
-    }
-    // Re-fetch current statement
-    if (selectedStudent) {
-      apiService.getFeeStatement(selectedStudent.id).then((res) => {
-        if (res?.success && res.data) setStatementData(res.data);
-      });
-    }
+  // --------------------------------------------------------------------------
+  // PDF EXPORT 2: INDIVIDUAL STUDENT FEE STATEMENT & AUDIT SLIP (PORTRAIT A4)
+  // --------------------------------------------------------------------------
+  const handleDownloadStudentStatementPdf = (st: Student) => {
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4',
+    });
+
+    const fin = getStudentFinancials(st);
+
+    // Burgundy Header
+    doc.setFillColor(122, 18, 40);
+    doc.rect(0, 0, 210, 24, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(15);
+    doc.setFont('helvetica', 'bold');
+    doc.text('GRACE SEEDS SCHOOL', 14, 11);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Official Learner Fee Statement & Ledger Advice', 14, 16);
+    doc.text('KEMRI Street, Kisian, Kisumu, Kenya | Tel: 0745436312 | Email: schoolgraceseeds@gmail.com', 14, 20);
+
+    // Learner Details Card
+    doc.setTextColor(30, 41, 59);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('LEARNER & PAYMENT DETAILS', 14, 32);
+
+    autoTable(doc, {
+      startY: 34,
+      body: [
+        [
+          { content: 'Learner Name:', styles: { fontStyle: 'bold', textColor: [100, 116, 139] } },
+          { content: st.name, styles: { fontStyle: 'bold' } },
+          { content: 'Admission No:', styles: { fontStyle: 'bold', textColor: [100, 116, 139] } },
+          { content: st.admNo || '--', styles: { fontStyle: 'bold' } }
+        ],
+        [
+          { content: 'Grade / Class:', styles: { fontStyle: 'bold', textColor: [100, 116, 139] } },
+          { content: `${st.grade || '--'}${st.stream ? ` (${st.stream})` : ''}` },
+          { content: 'KCB Paybill Shortcode:', styles: { fontStyle: 'bold', textColor: [100, 116, 139] } },
+          { content: '522533', styles: { fontStyle: 'bold', textColor: [0, 106, 64] } }
+        ],
+        [
+          { content: 'Parent / Guardian:', styles: { fontStyle: 'bold', textColor: [100, 116, 139] } },
+          { content: `${st.guardianName || '--'} (${st.guardianPhone || '--'})` },
+          { content: 'Buni Account Code:', styles: { fontStyle: 'bold', textColor: [100, 116, 139] } },
+          { content: `8048859#${st.name} ${st.grade || ''}`.trim(), styles: { fontStyle: 'bold', textColor: [0, 106, 64] } }
+        ]
+      ],
+      theme: 'grid',
+      styles: { fontSize: 8, cellPadding: 2.5 },
+    });
+
+    // Financial Position Table
+    const afterBiodataY = (doc as any).lastAutoTable.finalY + 6;
+    doc.text('FINANCIAL POSITION & RECONCILIATION', 14, afterBiodataY);
+
+    autoTable(doc, {
+      startY: afterBiodataY + 2,
+      head: [['Billed Fees', 'Prior Arrears', 'Total Payable', 'Fees Paid', 'Outstanding Arrears', 'Overpayment / Credit', 'Clearance Status']],
+      body: [[
+        `KES ${fin.billed.toLocaleString()}`,
+        `KES ${fin.priorArrears.toLocaleString()}`,
+        `KES ${fin.totalDue.toLocaleString()}`,
+        `KES ${fin.paid.toLocaleString()}`,
+        `KES ${fin.arrearsDue.toLocaleString()}`,
+        fin.overpayment > 0 ? `+KES ${fin.overpayment.toLocaleString()}` : 'KES 0',
+        fin.status === 'SPONSORED'
+          ? '100% SCHOLARSHIP'
+          : fin.status === 'OVERPAID'
+          ? 'OVERPAID (Credit)'
+          : fin.status === 'CLEARED'
+          ? 'CLEARED'
+          : fin.status === 'PARTIAL'
+          ? 'PARTIALLY PAID'
+          : 'ARREARS DUE'
+      ]],
+      theme: 'grid',
+      headStyles: { fillColor: [122, 18, 40], textColor: [255, 255, 255], fontSize: 7, halign: 'center' },
+      bodyStyles: { fontSize: 8, halign: 'center', fontStyle: 'bold' },
+    });
+
+    // Footer Sign-off
+    const finalY = (doc as any).lastAutoTable.finalY + 12;
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139);
+    doc.text('Official Verified Record · Grace Seeds School Accounts Office', 14, finalY);
+    doc.text(`Generated on: ${new Date().toLocaleString()} | Thank you for supporting your child's education.`, 14, finalY + 5);
+
+    doc.save(`Fee_Statement_${st.admNo || 'learner'}_${st.name.replace(/\s+/g, '_')}.pdf`);
   };
 
-  const studentGradeStr = selectedStudent?.grade || (selectedStudent as any)?.gradeLevel || '';
-  const kcbAccountRef = selectedStudent?.name
-    ? `8048859#${selectedStudent.name}${studentGradeStr ? ' ' + studentGradeStr : ''}`.trim()
-    : `8048859#${selectedStudent?.admNo || ''}`;
-
-  const currentBilled = statementData?.summary?.totalBilled ?? selectedStudent?.totalFee ?? 0;
-  const currentPaid = statementData?.summary?.totalPaid ?? Math.max(0, (selectedStudent?.totalFee || 0) - (selectedStudent?.feeBalance || 0));
-  const currentBalance = statementData?.summary?.currentBalance ?? selectedStudent?.feeBalance ?? 0;
-  const isSponsoredLearner = Boolean(
-    selectedStudent?.isSponsored ||
-    (selectedStudent as any)?.sponsorship ||
-    statementData?.isSponsored ||
-    statementData?.sponsorship ||
-    (statementData?.summary?.status === 'SPONSORED') ||
-    (statementData?.summary?.status === 'CHARGE_EXEMPT')
-  );
-  const activeSponsorship = statementData?.sponsorship || (selectedStudent as any)?.sponsorship || null;
-  const isCleared = !isSponsoredLearner && currentBilled > 0 && currentBalance <= 0;
-  const isPendingInvoice = !isSponsoredLearner && currentBilled <= 0 && currentBalance <= 0;
+  const studentGradeStr = statementStudent?.grade || (statementStudent as any)?.gradeLevel || '';
+  const kcbAccountRef = statementStudent?.name
+    ? `8048859#${statementStudent.name}${studentGradeStr ? ' ' + studentGradeStr : ''}`.trim()
+    : `8048859#${statementStudent?.admNo || ''}`;
 
   const invoicesList: StudentInvoice[] = statementData?.invoices || [];
   const paymentsList: any[] = statementData?.payments || [];
+  const activeSponsorship = statementData?.sponsorship || (statementStudent as any)?.sponsorship || null;
 
   return (
-    <div className="space-y-6 pb-16 font-body">
-      {/* Page Title & Breadcrumb */}
+    <div className="space-y-4 pb-16 font-body">
+      {/* 1. Header Toolbar with Title & Action Buttons */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 font-label-md text-label-md text-on-surface-variant">
+          <div className="flex items-center gap-2 font-label-md text-label-md text-slate-500">
             <span>Home</span>
             <span>/</span>
             <span>Finance &amp; Billing</span>
             <span>/</span>
-            <span className="text-primary font-semibold">Student Fee Checker</span>
+            <span className="text-[#7a1228] font-bold">Student Finances &amp; Ledger</span>
           </div>
-          <div className="flex items-center gap-2 mt-1">
-            <h1 className="font-headline-lg text-headline-lg text-on-surface">
-              Student Fee Checker &amp; Ledger
+          <div className="flex items-center gap-2.5 mt-1">
+            <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+              Student Finances &amp; Fee Register
             </h1>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
               KCB Paybill 522533
             </span>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-300 font-mono">
+              Accounting Ledger
+            </span>
           </div>
-          <p className="text-xs text-on-surface-variant mt-0.5">
-            Instant search across any learner in the institution to check term invoices, fee payments, live arrears, and official KCB Buni account codes.
+          <p className="text-xs text-slate-500 mt-0.5">
+            Single unified institutional ledger to manage all enrolled learners&apos; fee schedules, prior arrears, collections, overpayment advance credits, and official statements.
           </p>
         </div>
 
-        {/* Global Action Shortcut */}
-        {selectedStudent && (
-          <div className="flex items-center gap-2">
-            {isSponsoredLearner ? (
-              <span
-                className="px-3.5 py-2 bg-surface-container text-primary font-extrabold border border-primary/20 rounded-xl text-xs flex items-center gap-1.5 shadow-2xs"
-                title="Learner is enrolled in 100% Institutional Scholarship and cannot be charged fees"
-              >
-                <span className="material-symbols-outlined text-[16px]">lock</span>
-                <span>Charge Exempt</span>
-              </span>
-            ) : (
-              <button
-                onClick={() => setIsRecordPaymentOpen(true)}
-                className="px-3.5 py-2 bg-primary hover:bg-primary-container text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[16px]">add_card</span>
-                <span>Record Payment</span>
-              </button>
-            )}
-          </div>
-        )}
-      </div>
+        {/* Global Action Shortcuts */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Download Official PDF Ledger */}
+          <button
+            type="button"
+            onClick={handleDownloadLedgerPdf}
+            className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+            title="Download Landscape A4 PDF Ledger of all filtered learners"
+          >
+            <span className="material-symbols-outlined text-[16px] text-[#7a1228]">picture_as_pdf</span>
+            <span>Export Ledger PDF</span>
+          </button>
 
-      {/* Top Metric Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="p-3.5 rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs">
-          <span className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider block">
-            Total Learners
-          </span>
-          <div className="text-xl font-bold font-data-mono text-on-surface mt-1">
-            {overallStats.totalStudents.toLocaleString()}
-          </div>
-          <span className="text-[10px] text-on-surface-variant mt-0.5 block">Active School Registry</span>
-        </div>
-
-        <div className="p-3.5 rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs">
-          <span className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider block">
-            With Balances
-          </span>
-          <div className="text-xl font-bold font-data-mono text-error mt-1">
-            {overallStats.defaultersCount.toLocaleString()}
-          </div>
-          <span className="text-[10px] text-error font-medium mt-0.5 block">Pending Fee Settling</span>
-        </div>
-
-        <div className="p-3.5 rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs">
-          <span className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider block">
-            Total Outstanding
-          </span>
-          <div className="text-xl font-bold font-data-mono text-primary mt-1">
-            KES {overallStats.totalOutstanding.toLocaleString()}
-          </div>
-          <span className="text-[10px] text-primary/80 mt-0.5 block">Institutional Receivables</span>
-        </div>
-
-        <div className="p-3.5 rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs">
-          <span className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider block">
-            KCB Buni Shortcode
-          </span>
-          <div className="text-xl font-bold font-data-mono text-[#006a40] mt-1">
-            522533
-          </div>
-          <span className="text-[10px] text-[#006a40] font-semibold mt-0.5 block">Acc: 8048859#Child Grade</span>
+          {/* Record Fee Payment / Arrears Shortcut */}
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedStudentForPayment(students.length > 0 ? students[0] : null);
+              setIsRecordPaymentOpen(true);
+            }}
+            className="px-4 py-2 bg-[#7a1228] hover:bg-[#600e1f] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[16px]">add_card</span>
+            <span>Record Fee / Arrear</span>
+          </button>
         </div>
       </div>
 
-      {/* Main Search Bar & Filter Controls */}
-      <div className="bg-surface-container-lowest p-4 rounded-2xl border border-outline-variant/30 shadow-xs space-y-3">
-        <div className="flex flex-col md:flex-row items-center gap-3">
+      {/* 2. High-Density KPI Accounting Ribbon */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5">
+        <div className="p-3 rounded-xl bg-white border border-slate-200 shadow-2xs">
+          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+            Learners
+          </span>
+          <div className="text-lg font-bold font-mono text-slate-900 mt-0.5">
+            {filteredStudents.length} <span className="text-[10px] font-normal text-slate-400">/ {students.length}</span>
+          </div>
+          <span className="text-[10px] text-slate-400 mt-0.5 block truncate">Active Roster</span>
+        </div>
+
+        <div className="p-3 rounded-xl bg-white border border-slate-200 shadow-2xs">
+          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+            Billed Fees
+          </span>
+          <div className="text-lg font-bold font-mono text-slate-900 mt-0.5">
+            KES {stats.totalBilled.toLocaleString()}
+          </div>
+          <span className="text-[10px] text-slate-400 mt-0.5 block truncate">Term Fee Schedules</span>
+        </div>
+
+        <div className="p-3 rounded-xl bg-white border border-slate-200 shadow-2xs">
+          <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider block">
+            Prior Arrears
+          </span>
+          <div className="text-lg font-bold font-mono text-amber-900 mt-0.5">
+            KES {stats.totalPriorArrears.toLocaleString()}
+          </div>
+          <span className="text-[10px] text-amber-700 mt-0.5 block truncate">Carried Balances</span>
+        </div>
+
+        <div className="p-3 rounded-xl bg-white border border-slate-200 shadow-2xs">
+          <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block">
+            Total Receivables
+          </span>
+          <div className="text-lg font-extrabold font-mono text-slate-900 mt-0.5">
+            KES {stats.totalDue.toLocaleString()}
+          </div>
+          <span className="text-[10px] text-slate-500 mt-0.5 block truncate">Total Liability</span>
+        </div>
+
+        <div className="p-3 rounded-xl bg-white border border-slate-200 shadow-2xs">
+          <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider block">
+            Paid &amp; Reconciled
+          </span>
+          <div className="text-lg font-extrabold font-mono text-emerald-700 mt-0.5">
+            KES {stats.totalPaid.toLocaleString()}
+          </div>
+          <span className="text-[10px] text-emerald-700 font-semibold mt-0.5 block truncate">
+            {stats.collectionRate}% Collection Rate
+          </span>
+        </div>
+
+        <div className="p-3 rounded-xl bg-white border border-slate-200 shadow-2xs">
+          <span className="text-[10px] font-bold text-rose-800 uppercase tracking-wider block">
+            Arrears Due
+          </span>
+          <div className="text-lg font-extrabold font-mono text-rose-700 mt-0.5">
+            KES {stats.totalArrears.toLocaleString()}
+          </div>
+          <span className="text-[10px] text-rose-600 font-semibold mt-0.5 block truncate">
+            {stats.arrearsCount} Learner(s)
+          </span>
+        </div>
+
+        <div className="p-3 rounded-xl bg-teal-50/70 border border-teal-200 shadow-2xs">
+          <span className="text-[10px] font-bold text-teal-900 uppercase tracking-wider block flex items-center gap-1">
+            <span className="material-symbols-outlined text-[13px]">savings</span>
+            Overpayment / Credit
+          </span>
+          <div className="text-lg font-black font-mono text-teal-800 mt-0.5">
+            +KES {stats.totalOverpayment.toLocaleString()}
+          </div>
+          <span className="text-[10px] text-teal-700 font-semibold mt-0.5 block truncate">
+            {stats.overpaidCount} Advance Credit(s)
+          </span>
+        </div>
+
+        {/* 8th Card: Sponsored Learners in Institutional Scholarship Program */}
+        <div
+          onClick={() => setSelectedStatus(selectedStatus === 'Sponsored' ? 'All' : 'Sponsored')}
+          className={`p-3 rounded-xl border shadow-2xs cursor-pointer transition-all ${
+            selectedStatus === 'Sponsored'
+              ? 'bg-[#7a1228] text-white border-[#7a1228] ring-2 ring-[#7a1228]/40'
+              : 'bg-rose-50/40 hover:bg-rose-50 border-rose-200 text-slate-900'
+          }`}
+          title="Click to filter learners under the 100% Scholarship Program"
+        >
+          <span className={`text-[10px] font-bold uppercase tracking-wider block flex items-center gap-1 ${
+            selectedStatus === 'Sponsored' ? 'text-rose-100' : 'text-[#7a1228]'
+          }`}>
+            <span className="material-symbols-outlined text-[13px]">workspace_premium</span>
+            Scholarship
+          </span>
+          <div className="text-lg font-black font-mono mt-0.5">
+            {stats.sponsoredCount} <span className={`text-[10px] font-normal ${selectedStatus === 'Sponsored' ? 'text-rose-200' : 'text-slate-400'}`}>Learner(s)</span>
+          </div>
+          <span className={`text-[10px] mt-0.5 block truncate ${selectedStatus === 'Sponsored' ? 'text-rose-200 font-semibold' : 'text-slate-500'}`}>
+            100% Fee Waived
+          </span>
+        </div>
+      </div>
+
+      {/* 3. Search & Filter Bar */}
+      <div className="bg-white p-3.5 rounded-xl border border-slate-300 shadow-2xs space-y-2.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-2.5 items-center">
           {/* Real-Time Search Input */}
-          <div className="relative flex-1 w-full">
-            <span className="material-symbols-outlined absolute left-3.5 top-3 text-primary text-[20px]">
+          <div className="lg:col-span-4 relative w-full">
+            <span className="material-symbols-outlined absolute left-3 top-2.5 text-[#7a1228] text-[18px]">
               person_search
             </span>
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by learner name, admission no (e.g. 01, 02), UPI, grade, stream, or guardian phone..."
-              className="w-full pl-11 pr-10 py-2.5 bg-surface-container-low border border-outline-variant/40 rounded-xl text-sm text-on-surface placeholder:text-on-surface-variant/60 focus:outline-primary focus:ring-1 focus:ring-primary shadow-xs"
-              autoFocus
+              placeholder="Search learner name, admission no, UPI, grade, stream, parent phone..."
+              className="w-full pl-9 pr-8 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-[#7a1228]"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-2.5 p-1 text-on-surface-variant hover:text-on-surface rounded-full cursor-pointer"
+                className="absolute right-2.5 top-2 p-0.5 text-slate-400 hover:text-slate-600 rounded-full cursor-pointer"
                 title="Clear Search"
               >
-                <span className="material-symbols-outlined text-[18px]">close</span>
+                <span className="material-symbols-outlined text-[16px]">close</span>
               </button>
             )}
           </div>
 
-          {/* Filter: Grade */}
-          <div className="w-full md:w-44">
+          {/* Academic Term Filter (Distinguish fee billed according to term from fee structure) */}
+          <div className="lg:col-span-2">
+            <div className="relative">
+              <select
+                value={selectedTerm}
+                onChange={(e) => setSelectedTerm(e.target.value as any)}
+                className="w-full py-2 pl-7 pr-2.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#7a1228] cursor-pointer"
+                title="Distinguish fee billed from fee structure according to term"
+              >
+                <option value="term-3">Term 3 (Active Term)</option>
+                <option value="term-1">Term 1 Schedule</option>
+                <option value="term-2">Term 2 Schedule</option>
+                <option value="ALL">Whole Year (Annual Total)</option>
+              </select>
+              <span className="material-symbols-outlined absolute left-2 top-2 text-[#7a1228] text-[15px] pointer-events-none">
+                calendar_month
+              </span>
+            </div>
+          </div>
+
+          {/* Grade Filter */}
+          <div className="lg:col-span-2">
             <select
               value={selectedGrade}
               onChange={(e) => setSelectedGrade(e.target.value)}
-              className="w-full py-2.5 px-3 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs font-semibold text-on-surface focus:outline-primary cursor-pointer"
+              className="w-full py-2 px-2.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#7a1228] cursor-pointer"
             >
-              <option value="All">All Grades</option>
+              <option value="All">All Grades ({distinctGrades.length})</option>
               {distinctGrades.map((g) => (
                 <option key={g} value={g}>
                   {g}
@@ -428,977 +961,957 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
             </select>
           </div>
 
-          {/* Filter: Balance Status */}
-          <div className="w-full md:w-44">
+          {/* Stream Filter */}
+          <div className="lg:col-span-1">
+            <select
+              value={selectedStream}
+              onChange={(e) => setSelectedStream(e.target.value)}
+              className="w-full py-2 px-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#7a1228] cursor-pointer"
+            >
+              <option value="All">All Streams</option>
+              {distinctStreams.map((st) => (
+                <option key={st} value={st}>
+                  {st}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Financial Status Filter */}
+          <div className="lg:col-span-2">
             <select
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value as any)}
-              className="w-full py-2.5 px-3 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs font-semibold text-on-surface focus:outline-primary cursor-pointer"
+              className="w-full py-2 px-2 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#7a1228] cursor-pointer"
             >
-              <option value="All">All Fee Statuses</option>
-              <option value="Has_Balance">Has Arrears / Balance</option>
-              <option value="Cleared">Fully Cleared (KES 0)</option>
+              <option value="All">All Financial Statuses</option>
+              <option value="Has_Balance">Outstanding Arrears (Debtors)</option>
+              <option value="Overpaid">Overpaid (Credit Balance)</option>
+              <option value="Cleared">Fully Cleared (Zero Balance)</option>
               <option value="Sponsored">100% Scholarship / Sponsored</option>
             </select>
           </div>
 
-          {/* Filter: Sort By */}
-          <div className="w-full md:w-44">
+          {/* Sort By */}
+          <div className="lg:col-span-1">
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="w-full py-2.5 px-3 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs font-semibold text-on-surface focus:outline-primary cursor-pointer"
+              className="w-full py-2 px-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#7a1228] cursor-pointer"
             >
-              <option value="balance_desc">Highest Balance First</option>
-              <option value="balance_asc">Lowest Balance First</option>
+              <option value="balance_desc">Highest Arrears</option>
+              <option value="overpaid_desc">Highest Overpaid</option>
+              <option value="billed_desc">Highest Billed</option>
               <option value="name">Name (A-Z)</option>
-              <option value="adm">Admission No</option>
+              <option value="adm">Adm No</option>
             </select>
           </div>
         </div>
 
-        {/* Results Count & Quick Reset */}
-        <div className="flex items-center justify-between text-xs text-on-surface-variant pt-1">
-          <div className="flex items-center gap-2">
-            <span className="font-semibold text-on-surface">
-              Showing {filteredStudents.length} of {students.length} learner(s)
-            </span>
-            {searchQuery && (
-              <span className="px-2 py-0.5 rounded bg-primary/10 text-primary font-medium text-[11px]">
-                Matching &quot;{searchQuery}&quot;
-              </span>
-            )}
+        {/* Quick Filter Buttons & Results strip */}
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-slate-100">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[11px] font-bold text-slate-400 mr-1">Quick Filter:</span>
+            <button
+              type="button"
+              onClick={() => setSelectedStatus('All')}
+              className={`px-2 py-0.5 rounded text-[11px] font-bold cursor-pointer transition-all ${
+                selectedStatus === 'All' ? 'bg-slate-800 text-white shadow-2xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              All ({students.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedStatus('Has_Balance')}
+              className={`px-2 py-0.5 rounded text-[11px] font-bold cursor-pointer transition-all ${
+                selectedStatus === 'Has_Balance' ? 'bg-rose-700 text-white shadow-2xs' : 'bg-rose-50 text-rose-800 hover:bg-rose-100'
+              }`}
+            >
+              Has Balance ({stats.arrearsCount})
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedStatus('Cleared')}
+              className={`px-2 py-0.5 rounded text-[11px] font-bold cursor-pointer transition-all ${
+                selectedStatus === 'Cleared' ? 'bg-emerald-700 text-white shadow-2xs' : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
+              }`}
+            >
+              Cleared ({stats.clearedCount})
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedStatus('Overpaid')}
+              className={`px-2 py-0.5 rounded text-[11px] font-bold cursor-pointer transition-all ${
+                selectedStatus === 'Overpaid' ? 'bg-teal-700 text-white shadow-2xs' : 'bg-teal-50 text-teal-800 hover:bg-teal-100'
+              }`}
+            >
+              Overpaid ({stats.overpaidCount})
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedStatus('Sponsored')}
+              className={`px-2 py-0.5 rounded text-[11px] font-bold cursor-pointer transition-all flex items-center gap-1 ${
+                selectedStatus === 'Sponsored' ? 'bg-[#7a1228] text-white shadow-2xs' : 'bg-[#7a1228]/10 text-[#7a1228] hover:bg-[#7a1228]/20'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[13px]">workspace_premium</span>
+              100% Scholarship ({stats.sponsoredCount})
+            </button>
           </div>
 
-          {(searchQuery || selectedGrade !== 'All' || selectedStatus !== 'All') && (
-            <button
-              onClick={() => {
-                setSearchQuery('');
-                setSelectedGrade('All');
-                setSelectedStatus('All');
-              }}
-              className="text-primary hover:underline text-[11px] font-semibold cursor-pointer"
-            >
-              Reset Filters
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Main Two-Column Content: Student Quick Selector + Detailed Fee Ledger */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Side (Col 1-4): Student Quick List */}
-        <div className="lg:col-span-4 bg-surface-container-lowest rounded-2xl border border-outline-variant/30 shadow-xs overflow-hidden flex flex-col max-h-[820px]">
-          <div className="p-3.5 bg-surface-container-low border-b border-outline-variant/30 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px] text-primary">group</span>
-              <h3 className="font-bold text-xs uppercase tracking-wider text-on-surface">
-                Matching Learners ({filteredStudents.length})
-              </h3>
-            </div>
-            {selectedStudent && (
+          <div className="flex items-center gap-2 text-xs text-slate-500">
+            <span>
+              Showing <strong className="text-slate-900 font-mono">{filteredStudents.length}</strong> of{' '}
+              <strong className="text-slate-900 font-mono">{students.length}</strong> learner(s)
+            </span>
+            {(searchQuery || selectedGrade !== 'All' || selectedStream !== 'All' || selectedStatus !== 'All' || selectedTerm !== 'term-3') && (
               <button
-                onClick={() => setSelectedStudent(null)}
-                className="text-[11px] text-on-surface-variant hover:text-primary cursor-pointer"
+                onClick={() => {
+                  setSearchQuery('');
+                  setSelectedGrade('All');
+                  setSelectedStream('All');
+                  setSelectedStatus('All');
+                  setSelectedTerm('term-3');
+                  setSortBy('balance_desc');
+                }}
+                className="text-[#7a1228] hover:underline text-[11px] font-bold cursor-pointer ml-1"
               >
-                Clear Selected
+                Reset Filters
               </button>
             )}
           </div>
-
-          <div className="overflow-y-auto divide-y divide-outline-variant/15 flex-1 overscroll-contain">
-            {filteredStudents.length === 0 ? (
-              <div className="p-8 text-center text-xs text-on-surface-variant space-y-2">
-                <span className="material-symbols-outlined text-[36px] text-outline opacity-60">search_off</span>
-                <p>No learners found matching your search query.</p>
-                <button
-                  onClick={() => {
-                    setSearchQuery('');
-                    setSelectedGrade('All');
-                    setSelectedStatus('All');
-                  }}
-                  className="px-3 py-1 bg-surface-container text-primary font-bold text-xs rounded-lg hover:bg-surface-container-high"
-                >
-                  Clear Filters
-                </button>
-              </div>
-            ) : (
-              filteredStudents.map((st) => {
-                const isSelected = selectedStudent?.id === st.id;
-                const hasBal = (st.feeBalance || 0) > 0;
-                return (
-                  <div
-                    key={st.id}
-                    onClick={() => setSelectedStudent(st)}
-                    className={`p-3.5 flex items-center justify-between gap-3 cursor-pointer transition-colors ${
-                      isSelected
-                        ? 'bg-primary/10 border-l-4 border-primary'
-                        : 'hover:bg-surface-container-low/70'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      {/* Avatar */}
-                      <div className="w-10 h-10 rounded-xl bg-surface-container-high text-primary flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden border border-outline-variant/30">
-                        {st.profilePhotoUrl ? (
-                          <img src={st.profilePhotoUrl} alt={st.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <span>{st.name.slice(0, 2).toUpperCase()}</span>
-                        )}
-                      </div>
-
-                      <div className="min-w-0">
-                        <div className="font-bold text-xs text-on-surface truncate leading-tight">
-                          {st.name}
-                        </div>
-                        <div className="text-[11px] text-on-surface-variant font-data-mono flex items-center gap-1.5 mt-0.5">
-                          <span>{st.admNo}</span>
-                          <span>·</span>
-                          <span className="text-primary font-semibold">{st.grade}</span>
-                        </div>
-                        {st.isSponsored && (
-                          <div className="mt-1">
-                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-[#7a1228]/10 text-primary border border-[#7a1228]/25">
-                              <span className="material-symbols-outlined text-[13px]">workspace_premium</span>
-                              <span>100% Scholarship</span>
-                            </span>
-                          </div>
-                        )}
-                        {st.guardianPhone && st.guardianPhone !== '--' && (
-                          <div className="text-[10px] text-on-surface-variant/80 truncate mt-0.5">
-                            Parent: {st.guardianPhone}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Balance Pill */}
-                    <div className="text-right shrink-0">
-                      <div
-                        className={`text-xs font-extrabold font-data-mono ${
-                          st.isSponsored ? 'text-primary' : hasBal ? 'text-error' : 'text-emerald-700'
-                        }`}
-                      >
-                        {st.isSponsored ? 'KES 0 (Waived)' : hasBal ? `KES ${st.feeBalance.toLocaleString()}` : 'KES 0'}
-                      </div>
-                      <span
-                        className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9.5px] font-extrabold uppercase tracking-wider mt-0.5 ${
-                          st.isSponsored
-                            ? 'bg-[#7a1228] text-white shadow-2xs'
-                            : hasBal
-                            ? 'bg-error-container/40 text-error'
-                            : (st.totalFee || 0) > 0
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : 'bg-slate-100 text-slate-600 border border-slate-200'
-                        }`}
-                        title={st.isSponsored ? 'Learner is enrolled in 100% Scholarship and cannot be charged fees' : undefined}
-                      >
-                        {st.isSponsored ? (
-                          <>
-                            <span className="material-symbols-outlined text-[11px]">lock</span>
-                            <span>Charge Exempt</span>
-                          </>
-                        ) : hasBal ? 'Balance' : (st.totalFee || 0) > 0 ? 'Cleared' : 'Pending'}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </div>
-
-        {/* Right Side (Col 5-12): Detailed Student Ledger Inspection */}
-        <div className="lg:col-span-8">
-          {selectedStudent ? (
-            <div className="space-y-5 animate-in fade-in duration-200">
-              {/* Learner Identity & KCB Account Card */}
-              <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 shadow-xs overflow-hidden">
-                {/* Header Banner */}
-                <div className="bg-gradient-to-r from-[#7a1228] via-[#8c1730] to-[#5a0b1d] text-white p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div className="flex items-center gap-3.5">
-                    <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center font-bold text-base shrink-0 overflow-hidden shadow-inner text-white">
-                      {selectedStudent.profilePhotoUrl ? (
-                        <img
-                          src={selectedStudent.profilePhotoUrl}
-                          alt={selectedStudent.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <span>{selectedStudent.name.slice(0, 2).toUpperCase()}</span>
-                      )}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h2 className="text-lg font-bold leading-tight">{selectedStudent.name}</h2>
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/20 text-white border border-white/30 uppercase tracking-wider">
-                          {selectedStudent.status || 'Active'}
-                        </span>
-                      </div>
-                      <div className="text-xs text-rose-100 font-data-mono flex flex-wrap items-center gap-2 mt-1">
-                        <span>Adm: <strong className="text-white">{selectedStudent.admNo}</strong></span>
-                        <span>·</span>
-                        <span>Grade: <strong className="text-white">{selectedStudent.grade}</strong></span>
-                        {selectedStudent.stream && (
-                          <>
-                            <span>·</span>
-                            <span>Stream: <strong className="text-white">{selectedStudent.stream}</strong></span>
-                          </>
-                        )}
-                        {selectedStudent.upi && selectedStudent.upi !== '--' && (
-                          <>
-                            <span>·</span>
-                            <span>UPI: <strong className="text-white">{selectedStudent.upi}</strong></span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Guardian Call / Message shortcuts */}
-                  <div className="flex items-center gap-2 self-end sm:self-center">
-                    {selectedStudent.guardianPhone && selectedStudent.guardianPhone !== '--' && (
-                      <a
-                        href={`tel:${selectedStudent.guardianPhone}`}
-                        className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors"
-                        title="Call Guardian"
-                      >
-                        <span className="material-symbols-outlined text-[16px]">call</span>
-                        <span>{selectedStudent.guardianPhone}</span>
-                      </a>
-                    )}
-                    <button
-                      onClick={() => setSelectedStudent(null)}
-                      className="p-1.5 rounded-lg text-rose-200 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-                      title="Close learner view"
-                    >
-                      <span className="material-symbols-outlined text-[20px]">close</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Institutional Scholarship Program Directive Banner */}
-                {isSponsoredLearner && (
-                  <div className="p-4 sm:p-5 bg-gradient-to-r from-amber-500/15 via-[#7a1228]/10 to-amber-500/15 border-b-2 border-primary/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 animate-in fade-in">
-                    <div className="flex items-center gap-3.5">
-                      <div className="w-12 h-12 rounded-2xl bg-[#7a1228] text-white flex items-center justify-center font-bold shrink-0 shadow-sm">
-                        <span className="material-symbols-outlined text-[26px]">workspace_premium</span>
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="text-sm sm:text-base font-extrabold text-[#7a1228] tracking-tight">
-                            Institutional Full Scholarship Program Active
-                          </h3>
-                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-[#7a1228] text-white shadow-2xs">
-                            100% Fee Waiver · Charge Exempt
-                          </span>
-                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
-                            <span className="material-symbols-outlined text-[12px]">lock</span>
-                            Cannot Be Charged
-                          </span>
-                        </div>
-                        <p className="text-xs text-on-surface-variant mt-1">
-                          Benefactor: <strong className="text-on-surface">{activeSponsorship?.sponsorName || (activeSponsorship as any)?.benefactorName || "School Director's Benevolence Fund"}</strong>
-                          {' · '}
-                          Approval Ref: <span className="font-data-mono font-bold text-primary">{activeSponsorship?.approvalReference || "DIR-SCH-2026"}</span>
-                          {activeSponsorship?.termlySubsidyAmount && (
-                            <>
-                              {' · '}
-                              Subsidized Value: <strong className="font-data-mono text-primary">KES {activeSponsorship.termlySubsidyAmount.toLocaleString()} / term</strong>
-                            </>
-                          )}
-                        </p>
-                        <p className="text-[11px] text-on-surface-variant/80 mt-0.5">
-                          This learner&apos;s tuition and curriculum levies are fully covered by the school scholarship program. All billing invoices are subsidized and cleared under director institutional directives.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* 4 Financial Health Stat Cards */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 bg-surface-container-low/50 border-b border-outline-variant/20">
-                  <div className="p-3 bg-surface-container-lowest rounded-xl border border-outline-variant/30">
-                    <span className="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider block">
-                      Total Invoiced
-                    </span>
-                    <div className="text-base sm:text-lg font-bold font-data-mono text-on-surface mt-1">
-                      KES {currentBilled.toLocaleString()}
-                    </div>
-                    <span className="text-[10px] text-on-surface-variant mt-0.5 block">Approved Fee Schedule</span>
-                  </div>
-
-                  <div className="p-3 bg-surface-container-lowest rounded-xl border border-outline-variant/30">
-                    <span className="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider block">
-                      Total Fees Paid
-                    </span>
-                    <div className="text-base sm:text-lg font-bold font-data-mono text-emerald-700 mt-1">
-                      KES {currentPaid.toLocaleString()}
-                    </div>
-                    <span className="text-[10px] text-emerald-800 mt-0.5 block">Reconciled Credits</span>
-                  </div>
-
-                  <div className="p-3 bg-surface-container-lowest rounded-xl border border-outline-variant/30">
-                    <span className="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider block">
-                      Outstanding Balance
-                    </span>
-                    <div
-                      className={`text-base sm:text-lg font-extrabold font-data-mono mt-1 ${
-                        isSponsoredLearner ? 'text-primary' : isCleared ? 'text-emerald-700' : 'text-error'
-                      }`}
-                    >
-                      {isSponsoredLearner ? 'KES 0 (Waived)' : `KES ${currentBalance.toLocaleString()}`}
-                    </div>
-                    <span
-                      className={`text-[10px] font-semibold mt-0.5 block ${
-                        isSponsoredLearner ? 'text-primary' : isCleared ? 'text-emerald-700' : 'text-error'
-                      }`}
-                    >
-                      {isSponsoredLearner ? 'Charge Exempt · 100% Scholarship' : isCleared ? 'Nil Balance (All Clear)' : 'Fee Arrears Due'}
-                    </span>
-                  </div>
-
-                  <div className="p-3 bg-surface-container-lowest rounded-xl border border-outline-variant/30">
-                    <span className="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider block">
-                      Ledger Status
-                    </span>
-                    <div className="flex items-center gap-1.5 mt-1">
-                      <span
-                        className={`material-symbols-outlined text-[18px] ${
-                          isSponsoredLearner ? 'text-primary' : isCleared ? 'text-emerald-600' : isPendingInvoice ? 'text-slate-500' : 'text-amber-600'
-                        }`}
-                      >
-                        {isSponsoredLearner ? 'lock' : isCleared ? 'verified' : isPendingInvoice ? 'receipt_long' : 'pending_actions'}
-                      </span>
-                      <span className="font-bold text-xs text-on-surface">
-                        {isSponsoredLearner ? 'Charge Exempt' : isCleared ? 'Cleared' : isPendingInvoice ? 'Pending Invoicing' : 'Pending Payment'}
-                      </span>
-                    </div>
-                    <span className="text-[10px] text-on-surface-variant mt-0.5 block">
-                      {isSponsoredLearner ? '100% Scholarship · Cannot Be Charged' : isCleared ? 'Eligible for Term Exams' : isPendingInvoice ? 'No Invoice Issued' : 'Requires Clearance'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* KCB Paybill 522533 Official Payment Code Banner */}
-                <div className="p-4 bg-emerald-50/80 border-b border-emerald-200/80 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-[#006a40] text-white flex items-center justify-center font-bold shrink-0 shadow-sm">
-                      <span className="material-symbols-outlined text-[22px]">account_balance</span>
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-emerald-950 text-sm">
-                          KCB Buni Paybill: <span className="font-data-mono text-[#006a40]">522533</span>
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleCopy('522533', 'paybill')}
-                          className="px-2 py-0.5 bg-emerald-200/80 hover:bg-emerald-300 text-emerald-900 rounded text-[11px] font-bold cursor-pointer"
-                        >
-                          {copiedField === 'paybill' ? 'Copied!' : 'Copy'}
-                        </button>
-                      </div>
-                      <div className="text-[11px] text-emerald-900 flex items-center gap-2 mt-0.5">
-                        <span>Account Number:</span>
-                        <strong className="font-data-mono bg-white px-2 py-0.5 rounded border border-emerald-300 text-emerald-950">
-                          {kcbAccountRef}
-                        </strong>
-                        <button
-                          type="button"
-                          onClick={() => handleCopy(kcbAccountRef, 'account')}
-                          className="px-2 py-0.5 bg-emerald-200/80 hover:bg-emerald-300 text-emerald-900 rounded text-[11px] font-bold cursor-pointer"
-                        >
-                          {copiedField === 'account' ? 'Copied!' : 'Copy'}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Immediate Action Buttons */}
-                  <div className="flex flex-wrap items-center gap-2">
-                    {isSponsoredLearner ? (
-                      <span
-                        className="px-3.5 py-2 bg-surface-container text-primary font-bold border border-primary/20 rounded-xl text-xs flex items-center gap-1.5 cursor-not-allowed shadow-2xs"
-                        title="Learner is enrolled in 100% Institutional Scholarship and cannot be charged fees"
-                      >
-                        <span className="material-symbols-outlined text-[16px]">lock</span>
-                        <span>Charge Exempt</span>
-                      </span>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setIsRecordPaymentOpen(true)}
-                        className="px-3.5 py-2 bg-primary hover:bg-primary-container text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
-                      >
-                        <span className="material-symbols-outlined text-[16px]">point_of_sale</span>
-                        <span>Record Payment</span>
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => window.print()}
-                      className="px-3 py-2 bg-surface-container-high hover:bg-surface-container-highest text-on-surface rounded-xl text-xs font-semibold flex items-center gap-1 cursor-pointer"
-                      title="Print Official Statement"
-                    >
-                      <span className="material-symbols-outlined text-[16px]">print</span>
-                      <span>Print</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Sub-Tabs: Invoices / Payment Receipts / Statement */}
-                <div className="flex border-b border-outline-variant/30 bg-surface-container-low px-4 pt-2 gap-2 overflow-x-auto">
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('invoices')}
-                    className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-1.5 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
-                      activeTab === 'invoices'
-                        ? 'border-primary text-primary'
-                        : 'border-transparent text-on-surface-variant hover:text-on-surface'
-                    }`}
-                  >
-                    <span className="material-symbols-outlined text-[16px]">receipt_long</span>
-                    <span>Billed Invoices ({invoicesList.length})</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('payments')}
-                    className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-1.5 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
-                      activeTab === 'payments'
-                        ? 'border-primary text-primary'
-                        : 'border-transparent text-on-surface-variant hover:text-on-surface'
-                    }`}
-                  >
-                    <span className="material-symbols-outlined text-[16px]">payments</span>
-                    <span>Payment Receipts ({paymentsList.length})</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('statement')}
-                    className={`pb-2.5 px-3 text-xs font-bold flex items-center gap-1.5 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
-                      activeTab === 'statement'
-                        ? 'border-primary text-primary'
-                        : 'border-transparent text-on-surface-variant hover:text-on-surface'
-                    }`}
-                  >
-                    <span className="material-symbols-outlined text-[16px]">description</span>
-                    <span>Official Statement Document</span>
-                  </button>
-                </div>
-
-                {/* Tab Content Body */}
-                <div className="p-5">
-                  {isLoadingStatement ? (
-                    <div className="py-12 text-center text-xs text-on-surface-variant space-y-2">
-                      <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin mx-auto"></div>
-                      <p>Loading real-time fee statement and ledger...</p>
-                    </div>
-                  ) : statementError ? (
-                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-center gap-2">
-                      <span className="material-symbols-outlined text-amber-700">warning</span>
-                      <span>{statementError}</span>
-                    </div>
-                  ) : (
-                    <>
-                      {/* TAB 1: INVOICES BREAKDOWN */}
-                      {activeTab === 'invoices' && (
-                        <div className="space-y-4">
-                          {deleteSuccess && (
-                            <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-xl flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <span className="material-symbols-outlined text-[18px] text-emerald-600">check_circle</span>
-                                <span>{deleteSuccess}</span>
-                              </div>
-                              <button onClick={() => setDeleteSuccess(null)} className="text-emerald-700 hover:text-emerald-900 cursor-pointer">
-                                <span className="material-symbols-outlined text-[16px]">close</span>
-                              </button>
-                            </div>
-                          )}
-                          {deleteError && (
-                            <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-xl flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <span className="material-symbols-outlined text-[18px] text-rose-600">error</span>
-                                <span>{deleteError}</span>
-                              </div>
-                              <button onClick={() => setDeleteError(null)} className="text-rose-700 hover:text-rose-900 cursor-pointer">
-                                <span className="material-symbols-outlined text-[16px]">close</span>
-                              </button>
-                            </div>
-                          )}
-                          {invoicesList.length === 0 ? (
-                            <div className="p-8 text-center bg-surface-container-low rounded-2xl border border-dashed border-outline-variant/40 space-y-3">
-                              <div className="w-12 h-12 rounded-full bg-amber-50 text-amber-700 flex items-center justify-center mx-auto border border-amber-200">
-                                <span className="material-symbols-outlined text-[26px]">pending_actions</span>
-                              </div>
-                              <div>
-                                <h4 className="text-sm font-bold text-on-surface">Learner Not Yet Billed (Pending Authorization)</h4>
-                                <p className="text-xs text-on-surface-variant max-w-md mx-auto mt-1 leading-relaxed">
-                                  This learner was admitted or imported into the database with fee billing deferred. In accordance with system security policy, billing will only take place once explicitly authorized by Accounts, Headteacher, or School Admin accounts.
-                                </p>
-                              </div>
-                              {isBillingAuthorized ? (
-                                <div className="pt-2">
-                                  <button
-                                    type="button"
-                                    onClick={handleAuthorizeBilling}
-                                    disabled={isAuthorizingBilling}
-                                    className="inline-flex items-center gap-2 px-4 py-2 bg-[#7a1228] hover:bg-[#5c0a1a] text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer disabled:opacity-50"
-                                  >
-                                    {isAuthorizingBilling ? (
-                                      <>
-                                        <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                        <span>Authorizing & Billing...</span>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <span className="material-symbols-outlined text-[16px]">how_to_reg</span>
-                                        <span>Authorize &amp; Bill Learner Now (Term 1)</span>
-                                      </>
-                                    )}
-                                  </button>
-                                  {billingAuthFeedback && (
-                                    <p className="text-xs text-emerald-700 font-semibold mt-2.5 animate-in fade-in">
-                                      {billingAuthFeedback}
-                                    </p>
-                                  )}
-                                </div>
-                              ) : (
-                                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 text-amber-800 text-xs font-medium border border-amber-200">
-                                  <span className="material-symbols-outlined text-[16px]">lock</span>
-                                  <span>Awaiting billing authorization from Accounts, Headteacher, or School Admin</span>
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <div className="space-y-3">
-                              {invoicesList.map((inv) => {
-                                const isExpanded = expandedInvoiceId === inv.id;
-                                const invBal = inv.balance || 0;
-                                const isInvPaid = invBal <= 0;
-                                return (
-                                  <div
-                                    key={inv.id}
-                                    className="border border-outline-variant/30 rounded-xl overflow-hidden bg-surface-container-lowest shadow-2xs transition-all"
-                                  >
-                                    <div
-                                      onClick={() => setExpandedInvoiceId(isExpanded ? null : inv.id)}
-                                      className="p-3.5 bg-surface-container-low/60 hover:bg-surface-container-low flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer"
-                                    >
-                                      <div className="flex items-center gap-3">
-                                        <div
-                                          className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs ${
-                                            isInvPaid
-                                              ? 'bg-emerald-100 text-emerald-800'
-                                              : 'bg-primary/10 text-primary'
-                                          }`}
-                                        >
-                                          <span className="material-symbols-outlined text-[20px]">
-                                            {isInvPaid ? 'check_circle' : 'receipt'}
-                                          </span>
-                                        </div>
-                                        <div>
-                                          <div className="flex items-center gap-2">
-                                            <span className="font-bold text-xs font-data-mono text-primary">
-                                              #{inv.invoiceNumber}
-                                            </span>
-                                            <span
-                                              className={`px-2 py-0.2 rounded text-[10px] font-bold uppercase ${
-                                                isInvPaid
-                                                  ? 'bg-emerald-100 text-emerald-800'
-                                                  : 'bg-amber-100 text-amber-900'
-                                              }`}
-                                            >
-                                              {inv.status}
-                                            </span>
-                                            {canManageInvoices && isHangingInvoice(inv) && (
-                                              <button
-                                                type="button"
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  setDeleteError(null);
-                                                  setInvoiceToDelete(inv);
-                                                }}
-                                                className="px-2 py-0.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded text-[10px] font-bold inline-flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
-                                                title="Delete Unsettled Hanging Invoice (0 Payments)"
-                                              >
-                                                <span className="material-symbols-outlined text-[13px]">delete</span>
-                                                <span>Delete</span>
-                                              </button>
-                                            )}
-                                          </div>
-                                          <div className="text-[11px] text-on-surface-variant mt-0.5">
-                                            Due Date: {inv.dueDate || 'End of Term'} · {inv.items?.length || 0} line items
-                                          </div>
-                                        </div>
-                                      </div>
-
-                                      <div className="flex items-center justify-between sm:justify-end gap-4 text-xs font-data-mono">
-                                        <div className="text-right">
-                                          <span className="text-[10px] text-on-surface-variant uppercase font-semibold block">
-                                            Billed
-                                          </span>
-                                          <span className="font-bold text-on-surface">
-                                            KES {(inv.amountPayable || inv.amountBilled || 0).toLocaleString()}
-                                          </span>
-                                        </div>
-                                        <div className="text-right">
-                                          <span className="text-[10px] text-on-surface-variant uppercase font-semibold block">
-                                            Paid
-                                          </span>
-                                          <span className="font-bold text-emerald-700">
-                                            KES {(inv.amountPaid || 0).toLocaleString()}
-                                          </span>
-                                        </div>
-                                        <div className="text-right">
-                                          <span className="text-[10px] text-on-surface-variant uppercase font-semibold block">
-                                            Balance
-                                          </span>
-                                          <span className={`font-extrabold ${isInvPaid ? 'text-emerald-700' : 'text-error'}`}>
-                                            KES {invBal.toLocaleString()}
-                                          </span>
-                                        </div>
-                                        <span className="material-symbols-outlined text-[18px] text-outline">
-                                          {isExpanded ? 'expand_less' : 'expand_more'}
-                                        </span>
-                                      </div>
-                                    </div>
-
-                                    {/* Expanded Line Items Table */}
-                                    {isExpanded && (
-                                      <div className="p-4 bg-surface-container-lowest border-t border-outline-variant/20 space-y-3">
-                                        <div className="font-bold text-xs text-on-surface uppercase tracking-wider flex items-center justify-between">
-                                          <span>Invoice Item Breakdown</span>
-                                          <div className="flex items-center gap-2">
-                                            {canManageInvoices && isHangingInvoice(inv) && (
-                                              <button
-                                                type="button"
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  setDeleteError(null);
-                                                  setInvoiceToDelete(inv);
-                                                }}
-                                                className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1 shadow-2xs"
-                                                title="Delete Unsettled Hanging Invoice (0 Payments)"
-                                              >
-                                                <span className="material-symbols-outlined text-[14px]">delete</span>
-                                                <span>Delete Hanging Invoice</span>
-                                              </button>
-                                            )}
-                                            <span className="text-[11px] font-normal text-on-surface-variant font-sans">
-                                              Items: {inv.items?.length || 0}
-                                            </span>
-                                          </div>
-                                        </div>
-                                        {inv.items && inv.items.length > 0 ? (
-                                          <div className="overflow-x-auto rounded-lg border border-outline-variant/30">
-                                            <table className="w-full text-left text-xs">
-                                              <thead className="bg-surface-container-low text-on-surface-variant font-semibold">
-                                                <tr>
-                                                  <th className="p-2.5">Item Name</th>
-                                                  <th className="p-2.5">Category</th>
-                                                  <th className="p-2.5 text-right">Amount (KES)</th>
-                                                </tr>
-                                              </thead>
-                                              <tbody className="divide-y divide-outline-variant/20 font-data-mono">
-                                                {inv.items.map((it: any, idx: number) => (
-                                                  <tr key={idx} className="hover:bg-surface-container-low/50">
-                                                    <td className="p-2.5 font-medium text-on-surface font-sans">
-                                                      {it.name}
-                                                    </td>
-                                                    <td className="p-2.5 text-on-surface-variant text-[11px] font-sans">
-                                                      {it.category || 'Tuition / Statutory'}
-                                                    </td>
-                                                    <td className="p-2.5 text-right font-bold text-on-surface">
-                                                      KES {(it.amount || 0).toLocaleString()}
-                                                    </td>
-                                                  </tr>
-                                                ))}
-                                                <tr className="bg-surface-container font-bold text-on-surface">
-                                                  <td colSpan={2} className="p-2.5 text-right font-sans">
-                                                    Total Invoice Amount:
-                                                  </td>
-                                                  <td className="p-2.5 text-right text-primary">
-                                                    KES {(inv.amountPayable || inv.amountBilled || 0).toLocaleString()}
-                                                  </td>
-                                                </tr>
-                                              </tbody>
-                                            </table>
-                                          </div>
-                                        ) : (
-                                          <div className="text-xs text-on-surface-variant italic">
-                                            Consolidated standard term fee invoice.
-                                          </div>
-                                        )}
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* TAB 2: PAYMENT RECEIPTS HISTORY */}
-                      {activeTab === 'payments' && (
-                        <div className="space-y-4">
-                          {paymentsList.length === 0 ? (
-                            <div className="p-8 text-center text-xs text-on-surface-variant bg-surface-container-low rounded-xl border border-outline-variant/20">
-                              <span className="material-symbols-outlined text-[32px] text-outline opacity-60 mb-1">
-                                credit_card_off
-                              </span>
-                              <p className="font-semibold text-on-surface">No payments recorded yet for this learner.</p>
-                              <p className="mt-1">
-                                Payments can be recorded manually or received instantly via KCB Paybill 522533.
-                              </p>
-                              <div className="pt-3">
-                                <button
-                                  type="button"
-                                  onClick={() => setIsRecordPaymentOpen(true)}
-                                  className="px-4 py-2 bg-primary text-white text-xs font-bold rounded-lg cursor-pointer shadow-xs"
-                                >
-                                  Record First Payment
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="border border-outline-variant/30 rounded-xl overflow-hidden bg-surface-container-lowest shadow-2xs">
-                              <table className="w-full text-left text-xs">
-                                <thead className="bg-surface-container-low text-on-surface-variant font-semibold border-b border-outline-variant/30">
-                                  <tr>
-                                    <th className="p-3">Receipt Code</th>
-                                    <th className="p-3">Date</th>
-                                    <th className="p-3">Channel / Method</th>
-                                    <th className="p-3">Reference / Slip</th>
-                                    <th className="p-3 text-right">Amount Paid</th>
-                                    <th className="p-3 text-center">Status</th>
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-outline-variant/20 font-data-mono">
-                                  {paymentsList.map((p, idx) => (
-                                    <tr key={idx} className="hover:bg-surface-container-low/50">
-                                      <td className="p-3 font-bold text-primary">
-                                        {p.receiptNumber || `REC-${idx + 1000}`}
-                                      </td>
-                                      <td className="p-3 text-on-surface-variant text-[11px]">
-                                        {p.paymentDate || p.createdAt || p.paidAt || 'Recent'}
-                                      </td>
-                                      <td className="p-3 font-sans">
-                                        <span className="inline-flex items-center gap-1 font-semibold text-on-surface">
-                                          <span className="material-symbols-outlined text-[14px] text-emerald-700">
-                                            check_circle
-                                          </span>
-                                          {p.paymentMethod || p.method || 'KCB_BUNI'}
-                                        </span>
-                                      </td>
-                                      <td className="p-3 text-on-surface-variant text-[11px]">
-                                        {p.transactionReference || p.ref || '--'}
-                                      </td>
-                                      <td className="p-3 text-right font-extrabold text-emerald-700 text-sm">
-                                        +KES {(p.amount || 0).toLocaleString()}
-                                      </td>
-                                      <td className="p-3 text-center">
-                                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 uppercase">
-                                          {p.status || 'COMPLETED'}
-                                        </span>
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* TAB 3: OFFICIAL PRINTABLE STATEMENT */}
-                      {activeTab === 'statement' && (
-                        <div className="bg-white text-slate-900 p-6 rounded-xl border border-outline-variant/30 space-y-6 shadow-sm print:m-0 print:border-none">
-                          {/* Official Statement Header */}
-                          <div className="flex items-center justify-between border-b-2 border-slate-900 pb-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-12 h-12 rounded-xl bg-primary text-white flex items-center justify-center font-bold text-lg">
-                                <span className="material-symbols-outlined text-[28px]">school</span>
-                              </div>
-                              <div>
-                                <h3 className="text-base font-extrabold uppercase tracking-tight text-slate-900">
-                                  {user?.schoolName || 'Grace Seeds School'}
-                                </h3>
-                                <p className="text-xs text-slate-600">
-                                  Official Learner Fee Statement &amp; Audit Ledger
-                                </p>
-                              </div>
-                            </div>
-                            <div className="text-right text-xs text-slate-600">
-                              <div>Date Generated: <strong className="text-slate-900">{new Date().toLocaleDateString()}</strong></div>
-                              <div>Payment Rail: <strong className="text-emerald-800">KCB Paybill 522533</strong></div>
-                            </div>
-                          </div>
-
-                          {/* Student Biodata Summary */}
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-3 bg-slate-50 rounded-lg text-xs border border-slate-200">
-                            <div>
-                              <span className="text-slate-500 uppercase text-[10px] font-semibold block">Learner Name</span>
-                              <strong className="text-slate-900 text-sm">{selectedStudent.name}</strong>
-                            </div>
-                            <div>
-                              <span className="text-slate-500 uppercase text-[10px] font-semibold block">Admission No</span>
-                              <strong className="text-slate-900 text-sm font-mono">{selectedStudent.admNo}</strong>
-                            </div>
-                            <div>
-                              <span className="text-slate-500 uppercase text-[10px] font-semibold block">Grade / Class</span>
-                              <strong className="text-slate-900 text-sm">{selectedStudent.grade} ({selectedStudent.stream || 'A'})</strong>
-                            </div>
-                            <div>
-                              <span className="text-slate-500 uppercase text-[10px] font-semibold block">Parent / Guardian</span>
-                              <strong className="text-slate-900 text-sm">{selectedStudent.guardianName} ({selectedStudent.guardianPhone})</strong>
-                            </div>
-                          </div>
-
-                          {/* Running Ledger Table */}
-                          <div className="space-y-2">
-                            <h4 className="font-bold text-xs uppercase tracking-wider text-slate-900">
-                              Transaction Journal &amp; Balance Summary
-                            </h4>
-                            <div className="border border-slate-300 rounded-lg overflow-hidden">
-                              <table className="w-full text-left text-xs">
-                                <thead className="bg-slate-100 border-b border-slate-300 font-semibold text-slate-700">
-                                  <tr>
-                                    <th className="p-2.5">Date / Item</th>
-                                    <th className="p-2.5">Reference Code</th>
-                                    <th className="p-2.5 text-right">Debit (Billed)</th>
-                                    <th className="p-2.5 text-right">Credit (Paid)</th>
-                                    <th className="p-2.5 text-right">Running Bal</th>
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-200 font-mono text-xs">
-                                  {invoicesList.map((inv, idx) => (
-                                    <tr key={`inv-${idx}`}>
-                                      <td className="p-2.5 font-sans">
-                                        Invoice #{inv.invoiceNumber} (Term Fee)
-                                      </td>
-                                      <td className="p-2.5 text-slate-600">{inv.dueDate || 'Term Billed'}</td>
-                                      <td className="p-2.5 text-right text-rose-700 font-bold">
-                                        KES {(inv.amountPayable || inv.amountBilled || 0).toLocaleString()}
-                                      </td>
-                                      <td className="p-2.5 text-right text-slate-400">--</td>
-                                      <td className="p-2.5 text-right font-bold text-slate-900">
-                                        KES {(inv.balance || 0).toLocaleString()}
-                                      </td>
-                                    </tr>
-                                  ))}
-                                  {paymentsList.map((p, idx) => (
-                                    <tr key={`pay-${idx}`} className="bg-emerald-50/40">
-                                      <td className="p-2.5 font-sans text-emerald-900">
-                                        Payment: {p.paymentMethod || 'KCB Buni Paybill'}
-                                      </td>
-                                      <td className="p-2.5 text-emerald-800">{p.receiptNumber}</td>
-                                      <td className="p-2.5 text-right text-slate-400">--</td>
-                                      <td className="p-2.5 text-right text-emerald-700 font-bold">
-                                        +KES {(p.amount || 0).toLocaleString()}
-                                      </td>
-                                      <td className="p-2.5 text-right font-bold text-slate-900">
-                                        CR
-                                      </td>
-                                    </tr>
-                                  ))}
-                                  <tr className="bg-slate-100 font-bold text-slate-900 text-sm">
-                                    <td colSpan={4} className="p-3 text-right font-sans uppercase">
-                                      Net Outstanding Balance:
-                                    </td>
-                                    <td className={`p-3 text-right ${isCleared ? 'text-emerald-700' : 'text-rose-700'}`}>
-                                      KES {currentBalance.toLocaleString()}
-                                    </td>
-                                  </tr>
-                                </tbody>
-                              </table>
-                            </div>
-                          </div>
-
-                          {/* Payment Instructions & Official Endorsement */}
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-slate-300 text-xs">
-                            <div className="space-y-1 text-slate-600">
-                              <span className="font-bold text-slate-900 block">Bank &amp; Paybill Remittance:</span>
-                              <div>1. Business Number: <strong>522533</strong> (KCB Buni API Platform)</div>
-                              <div>2. Account Number: <strong>{kcbAccountRef}</strong></div>
-                              <div>3. Direct Bank Wire: KCB Bank Kenya · A/C 1234567890</div>
-                            </div>
-                            <div className="text-right space-y-4 pt-2">
-                              <div className="text-slate-500 italic">Official School Stamp &amp; Accounts Sign-off:</div>
-                              <div className="border-b border-dashed border-slate-400 w-44 ml-auto pt-4"></div>
-                              <div className="text-[11px] text-slate-700 font-semibold">Authorized Finance Officer</div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          ) : (
-            /* Zero State: No Learner Selected */
-            <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-10 text-center space-y-4 shadow-xs">
-              <div className="w-16 h-16 rounded-2xl bg-primary/10 text-primary mx-auto flex items-center justify-center shadow-xs">
-                <span className="material-symbols-outlined text-[36px]">search_check</span>
-              </div>
-              <div className="max-w-md mx-auto">
-                <h3 className="font-bold text-base text-on-surface">Select a Learner to Inspect Fees</h3>
-                <p className="text-xs text-on-surface-variant mt-1.5 leading-relaxed">
-                  Use the search bar above or choose a student from the matching learners panel on the left to view complete term invoices, payment receipts, balance breakdowns, and official KCB Paybill remittance references.
-                </p>
-              </div>
-
-              {filteredStudents.length > 0 && (
-                <div className="pt-2">
-                  <span className="text-xs font-semibold text-on-surface-variant block mb-2">
-                    Or select one from recent results:
-                  </span>
-                  <div className="flex flex-wrap items-center justify-center gap-2 max-w-lg mx-auto">
-                    {filteredStudents.slice(0, 5).map((st) => (
-                      <button
-                        key={st.id}
-                        type="button"
-                        onClick={() => setSelectedStudent(st)}
-                        className="px-3 py-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-xs font-medium text-on-surface flex items-center gap-1.5 cursor-pointer transition-colors border border-outline-variant/30"
-                      >
-                        <span className="material-symbols-outlined text-[16px] text-primary">person</span>
-                        <span>{st.name}</span>
-                        <span className="font-data-mono text-[11px] text-error font-bold">
-                          {(st.feeBalance || 0) > 0 ? `KES ${st.feeBalance.toLocaleString()}` : 'KES 0'}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </div>
 
-      {/* MODALS */}
-      {/* Manual Payment Record Modal (Cash / Bank Deposit / Slip / Cheque) */}
-      {isRecordPaymentOpen && selectedStudent && (
+      {/* 4. Full-Width Accounting Table (The List Form - Identical to Payroll) */}
+      <div className="bg-white rounded-xl border border-slate-300 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto max-h-[720px]">
+          {filteredStudents.length === 0 ? (
+            <div className="p-16 text-center">
+              <span className="material-symbols-outlined text-4xl text-slate-400 mb-2">table_rows</span>
+              <p className="text-slate-700 font-semibold text-sm">No student finance records found.</p>
+              <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
+                No learners match your search query or filter criteria. Click &quot;Reset Filters&quot; to restore the full school ledger roster.
+              </p>
+            </div>
+          ) : (
+            <table className="w-full border-collapse border border-slate-300 text-left text-xs text-slate-800 font-mono table-auto">
+              {/* Table Column Headers with Clear Dividing Lines & Self-Adjusting Column Sizes */}
+              <thead className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold border-b border-slate-300 uppercase text-[10px] select-none">
+                <tr>
+                  <th className="px-1.5 py-1.5 text-center bg-slate-200 border border-slate-300 w-8 whitespace-nowrap">#</th>
+                  <th className="px-2 py-1.5 border border-slate-300 whitespace-nowrap font-mono" title="Learner Admission Number">Adm No</th>
+                  <th className="px-2 py-1.5 border border-slate-300 font-sans whitespace-nowrap">Learner Name</th>
+                  <th className="px-2 py-1.5 border border-slate-300 font-sans whitespace-nowrap">Grade</th>
+                  <th className="px-1.5 py-1.5 border border-slate-300 font-sans whitespace-nowrap">Stream</th>
+                  <th className="px-2 py-1.5 border border-slate-300 text-right whitespace-nowrap" title="Billed Term Fee from Fee Structure">
+                    <div>Billed Fees</div>
+                    <div className="text-[9px] font-normal text-slate-500">(KES)</div>
+                  </th>
+                  <th className="px-2 py-1.5 border border-slate-300 text-right whitespace-nowrap text-amber-800" title="Opening / Prior Term Arrears (distinct from term billed fee)">
+                    <div>Prior Arrears</div>
+                    <div className="text-[9px] font-normal text-amber-600">(KES)</div>
+                  </th>
+                  <th className="px-2 py-1.5 border border-slate-300 text-right bg-slate-200/70 font-extrabold text-slate-900 whitespace-nowrap" title="Total Due = Billed Fees + Prior Arrears">
+                    <div>Total Due</div>
+                    <div className="text-[9px] font-normal text-slate-600">(KES)</div>
+                  </th>
+                  <th className="px-2 py-1.5 border border-slate-300 text-right text-emerald-800 bg-emerald-50/50 font-extrabold whitespace-nowrap" title="Collections Reconciled">
+                    <div>Paid Fees</div>
+                    <div className="text-[9px] font-normal text-emerald-600">(KES)</div>
+                  </th>
+                  <th className="px-2 py-1.5 border border-slate-300 text-right font-bold text-slate-800 bg-slate-100/70 whitespace-nowrap" title="Net Balance = Total Due - Paid Fees (Negative indicates exact overpayment credit)">
+                    <div>Balance</div>
+                    <div className="text-[9px] font-normal text-slate-500">(KES)</div>
+                  </th>
+                  <th className="px-2 py-1.5 border border-slate-300 text-right font-bold text-teal-800 bg-teal-50/50 whitespace-nowrap" title="Prepayment / Advance Credit">
+                    <div>Overpayment / Credit</div>
+                    <div className="text-[9px] font-normal text-teal-600">(KES)</div>
+                  </th>
+                  <th className="px-2 py-1.5 border border-slate-300 font-sans whitespace-nowrap">Financial Status</th>
+                  <th className="px-2 py-1.5 border border-slate-300 text-center font-sans whitespace-nowrap sticky right-0 z-30 bg-slate-100 shadow-[-3px_0_5px_rgba(0,0,0,0.06)]">Actions</th>
+                </tr>
+              </thead>
+
+              {/* Table Rows with Explicit Cell Borders (Gridlines) & Self-Adjusting Dimensions */}
+              <tbody className="divide-y divide-slate-200 bg-white">
+                {filteredStudents.map((st, idx) => {
+                  const fin = getStudentFinancials(st, selectedTerm, feeStructures);
+                  const rowNumber = idx + 1;
+
+                  return (
+                    <tr key={st.id} className="hover:bg-slate-50 transition-colors group">
+                      {/* 1. Row Index */}
+                      <td className="px-1.5 py-1 text-center bg-slate-50 border border-slate-300 font-bold text-slate-500 text-[11px] select-none whitespace-nowrap">
+                        {rowNumber}
+                      </td>
+
+                      {/* 2. Admission Number */}
+                      <td className="px-2 py-1 border border-slate-300 text-slate-700 font-mono text-[11px] font-bold whitespace-nowrap">
+                        {st.admNo || '--'}
+                      </td>
+
+                      {/* 3. Learner Name with Profile Avatar & Guardian */}
+                      <td className="px-2 py-1 border border-slate-300 font-sans whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-slate-200 text-[#7a1228] font-bold text-[10px] flex items-center justify-center shrink-0 overflow-hidden">
+                            {st.profilePhotoUrl ? (
+                              <img src={st.profilePhotoUrl} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              st.name.slice(0, 2).toUpperCase()
+                            )}
+                          </div>
+                          <div className="leading-tight">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-bold text-slate-900 text-xs">{st.name}</span>
+                              {fin.isSponsored && (
+                                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-emerald-100 text-emerald-950 border border-emerald-300" title="Fee is Cleared under Institutional Scholarship Scheme">
+                                  <span className="material-symbols-outlined text-[11px] text-emerald-700">verified</span>
+                                  <span>Cleared · Scholarship</span>
+                                </span>
+                              )}
+                            </div>
+                            {st.guardianPhone && (
+                              <span className="text-[10px] text-slate-500 font-normal">
+                                ({st.guardianPhone})
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* 4. Grade */}
+                      <td className="px-2 py-1 border border-slate-300 font-sans text-slate-800 text-[11px] font-medium whitespace-nowrap">
+                        {st.grade || '--'}
+                      </td>
+
+                      {/* 5. Stream */}
+                      <td className="px-1.5 py-1 border border-slate-300 font-sans text-slate-600 text-[11px] whitespace-nowrap">
+                        {st.stream || '--'}
+                      </td>
+
+                      {/* 6. Billed Fees */}
+                      <td className="px-2 py-1 border border-slate-300 text-right text-slate-800 text-[11px] font-medium whitespace-nowrap">
+                        {fin.isSponsored ? (
+                          <span className="text-slate-400 font-normal">0 <span className="text-[9px] text-emerald-700 font-bold">(Waived)</span></span>
+                        ) : (
+                          fin.billed.toLocaleString()
+                        )}
+                      </td>
+
+                      {/* 7. Prior Arrears */}
+                      <td className="px-2 py-1 border border-slate-300 text-right text-amber-800 text-[11px] font-medium whitespace-nowrap">
+                        {fin.isSponsored ? '0' : (fin.priorArrears > 0 ? fin.priorArrears.toLocaleString() : '--')}
+                      </td>
+
+                      {/* 8. Total Due */}
+                      <td className="px-2 py-1 border border-slate-300 text-right font-extrabold text-slate-900 bg-slate-50/70 text-[11px] whitespace-nowrap">
+                        {fin.isSponsored ? '0' : fin.totalDue.toLocaleString()}
+                      </td>
+
+                      {/* 9. Paid Fees */}
+                      <td className="px-2 py-1 border border-slate-300 text-right font-extrabold text-emerald-800 bg-emerald-50/40 text-[11px] whitespace-nowrap">
+                        {fin.paid.toLocaleString()}
+                      </td>
+
+                      {/* 10. Balance (Negative if Overpaid: -(overpayment)) */}
+                      <td className={`px-2 py-1 border border-slate-300 text-right font-bold text-[11px] whitespace-nowrap ${
+                        fin.isSponsored
+                          ? 'bg-emerald-50/20 text-emerald-800'
+                          : fin.balance < 0
+                          ? 'bg-teal-50/40 text-teal-800'
+                          : fin.balance > 0
+                          ? 'bg-rose-50/20 text-rose-700'
+                          : 'text-slate-500'
+                      }`}>
+                        {fin.isSponsored ? (
+                          <span className="text-emerald-700 font-extrabold inline-flex items-center gap-0.5">
+                            <span className="material-symbols-outlined text-[12px]">check_circle</span>
+                            0
+                          </span>
+                        ) : fin.balance < 0 ? (
+                          <span className="text-teal-800 font-extrabold font-mono" title={`Exact Overpayment Credit: KES ${Math.abs(fin.balance).toLocaleString()}`}>
+                            -{Math.abs(fin.balance).toLocaleString()}
+                          </span>
+                        ) : fin.balance > 0 ? (
+                          <span className="text-rose-700 font-extrabold font-mono">
+                            {fin.balance.toLocaleString()}
+                          </span>
+                        ) : (
+                          <span className="text-emerald-700 font-semibold font-mono">0</span>
+                        )}
+                      </td>
+
+                      {/* 11. Overpayment / Prepayment Credit */}
+                      <td className="px-2 py-1 border border-slate-300 text-right font-bold text-[11px] whitespace-nowrap bg-teal-50/30">
+                        {fin.overpayment > 0 ? (
+                          <span className="text-teal-800 font-extrabold inline-flex items-center gap-0.5">
+                            <span className="material-symbols-outlined text-[13px]">savings</span>
+                            +{fin.overpayment.toLocaleString()}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">--</span>
+                        )}
+                      </td>
+
+                      {/* 12. Financial Status Badge */}
+                      <td className="px-2 py-1 border border-slate-300 font-sans whitespace-nowrap">
+                        {fin.isSponsored ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-950 border border-emerald-300 shadow-2xs" title="100% Institutional Scholarship Scheme — Fee Cleared">
+                            <span className="material-symbols-outlined text-[13px] text-emerald-700">verified</span>
+                            CLEARED · SCHOLARSHIP
+                          </span>
+                        ) : fin.status === 'OVERPAID' ? (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-teal-100 text-teal-900 border border-teal-300">
+                            <span className="material-symbols-outlined text-[12px] text-teal-700">savings</span>
+                            OVERPAID (-KES {Math.abs(fin.balance).toLocaleString()})
+                          </span>
+                        ) : fin.status === 'CLEARED' ? (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                            CLEARED
+                          </span>
+                        ) : fin.status === 'PARTIAL' ? (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
+                            PARTIAL
+                          </span>
+                        ) : fin.status === 'UNBILLED' ? (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600">
+                            UNBILLED
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800">
+                            <span className="w-1.5 h-1.5 rounded-full bg-rose-600"></span>
+                            ARREARS
+                          </span>
+                        )}
+                      </td>
+
+                      {/* 13. Actions - Sticky Right to ALWAYS remain visible */}
+                      <td className="px-2 py-1 border border-slate-300 font-sans text-center sticky right-0 z-10 bg-white group-hover:bg-slate-50 shadow-[-3px_0_5px_rgba(0,0,0,0.06)] whitespace-nowrap">
+                        <div className="flex items-center justify-center gap-1">
+                          {/* 1-click Transact (Record Payment / Arrears) */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedStudentForPayment(st);
+                              setIsRecordPaymentOpen(true);
+                            }}
+                            title="Record manual fee payment or fee arrears for this student"
+                            className="px-2 py-0.5 rounded text-[11px] font-bold flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs cursor-pointer transition-colors"
+                          >
+                            <span className="material-symbols-outlined text-[13px]">payments</span>
+                            <span>Transact</span>
+                          </button>
+
+                          {/* View Statement & Breakdown Modal */}
+                          <button
+                            type="button"
+                            onClick={() => handleOpenStatementModal(st)}
+                            title="View detailed invoices breakdown & payment history"
+                            className="p-1 text-slate-600 hover:text-[#7a1228] hover:bg-slate-100 rounded transition-colors cursor-pointer"
+                          >
+                            <span className="material-symbols-outlined text-[15px]">receipt_long</span>
+                          </button>
+
+                          {/* Download Single Student Statement PDF */}
+                          <button
+                            type="button"
+                            onClick={() => handleDownloadStudentStatementPdf(st)}
+                            title="Download Official Fee Statement PDF Advice"
+                            className="p-1 text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 rounded transition-colors cursor-pointer"
+                          >
+                            <span className="material-symbols-outlined text-[15px]">picture_as_pdf</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+
+              {/* Accounting Totals Row with Clean Accounting Double Underlines */}
+              <tfoot className="sticky bottom-0 z-20 bg-slate-100 text-slate-900 border-t-2 border-b-4 border-double border-slate-700 font-bold text-xs select-none shadow-md">
+                <tr>
+                  <td className="px-1.5 py-1.5 text-center bg-slate-200 border border-slate-300 font-black text-slate-800 whitespace-nowrap">
+                    ∑
+                  </td>
+                  <td className="px-2 py-1.5 border border-slate-300 text-slate-700 font-sans uppercase text-[10px] whitespace-nowrap">
+                    TOTALS
+                  </td>
+                  <td className="px-2 py-1.5 border border-slate-300 font-sans whitespace-nowrap">
+                    {filteredStudents.length} Learners
+                  </td>
+                  <td className="px-2 py-1.5 border border-slate-300 text-slate-500 font-sans whitespace-nowrap">
+                    --
+                  </td>
+                  <td className="px-1.5 py-1.5 border border-slate-300 text-slate-500 font-sans whitespace-nowrap">
+                    --
+                  </td>
+                  <td className="px-2 py-1.5 border border-slate-300 text-right whitespace-nowrap text-[11px]">
+                    {stats.totalBilled.toLocaleString()}
+                  </td>
+                  <td className="px-2 py-1.5 border border-slate-300 text-right whitespace-nowrap text-[11px] text-amber-800">
+                    {stats.totalPriorArrears.toLocaleString()}
+                  </td>
+                  <td className="px-2 py-1.5 border border-slate-300 text-right font-black text-slate-900 bg-slate-200/60 whitespace-nowrap text-[11px]">
+                    {stats.totalDue.toLocaleString()}
+                  </td>
+                  <td className="px-2 py-1.5 border border-slate-300 text-right font-black text-emerald-900 bg-emerald-100/70 whitespace-nowrap text-[11px]">
+                    {stats.totalPaid.toLocaleString()}
+                  </td>
+                  <td className="px-2 py-1.5 border border-slate-300 text-right font-black text-rose-800 bg-rose-100/60 whitespace-nowrap text-[11px]">
+                    {stats.totalArrears.toLocaleString()}
+                  </td>
+                  <td className="px-2 py-1.5 border border-slate-300 text-right font-black text-teal-900 bg-teal-100/70 whitespace-nowrap text-[11px]">
+                    +{stats.totalOverpayment.toLocaleString()}
+                  </td>
+                  <td className="px-2 py-1.5 border border-slate-300 font-sans text-[10px] whitespace-nowrap text-slate-700">
+                    Cleared: <strong className="text-emerald-800">{stats.clearedCount}</strong> · Overpaid: <strong className="text-teal-800">{stats.overpaidCount}</strong>
+                  </td>
+                  <td className="px-2 py-1.5 border border-slate-300 text-center font-sans text-[10px] text-slate-600 sticky right-0 z-30 bg-slate-100 shadow-[-3px_0_5px_rgba(0,0,0,0.06)] whitespace-nowrap">
+                    Audited
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          )}
+        </div>
+
+        {/* Ledger Summary Strip */}
+        <div className="bg-slate-100 text-slate-700 text-xs px-4 py-2 border-t border-slate-300 flex flex-wrap items-center justify-between gap-3 font-medium">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-sm text-[#7a1228]">verified</span>
+            <span>Showing {filteredStudents.length} learners for <strong>{selectedGrade === 'All' ? 'All Classes' : selectedGrade}</strong></span>
+          </div>
+          <div className="flex flex-wrap items-center gap-4 text-[11px]">
+            <span>TOTAL BILLED: <strong className="text-slate-900 font-mono">KES {stats.totalBilled.toLocaleString()}</strong></span>
+            <span>TOTAL COLLECTED: <strong className="text-emerald-700 font-mono font-bold">KES {stats.totalPaid.toLocaleString()}</strong></span>
+            <span>OUTSTANDING ARREARS: <strong className="text-rose-700 font-mono font-bold">KES {stats.totalArrears.toLocaleString()}</strong></span>
+            <span>PREPAYMENT CREDITS: <strong className="text-teal-800 font-mono font-bold">+KES {stats.totalOverpayment.toLocaleString()}</strong></span>
+            <span>SCHOLARSHIP LEARNERS: <strong className="text-[#7a1228] font-mono font-bold">{stats.sponsoredCount} (100% Waived)</strong></span>
+            <span>COLLECTION RATE: <strong className="text-slate-900 font-mono font-bold">{stats.collectionRate}%</strong></span>
+          </div>
+        </div>
+      </div>
+
+      {/* 5. MODAL: DETAILED STUDENT STATEMENT INSPECTION */}
+      {isStatementModalOpen && statementStudent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-xs overflow-y-auto animate-fade-in font-sans">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[92vh] flex flex-col overflow-hidden border border-slate-200 my-auto">
+            {/* Modal Header */}
+            <div className="bg-[#7a1228] text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center font-bold text-sm shrink-0 overflow-hidden">
+                  {statementStudent.profilePhotoUrl ? (
+                    <img src={statementStudent.profilePhotoUrl} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <span>{statementStudent.name.slice(0, 2).toUpperCase()}</span>
+                  )}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-base leading-tight">{statementStudent.name}</h3>
+                    <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-white/20 uppercase tracking-wider">
+                      {statementStudent.status || 'Active'}
+                    </span>
+                  </div>
+                  <div className="text-xs text-rose-100 font-mono flex flex-wrap items-center gap-2 mt-0.5">
+                    <span>Adm: <strong className="text-white">{statementStudent.admNo}</strong></span>
+                    <span>·</span>
+                    <span>Grade: <strong className="text-white">{statementStudent.grade}</strong></span>
+                    {statementStudent.stream && (
+                      <>
+                        <span>·</span>
+                        <span>Stream: <strong className="text-white">{statementStudent.stream}</strong></span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleDownloadStudentStatementPdf(statementStudent)}
+                  className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                  title="Download Statement PDF"
+                >
+                  <span className="material-symbols-outlined text-[16px]">picture_as_pdf</span>
+                  <span>PDF Statement</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsStatementModalOpen(false)}
+                  className="p-1.5 text-rose-200 hover:text-white rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[20px]">close</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="overflow-y-auto p-4 sm:p-6 space-y-4 flex-1">
+              {/* KCB Paybill Official Shortcode Banner */}
+              <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-[#006a40] text-white flex items-center justify-center font-bold shrink-0">
+                    <span className="material-symbols-outlined text-[18px]">account_balance</span>
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-emerald-950">
+                        KCB Buni Paybill: <span className="font-mono text-[#006a40]">522533</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopy('522533', 'paybill')}
+                        className="px-1.5 py-0.2 bg-emerald-200 text-emerald-900 rounded text-[10px] font-bold cursor-pointer"
+                      >
+                        {copiedField === 'paybill' ? 'Copied!' : 'Copy'}
+                      </button>
+                    </div>
+                    <div className="text-[11px] text-emerald-900 flex items-center gap-1.5 mt-0.5">
+                      <span>Account Ref:</span>
+                      <strong className="font-mono bg-white px-1.5 py-0.2 rounded border border-emerald-300 text-emerald-950">
+                        {kcbAccountRef}
+                      </strong>
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(kcbAccountRef, 'account')}
+                        className="px-1.5 py-0.2 bg-emerald-200 text-emerald-900 rounded text-[10px] font-bold cursor-pointer"
+                      >
+                        {copiedField === 'account' ? 'Copied!' : 'Copy'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedStudentForPayment(statementStudent);
+                    setIsRecordPaymentOpen(true);
+                  }}
+                  className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow-xs cursor-pointer self-start sm:self-center"
+                >
+                  <span className="material-symbols-outlined text-[15px]">add_card</span>
+                  <span>Record Payment / Arrears</span>
+                </button>
+              </div>
+
+              {/* 4 Financial Stat Cards */}
+              {(() => {
+                const fin = getStudentFinancials(statementStudent);
+                return (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                      <span className="text-[10px] font-bold uppercase text-slate-500 block">Total Billed</span>
+                      <div className="text-base font-bold font-mono text-slate-900 mt-0.5">
+                        KES {fin.billed.toLocaleString()}
+                      </div>
+                      <span className="text-[10px] text-slate-400 mt-0.5 block">Approved Fees</span>
+                    </div>
+
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                      <span className="text-[10px] font-bold uppercase text-emerald-700 block">Total Paid</span>
+                      <div className="text-base font-bold font-mono text-emerald-800 mt-0.5">
+                        KES {fin.paid.toLocaleString()}
+                      </div>
+                      <span className="text-[10px] text-emerald-700 mt-0.5 block">Reconciled Collections</span>
+                    </div>
+
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                      <span className="text-[10px] font-bold uppercase text-rose-700 block">Outstanding Arrears</span>
+                      <div className="text-base font-extrabold font-mono text-rose-800 mt-0.5">
+                        KES {fin.arrearsDue.toLocaleString()}
+                      </div>
+                      <span className="text-[10px] text-rose-600 mt-0.5 block">Due to School</span>
+                    </div>
+
+                    <div className="p-3 bg-teal-50 rounded-xl border border-teal-200">
+                      <span className="text-[10px] font-bold uppercase text-teal-800 block flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[13px]">savings</span>
+                        Overpayment / Credit
+                      </span>
+                      <div className="text-base font-black font-mono text-teal-900 mt-0.5">
+                        +KES {fin.overpayment.toLocaleString()}
+                      </div>
+                      <span className="text-[10px] text-teal-700 mt-0.5 block font-semibold">Advance Prepayment</span>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Sub-Tabs: Invoices / Payments / Printable Statement */}
+              <div className="flex border-b border-slate-200 gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setStatementTab('invoices')}
+                  className={`pb-2 px-3 text-xs font-bold flex items-center gap-1.5 border-b-2 transition-all cursor-pointer ${
+                    statementTab === 'invoices'
+                      ? 'border-[#7a1228] text-[#7a1228]'
+                      : 'border-transparent text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[15px]">receipt_long</span>
+                  <span>Billed Invoices ({invoicesList.length})</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setStatementTab('payments')}
+                  className={`pb-2 px-3 text-xs font-bold flex items-center gap-1.5 border-b-2 transition-all cursor-pointer ${
+                    statementTab === 'payments'
+                      ? 'border-[#7a1228] text-[#7a1228]'
+                      : 'border-transparent text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[15px]">payments</span>
+                  <span>Payment Receipts ({paymentsList.length})</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setStatementTab('statement')}
+                  className={`pb-2 px-3 text-xs font-bold flex items-center gap-1.5 border-b-2 transition-all cursor-pointer ${
+                    statementTab === 'statement'
+                      ? 'border-[#7a1228] text-[#7a1228]'
+                      : 'border-transparent text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[15px]">description</span>
+                  <span>Printable Statement Advice</span>
+                </button>
+              </div>
+
+              {/* Tab Contents */}
+              <div>
+                {isLoadingStatement ? (
+                  <div className="py-12 text-center text-xs text-slate-500 space-y-2">
+                    <div className="w-7 h-7 rounded-full border-2 border-[#7a1228] border-t-transparent animate-spin mx-auto"></div>
+                    <p>Loading real-time statement ledger...</p>
+                  </div>
+                ) : statementError ? (
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-amber-700 text-sm">warning</span>
+                    <span>{statementError}</span>
+                  </div>
+                ) : (
+                  <>
+                    {/* 1. INVOICES TAB */}
+                    {statementTab === 'invoices' && (
+                      <div className="space-y-3">
+                        {deleteSuccess && (
+                          <div className="p-2.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-lg flex items-center justify-between">
+                            <span>{deleteSuccess}</span>
+                            <button onClick={() => setDeleteSuccess(null)} className="text-emerald-700">
+                              <span className="material-symbols-outlined text-sm">close</span>
+                            </button>
+                          </div>
+                        )}
+                        {deleteError && (
+                          <div className="p-2.5 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-lg flex items-center justify-between">
+                            <span>{deleteError}</span>
+                            <button onClick={() => setDeleteError(null)} className="text-rose-700">
+                              <span className="material-symbols-outlined text-sm">close</span>
+                            </button>
+                          </div>
+                        )}
+
+                        {invoicesList.length === 0 ? (
+                          <div className="p-8 text-center bg-slate-50 rounded-xl border border-dashed border-slate-300 space-y-2">
+                            <span className="material-symbols-outlined text-3xl text-amber-600">pending_actions</span>
+                            <h4 className="text-xs font-bold text-slate-800">Learner Not Yet Invoiced (Pending Authorization)</h4>
+                            <p className="text-[11px] text-slate-500 max-w-md mx-auto">
+                              In accordance with system policy, term billing will take place once authorized by Accounts or School Admin.
+                            </p>
+                            {isBillingAuthorized && (
+                              <div className="pt-2">
+                                <button
+                                  type="button"
+                                  onClick={handleAuthorizeBilling}
+                                  disabled={isAuthorizingBilling}
+                                  className="px-3.5 py-1.5 bg-[#7a1228] hover:bg-[#600e1f] text-white rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50"
+                                >
+                                  {isAuthorizingBilling ? 'Authorizing...' : 'Authorize & Bill Term 1'}
+                                </button>
+                                {billingAuthFeedback && (
+                                  <p className="text-xs text-emerald-700 font-semibold mt-2">
+                                    {billingAuthFeedback}
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="space-y-2.5">
+                            {invoicesList.map((inv) => {
+                              const isExpanded = expandedInvoiceId === inv.id;
+                              const invBal = inv.balance || 0;
+                              const isInvPaid = invBal <= 0;
+
+                              return (
+                                <div key={inv.id} className="border border-slate-200 rounded-xl overflow-hidden bg-white">
+                                  <div
+                                    onClick={() => setExpandedInvoiceId(isExpanded ? null : inv.id)}
+                                    className="p-3 bg-slate-50 hover:bg-slate-100 flex flex-wrap items-center justify-between gap-3 cursor-pointer text-xs"
+                                  >
+                                    <div className="flex items-center gap-2.5">
+                                      <span className="font-mono font-bold text-[#7a1228]">#{inv.invoiceNumber}</span>
+                                      <span
+                                        className={`px-1.5 py-0.2 rounded text-[10px] font-bold uppercase ${
+                                          isInvPaid ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-900'
+                                        }`}
+                                      >
+                                        {inv.status}
+                                      </span>
+                                      {canManageInvoices && isHangingInvoice(inv) && (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setDeleteError(null);
+                                            setInvoiceToDelete(inv);
+                                          }}
+                                          className="px-2 py-0.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded text-[10px] font-bold inline-flex items-center gap-0.5 cursor-pointer shadow-2xs"
+                                          title="Delete Unsettled Hanging Invoice"
+                                        >
+                                          <span className="material-symbols-outlined text-[12px]">delete</span>
+                                          <span>Delete</span>
+                                        </button>
+                                      )}
+                                    </div>
+
+                                    <div className="flex items-center gap-4 font-mono text-xs">
+                                      <span>Billed: <strong>{(inv.amountPayable || inv.amountBilled || 0).toLocaleString()}</strong></span>
+                                      <span>Paid: <strong className="text-emerald-700">{(inv.amountPaid || 0).toLocaleString()}</strong></span>
+                                      <span>Bal: <strong className={isInvPaid ? 'text-emerald-700' : 'text-rose-700'}>{invBal.toLocaleString()}</strong></span>
+                                      <span className="material-symbols-outlined text-[16px] text-slate-400">
+                                        {isExpanded ? 'expand_less' : 'expand_more'}
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  {isExpanded && inv.items && inv.items.length > 0 && (
+                                    <div className="p-3 border-t border-slate-200 space-y-2 bg-white">
+                                      <table className="w-full text-left text-xs">
+                                        <thead className="bg-slate-100 text-slate-600 font-semibold">
+                                          <tr>
+                                            <th className="p-2">Item Name</th>
+                                            <th className="p-2">Category</th>
+                                            <th className="p-2 text-right">Amount (KES)</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100 font-mono">
+                                          {inv.items.map((it: any, itemIdx: number) => (
+                                            <tr key={itemIdx}>
+                                              <td className="p-2 font-sans">{it.name}</td>
+                                              <td className="p-2 font-sans text-slate-500 text-[11px]">{it.category || 'Tuition / Levy'}</td>
+                                              <td className="p-2 text-right font-bold">{(it.amount || 0).toLocaleString()}</td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* 2. PAYMENTS TAB */}
+                    {statementTab === 'payments' && (
+                      <div className="space-y-3">
+                        {paymentsList.length === 0 ? (
+                          <div className="p-8 text-center text-xs text-slate-500 bg-slate-50 rounded-xl border border-slate-200">
+                            <span className="material-symbols-outlined text-3xl text-slate-400 mb-1">credit_card_off</span>
+                            <p className="font-semibold text-slate-700">No payment records found for this learner yet.</p>
+                            <div className="pt-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedStudentForPayment(statementStudent);
+                                  setIsRecordPaymentOpen(true);
+                                }}
+                                className="px-3 py-1.5 bg-[#7a1228] text-white text-xs font-bold rounded-lg cursor-pointer shadow-xs"
+                              >
+                                Record Payment Now
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="border border-slate-200 rounded-xl overflow-hidden bg-white">
+                            <table className="w-full text-left text-xs font-mono">
+                              <thead className="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200">
+                                <tr>
+                                  <th className="p-2.5">Receipt #</th>
+                                  <th className="p-2.5">Date</th>
+                                  <th className="p-2.5 font-sans">Method</th>
+                                  <th className="p-2.5">Reference / Slip</th>
+                                  <th className="p-2.5 text-right">Amount</th>
+                                  <th className="p-2.5 text-center font-sans">Status</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-100">
+                                {paymentsList.map((p, pIdx) => (
+                                  <tr key={pIdx} className="hover:bg-slate-50">
+                                    <td className="p-2.5 font-bold text-[#7a1228]">{p.receiptNumber || `REC-${pIdx + 1000}`}</td>
+                                    <td className="p-2.5 text-slate-600">{p.paymentDate || 'Recent'}</td>
+                                    <td className="p-2.5 font-sans font-medium text-slate-800">{p.paymentMethod || 'KCB_BUNI'}</td>
+                                    <td className="p-2.5 text-slate-600">{p.transactionReference || '--'}</td>
+                                    <td className="p-2.5 text-right font-extrabold text-emerald-700">
+                                      +KES {(p.amount || 0).toLocaleString()}
+                                    </td>
+                                    <td className="p-2.5 text-center font-sans">
+                                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                                        {p.status || 'COMPLETED'}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* 3. PRINTABLE STATEMENT ADVICE TAB */}
+                    {statementTab === 'statement' && (
+                      <div className="bg-white p-5 rounded-xl border border-slate-300 space-y-5">
+                        <div className="flex items-center justify-between border-b-2 border-slate-900 pb-3">
+                          <div>
+                            <h3 className="text-sm font-extrabold uppercase text-slate-900">
+                              {user?.schoolName || 'Grace Seeds School'}
+                            </h3>
+                            <p className="text-[11px] text-slate-500">Official Student Fee Statement &amp; Audit Slip</p>
+                          </div>
+                          <div className="text-right text-[11px] text-slate-600">
+                            <div>Date: <strong className="text-slate-900">{new Date().toLocaleDateString()}</strong></div>
+                            <div>Paybill: <strong className="text-emerald-800">522533</strong></div>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 bg-slate-50 rounded-lg text-xs border border-slate-200">
+                          <div>
+                            <span className="text-slate-500 text-[10px] uppercase font-bold block">Learner</span>
+                            <strong className="text-slate-900">{statementStudent.name}</strong>
+                          </div>
+                          <div>
+                            <span className="text-slate-500 text-[10px] uppercase font-bold block">Adm No</span>
+                            <strong className="text-slate-900 font-mono">{statementStudent.admNo}</strong>
+                          </div>
+                          <div>
+                            <span className="text-slate-500 text-[10px] uppercase font-bold block">Class / Stream</span>
+                            <strong className="text-slate-900">{statementStudent.grade} ({statementStudent.stream || 'Simba'})</strong>
+                          </div>
+                          <div>
+                            <span className="text-slate-500 text-[10px] uppercase font-bold block">Guardian</span>
+                            <strong className="text-slate-900">{statementStudent.guardianName || '--'} ({statementStudent.guardianPhone || '--'})</strong>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <h4 className="font-bold text-xs uppercase tracking-wider text-slate-800">Ledger Journal</h4>
+                          <div className="border border-slate-300 rounded-lg overflow-hidden">
+                            <table className="w-full text-left text-xs font-mono">
+                              <thead className="bg-slate-100 border-b border-slate-300 text-slate-700">
+                                <tr>
+                                  <th className="p-2 font-sans">Item / Description</th>
+                                  <th className="p-2">Reference</th>
+                                  <th className="p-2 text-right">Debit (Billed)</th>
+                                  <th className="p-2 text-right">Credit (Paid)</th>
+                                  <th className="p-2 text-right">Balance</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-200">
+                                {invoicesList.map((inv, iIdx) => (
+                                  <tr key={`inv-${iIdx}`}>
+                                    <td className="p-2 font-sans">Invoice #{inv.invoiceNumber}</td>
+                                    <td className="p-2 text-slate-500">{inv.dueDate || 'Term Fee'}</td>
+                                    <td className="p-2 text-right text-rose-700 font-bold">KES {(inv.amountPayable || inv.amountBilled || 0).toLocaleString()}</td>
+                                    <td className="p-2 text-right text-slate-400">--</td>
+                                    <td className="p-2 text-right font-bold text-slate-800">KES {(inv.balance || 0).toLocaleString()}</td>
+                                  </tr>
+                                ))}
+                                {paymentsList.map((p, pIdx) => (
+                                  <tr key={`p-${pIdx}`} className="bg-emerald-50/40">
+                                    <td className="p-2 font-sans text-emerald-900">Payment: {p.paymentMethod || 'KCB Paybill'}</td>
+                                    <td className="p-2 text-emerald-800">{p.receiptNumber}</td>
+                                    <td className="p-2 text-right text-slate-400">--</td>
+                                    <td className="p-2 text-right text-emerald-700 font-bold">+KES {(p.amount || 0).toLocaleString()}</td>
+                                    <td className="p-2 text-right font-bold text-slate-800">CR</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end gap-2 pt-2">
+                          <button
+                            type="button"
+                            onClick={() => handleDownloadStudentStatementPdf(statementStudent)}
+                            className="px-4 py-2 bg-[#7a1228] text-white rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm"
+                          >
+                            <span className="material-symbols-outlined text-[16px]">picture_as_pdf</span>
+                            <span>Download Statement PDF</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs">
+              <span className="text-slate-500 font-medium">
+                KCB Paybill 522533 · A/C: <strong className="font-mono text-emerald-800">{kcbAccountRef}</strong>
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsStatementModalOpen(false)}
+                className="px-3.5 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-lg text-xs font-bold cursor-pointer transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 6. MODAL: UNIFIED RECORD PAYMENT / ARREARS MODAL */}
+      {isRecordPaymentOpen && (
         <RecordPaymentModal
           isOpen={isRecordPaymentOpen}
-          onClose={() => setIsRecordPaymentOpen(false)}
+          onClose={() => {
+            setIsRecordPaymentOpen(false);
+            setSelectedStudentForPayment(null);
+          }}
           students={students}
-          initialStudent={selectedStudent}
+          initialStudent={selectedStudentForPayment || (students.length > 0 ? students[0] : undefined)}
           onPaymentRecorded={handlePaymentSuccess}
+          onArrearRecorded={handlePaymentSuccess}
+          onRefreshStudents={onRefreshStudents}
         />
       )}
 
-      {/* 3. Delete Hanging Invoice Confirmation Modal */}
+      {/* 7. MODAL: DELETE HANGING INVOICE CONFIRMATION */}
       {invoiceToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-xs overflow-y-auto animate-fade-in">
-          <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-outline-variant/30 my-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto animate-fade-in font-sans">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-200 my-auto">
             <div className="bg-rose-700 text-white p-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-[20px]">warning</span>
-                <h3 className="font-semibold text-sm">Delete Hanging Invoice</h3>
+                <h3 className="font-bold text-sm">Delete Hanging Invoice</h3>
               </div>
               <button
                 onClick={() => {
@@ -1415,30 +1928,30 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
             </div>
 
             <div className="p-5 space-y-4 text-xs">
-              <p className="text-on-surface">
-                Are you sure you want to delete invoice <strong className="font-data-mono text-primary">#{invoiceToDelete.invoiceNumber}</strong>?
+              <p className="text-slate-800">
+                Are you sure you want to delete invoice <strong className="font-mono text-[#7a1228]">#{invoiceToDelete.invoiceNumber}</strong>?
               </p>
 
-              <div className="p-3 bg-surface-container-low rounded-xl border border-outline-variant/20 space-y-2 font-data-mono">
-                <div className="flex justify-between text-on-surface-variant font-sans">
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2 font-mono">
+                <div className="flex justify-between text-slate-600 font-sans">
                   <span>Student / Adm:</span>
-                  <span className="font-semibold text-on-surface">
-                    {selectedStudent?.name || invoiceToDelete.studentId} ({selectedStudent?.admNo || ''})
+                  <span className="font-bold text-slate-900">
+                    {statementStudent?.name || invoiceToDelete.studentId} ({statementStudent?.admNo || ''})
                   </span>
                 </div>
-                <div className="flex justify-between text-on-surface-variant font-sans">
+                <div className="flex justify-between text-slate-600 font-sans">
                   <span>Billed Amount:</span>
-                  <span className="font-bold text-on-surface">
+                  <span className="font-bold text-slate-900">
                     KES {(invoiceToDelete.amountPayable || invoiceToDelete.amountBilled || 0).toLocaleString()}
                   </span>
                 </div>
-                <div className="flex justify-between text-on-surface-variant font-sans">
+                <div className="flex justify-between text-slate-600 font-sans">
                   <span>Amount Paid:</span>
                   <span className="font-bold text-emerald-700">
                     KES {(invoiceToDelete.amountPaid || 0).toLocaleString()} (0 Payments)
                   </span>
                 </div>
-                <div className="flex justify-between text-on-surface-variant font-sans">
+                <div className="flex justify-between text-slate-600 font-sans">
                   <span>Status:</span>
                   <span className="px-2 py-0.5 rounded bg-rose-100 text-rose-800 font-bold text-[10px] uppercase">
                     {invoiceToDelete.status} (Hanging)
@@ -1449,7 +1962,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
               <div className="p-2.5 bg-amber-50 border border-amber-200 text-amber-900 rounded-lg text-[11px] flex items-start gap-2">
                 <span className="material-symbols-outlined text-[16px] text-amber-700 shrink-0 mt-0.5">info</span>
                 <span>
-                  This action removes this unsettled billing entry from the ledger. Only hanging invoices with <strong>zero payments recorded</strong> can be deleted. This action cannot be undone.
+                  Only hanging invoices with <strong>zero payments recorded</strong> can be deleted. This action cannot be undone.
                 </span>
               </div>
 
@@ -1460,7 +1973,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                 </div>
               )}
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-surface-container">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200">
                 <button
                   type="button"
                   onClick={() => {
@@ -1468,7 +1981,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                     setDeleteError(null);
                   }}
                   disabled={isDeletingInvoice}
-                  className="px-3.5 py-2 bg-surface-container hover:bg-surface-container-high text-on-surface rounded-lg text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50"
+                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold cursor-pointer disabled:opacity-50"
                 >
                   Cancel
                 </button>
@@ -1476,19 +1989,9 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                   type="button"
                   onClick={handleDeleteInvoice}
                   disabled={isDeletingInvoice}
-                  className="px-4 py-2 bg-error hover:bg-rose-700 text-white rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                  className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold cursor-pointer flex items-center gap-1 disabled:opacity-50"
                 >
-                  {isDeletingInvoice ? (
-                    <>
-                      <div className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin"></div>
-                      <span>Deleting...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="material-symbols-outlined text-sm">delete</span>
-                      <span>Confirm Delete</span>
-                    </>
-                  )}
+                  {isDeletingInvoice ? 'Deleting...' : 'Confirm Delete'}
                 </button>
               </div>
             </div>

@@ -117,6 +117,13 @@ export const BursarDashboardView: React.FC<BursarDashboardViewProps> = ({
               <span className="material-symbols-outlined text-[18px]">receipt_long</span>
               <span>Defaulters Roster ({safeDefaulters.length})</span>
             </button>
+            <button
+              onClick={() => onNavigateTab('forwarded-payments')}
+              className="px-4 py-2.5 rounded-xl bg-emerald-800/80 hover:bg-emerald-800 text-white font-semibold text-xs border border-emerald-400/30 flex items-center gap-2 transition-all cursor-pointer shadow-xs"
+            >
+              <span className="material-symbols-outlined text-[18px]">forward_to_inbox</span>
+              <span>Forwarded Payments</span>
+            </button>
           </div>
         </div>
       </div>
@@ -257,6 +264,17 @@ export const BursarDashboardView: React.FC<BursarDashboardViewProps> = ({
             </p>
 
             <div className="space-y-2.5">
+              <button
+                onClick={() => onNavigateTab('forwarded-payments')}
+                className="w-full p-3 rounded-xl border border-outline-variant/30 hover:bg-emerald-50/50 hover:border-emerald-300 transition-all flex items-center gap-3 text-left cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-emerald-700 text-[22px]">forward_to_inbox</span>
+                <div>
+                  <div className="text-xs font-bold text-on-surface">Parent Forwarded Payments</div>
+                  <div className="text-[11px] text-on-surface-variant">Verify M-Pesa &amp; Bank SMS confirmations</div>
+                </div>
+              </button>
+
               <button
                 onClick={() => onNavigateTab('cashflow-ledger')}
                 className="w-full p-3 rounded-xl border border-outline-variant/30 hover:bg-amber-50/50 hover:border-amber-300 transition-all flex items-center gap-3 text-left cursor-pointer"

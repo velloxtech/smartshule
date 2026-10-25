@@ -40,23 +40,26 @@ const GRADE_LEVEL_OPTIONS = [
 // Quick Templates for School Administration
 const ANNOUNCEMENT_TEMPLATES = [
   {
-    title: 'Term 3 Opening & Reporting Directives',
+    title: '📢 Official School Reopening & Reporting Directives',
     category: 'GENERAL' as AnnouncementCategory,
     priority: 'HIGH' as AnnouncementPriority,
     targetAudience: 'PARENTS' as AnnouncementAudience,
     content: `Dear Parents and Guardians,
 
-Grace Seeds School warmly welcomes back our learners for Term 3. 
+Grace Seeds School warmly announces the official reopening and reporting schedule for the upcoming academic term.
 
-1. Reporting Time: All learners are expected at school by 7:45 AM on Monday.
-2. School Uniform & Grooming: Please ensure full standard uniform, black leather shoes, and clean PE kit on scheduled days.
-3. Stationery & CBC Workbooks: Ensure all student exercise books and creative work materials are labelled clearly.
-4. Transport & Drop-off: Morning bus routes will commence at 6:15 AM sharp. Parents dropping learners directly are requested to use Gate 2.
+1. Official Reopening Date: Monday, 5th January 2027 (or scheduled term opening date)
+2. Reporting Time: All learners are expected at school promptly by 7:45 AM for morning assembly and devotion.
+3. School Uniform & Grooming: Please ensure full standard uniform, clean polished black leather shoes, and clean PE kit on scheduled sports days.
+4. Stationery & CBC Workbooks: Ensure all student exercise books, strand assessment portfolios, and creative learning materials are labelled clearly.
+5. School Transport: Morning bus pickup routes will commence at 6:15 AM sharp. Parents dropping learners directly are requested to use Gate 2.
+6. Term Fee Clearance: Kindly finalize term fees or obtain financial clearance via M-Pesa Paybill 247247 before reporting.
 
-We look forward to an enriching and fruitful final term of the academic year.
+We look forward to an enriching, inspiring, and fruitful academic session with our learners.
 
 Warm regards,
-Office of the Head Teacher`,
+Office of the Head Teacher / School Administration
+Grace Seeds School`,
   },
   {
     title: '2026 Annual Fee Settlement & Clearance Directive',
@@ -939,13 +942,29 @@ export const AnnouncementsView: React.FC = () => {
           </button>
 
           {canManage && (
-            <button
-              onClick={openCreateModal}
-              className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-sm font-semibold transition shadow-md hover:shadow-lg"
-            >
-              <span className="material-symbols-outlined text-base">post_add</span>
-              <span>Post New Notice</span>
-            </button>
+            <>
+              <button
+                onClick={() => {
+                  openCreateModal();
+                  applyTemplate(ANNOUNCEMENT_TEMPLATES[0]);
+                  setFormSendSms(true);
+                  setFormIsPinned(true);
+                }}
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-[#800000] hover:bg-[#660000] text-white border border-rose-400/30 rounded-xl text-sm font-semibold transition shadow-md cursor-pointer"
+                title="Broadcast School Reopening Notice & Directives to Parents"
+              >
+                <span className="material-symbols-outlined text-base text-amber-300">campaign</span>
+                <span>📢 Reopening Notice</span>
+              </button>
+
+              <button
+                onClick={openCreateModal}
+                className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-sm font-semibold transition shadow-md hover:shadow-lg cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-base">post_add</span>
+                <span>Post New Notice</span>
+              </button>
+            </>
           )}
 
           <button

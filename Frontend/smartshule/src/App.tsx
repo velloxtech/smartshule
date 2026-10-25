@@ -53,6 +53,7 @@ import { LunchFeeManagementView } from './components/views/LunchFeeManagementVie
 import { ParentProfileView } from './components/views/ParentProfileView';
 import { StudentFeeCheckerView } from './components/views/StudentFeeCheckerView';
 import { ArrearsView } from './components/views/ArrearsView';
+import { ForwardedPaymentsView } from './components/views/ForwardedPaymentsView';
 import { ArchivedRecordsView } from './components/views/ArchivedRecordsView';
 import { StandaloneArchivedRecordsPage } from './components/views/StandaloneArchivedRecordsPage';
 import { LibraryView } from './components/views/LibraryView';
@@ -701,6 +702,16 @@ export default function App() {
             if (appView !== 'portal') setAppView('portal');
           }
         }
+      } else if (hash === '#/forwarded-payments' || hash === '#/forwarded' || search.includes('view=forwarded')) {
+        if (isAuthenticated) {
+          if (user?.role && isTabPermitted('forwarded-payments', user.role)) {
+            setCurrentTab('forwarded-payments');
+            if (appView !== 'portal') setAppView('portal');
+          } else {
+            setCurrentTab('dashboard');
+            if (appView !== 'portal') setAppView('portal');
+          }
+        }
       } else if (appView === 'archive' && !hash && !search.includes('view=archive')) {
         setAppView('portal');
       }
@@ -1150,6 +1161,24 @@ export default function App() {
             />
           )}
 
+          {currentTab === 'forwarded-payments' && (
+            user?.role && [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.BURSAR, UserRole.ACCOUNTANT].includes(user.role) ? (
+              <ForwardedPaymentsView
+                students={students}
+                onRefreshStudents={refreshStudentsAndFees}
+                onNavigateTab={(tab) => setCurrentTab(tab as any)}
+              />
+            ) : (
+              <div className="p-8 my-8 text-center rounded-2xl bg-rose-50 border border-rose-200 text-rose-950 space-y-3 max-w-lg mx-auto">
+                <span className="material-symbols-outlined text-[48px] text-rose-700">lock</span>
+                <h3 className="text-base font-bold">Access Restricted</h3>
+                <p className="text-xs text-rose-800">
+                  Parent forwarded payment verification is restricted to administrative and accounting personnel only.
+                </p>
+              </div>
+            )
+          )}
+
           {currentTab === 'defaulters-receipts' && (
             <DefaultersView
               students={students}
@@ -1301,6 +1330,8 @@ export default function App() {
         students={students}
         initialStudent={selectedStudentForPayment}
         onPaymentRecorded={handlePaymentRecorded}
+        onArrearRecorded={refreshStudentsAndFees}
+        onRefreshStudents={refreshStudentsAndFees}
       />
 
       <ForwardPaymentModal

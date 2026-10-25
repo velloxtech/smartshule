@@ -33,19 +33,31 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
   const [activeCbcTab, setActiveCbcTab] = useState<'formative' | 'summative'>('formative');
   const [selectedFormativeRating, setSelectedFormativeRating] = useState<string>('All');
   const [selectedFormativeSubject, setSelectedFormativeSubject] = useState<string>('All');
+  const [reopenAnnouncement, setReopenAnnouncement] = useState<any | null>(null);
 
   const loadPortalData = async () => {
     setLoading(true);
     try {
-      const [res, lunchRes] = await Promise.all([
+      const [res, lunchRes, annRes] = await Promise.all([
         apiService.getGuardianPortalData(),
         apiService.getLunchEnrollments().catch(() => ({ success: true, data: [] })),
+        apiService.getAnnouncements().catch(() => ({ success: true, data: [] })),
       ]);
       if (res.success && res.data) {
         setPortalData(res.data);
       }
       if (lunchRes.success && lunchRes.data) {
         setLunchEnrollments(lunchRes.data);
+      }
+      if (annRes?.data && Array.isArray(annRes.data)) {
+        const found = annRes.data.find((a: any) =>
+          a.title?.toLowerCase().includes('reopen') ||
+          a.title?.toLowerCase().includes('opening') ||
+          a.content?.toLowerCase().includes('reopening date')
+        );
+        if (found) {
+          setReopenAnnouncement(found);
+        }
       }
     } catch (err) {
       console.error('Failed to load parent portal data:', err);
@@ -67,9 +79,10 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
   const guardianUser = portalData?.guardian?.user || user;
 
   const currentChildFee = currentChild?.fee;
-  const feeBalance = currentChildFee?.balance || 0;
-  const isFeeCleared = Boolean(currentChild?.isChargeExempt) || feeBalance <= 0;
-  const arrearsAmount = currentChildFee?.arrearsAmount || 0;
+  const isSponsored = Boolean(currentChild?.isSponsored || currentChild?.sponsorship || currentChild?.isChargeExempt || (currentChild as any)?.sponsorship);
+  const feeBalance = isSponsored ? 0 : (currentChildFee?.balance || (currentChild as any)?.feeBalance || 0);
+  const isFeeCleared = isSponsored || feeBalance <= 0;
+  const arrearsAmount = isSponsored ? 0 : (currentChildFee?.arrearsAmount || (currentChild as any)?.priorArrears || 0);
   const feeBannerConfig: FeeBannerConfig | null = portalData?.feeBanner || null;
   const rawDueDate = feeBannerConfig?.deadlineDate || currentChildFee?.dueDate || currentChildFee?.invoices?.[0]?.dueDate || null;
 
@@ -304,8 +317,93 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
             </div>
           </div>
 
+          {/* Official School Reopening Notice Banner for Parents */}
+          {reopenAnnouncement && (
+            <div className="bg-gradient-to-r from-[#800000] via-[#660000] to-[#500b1a] text-white rounded-2xl p-4 sm:p-5 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4 animate-fade-in border border-rose-300/30">
+              <div className="flex items-start sm:items-center gap-3.5">
+                <div className="w-12 h-12 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center font-bold shrink-0 shadow-xs text-amber-300">
+                  <span className="material-symbols-outlined text-[28px]">campaign</span>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-sm sm:text-base font-extrabold text-white tracking-tight">
+                      {reopenAnnouncement.title}
+                    </h3>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-400 text-slate-950 uppercase tracking-wider">
+                      Official Admin Notice
+                    </span>
+                  </div>
+                  <p className="text-xs text-rose-100 mt-1 leading-relaxed line-clamp-2">
+                    {reopenAnnouncement.content}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0 self-end md:self-center">
+                {onNavigateTab && (
+                  <button
+                    onClick={() => onNavigateTab('announcements')}
+                    className="px-3.5 py-2 bg-white/20 hover:bg-white/30 text-white rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5"
+                  >
+                    <span>Read Full Directives</span>
+                    <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Prominent Fee Payment Notice & Remittance Instructions */}
-          {feeBannerConfig?.isEnabled !== false && (feeBalance > 0 || !feeBannerConfig?.showOnlyToDefaulters) ? (
+          {isSponsored ? (
+            <div className="bg-emerald-500/10 border-2 border-emerald-500/40 rounded-2xl p-4 sm:p-5 shadow-xs flex items-center justify-between gap-4 animate-fade-in">
+              <div className="flex items-center gap-3.5">
+                <div className="w-11 h-11 rounded-2xl bg-emerald-500/20 text-emerald-900 border border-emerald-500/30 flex items-center justify-center font-bold shrink-0">
+                  <span className="material-symbols-outlined text-[26px]">verified</span>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-extrabold text-emerald-950">
+                      Fees Cleared · 100% Institutional Scholarship Scheme
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-700 text-white">
+                      Status: CLEARED
+                    </span>
+                  </div>
+                  <p className="text-xs text-emerald-900/90 mt-0.5">
+                    <strong>{currentChild.firstName} {currentChild.lastName}</strong> is enrolled under the institutional scholarship benevolence scheme. All academic term fees are 100% waived and fully cleared.
+                  </p>
+                </div>
+              </div>
+              <div className="text-right hidden sm:block">
+                <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider block">Ledger Balance</span>
+                <span className="text-base font-black font-data-mono text-emerald-800">KES 0 (CLEARED)</span>
+              </div>
+            </div>
+          ) : feeBalance < 0 ? (
+            <div className="bg-teal-500/10 border-2 border-teal-500/40 rounded-2xl p-4 sm:p-5 shadow-xs flex items-center justify-between gap-4 animate-fade-in">
+              <div className="flex items-center gap-3.5">
+                <div className="w-11 h-11 rounded-2xl bg-teal-500/20 text-teal-900 border border-teal-500/30 flex items-center justify-center font-bold shrink-0">
+                  <span className="material-symbols-outlined text-[26px]">savings</span>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-extrabold text-teal-950">
+                      Fee Overpayment / Advance Credit
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-teal-700 text-white font-mono">
+                      Credit Balance: -KES {Math.abs(feeBalance).toLocaleString()}
+                    </span>
+                  </div>
+                  <p className="text-xs text-teal-900/90 mt-0.5">
+                    An advance payment has been recorded for <strong>{currentChild.firstName}</strong>. Your account has an overpayment credit of <strong className="font-mono text-teal-950 font-bold">-KES {Math.abs(feeBalance).toLocaleString()}</strong> which will automatically be credited against subsequent term fees.
+                  </p>
+                </div>
+              </div>
+              <div className="text-right hidden sm:block">
+                <span className="text-[10px] font-bold text-teal-800 uppercase tracking-wider block">Prepaid Credit</span>
+                <span className="text-base font-black font-data-mono text-teal-800">-KES {Math.abs(feeBalance).toLocaleString()}</span>
+              </div>
+            </div>
+          ) : feeBalance > 0 && feeBannerConfig?.isEnabled !== false ? (
             <div className="bg-gradient-to-r from-amber-500/15 via-rose-500/10 to-amber-500/15 border-2 border-amber-500/50 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 animate-fade-in">
               <div className="flex items-start sm:items-center gap-3.5">
                 <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-900 border border-amber-500/30 flex items-center justify-center font-bold shrink-0 shadow-2xs">
@@ -481,20 +579,36 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
 
             <div className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs">
               <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
-                Outstanding Balance
+                {isSponsored ? 'Fee Status' : feeBalance < 0 ? 'Account Credit / Overpayment' : 'Outstanding Balance'}
               </span>
-              <div className="text-2xl font-bold font-data-mono text-error mt-1">
-                KES {(currentChild.fee?.balance || 0).toLocaleString()}
+              <div className={`text-2xl font-bold font-data-mono mt-1 ${
+                isSponsored || feeBalance === 0 ? 'text-emerald-700' : feeBalance < 0 ? 'text-teal-700' : 'text-error'
+              }`}>
+                {isSponsored
+                  ? 'KES 0 (CLEARED)'
+                  : feeBalance < 0
+                  ? `-KES ${Math.abs(feeBalance).toLocaleString()}`
+                  : `KES ${feeBalance.toLocaleString()}`}
               </div>
-              {arrearsAmount > 0 && (
+              {arrearsAmount > 0 && !isSponsored && feeBalance > 0 && (
                 <div className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-950 text-[10px] font-bold border border-amber-300">
                   <span className="material-symbols-outlined text-[12px] text-amber-800">warning</span>
                   <span>Includes KES {arrearsAmount.toLocaleString()} Prior Arrears</span>
                 </div>
               )}
-              <span className="text-[11px] text-on-surface-variant mt-1 block">
-                Total Invoiced: KES {(currentChild.fee?.totalBilled || 0).toLocaleString()}
-              </span>
+              {isSponsored ? (
+                <span className="text-[11px] text-emerald-800 font-bold mt-1 block">
+                  100% Institutional Scholarship
+                </span>
+              ) : feeBalance < 0 ? (
+                <span className="text-[11px] text-teal-700 font-bold mt-1 block">
+                  Exact Advance Overpayment: -KES {Math.abs(feeBalance).toLocaleString()}
+                </span>
+              ) : (
+                <span className="text-[11px] text-on-surface-variant mt-1 block">
+                  Total Invoiced: KES {(currentChild.fee?.totalBilled || 0).toLocaleString()}
+                </span>
+              )}
             </div>
 
             <div className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs">
@@ -527,8 +641,8 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                     <span className="material-symbols-outlined text-[14px]">forward_to_inbox</span>
                     <span>Forward Payment</span>
                   </button>
-                  <span className="text-xs font-bold text-primary font-data-mono">
-                    Balance: KES {(currentChild.fee?.balance || 0).toLocaleString()}
+                  <span className={`text-xs font-bold font-data-mono ${feeBalance < 0 ? 'text-teal-800' : isSponsored || feeBalance === 0 ? 'text-emerald-700' : 'text-primary'}`}>
+                    Balance: {isSponsored ? 'KES 0 (CLEARED)' : feeBalance < 0 ? `-KES ${Math.abs(feeBalance).toLocaleString()}` : `KES ${feeBalance.toLocaleString()}`}
                   </span>
                 </div>
               </div>

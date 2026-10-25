@@ -1,0 +1,3402 @@
+/home/don/Documents/VELLOX TECH PROJECTS/SmartShule
+├── .cursor
+├── data
+│   ├── uploads
+│   │   ├── img-1789902127133-7bo2thy.png
+│   │   ├── img-1789902127142-r69eqtf.jpg
+│   │   ├── img-1789903055137-94x2emq.png
+│   │   ├── img-1789903055165-4n6k6k0.jpg
+│   │   ├── img-1789903055189-hlwotnq.jpg
+│   │   ├── img-1789903055198-uwrpvgb.png
+│   │   ├── img-1789903055217-wa526pt.png
+│   │   ├── img-1789903095065-1yfwshf.png
+│   │   ├── img-1789903095076-cfgvqa5.jpg
+│   │   ├── img-1789903095089-hwasmhs.jpg
+│   │   ├── img-1789903095097-sh30dnj.png
+│   │   ├── img-1789903095109-hgp2xvg.png
+│   │   ├── img-1789903641158-gueus5b.jpg
+│   │   ├── img-1789903922691-ro033jf.webp
+│   │   ├── img-1789904327195-r78wi0k.png
+│   │   ├── img-1789904327203-mqy29ro.jpg
+│   │   ├── img-1789904327219-qfl8c4y.jpg
+│   │   ├── img-1789904327226-l0jckb8.png
+│   │   ├── img-1789904327232-i7otkrd.png
+│   │   ├── img-1789906267087-kfamls5.png
+│   │   ├── img-1789906267099-ky9hpk0.jpg
+│   │   ├── img-1789906267113-dzp1qvq.jpg
+│   │   ├── img-1789906267120-nxnfrtt.png
+│   │   ├── img-1789906267126-2682ap2.png
+│   │   ├── img-1789909499528-ekaol9r.png
+│   │   ├── img-1789909499540-6ugxhct.jpg
+│   │   ├── img-1789909499558-yim43ae.jpg
+│   │   ├── img-1789909499567-8r2ec6u.png
+│   │   ├── img-1789909499575-2kkiojg.png
+│   │   ├── img-1789909567577-le2llt8.png
+│   │   ├── img-1789909567587-qu2uc6l.jpg
+│   │   ├── img-1789909567602-od1licz.jpg
+│   │   ├── img-1789909567608-7d232nj.png
+│   │   ├── img-1789909567616-zq08h12.png
+│   │   ├── img-1789909939863-exflyhs.png
+│   │   ├── img-1789909939875-zc5rqwt.jpg
+│   │   ├── img-1789909939891-lwgxqko.jpg
+│   │   ├── img-1789909939904-qwmb8ex.png
+│   │   ├── img-1789909939942-kirxtxj.png
+│   │   ├── img-1789909975168-6brpr7r.png
+│   │   ├── img-1789909975181-lwqdwoy.jpg
+│   │   ├── img-1789909975201-3uznwfx.jpg
+│   │   ├── img-1789909975212-u0cfu75.png
+│   │   ├── img-1789909975221-2t3tk9r.png
+│   │   ├── img-1789910005229-f7c7crv.png
+│   │   ├── img-1789910005239-8404v4w.jpg
+│   │   ├── img-1789910005314-rr8lbtz.jpg
+│   │   ├── img-1789910005319-44al53v.png
+│   │   ├── img-1789910005334-rndgdzi.png
+│   │   ├── img-1789910029864-tbrml6k.png
+│   │   ├── img-1789910029875-z0k3dzh.jpg
+│   │   ├── img-1789910029895-pzcabt3.jpg
+│   │   ├── img-1789910029901-joccriw.png
+│   │   ├── img-1789910029910-4e1au95.png
+│   │   ├── img-1789910055971-vqxbx9j.png
+│   │   ├── img-1789910055980-xcqqicj.jpg
+│   │   ├── img-1789910055992-ktidasm.jpg
+│   │   ├── img-1789910055998-acn6cbb.png
+│   │   ├── img-1789910056019-0d8940x.png
+│   │   ├── img-1789910327645-cqghipd.png
+│   │   ├── img-1789910327652-n5ib0wd.jpg
+│   │   ├── img-1789910327663-bbymnz7.jpg
+│   │   ├── img-1789910327667-usq8wbd.png
+│   │   ├── img-1789910327673-r1351qm.png
+│   │   ├── img-1789911035835-7ydcuzb.png
+│   │   ├── img-1789911035859-1s02gsv.jpg
+│   │   ├── img-1789911035892-0v2k98r.jpg
+│   │   ├── img-1789911035918-9653u4k.png
+│   │   ├── img-1789911035935-7i4cbyn.png
+│   │   ├── img-1789911077673-5q4nopx.png
+│   │   ├── img-1789911077695-95dxoyh.jpg
+│   │   ├── img-1789911077715-h7ynfk9.jpg
+│   │   ├── img-1789911077725-80qr2de.png
+│   │   ├── img-1789911077746-n12mnl3.png
+│   │   ├── img-1789912283828-nyej3ns.jpg
+│   │   ├── img-1789912704105-ndwbhzk.png
+│   │   ├── img-1789912704119-3upa773.jpg
+│   │   ├── img-1789912704150-9kshsax.jpg
+│   │   ├── img-1789912704166-fqsk4w0.png
+│   │   ├── img-1789912704192-v0im1d3.png
+│   │   ├── img-1789913209127-fx0cfyu.png
+│   │   ├── img-1789913209140-2ey5ill.jpg
+│   │   ├── img-1789913209158-ydetvjg.jpg
+│   │   ├── img-1789913209167-az7gmaw.png
+│   │   ├── img-1789913209176-19ubjrn.png
+│   │   ├── img-1789913835148-f1ecvp1.png
+│   │   ├── img-1789913835158-h1o9p98.jpg
+│   │   ├── img-1789913835170-bl70ode.jpg
+│   │   ├── img-1789913835175-cgbw879.png
+│   │   ├── img-1789913835180-gehdf98.png
+│   │   ├── img-1789928574234-92nf7lz.png
+│   │   ├── img-1789928574241-ojqaxsg.jpg
+│   │   ├── img-1789928574248-5evw0ym.jpg
+│   │   ├── img-1789928574253-p3oz00g.png
+│   │   ├── img-1789928574261-tk14s3b.png
+│   │   ├── img-1789934989263-e0q9709.png
+│   │   ├── img-1789934989278-ag8si44.jpg
+│   │   ├── img-1789934989305-0wud8u8.jpg
+│   │   ├── img-1789934989312-rptcn48.png
+│   │   ├── img-1789934989318-b8z49v6.png
+│   │   ├── img-1789980299354-lvcykcw.png
+│   │   ├── img-1789980299370-sacbzll.jpg
+│   │   ├── img-1789980299389-4u1c2zn.jpg
+│   │   ├── img-1789980299400-97lhu6g.png
+│   │   ├── img-1789980299408-zqf0ikg.png
+│   │   ├── img-1789980568718-rf62pm8.png
+│   │   ├── img-1789980568730-sw6pjj1.jpg
+│   │   ├── img-1789980568743-8nlb3ny.jpg
+│   │   ├── img-1789980568752-ypz2bs6.png
+│   │   ├── img-1789980568758-pwx7rp9.png
+│   │   ├── img-1790184607502-ctcy31r.png
+│   │   ├── img-1790184607518-gr999vu.jpg
+│   │   ├── img-1790184607535-g1s8fqp.jpg
+│   │   ├── img-1790184607541-64dpruf.png
+│   │   ├── img-1790184607547-1yt9dhx.png
+│   │   ├── img-1790184801984-d9d0k8y.png
+│   │   ├── img-1790184801999-jumx5eo.jpg
+│   │   ├── img-1790184802053-s62vbw5.jpg
+│   │   ├── img-1790184802060-pnsg4bx.png
+│   │   ├── img-1790184802066-hdmgwah.png
+│   │   ├── img-1790190118942-d7qz5mn.png
+│   │   ├── img-1790190118965-dys51h8.jpg
+│   │   ├── img-1790190118992-no0tjkr.jpg
+│   │   ├── img-1790190119003-d8wmf9b.png
+│   │   ├── img-1790190119010-yv66x6n.png
+│   │   ├── img-1790231992750-3okiojx.png
+│   │   ├── img-1790231992771-cpvuojv.jpg
+│   │   ├── img-1790231992785-xe4u4ng.jpg
+│   │   ├── img-1790231992791-iveqjtc.png
+│   │   ├── img-1790231992799-iut0ey5.png
+│   │   ├── img-1790232717192-69di3qc.png
+│   │   ├── img-1790232717225-y7e9m3u.jpg
+│   │   ├── img-1790232717263-6m1fjco.jpg
+│   │   ├── img-1790232717275-is3oqxo.png
+│   │   ├── img-1790232717282-wb9rg55.png
+│   │   ├── img-1790234866753-vlgkmsa.png
+│   │   ├── img-1790234866768-ol43dnt.jpg
+│   │   ├── img-1790234866781-rnyaiqm.jpg
+│   │   ├── img-1790234866790-patec41.png
+│   │   ├── img-1790234866798-x8j64k5.png
+│   │   ├── img-1790256842678-m6uvovp.png
+│   │   ├── img-1790256842691-0077nwq.jpg
+│   │   ├── img-1790256842698-5bl3sh1.jpg
+│   │   ├── img-1790256842701-zjrctwy.png
+│   │   ├── img-1790256842705-288cg0n.png
+│   │   ├── img-1790257423991-njjc614.png
+│   │   ├── img-1790257423999-8fhv8c6.jpg
+│   │   ├── img-1790257424028-tb4mrs3.jpg
+│   │   ├── img-1790257424036-moh2bkz.png
+│   │   ├── img-1790257424045-itf06v5.png
+│   │   ├── img-1790281119249-nw8qjuj.png
+│   │   ├── img-1790281119259-a5bnfp4.jpg
+│   │   ├── img-1790281119268-kz370xo.jpg
+│   │   ├── img-1790281119272-oty7749.png
+│   │   ├── img-1790281119276-qv9ztg4.png
+│   │   ├── img-1790357743525-n3mzn60.png
+│   │   ├── img-1790357743530-0aj6lb1.jpg
+│   │   ├── img-1790357743537-8zjdg0q.jpg
+│   │   ├── img-1790357743541-om2c3my.png
+│   │   ├── img-1790357743544-jabhq59.png
+│   │   ├── img-1790363483143-k1q4xjr.png
+│   │   ├── img-1790363483148-a7obhy8.jpg
+│   │   ├── img-1790363483155-hydd5wv.jpg
+│   │   ├── img-1790363483159-c54v8yp.png
+│   │   ├── img-1790363483162-lv3no21.png
+│   │   ├── img-1790364975926-tpzgxkg.png
+│   │   ├── img-1790364975939-6qsr3we.jpg
+│   │   ├── img-1790364975954-13za1av.jpg
+│   │   ├── img-1790364975961-zsn1t5g.png
+│   │   ├── img-1790364975965-tjidzxa.png
+│   │   ├── img-1790365965536-a1900r3.png
+│   │   ├── img-1790365965553-i3ilk52.jpg
+│   │   ├── img-1790365965564-c624fq6.jpg
+│   │   ├── img-1790365965569-7iuc9xx.png
+│   │   ├── img-1790365965572-58xvu3f.png
+│   │   ├── img-1790367665685-lqlo4x3.png
+│   │   ├── img-1790367665690-77ki0yc.jpg
+│   │   ├── img-1790367665698-uvdnf9b.jpg
+│   │   ├── img-1790367665704-srlsloh.png
+│   │   ├── img-1790367665708-5wwfunb.png
+│   │   ├── img-1790405599586-vznnfi7.png
+│   │   ├── img-1790405599590-ocxitsk.jpg
+│   │   ├── img-1790405599598-vmqr2i7.jpg
+│   │   ├── img-1790405599603-ass7hvw.png
+│   │   ├── img-1790405599606-q29o3zc.png
+│   │   ├── img-1790405804613-2s0o69c.png
+│   │   ├── img-1790405804625-qedwfan.jpg
+│   │   ├── img-1790405804638-rg4uguw.jpg
+│   │   ├── img-1790405804644-kw63g9c.png
+│   │   ├── img-1790405804648-dxrsw94.png
+│   │   ├── img-1790407421587-usa0qb1.png
+│   │   ├── img-1790407421598-wt0p42c.jpg
+│   │   ├── img-1790407421615-3dj22ru.jpg
+│   │   ├── img-1790407421622-xuwxx9g.png
+│   │   ├── img-1790407421628-21v2qxb.png
+│   │   ├── img-1790407612366-8ytlq7g.png
+│   │   ├── img-1790407612374-3691cb5.jpg
+│   │   ├── img-1790407612387-sapz9pj.jpg
+│   │   ├── img-1790407612395-99w2zcm.png
+│   │   ├── img-1790407612401-gr132dq.png
+│   │   ├── img-1790408328849-d1xysdk.png
+│   │   ├── img-1790408328853-6ke1zgm.jpg
+│   │   ├── img-1790408328860-hn5dfe0.jpg
+│   │   ├── img-1790408328864-g2i2u7o.png
+│   │   ├── img-1790408328867-mjhvxaw.png
+│   │   ├── img-1790409086299-kczy4jw.png
+│   │   ├── img-1790409086316-gd2sedu.jpg
+│   │   ├── img-1790409086324-ip6a9us.jpg
+│   │   ├── img-1790409086328-fnu8azr.png
+│   │   ├── img-1790409086356-1q3lydi.png
+│   │   ├── img-1790410873649-l5gu6z8.png
+│   │   ├── img-1790410873660-nviovde.jpg
+│   │   ├── img-1790410873676-2k33n24.jpg
+│   │   ├── img-1790410873685-g1lrgie.png
+│   │   ├── img-1790410873694-3gzie1y.png
+│   │   ├── img-1790411261155-zy61iyw.png
+│   │   ├── img-1790411261165-r23xb8g.jpg
+│   │   ├── img-1790411261172-gzkfsun.jpg
+│   │   ├── img-1790411261179-89quxbv.png
+│   │   ├── img-1790411261183-ahc4rr4.png
+│   │   ├── img-1790416985646-a8d47mp.png
+│   │   ├── img-1790416985657-j74c43t.jpg
+│   │   ├── img-1790416985672-d5j7atg.jpg
+│   │   ├── img-1790416985678-amb9ymq.png
+│   │   ├── img-1790416985686-p7ykbj2.png
+│   │   ├── img-1790500555440-s0pp1lt.png
+│   │   ├── img-1790500555449-3ny4noo.jpg
+│   │   ├── img-1790500555459-ykmlxu0.jpg
+│   │   ├── img-1790500555463-qetwbku.png
+│   │   ├── img-1790500555466-w6vfow1.png
+│   │   ├── img-1790503520888-d5c0wcz.png
+│   │   ├── img-1790503520895-u560ym3.jpg
+│   │   ├── img-1790503520901-2hfb1ar.jpg
+│   │   ├── img-1790503520905-0wk0jev.png
+│   │   ├── img-1790503520908-eyoipbv.png
+│   │   ├── img-1790503883773-6you375.png
+│   │   ├── img-1790503883807-umss3it.jpg
+│   │   ├── img-1790503883814-ztmki2v.jpg
+│   │   ├── img-1790503883817-biatacg.png
+│   │   ├── img-1790503883821-fv7nqdl.png
+│   │   ├── img-1790504041470-bmvh26j.png
+│   │   ├── img-1790504041475-ojouv8b.jpg
+│   │   ├── img-1790504041485-att94zm.jpg
+│   │   ├── img-1790504041489-7buefqt.png
+│   │   ├── img-1790504041492-jvwc1ff.png
+│   │   ├── img-1790612633515-7oq11dm.png
+│   │   ├── img-1790612633521-s4pgfcn.jpg
+│   │   ├── img-1790612633529-7jwq7ru.jpg
+│   │   ├── img-1790612633533-9s6mqp2.png
+│   │   ├── img-1790612633537-0cc7bpw.png
+│   │   ├── img-1790613862947-efgbn2x.png
+│   │   ├── img-1790613862951-tiqa7k1.jpg
+│   │   ├── img-1790613862957-o1hvxzy.jpg
+│   │   ├── img-1790613862961-pmk439b.png
+│   │   ├── img-1790613862964-hkd50r6.png
+│   │   ├── img-1790617062973-gefnce5.png
+│   │   ├── img-1790617062978-3ikfmu1.jpg
+│   │   ├── img-1790617062985-in6uvoz.jpg
+│   │   ├── img-1790617062988-c8wog1h.png
+│   │   ├── img-1790617062992-ms0wxz9.png
+│   │   ├── img-1790620884241-cc06hfs.png
+│   │   ├── img-1790620884255-mem90ak.jpg
+│   │   ├── img-1790620884272-d5wqn67.jpg
+│   │   ├── img-1790620884281-0o2e4st.png
+│   │   ├── img-1790620884304-ptocpyp.png
+│   │   ├── img-1790699477295-2b7t084.png
+│   │   ├── img-1790699477300-4xk92bp.jpg
+│   │   ├── img-1790699477309-y8z7fgs.jpg
+│   │   ├── img-1790699477313-6jbari9.png
+│   │   ├── img-1790699477316-z0k4mgp.png
+│   │   ├── img-1790701106821-fdydoaf.png
+│   │   ├── img-1790701106826-gffbb9g.jpg
+│   │   ├── img-1790701106832-o1qalon.jpg
+│   │   ├── img-1790701106836-673npcw.png
+│   │   ├── img-1790701106839-pzce2hg.png
+│   │   ├── img-1790701914919-swakc1h.png
+│   │   ├── img-1790701914942-zoio2co.jpg
+│   │   ├── img-1790701914951-lvr47qv.jpg
+│   │   ├── img-1790701914963-cns4vj2.png
+│   │   ├── img-1790701914974-cdrrpss.png
+│   │   ├── img-1790702263956-yp0sp08.png
+│   │   ├── img-1790702263962-wp2476u.jpg
+│   │   ├── img-1790702263971-6b9tnfn.jpg
+│   │   ├── img-1790702263976-izk0846.png
+│   │   ├── img-1790702263979-r98v75b.png
+│   │   ├── img-1790702314715-ojdrghz.png
+│   │   ├── img-1790702314726-ztdl2ec.jpg
+│   │   ├── img-1790702314738-3bfo1cp.jpg
+│   │   ├── img-1790702314742-verqx7b.png
+│   │   ├── img-1790702314745-gnuxdok.png
+│   │   ├── img-1790703632348-l7anf4d.png
+│   │   ├── img-1790703632355-m4njj4t.jpg
+│   │   ├── img-1790703632366-fe1sjtr.jpg
+│   │   ├── img-1790703632378-b8if8i2.png
+│   │   ├── img-1790703632383-sux6t4d.png
+│   │   ├── img-1790705152714-ay7avxt.png
+│   │   ├── img-1790705152720-4t7pbmb.jpg
+│   │   ├── img-1790705152727-e7tzyww.jpg
+│   │   ├── img-1790705152731-1bm7v4g.png
+│   │   ├── img-1790705152734-stfarbm.png
+│   │   ├── img-1790706668427-dqbgnj8.png
+│   │   ├── img-1790706668435-esc7rhd.jpg
+│   │   ├── img-1790706668444-x4q6f53.jpg
+│   │   ├── img-1790706668448-vmvd73o.png
+│   │   ├── img-1790706668451-5thzuwo.png
+│   │   ├── img-1790707918833-800n9k8.png
+│   │   ├── img-1790707918838-zr2banb.jpg
+│   │   ├── img-1790707918844-bbdqlka.jpg
+│   │   ├── img-1790707918848-fcu5g8j.png
+│   │   ├── img-1790707918851-gpx9wq1.png
+│   │   ├── img-1790710013934-pz3xk8e.png
+│   │   ├── img-1790710013939-ogk2vqn.jpg
+│   │   ├── img-1790710013945-xdc80xk.jpg
+│   │   ├── img-1790710013950-kc9i4t4.png
+│   │   ├── img-1790710013971-6lk4wu2.png
+│   │   ├── img-1790744403934-13poklp.png
+│   │   ├── img-1790744403945-c4akr1r.jpg
+│   │   ├── img-1790744403962-kukeh8z.jpg
+│   │   ├── img-1790744403968-iaykvdj.png
+│   │   ├── img-1790744403975-tp1gefi.png
+│   │   ├── img-1790935589867-z7fcja1.png
+│   │   ├── img-1790935589874-wea1ctn.jpg
+│   │   ├── img-1790935589884-f96s92o.jpg
+│   │   ├── img-1790935589888-vvb4jap.png
+│   │   ├── img-1790935589892-wmtoyds.png
+│   │   ├── img-1790937717174-brp8wy5.png
+│   │   ├── img-1790937717184-3fjcdp2.jpg
+│   │   ├── img-1790937717202-pwlkzx3.jpg
+│   │   ├── img-1790937717209-03kvk3v.png
+│   │   ├── img-1790937717215-wlzbwzs.png
+│   │   ├── img-1790962470442-kpjmjib.png
+│   │   ├── img-1790962470449-1pwbnks.jpg
+│   │   ├── img-1790962470459-xz0azqr.jpg
+│   │   ├── img-1790962470471-sgywgxy.png
+│   │   ├── img-1790962470478-1bj9bm6.png
+│   │   ├── img-1790963524509-wgl4323.png
+│   │   ├── img-1790963524521-s0v009c.jpg
+│   │   ├── img-1790963524538-w882hi7.jpg
+│   │   ├── img-1790963524548-qu6vmq8.png
+│   │   ├── img-1790963524561-jft3ak3.png
+│   │   ├── img-1790964620270-uwlhrmw.png
+│   │   ├── img-1790964620274-437kg3p.jpg
+│   │   ├── img-1790964620281-zpf46il.jpg
+│   │   ├── img-1790964620284-x9tcour.png
+│   │   ├── img-1790964620287-2k3lmlk.png
+│   │   ├── img-1790966019701-old164n.png
+│   │   ├── img-1790966019706-sfbeb8d.jpg
+│   │   ├── img-1790966019715-asu9es6.jpg
+│   │   ├── img-1790966019718-e1vy8yt.png
+│   │   ├── img-1790966019721-i2oxvfw.png
+│   │   ├── img-1790966498738-0xebztx.png
+│   │   ├── img-1790966498746-cwb7b25.jpg
+│   │   ├── img-1790966498757-l7hszbh.jpg
+│   │   ├── img-1790966498762-915dzoa.png
+│   │   ├── img-1790966498766-hkej4v7.png
+│   │   ├── img-1790967721114-y9fxhji.png
+│   │   ├── img-1790967721119-olvhs57.jpg
+│   │   ├── img-1790967721126-vwigka4.jpg
+│   │   ├── img-1790967721129-2ek0le3.png
+│   │   ├── img-1790967721133-gufgql3.png
+│   │   ├── img-1790968301803-9jdnrvw.png
+│   │   ├── img-1790968301810-ioyhk2s.jpg
+│   │   ├── img-1790968301819-ie6ndzx.jpg
+│   │   ├── img-1790968301822-qvcicdt.png
+│   │   ├── img-1790968301825-ib5xvbq.png
+│   │   ├── img-1790969204604-zrfhq55.png
+│   │   ├── img-1790969204609-gtho354.jpg
+│   │   ├── img-1790969204616-n5t81i5.jpg
+│   │   ├── img-1790969204619-xmytjvl.png
+│   │   ├── img-1790969204623-hsgs11e.png
+│   │   ├── img-1790971840653-dgu3yoq.png
+│   │   ├── img-1790971840660-3w56i5n.jpg
+│   │   ├── img-1790971840671-7f0zt5s.jpg
+│   │   ├── img-1790971840678-0o1rsct.png
+│   │   ├── img-1790971840683-56h9ljx.png
+│   │   ├── img-1791014636381-tay6vc0.png
+│   │   ├── img-1791014636387-idufq18.jpg
+│   │   ├── img-1791014636396-itua6rh.jpg
+│   │   ├── img-1791014636401-uyqsfaa.png
+│   │   ├── img-1791014636405-9jx04sv.png
+│   │   ├── img-1791045072802-jzte6o9.jpg
+│   │   ├── img-1791047356571-nxhajci.png
+│   │   ├── img-1791047356576-p0jn1kx.jpg
+│   │   ├── img-1791047356584-oxzf53w.jpg
+│   │   ├── img-1791047356588-ot8h07e.png
+│   │   ├── img-1791047356591-rsuf47u.png
+│   │   ├── img-1791050631869-zga6n5v.png
+│   │   ├── img-1791050631874-t65p9j2.jpg
+│   │   ├── img-1791050631880-kqdzxxu.jpg
+│   │   ├── img-1791050631884-ba5t3ur.png
+│   │   ├── img-1791050631887-a60cwyx.png
+│   │   ├── img-1791130572067-pi0uyyl.png
+│   │   ├── img-1791130572251-kxyihdv.jpg
+│   │   ├── img-1791130572259-yy5c8o5.jpg
+│   │   ├── img-1791130572263-7w07t04.png
+│   │   ├── img-1791130572267-4q8cepk.png
+│   │   ├── img-1791130772329-kemns6g.png
+│   │   ├── img-1791130772334-lw9e8j0.jpg
+│   │   ├── img-1791130772340-ii82y2l.jpg
+│   │   ├── img-1791130772344-e5e8p19.png
+│   │   ├── img-1791130772347-vmsg7hy.png
+│   │   ├── img-1791132584466-1z582xd.png
+│   │   ├── img-1791132584470-gvd10jn.jpg
+│   │   ├── img-1791132584478-jks06lw.jpg
+│   │   ├── img-1791132584482-2mzsfwd.png
+│   │   ├── img-1791132584485-qvhon16.png
+│   │   ├── img-1791134682528-dj1fel4.png
+│   │   ├── img-1791134682532-bz0tix0.jpg
+│   │   ├── img-1791134682538-t0sq7gq.jpg
+│   │   ├── img-1791134682541-v0s12zr.png
+│   │   ├── img-1791134682544-i59m7q9.png
+│   │   ├── img-1791141728984-6jqqq3v.png
+│   │   ├── img-1791141728989-vfp74ah.jpg
+│   │   ├── img-1791141728995-p4lqc5p.jpg
+│   │   ├── img-1791141729000-5jxxx4l.png
+│   │   ├── img-1791141729010-c7jq1vc.png
+│   │   ├── img-1791184961033-i23ono3.png
+│   │   ├── img-1791184961040-8tax7qa.jpg
+│   │   ├── img-1791184961049-iwigywk.jpg
+│   │   ├── img-1791184961054-wgb10px.png
+│   │   ├── img-1791184961057-x77fdkj.png
+│   │   ├── img-1791186342756-c80xhd1.png
+│   │   ├── img-1791186342760-wbofvof.jpg
+│   │   ├── img-1791186342766-u14xlx8.jpg
+│   │   ├── img-1791186342769-70okjyq.png
+│   │   ├── img-1791186342772-35kizx9.png
+│   │   ├── img-1791217620819-etz108k.png
+│   │   ├── img-1791217620827-frhbkca.jpg
+│   │   ├── img-1791217620835-qadoh7v.jpg
+│   │   ├── img-1791217620839-ag6n6hh.png
+│   │   ├── img-1791217620843-9vrlkrz.png
+│   │   ├── img-1791229842349-zmyllip.png
+│   │   ├── img-1791229842356-u5jzies.jpg
+│   │   ├── img-1791229842367-4gwrnc6.jpg
+│   │   ├── img-1791229842372-rezyqee.png
+│   │   ├── img-1791229842376-ufzt1tk.png
+│   │   ├── img-1791303433465-kh2uwx8.png
+│   │   ├── img-1791303433472-xpuobkd.jpg
+│   │   ├── img-1791303433479-53y5yc7.jpg
+│   │   ├── img-1791303433484-f6l3hhd.png
+│   │   ├── img-1791303433487-nonvccf.png
+│   │   ├── img-1791310958772-epwjq75.png
+│   │   ├── img-1791310958779-u8zr3d4.jpg
+│   │   ├── img-1791310958789-5he494j.jpg
+│   │   ├── img-1791310958793-js3cs90.png
+│   │   ├── img-1791310958797-89m3jkh.png
+│   │   ├── img-1791360669284-drdcxor.png
+│   │   ├── img-1791360669295-s12rrvi.jpg
+│   │   ├── img-1791360669306-zb7rufs.jpg
+│   │   ├── img-1791360669310-1fcybec.png
+│   │   ├── img-1791360669315-p7gx4k3.png
+│   │   ├── img-1791361843541-bmudib9.png
+│   │   ├── img-1791361843551-xz3bfn4.jpg
+│   │   ├── img-1791361843565-7r4tj7j.jpg
+│   │   ├── img-1791361843569-z1dsg61.png
+│   │   ├── img-1791361843575-jtt58xi.png
+│   │   ├── img-1791373103890-xucihml.png
+│   │   ├── img-1791373103897-7wu87b7.jpg
+│   │   ├── img-1791373103912-svkwzmf.jpg
+│   │   ├── img-1791373103921-c8ayxmf.png
+│   │   ├── img-1791373103928-buiit6i.png
+│   │   ├── img-1791444714496-dp8b7f8.png
+│   │   ├── img-1791444714506-ha3c8da.jpg
+│   │   ├── img-1791444714516-qpldbh3.jpg
+│   │   ├── img-1791444714521-3fffzsj.png
+│   │   ├── img-1791444714528-b82a0hv.png
+│   │   ├── img-1791444828368-2obna9m.png
+│   │   ├── img-1791444828377-pnozbe3.jpg
+│   │   ├── img-1791444828389-1qn9i53.jpg
+│   │   ├── img-1791444828396-w2mh7y9.png
+│   │   ├── img-1791444828401-80han5g.png
+│   │   ├── img-1791889631856-035cewv.png
+│   │   ├── img-1791889631866-577cyrc.jpg
+│   │   ├── img-1791889631877-ywbmz4a.jpg
+│   │   ├── img-1791889631882-3gbnhb6.png
+│   │   ├── img-1791889631887-0whko3a.png
+│   │   ├── img-1791892791270-iyr7p1c.png
+│   │   ├── img-1791892791277-vof1xa0.jpg
+│   │   ├── img-1791892791292-42b7ypx.jpg
+│   │   ├── img-1791892791298-u0jqase.png
+│   │   ├── img-1791892791303-tanfflc.png
+│   │   ├── img-1791895198673-4fc2iew.png
+│   │   ├── img-1791895198681-cpw7963.jpg
+│   │   ├── img-1791895198691-aeffx8y.jpg
+│   │   ├── img-1791895198696-fkdlf1d.png
+│   │   ├── img-1791895198700-s4af9n8.png
+│   │   ├── img-1792079189404-qhv08ph.png
+│   │   ├── img-1792079189422-rjt9k8t.jpg
+│   │   ├── img-1792079189433-7mfc6ze.jpg
+│   │   ├── img-1792079189441-astfhn9.png
+│   │   ├── img-1792079189449-z1p1cxc.png
+│   │   ├── img-1792169520982-sx4137v.png
+│   │   ├── img-1792169520991-feyl4xr.jpg
+│   │   ├── img-1792169520998-w1mxr9b.jpg
+│   │   ├── img-1792169521006-n0nybi2.png
+│   │   ├── img-1792169521012-9kiizn9.png
+│   │   ├── img-1792170845274-9urmlwe.png
+│   │   ├── img-1792170845284-otcu4m0.jpg
+│   │   ├── img-1792170845297-s3xeehc.jpg
+│   │   ├── img-1792170845301-v30fmhz.png
+│   │   ├── img-1792170845304-4hqzu6j.png
+│   │   ├── img-1792171002522-i1jdvi6.png
+│   │   ├── img-1792171002527-e95d405.jpg
+│   │   ├── img-1792171002534-l0d0vsu.jpg
+│   │   ├── img-1792171002539-r1mrto6.png
+│   │   ├── img-1792171002543-pmh2s8h.png
+│   │   ├── img-1792172997753-xksmj2h.png
+│   │   ├── img-1792172997761-j3n08tk.jpg
+│   │   ├── img-1792172997771-19wns1h.jpg
+│   │   ├── img-1792172997774-btldo90.png
+│   │   ├── img-1792172997778-94lljp8.png
+│   │   ├── img-1792175873868-wv5u0ot.png
+│   │   ├── img-1792175873873-bvwyt7j.jpg
+│   │   ├── img-1792175873879-931yv2t.jpg
+│   │   ├── img-1792175873883-c9o2uoo.png
+│   │   ├── img-1792175873887-lmdohov.png
+│   │   ├── img-1792177134174-qs83b6o.png
+│   │   ├── img-1792177134182-jbms2by.jpg
+│   │   ├── img-1792177134193-4ozefb8.jpg
+│   │   ├── img-1792177134199-vk47r1i.png
+│   │   ├── img-1792177134209-y021vkk.png
+│   │   ├── img-1792178105973-aggkp78.png
+│   │   ├── img-1792178105980-8iqrv3g.jpg
+│   │   ├── img-1792178105987-me7xnof.jpg
+│   │   ├── img-1792178105991-rr5zznj.png
+│   │   ├── img-1792178105995-hy2qtf8.png
+│   │   ├── img-1792181477536-wvo7a0v.png
+│   │   ├── img-1792181477547-emvuere.jpg
+│   │   ├── img-1792181477563-zp5snik.jpg
+│   │   ├── img-1792181477572-ud2k0vv.png
+│   │   ├── img-1792181477581-a6eo2c8.png
+│   │   ├── img-1792255263263-72rorwy.png
+│   │   ├── img-1792255263269-wevfhqp.jpg
+│   │   ├── img-1792255263276-d2r1f0l.jpg
+│   │   ├── img-1792255263282-b4gsyrc.png
+│   │   ├── img-1792255263286-hn2il3k.png
+│   │   ├── img-1792270456596-0bvhtbj.png
+│   │   ├── img-1792270456606-4sj4yz4.jpg
+│   │   ├── img-1792270456616-t7xu1ck.jpg
+│   │   ├── img-1792270456622-busum21.png
+│   │   ├── img-1792270456627-zepwkhh.png
+│   │   ├── img-1792271436580-8gfyq7p.png
+│   │   ├── img-1792271436589-3489197.jpg
+│   │   ├── img-1792271436601-w2wjbeh.jpg
+│   │   ├── img-1792271436608-u0cnm0a.png
+│   │   ├── img-1792271436615-eemjrbo.png
+│   │   ├── img-1792272621909-hcz3vbn.png
+│   │   ├── img-1792272621916-vzwxc6p.jpg
+│   │   ├── img-1792272621932-yl0ajrh.jpg
+│   │   ├── img-1792272621942-di3kmya.png
+│   │   ├── img-1792272621949-lps45w0.png
+│   │   ├── img-1792274139397-myz4qml.png
+│   │   ├── img-1792274139403-8ts8cbp.jpg
+│   │   ├── img-1792274139414-dd26bxx.jpg
+│   │   ├── img-1792274139418-m2pnngx.png
+│   │   ├── img-1792274139423-o8ml8c5.png
+│   │   ├── img-1792313670595-au7pijw.png
+│   │   ├── img-1792313670611-114tgp9.jpg
+│   │   ├── img-1792313670635-w6qj3fb.jpg
+│   │   ├── img-1792313670643-1460ahr.png
+│   │   ├── img-1792313670651-fftjkj7.png
+│   │   ├── img-1792349921205-2ry7rfj.png
+│   │   ├── img-1792349921212-x79nok3.jpg
+│   │   ├── img-1792349921231-7kw2nez.jpg
+│   │   ├── img-1792349921240-bgteqdq.png
+│   │   ├── img-1792349921249-4yjgmsz.png
+│   │   ├── img-1792350979988-lcmovtz.png
+│   │   ├── img-1792350979998-i111n2h.jpg
+│   │   ├── img-1792350980017-fu0jorx.jpg
+│   │   ├── img-1792350980025-atv0mbg.png
+│   │   ├── img-1792350980031-yc20xp8.png
+│   │   ├── img-1792352001524-v1vbqh0.png
+│   │   ├── img-1792352001535-n1tux0i.jpg
+│   │   ├── img-1792352001550-g8tzh60.jpg
+│   │   ├── img-1792352001556-6fz2vqw.png
+│   │   ├── img-1792352001565-l2vf0wa.png
+│   │   ├── img-1792352615973-f9xsuw3.png
+│   │   ├── img-1792352615986-paxpcnn.jpg
+│   │   ├── img-1792352616008-9ad19p9.jpg
+│   │   ├── img-1792352616020-k8mr5s9.png
+│   │   ├── img-1792352616034-zf9ax91.png
+│   │   ├── img-1792387478291-c3fb4r5.png
+│   │   ├── img-1792387478300-bp25wvm.jpg
+│   │   ├── img-1792387478308-qx5nsg6.jpg
+│   │   ├── img-1792387478314-dy35fe8.png
+│   │   ├── img-1792387478319-sb6akmw.png
+│   │   ├── img-1792390329830-wbdi6bq.png
+│   │   ├── img-1792390329836-0at3ox1.jpg
+│   │   ├── img-1792390329847-uprjkqw.jpg
+│   │   ├── img-1792390329851-u6j9138.png
+│   │   ├── img-1792390329856-30573io.png
+│   │   ├── img-1792393991317-b5iouwu.png
+│   │   ├── img-1792393991323-4cybth5.jpg
+│   │   ├── img-1792393991331-c5w9389.jpg
+│   │   ├── img-1792393991337-euw1w1i.png
+│   │   ├── img-1792393991341-8ogqqob.png
+│   │   ├── img-1792397485151-9vm7q57.png
+│   │   ├── img-1792397485160-x68ztnk.jpg
+│   │   ├── img-1792397485178-otqyuae.jpg
+│   │   ├── img-1792397485184-lmlk92x.png
+│   │   ├── img-1792397485190-rzko6p1.png
+│   │   ├── img-1792517841495-js16u01.png
+│   │   ├── img-1792517841506-0eyr01c.jpg
+│   │   ├── img-1792517841517-k4mblk3.jpg
+│   │   ├── img-1792517841522-0b7dw34.png
+│   │   ├── img-1792517841527-2thogzr.png
+│   │   ├── img-1792518743661-o89m51c.png
+│   │   ├── img-1792518743668-43900p8.jpg
+│   │   ├── img-1792518743676-wwxsxhp.jpg
+│   │   ├── img-1792518743681-849pzb7.png
+│   │   ├── img-1792518743687-7os5yjo.png
+│   │   ├── img-1792521267660-23mq5z6.png
+│   │   ├── img-1792521267673-g96eo0k.jpg
+│   │   ├── img-1792521267681-q0k7ybc.jpg
+│   │   ├── img-1792521267685-lnu569f.png
+│   │   ├── img-1792521267691-paghcso.png
+│   │   ├── img-1792523003498-xwp9w0i.png
+│   │   ├── img-1792523003505-j8t610o.jpg
+│   │   ├── img-1792523003513-zwou9lv.jpg
+│   │   ├── img-1792523003518-mb4hbya.png
+│   │   ├── img-1792523003522-3elhaqg.png
+│   │   ├── img-1792567597761-bxp1pa3.png
+│   │   ├── img-1792567597767-bx4do9m.jpg
+│   │   ├── img-1792567597775-ov303ur.jpg
+│   │   ├── img-1792567597779-p95x0po.png
+│   │   └── img-1792567597784-54yfl51.png
+│   ├── whatsapp_meta_config.json
+│   └── whatsapp_session
+├── dist
+│   ├── application
+│   │   ├── academics
+│   │   │   ├── AcademicUseCases.js
+│   │   │   └── BroadsheetUseCases.js
+│   │   ├── analytics
+│   │   │   └── AnalyticsUseCases.js
+│   │   ├── announcements
+│   │   │   └── AnnouncementUseCases.js
+│   │   ├── attendance
+│   │   │   ├── AttendanceUseCases.js
+│   │   │   └── GeofenceUseCases.js
+│   │   ├── auth
+│   │   │   └── AuthUseCases.js
+│   │   ├── cbc
+│   │   │   └── CbcAssessmentUseCases.js
+│   │   ├── complaints
+│   │   │   └── ComplaintUseCases.js
+│   │   ├── curriculum-plans
+│   │   │   ├── CurriculumPlanUseCases.js
+│   │   │   └── RecordOfWorkUseCases.js
+│   │   ├── curriculum-tracker
+│   │   │   └── CurriculumTrackerUseCases.js
+│   │   ├── discipline
+│   │   │   └── DisciplineUseCases.js
+│   │   ├── ediary
+│   │   │   └── EDiaryUseCases.js
+│   │   ├── finance
+│   │   │   ├── FeeUseCases.js
+│   │   │   └── LunchFeeUseCases.js
+│   │   ├── health
+│   │   │   └── ClinicUseCases.js
+│   │   ├── inventory
+│   │   │   └── InventoryUseCases.js
+│   │   ├── library
+│   │   │   └── LibraryUseCases.js
+│   │   ├── media
+│   │   │   └── VisualMediaUseCases.js
+│   │   ├── occurrences
+│   │   │   └── OccurrenceUseCases.js
+│   │   ├── payroll
+│   │   │   └── PayrollUseCases.js
+│   │   ├── sponsorship
+│   │   │   └── StudentSponsorshipUseCases.js
+│   │   ├── students
+│   │   │   └── StudentUseCases.js
+│   │   ├── system-logs
+│   │   │   └── SystemLogUseCases.js
+│   │   ├── teachers
+│   │   │   └── TeacherUseCases.js
+│   │   └── timetables
+│   │       └── TimetableUseCases.js
+│   ├── core
+│   │   ├── domain
+│   │   │   ├── academic
+│   │   │   │   ├── AcademicYear.js
+│   │   │   │   ├── ClassRoom.js
+│   │   │   │   └── School.js
+│   │   │   ├── announcement
+│   │   │   │   └── Announcement.js
+│   │   │   ├── attendance
+│   │   │   │   ├── Attendance.js
+│   │   │   │   ├── GeofenceUtils.js
+│   │   │   │   └── TeacherClockIn.js
+│   │   │   ├── cbc
+│   │   │   │   └── CbcAssessment.js
+│   │   │   ├── complaint
+│   │   │   │   └── Complaint.js
+│   │   │   ├── curriculum-plan
+│   │   │   │   ├── LessonPlan.js
+│   │   │   │   ├── RecordOfWork.js
+│   │   │   │   └── SchemeOfWork.js
+│   │   │   ├── curriculum-tracker
+│   │   │   │   └── CurriculumTracker.js
+│   │   │   ├── discipline
+│   │   │   │   └── DisciplineIncident.js
+│   │   │   ├── ediary
+│   │   │   │   └── EDiaryEntry.js
+│   │   │   ├── finance
+│   │   │   │   ├── FeeBannerConfig.js
+│   │   │   │   ├── Fee.js
+│   │   │   │   ├── LunchEnrollment.js
+│   │   │   │   └── LunchExpense.js
+│   │   │   ├── health
+│   │   │   │   └── ClinicVisit.js
+│   │   │   ├── inventory
+│   │   │   │   └── InventoryItem.js
+│   │   │   ├── library
+│   │   │   │   ├── Book.js
+│   │   │   │   └── BookLoan.js
+│   │   │   ├── media
+│   │   │   │   ├── ParentHelpRequest.js
+│   │   │   │   └── StudentProgressPhoto.js
+│   │   │   ├── occurrence
+│   │   │   │   └── OccurrenceRecord.js
+│   │   │   ├── payroll
+│   │   │   │   └── PayrollRecord.js
+│   │   │   ├── shared
+│   │   │   │   ├── Entity.js
+│   │   │   │   └── Errors.js
+│   │   │   ├── sponsorship
+│   │   │   │   └── StudentSponsorship.js
+│   │   │   ├── system-log
+│   │   │   │   └── SystemLog.js
+│   │   │   ├── timetable
+│   │   │   │   └── Timetable.js
+│   │   │   └── user
+│   │   │       ├── DeletedStudent.js
+│   │   │       ├── Guardian.js
+│   │   │       ├── Student.js
+│   │   │       ├── Teacher.js
+│   │   │       └── User.js
+│   │   └── ports
+│   │       ├── repositories
+│   │       │   ├── IAcademicRepository.js
+│   │       │   ├── IAnnouncementRepository.js
+│   │       │   ├── ICbcAssessmentRepository.js
+│   │       │   ├── IClinicRepository.js
+│   │       │   ├── IComplaintRepository.js
+│   │       │   ├── ICurriculumTrackerRepository.js
+│   │       │   ├── IDeletedStudentRepository.js
+│   │       │   ├── IDisciplineRepository.js
+│   │       │   ├── IEDiaryRepository.js
+│   │       │   ├── IFeeRepository.js
+│   │       │   ├── IInventoryRepository.js
+│   │       │   ├── ILibraryRepository.js
+│   │       │   ├── ILunchFeeRepository.js
+│   │       │   ├── IMediaRepository.js
+│   │       │   ├── IOccurrenceRepository.js
+│   │       │   ├── IPayrollRepository.js
+│   │       │   ├── IRecordOfWorkRepository.js
+│   │       │   ├── ISchemeOfWorkRepository.js
+│   │       │   ├── IStudentRepository.js
+│   │       │   ├── IStudentSponsorshipRepository.js
+│   │       │   ├── ISystemLogRepository.js
+│   │       │   ├── ITeacherClockInRepository.js
+│   │       │   ├── ITeacherRepository.js
+│   │       │   ├── ITimetableRepository.js
+│   │       │   └── IUserRepository.js
+│   │       └── services
+│   │           └── IExternalServices.js
+│   ├── index.js
+│   └── infrastructure
+│       ├── config
+│       │   ├── databaseResolver.js
+│       │   └── env.js
+│       ├── container.js
+│       ├── database
+│       │   ├── DatabaseFactory.js
+│       │   ├── in-memory
+│       │   │   ├── InMemoryAnnouncementRepository.js
+│       │   │   ├── InMemoryClinicRepository.js
+│       │   │   ├── InMemoryComplaintRepository.js
+│       │   │   ├── InMemoryCurriculumTrackerRepository.js
+│       │   │   ├── InMemoryDisciplineRepository.js
+│       │   │   ├── InMemoryInventoryRepository.js
+│       │   │   ├── InMemoryLibraryRepository.js
+│       │   │   ├── InMemoryLunchFeeRepository.js
+│       │   │   ├── InMemoryOccurrenceRepository.js
+│       │   │   ├── InMemoryPayrollRepository.js
+│       │   │   ├── InMemoryRepositories.js
+│       │   │   ├── InMemoryStudentSponsorshipRepository.js
+│       │   │   ├── InMemorySystemLogRepository.js
+│       │   │   └── InMemoryTeacherClockInRepository.js
+│       │   ├── mongodb
+│       │   │   └── MongooseRepositories.js
+│       │   └── postgres
+│       │       ├── PostgresComplaintRepository.js
+│       │       ├── PostgresCurriculumTrackerRepository.js
+│       │       ├── PostgresLibraryRepository.js
+│       │       ├── PostgresLunchFeeRepository.js
+│       │       ├── PostgresOccurrenceRepository.js
+│       │       ├── PostgresRecordOfWorkRepository.js
+│       │       ├── PostgresRepositories.js
+│       │       ├── PostgresSystemLogRepository.js
+│       │       └── PostgresTeacherClockInRepository.js
+│       ├── http
+│       │   ├── app.js
+│       │   ├── controllers
+│       │   │   ├── AcademicController.js
+│       │   │   ├── AnalyticsController.js
+│       │   │   ├── AnnouncementController.js
+│       │   │   ├── AttendanceController.js
+│       │   │   ├── AuthController.js
+│       │   │   ├── BroadsheetController.js
+│       │   │   ├── CbcAssessmentController.js
+│       │   │   ├── ClinicController.js
+│       │   │   ├── ComplaintController.js
+│       │   │   ├── CurriculumPlanController.js
+│       │   │   ├── CurriculumTrackerController.js
+│       │   │   ├── DisciplineController.js
+│       │   │   ├── EDiaryController.js
+│       │   │   ├── FinanceController.js
+│       │   │   ├── GeofenceController.js
+│       │   │   ├── InventoryController.js
+│       │   │   ├── LibraryController.js
+│       │   │   ├── LunchFeeController.js
+│       │   │   ├── MediaController.js
+│       │   │   ├── OccurrenceController.js
+│       │   │   ├── PayrollController.js
+│       │   │   ├── RecordOfWorkController.js
+│       │   │   ├── StudentController.js
+│       │   │   ├── StudentSponsorshipController.js
+│       │   │   ├── SystemLogController.js
+│       │   │   ├── TeacherController.js
+│       │   │   ├── TimetableController.js
+│       │   │   └── WhatsAppController.js
+│       │   ├── middlewares
+│       │   │   ├── accountabilityMiddleware.js
+│       │   │   ├── authMiddleware.js
+│       │   │   ├── errorHandler.js
+│       │   │   └── validateRequest.js
+│       │   └── routes
+│       │       └── index.js
+│       ├── services
+│       │   ├── BcryptPasswordHasher.js
+│       │   ├── GeminiService.js
+│       │   ├── ImageProcessingService.js
+│       │   ├── JwtAuthTokenService.js
+│       │   ├── KcbBuniPaymentAdapter.js
+│       │   ├── MpesaDarajaPaymentAdapter.js
+│       │   ├── PaystackPaymentAdapter.js
+│       │   ├── SmsNotificationAdapter.js
+│       │   ├── WhatsAppClientManager.js
+│       │   └── WhatsAppService.js
+│       └── utils
+│           ├── networkAccountability.js
+│           └── PhoneUtils.js
+├── docker-compose.yml
+├── Dockerfile
+├── .dockerignore
+├── .env
+├── .env.example
+├── Frontend
+│   ├── Dockerfile
+│   ├── .dockerignore
+│   ├── images
+│   │   └── Gemini_Generated_Image_mg8kccmg8kccmg8k.jpg
+│   ├── nginx.conf
+│   ├── package.json
+│   ├── package-lock.json
+│   ├── smartshule
+│   │   ├── dist
+│   │   │   ├── assets
+│   │   │   │   ├── html2canvas.esm-QH1iLAAe.js
+│   │   │   │   ├── index-BU4CrD3C.css
+│   │   │   │   ├── index-CpIbDaPP.js
+│   │   │   │   ├── index.es-DKB0IEBS.js
+│   │   │   │   └── purify.es-DBIK8olT.js
+│   │   │   ├── graduation banner.jpeg
+│   │   │   ├── graduation-banner.jpeg
+│   │   │   ├── hero-school.png
+│   │   │   ├── index.html
+│   │   │   ├── logo.jpg
+│   │   │   ├── logo.png
+│   │   │   ├── scouts-marching.jpeg
+│   │   │   ├── scouts matching.jpeg
+│   │   │   └── whatsapp-hero.jpeg
+│   │   ├── .env
+│   │   ├── .env.example
+│   │   ├── .gitignore
+│   │   ├── index.html
+│   │   ├── metadata.json
+│   │   ├── package.json
+│   │   ├── package-lock.json
+│   │   ├── public
+│   │   │   ├── graduation banner.jpeg
+│   │   │   ├── graduation-banner.jpeg
+│   │   │   ├── hero-school.png
+│   │   │   ├── logo.jpg
+│   │   │   ├── logo.png
+│   │   │   ├── scouts-marching.jpeg
+│   │   │   ├── scouts matching.jpeg
+│   │   │   └── whatsapp-hero.jpeg
+│   │   ├── src
+│   │   │   ├── App.tsx
+│   │   │   ├── assets
+│   │   │   │   ├── graduation-banner.jpeg
+│   │   │   │   ├── hero-school.jpg
+│   │   │   │   ├── logo.jpg
+│   │   │   │   ├── reference.jpg
+│   │   │   │   ├── scouts-marching.jpeg
+│   │   │   │   └── whatsapp-hero.jpeg
+│   │   │   ├── components
+│   │   │   │   ├── auth
+│   │   │   │   │   └── LoginPage.tsx
+│   │   │   │   ├── Header.tsx
+│   │   │   │   ├── landing
+│   │   │   │   │   ├── AdmissionsPage.tsx
+│   │   │   │   │   ├── ApplyAdmissionSlotPage.tsx
+│   │   │   │   │   ├── CloudSky.tsx
+│   │   │   │   │   ├── InteractiveLearningLab.tsx
+│   │   │   │   │   ├── LandingPage.tsx
+│   │   │   │   │   ├── LearnerOnboardingPage.tsx
+│   │   │   │   │   └── ProgrammesPage.tsx
+│   │   │   │   ├── legal
+│   │   │   │   │   ├── CookieBanner.tsx
+│   │   │   │   │   └── LegalModal.tsx
+│   │   │   │   ├── modals
+│   │   │   │   │   ├── AcademicTermsModal.tsx
+│   │   │   │   │   ├── AddBookModal.tsx
+│   │   │   │   │   ├── AddTimetableSlotModal.tsx
+│   │   │   │   │   ├── AdmitLearnerModal.tsx
+│   │   │   │   │   ├── ArchivedStudentsModal.tsx
+│   │   │   │   │   ├── CBCFormativeModal.tsx
+│   │   │   │   │   ├── ChangePasswordModal.tsx
+│   │   │   │   │   ├── CreateFeeStructureModal.tsx
+│   │   │   │   │   ├── CreateLessonPlanModal.tsx
+│   │   │   │   │   ├── CreateRecordOfWorkModal.tsx
+│   │   │   │   │   ├── CreateSchemeModal.tsx
+│   │   │   │   │   ├── EditRecordOfWorkModal.tsx
+│   │   │   │   │   ├── EditStudentModal.tsx
+│   │   │   │   │   ├── EditTeacherProfileModal.tsx
+│   │   │   │   │   ├── ExportReportModal.tsx
+│   │   │   │   │   ├── FeeStatementModal.tsx
+│   │   │   │   │   ├── ForwardPaymentModal.tsx
+│   │   │   │   │   ├── GenerateInvoicesModal.tsx
+│   │   │   │   │   ├── IssueBookModal.tsx
+│   │   │   │   │   ├── KnecSyncModal.tsx
+│   │   │   │   │   ├── LearnerProfileModal.tsx
+│   │   │   │   │   ├── OnboardingApprovalsModal.tsx
+│   │   │   │   │   ├── OnboardSchoolModal.tsx
+│   │   │   │   │   ├── OnboardTeacherModal.tsx
+│   │   │   │   │   ├── PromoteStudentModal.tsx
+│   │   │   │   │   ├── ReceiptViewModal.tsx
+│   │   │   │   │   ├── RecordExpenseModal.tsx
+│   │   │   │   │   ├── RecordIncomeModal.tsx
+│   │   │   │   │   ├── RecordPaymentModal.tsx
+│   │   │   │   │   ├── ReturnBookModal.tsx
+│   │   │   │   │   ├── SendSmsModal.tsx
+│   │   │   │   │   ├── StationeryRequirementsModal.tsx
+│   │   │   │   │   └── UploadMarksModal.tsx
+│   │   │   │   ├── Sidebar.tsx
+│   │   │   │   └── views
+│   │   │   │       ├── AdmissionsDashboardView.tsx
+│   │   │   │       ├── AnnouncementsView.tsx
+│   │   │   │       ├── ArchivedRecordsView.tsx
+│   │   │   │       ├── ArrearsView.tsx
+│   │   │   │       ├── AssessmentsView.tsx
+│   │   │   │       ├── AttendanceRegisterView.tsx
+│   │   │   │       ├── BursarDashboardView.tsx
+│   │   │   │       ├── CapitationIncomeView.tsx
+│   │   │   │       ├── CashFlowLedgerView.tsx
+│   │   │   │       ├── ClassesView.tsx
+│   │   │   │       ├── ClinicManagementView.tsx
+│   │   │   │       ├── CompetencyAnalyticsView.tsx
+│   │   │   │       ├── ComplaintsView.tsx
+│   │   │   │       ├── ConcernsView.tsx
+│   │   │   │       ├── CurriculumTrackerView.tsx
+│   │   │   │       ├── DashboardView.tsx
+│   │   │   │       ├── DefaultersView.tsx
+│   │   │   │       ├── DeputyDashboardView.tsx
+│   │   │   │       ├── DisciplineClubsView.tsx
+│   │   │   │       ├── EDiaryView.tsx
+│   │   │   │       ├── ExpensesView.tsx
+│   │   │   │       ├── FacultyAttendanceRosterCard.tsx
+│   │   │   │       ├── FeeDeadlineBannerManagementView.tsx
+│   │   │   │       ├── FeeStructureView.tsx
+│   │   │   │       ├── FinancialReportsView.tsx
+│   │   │   │       ├── FormativeAssessmentsView.tsx
+│   │   │   │       ├── GeofenceManagementSection.tsx
+│   │   │   │       ├── GeofenceView.tsx
+│   │   │   │       ├── HeadTeacherDashboardView.tsx
+│   │   │   │       ├── InventoryManagementView.tsx
+│   │   │   │       ├── InvoicesMpesaView.tsx
+│   │   │   │       ├── LearningAreasView.tsx
+│   │   │   │       ├── LibraryView.tsx
+│   │   │   │       ├── LunchFeeManagementView.tsx
+│   │   │   │       ├── MasterBroadsheetView.tsx
+│   │   │   │       ├── OccurrenceBookView.tsx
+│   │   │   │       ├── OnboardQueueView.tsx
+│   │   │   │       ├── ParentDashboardView.tsx
+│   │   │   │       ├── ParentProfileView.tsx
+│   │   │   │       ├── PayrollManagementView.tsx
+│   │   │   │       ├── RecordsOfWorkView.tsx
+│   │   │   │       ├── ReportCardsView.tsx
+│   │   │   │       ├── SchemesView.tsx
+│   │   │   │       ├── SlotApplicationsView.tsx
+│   │   │   │       ├── SponsoredStudentsView.tsx
+│   │   │   │       ├── StandaloneArchivedRecordsPage.tsx
+│   │   │   │       ├── StrandsView.tsx
+│   │   │   │       ├── StudentFeeCheckerView.tsx
+│   │   │   │       ├── StudentsView.tsx
+│   │   │   │       ├── SummativeAssessmentsView.tsx
+│   │   │   │       ├── SuperAdminDashboardView.tsx
+│   │   │   │       ├── SystemLogsView.tsx
+│   │   │   │       ├── TeacherDashboardView.tsx
+│   │   │   │       ├── TeacherGeofenceClockInCard.tsx
+│   │   │   │       ├── TeachersView.tsx
+│   │   │   │       ├── TimetableView.tsx
+│   │   │   │       ├── UserManagementView.tsx
+│   │   │   │       ├── VisualCBCView.tsx
+│   │   │   │       └── WhatsAppBotView.tsx
+│   │   │   ├── context
+│   │   │   │   └── AuthContext.tsx
+│   │   │   ├── data
+│   │   │   ├── index.css
+│   │   │   ├── main.tsx
+│   │   │   ├── services
+│   │   │   │   ├── api.ts
+│   │   │   │   └── onboardingService.ts
+│   │   │   ├── types.ts
+│   │   │   └── utils
+│   │   │       ├── classCategorization.ts
+│   │   │       ├── cookieConsent.ts
+│   │   │       ├── formatters.ts
+│   │   │       ├── kenyanConstitution.ts
+│   │   │       ├── printerDetector.ts
+│   │   │       ├── rbac.ts
+│   │   │       └── sequenceGenerator.ts
+│   │   ├── tsconfig.json
+│   │   └── vite.config.ts
+│   └── tsconfig.json
+├── full_text.txt
+├── .gitignore
+├── jest.config.js
+├── KEA_Grade_3_Christian_Religious_Education_Rationalized_Records_of_Work_Term_3_2026_Oxford_Growing_in_Christ.pdf
+├── Mobile
+│   ├── analysis_options.yaml
+│   ├── android
+│   │   ├── app
+│   │   │   ├── build.gradle.kts
+│   │   │   └── src
+│   │   │       ├── debug
+│   │   │       │   └── AndroidManifest.xml
+│   │   │       ├── main
+│   │   │       │   ├── AndroidManifest.xml
+│   │   │       │   ├── java
+│   │   │       │   │   └── io
+│   │   │       │   │       └── flutter
+│   │   │       │   │           └── plugins
+│   │   │       │   │               └── GeneratedPluginRegistrant.java
+│   │   │       │   ├── kotlin
+│   │   │       │   │   └── com
+│   │   │       │   │       └── smartshule
+│   │   │       │   │           └── smartshule_mobile
+│   │   │       │   │               └── MainActivity.kt
+│   │   │       │   └── res
+│   │   │       │       ├── drawable
+│   │   │       │       │   └── launch_background.xml
+│   │   │       │       ├── drawable-v21
+│   │   │       │       │   └── launch_background.xml
+│   │   │       │       ├── mipmap-hdpi
+│   │   │       │       │   └── ic_launcher.png
+│   │   │       │       ├── mipmap-mdpi
+│   │   │       │       │   └── ic_launcher.png
+│   │   │       │       ├── mipmap-xhdpi
+│   │   │       │       │   └── ic_launcher.png
+│   │   │       │       ├── mipmap-xxhdpi
+│   │   │       │       │   └── ic_launcher.png
+│   │   │       │       ├── mipmap-xxxhdpi
+│   │   │       │       │   └── ic_launcher.png
+│   │   │       │       ├── values
+│   │   │       │       │   └── styles.xml
+│   │   │       │       └── values-night
+│   │   │       │           └── styles.xml
+│   │   │       └── profile
+│   │   │           └── AndroidManifest.xml
+│   │   ├── build.gradle.kts
+│   │   ├── .gitignore
+│   │   ├── .gradle
+│   │   │   ├── 8.12
+│   │   │   │   ├── checksums
+│   │   │   │   │   ├── checksums.lock
+│   │   │   │   │   ├── md5-checksums.bin
+│   │   │   │   │   └── sha1-checksums.bin
+│   │   │   │   ├── executionHistory
+│   │   │   │   │   ├── executionHistory.bin
+│   │   │   │   │   └── executionHistory.lock
+│   │   │   │   ├── expanded
+│   │   │   │   ├── fileChanges
+│   │   │   │   │   └── last-build.bin
+│   │   │   │   ├── fileHashes
+│   │   │   │   │   ├── fileHashes.bin
+│   │   │   │   │   ├── fileHashes.lock
+│   │   │   │   │   └── resourceHashesCache.bin
+│   │   │   │   ├── gc.properties
+│   │   │   │   └── vcsMetadata
+│   │   │   ├── buildOutputCleanup
+│   │   │   │   ├── buildOutputCleanup.lock
+│   │   │   │   ├── cache.properties
+│   │   │   │   └── outputFiles.bin
+│   │   │   ├── file-system.probe
+│   │   │   ├── noVersion
+│   │   │   │   └── buildLogic.lock
+│   │   │   └── vcs-1
+│   │   │       └── gc.properties
+│   │   ├── gradle
+│   │   │   └── wrapper
+│   │   │       ├── gradle-wrapper.jar
+│   │   │       └── gradle-wrapper.properties
+│   │   ├── gradle.properties
+│   │   ├── gradlew
+│   │   ├── gradlew.bat
+│   │   ├── .kotlin
+│   │   │   └── sessions
+│   │   ├── local.properties
+│   │   ├── settings.gradle.kts
+│   │   └── smartshule_mobile_android.iml
+│   ├── assets
+│   │   └── images
+│   │       └── logo.png
+│   ├── build
+│   │   ├── 7e4aebe516b998635f34742713e086a8.cache.dill.track.dill
+│   │   ├── app
+│   │   │   ├── generated
+│   │   │   │   ├── ap_generated_sources
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── out
+│   │   │   │   └── res
+│   │   │   │       ├── pngs
+│   │   │   │       │   └── debug
+│   │   │   │       └── resValues
+│   │   │   │           └── debug
+│   │   │   ├── intermediates
+│   │   │   │   ├── aar_metadata_check
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── checkDebugAarMetadata
+│   │   │   │   ├── annotation_processor_list
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── javaPreCompileDebug
+│   │   │   │   │           └── annotationProcessors.json
+│   │   │   │   ├── apk_ide_redirect_file
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── createDebugApkListingFileRedirect
+│   │   │   │   │           └── redirect.txt
+│   │   │   │   ├── app_metadata
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── writeDebugAppMetadata
+│   │   │   │   │           └── app-metadata.properties
+│   │   │   │   ├── assets
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── mergeDebugAssets
+│   │   │   │   │           └── flutter_assets
+│   │   │   │   │               ├── AssetManifest.bin
+│   │   │   │   │               ├── AssetManifest.json
+│   │   │   │   │               ├── assets
+│   │   │   │   │               │   └── images
+│   │   │   │   │               │       └── logo.png
+│   │   │   │   │               ├── FontManifest.json
+│   │   │   │   │               ├── fonts
+│   │   │   │   │               │   └── MaterialIcons-Regular.otf
+│   │   │   │   │               ├── isolate_snapshot_data
+│   │   │   │   │               ├── kernel_blob.bin
+│   │   │   │   │               ├── NativeAssetsManifest.json
+│   │   │   │   │               ├── NOTICES.Z
+│   │   │   │   │               ├── packages
+│   │   │   │   │               │   └── cupertino_icons
+│   │   │   │   │               │       └── assets
+│   │   │   │   │               │           └── CupertinoIcons.ttf
+│   │   │   │   │               ├── shaders
+│   │   │   │   │               │   └── ink_sparkle.frag
+│   │   │   │   │               └── vm_snapshot_data
+│   │   │   │   ├── compatible_screen_manifest
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── createDebugCompatibleScreenManifests
+│   │   │   │   │           └── output-metadata.json
+│   │   │   │   ├── compile_and_runtime_not_namespaced_r_class_jar
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── processDebugResources
+│   │   │   │   │           └── R.jar
+│   │   │   │   ├── compressed_assets
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── compressDebugAssets
+│   │   │   │   │           └── out
+│   │   │   │   │               └── assets
+│   │   │   │   │                   └── flutter_assets
+│   │   │   │   │                       ├── AssetManifest.bin.jar
+│   │   │   │   │                       ├── AssetManifest.json.jar
+│   │   │   │   │                       ├── assets
+│   │   │   │   │                       │   └── images
+│   │   │   │   │                       │       └── logo.png.jar
+│   │   │   │   │                       ├── FontManifest.json.jar
+│   │   │   │   │                       ├── fonts
+│   │   │   │   │                       │   └── MaterialIcons-Regular.otf.jar
+│   │   │   │   │                       ├── isolate_snapshot_data.jar
+│   │   │   │   │                       ├── kernel_blob.bin.jar
+│   │   │   │   │                       ├── NativeAssetsManifest.json.jar
+│   │   │   │   │                       ├── NOTICES.Z.jar
+│   │   │   │   │                       ├── packages
+│   │   │   │   │                       │   └── cupertino_icons
+│   │   │   │   │                       │       └── assets
+│   │   │   │   │                       │           └── CupertinoIcons.ttf.jar
+│   │   │   │   │                       ├── shaders
+│   │   │   │   │                       │   └── ink_sparkle.frag.jar
+│   │   │   │   │                       └── vm_snapshot_data.jar
+│   │   │   │   ├── cxx
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── 12331n6s
+│   │   │   │   │           ├── logs
+│   │   │   │   │           │   ├── arm64-v8a
+│   │   │   │   │           │   │   ├── build_model.json
+│   │   │   │   │           │   │   ├── configure_command
+│   │   │   │   │           │   │   ├── configure_stderr.txt
+│   │   │   │   │           │   │   ├── configure_stdout.txt
+│   │   │   │   │           │   │   ├── generate_cxx_metadata_325_timing.txt
+│   │   │   │   │           │   │   ├── generate_cxx_metadata_489_timing.txt
+│   │   │   │   │           │   │   ├── generate_cxx_metadata_578_timing.txt
+│   │   │   │   │           │   │   ├── generate_cxx_metadata_60_timing.txt
+│   │   │   │   │           │   │   └── metadata_generation_record.json
+│   │   │   │   │           │   ├── armeabi-v7a
+│   │   │   │   │           │   │   ├── build_model.json
+│   │   │   │   │           │   │   ├── configure_command
+│   │   │   │   │           │   │   ├── configure_stderr.txt
+│   │   │   │   │           │   │   ├── configure_stdout.txt
+│   │   │   │   │           │   │   ├── generate_cxx_metadata_324_timing.txt
+│   │   │   │   │           │   │   ├── generate_cxx_metadata_489_timing.txt
+│   │   │   │   │           │   │   ├── generate_cxx_metadata_576_timing.txt
+│   │   │   │   │           │   │   ├── generate_cxx_metadata_59_timing.txt
+│   │   │   │   │           │   │   └── metadata_generation_record.json
+│   │   │   │   │           │   └── x86_64
+│   │   │   │   │           │       ├── build_model.json
+│   │   │   │   │           │       ├── configure_command
+│   │   │   │   │           │       ├── configure_stderr.txt
+│   │   │   │   │           │       ├── configure_stdout.txt
+│   │   │   │   │           │       ├── generate_cxx_metadata_324_timing.txt
+│   │   │   │   │           │       ├── generate_cxx_metadata_491_timing.txt
+│   │   │   │   │           │       ├── generate_cxx_metadata_578_timing.txt
+│   │   │   │   │           │       ├── generate_cxx_metadata_59_timing.txt
+│   │   │   │   │           │       └── metadata_generation_record.json
+│   │   │   │   │           └── obj
+│   │   │   │   │               ├── arm64-v8a
+│   │   │   │   │               ├── armeabi-v7a
+│   │   │   │   │               └── x86_64
+│   │   │   │   ├── data_binding_layout_info_type_merge
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── mergeDebugResources
+│   │   │   │   │           └── out
+│   │   │   │   ├── data_binding_layout_info_type_package
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── packageDebugResources
+│   │   │   │   │           └── out
+│   │   │   │   ├── desugar_graph
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── dexBuilderDebug
+│   │   │   │   │           └── out
+│   │   │   │   │               ├── currentProject
+│   │   │   │   │               │   ├── dirs_bucket_0
+│   │   │   │   │               │   │   └── graph.bin
+│   │   │   │   │               │   ├── dirs_bucket_1
+│   │   │   │   │               │   │   └── graph.bin
+│   │   │   │   │               │   ├── jar_e48c790c80cc18b719786249ec710b36c360770c6ce5570df6a615cfefbe98e9_bucket_0
+│   │   │   │   │               │   │   └── graph.bin
+│   │   │   │   │               │   └── jar_e48c790c80cc18b719786249ec710b36c360770c6ce5570df6a615cfefbe98e9_bucket_1
+│   │   │   │   │               │       └── graph.bin
+│   │   │   │   │               ├── externalLibs
+│   │   │   │   │               ├── mixedScopes
+│   │   │   │   │               └── otherProjects
+│   │   │   │   ├── dex
+│   │   │   │   │   └── debug
+│   │   │   │   │       ├── mergeExtDexDebug
+│   │   │   │   │       │   └── classes.dex
+│   │   │   │   │       ├── mergeLibDexDebug
+│   │   │   │   │       │   ├── 0
+│   │   │   │   │       │   ├── 1
+│   │   │   │   │       │   ├── 10
+│   │   │   │   │       │   ├── 11
+│   │   │   │   │       │   ├── 12
+│   │   │   │   │       │   ├── 13
+│   │   │   │   │       │   ├── 14
+│   │   │   │   │       │   ├── 15
+│   │   │   │   │       │   ├── 2
+│   │   │   │   │       │   ├── 3
+│   │   │   │   │       │   ├── 4
+│   │   │   │   │       │   ├── 5
+│   │   │   │   │       │   │   └── classes.dex
+│   │   │   │   │       │   ├── 6
+│   │   │   │   │       │   ├── 7
+│   │   │   │   │       │   ├── 8
+│   │   │   │   │       │   └── 9
+│   │   │   │   │       └── mergeProjectDexDebug
+│   │   │   │   │           ├── 0
+│   │   │   │   │           │   └── classes.dex
+│   │   │   │   │           ├── 1
+│   │   │   │   │           │   └── classes.dex
+│   │   │   │   │           ├── 10
+│   │   │   │   │           ├── 11
+│   │   │   │   │           ├── 12
+│   │   │   │   │           ├── 13
+│   │   │   │   │           ├── 14
+│   │   │   │   │           │   └── classes.dex
+│   │   │   │   │           ├── 15
+│   │   │   │   │           ├── 2
+│   │   │   │   │           ├── 3
+│   │   │   │   │           ├── 4
+│   │   │   │   │           ├── 5
+│   │   │   │   │           ├── 6
+│   │   │   │   │           ├── 7
+│   │   │   │   │           ├── 8
+│   │   │   │   │           └── 9
+│   │   │   │   ├── dex_archive_input_jar_hashes
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── dexBuilderDebug
+│   │   │   │   │           └── out
+│   │   │   │   ├── dex_number_of_buckets_file
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── dexBuilderDebug
+│   │   │   │   │           └── out
+│   │   │   │   ├── duplicate_classes_check
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── checkDebugDuplicateClasses
+│   │   │   │   ├── external_file_lib_dex_archives
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── desugarDebugFileDependencies
+│   │   │   │   ├── external_libs_dex_archive
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── dexBuilderDebug
+│   │   │   │   │           └── out
+│   │   │   │   ├── external_libs_dex_archive_with_artifact_transforms
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── dexBuilderDebug
+│   │   │   │   │           └── out
+│   │   │   │   ├── flutter
+│   │   │   │   │   └── debug
+│   │   │   │   │       ├── flutter_assets
+│   │   │   │   │       │   ├── AssetManifest.bin
+│   │   │   │   │       │   ├── AssetManifest.json
+│   │   │   │   │       │   ├── assets
+│   │   │   │   │       │   │   └── images
+│   │   │   │   │       │   │       └── logo.png
+│   │   │   │   │       │   ├── FontManifest.json
+│   │   │   │   │       │   ├── fonts
+│   │   │   │   │       │   │   └── MaterialIcons-Regular.otf
+│   │   │   │   │       │   ├── isolate_snapshot_data
+│   │   │   │   │       │   ├── kernel_blob.bin
+│   │   │   │   │       │   ├── NativeAssetsManifest.json
+│   │   │   │   │       │   ├── NOTICES.Z
+│   │   │   │   │       │   ├── packages
+│   │   │   │   │       │   │   └── cupertino_icons
+│   │   │   │   │       │   │       └── assets
+│   │   │   │   │       │   │           └── CupertinoIcons.ttf
+│   │   │   │   │       │   ├── shaders
+│   │   │   │   │       │   │   └── ink_sparkle.frag
+│   │   │   │   │       │   └── vm_snapshot_data
+│   │   │   │   │       ├── flutter_build.d
+│   │   │   │   │       ├── .last_build_id
+│   │   │   │   │       └── libs.jar
+│   │   │   │   ├── incremental
+│   │   │   │   │   ├── debug
+│   │   │   │   │   │   ├── mergeDebugResources
+│   │   │   │   │   │   │   ├── compile-file-map.properties
+│   │   │   │   │   │   │   ├── merged.dir
+│   │   │   │   │   │   │   │   ├── values
+│   │   │   │   │   │   │   │   │   └── values.xml
+│   │   │   │   │   │   │   │   ├── values-af
+│   │   │   │   │   │   │   │   │   └── values-af.xml
+│   │   │   │   │   │   │   │   ├── values-am
+│   │   │   │   │   │   │   │   │   └── values-am.xml
+│   │   │   │   │   │   │   │   ├── values-ar
+│   │   │   │   │   │   │   │   │   └── values-ar.xml
+│   │   │   │   │   │   │   │   ├── values-as
+│   │   │   │   │   │   │   │   │   └── values-as.xml
+│   │   │   │   │   │   │   │   ├── values-az
+│   │   │   │   │   │   │   │   │   └── values-az.xml
+│   │   │   │   │   │   │   │   ├── values-be
+│   │   │   │   │   │   │   │   │   └── values-be.xml
+│   │   │   │   │   │   │   │   ├── values-bg
+│   │   │   │   │   │   │   │   │   └── values-bg.xml
+│   │   │   │   │   │   │   │   ├── values-bn
+│   │   │   │   │   │   │   │   │   └── values-bn.xml
+│   │   │   │   │   │   │   │   ├── values-bs
+│   │   │   │   │   │   │   │   │   └── values-bs.xml
+│   │   │   │   │   │   │   │   ├── values-b+sr+Latn
+│   │   │   │   │   │   │   │   │   └── values-b+sr+Latn.xml
+│   │   │   │   │   │   │   │   ├── values-ca
+│   │   │   │   │   │   │   │   │   └── values-ca.xml
+│   │   │   │   │   │   │   │   ├── values-cs
+│   │   │   │   │   │   │   │   │   └── values-cs.xml
+│   │   │   │   │   │   │   │   ├── values-da
+│   │   │   │   │   │   │   │   │   └── values-da.xml
+│   │   │   │   │   │   │   │   ├── values-de
+│   │   │   │   │   │   │   │   │   └── values-de.xml
+│   │   │   │   │   │   │   │   ├── values-el
+│   │   │   │   │   │   │   │   │   └── values-el.xml
+│   │   │   │   │   │   │   │   ├── values-en-rAU
+│   │   │   │   │   │   │   │   │   └── values-en-rAU.xml
+│   │   │   │   │   │   │   │   ├── values-en-rCA
+│   │   │   │   │   │   │   │   │   └── values-en-rCA.xml
+│   │   │   │   │   │   │   │   ├── values-en-rGB
+│   │   │   │   │   │   │   │   │   └── values-en-rGB.xml
+│   │   │   │   │   │   │   │   ├── values-en-rIN
+│   │   │   │   │   │   │   │   │   └── values-en-rIN.xml
+│   │   │   │   │   │   │   │   ├── values-en-rXC
+│   │   │   │   │   │   │   │   │   └── values-en-rXC.xml
+│   │   │   │   │   │   │   │   ├── values-es
+│   │   │   │   │   │   │   │   │   └── values-es.xml
+│   │   │   │   │   │   │   │   ├── values-es-rUS
+│   │   │   │   │   │   │   │   │   └── values-es-rUS.xml
+│   │   │   │   │   │   │   │   ├── values-et
+│   │   │   │   │   │   │   │   │   └── values-et.xml
+│   │   │   │   │   │   │   │   ├── values-eu
+│   │   │   │   │   │   │   │   │   └── values-eu.xml
+│   │   │   │   │   │   │   │   ├── values-fa
+│   │   │   │   │   │   │   │   │   └── values-fa.xml
+│   │   │   │   │   │   │   │   ├── values-fi
+│   │   │   │   │   │   │   │   │   └── values-fi.xml
+│   │   │   │   │   │   │   │   ├── values-fr
+│   │   │   │   │   │   │   │   │   └── values-fr.xml
+│   │   │   │   │   │   │   │   ├── values-fr-rCA
+│   │   │   │   │   │   │   │   │   └── values-fr-rCA.xml
+│   │   │   │   │   │   │   │   ├── values-gl
+│   │   │   │   │   │   │   │   │   └── values-gl.xml
+│   │   │   │   │   │   │   │   ├── values-gu
+│   │   │   │   │   │   │   │   │   └── values-gu.xml
+│   │   │   │   │   │   │   │   ├── values-h720dp-v13
+│   │   │   │   │   │   │   │   │   └── values-h720dp-v13.xml
+│   │   │   │   │   │   │   │   ├── values-hdpi-v4
+│   │   │   │   │   │   │   │   │   └── values-hdpi-v4.xml
+│   │   │   │   │   │   │   │   ├── values-hi
+│   │   │   │   │   │   │   │   │   └── values-hi.xml
+│   │   │   │   │   │   │   │   ├── values-hr
+│   │   │   │   │   │   │   │   │   └── values-hr.xml
+│   │   │   │   │   │   │   │   ├── values-hu
+│   │   │   │   │   │   │   │   │   └── values-hu.xml
+│   │   │   │   │   │   │   │   ├── values-hy
+│   │   │   │   │   │   │   │   │   └── values-hy.xml
+│   │   │   │   │   │   │   │   ├── values-in
+│   │   │   │   │   │   │   │   │   └── values-in.xml
+│   │   │   │   │   │   │   │   ├── values-is
+│   │   │   │   │   │   │   │   │   └── values-is.xml
+│   │   │   │   │   │   │   │   ├── values-it
+│   │   │   │   │   │   │   │   │   └── values-it.xml
+│   │   │   │   │   │   │   │   ├── values-iw
+│   │   │   │   │   │   │   │   │   └── values-iw.xml
+│   │   │   │   │   │   │   │   ├── values-ja
+│   │   │   │   │   │   │   │   │   └── values-ja.xml
+│   │   │   │   │   │   │   │   ├── values-ka
+│   │   │   │   │   │   │   │   │   └── values-ka.xml
+│   │   │   │   │   │   │   │   ├── values-kk
+│   │   │   │   │   │   │   │   │   └── values-kk.xml
+│   │   │   │   │   │   │   │   ├── values-km
+│   │   │   │   │   │   │   │   │   └── values-km.xml
+│   │   │   │   │   │   │   │   ├── values-kn
+│   │   │   │   │   │   │   │   │   └── values-kn.xml
+│   │   │   │   │   │   │   │   ├── values-ko
+│   │   │   │   │   │   │   │   │   └── values-ko.xml
+│   │   │   │   │   │   │   │   ├── values-ky
+│   │   │   │   │   │   │   │   │   └── values-ky.xml
+│   │   │   │   │   │   │   │   ├── values-land
+│   │   │   │   │   │   │   │   │   └── values-land.xml
+│   │   │   │   │   │   │   │   ├── values-large-v4
+│   │   │   │   │   │   │   │   │   └── values-large-v4.xml
+│   │   │   │   │   │   │   │   ├── values-ldltr-v21
+│   │   │   │   │   │   │   │   │   └── values-ldltr-v21.xml
+│   │   │   │   │   │   │   │   ├── values-lo
+│   │   │   │   │   │   │   │   │   └── values-lo.xml
+│   │   │   │   │   │   │   │   ├── values-lt
+│   │   │   │   │   │   │   │   │   └── values-lt.xml
+│   │   │   │   │   │   │   │   ├── values-lv
+│   │   │   │   │   │   │   │   │   └── values-lv.xml
+│   │   │   │   │   │   │   │   ├── values-mk
+│   │   │   │   │   │   │   │   │   └── values-mk.xml
+│   │   │   │   │   │   │   │   ├── values-ml
+│   │   │   │   │   │   │   │   │   └── values-ml.xml
+│   │   │   │   │   │   │   │   ├── values-mn
+│   │   │   │   │   │   │   │   │   └── values-mn.xml
+│   │   │   │   │   │   │   │   ├── values-mr
+│   │   │   │   │   │   │   │   │   └── values-mr.xml
+│   │   │   │   │   │   │   │   ├── values-ms
+│   │   │   │   │   │   │   │   │   └── values-ms.xml
+│   │   │   │   │   │   │   │   ├── values-my
+│   │   │   │   │   │   │   │   │   └── values-my.xml
+│   │   │   │   │   │   │   │   ├── values-nb
+│   │   │   │   │   │   │   │   │   └── values-nb.xml
+│   │   │   │   │   │   │   │   ├── values-ne
+│   │   │   │   │   │   │   │   │   └── values-ne.xml
+│   │   │   │   │   │   │   │   ├── values-night-v8
+│   │   │   │   │   │   │   │   │   └── values-night-v8.xml
+│   │   │   │   │   │   │   │   ├── values-nl
+│   │   │   │   │   │   │   │   │   └── values-nl.xml
+│   │   │   │   │   │   │   │   ├── values-or
+│   │   │   │   │   │   │   │   │   └── values-or.xml
+│   │   │   │   │   │   │   │   ├── values-pa
+│   │   │   │   │   │   │   │   │   └── values-pa.xml
+│   │   │   │   │   │   │   │   ├── values-pl
+│   │   │   │   │   │   │   │   │   └── values-pl.xml
+│   │   │   │   │   │   │   │   ├── values-port
+│   │   │   │   │   │   │   │   │   └── values-port.xml
+│   │   │   │   │   │   │   │   ├── values-pt
+│   │   │   │   │   │   │   │   │   └── values-pt.xml
+│   │   │   │   │   │   │   │   ├── values-pt-rBR
+│   │   │   │   │   │   │   │   │   └── values-pt-rBR.xml
+│   │   │   │   │   │   │   │   ├── values-pt-rPT
+│   │   │   │   │   │   │   │   │   └── values-pt-rPT.xml
+│   │   │   │   │   │   │   │   ├── values-ro
+│   │   │   │   │   │   │   │   │   └── values-ro.xml
+│   │   │   │   │   │   │   │   ├── values-ru
+│   │   │   │   │   │   │   │   │   └── values-ru.xml
+│   │   │   │   │   │   │   │   ├── values-si
+│   │   │   │   │   │   │   │   │   └── values-si.xml
+│   │   │   │   │   │   │   │   ├── values-sk
+│   │   │   │   │   │   │   │   │   └── values-sk.xml
+│   │   │   │   │   │   │   │   ├── values-sl
+│   │   │   │   │   │   │   │   │   └── values-sl.xml
+│   │   │   │   │   │   │   │   ├── values-sq
+│   │   │   │   │   │   │   │   │   └── values-sq.xml
+│   │   │   │   │   │   │   │   ├── values-sr
+│   │   │   │   │   │   │   │   │   └── values-sr.xml
+│   │   │   │   │   │   │   │   ├── values-sv
+│   │   │   │   │   │   │   │   │   └── values-sv.xml
+│   │   │   │   │   │   │   │   ├── values-sw
+│   │   │   │   │   │   │   │   │   └── values-sw.xml
+│   │   │   │   │   │   │   │   ├── values-sw360dp-v13
+│   │   │   │   │   │   │   │   │   └── values-sw360dp-v13.xml
+│   │   │   │   │   │   │   │   ├── values-sw600dp-v13
+│   │   │   │   │   │   │   │   │   └── values-sw600dp-v13.xml
+│   │   │   │   │   │   │   │   ├── values-ta
+│   │   │   │   │   │   │   │   │   └── values-ta.xml
+│   │   │   │   │   │   │   │   ├── values-te
+│   │   │   │   │   │   │   │   │   └── values-te.xml
+│   │   │   │   │   │   │   │   ├── values-th
+│   │   │   │   │   │   │   │   │   └── values-th.xml
+│   │   │   │   │   │   │   │   ├── values-tl
+│   │   │   │   │   │   │   │   │   └── values-tl.xml
+│   │   │   │   │   │   │   │   ├── values-tr
+│   │   │   │   │   │   │   │   │   └── values-tr.xml
+│   │   │   │   │   │   │   │   ├── values-uk
+│   │   │   │   │   │   │   │   │   └── values-uk.xml
+│   │   │   │   │   │   │   │   ├── values-ur
+│   │   │   │   │   │   │   │   │   └── values-ur.xml
+│   │   │   │   │   │   │   │   ├── values-uz
+│   │   │   │   │   │   │   │   │   └── values-uz.xml
+│   │   │   │   │   │   │   │   ├── values-v16
+│   │   │   │   │   │   │   │   │   └── values-v16.xml
+│   │   │   │   │   │   │   │   ├── values-v17
+│   │   │   │   │   │   │   │   │   └── values-v17.xml
+│   │   │   │   │   │   │   │   ├── values-v18
+│   │   │   │   │   │   │   │   │   └── values-v18.xml
+│   │   │   │   │   │   │   │   ├── values-v21
+│   │   │   │   │   │   │   │   │   └── values-v21.xml
+│   │   │   │   │   │   │   │   ├── values-v22
+│   │   │   │   │   │   │   │   │   └── values-v22.xml
+│   │   │   │   │   │   │   │   ├── values-v23
+│   │   │   │   │   │   │   │   │   └── values-v23.xml
+│   │   │   │   │   │   │   │   ├── values-v24
+│   │   │   │   │   │   │   │   │   └── values-v24.xml
+│   │   │   │   │   │   │   │   ├── values-v25
+│   │   │   │   │   │   │   │   │   └── values-v25.xml
+│   │   │   │   │   │   │   │   ├── values-v26
+│   │   │   │   │   │   │   │   │   └── values-v26.xml
+│   │   │   │   │   │   │   │   ├── values-v28
+│   │   │   │   │   │   │   │   │   └── values-v28.xml
+│   │   │   │   │   │   │   │   ├── values-vi
+│   │   │   │   │   │   │   │   │   └── values-vi.xml
+│   │   │   │   │   │   │   │   ├── values-watch-v20
+│   │   │   │   │   │   │   │   │   └── values-watch-v20.xml
+│   │   │   │   │   │   │   │   ├── values-watch-v21
+│   │   │   │   │   │   │   │   │   └── values-watch-v21.xml
+│   │   │   │   │   │   │   │   ├── values-xlarge-v4
+│   │   │   │   │   │   │   │   │   └── values-xlarge-v4.xml
+│   │   │   │   │   │   │   │   ├── values-zh-rCN
+│   │   │   │   │   │   │   │   │   └── values-zh-rCN.xml
+│   │   │   │   │   │   │   │   ├── values-zh-rHK
+│   │   │   │   │   │   │   │   │   └── values-zh-rHK.xml
+│   │   │   │   │   │   │   │   ├── values-zh-rTW
+│   │   │   │   │   │   │   │   │   └── values-zh-rTW.xml
+│   │   │   │   │   │   │   │   └── values-zu
+│   │   │   │   │   │   │   │       └── values-zu.xml
+│   │   │   │   │   │   │   ├── merger.xml
+│   │   │   │   │   │   │   └── stripped.dir
+│   │   │   │   │   │   └── packageDebugResources
+│   │   │   │   │   │       ├── compile-file-map.properties
+│   │   │   │   │   │       ├── merged.dir
+│   │   │   │   │   │       │   ├── values
+│   │   │   │   │   │       │   │   └── values.xml
+│   │   │   │   │   │       │   └── values-night-v8
+│   │   │   │   │   │       │       └── values-night-v8.xml
+│   │   │   │   │   │       ├── merger.xml
+│   │   │   │   │   │       └── stripped.dir
+│   │   │   │   │   ├── debug-mergeJavaRes
+│   │   │   │   │   │   ├── merge-state
+│   │   │   │   │   │   └── zip-cache
+│   │   │   │   │   │       ├── 0_HxWjFA_INMuAPzR3ll1iQZCEs=
+│   │   │   │   │   │       ├── 3AJ2oj0alEj266dSDHkZpHPWpiY=
+│   │   │   │   │   │       ├── 4GjrVDYQ9OIyL0GxoTXbppMvF+g=
+│   │   │   │   │   │       ├── 5nC9zDpM6pN9FcBMKAwn3SuSd20=
+│   │   │   │   │   │       ├── 5+uwlYa5FPabFTChU0Q9CivDD8M=
+│   │   │   │   │   │       ├── 6hjg4IdD+BWn1b+8gAR7b7I3kHU=
+│   │   │   │   │   │       ├── 7XbHKICZtGtYB5O6Jbm0E5NAuvM=
+│   │   │   │   │   │       ├── 89xIAKmzJdOJLVh4n2pknGsEjzM=
+│   │   │   │   │   │       ├── 98NPNfXTrPBnU621tBrXYWKLQyM=
+│   │   │   │   │   │       ├── 9njNsNjMahLeVwA985QzoXwg5Zs=
+│   │   │   │   │   │       ├── ab3BVF93p2VGVyc_CpWEAcVGshI=
+│   │   │   │   │   │       ├── AEFO4jiq4XUgNXaWvxpYOb8p5bo=
+│   │   │   │   │   │       ├── bXTcVn2QvhLsiAipngcM5vURp9I=
+│   │   │   │   │   │       ├── Cf5uC7t0BkzawF1NGo4TyZvHxQY=
+│   │   │   │   │   │       ├── d9HCJBGBSczP2QNC9oEfbgH4dC0=
+│   │   │   │   │   │       ├── d9NRhMz32koF493mNnPo8XEXi_s=
+│   │   │   │   │   │       ├── DqrpHyEQZJAR5QA0SrGiP4j9u+g=
+│   │   │   │   │   │       ├── DsEbIgVFRZCFw0Za0bv6VwRMpwY=
+│   │   │   │   │   │       ├── ebf2M10SlZsdP+IrChsMAIMfKAo=
+│   │   │   │   │   │       ├── ebKKz4OloMTTuKq3Lqj46Eu6Ylg=
+│   │   │   │   │   │       ├── fsW4M9fw5K1FX97Mn0COfP47sBQ=
+│   │   │   │   │   │       ├── G4U7IOTq32G0lUdQqYy2Cblot_U=
+│   │   │   │   │   │       ├── gErdHQFKXfSxfbhFjdrxeXyWib8=
+│   │   │   │   │   │       ├── GRi7h+kCh9q_Iyaub8Wyyr3pkjg=
+│   │   │   │   │   │       ├── gZ2jkczJvgPVEpSXRwOkVo19Q_0=
+│   │   │   │   │   │       ├── HjU528Jr6RCE5e+qT_WHLOEMFDU=
+│   │   │   │   │   │       ├── i0TydD+hQmNHxyO3MixrNvngOFc=
+│   │   │   │   │   │       ├── iYwFO69D6qkS+CJmF1CyTCw05jQ=
+│   │   │   │   │   │       ├── Iz6dY3kH8kZtPom91C2fk6CBing=
+│   │   │   │   │   │       ├── j9_Y+MR7iGyljLlxw8GwuRWOorg=
+│   │   │   │   │   │       ├── jdkE4xqtiUdXf33uvLFcotKVswE=
+│   │   │   │   │   │       ├── kip8ytEnEUxzEDXe0WNVQLdL_qo=
+│   │   │   │   │   │       ├── kq++2_xATSk2Atm+ZZNpuBGdRMM=
+│   │   │   │   │   │       ├── L3p1S8Swl7tpAIP51tzK6+y0_8U=
+│   │   │   │   │   │       ├── mbprYVGjh9bWjrZoRaDd+_dTvgA=
+│   │   │   │   │   │       ├── mG1S20_lfhKJueag+uTSfXoEZmI=
+│   │   │   │   │   │       ├── mlrczBU9KaAhlg1Z9JTnzFG72gs=
+│   │   │   │   │   │       ├── N0WFUZwoV2Szi6HOIMhjGTPqe+Q=
+│   │   │   │   │   │       ├── NTOzu03T0Z7B8ZtcdGq9nE9wKzY=
+│   │   │   │   │   │       ├── nwYrMIDtDaK16YNnWeIGTw5shAc=
+│   │   │   │   │   │       ├── NzljyUKOKEfaIEhgInb6YdsuVoc=
+│   │   │   │   │   │       ├── o3ikHiZap8ixskx+aVvZeoGqPus=
+│   │   │   │   │   │       ├── oevi0QNPwP8wju_tS+gHahM5v4c=
+│   │   │   │   │   │       ├── oUxnC3AxWiuLvy+FXbH2vOiWRZk=
+│   │   │   │   │   │       ├── peDONb451PfdhHVT2q05aCclR0U=
+│   │   │   │   │   │       ├── pez_+ff+q0hsZebdC8ZlaceoAOM=
+│   │   │   │   │   │       ├── qdEtmmZ6zCAhDNby4c2KbnzxWJ8=
+│   │   │   │   │   │       ├── qfuqCD+bncaICnGjO6R9bgXVq4Q=
+│   │   │   │   │   │       ├── QT48WjXJP_ZregihZj4SfGglgvA=
+│   │   │   │   │   │       ├── qV7XferHuxh6Wt+BconzIaTmzY4=
+│   │   │   │   │   │       ├── qxSGlvSORtpT5L40SunqiSr1E+0=
+│   │   │   │   │   │       ├── R25PEeeG3AETKCdkv0SmLV5Bu78=
+│   │   │   │   │   │       ├── rIGdcqdWWADQ2XqvrIn_sDxD35c=
+│   │   │   │   │   │       ├── S_+a1Zl6FwGeaKPNnGig5T1X7qU=
+│   │   │   │   │   │       ├── Sp5YzG1dnJbDrIDRdcRZY0LqoA8=
+│   │   │   │   │   │       ├── SYpoB6I3DY9MMue8niUOqZsaiRw=
+│   │   │   │   │   │       ├── TjtOwAtzDs2c1PsGAJRFTkwgF8E=
+│   │   │   │   │   │       ├── t+rAZREqJ9S8r8BE5K_DHju8i64=
+│   │   │   │   │   │       ├── UhR0XpTiLQb1gFB5JYEIbLHpfvw=
+│   │   │   │   │   │       ├── VHHoE08WOpoveizHHXgyyrcj9_Q=
+│   │   │   │   │   │       ├── v_+LThSUd7l42MmXnfrOUxZ1E68=
+│   │   │   │   │   │       ├── vsXOWMf3E84+yfQyd0_bib8HYqg=
+│   │   │   │   │   │       ├── VxfkTWjIc9_zw4_aKGbJm8S+wrg=
+│   │   │   │   │   │       ├── wc2UeoXldvgjq7aIh4KG+Z1Vshg=
+│   │   │   │   │   │       ├── +WNptX+sdcQJ9WLHj4JggOzll2E=
+│   │   │   │   │   │       ├── Wx7ilvgra3QhearzNHn2nf0QExg=
+│   │   │   │   │   │       ├── xBOUSAWoV40Z+ljtNK10KAEIcNw=
+│   │   │   │   │   │       ├── XiBgm9fbJAbRVjhlDaCzna1uSFo=
+│   │   │   │   │   │       ├── xKwDM3bxSCmDjSpdcoRlyrEk20g=
+│   │   │   │   │   │       ├── XSdTlFlwxInJkOrcfXlJoLiLdVc=
+│   │   │   │   │   │       ├── YpmlrFv25opYrdw_p_SUZtQB5WM=
+│   │   │   │   │   │       ├── YquuI2KJLeBsUZuy6W5dcexGz2k=
+│   │   │   │   │   │       ├── YsRG62_OPVBmRQ46XoQt+NY++DE=
+│   │   │   │   │   │       ├── YuNaCHmKTurDBC75vuo_ykkffRU=
+│   │   │   │   │   │       ├── Zcyfl+mjftgBvyRXQgWTR8iO7Og=
+│   │   │   │   │   │       ├── zQAXUDb5N5GDnaBR_TXcLp6PDjw=
+│   │   │   │   │   │       ├── Z_raofrvxDGLXY5T0DRlud_COsc=
+│   │   │   │   │   │       └── ZZ9pK0z1Jjn9ljIGNcHcVb66aRE=
+│   │   │   │   │   ├── mergeDebugAssets
+│   │   │   │   │   │   └── merger.xml
+│   │   │   │   │   ├── mergeDebugJniLibFolders
+│   │   │   │   │   │   └── merger.xml
+│   │   │   │   │   ├── mergeDebugShaders
+│   │   │   │   │   │   └── merger.xml
+│   │   │   │   │   └── packageDebug
+│   │   │   │   │       └── tmp
+│   │   │   │   │           └── debug
+│   │   │   │   │               ├── dex-renamer-state.txt
+│   │   │   │   │               └── zip-cache
+│   │   │   │   │                   ├── androidResources
+│   │   │   │   │                   └── javaResources0
+│   │   │   │   ├── javac
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── compileDebugJavaWithJavac
+│   │   │   │   │           └── classes
+│   │   │   │   │               └── io
+│   │   │   │   │                   └── flutter
+│   │   │   │   │                       └── plugins
+│   │   │   │   │                           └── GeneratedPluginRegistrant.class
+│   │   │   │   ├── java_res
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── processDebugJavaRes
+│   │   │   │   │           └── out
+│   │   │   │   │               ├── com
+│   │   │   │   │               │   └── smartshule
+│   │   │   │   │               │       └── smartshule_mobile
+│   │   │   │   │               └── META-INF
+│   │   │   │   │                   └── app_debug.kotlin_module
+│   │   │   │   ├── linked_resources_binary_format
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── processDebugResources
+│   │   │   │   │           ├── linked-resources-binary-format-debug.ap_
+│   │   │   │   │           └── output-metadata.json
+│   │   │   │   ├── local_only_symbol_list
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── parseDebugLocalResources
+│   │   │   │   │           └── R-def.txt
+│   │   │   │   ├── manifest_merge_blame_file
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── processDebugMainManifest
+│   │   │   │   │           └── manifest-merger-blame-debug-report.txt
+│   │   │   │   ├── merged_java_res
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── mergeDebugJavaResource
+│   │   │   │   │           └── base.jar
+│   │   │   │   ├── merged_jni_libs
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── mergeDebugJniLibFolders
+│   │   │   │   │           └── out
+│   │   │   │   ├── merged_manifest
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── processDebugMainManifest
+│   │   │   │   │           └── AndroidManifest.xml
+│   │   │   │   ├── merged_manifests
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── processDebugManifest
+│   │   │   │   │           ├── AndroidManifest.xml
+│   │   │   │   │           └── output-metadata.json
+│   │   │   │   ├── merged_native_libs
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── mergeDebugNativeLibs
+│   │   │   │   │           └── out
+│   │   │   │   │               └── lib
+│   │   │   │   │                   ├── arm64-v8a
+│   │   │   │   │                   │   ├── libdatastore_shared_counter.so
+│   │   │   │   │                   │   ├── libflutter.so
+│   │   │   │   │                   │   └── libVkLayer_khronos_validation.so
+│   │   │   │   │                   ├── armeabi-v7a
+│   │   │   │   │                   │   └── libdatastore_shared_counter.so
+│   │   │   │   │                   ├── x86
+│   │   │   │   │                   │   └── libdatastore_shared_counter.so
+│   │   │   │   │                   └── x86_64
+│   │   │   │   │                       └── libdatastore_shared_counter.so
+│   │   │   │   ├── merged_res
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── mergeDebugResources
+│   │   │   │   │           ├── drawable-v21_launch_background.xml.flat
+│   │   │   │   │           ├── mipmap-hdpi_ic_launcher.png.flat
+│   │   │   │   │           ├── mipmap-mdpi_ic_launcher.png.flat
+│   │   │   │   │           ├── mipmap-xhdpi_ic_launcher.png.flat
+│   │   │   │   │           ├── mipmap-xxhdpi_ic_launcher.png.flat
+│   │   │   │   │           ├── mipmap-xxxhdpi_ic_launcher.png.flat
+│   │   │   │   │           ├── values-af_values-af.arsc.flat
+│   │   │   │   │           ├── values-am_values-am.arsc.flat
+│   │   │   │   │           ├── values-ar_values-ar.arsc.flat
+│   │   │   │   │           ├── values-as_values-as.arsc.flat
+│   │   │   │   │           ├── values-az_values-az.arsc.flat
+│   │   │   │   │           ├── values-be_values-be.arsc.flat
+│   │   │   │   │           ├── values-bg_values-bg.arsc.flat
+│   │   │   │   │           ├── values-bn_values-bn.arsc.flat
+│   │   │   │   │           ├── values-b+sr+Latn_values-b+sr+Latn.arsc.flat
+│   │   │   │   │           ├── values-bs_values-bs.arsc.flat
+│   │   │   │   │           ├── values-ca_values-ca.arsc.flat
+│   │   │   │   │           ├── values-cs_values-cs.arsc.flat
+│   │   │   │   │           ├── values-da_values-da.arsc.flat
+│   │   │   │   │           ├── values-de_values-de.arsc.flat
+│   │   │   │   │           ├── values-el_values-el.arsc.flat
+│   │   │   │   │           ├── values-en-rAU_values-en-rAU.arsc.flat
+│   │   │   │   │           ├── values-en-rCA_values-en-rCA.arsc.flat
+│   │   │   │   │           ├── values-en-rGB_values-en-rGB.arsc.flat
+│   │   │   │   │           ├── values-en-rIN_values-en-rIN.arsc.flat
+│   │   │   │   │           ├── values-en-rXC_values-en-rXC.arsc.flat
+│   │   │   │   │           ├── values-es-rUS_values-es-rUS.arsc.flat
+│   │   │   │   │           ├── values-es_values-es.arsc.flat
+│   │   │   │   │           ├── values-et_values-et.arsc.flat
+│   │   │   │   │           ├── values-eu_values-eu.arsc.flat
+│   │   │   │   │           ├── values-fa_values-fa.arsc.flat
+│   │   │   │   │           ├── values-fi_values-fi.arsc.flat
+│   │   │   │   │           ├── values-fr-rCA_values-fr-rCA.arsc.flat
+│   │   │   │   │           ├── values-fr_values-fr.arsc.flat
+│   │   │   │   │           ├── values-gl_values-gl.arsc.flat
+│   │   │   │   │           ├── values-gu_values-gu.arsc.flat
+│   │   │   │   │           ├── values-h720dp-v13_values-h720dp-v13.arsc.flat
+│   │   │   │   │           ├── values-hdpi-v4_values-hdpi-v4.arsc.flat
+│   │   │   │   │           ├── values-hi_values-hi.arsc.flat
+│   │   │   │   │           ├── values-hr_values-hr.arsc.flat
+│   │   │   │   │           ├── values-hu_values-hu.arsc.flat
+│   │   │   │   │           ├── values-hy_values-hy.arsc.flat
+│   │   │   │   │           ├── values-in_values-in.arsc.flat
+│   │   │   │   │           ├── values-is_values-is.arsc.flat
+│   │   │   │   │           ├── values-it_values-it.arsc.flat
+│   │   │   │   │           ├── values-iw_values-iw.arsc.flat
+│   │   │   │   │           ├── values-ja_values-ja.arsc.flat
+│   │   │   │   │           ├── values-ka_values-ka.arsc.flat
+│   │   │   │   │           ├── values-kk_values-kk.arsc.flat
+│   │   │   │   │           ├── values-km_values-km.arsc.flat
+│   │   │   │   │           ├── values-kn_values-kn.arsc.flat
+│   │   │   │   │           ├── values-ko_values-ko.arsc.flat
+│   │   │   │   │           ├── values-ky_values-ky.arsc.flat
+│   │   │   │   │           ├── values-land_values-land.arsc.flat
+│   │   │   │   │           ├── values-large-v4_values-large-v4.arsc.flat
+│   │   │   │   │           ├── values-ldltr-v21_values-ldltr-v21.arsc.flat
+│   │   │   │   │           ├── values-lo_values-lo.arsc.flat
+│   │   │   │   │           ├── values-lt_values-lt.arsc.flat
+│   │   │   │   │           ├── values-lv_values-lv.arsc.flat
+│   │   │   │   │           ├── values-mk_values-mk.arsc.flat
+│   │   │   │   │           ├── values-ml_values-ml.arsc.flat
+│   │   │   │   │           ├── values-mn_values-mn.arsc.flat
+│   │   │   │   │           ├── values-mr_values-mr.arsc.flat
+│   │   │   │   │           ├── values-ms_values-ms.arsc.flat
+│   │   │   │   │           ├── values-my_values-my.arsc.flat
+│   │   │   │   │           ├── values-nb_values-nb.arsc.flat
+│   │   │   │   │           ├── values-ne_values-ne.arsc.flat
+│   │   │   │   │           ├── values-night-v8_values-night-v8.arsc.flat
+│   │   │   │   │           ├── values-nl_values-nl.arsc.flat
+│   │   │   │   │           ├── values-or_values-or.arsc.flat
+│   │   │   │   │           ├── values-pa_values-pa.arsc.flat
+│   │   │   │   │           ├── values-pl_values-pl.arsc.flat
+│   │   │   │   │           ├── values-port_values-port.arsc.flat
+│   │   │   │   │           ├── values-pt-rBR_values-pt-rBR.arsc.flat
+│   │   │   │   │           ├── values-pt-rPT_values-pt-rPT.arsc.flat
+│   │   │   │   │           ├── values-pt_values-pt.arsc.flat
+│   │   │   │   │           ├── values-ro_values-ro.arsc.flat
+│   │   │   │   │           ├── values-ru_values-ru.arsc.flat
+│   │   │   │   │           ├── values-si_values-si.arsc.flat
+│   │   │   │   │           ├── values-sk_values-sk.arsc.flat
+│   │   │   │   │           ├── values-sl_values-sl.arsc.flat
+│   │   │   │   │           ├── values-sq_values-sq.arsc.flat
+│   │   │   │   │           ├── values-sr_values-sr.arsc.flat
+│   │   │   │   │           ├── values-sv_values-sv.arsc.flat
+│   │   │   │   │           ├── values-sw360dp-v13_values-sw360dp-v13.arsc.flat
+│   │   │   │   │           ├── values-sw600dp-v13_values-sw600dp-v13.arsc.flat
+│   │   │   │   │           ├── values-sw_values-sw.arsc.flat
+│   │   │   │   │           ├── values-ta_values-ta.arsc.flat
+│   │   │   │   │           ├── values-te_values-te.arsc.flat
+│   │   │   │   │           ├── values-th_values-th.arsc.flat
+│   │   │   │   │           ├── values-tl_values-tl.arsc.flat
+│   │   │   │   │           ├── values-tr_values-tr.arsc.flat
+│   │   │   │   │           ├── values-uk_values-uk.arsc.flat
+│   │   │   │   │           ├── values-ur_values-ur.arsc.flat
+│   │   │   │   │           ├── values-uz_values-uz.arsc.flat
+│   │   │   │   │           ├── values-v16_values-v16.arsc.flat
+│   │   │   │   │           ├── values-v17_values-v17.arsc.flat
+│   │   │   │   │           ├── values-v18_values-v18.arsc.flat
+│   │   │   │   │           ├── values-v21_values-v21.arsc.flat
+│   │   │   │   │           ├── values-v22_values-v22.arsc.flat
+│   │   │   │   │           ├── values-v23_values-v23.arsc.flat
+│   │   │   │   │           ├── values-v24_values-v24.arsc.flat
+│   │   │   │   │           ├── values-v25_values-v25.arsc.flat
+│   │   │   │   │           ├── values-v26_values-v26.arsc.flat
+│   │   │   │   │           ├── values-v28_values-v28.arsc.flat
+│   │   │   │   │           ├── values_values.arsc.flat
+│   │   │   │   │           ├── values-vi_values-vi.arsc.flat
+│   │   │   │   │           ├── values-watch-v20_values-watch-v20.arsc.flat
+│   │   │   │   │           ├── values-watch-v21_values-watch-v21.arsc.flat
+│   │   │   │   │           ├── values-xlarge-v4_values-xlarge-v4.arsc.flat
+│   │   │   │   │           ├── values-zh-rCN_values-zh-rCN.arsc.flat
+│   │   │   │   │           ├── values-zh-rHK_values-zh-rHK.arsc.flat
+│   │   │   │   │           ├── values-zh-rTW_values-zh-rTW.arsc.flat
+│   │   │   │   │           └── values-zu_values-zu.arsc.flat
+│   │   │   │   ├── merged_res_blame_folder
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── mergeDebugResources
+│   │   │   │   │           └── out
+│   │   │   │   │               ├── multi-v2
+│   │   │   │   │               │   ├── mergeDebugResources.json
+│   │   │   │   │               │   ├── values-af.json
+│   │   │   │   │               │   ├── values-am.json
+│   │   │   │   │               │   ├── values-ar.json
+│   │   │   │   │               │   ├── values-as.json
+│   │   │   │   │               │   ├── values-az.json
+│   │   │   │   │               │   ├── values-be.json
+│   │   │   │   │               │   ├── values-bg.json
+│   │   │   │   │               │   ├── values-bn.json
+│   │   │   │   │               │   ├── values-bs.json
+│   │   │   │   │               │   ├── values-b+sr+Latn.json
+│   │   │   │   │               │   ├── values-ca.json
+│   │   │   │   │               │   ├── values-cs.json
+│   │   │   │   │               │   ├── values-da.json
+│   │   │   │   │               │   ├── values-de.json
+│   │   │   │   │               │   ├── values-el.json
+│   │   │   │   │               │   ├── values-en-rAU.json
+│   │   │   │   │               │   ├── values-en-rCA.json
+│   │   │   │   │               │   ├── values-en-rGB.json
+│   │   │   │   │               │   ├── values-en-rIN.json
+│   │   │   │   │               │   ├── values-en-rXC.json
+│   │   │   │   │               │   ├── values-es.json
+│   │   │   │   │               │   ├── values-es-rUS.json
+│   │   │   │   │               │   ├── values-et.json
+│   │   │   │   │               │   ├── values-eu.json
+│   │   │   │   │               │   ├── values-fa.json
+│   │   │   │   │               │   ├── values-fi.json
+│   │   │   │   │               │   ├── values-fr.json
+│   │   │   │   │               │   ├── values-fr-rCA.json
+│   │   │   │   │               │   ├── values-gl.json
+│   │   │   │   │               │   ├── values-gu.json
+│   │   │   │   │               │   ├── values-h720dp-v13.json
+│   │   │   │   │               │   ├── values-hdpi-v4.json
+│   │   │   │   │               │   ├── values-hi.json
+│   │   │   │   │               │   ├── values-hr.json
+│   │   │   │   │               │   ├── values-hu.json
+│   │   │   │   │               │   ├── values-hy.json
+│   │   │   │   │               │   ├── values-in.json
+│   │   │   │   │               │   ├── values-is.json
+│   │   │   │   │               │   ├── values-it.json
+│   │   │   │   │               │   ├── values-iw.json
+│   │   │   │   │               │   ├── values-ja.json
+│   │   │   │   │               │   ├── values.json
+│   │   │   │   │               │   ├── values-ka.json
+│   │   │   │   │               │   ├── values-kk.json
+│   │   │   │   │               │   ├── values-km.json
+│   │   │   │   │               │   ├── values-kn.json
+│   │   │   │   │               │   ├── values-ko.json
+│   │   │   │   │               │   ├── values-ky.json
+│   │   │   │   │               │   ├── values-land.json
+│   │   │   │   │               │   ├── values-large-v4.json
+│   │   │   │   │               │   ├── values-ldltr-v21.json
+│   │   │   │   │               │   ├── values-lo.json
+│   │   │   │   │               │   ├── values-lt.json
+│   │   │   │   │               │   ├── values-lv.json
+│   │   │   │   │               │   ├── values-mk.json
+│   │   │   │   │               │   ├── values-ml.json
+│   │   │   │   │               │   ├── values-mn.json
+│   │   │   │   │               │   ├── values-mr.json
+│   │   │   │   │               │   ├── values-ms.json
+│   │   │   │   │               │   ├── values-my.json
+│   │   │   │   │               │   ├── values-nb.json
+│   │   │   │   │               │   ├── values-ne.json
+│   │   │   │   │               │   ├── values-night-v8.json
+│   │   │   │   │               │   ├── values-nl.json
+│   │   │   │   │               │   ├── values-or.json
+│   │   │   │   │               │   ├── values-pa.json
+│   │   │   │   │               │   ├── values-pl.json
+│   │   │   │   │               │   ├── values-port.json
+│   │   │   │   │               │   ├── values-pt.json
+│   │   │   │   │               │   ├── values-pt-rBR.json
+│   │   │   │   │               │   ├── values-pt-rPT.json
+│   │   │   │   │               │   ├── values-ro.json
+│   │   │   │   │               │   ├── values-ru.json
+│   │   │   │   │               │   ├── values-si.json
+│   │   │   │   │               │   ├── values-sk.json
+│   │   │   │   │               │   ├── values-sl.json
+│   │   │   │   │               │   ├── values-sq.json
+│   │   │   │   │               │   ├── values-sr.json
+│   │   │   │   │               │   ├── values-sv.json
+│   │   │   │   │               │   ├── values-sw360dp-v13.json
+│   │   │   │   │               │   ├── values-sw600dp-v13.json
+│   │   │   │   │               │   ├── values-sw.json
+│   │   │   │   │               │   ├── values-ta.json
+│   │   │   │   │               │   ├── values-te.json
+│   │   │   │   │               │   ├── values-th.json
+│   │   │   │   │               │   ├── values-tl.json
+│   │   │   │   │               │   ├── values-tr.json
+│   │   │   │   │               │   ├── values-uk.json
+│   │   │   │   │               │   ├── values-ur.json
+│   │   │   │   │               │   ├── values-uz.json
+│   │   │   │   │               │   ├── values-v16.json
+│   │   │   │   │               │   ├── values-v17.json
+│   │   │   │   │               │   ├── values-v18.json
+│   │   │   │   │               │   ├── values-v21.json
+│   │   │   │   │               │   ├── values-v22.json
+│   │   │   │   │               │   ├── values-v23.json
+│   │   │   │   │               │   ├── values-v24.json
+│   │   │   │   │               │   ├── values-v25.json
+│   │   │   │   │               │   ├── values-v26.json
+│   │   │   │   │               │   ├── values-v28.json
+│   │   │   │   │               │   ├── values-vi.json
+│   │   │   │   │               │   ├── values-watch-v20.json
+│   │   │   │   │               │   ├── values-watch-v21.json
+│   │   │   │   │               │   ├── values-xlarge-v4.json
+│   │   │   │   │               │   ├── values-zh-rCN.json
+│   │   │   │   │               │   ├── values-zh-rHK.json
+│   │   │   │   │               │   ├── values-zh-rTW.json
+│   │   │   │   │               │   └── values-zu.json
+│   │   │   │   │               └── single
+│   │   │   │   │                   └── mergeDebugResources.json
+│   │   │   │   ├── merged_shaders
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── mergeDebugShaders
+│   │   │   │   │           └── out
+│   │   │   │   ├── merged_test_only_native_libs
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── mergeDebugNativeLibs
+│   │   │   │   │           └── out
+│   │   │   │   ├── mixed_scope_dex_archive
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── dexBuilderDebug
+│   │   │   │   │           └── out
+│   │   │   │   ├── navigation_json
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── extractDeepLinksDebug
+│   │   │   │   │           └── navigation.json
+│   │   │   │   ├── nested_resources_validation_report
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── generateDebugResources
+│   │   │   │   │           └── nestedResourcesValidationReport.txt
+│   │   │   │   ├── packaged_manifests
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── processDebugManifestForPackage
+│   │   │   │   │           ├── AndroidManifest.xml
+│   │   │   │   │           └── output-metadata.json
+│   │   │   │   ├── packaged_res
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── packageDebugResources
+│   │   │   │   │           ├── drawable-v21
+│   │   │   │   │           │   └── launch_background.xml
+│   │   │   │   │           ├── mipmap-hdpi-v4
+│   │   │   │   │           │   └── ic_launcher.png
+│   │   │   │   │           ├── mipmap-mdpi-v4
+│   │   │   │   │           │   └── ic_launcher.png
+│   │   │   │   │           ├── mipmap-xhdpi-v4
+│   │   │   │   │           │   └── ic_launcher.png
+│   │   │   │   │           ├── mipmap-xxhdpi-v4
+│   │   │   │   │           │   └── ic_launcher.png
+│   │   │   │   │           ├── mipmap-xxxhdpi-v4
+│   │   │   │   │           │   └── ic_launcher.png
+│   │   │   │   │           ├── values
+│   │   │   │   │           │   └── values.xml
+│   │   │   │   │           └── values-night-v8
+│   │   │   │   │               └── values-night-v8.xml
+│   │   │   │   ├── project_dex_archive
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── dexBuilderDebug
+│   │   │   │   │           └── out
+│   │   │   │   │               ├── 9440aa8299dd43b823fecb00e6e250a6b50be3d8f4a183f01ceec009fd445b08_0.jar
+│   │   │   │   │               ├── 9440aa8299dd43b823fecb00e6e250a6b50be3d8f4a183f01ceec009fd445b08_1.jar
+│   │   │   │   │               ├── com
+│   │   │   │   │               │   └── smartshule
+│   │   │   │   │               │       └── smartshule_mobile
+│   │   │   │   │               │           └── MainActivity.dex
+│   │   │   │   │               └── io
+│   │   │   │   │                   └── flutter
+│   │   │   │   │                       └── plugins
+│   │   │   │   │                           └── GeneratedPluginRegistrant.dex
+│   │   │   │   ├── runtime_symbol_list
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── processDebugResources
+│   │   │   │   │           └── R.txt
+│   │   │   │   ├── signing_config_versions
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── writeDebugSigningConfigVersions
+│   │   │   │   │           └── signing-config-versions.json
+│   │   │   │   ├── source_set_path_map
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── mapDebugSourceSetPaths
+│   │   │   │   │           └── file-map.txt
+│   │   │   │   ├── stable_resource_ids_file
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── processDebugResources
+│   │   │   │   │           └── stableIds.txt
+│   │   │   │   ├── stripped_native_libs
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── stripDebugDebugSymbols
+│   │   │   │   │           └── out
+│   │   │   │   │               └── lib
+│   │   │   │   │                   ├── arm64-v8a
+│   │   │   │   │                   │   ├── libdatastore_shared_counter.so
+│   │   │   │   │                   │   ├── libflutter.so
+│   │   │   │   │                   │   └── libVkLayer_khronos_validation.so
+│   │   │   │   │                   ├── armeabi-v7a
+│   │   │   │   │                   │   └── libdatastore_shared_counter.so
+│   │   │   │   │                   ├── x86
+│   │   │   │   │                   │   └── libdatastore_shared_counter.so
+│   │   │   │   │                   └── x86_64
+│   │   │   │   │                       └── libdatastore_shared_counter.so
+│   │   │   │   ├── sub_project_dex_archive
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── dexBuilderDebug
+│   │   │   │   │           └── out
+│   │   │   │   ├── symbol_list_with_package_name
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── processDebugResources
+│   │   │   │   │           └── package-aware-r.txt
+│   │   │   │   └── validate_signing_config
+│   │   │   │       └── debug
+│   │   │   │           └── validateSigningDebug
+│   │   │   ├── kotlin
+│   │   │   │   └── compileDebugKotlin
+│   │   │   │       ├── cacheable
+│   │   │   │       │   ├── caches-jvm
+│   │   │   │       │   │   ├── inputs
+│   │   │   │       │   │   │   ├── source-to-output.tab
+│   │   │   │       │   │   │   ├── source-to-output.tab_i
+│   │   │   │       │   │   │   ├── source-to-output.tab_i.len
+│   │   │   │       │   │   │   ├── source-to-output.tab.keystream
+│   │   │   │       │   │   │   ├── source-to-output.tab.keystream.len
+│   │   │   │       │   │   │   ├── source-to-output.tab.len
+│   │   │   │       │   │   │   └── source-to-output.tab.values.at
+│   │   │   │       │   │   ├── jvm
+│   │   │   │       │   │   │   └── kotlin
+│   │   │   │       │   │   │       ├── class-attributes.tab
+│   │   │   │       │   │   │       ├── class-attributes.tab_i
+│   │   │   │       │   │   │       ├── class-attributes.tab_i.len
+│   │   │   │       │   │   │       ├── class-attributes.tab.keystream
+│   │   │   │       │   │   │       ├── class-attributes.tab.keystream.len
+│   │   │   │       │   │   │       ├── class-attributes.tab.len
+│   │   │   │       │   │   │       ├── class-attributes.tab.values.at
+│   │   │   │       │   │   │       ├── class-fq-name-to-source.tab
+│   │   │   │       │   │   │       ├── class-fq-name-to-source.tab_i
+│   │   │   │       │   │   │       ├── class-fq-name-to-source.tab_i.len
+│   │   │   │       │   │   │       ├── class-fq-name-to-source.tab.keystream
+│   │   │   │       │   │   │       ├── class-fq-name-to-source.tab.keystream.len
+│   │   │   │       │   │   │       ├── class-fq-name-to-source.tab.len
+│   │   │   │       │   │   │       ├── class-fq-name-to-source.tab.values.at
+│   │   │   │       │   │   │       ├── internal-name-to-source.tab
+│   │   │   │       │   │   │       ├── internal-name-to-source.tab_i
+│   │   │   │       │   │   │       ├── internal-name-to-source.tab_i.len
+│   │   │   │       │   │   │       ├── internal-name-to-source.tab.keystream
+│   │   │   │       │   │   │       ├── internal-name-to-source.tab.keystream.len
+│   │   │   │       │   │   │       ├── internal-name-to-source.tab.len
+│   │   │   │       │   │   │       ├── internal-name-to-source.tab.values.at
+│   │   │   │       │   │   │       ├── proto.tab
+│   │   │   │       │   │   │       ├── proto.tab_i
+│   │   │   │       │   │   │       ├── proto.tab_i.len
+│   │   │   │       │   │   │       ├── proto.tab.keystream
+│   │   │   │       │   │   │       ├── proto.tab.keystream.len
+│   │   │   │       │   │   │       ├── proto.tab.len
+│   │   │   │       │   │   │       ├── proto.tab.values.at
+│   │   │   │       │   │   │       ├── source-to-classes.tab
+│   │   │   │       │   │   │       ├── source-to-classes.tab_i
+│   │   │   │       │   │   │       ├── source-to-classes.tab_i.len
+│   │   │   │       │   │   │       ├── source-to-classes.tab.keystream
+│   │   │   │       │   │   │       ├── source-to-classes.tab.keystream.len
+│   │   │   │       │   │   │       ├── source-to-classes.tab.len
+│   │   │   │       │   │   │       ├── source-to-classes.tab.values.at
+│   │   │   │       │   │   │       ├── subtypes.tab
+│   │   │   │       │   │   │       ├── subtypes.tab_i
+│   │   │   │       │   │   │       ├── subtypes.tab_i.len
+│   │   │   │       │   │   │       ├── subtypes.tab.keystream
+│   │   │   │       │   │   │       ├── subtypes.tab.keystream.len
+│   │   │   │       │   │   │       ├── subtypes.tab.len
+│   │   │   │       │   │   │       ├── subtypes.tab.values.at
+│   │   │   │       │   │   │       ├── supertypes.tab
+│   │   │   │       │   │   │       ├── supertypes.tab_i
+│   │   │   │       │   │   │       ├── supertypes.tab_i.len
+│   │   │   │       │   │   │       ├── supertypes.tab.keystream
+│   │   │   │       │   │   │       ├── supertypes.tab.keystream.len
+│   │   │   │       │   │   │       ├── supertypes.tab.len
+│   │   │   │       │   │   │       └── supertypes.tab.values.at
+│   │   │   │       │   │   └── lookups
+│   │   │   │       │   │       ├── counters.tab
+│   │   │   │       │   │       ├── file-to-id.tab
+│   │   │   │       │   │       ├── file-to-id.tab_i
+│   │   │   │       │   │       ├── file-to-id.tab_i.len
+│   │   │   │       │   │       ├── file-to-id.tab.keystream
+│   │   │   │       │   │       ├── file-to-id.tab.keystream.len
+│   │   │   │       │   │       ├── file-to-id.tab.len
+│   │   │   │       │   │       ├── file-to-id.tab.values.at
+│   │   │   │       │   │       ├── id-to-file.tab
+│   │   │   │       │   │       ├── id-to-file.tab_i.len
+│   │   │   │       │   │       ├── id-to-file.tab.keystream
+│   │   │   │       │   │       ├── id-to-file.tab.keystream.len
+│   │   │   │       │   │       ├── id-to-file.tab.len
+│   │   │   │       │   │       ├── id-to-file.tab.values.at
+│   │   │   │       │   │       ├── lookups.tab
+│   │   │   │       │   │       ├── lookups.tab_i
+│   │   │   │       │   │       ├── lookups.tab_i.len
+│   │   │   │       │   │       ├── lookups.tab.keystream
+│   │   │   │       │   │       ├── lookups.tab.keystream.len
+│   │   │   │       │   │       ├── lookups.tab.len
+│   │   │   │       │   │       └── lookups.tab.values.at
+│   │   │   │       │   └── last-build.bin
+│   │   │   │       ├── classpath-snapshot
+│   │   │   │       │   └── shrunk-classpath-snapshot.bin
+│   │   │   │       └── local-state
+│   │   │   │           └── build-history.bin
+│   │   │   ├── outputs
+│   │   │   │   ├── apk
+│   │   │   │   │   └── debug
+│   │   │   │   │       ├── app-debug.apk
+│   │   │   │   │       └── output-metadata.json
+│   │   │   │   ├── flutter-apk
+│   │   │   │   │   ├── app-debug.apk
+│   │   │   │   │   └── app-debug.apk.sha1
+│   │   │   │   └── logs
+│   │   │   │       └── manifest-merger-debug-report.txt
+│   │   │   └── tmp
+│   │   │       ├── compileDebugJavaWithJavac
+│   │   │       │   ├── compileTransaction
+│   │   │       │   │   ├── backup-dir
+│   │   │       │   │   └── stash-dir
+│   │   │       │   └── previous-compilation-data.bin
+│   │   │       ├── kotlin-classes
+│   │   │       │   └── debug
+│   │   │       │       ├── com
+│   │   │       │       │   └── smartshule
+│   │   │       │       │       └── smartshule_mobile
+│   │   │       │       │           └── MainActivity.class
+│   │   │       │       └── META-INF
+│   │   │       │           └── app_debug.kotlin_module
+│   │   │       └── packJniLibsflutterBuildDebug
+│   │   │           └── MANIFEST.MF
+│   │   ├── b0f31f805f23c619e6c5849e4fde37e4
+│   │   │   ├── _composite.stamp
+│   │   │   ├── gen_dart_plugin_registrant.stamp
+│   │   │   └── gen_localizations.stamp
+│   │   ├── .cxx
+│   │   │   └── debug
+│   │   │       └── 12331n6s
+│   │   │           ├── arm64-v8a
+│   │   │           │   ├── additional_project_files.txt
+│   │   │           │   ├── android_gradle_build.json
+│   │   │           │   ├── android_gradle_build_mini.json
+│   │   │           │   ├── build_file_index.txt
+│   │   │           │   ├── build.ninja
+│   │   │           │   ├── .cmake
+│   │   │           │   │   └── api
+│   │   │           │   │       └── v1
+│   │   │           │   │           ├── query
+│   │   │           │   │           │   └── client-agp
+│   │   │           │   │           │       ├── cache-v2
+│   │   │           │   │           │       ├── cmakeFiles-v1
+│   │   │           │   │           │       └── codemodel-v2
+│   │   │           │   │           └── reply
+│   │   │           │   │               ├── cache-v2-cbfa992fbb9ada3fbd89.json
+│   │   │           │   │               ├── cmakeFiles-v1-5c4c1be12e7a3b4932e8.json
+│   │   │           │   │               ├── codemodel-v2-8de48d2003d6f1c18fa7.json
+│   │   │           │   │               ├── directory-.-debug-f5ebdc15457944623624.json
+│   │   │           │   │               └── index-2026-10-08T18-14-04-0857.json
+│   │   │           │   ├── CMakeCache.txt
+│   │   │           │   ├── CMakeFiles
+│   │   │           │   │   ├── 3.22.1-g37088a8
+│   │   │           │   │   │   ├── CMakeCCompiler.cmake
+│   │   │           │   │   │   ├── CMakeCXXCompiler.cmake
+│   │   │           │   │   │   ├── CMakeDetermineCompilerABI_C.bin
+│   │   │           │   │   │   ├── CMakeDetermineCompilerABI_CXX.bin
+│   │   │           │   │   │   ├── CMakeSystem.cmake
+│   │   │           │   │   │   ├── CompilerIdC
+│   │   │           │   │   │   │   ├── CMakeCCompilerId.c
+│   │   │           │   │   │   │   ├── CMakeCCompilerId.o
+│   │   │           │   │   │   │   └── tmp
+│   │   │           │   │   │   └── CompilerIdCXX
+│   │   │           │   │   │       ├── CMakeCXXCompilerId.cpp
+│   │   │           │   │   │       ├── CMakeCXXCompilerId.o
+│   │   │           │   │   │       └── tmp
+│   │   │           │   │   ├── cmake.check_cache
+│   │   │           │   │   ├── CMakeOutput.log
+│   │   │           │   │   ├── CMakeTmp
+│   │   │           │   │   ├── rules.ninja
+│   │   │           │   │   └── TargetDirectories.txt
+│   │   │           │   ├── cmake_install.cmake
+│   │   │           │   ├── configure_fingerprint.bin
+│   │   │           │   ├── metadata_generation_command.txt
+│   │   │           │   ├── prefab_config.json
+│   │   │           │   └── symbol_folder_index.txt
+│   │   │           ├── armeabi-v7a
+│   │   │           │   ├── additional_project_files.txt
+│   │   │           │   ├── android_gradle_build.json
+│   │   │           │   ├── android_gradle_build_mini.json
+│   │   │           │   ├── build_file_index.txt
+│   │   │           │   ├── build.ninja
+│   │   │           │   ├── .cmake
+│   │   │           │   │   └── api
+│   │   │           │   │       └── v1
+│   │   │           │   │           ├── query
+│   │   │           │   │           │   └── client-agp
+│   │   │           │   │           │       ├── cache-v2
+│   │   │           │   │           │       ├── cmakeFiles-v1
+│   │   │           │   │           │       └── codemodel-v2
+│   │   │           │   │           └── reply
+│   │   │           │   │               ├── cache-v2-2880b8a428450fdaf017.json
+│   │   │           │   │               ├── cmakeFiles-v1-e62d81cd735d72da37ff.json
+│   │   │           │   │               ├── codemodel-v2-5ca167d700059c374111.json
+│   │   │           │   │               ├── directory-.-debug-f5ebdc15457944623624.json
+│   │   │           │   │               └── index-2026-10-08T18-15-06-0850.json
+│   │   │           │   ├── CMakeCache.txt
+│   │   │           │   ├── CMakeFiles
+│   │   │           │   │   ├── 3.22.1-g37088a8
+│   │   │           │   │   │   ├── CMakeCCompiler.cmake
+│   │   │           │   │   │   ├── CMakeCXXCompiler.cmake
+│   │   │           │   │   │   ├── CMakeDetermineCompilerABI_C.bin
+│   │   │           │   │   │   ├── CMakeDetermineCompilerABI_CXX.bin
+│   │   │           │   │   │   ├── CMakeSystem.cmake
+│   │   │           │   │   │   ├── CompilerIdC
+│   │   │           │   │   │   │   ├── CMakeCCompilerId.c
+│   │   │           │   │   │   │   ├── CMakeCCompilerId.o
+│   │   │           │   │   │   │   └── tmp
+│   │   │           │   │   │   └── CompilerIdCXX
+│   │   │           │   │   │       ├── CMakeCXXCompilerId.cpp
+│   │   │           │   │   │       ├── CMakeCXXCompilerId.o
+│   │   │           │   │   │       └── tmp
+│   │   │           │   │   ├── cmake.check_cache
+│   │   │           │   │   ├── CMakeOutput.log
+│   │   │           │   │   ├── CMakeTmp
+│   │   │           │   │   ├── rules.ninja
+│   │   │           │   │   └── TargetDirectories.txt
+│   │   │           │   ├── cmake_install.cmake
+│   │   │           │   ├── configure_fingerprint.bin
+│   │   │           │   ├── metadata_generation_command.txt
+│   │   │           │   ├── prefab_config.json
+│   │   │           │   └── symbol_folder_index.txt
+│   │   │           ├── hash_key.txt
+│   │   │           └── x86_64
+│   │   │               ├── additional_project_files.txt
+│   │   │               ├── android_gradle_build.json
+│   │   │               ├── android_gradle_build_mini.json
+│   │   │               ├── build_file_index.txt
+│   │   │               ├── build.ninja
+│   │   │               ├── .cmake
+│   │   │               │   └── api
+│   │   │               │       └── v1
+│   │   │               │           ├── query
+│   │   │               │           │   └── client-agp
+│   │   │               │           │       ├── cache-v2
+│   │   │               │           │       ├── cmakeFiles-v1
+│   │   │               │           │       └── codemodel-v2
+│   │   │               │           └── reply
+│   │   │               │               ├── cache-v2-649514f0db7d07b20fcf.json
+│   │   │               │               ├── cmakeFiles-v1-2831c5c8cf149ca8a62c.json
+│   │   │               │               ├── codemodel-v2-a7bbfac9018a8e00473a.json
+│   │   │               │               ├── directory-.-debug-f5ebdc15457944623624.json
+│   │   │               │               └── index-2026-10-08T18-15-07-0503.json
+│   │   │               ├── CMakeCache.txt
+│   │   │               ├── CMakeFiles
+│   │   │               │   ├── 3.22.1-g37088a8
+│   │   │               │   │   ├── CMakeCCompiler.cmake
+│   │   │               │   │   ├── CMakeCXXCompiler.cmake
+│   │   │               │   │   ├── CMakeDetermineCompilerABI_C.bin
+│   │   │               │   │   ├── CMakeDetermineCompilerABI_CXX.bin
+│   │   │               │   │   ├── CMakeSystem.cmake
+│   │   │               │   │   ├── CompilerIdC
+│   │   │               │   │   │   ├── CMakeCCompilerId.c
+│   │   │               │   │   │   ├── CMakeCCompilerId.o
+│   │   │               │   │   │   └── tmp
+│   │   │               │   │   └── CompilerIdCXX
+│   │   │               │   │       ├── CMakeCXXCompilerId.cpp
+│   │   │               │   │       ├── CMakeCXXCompilerId.o
+│   │   │               │   │       └── tmp
+│   │   │               │   ├── cmake.check_cache
+│   │   │               │   ├── CMakeOutput.log
+│   │   │               │   ├── CMakeTmp
+│   │   │               │   ├── rules.ninja
+│   │   │               │   └── TargetDirectories.txt
+│   │   │               ├── cmake_install.cmake
+│   │   │               ├── configure_fingerprint.bin
+│   │   │               ├── metadata_generation_command.txt
+│   │   │               ├── prefab_config.json
+│   │   │               └── symbol_folder_index.txt
+│   │   ├── native_assets
+│   │   │   ├── android
+│   │   │   └── linux
+│   │   │       └── native_assets.json
+│   │   ├── reports
+│   │   │   └── problems
+│   │   │       └── problems-report.html
+│   │   ├── shared_preferences_android
+│   │   │   ├── generated
+│   │   │   │   ├── ap_generated_sources
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── out
+│   │   │   │   └── res
+│   │   │   │       ├── pngs
+│   │   │   │       │   └── debug
+│   │   │   │       └── resValues
+│   │   │   │           └── debug
+│   │   │   ├── intermediates
+│   │   │   │   ├── aapt_friendly_merged_manifests
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── processDebugManifest
+│   │   │   │   │           └── aapt
+│   │   │   │   │               ├── AndroidManifest.xml
+│   │   │   │   │               └── output-metadata.json
+│   │   │   │   ├── aar_libs_directory
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── syncDebugLibJars
+│   │   │   │   │           └── libs
+│   │   │   │   ├── aar_main_jar
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── syncDebugLibJars
+│   │   │   │   │           └── classes.jar
+│   │   │   │   ├── aar_metadata
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── writeDebugAarMetadata
+│   │   │   │   │           └── aar-metadata.properties
+│   │   │   │   ├── annotation_processor_list
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── javaPreCompileDebug
+│   │   │   │   │           └── annotationProcessors.json
+│   │   │   │   ├── annotations_typedef_file
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── extractDebugAnnotations
+│   │   │   │   │           └── typedefs.txt
+│   │   │   │   ├── annotations_zip
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── extractDebugAnnotations
+│   │   │   │   ├── assets
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── mergeDebugAssets
+│   │   │   │   ├── compiled_local_resources
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── compileDebugLibraryResources
+│   │   │   │   │           └── out
+│   │   │   │   ├── compile_library_classes_jar
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── bundleLibCompileToJarDebug
+│   │   │   │   │           └── classes.jar
+│   │   │   │   ├── compile_r_class_jar
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── generateDebugRFile
+│   │   │   │   │           └── R.jar
+│   │   │   │   ├── compile_symbol_list
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── generateDebugRFile
+│   │   │   │   │           └── R.txt
+│   │   │   │   ├── data_binding_layout_info_type_package
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── packageDebugResources
+│   │   │   │   │           └── out
+│   │   │   │   ├── generated_proguard_file
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── mergeDebugGeneratedProguardFiles
+│   │   │   │   ├── incremental
+│   │   │   │   │   ├── debug
+│   │   │   │   │   │   └── packageDebugResources
+│   │   │   │   │   │       ├── compile-file-map.properties
+│   │   │   │   │   │       ├── merged.dir
+│   │   │   │   │   │       ├── merger.xml
+│   │   │   │   │   │       └── stripped.dir
+│   │   │   │   │   ├── debug-mergeJavaRes
+│   │   │   │   │   │   ├── merge-state
+│   │   │   │   │   │   └── zip-cache
+│   │   │   │   │   ├── mergeDebugAssets
+│   │   │   │   │   │   └── merger.xml
+│   │   │   │   │   ├── mergeDebugJniLibFolders
+│   │   │   │   │   │   └── merger.xml
+│   │   │   │   │   └── mergeDebugShaders
+│   │   │   │   │       └── merger.xml
+│   │   │   │   ├── javac
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── compileDebugJavaWithJavac
+│   │   │   │   │           └── classes
+│   │   │   │   │               └── io
+│   │   │   │   │                   └── flutter
+│   │   │   │   │                       └── plugins
+│   │   │   │   │                           └── sharedpreferences
+│   │   │   │   │                               ├── LegacySharedPreferencesPlugin$ListEncoder.class
+│   │   │   │   │                               ├── LegacySharedPreferencesPlugin.class
+│   │   │   │   │                               ├── Messages$FlutterError.class
+│   │   │   │   │                               ├── Messages$PigeonCodec.class
+│   │   │   │   │                               ├── Messages$SharedPreferencesApi.class
+│   │   │   │   │                               ├── Messages.class
+│   │   │   │   │                               └── SharedPreferencesListEncoder.class
+│   │   │   │   ├── java_res
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── processDebugJavaRes
+│   │   │   │   │           └── out
+│   │   │   │   │               ├── io
+│   │   │   │   │               │   └── flutter
+│   │   │   │   │               │       └── plugins
+│   │   │   │   │               │           └── sharedpreferences
+│   │   │   │   │               └── META-INF
+│   │   │   │   │                   └── shared_preferences_android_debug.kotlin_module
+│   │   │   │   ├── library_and_local_jars_jni
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── copyDebugJniLibsProjectAndLocalJars
+│   │   │   │   │           └── jni
+│   │   │   │   ├── library_art_profile
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── prepareDebugArtProfile
+│   │   │   │   ├── library_jni
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── copyDebugJniLibsProjectOnly
+│   │   │   │   │           └── jni
+│   │   │   │   ├── lint_publish_jar
+│   │   │   │   │   └── global
+│   │   │   │   │       └── prepareLintJarForPublish
+│   │   │   │   ├── local_only_symbol_list
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── parseDebugLocalResources
+│   │   │   │   │           └── R-def.txt
+│   │   │   │   ├── manifest_merge_blame_file
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── processDebugManifest
+│   │   │   │   │           └── manifest-merger-blame-debug-report.txt
+│   │   │   │   ├── merged_consumer_proguard_file
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── mergeDebugConsumerProguardFiles
+│   │   │   │   ├── merged_java_res
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── mergeDebugJavaResource
+│   │   │   │   │           └── feature-shared_preferences_android.jar
+│   │   │   │   ├── merged_jni_libs
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── mergeDebugJniLibFolders
+│   │   │   │   │           └── out
+│   │   │   │   ├── merged_manifest
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── processDebugManifest
+│   │   │   │   │           └── AndroidManifest.xml
+│   │   │   │   ├── merged_shaders
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── mergeDebugShaders
+│   │   │   │   │           └── out
+│   │   │   │   ├── navigation_json
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── extractDeepLinksDebug
+│   │   │   │   │           └── navigation.json
+│   │   │   │   ├── navigation_json_for_aar
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── extractDeepLinksForAarDebug
+│   │   │   │   ├── nested_resources_validation_report
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── generateDebugResources
+│   │   │   │   │           └── nestedResourcesValidationReport.txt
+│   │   │   │   ├── packaged_res
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── packageDebugResources
+│   │   │   │   ├── public_res
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── packageDebugResources
+│   │   │   │   ├── runtime_library_classes_dir
+│   │   │   │   │   └── debug
+│   │   │   │   │       └── bundleLibRuntimeToDirDebug
+│   │   │   │   │           ├── io
+│   │   │   │   │           │   └── flutter
+│   │   │   │   │           │       └── plugins
+│   │   │   │   │           │           └── sharedpreferences
+│   │   │   │   │           │               ├── LegacySharedPreferencesPlugin$ListEncoder.class
+│   │   │   │   │           │               ├── LegacySharedPreferencesPlugin.class
+│   │   │   │   │           │               ├── ListEncoder.class
+│   │   │   │   │           │               ├── Messages$FlutterError.class
+│   │   │   │   │           │               ├── Messages$PigeonCodec.class
+│   │   │   │   │           │               ├── Messages$SharedPreferencesApi.class
+│   │   │   │   │           │               ├── MessagesAsyncPigeonCodec.class
+│   │   │   │   │           │               ├── MessagesAsyncPigeonUtils.class
+│   │   │   │   │           │               ├── Messages.class
+│   │   │   │   │           │               ├── SharedPreferencesAsyncApi$Companion.class
+│   │   │   │   │           │               ├── SharedPreferencesAsyncApi.class
+│   │   │   │   │           │               ├── SharedPreferencesBackend.class
+│   │   │   │   │           │               ├── SharedPreferencesError.class
+│   │   │   │   │           │               ├── SharedPreferencesListEncoder.class
+│   │   │   │   │           │               ├── SharedPreferencesPigeonOptions$Companion.class
+│   │   │   │   │           │               ├── SharedPreferencesPigeonOptions.class
+│   │   │   │   │           │               ├── SharedPreferencesPlugin$clear$1$1.class
+│   │   │   │   │           │               ├── SharedPreferencesPlugin$clear$1.class
+│   │   │   │   │           │               ├── SharedPreferencesPlugin$dataStoreSetString$2.class
+│   │   │   │   │           │               ├── SharedPreferencesPlugin$getAll$1.class
+│   │   │   │   │           │               ├── SharedPreferencesPlugin$getBool$1$invokeSuspend$$inlined$map$1$2$1.class
+│   │   │   │   │           │               ├── SharedPreferencesPlugin$getBool$1$invokeSuspend$$inlined$map$1$2.class
+│   │   │   │   │           │               ├── SharedPreferencesPlugin$getBool$1$invokeSuspend$$inlined$map$1.class
+│   │   │   │   │           │               ├── SharedPreferencesPlugin$getBool$1.class
+│   │   │   │   │           │               ├── SharedPreferencesPlugin$getDouble$1$invokeSuspend$$inlined$map$1$2$1.class
+│   │   │   │   │           │               ├── SharedPreferencesPlugin$getDouble$1$invokeSuspend$$inlined$map$1$2.class
+│   │   │   │   │           │               ├── SharedPreferencesPlugin$getDouble$1$invokeSuspend$$inlined$map$1.class
+│   │   │   │   │           │               ├── SharedPreferencesPlugin$getDouble$1.class
+│   │   │   │   │           │               ├── SharedPreferencesPlugin$getInt$1$invokeSuspend$$inlined$map$1$2$1.class
+│   │   │   │   │           │               ├── SharedPreferencesPlugin$getInt$1$invokeSuspend$$inlined$map$1$2.class
+│   │   │   │   │           │               ├── SharedPreferencesPlugin$getInt$1$invokeSuspend$$inlined$map$1.class
+│   │   │   │   │           │               ├── SharedPreferencesPlugin$getInt$1.class
+│   │   │   │   │           │               ├── SharedPreferencesPlugin$getKeys$prefs$1.class
+│   │   │   │   │           │               ├── SharedPreferencesPlugin$getPrefs$1.class
+│   │   │   │   │           │               ├── SharedPreferencesPlugin$getString$1$invokeSuspend$$inlined$map$1$2$1.class
+│   │   │   │   │           │               ├── SharedPreferencesPlugin$getString$1$invokeSuspend$$inlined$map$1$2.class
+│   │   │   │   │           │               ├── SharedPreferencesPlugin$getString$1$invokeSuspend$$inlined$map$1.class
+│   │   │   │   │           │               ├── SharedPreferencesPlugin$getString$1.class
+│   │   │   │   │           │               ├── SharedPreferencesPlugin$getValueByKey$$inlined$map$1$2$1.class
+│   │   │   │   │           │               ├── SharedPreferencesPlugin$getValueByKey$$inlined$map$1$2.class
+│   │   │   │   │           │               ├── SharedPreferencesPlugin$getValueByKey$$inlined$map$1.class
+│   │   │   │   │           │               ├── SharedPreferencesPlugin$readAllKeys$$inlined$map$1$2$1.class
+│   │   │   │   │           │               ├── SharedPreferencesPlugin$readAllKeys$$inlined$map$1$2.class
+│   │   │   │   │           │               ├── SharedPreferencesPlugin$readAllKeys$$inlined$map$1.class
+│   │   │   │   │           │               ├── SharedPreferencesPlugin$setBool$1$1.class
+│   │   │   │   │           │               ├── SharedPreferencesPlugin$setBool$1.class
+│   │   │   │   │           │               ├── SharedPreferencesPlugin$setDeprecatedStringList$1.class
+│   │   │   │   │           │               ├── SharedPreferencesPlugin$setDouble$1$1.class
+│   │   │   │   │           │               ├── SharedPreferencesPlugin$setDouble$1.class
+│   │   │   │   │           │               ├── SharedPreferencesPlugin$setEncodedStringList$1.class
+│   │   │   │   │           │               ├── SharedPreferencesPlugin$setInt$1$1.class
+│   │   │   │   │           │               ├── SharedPreferencesPlugin$setInt$1.class
+│   │   │   │   │           │               ├── SharedPreferencesPlugin$setString$1.class
+│   │   │   │   │           │               ├── SharedPreferencesPlugin.class
+│   │   │   │   │           │               ├── SharedPreferencesPluginKt.class
+│   │   │   │   │           │               ├── StringListLookupResultType$Companion.class
+│   │   │   │   │           │               ├── StringListLookupResultType.class
+│   │   │   │   │           │               ├── StringListObjectInputStream.class
+│   │   │   │   │           │               ├── StringListResult$Companion.class
+│   │   │   │   │           │               └── StringListResult.class
+│   │   │   │   │           └── META-INF
+│   │   │   │   │               └── shared_preferences_android_debug.kotlin_module
+│   │   │   │   └── symbol_list_with_package_name
+│   │   │   │       └── debug
+│   │   │   │           └── generateDebugRFile
+│   │   │   │               └── package-aware-r.txt
+│   │   │   ├── kotlin
+│   │   │   │   └── compileDebugKotlin
+│   │   │   │       ├── cacheable
+│   │   │   │       │   ├── caches-jvm
+│   │   │   │       │   │   ├── inputs
+│   │   │   │       │   │   │   ├── source-to-output.tab
+│   │   │   │       │   │   │   ├── source-to-output.tab_i
+│   │   │   │       │   │   │   ├── source-to-output.tab_i.len
+│   │   │   │       │   │   │   ├── source-to-output.tab.keystream
+│   │   │   │       │   │   │   ├── source-to-output.tab.keystream.len
+│   │   │   │       │   │   │   ├── source-to-output.tab.len
+│   │   │   │       │   │   │   └── source-to-output.tab.values.at
+│   │   │   │       │   │   ├── jvm
+│   │   │   │       │   │   │   └── kotlin
+│   │   │   │       │   │   │       ├── class-attributes.tab
+│   │   │   │       │   │   │       ├── class-attributes.tab_i
+│   │   │   │       │   │   │       ├── class-attributes.tab_i.len
+│   │   │   │       │   │   │       ├── class-attributes.tab.keystream
+│   │   │   │       │   │   │       ├── class-attributes.tab.keystream.len
+│   │   │   │       │   │   │       ├── class-attributes.tab.len
+│   │   │   │       │   │   │       ├── class-attributes.tab.values.at
+│   │   │   │       │   │   │       ├── class-fq-name-to-source.tab
+│   │   │   │       │   │   │       ├── class-fq-name-to-source.tab_i
+│   │   │   │       │   │   │       ├── class-fq-name-to-source.tab_i.len
+│   │   │   │       │   │   │       ├── class-fq-name-to-source.tab.keystream
+│   │   │   │       │   │   │       ├── class-fq-name-to-source.tab.keystream.len
+│   │   │   │       │   │   │       ├── class-fq-name-to-source.tab.len
+│   │   │   │       │   │   │       ├── class-fq-name-to-source.tab.values.at
+│   │   │   │       │   │   │       ├── constants.tab
+│   │   │   │       │   │   │       ├── constants.tab_i
+│   │   │   │       │   │   │       ├── constants.tab_i.len
+│   │   │   │       │   │   │       ├── constants.tab.keystream
+│   │   │   │       │   │   │       ├── constants.tab.keystream.len
+│   │   │   │       │   │   │       ├── constants.tab.len
+│   │   │   │       │   │   │       ├── constants.tab.values.at
+│   │   │   │       │   │   │       ├── internal-name-to-source.tab
+│   │   │   │       │   │   │       ├── internal-name-to-source.tab_i
+│   │   │   │       │   │   │       ├── internal-name-to-source.tab_i.len
+│   │   │   │       │   │   │       ├── internal-name-to-source.tab.keystream
+│   │   │   │       │   │   │       ├── internal-name-to-source.tab.keystream.len
+│   │   │   │       │   │   │       ├── internal-name-to-source.tab.len
+│   │   │   │       │   │   │       ├── internal-name-to-source.tab.values.at
+│   │   │   │       │   │   │       ├── package-parts.tab
+│   │   │   │       │   │   │       ├── package-parts.tab_i
+│   │   │   │       │   │   │       ├── package-parts.tab_i.len
+│   │   │   │       │   │   │       ├── package-parts.tab.keystream
+│   │   │   │       │   │   │       ├── package-parts.tab.keystream.len
+│   │   │   │       │   │   │       ├── package-parts.tab.len
+│   │   │   │       │   │   │       ├── package-parts.tab.values.at
+│   │   │   │       │   │   │       ├── proto.tab
+│   │   │   │       │   │   │       ├── proto.tab_i
+│   │   │   │       │   │   │       ├── proto.tab_i.len
+│   │   │   │       │   │   │       ├── proto.tab.keystream
+│   │   │   │       │   │   │       ├── proto.tab.keystream.len
+│   │   │   │       │   │   │       ├── proto.tab.len
+│   │   │   │       │   │   │       ├── proto.tab.values.at
+│   │   │   │       │   │   │       ├── source-to-classes.tab
+│   │   │   │       │   │   │       ├── source-to-classes.tab_i
+│   │   │   │       │   │   │       ├── source-to-classes.tab_i.len
+│   │   │   │       │   │   │       ├── source-to-classes.tab.keystream
+│   │   │   │       │   │   │       ├── source-to-classes.tab.keystream.len
+│   │   │   │       │   │   │       ├── source-to-classes.tab.len
+│   │   │   │       │   │   │       ├── source-to-classes.tab.values.at
+│   │   │   │       │   │   │       ├── subtypes.tab
+│   │   │   │       │   │   │       ├── subtypes.tab_i
+│   │   │   │       │   │   │       ├── subtypes.tab_i.len
+│   │   │   │       │   │   │       ├── subtypes.tab.keystream
+│   │   │   │       │   │   │       ├── subtypes.tab.keystream.len
+│   │   │   │       │   │   │       ├── subtypes.tab.len
+│   │   │   │       │   │   │       ├── subtypes.tab.values.at
+│   │   │   │       │   │   │       ├── supertypes.tab
+│   │   │   │       │   │   │       ├── supertypes.tab_i
+│   │   │   │       │   │   │       ├── supertypes.tab_i.len
+│   │   │   │       │   │   │       ├── supertypes.tab.keystream
+│   │   │   │       │   │   │       ├── supertypes.tab.keystream.len
+│   │   │   │       │   │   │       ├── supertypes.tab.len
+│   │   │   │       │   │   │       └── supertypes.tab.values.at
+│   │   │   │       │   │   └── lookups
+│   │   │   │       │   │       ├── counters.tab
+│   │   │   │       │   │       ├── file-to-id.tab
+│   │   │   │       │   │       ├── file-to-id.tab_i
+│   │   │   │       │   │       ├── file-to-id.tab_i.len
+│   │   │   │       │   │       ├── file-to-id.tab.keystream
+│   │   │   │       │   │       ├── file-to-id.tab.keystream.len
+│   │   │   │       │   │       ├── file-to-id.tab.len
+│   │   │   │       │   │       ├── file-to-id.tab.values.at
+│   │   │   │       │   │       ├── id-to-file.tab
+│   │   │   │       │   │       ├── id-to-file.tab_i
+│   │   │   │       │   │       ├── id-to-file.tab_i.len
+│   │   │   │       │   │       ├── id-to-file.tab.keystream
+│   │   │   │       │   │       ├── id-to-file.tab.keystream.len
+│   │   │   │       │   │       ├── id-to-file.tab.len
+│   │   │   │       │   │       ├── id-to-file.tab.values.at
+│   │   │   │       │   │       ├── lookups.tab
+│   │   │   │       │   │       ├── lookups.tab_i
+│   │   │   │       │   │       ├── lookups.tab_i.len
+│   │   │   │       │   │       ├── lookups.tab.keystream
+│   │   │   │       │   │       ├── lookups.tab.keystream.len
+│   │   │   │       │   │       ├── lookups.tab.len
+│   │   │   │       │   │       └── lookups.tab.values.at
+│   │   │   │       │   └── last-build.bin
+│   │   │   │       ├── classpath-snapshot
+│   │   │   │       │   └── shrunk-classpath-snapshot.bin
+│   │   │   │       └── local-state
+│   │   │   │           └── build-history.bin
+│   │   │   ├── outputs
+│   │   │   │   ├── aar
+│   │   │   │   │   └── shared_preferences_android-debug.aar
+│   │   │   │   └── logs
+│   │   │   │       └── manifest-merger-debug-report.txt
+│   │   │   ├── tmp
+│   │   │   │   ├── compileDebugJavaWithJavac
+│   │   │   │   │   └── previous-compilation-data.bin
+│   │   │   │   └── kotlin-classes
+│   │   │   │       └── debug
+│   │   │   │           ├── io
+│   │   │   │           │   └── flutter
+│   │   │   │           │       └── plugins
+│   │   │   │           │           └── sharedpreferences
+│   │   │   │           │               ├── ListEncoder.class
+│   │   │   │           │               ├── MessagesAsyncPigeonCodec.class
+│   │   │   │           │               ├── MessagesAsyncPigeonUtils.class
+│   │   │   │           │               ├── SharedPreferencesAsyncApi$Companion.class
+│   │   │   │           │               ├── SharedPreferencesAsyncApi.class
+│   │   │   │           │               ├── SharedPreferencesBackend.class
+│   │   │   │           │               ├── SharedPreferencesError.class
+│   │   │   │           │               ├── SharedPreferencesPigeonOptions$Companion.class
+│   │   │   │           │               ├── SharedPreferencesPigeonOptions.class
+│   │   │   │           │               ├── SharedPreferencesPlugin$clear$1$1.class
+│   │   │   │           │               ├── SharedPreferencesPlugin$clear$1.class
+│   │   │   │           │               ├── SharedPreferencesPlugin$dataStoreSetString$2.class
+│   │   │   │           │               ├── SharedPreferencesPlugin$getAll$1.class
+│   │   │   │           │               ├── SharedPreferencesPlugin$getBool$1$invokeSuspend$$inlined$map$1$2$1.class
+│   │   │   │           │               ├── SharedPreferencesPlugin$getBool$1$invokeSuspend$$inlined$map$1$2.class
+│   │   │   │           │               ├── SharedPreferencesPlugin$getBool$1$invokeSuspend$$inlined$map$1.class
+│   │   │   │           │               ├── SharedPreferencesPlugin$getBool$1.class
+│   │   │   │           │               ├── SharedPreferencesPlugin$getDouble$1$invokeSuspend$$inlined$map$1$2$1.class
+│   │   │   │           │               ├── SharedPreferencesPlugin$getDouble$1$invokeSuspend$$inlined$map$1$2.class
+│   │   │   │           │               ├── SharedPreferencesPlugin$getDouble$1$invokeSuspend$$inlined$map$1.class
+│   │   │   │           │               ├── SharedPreferencesPlugin$getDouble$1.class
+│   │   │   │           │               ├── SharedPreferencesPlugin$getInt$1$invokeSuspend$$inlined$map$1$2$1.class
+│   │   │   │           │               ├── SharedPreferencesPlugin$getInt$1$invokeSuspend$$inlined$map$1$2.class
+│   │   │   │           │               ├── SharedPreferencesPlugin$getInt$1$invokeSuspend$$inlined$map$1.class
+│   │   │   │           │               ├── SharedPreferencesPlugin$getInt$1.class
+│   │   │   │           │               ├── SharedPreferencesPlugin$getKeys$prefs$1.class
+│   │   │   │           │               ├── SharedPreferencesPlugin$getPrefs$1.class
+│   │   │   │           │               ├── SharedPreferencesPlugin$getString$1$invokeSuspend$$inlined$map$1$2$1.class
+│   │   │   │           │               ├── SharedPreferencesPlugin$getString$1$invokeSuspend$$inlined$map$1$2.class
+│   │   │   │           │               ├── SharedPreferencesPlugin$getString$1$invokeSuspend$$inlined$map$1.class
+│   │   │   │           │               ├── SharedPreferencesPlugin$getString$1.class
+│   │   │   │           │               ├── SharedPreferencesPlugin$getValueByKey$$inlined$map$1$2$1.class
+│   │   │   │           │               ├── SharedPreferencesPlugin$getValueByKey$$inlined$map$1$2.class
+│   │   │   │           │               ├── SharedPreferencesPlugin$getValueByKey$$inlined$map$1.class
+│   │   │   │           │               ├── SharedPreferencesPlugin$readAllKeys$$inlined$map$1$2$1.class
+│   │   │   │           │               ├── SharedPreferencesPlugin$readAllKeys$$inlined$map$1$2.class
+│   │   │   │           │               ├── SharedPreferencesPlugin$readAllKeys$$inlined$map$1.class
+│   │   │   │           │               ├── SharedPreferencesPlugin$setBool$1$1.class
+│   │   │   │           │               ├── SharedPreferencesPlugin$setBool$1.class
+│   │   │   │           │               ├── SharedPreferencesPlugin$setDeprecatedStringList$1.class
+│   │   │   │           │               ├── SharedPreferencesPlugin$setDouble$1$1.class
+│   │   │   │           │               ├── SharedPreferencesPlugin$setDouble$1.class
+│   │   │   │           │               ├── SharedPreferencesPlugin$setEncodedStringList$1.class
+│   │   │   │           │               ├── SharedPreferencesPlugin$setInt$1$1.class
+│   │   │   │           │               ├── SharedPreferencesPlugin$setInt$1.class
+│   │   │   │           │               ├── SharedPreferencesPlugin$setString$1.class
+│   │   │   │           │               ├── SharedPreferencesPlugin.class
+│   │   │   │           │               ├── SharedPreferencesPluginKt.class
+│   │   │   │           │               ├── StringListLookupResultType$Companion.class
+│   │   │   │           │               ├── StringListLookupResultType.class
+│   │   │   │           │               ├── StringListObjectInputStream.class
+│   │   │   │           │               ├── StringListResult$Companion.class
+│   │   │   │           │               └── StringListResult.class
+│   │   │   │           └── META-INF
+│   │   │   │               └── shared_preferences_android_debug.kotlin_module
+│   │   │   └── .transforms
+│   │   │       └── 7bf922d68339c7913c0c16799b870aef
+│   │   │           ├── results.bin
+│   │   │           └── transformed
+│   │   │               └── bundleLibRuntimeToDirDebug
+│   │   │                   ├── desugar_graph.bin
+│   │   │                   └── io
+│   │   │                       └── flutter
+│   │   │                           └── plugins
+│   │   │                               └── sharedpreferences
+│   │   │                                   ├── LegacySharedPreferencesPlugin$ListEncoder.dex
+│   │   │                                   ├── LegacySharedPreferencesPlugin.dex
+│   │   │                                   ├── ListEncoder.dex
+│   │   │                                   ├── Messages$FlutterError.dex
+│   │   │                                   ├── Messages$PigeonCodec.dex
+│   │   │                                   ├── Messages$SharedPreferencesApi.dex
+│   │   │                                   ├── MessagesAsyncPigeonCodec.dex
+│   │   │                                   ├── MessagesAsyncPigeonUtils.dex
+│   │   │                                   ├── Messages.dex
+│   │   │                                   ├── SharedPreferencesAsyncApi$Companion.dex
+│   │   │                                   ├── SharedPreferencesAsyncApi.dex
+│   │   │                                   ├── SharedPreferencesBackend.dex
+│   │   │                                   ├── SharedPreferencesError.dex
+│   │   │                                   ├── SharedPreferencesListEncoder.dex
+│   │   │                                   ├── SharedPreferencesPigeonOptions$Companion.dex
+│   │   │                                   ├── SharedPreferencesPigeonOptions.dex
+│   │   │                                   ├── SharedPreferencesPlugin$clear$1$1.dex
+│   │   │                                   ├── SharedPreferencesPlugin$clear$1.dex
+│   │   │                                   ├── SharedPreferencesPlugin$dataStoreSetString$2.dex
+│   │   │                                   ├── SharedPreferencesPlugin$getAll$1.dex
+│   │   │                                   ├── SharedPreferencesPlugin$getBool$1$invokeSuspend$$inlined$map$1$2$1.dex
+│   │   │                                   ├── SharedPreferencesPlugin$getBool$1$invokeSuspend$$inlined$map$1$2.dex
+│   │   │                                   ├── SharedPreferencesPlugin$getBool$1$invokeSuspend$$inlined$map$1.dex
+│   │   │                                   ├── SharedPreferencesPlugin$getBool$1.dex
+│   │   │                                   ├── SharedPreferencesPlugin$getDouble$1$invokeSuspend$$inlined$map$1$2$1.dex
+│   │   │                                   ├── SharedPreferencesPlugin$getDouble$1$invokeSuspend$$inlined$map$1$2.dex
+│   │   │                                   ├── SharedPreferencesPlugin$getDouble$1$invokeSuspend$$inlined$map$1.dex
+│   │   │                                   ├── SharedPreferencesPlugin$getDouble$1.dex
+│   │   │                                   ├── SharedPreferencesPlugin$getInt$1$invokeSuspend$$inlined$map$1$2$1.dex
+│   │   │                                   ├── SharedPreferencesPlugin$getInt$1$invokeSuspend$$inlined$map$1$2.dex
+│   │   │                                   ├── SharedPreferencesPlugin$getInt$1$invokeSuspend$$inlined$map$1.dex
+│   │   │                                   ├── SharedPreferencesPlugin$getInt$1.dex
+│   │   │                                   ├── SharedPreferencesPlugin$getKeys$prefs$1.dex
+│   │   │                                   ├── SharedPreferencesPlugin$getPrefs$1.dex
+│   │   │                                   ├── SharedPreferencesPlugin$getString$1$invokeSuspend$$inlined$map$1$2$1.dex
+│   │   │                                   ├── SharedPreferencesPlugin$getString$1$invokeSuspend$$inlined$map$1$2.dex
+│   │   │                                   ├── SharedPreferencesPlugin$getString$1$invokeSuspend$$inlined$map$1.dex
+│   │   │                                   ├── SharedPreferencesPlugin$getString$1.dex
+│   │   │                                   ├── SharedPreferencesPlugin$getValueByKey$$inlined$map$1$2$1.dex
+│   │   │                                   ├── SharedPreferencesPlugin$getValueByKey$$inlined$map$1$2.dex
+│   │   │                                   ├── SharedPreferencesPlugin$getValueByKey$$inlined$map$1.dex
+│   │   │                                   ├── SharedPreferencesPlugin$readAllKeys$$inlined$map$1$2$1.dex
+│   │   │                                   ├── SharedPreferencesPlugin$readAllKeys$$inlined$map$1$2.dex
+│   │   │                                   ├── SharedPreferencesPlugin$readAllKeys$$inlined$map$1.dex
+│   │   │                                   ├── SharedPreferencesPlugin$setBool$1$1.dex
+│   │   │                                   ├── SharedPreferencesPlugin$setBool$1.dex
+│   │   │                                   ├── SharedPreferencesPlugin$setDeprecatedStringList$1.dex
+│   │   │                                   ├── SharedPreferencesPlugin$setDouble$1$1.dex
+│   │   │                                   ├── SharedPreferencesPlugin$setDouble$1.dex
+│   │   │                                   ├── SharedPreferencesPlugin$setEncodedStringList$1.dex
+│   │   │                                   ├── SharedPreferencesPlugin$setInt$1$1.dex
+│   │   │                                   ├── SharedPreferencesPlugin$setInt$1.dex
+│   │   │                                   ├── SharedPreferencesPlugin$setString$1.dex
+│   │   │                                   ├── SharedPreferencesPlugin.dex
+│   │   │                                   ├── SharedPreferencesPluginKt.dex
+│   │   │                                   ├── StringListLookupResultType$Companion.dex
+│   │   │                                   ├── StringListLookupResultType.dex
+│   │   │                                   ├── StringListObjectInputStream.dex
+│   │   │                                   ├── StringListResult$Companion.dex
+│   │   │                                   └── StringListResult.dex
+│   │   ├── test_cache
+│   │   │   └── build
+│   │   │       └── 7e4aebe516b998635f34742713e086a8.cache.dill.track.dill
+│   │   └── unit_test_assets
+│   │       ├── AssetManifest.bin
+│   │       ├── AssetManifest.json
+│   │       ├── assets
+│   │       │   └── images
+│   │       │       └── logo.png
+│   │       ├── FontManifest.json
+│   │       ├── fonts
+│   │       │   └── MaterialIcons-Regular.otf
+│   │       ├── NativeAssetsManifest.json
+│   │       ├── NOTICES.Z
+│   │       ├── packages
+│   │       │   └── cupertino_icons
+│   │       │       └── assets
+│   │       │           └── CupertinoIcons.ttf
+│   │       └── shaders
+│   │           └── ink_sparkle.frag
+│   ├── .dart_tool
+│   │   ├── dartpad
+│   │   │   └── web_plugin_registrant.dart
+│   │   ├── extension_discovery
+│   │   │   ├── README.md
+│   │   │   └── vs_code.json
+│   │   ├── flutter_build
+│   │   │   ├── aec2a7dd5fc9b8e03f145b57964f6c11
+│   │   │   │   ├── app.dill
+│   │   │   │   ├── dart_build.d
+│   │   │   │   ├── dart_build_result.json
+│   │   │   │   ├── dart_build.stamp
+│   │   │   │   ├── debug_android_application.stamp
+│   │   │   │   ├── .filecache
+│   │   │   │   ├── flutter_assets.d
+│   │   │   │   ├── gen_dart_plugin_registrant.stamp
+│   │   │   │   ├── gen_localizations.stamp
+│   │   │   │   ├── install_code_assets.d
+│   │   │   │   ├── install_code_assets.stamp
+│   │   │   │   ├── kernel_snapshot_program.d
+│   │   │   │   ├── kernel_snapshot_program.stamp
+│   │   │   │   ├── native_assets.json
+│   │   │   │   └── outputs.json
+│   │   │   ├── c2bd406043a31f79d4a31c319bea49ca
+│   │   │   │   ├── app.dill
+│   │   │   │   ├── dart_build.d
+│   │   │   │   ├── dart_build_result.json
+│   │   │   │   ├── dart_build.stamp
+│   │   │   │   ├── debug_android_application.stamp
+│   │   │   │   ├── .filecache
+│   │   │   │   ├── flutter_assets.d
+│   │   │   │   ├── gen_dart_plugin_registrant.stamp
+│   │   │   │   ├── gen_localizations.stamp
+│   │   │   │   ├── install_code_assets.d
+│   │   │   │   ├── install_code_assets.stamp
+│   │   │   │   ├── kernel_snapshot_program.d
+│   │   │   │   ├── kernel_snapshot_program.stamp
+│   │   │   │   ├── native_assets.json
+│   │   │   │   └── outputs.json
+│   │   │   └── dart_plugin_registrant.dart
+│   │   ├── package_config.json
+│   │   ├── package_graph.json
+│   │   └── version
+│   ├── .flutter-plugins-dependencies
+│   ├── .gitignore
+│   ├── .idea
+│   │   ├── libraries
+│   │   │   ├── Dart_SDK.xml
+│   │   │   └── KotlinJavaRuntime.xml
+│   │   ├── modules.xml
+│   │   ├── runConfigurations
+│   │   │   └── main_dart.xml
+│   │   └── workspace.xml
+│   ├── ios
+│   │   ├── Flutter
+│   │   │   ├── AppFrameworkInfo.plist
+│   │   │   ├── Debug.xcconfig
+│   │   │   ├── ephemeral
+│   │   │   │   ├── flutter_lldb_helper.py
+│   │   │   │   └── flutter_lldbinit
+│   │   │   ├── flutter_export_environment.sh
+│   │   │   ├── Generated.xcconfig
+│   │   │   └── Release.xcconfig
+│   │   ├── .gitignore
+│   │   ├── Runner
+│   │   │   ├── AppDelegate.swift
+│   │   │   ├── Assets.xcassets
+│   │   │   │   ├── AppIcon.appiconset
+│   │   │   │   │   ├── Contents.json
+│   │   │   │   │   ├── Icon-App-1024x1024@1x.png
+│   │   │   │   │   ├── Icon-App-20x20@1x.png
+│   │   │   │   │   ├── Icon-App-20x20@2x.png
+│   │   │   │   │   ├── Icon-App-20x20@3x.png
+│   │   │   │   │   ├── Icon-App-29x29@1x.png
+│   │   │   │   │   ├── Icon-App-29x29@2x.png
+│   │   │   │   │   ├── Icon-App-29x29@3x.png
+│   │   │   │   │   ├── Icon-App-40x40@1x.png
+│   │   │   │   │   ├── Icon-App-40x40@2x.png
+│   │   │   │   │   ├── Icon-App-40x40@3x.png
+│   │   │   │   │   ├── Icon-App-60x60@2x.png
+│   │   │   │   │   ├── Icon-App-60x60@3x.png
+│   │   │   │   │   ├── Icon-App-76x76@1x.png
+│   │   │   │   │   ├── Icon-App-76x76@2x.png
+│   │   │   │   │   └── Icon-App-83.5x83.5@2x.png
+│   │   │   │   └── LaunchImage.imageset
+│   │   │   │       ├── Contents.json
+│   │   │   │       ├── LaunchImage@2x.png
+│   │   │   │       ├── LaunchImage@3x.png
+│   │   │   │       ├── LaunchImage.png
+│   │   │   │       └── README.md
+│   │   │   ├── Base.lproj
+│   │   │   │   ├── LaunchScreen.storyboard
+│   │   │   │   └── Main.storyboard
+│   │   │   ├── GeneratedPluginRegistrant.h
+│   │   │   ├── GeneratedPluginRegistrant.m
+│   │   │   ├── Info.plist
+│   │   │   └── Runner-Bridging-Header.h
+│   │   ├── RunnerTests
+│   │   │   └── RunnerTests.swift
+│   │   ├── Runner.xcodeproj
+│   │   │   ├── project.pbxproj
+│   │   │   ├── project.xcworkspace
+│   │   │   │   ├── contents.xcworkspacedata
+│   │   │   │   └── xcshareddata
+│   │   │   │       ├── IDEWorkspaceChecks.plist
+│   │   │   │       └── WorkspaceSettings.xcsettings
+│   │   │   └── xcshareddata
+│   │   │       └── xcschemes
+│   │   │           └── Runner.xcscheme
+│   │   └── Runner.xcworkspace
+│   │       ├── contents.xcworkspacedata
+│   │       └── xcshareddata
+│   │           ├── IDEWorkspaceChecks.plist
+│   │           └── WorkspaceSettings.xcsettings
+│   ├── lib
+│   │   ├── main.dart
+│   │   ├── models
+│   │   │   ├── announcement.dart
+│   │   │   ├── assessment.dart
+│   │   │   ├── fee.dart
+│   │   │   ├── student.dart
+│   │   │   └── user.dart
+│   │   ├── providers
+│   │   │   └── auth_provider.dart
+│   │   ├── screens
+│   │   │   ├── auth
+│   │   │   │   └── login_screen.dart
+│   │   │   ├── main_shell.dart
+│   │   │   ├── parent
+│   │   │   │   ├── parent_academics_screen.dart
+│   │   │   │   ├── parent_attendance_screen.dart
+│   │   │   │   ├── parent_dashboard_screen.dart
+│   │   │   │   └── parent_fees_screen.dart
+│   │   │   ├── profile
+│   │   │   │   └── profile_screen.dart
+│   │   │   └── teacher
+│   │   │       ├── teacher_announcements_screen.dart
+│   │   │       ├── teacher_assessment_screen.dart
+│   │   │       ├── teacher_attendance_screen.dart
+│   │   │       └── teacher_dashboard_screen.dart
+│   │   ├── services
+│   │   │   └── api_service.dart
+│   │   └── theme
+│   │       └── app_theme.dart
+│   ├── linux
+│   │   ├── CMakeLists.txt
+│   │   ├── flutter
+│   │   │   ├── CMakeLists.txt
+│   │   │   ├── ephemeral
+│   │   │   │   └── .plugin_symlinks
+│   │   │   │       ├── path_provider_linux -> /home/don/.pub-cache/hosted/pub.dev/path_provider_linux-2.2.1/
+│   │   │   │       └── shared_preferences_linux -> /home/don/.pub-cache/hosted/pub.dev/shared_preferences_linux-2.4.1/
+│   │   │   ├── generated_plugin_registrant.cc
+│   │   │   ├── generated_plugin_registrant.h
+│   │   │   └── generated_plugins.cmake
+│   │   ├── .gitignore
+│   │   └── runner
+│   │       ├── CMakeLists.txt
+│   │       ├── main.cc
+│   │       ├── my_application.cc
+│   │       └── my_application.h
+│   ├── macos
+│   │   ├── Flutter
+│   │   │   ├── ephemeral
+│   │   │   │   ├── flutter_export_environment.sh
+│   │   │   │   └── Flutter-Generated.xcconfig
+│   │   │   ├── Flutter-Debug.xcconfig
+│   │   │   ├── Flutter-Release.xcconfig
+│   │   │   └── GeneratedPluginRegistrant.swift
+│   │   ├── .gitignore
+│   │   ├── Runner
+│   │   │   ├── AppDelegate.swift
+│   │   │   ├── Assets.xcassets
+│   │   │   │   └── AppIcon.appiconset
+│   │   │   │       ├── app_icon_1024.png
+│   │   │   │       ├── app_icon_128.png
+│   │   │   │       ├── app_icon_16.png
+│   │   │   │       ├── app_icon_256.png
+│   │   │   │       ├── app_icon_32.png
+│   │   │   │       ├── app_icon_512.png
+│   │   │   │       ├── app_icon_64.png
+│   │   │   │       └── Contents.json
+│   │   │   ├── Base.lproj
+│   │   │   │   └── MainMenu.xib
+│   │   │   ├── Configs
+│   │   │   │   ├── AppInfo.xcconfig
+│   │   │   │   ├── Debug.xcconfig
+│   │   │   │   ├── Release.xcconfig
+│   │   │   │   └── Warnings.xcconfig
+│   │   │   ├── DebugProfile.entitlements
+│   │   │   ├── Info.plist
+│   │   │   ├── MainFlutterWindow.swift
+│   │   │   └── Release.entitlements
+│   │   ├── RunnerTests
+│   │   │   └── RunnerTests.swift
+│   │   ├── Runner.xcodeproj
+│   │   │   ├── project.pbxproj
+│   │   │   ├── project.xcworkspace
+│   │   │   │   └── xcshareddata
+│   │   │   │       └── IDEWorkspaceChecks.plist
+│   │   │   └── xcshareddata
+│   │   │       └── xcschemes
+│   │   │           └── Runner.xcscheme
+│   │   └── Runner.xcworkspace
+│   │       ├── contents.xcworkspacedata
+│   │       └── xcshareddata
+│   │           └── IDEWorkspaceChecks.plist
+│   ├── .metadata
+│   ├── pubspec.lock
+│   ├── pubspec.yaml
+│   ├── README.md
+│   ├── smartshule_mobile.iml
+│   ├── test
+│   │   └── widget_test.dart
+│   ├── web
+│   │   ├── favicon.png
+│   │   ├── icons
+│   │   │   ├── Icon-192.png
+│   │   │   ├── Icon-512.png
+│   │   │   ├── Icon-maskable-192.png
+│   │   │   └── Icon-maskable-512.png
+│   │   ├── index.html
+│   │   └── manifest.json
+│   └── windows
+│       ├── CMakeLists.txt
+│       ├── flutter
+│       │   ├── CMakeLists.txt
+│       │   ├── ephemeral
+│       │   │   └── .plugin_symlinks
+│       │   │       ├── path_provider_windows -> /home/don/.pub-cache/hosted/pub.dev/path_provider_windows-2.3.0/
+│       │   │       └── shared_preferences_windows -> /home/don/.pub-cache/hosted/pub.dev/shared_preferences_windows-2.4.1/
+│       │   ├── generated_plugin_registrant.cc
+│       │   ├── generated_plugin_registrant.h
+│       │   └── generated_plugins.cmake
+│       ├── .gitignore
+│       └── runner
+│           ├── CMakeLists.txt
+│           ├── flutter_window.cpp
+│           ├── flutter_window.h
+│           ├── main.cpp
+│           ├── resource.h
+│           ├── resources
+│           │   └── app_icon.ico
+│           ├── runner.exe.manifest
+│           ├── Runner.rc
+│           ├── utils.cpp
+│           ├── utils.h
+│           ├── win32_window.cpp
+│           └── win32_window.h
+├── package.json
+├── package-lock.json
+├── postman
+│   ├── SmartShule_Postman_Collection.json
+│   └── SmartShule_Postman_Environment.json
+├── prisma
+│   └── schema.prisma
+├── README.md
+├── RENDER_DEPLOYMENT.md
+├── render.yaml
+├── scripts
+│   ├── db-switch.ts
+│   ├── docker-entrypoint.sh
+│   ├── prisma-cli.ts
+│   └── seed-broadsheet-data.ts
+├── src
+│   ├── application
+│   │   ├── academics
+│   │   │   ├── AcademicUseCases.ts
+│   │   │   └── BroadsheetUseCases.ts
+│   │   ├── analytics
+│   │   │   └── AnalyticsUseCases.ts
+│   │   ├── announcements
+│   │   │   └── AnnouncementUseCases.ts
+│   │   ├── attendance
+│   │   │   ├── AttendanceUseCases.ts
+│   │   │   └── GeofenceUseCases.ts
+│   │   ├── auth
+│   │   │   └── AuthUseCases.ts
+│   │   ├── cbc
+│   │   │   └── CbcAssessmentUseCases.ts
+│   │   ├── complaints
+│   │   │   └── ComplaintUseCases.ts
+│   │   ├── curriculum-plans
+│   │   │   ├── CurriculumPlanUseCases.ts
+│   │   │   └── RecordOfWorkUseCases.ts
+│   │   ├── curriculum-tracker
+│   │   │   └── CurriculumTrackerUseCases.ts
+│   │   ├── discipline
+│   │   │   └── DisciplineUseCases.ts
+│   │   ├── ediary
+│   │   │   └── EDiaryUseCases.ts
+│   │   ├── finance
+│   │   │   ├── FeeUseCases.ts
+│   │   │   └── LunchFeeUseCases.ts
+│   │   ├── health
+│   │   │   └── ClinicUseCases.ts
+│   │   ├── inventory
+│   │   │   └── InventoryUseCases.ts
+│   │   ├── library
+│   │   │   └── LibraryUseCases.ts
+│   │   ├── media
+│   │   │   └── VisualMediaUseCases.ts
+│   │   ├── occurrences
+│   │   │   └── OccurrenceUseCases.ts
+│   │   ├── payroll
+│   │   │   └── PayrollUseCases.ts
+│   │   ├── sponsorship
+│   │   │   └── StudentSponsorshipUseCases.ts
+│   │   ├── students
+│   │   │   └── StudentUseCases.ts
+│   │   ├── system-logs
+│   │   │   └── SystemLogUseCases.ts
+│   │   ├── teachers
+│   │   │   └── TeacherUseCases.ts
+│   │   └── timetables
+│   │       └── TimetableUseCases.ts
+│   ├── core
+│   │   ├── domain
+│   │   │   ├── academic
+│   │   │   │   ├── AcademicYear.ts
+│   │   │   │   ├── ClassRoom.ts
+│   │   │   │   └── School.ts
+│   │   │   ├── announcement
+│   │   │   │   └── Announcement.ts
+│   │   │   ├── attendance
+│   │   │   │   ├── Attendance.ts
+│   │   │   │   ├── GeofenceUtils.ts
+│   │   │   │   └── TeacherClockIn.ts
+│   │   │   ├── cbc
+│   │   │   │   └── CbcAssessment.ts
+│   │   │   ├── complaint
+│   │   │   │   └── Complaint.ts
+│   │   │   ├── curriculum-plan
+│   │   │   │   ├── LessonPlan.ts
+│   │   │   │   ├── RecordOfWork.ts
+│   │   │   │   └── SchemeOfWork.ts
+│   │   │   ├── curriculum-tracker
+│   │   │   │   └── CurriculumTracker.ts
+│   │   │   ├── discipline
+│   │   │   │   └── DisciplineIncident.ts
+│   │   │   ├── ediary
+│   │   │   │   └── EDiaryEntry.ts
+│   │   │   ├── finance
+│   │   │   │   ├── FeeBannerConfig.ts
+│   │   │   │   ├── Fee.ts
+│   │   │   │   ├── LunchEnrollment.ts
+│   │   │   │   └── LunchExpense.ts
+│   │   │   ├── health
+│   │   │   │   └── ClinicVisit.ts
+│   │   │   ├── inventory
+│   │   │   │   └── InventoryItem.ts
+│   │   │   ├── library
+│   │   │   │   ├── BookLoan.ts
+│   │   │   │   └── Book.ts
+│   │   │   ├── media
+│   │   │   │   ├── ParentHelpRequest.ts
+│   │   │   │   └── StudentProgressPhoto.ts
+│   │   │   ├── occurrence
+│   │   │   │   └── OccurrenceRecord.ts
+│   │   │   ├── payroll
+│   │   │   │   └── PayrollRecord.ts
+│   │   │   ├── shared
+│   │   │   │   ├── Entity.ts
+│   │   │   │   └── Errors.ts
+│   │   │   ├── sponsorship
+│   │   │   │   └── StudentSponsorship.ts
+│   │   │   ├── system-log
+│   │   │   │   └── SystemLog.ts
+│   │   │   ├── timetable
+│   │   │   │   └── Timetable.ts
+│   │   │   └── user
+│   │   │       ├── DeletedStudent.ts
+│   │   │       ├── Guardian.ts
+│   │   │       ├── Student.ts
+│   │   │       ├── Teacher.ts
+│   │   │       └── User.ts
+│   │   └── ports
+│   │       ├── repositories
+│   │       │   ├── IAcademicRepository.ts
+│   │       │   ├── IAnnouncementRepository.ts
+│   │       │   ├── ICbcAssessmentRepository.ts
+│   │       │   ├── IClinicRepository.ts
+│   │       │   ├── IComplaintRepository.ts
+│   │       │   ├── ICurriculumTrackerRepository.ts
+│   │       │   ├── IDeletedStudentRepository.ts
+│   │       │   ├── IDisciplineRepository.ts
+│   │       │   ├── IEDiaryRepository.ts
+│   │       │   ├── IFeeRepository.ts
+│   │       │   ├── IInventoryRepository.ts
+│   │       │   ├── ILibraryRepository.ts
+│   │       │   ├── ILunchFeeRepository.ts
+│   │       │   ├── IMediaRepository.ts
+│   │       │   ├── IOccurrenceRepository.ts
+│   │       │   ├── IPayrollRepository.ts
+│   │       │   ├── IRecordOfWorkRepository.ts
+│   │       │   ├── ISchemeOfWorkRepository.ts
+│   │       │   ├── IStudentRepository.ts
+│   │       │   ├── IStudentSponsorshipRepository.ts
+│   │       │   ├── ISystemLogRepository.ts
+│   │       │   ├── ITeacherClockInRepository.ts
+│   │       │   ├── ITeacherRepository.ts
+│   │       │   ├── ITimetableRepository.ts
+│   │       │   └── IUserRepository.ts
+│   │       └── services
+│   │           └── IExternalServices.ts
+│   ├── index.ts
+│   └── infrastructure
+│       ├── config
+│       │   ├── databaseResolver.ts
+│       │   └── env.ts
+│       ├── container.ts
+│       ├── database
+│       │   ├── DatabaseFactory.ts
+│       │   ├── in-memory
+│       │   │   ├── InMemoryAnnouncementRepository.ts
+│       │   │   ├── InMemoryClinicRepository.ts
+│       │   │   ├── InMemoryComplaintRepository.ts
+│       │   │   ├── InMemoryCurriculumTrackerRepository.ts
+│       │   │   ├── InMemoryDisciplineRepository.ts
+│       │   │   ├── InMemoryInventoryRepository.ts
+│       │   │   ├── InMemoryLibraryRepository.ts
+│       │   │   ├── InMemoryLunchFeeRepository.ts
+│       │   │   ├── InMemoryOccurrenceRepository.ts
+│       │   │   ├── InMemoryPayrollRepository.ts
+│       │   │   ├── InMemoryRepositories.ts
+│       │   │   ├── InMemoryStudentSponsorshipRepository.ts
+│       │   │   ├── InMemorySystemLogRepository.ts
+│       │   │   └── InMemoryTeacherClockInRepository.ts
+│       │   ├── mongodb
+│       │   │   └── MongooseRepositories.ts
+│       │   └── postgres
+│       │       ├── PostgresComplaintRepository.ts
+│       │       ├── PostgresCurriculumTrackerRepository.ts
+│       │       ├── PostgresLibraryRepository.ts
+│       │       ├── PostgresLunchFeeRepository.ts
+│       │       ├── PostgresOccurrenceRepository.ts
+│       │       ├── PostgresRecordOfWorkRepository.ts
+│       │       ├── PostgresRepositories.ts
+│       │       ├── PostgresSystemLogRepository.ts
+│       │       └── PostgresTeacherClockInRepository.ts
+│       ├── http
+│       │   ├── app.ts
+│       │   ├── controllers
+│       │   │   ├── AcademicController.ts
+│       │   │   ├── AnalyticsController.ts
+│       │   │   ├── AnnouncementController.ts
+│       │   │   ├── AttendanceController.ts
+│       │   │   ├── AuthController.ts
+│       │   │   ├── BroadsheetController.ts
+│       │   │   ├── CbcAssessmentController.ts
+│       │   │   ├── ClinicController.ts
+│       │   │   ├── ComplaintController.ts
+│       │   │   ├── CurriculumPlanController.ts
+│       │   │   ├── CurriculumTrackerController.ts
+│       │   │   ├── DisciplineController.ts
+│       │   │   ├── EDiaryController.ts
+│       │   │   ├── FinanceController.ts
+│       │   │   ├── GeofenceController.ts
+│       │   │   ├── InventoryController.ts
+│       │   │   ├── LibraryController.ts
+│       │   │   ├── LunchFeeController.ts
+│       │   │   ├── MediaController.ts
+│       │   │   ├── OccurrenceController.ts
+│       │   │   ├── PayrollController.ts
+│       │   │   ├── RecordOfWorkController.ts
+│       │   │   ├── StudentController.ts
+│       │   │   ├── StudentSponsorshipController.ts
+│       │   │   ├── SystemLogController.ts
+│       │   │   ├── TeacherController.ts
+│       │   │   ├── TimetableController.ts
+│       │   │   └── WhatsAppController.ts
+│       │   ├── middlewares
+│       │   │   ├── accountabilityMiddleware.ts
+│       │   │   ├── authMiddleware.ts
+│       │   │   ├── errorHandler.ts
+│       │   │   └── validateRequest.ts
+│       │   └── routes
+│       │       └── index.ts
+│       ├── services
+│       │   ├── BcryptPasswordHasher.ts
+│       │   ├── GeminiService.ts
+│       │   ├── ImageProcessingService.ts
+│       │   ├── JwtAuthTokenService.ts
+│       │   ├── KcbBuniPaymentAdapter.ts
+│       │   ├── MpesaDarajaPaymentAdapter.ts
+│       │   ├── SmsNotificationAdapter.ts
+│       │   ├── WhatsAppClientManager.ts
+│       │   └── WhatsAppService.ts
+│       └── utils
+│           ├── networkAccountability.ts
+│           └── PhoneUtils.ts
+├── supabase_grade3_assessment_2026.sql
+├── tests
+│   ├── helpers
+│   │   └── testFixtures.ts
+│   ├── integration
+│   │   ├── access_controls_and_roles.test.ts
+│   │   ├── api.test.ts
+│   │   ├── complaint_system.test.ts
+│   │   ├── curriculum_tracker_api.test.ts
+│   │   ├── deleted_students_api.test.ts
+│   │   ├── delete_hanging_invoice.test.ts
+│   │   ├── geofence_api.test.ts
+│   │   ├── kcb_buni_payments.test.ts
+│   │   ├── library_system.test.ts
+│   │   ├── lunch_fee_management.test.ts
+│   │   ├── new_features.test.ts
+│   │   ├── occurrence_record_api.test.ts
+│   │   ├── parent_data_isolation.test.ts
+│   │   ├── phone_only_authentication.test.ts
+│   │   ├── playgroup_class.test.ts
+│   │   ├── promotion_and_balance_carry_forward.test.ts
+│   │   ├── security_hardening.test.ts
+│   │   ├── sequential_ids.test.ts
+│   │   ├── student_profile_editing.test.ts
+│   │   ├── system_logs.test.ts
+│   │   ├── teacher_profile_and_role.test.ts
+│   │   └── timetable_persistence.test.ts
+│   └── unit
+│       ├── announcements.test.ts
+│       ├── annual_fee_structure.test.ts
+│       ├── auth_setup_status.test.ts
+│       ├── broadsheet_rankings.test.ts
+│       ├── cash_and_bank_deposit_payments.test.ts
+│       ├── complaint.test.ts
+│       ├── database_switcher.test.ts
+│       ├── deleted_student.test.ts
+│       ├── domain.test.ts
+│       ├── exact_payment_and_arrears_precision.test.ts
+│       ├── forwarded_payments_and_arrears_balance.test.ts
+│       ├── geofence.test.ts
+│       ├── lunch_expense.test.ts
+│       ├── lunch_fee.test.ts
+│       ├── network_accountability.test.ts
+│       ├── payroll.test.ts
+│       └── whatsapp.test.ts
+├── tsconfig.json
+└── .vscode
+    └── settings.json
+
+940 directories, 2460 files

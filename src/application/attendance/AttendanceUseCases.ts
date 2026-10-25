@@ -143,7 +143,6 @@ export class AttendanceUseCases {
           guardian = await this.guardianRepository.findByPhone(user.phone);
         }
       }
-      // Demo parent fallback
       if (guardian && (!guardian.studentIds || guardian.studentIds.length === 0)) {
         const user = await this.userRepository.findById(requestingUser.userId);
         if (user && (user.email === 'parent@smartshule.ac.ke' || user.id === 'usr-parent-01')) {

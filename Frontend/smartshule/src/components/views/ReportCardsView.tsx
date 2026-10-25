@@ -180,6 +180,125 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
     }
   }, [student?.id, selectedTermId, currentTerm?.id, currentYear?.id, isParent, isFeeCleared, checkingClearance]);
 
+  // Evaluation Period: End of Term (Summative Dossier) vs Mid-Term Assessment
+  const [evaluationPeriod, setEvaluationPeriod] = useState<'END_OF_TERM' | 'MID_TERM'>('END_OF_TERM');
+  const isEndTerm = evaluationPeriod === 'END_OF_TERM';
+
+  // Helper to dynamically resolve the accurate school reopening date
+  const nextTermOpening = useMemo(() => {
+    const activeTerm = availableTerms.find(t => t.id === selectedTermId) || currentTerm;
+
+    // 1. If report card already has explicit nextTermOpeningDate saved in DB
+    if (reportCardData?.nextTermOpeningDate) {
+      try {
+        const d = new Date(reportCardData.nextTermOpeningDate);
+        if (!isNaN(d.getTime())) {
+          return {
+            dateStr: reportCardData.nextTermOpeningDate,
+            formatted: d.toLocaleDateString('en-GB', {
+              weekday: 'long',
+              day: 'numeric',
+              month: 'long',
+              year: 'numeric',
+            }),
+            shortFormatted: d.toLocaleDateString('en-GB', {
+              day: 'numeric',
+              month: 'short',
+              year: 'numeric',
+            }),
+            termName: 'Next Term',
+            isExplicit: true,
+          };
+        }
+      } catch {}
+    }
+
+    // 2. Identify current term number
+    const termNum = (() => {
+      if (activeTerm?.termNumber) return Number(activeTerm.termNumber);
+      const name = (activeTerm?.name || selectedTermId || '').toLowerCase();
+      if (name.includes('1') || name.includes('t1')) return 1;
+      if (name.includes('2') || name.includes('t2')) return 2;
+      return 3;
+    })();
+
+    const isTerm1 = termNum === 1;
+    const isTerm2 = termNum === 2;
+    const isTerm3 = termNum === 3;
+
+    // 3. Find subsequent term in available terms
+    let nextTerm: any = null;
+    if (isTerm1) {
+      nextTerm = availableTerms.find(t => Number(t.termNumber) === 2 && (!activeTerm?.academicYearId || t.academicYearId === activeTerm.academicYearId));
+    } else if (isTerm2) {
+      nextTerm = availableTerms.find(t => Number(t.termNumber) === 3 && (!activeTerm?.academicYearId || t.academicYearId === activeTerm.academicYearId));
+    } else if (isTerm3) {
+      // End of Year (Term 3): Look for Term 1 of subsequent academic year or term with startDate after current term's endDate
+      nextTerm = availableTerms.find(t => Number(t.termNumber) === 1 && t.id !== activeTerm?.id && (!activeTerm?.academicYearId || t.academicYearId !== activeTerm.academicYearId));
+      if (!nextTerm && activeTerm?.endDate) {
+        nextTerm = availableTerms.find(t => t.id !== activeTerm?.id && new Date(t.startDate).getTime() > new Date(activeTerm.endDate).getTime());
+      }
+    }
+
+    if (nextTerm?.startDate) {
+      const d = new Date(nextTerm.startDate);
+      if (!isNaN(d.getTime())) {
+        const nextTermLabel = nextTerm.name || (isTerm3 ? 'Term 1, Next Academic Year' : `Term ${termNum + 1}`);
+        return {
+          dateStr: nextTerm.startDate.split('T')[0],
+          formatted: d.toLocaleDateString('en-GB', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+          }),
+          shortFormatted: d.toLocaleDateString('en-GB', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+          }),
+          termName: nextTermLabel,
+          isExplicit: false,
+        };
+      }
+    }
+
+    // 4. Default estimation based on active term's endDate
+    if (activeTerm?.endDate) {
+      const endD = new Date(activeTerm.endDate);
+      if (!isNaN(endD.getTime())) {
+        // Holiday duration: ~56 days (8 weeks) for Term 3 (long vacation), ~21 days (3 weeks) for Term 1 or Term 2
+        const vacationDays = isTerm3 ? 56 : 21;
+        const estimatedDate = new Date(endD.getTime() + vacationDays * 86400000);
+        const nextTermLabel = isTerm3 ? 'Term 1, Next Academic Year' : `Term ${termNum + 1}`;
+        return {
+          dateStr: estimatedDate.toISOString().split('T')[0],
+          formatted: estimatedDate.toLocaleDateString('en-GB', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+          }),
+          shortFormatted: estimatedDate.toLocaleDateString('en-GB', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+          }),
+          termName: nextTermLabel,
+          isExplicit: false,
+        };
+      }
+    }
+
+    return {
+      dateStr: null,
+      formatted: 'Monday, 5th January 2027',
+      shortFormatted: '5th Jan 2027',
+      termName: isTerm3 ? 'Term 1, Next Academic Year' : `Term ${termNum + 1}`,
+      isExplicit: false,
+    };
+  }, [availableTerms, selectedTermId, currentTerm, reportCardData?.nextTermOpeningDate]);
+
   const handleGenerateReportCard = async () => {
     if (!student) return;
     const activeTerm = availableTerms.find(t => t.id === selectedTermId) || currentTerm;
@@ -196,9 +315,9 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
         classTeacherRemarks: `${student.name} demonstrates commendable diligence, discipline, and active participation in continuous CBC strand learning outcomes.`,
         headTeacherRemarks: 'Commendable performance throughout the term. Demonstrates steady growth in core competencies and moral values.',
         closingDate: activeTerm.endDate ? new Date(activeTerm.endDate).toISOString().split('T')[0] : undefined,
-        nextTermOpeningDate: activeTerm.endDate
-          ? new Date(new Date(activeTerm.endDate).getTime() + 14 * 86400000).toISOString().split('T')[0]
-          : undefined,
+        nextTermOpeningDate: nextTermOpening.dateStr || (activeTerm.endDate
+          ? new Date(new Date(activeTerm.endDate).getTime() + (Number(activeTerm.termNumber) === 3 ? 56 : 21) * 86400000).toISOString().split('T')[0]
+          : undefined),
       });
       if (res.success && res.data) {
         setReportCardData(res.data);
@@ -262,10 +381,10 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
         const baseScore = score;
         const term1Score = ev.term1Score !== undefined && ev.term1Score !== null
           ? Number(ev.term1Score)
-          : (isTerm1 ? baseScore : Math.max(45, Math.min(100, Math.round(baseScore - 4 + (index % 3 - 1)))));
+          : baseScore;
         const term2Score = ev.term2Score !== undefined && ev.term2Score !== null
           ? Number(ev.term2Score)
-          : (isTerm2 ? baseScore : Math.max(45, Math.min(100, Math.round(baseScore - 1 + (index % 2)))));
+          : baseScore;
         const term3Score = ev.term3Score !== undefined && ev.term3Score !== null
           ? Number(ev.term3Score)
           : baseScore;
@@ -403,13 +522,13 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
       ? Math.round(t1Trend.averageScore)
       : hasT1InSubj
       ? Math.round(resolvedSubjects.reduce((acc, s) => acc + (s.term1Score ?? s.score), 0) / Math.max(1, resolvedSubjects.length))
-      : Math.max(45, Math.min(100, Math.round(overallAverage - 5)));
+      : Math.round(overallAverage);
 
     const t2Avg = t2Trend?.averageScore !== undefined
       ? Math.round(t2Trend.averageScore)
       : hasT2InSubj
       ? Math.round(resolvedSubjects.reduce((acc, s) => acc + (s.term2Score ?? s.score), 0) / Math.max(1, resolvedSubjects.length))
-      : Math.max(45, Math.min(100, Math.round(overallAverage - 2)));
+      : Math.round(overallAverage);
 
     const t3Avg = t3Trend?.averageScore !== undefined
       ? Math.round(t3Trend.averageScore)
@@ -929,6 +1048,29 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
       ${graphSVGString}
     </div>
 
+    ${isEndTerm ? `
+    <!-- Official End of Term Reopening Directive -->
+    <div style="margin: 4px 0 3px 0; padding: 4px 8px; background: #fff5f5; border: 1.5px solid #800000; border-radius: 5px; display: flex; justify-content: space-between; align-items: center;">
+      <div style="display: flex; align-items: center; gap: 6px;">
+        <div style="width: 18px; height: 18px; border-radius: 4px; background: #800000; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; flex-shrink: 0;">📅</div>
+        <div>
+          <strong style="color: #800000; font-size: 7.5px; text-transform: uppercase; letter-spacing: 0.3px; display: block;">
+            OFFICIAL SCHOOL REOPENING DIRECTIVE &middot; ${nextTermOpening.termName.toUpperCase()}
+          </strong>
+          <span style="color: #374151; font-size: 6.8px; line-height: 1.2;">
+            Learners are required to report promptly on reopening morning by <strong>7:45 AM</strong> in complete standard school uniform.
+          </span>
+        </div>
+      </div>
+      <div style="text-align: right; background: #800000; color: #ffffff; padding: 3px 8px; border-radius: 4px; flex-shrink: 0;">
+        <span style="display: block; font-size: 5.5px; text-transform: uppercase; letter-spacing: 0.3px; opacity: 0.9;">Reopening Date:</span>
+        <strong style="font-size: 8px; font-weight: 800; white-space: nowrap;">
+          ${nextTermOpening.formatted}
+        </strong>
+      </div>
+    </div>
+    ` : ''}
+
     <!-- Remarks & Signatures -->
     <div class="remarks-grid">
       <div class="remark-box">
@@ -973,7 +1115,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
       <div style="text-align: right;">
         <span style="color: #666; text-transform: uppercase; font-size: 7px;">Next Term Commences:</span><br/>
         <strong style="color: #800000; font-size: 9px;">
-          ${currentTerm?.endDate ? new Date(new Date(currentTerm.endDate).getTime() + 14 * 86400000).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : 'To Be Communicated'}
+          ${nextTermOpening.formatted}
         </strong>
       </div>
     </div>
@@ -1197,6 +1339,25 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
     doc.text(reportCardData?.headTeacherRemarks || 'Commendable academic effort. Encouraged to sustain reading habit and inquiry skills next term.', 18, finalY + 24);
 
     finalY += 40;
+    if (isEndTerm) {
+      if (finalY + 12 > 280) {
+        doc.addPage('a4', 'portrait');
+        finalY = 18;
+      }
+      doc.setFillColor(254, 242, 242);
+      doc.setDrawColor(122, 18, 40);
+      doc.rect(14, finalY, 182, 8, 'FD');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7.5);
+      doc.setTextColor(122, 18, 40);
+      doc.text(
+        `OFFICIAL SCHOOL REOPENING DIRECTIVE: School reopens on ${nextTermOpening.formatted}. Reporting time: 7:45 AM.`,
+        18,
+        finalY + 5.5
+      );
+      finalY += 11;
+    }
+
     if (finalY + 15 > 285) {
       doc.addPage('a4', 'portrait');
       finalY = 18;
@@ -1207,6 +1368,11 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
     doc.setTextColor(100, 116, 139);
     doc.text('Class Teacher Signature: _______________________', 18, finalY);
     doc.text('Head Teacher Official Stamp: [                             ]', 115, finalY);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
+    doc.setTextColor(122, 18, 40);
+    doc.text(`Next Term Commences: ${nextTermOpening.formatted}`, 18, finalY + 6);
 
     doc.setFontSize(7);
     doc.text(`Grace Seeds School · Official Progress Dossier · Generated on ${new Date().toLocaleString()}`, 105, 290, { align: 'center' });
@@ -1492,6 +1658,34 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
+          {/* Evaluation Type Switch (End-of-Term vs Mid-Term) */}
+          <div className="flex items-center rounded-lg border border-outline-variant/40 bg-surface-container-lowest p-0.5 text-xs font-semibold shadow-xs">
+            <button
+              type="button"
+              onClick={() => setEvaluationPeriod('END_OF_TERM')}
+              className={`px-3 py-1.5 rounded-md font-bold transition-all cursor-pointer ${
+                isEndTerm
+                  ? 'bg-[#800000] text-white shadow-2xs'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+              title="Official End of Term Summative Dossier"
+            >
+              End of Term
+            </button>
+            <button
+              type="button"
+              onClick={() => setEvaluationPeriod('MID_TERM')}
+              className={`px-3 py-1.5 rounded-md font-bold transition-all cursor-pointer ${
+                !isEndTerm
+                  ? 'bg-[#800000] text-white shadow-2xs'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+              title="Continuous Mid-Term Progress Assessment"
+            >
+              Mid-Term
+            </button>
+          </div>
+
           {/* Learner Select */}
           <select
             value={selectedId}
@@ -1603,7 +1797,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
           </p>
 
           <div className="mt-2 print:mt-0.5 inline-flex flex-wrap items-center justify-center gap-1.5 px-4 py-1 print:py-0.5 bg-[#800000] text-white rounded-md text-xs print:text-[7.5px] font-bold uppercase tracking-wider shadow-xs print:shadow-none">
-            <span>LEARNER COMPETENCY SUMMATIVE DOSSIER</span>
+            <span>{isEndTerm ? 'END-OF-TERM COMPETENCY SUMMATIVE DOSSIER' : 'MID-TERM COMPETENCY PROGRESS EVALUATION'}</span>
             <span>·</span>
             <span>{(availableTerms.find(t => t.id === selectedTermId) || currentTerm)?.name || 'TERM 3'}, {resolveAcademicYearName(currentYear?.name || currentYear?.year || currentYear?.id)}</span>
           </div>
@@ -1958,6 +2152,36 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
         </div>
 
 
+        {/* Official School Reopening Directive (End-of-Term Directive) */}
+        {isEndTerm && (
+          <div className="p-3.5 print:p-2 rounded-xl border-2 border-[#800000] bg-rose-50/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 print:w-7 print:h-7 rounded-xl bg-[#800000] text-white flex items-center justify-center shrink-0 shadow-xs">
+                <span className="material-symbols-outlined text-[22px] print:text-[14px]">calendar_month</span>
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-extrabold text-[#800000] uppercase text-xs print:text-[8.5px] tracking-wide">
+                    Official School Reopening Directive &middot; {nextTermOpening.termName}
+                  </span>
+                  <span className="px-2 py-0.2 rounded-full text-[10px] print:text-[7px] font-bold bg-[#800000] text-white uppercase">
+                    End of Term Notice
+                  </span>
+                </div>
+                <p className="text-gray-700 text-[11px] print:text-[7.5px] mt-0.5 leading-snug">
+                  Learners are required to report promptly on reopening morning by <strong>7:45 AM</strong> in complete standard school uniform with requisite CBC learning workbooks.
+                </p>
+              </div>
+            </div>
+            <div className="text-right sm:text-right shrink-0 bg-[#800000] text-white px-3 py-1.5 rounded-lg shadow-2xs">
+              <span className="block text-[10px] print:text-[6.5px] uppercase font-bold text-rose-200">Reopening Date:</span>
+              <span className="font-black text-sm print:text-[9.5px] whitespace-nowrap">
+                {nextTermOpening.formatted}
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Remarks and Official Signatures Block */}
         <div className="remarks-signatures-section space-y-2.5 print:space-y-1 pt-0.5">
           <div className="grid grid-cols-1 md:grid-cols-2 print:grid-cols-2 gap-3 print:gap-2">
@@ -2018,7 +2242,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
             <div className="text-right">
               <span className="text-gray-500 block text-[10px] print:text-[7px] uppercase">Next Term Commences:</span>
               <span className="font-bold text-[#800000] text-xs print:text-[8.5px]">
-                {currentTerm?.endDate ? new Date(new Date(currentTerm.endDate).getTime() + 14 * 86400000).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : 'To Be Communicated'}
+                {nextTermOpening.formatted}
               </span>
             </div>
           </div>

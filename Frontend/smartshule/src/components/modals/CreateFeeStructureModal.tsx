@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { apiService } from '../../services/api';
-import { AcademicYear, AcademicTerm } from '../../types';
+import { AcademicYear, AcademicTerm, FeeStructure } from '../../types';
 import { resolveAcademicYearName, resolveGradeName } from '../../utils/formatters';
 
 interface CreateFeeStructureModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreated: (structure: any) => void;
-  initialData?: any;
+  onCreated: (structure?: any) => void;
+  initialData?: FeeStructure | null;
 }
 
 export interface FeeLineItemState {
@@ -15,59 +15,15 @@ export interface FeeLineItemState {
   name: string;
   category: 'TUITION' | 'ASSESSMENT' | 'ACTIVITY' | 'BOARDING' | 'MEALS' | 'TRANSPORT' | 'ADMISSION' | 'OTHER';
   isOptional: boolean;
-  amount: string; // Whole year full amount (KES)
+  amount: string;
+  expectedAmount?: string;
 }
 
-const TEMPLATES: Record<string, { label: string; desc: string; icon: string; gradeLevel: string; items: FeeLineItemState[] }> = {
-  graceseed_pp: {
-    label: 'Pre-Primary (PG, PP1, PP2)',
-    desc: 'Term 1 & 2: KES 5,100 · Term 3: KES 4,800',
-    icon: 'child_care',
-    gradeLevel: 'PLAYGROUP',
-    items: [
-      { id: 'gs-1', name: 'Tuition Fee', category: 'TUITION', isOptional: false, amount: '4500' },
-      { id: 'gs-2', name: 'Activity Fee', category: 'ACTIVITY', isOptional: false, amount: '300' },
-      { id: 'gs-3', name: 'Assessment Fee', category: 'ASSESSMENT', isOptional: false, amount: '300' },
-    ],
-  },
-  graceseed_lower: {
-    label: 'Lower Primary (Grade 1 - 3)',
-    desc: 'Term 1 & 2: KES 5,800 · Term 3: KES 5,300',
-    icon: 'school',
-    gradeLevel: 'GRADE_1',
-    items: [
-      { id: 'gs-1', name: 'Tuition Fee', category: 'TUITION', isOptional: false, amount: '5000' },
-      { id: 'gs-2', name: 'Activity Fee', category: 'ACTIVITY', isOptional: false, amount: '500' },
-      { id: 'gs-3', name: 'Assessment Fee', category: 'ASSESSMENT', isOptional: false, amount: '300' },
-    ],
-  },
-  graceseed_upper: {
-    label: 'Upper Primary (Grade 4 - 6)',
-    desc: 'Term 1 & 2: KES 6,500 · Term 3: KES 6,000',
-    icon: 'menu_book',
-    gradeLevel: 'GRADE_4',
-    items: [
-      { id: 'gs-1', name: 'Tuition Fee', category: 'TUITION', isOptional: false, amount: '5700' },
-      { id: 'gs-2', name: 'Activity Fee', category: 'ACTIVITY', isOptional: false, amount: '500' },
-      { id: 'gs-3', name: 'Assessment Fee', category: 'ASSESSMENT', isOptional: false, amount: '300' },
-    ],
-  },
-  junior_secondary: {
-    label: 'Junior School (Grade 7 - 9)',
-    desc: 'Tuition 25,000 · Assessment 6,000 · Activity 2,000',
-    icon: 'account_balance',
-    gradeLevel: 'GRADE_7',
-    items: [
-      { id: 'js-1', name: 'Tuition Fee', category: 'TUITION', isOptional: false, amount: '25000' },
-      { id: 'js-2', name: 'CBC Assessment Practical Kits', category: 'ASSESSMENT', isOptional: false, amount: '6000' },
-      { id: 'js-3', name: 'Activity & Sports Levy', category: 'ACTIVITY', isOptional: false, amount: '2000' },
-      { id: 'js-4', name: 'Hot Lunch Programme', category: 'MEALS', isOptional: true, amount: '8500' },
-    ],
-  },
-};
-
-const BLANK_FEE_ITEMS: FeeLineItemState[] = [
-  { id: 'item-1', name: '', category: 'TUITION', isOptional: false, amount: '' }
+const GRADE_OPTIONS = [
+  { group: 'Pre-Primary', items: [{ id: 'PLAYGROUP', name: 'Playgroup' }, { id: 'PP1', name: 'PP1' }, { id: 'PP2', name: 'PP2' }] },
+  { group: 'Lower Primary', items: [{ id: 'GRADE_1', name: 'Grade 1' }, { id: 'GRADE_2', name: 'Grade 2' }, { id: 'GRADE_3', name: 'Grade 3' }] },
+  { group: 'Upper Primary', items: [{ id: 'GRADE_4', name: 'Grade 4' }, { id: 'GRADE_5', name: 'Grade 5' }, { id: 'GRADE_6', name: 'Grade 6' }] },
+  { group: 'Junior Secondary', items: [{ id: 'GRADE_7', name: 'Grade 7' }, { id: 'GRADE_8', name: 'Grade 8' }, { id: 'GRADE_9', name: 'Grade 9' }] },
 ];
 
 export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = ({
@@ -76,29 +32,69 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
   onCreated,
   initialData,
 }) => {
-  const [gradeLevel, setGradeLevel] = useState('PLAYGROUP');
-  const [selectedTermId, setSelectedTermId] = useState('term-2026-t1');
-  const [title, setTitle] = useState('');
-  const [dueDate, setDueDate] = useState('');
-  const [items, setItems] = useState<FeeLineItemState[]>(BLANK_FEE_ITEMS);
-
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
   const [schoolId, setSchoolId] = useState('');
   const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
   const [selectedYearId, setSelectedYearId] = useState('');
   const [terms, setTerms] = useState<AcademicTerm[]>([]);
+  const [selectedTermId, setSelectedTermId] = useState('');
+  const [termLabel, setTermLabel] = useState('Term 1');
+  const [gradeLevel, setGradeLevel] = useState('GRADE_1');
+  const [title, setTitle] = useState('');
+  const [dueDate, setDueDate] = useState('');
+  const [items, setItems] = useState<FeeLineItemState[]>([]);
 
-  const resolveTermLabel = (termId: string) => {
-    if (termId.toLowerCase().includes('t3') || termId.toLowerCase().includes('term-3') || termId.endsWith('3')) return 'Term 3';
-    if (termId.toLowerCase().includes('t2') || termId.toLowerCase().includes('term-2') || termId.endsWith('2')) return 'Term 2';
-    return 'Term 1';
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const isCustomTitleEdited = useRef(false);
+
+  // Strict term number parser that will not be confused by year numbers like "2026" or "2027"
+  const parseTermNumber = (labelOrId: string): 1 | 2 | 3 => {
+    const s = String(labelOrId).toLowerCase();
+    if (/(?:term[-_\s]*3|\bt[-_\s]*3\b)/i.test(s) || s.endsWith('-3') || s.endsWith('_3')) return 3;
+    if (/(?:term[-_\s]*2|\bt[-_\s]*2\b)/i.test(s) || s.endsWith('-2') || s.endsWith('_2')) return 2;
+    return 1;
   };
 
+  const getDefaultAmountsForGrade = (grade: string) => {
+    const g = grade.toUpperCase();
+    if (g.includes('PLAYGROUP') || g.includes('PP1') || g.includes('PP2')) {
+      return { tuition: '4500', assessment: '300', activity: '300' };
+    }
+    if (g.includes('GRADE_4') || g.includes('GRADE_5') || g.includes('GRADE_6') || g === 'GRADE 4' || g === 'GRADE 5' || g === 'GRADE 6') {
+      return { tuition: '5700', assessment: '300', activity: '500' };
+    }
+    return { tuition: '5000', assessment: '300', activity: '500' };
+  };
+
+  const generateDefaultItems = (termNum: number, grade: string): FeeLineItemState[] => {
+    const rates = getDefaultAmountsForGrade(grade);
+    const base: FeeLineItemState[] = [
+      { id: `tuition-${Date.now()}`, name: 'Tuition Fee', category: 'TUITION', isOptional: false, amount: '', expectedAmount: rates.tuition },
+      { id: `assessment-${Date.now() + 1}`, name: 'Assessment Fee', category: 'ASSESSMENT', isOptional: false, amount: '', expectedAmount: rates.assessment },
+    ];
+
+    if (termNum !== 3) {
+      base.push({
+        id: `activity-${Date.now() + 2}`,
+        name: 'Activity Fee',
+        category: 'ACTIVITY',
+        isOptional: false,
+        amount: '',
+        expectedAmount: rates.activity,
+      });
+    }
+
+    return base;
+  };
+
+  // Synchronize terms and pre-fill data whenever modal opens
   useEffect(() => {
     if (!isOpen) return;
-    async function loadAcademicData() {
+
+    let isMounted = true;
+
+    async function initializeModal() {
       try {
         const [schoolRes, contextRes, yearsRes] = await Promise.all([
           apiService.getSchool().catch(() => null),
@@ -106,665 +102,616 @@ export const CreateFeeStructureModal: React.FC<CreateFeeStructureModalProps> = (
           apiService.getYears().catch(() => null),
         ]);
 
+        if (!isMounted) return;
+
         if (schoolRes?.success && schoolRes.data) {
-          setSchoolId(schoolRes.data.id);
+          setSchoolId(schoolRes.data.id || '');
         }
 
-        if (yearsRes?.success && yearsRes.data && yearsRes.data.length > 0) {
-          setAcademicYears(yearsRes.data);
-          const currentYear = contextRes?.data?.currentYear || yearsRes.data.find((y) => y.isCurrent) || yearsRes.data[0];
-          setSelectedYearId(currentYear.id);
+        let loadedYears: AcademicYear[] = [];
+        let loadedTerms: AcademicTerm[] = [];
+        let activeYId = '';
+        let activeTId = '';
+        let activeTName = 'Term 1';
 
-          const termsRes = await apiService.getTerms(currentYear.id);
-          if (termsRes?.success && termsRes.data) {
-            setTerms(termsRes.data);
-            const currentTerm = contextRes?.data?.currentTerm || termsRes.data.find((t) => t.isCurrent) || termsRes.data[0];
-            if (currentTerm?.id) {
-              setSelectedTermId(currentTerm.id);
+        if (yearsRes?.success && Array.isArray(yearsRes.data) && yearsRes.data.length > 0) {
+          loadedYears = yearsRes.data;
+          setAcademicYears(loadedYears);
+
+          const activeYear = contextRes?.data?.currentYear || loadedYears.find((y) => y.isCurrent) || loadedYears[0];
+          activeYId = initialData?.academicYearId || activeYear.id;
+          setSelectedYearId(activeYId);
+
+          const termsRes = await apiService.getTerms(activeYId).catch(() => null);
+          if (termsRes?.success && Array.isArray(termsRes.data) && termsRes.data.length > 0) {
+            loadedTerms = termsRes.data;
+            setTerms(loadedTerms);
+
+            const matchedTerm = initialData?.termId
+              ? loadedTerms.find((t) => t.id === initialData.termId)
+              : contextRes?.data?.currentTerm || loadedTerms.find((t) => t.isCurrent) || loadedTerms[0];
+
+            if (matchedTerm) {
+              activeTId = matchedTerm.id;
+              activeTName = matchedTerm.name || `Term ${parseTermNumber(matchedTerm.id)}`;
+            } else {
+              activeTId = loadedTerms[0].id;
+              activeTName = loadedTerms[0].name || 'Term 1';
             }
           }
         }
+
+        const g = initialData?.gradeLevel || 'GRADE_1';
+        const tNum = parseTermNumber(activeTName || activeTId);
+        const resolvedTLabel = `Term ${tNum}`;
+
+        setGradeLevel(g);
+        setSelectedTermId(activeTId);
+        setTermLabel(resolvedTLabel);
+        setDueDate(initialData?.dueDate || '');
+
+        const gradeDisplay = resolveGradeName(g);
+        if (initialData?.title) {
+          setTitle(initialData.title);
+          isCustomTitleEdited.current = true;
+        } else {
+          setTitle(`${gradeDisplay} ${resolvedTLabel} Fee Schedule`);
+          isCustomTitleEdited.current = false;
+        }
+
+        if (initialData?.items && Array.isArray(initialData.items) && initialData.items.length > 0) {
+          const defaultRates = getDefaultAmountsForGrade(g);
+          let loadedItems: FeeLineItemState[] = initialData.items.map((it: any, idx: number) => {
+            const val = Number(it.amount);
+            return {
+              id: it.id || `item-${Date.now()}-${idx}`,
+              name: it.name || '',
+              category: it.category || 'TUITION',
+              isOptional: !!it.isOptional,
+              amount: val > 0 ? String(val) : '',
+              expectedAmount: String(val > 0 ? val : (defaultRates as any)[it.category?.toLowerCase()] || '500'),
+            };
+          });
+
+          if (tNum === 3) {
+            loadedItems = loadedItems.filter((it) => it.category !== 'ACTIVITY' && !it.name.toLowerCase().includes('activity'));
+          }
+
+          setItems(loadedItems);
+        } else {
+          setItems(generateDefaultItems(tNum, g));
+        }
       } catch (err) {
-        console.error('Failed to load academic data for fee structure:', err);
+        console.error('Failed to initialize fee schedule modal:', err);
       }
     }
-    loadAcademicData();
-  }, [isOpen]);
 
-  // Handle clone / pre-fill if initialData passed
-  useEffect(() => {
-    if (!isOpen) return;
-    if (initialData) {
-      if (initialData.gradeLevel) setGradeLevel(initialData.gradeLevel);
-      if (initialData.academicYearId) setSelectedYearId(initialData.academicYearId);
-      if (initialData.termId && initialData.termId !== 'ALL') setSelectedTermId(initialData.termId);
-      if (initialData.dueDate) setDueDate(initialData.dueDate);
-      if (initialData.title) setTitle(`${initialData.title} (Copy)`);
+    initializeModal();
 
-      if (initialData.items && Array.isArray(initialData.items) && initialData.items.length > 0) {
-        const converted: FeeLineItemState[] = initialData.items.map((it: any, idx: number) => {
-          const amt = Number(it.amount) || 0;
-          return {
-            id: `item-${Date.now()}-${idx}`,
-            name: it.name || '',
-            category: it.category || 'TUITION',
-            isOptional: !!it.isOptional,
-            amount: String(amt),
-          };
-        });
-        setItems(converted);
-      }
-    } else {
-      // Keep entry fields completely blank for fresh creation
-      setTitle('');
-      setDueDate('');
-      setItems([{ id: `item-${Date.now()}`, name: '', category: 'TUITION', isOptional: false, amount: '' }]);
-    }
+    return () => {
+      isMounted = false;
+    };
   }, [isOpen, initialData]);
 
-  if (!isOpen) return null;
-
-  const handleYearChange = async (yearId: string) => {
-    setSelectedYearId(yearId);
+  // Handle changing Academic Year: immediately reload valid terms for that year
+  const handleYearChange = async (newYearId: string) => {
+    setSelectedYearId(newYearId);
     try {
-      const res = await apiService.getTerms(yearId);
-      if (res.success && res.data) {
+      const res = await apiService.getTerms(newYearId);
+      if (res?.success && Array.isArray(res.data) && res.data.length > 0) {
         setTerms(res.data);
+        const firstTerm = res.data.find((t) => t.isCurrent) || res.data[0];
+        const tNum = parseTermNumber(firstTerm.name || firstTerm.id);
+        const newTermLabel = `Term ${tNum}`;
+
+        setSelectedTermId(firstTerm.id);
+        setTermLabel(newTermLabel);
+
+        const gradeDisplay = resolveGradeName(gradeLevel);
+        if (!isCustomTitleEdited.current) {
+          setTitle(`${gradeDisplay} ${newTermLabel} Fee Schedule`);
+        }
+
+        setItems(generateDefaultItems(tNum, gradeLevel));
+      } else {
+        setTerms([]);
       }
     } catch {
       setTerms([]);
     }
   };
 
-  const handleTermChange = (newTermId: string) => {
+  // Handle changing Academic Term: sync label, title, and activity fee row
+  const handleTermSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newTermId = e.target.value;
+    const selectedOptionText = e.target.options[e.target.selectedIndex]?.text || '';
+    const tNum = parseTermNumber(selectedOptionText || newTermId);
+    const newTermLabel = `Term ${tNum}`;
+
     setSelectedTermId(newTermId);
-  };
+    setTermLabel(newTermLabel);
 
-  const handleGradeChange = (newGrade: string) => {
-    setGradeLevel(newGrade);
-  };
-
-  // Apply preset template
-  const handleApplyTemplate = (templateKey: string) => {
-    const tpl = TEMPLATES[templateKey];
-    if (!tpl) return;
-    setItems(tpl.items.map((it, idx) => ({ ...it, id: `item-${Date.now()}-${idx}` })));
-    if (tpl.gradeLevel) {
-      handleGradeChange(tpl.gradeLevel);
+    const gradeDisplay = resolveGradeName(gradeLevel);
+    if (!isCustomTitleEdited.current) {
+      setTitle(`${gradeDisplay} ${newTermLabel} Fee Schedule`);
+    } else {
+      setTitle((prev) => {
+        if (/Term\s+[1-3]/i.test(prev)) {
+          return prev.replace(/Term\s+[1-3]/i, newTermLabel);
+        }
+        return `${gradeDisplay} ${newTermLabel} Fee Schedule`;
+      });
     }
-    const yearObj = academicYears.find((y) => y.id === selectedYearId);
-    const yearName = yearObj ? resolveAcademicYearName(yearObj.name || yearObj.id) : '2026';
-    const termLabel = resolveTermLabel(selectedTermId);
-    setTitle(`${resolveGradeName(tpl.gradeLevel || gradeLevel)} CBC ${termLabel} Fee Schedule — ${yearName}`);
+
+    setItems((prevItems) => {
+      const rates = getDefaultAmountsForGrade(gradeLevel);
+
+      if (tNum === 3) {
+        return prevItems.filter(
+          (it) => it.category !== 'ACTIVITY' && !it.name.toLowerCase().includes('activity')
+        );
+      } else {
+        const hasActivity = prevItems.some(
+          (it) => it.category === 'ACTIVITY' || it.name.toLowerCase().includes('activity')
+        );
+        if (!hasActivity) {
+          return [
+            ...prevItems,
+            {
+              id: `activity-${Date.now()}`,
+              name: 'Activity Fee',
+              category: 'ACTIVITY',
+              isOptional: false,
+              amount: '',
+              expectedAmount: rates.activity,
+            },
+          ];
+        }
+        return prevItems;
+      }
+    });
   };
 
-  // Update annual KES amount
-  const handleUpdateAmount = (id: string, newAmountStr: string) => {
-    setItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, amount: newAmountStr } : item))
+  const handleGradeSelect = (newGrade: string) => {
+    setGradeLevel(newGrade);
+    const gradeDisplay = resolveGradeName(newGrade);
+    if (!isCustomTitleEdited.current) {
+      setTitle(`${gradeDisplay} ${termLabel} Fee Schedule`);
+    }
+
+    const rates = getDefaultAmountsForGrade(newGrade);
+    setItems((prevItems) =>
+      prevItems.map((it) => {
+        if (it.category === 'TUITION' || it.name.toLowerCase().includes('tuition')) {
+          return { ...it, expectedAmount: rates.tuition };
+        }
+        if (it.category === 'ACTIVITY' || it.name.toLowerCase().includes('activity')) {
+          return { ...it, expectedAmount: rates.activity };
+        }
+        return it;
+      })
     );
   };
 
-  const handleAddItem = () => {
-    const newItem: FeeLineItemState = {
-      id: `item-${Date.now()}`,
-      name: '',
-      category: 'OTHER',
-      isOptional: false,
-      amount: '',
-    };
-    setItems((prev) => [...prev, newItem]);
+  const applyOfficialPreset = (level: 'PRE_PRIMARY' | 'LOWER_PRIMARY' | 'UPPER_PRIMARY') => {
+    const tNum = parseTermNumber(termLabel);
+    const isT3 = tNum === 3;
+
+    if (level === 'PRE_PRIMARY') {
+      setItems([
+        { id: `ps-${Date.now()}-1`, name: 'Tuition Fee', category: 'TUITION', isOptional: false, amount: '', expectedAmount: '4500' },
+        { id: `ps-${Date.now()}-2`, name: 'Assessment Fee', category: 'ASSESSMENT', isOptional: false, amount: '', expectedAmount: '300' },
+        ...(!isT3 ? [{ id: `ps-${Date.now()}-3`, name: 'Activity Fee', category: 'ACTIVITY', isOptional: false, amount: '', expectedAmount: '300' } as FeeLineItemState] : []),
+      ]);
+    } else if (level === 'LOWER_PRIMARY') {
+      setItems([
+        { id: `ps-${Date.now()}-1`, name: 'Tuition Fee', category: 'TUITION', isOptional: false, amount: '', expectedAmount: '5000' },
+        { id: `ps-${Date.now()}-2`, name: 'Assessment Fee', category: 'ASSESSMENT', isOptional: false, amount: '', expectedAmount: '300' },
+        ...(!isT3 ? [{ id: `ps-${Date.now()}-3`, name: 'Activity Fee', category: 'ACTIVITY', isOptional: false, amount: '', expectedAmount: '500' } as FeeLineItemState] : []),
+      ]);
+    } else if (level === 'UPPER_PRIMARY') {
+      setItems([
+        { id: `ps-${Date.now()}-1`, name: 'Tuition Fee', category: 'TUITION', isOptional: false, amount: '', expectedAmount: '5700' },
+        { id: `ps-${Date.now()}-2`, name: 'Assessment Fee', category: 'ASSESSMENT', isOptional: false, amount: '', expectedAmount: '300' },
+        ...(!isT3 ? [{ id: `ps-${Date.now()}-3`, name: 'Activity Fee', category: 'ACTIVITY', isOptional: false, amount: '', expectedAmount: '500' } as FeeLineItemState] : []),
+      ]);
+    }
   };
 
-  const handleDuplicateItem = (id: string) => {
-    const target = items.find((i) => i.id === id);
-    if (!target) return;
-    const cloned: FeeLineItemState = {
-      ...target,
-      id: `item-${Date.now()}`,
-      name: `${target.name} (Copy)`,
-    };
-    setItems((prev) => [...prev, cloned]);
+  const handleAddItem = () => {
+    setItems((prev) => [
+      ...prev,
+      { id: `item-${Date.now()}`, name: '', category: 'ACTIVITY', isOptional: false, amount: '', expectedAmount: '500' },
+    ]);
   };
 
   const handleRemoveItem = (id: string) => {
     if (items.length <= 1) {
-      alert('A fee structure must contain at least one line item.');
+      alert('At least one fee line item is required.');
       return;
     }
-    setItems((prev) => prev.filter((item) => item.id !== id));
+    setItems((prev) => prev.filter((it) => it.id !== id));
   };
 
-  // Quick Add-on shortcuts
-  const handleAddAddon = (type: 'LUNCH' | 'ADMISSION' | 'TRANSPORT' | 'UNIFORM') => {
-    let newItem: FeeLineItemState;
-    if (type === 'LUNCH') {
-      newItem = {
-        id: `addon-lunch-${Date.now()}`,
-        name: 'School Lunch Scheme',
-        category: 'MEALS',
-        isOptional: true,
-        amount: '',
-      };
-    } else if (type === 'ADMISSION') {
-      newItem = {
-        id: `addon-adm-${Date.now()}`,
-        name: 'Admission & Registration Fee',
-        category: 'ADMISSION',
-        isOptional: true,
-        amount: '',
-      };
-    } else if (type === 'TRANSPORT') {
-      newItem = {
-        id: `addon-trans-${Date.now()}`,
-        name: 'School Transport Scheme',
-        category: 'TRANSPORT',
-        isOptional: true,
-        amount: '',
-      };
-    } else {
-      newItem = {
-        id: `addon-uni-${Date.now()}`,
-        name: 'Track Suit / School Uniform',
-        category: 'OTHER',
-        isOptional: true,
-        amount: '',
-      };
-    }
-    setItems((prev) => [...prev, newItem]);
+  const getEffectiveAmount = (it: FeeLineItemState): number => {
+    if (it.amount.trim() !== '') return Number(it.amount) || 0;
+    return Number(it.expectedAmount) || 0;
   };
 
-  // Compute totals for the whole year
-  const fullAnnualTotal = items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
-  const mandatoryTotal = items.filter(it => !it.isOptional).reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
-  const optionalTotal = items.filter(it => it.isOptional).reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+  const totalTermlyAmount = useMemo(() => {
+    return items.reduce((sum, it) => sum + getEffectiveAmount(it), 0);
+  }, [items]);
 
-  const handleSubmit = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!selectedYearId) {
-      setError('Please select an active academic year.');
+  const mandatoryTotal = useMemo(() => {
+    return items.filter((it) => !it.isOptional).reduce((sum, it) => sum + getEffectiveAmount(it), 0);
+  }, [items]);
+
+  const isTerm3Active = parseTermNumber(termLabel) === 3;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim()) {
+      setError('Please provide a schedule title.');
       return;
     }
-
-    if (fullAnnualTotal <= 0) {
-      setError('Total fee structure amount must be greater than zero.');
+    if (totalTermlyAmount <= 0) {
+      setError('Total fee amount must be greater than zero.');
       return;
     }
 
     const unNamedItems = items.filter((it) => !it.name.trim());
     if (unNamedItems.length > 0) {
-      setError('Please provide a name for all line items.');
+      setError('Please provide a valid description for all line items.');
       return;
     }
 
-    const formattedItems = items
-      .filter((it) => it.name.trim() !== '')
-      .map((it) => {
-        const amt = Number(it.amount) || 0;
-        return {
-          name: it.name.trim(),
-          amount: amt,
-          isOptional: it.isOptional,
-          category: it.category,
-        };
-      });
+    setIsLoading(true);
+    setError(null);
 
-    const defaultTitle = `${gradeLevel.replace('_', ' ')} CBC ${resolveTermLabel(selectedTermId)} Fee Schedule`;
+    // Format valid YYYY-MM-DD due date
+    const fallbackDueDate = `${new Date().getFullYear()}-12-31`;
+    const formattedDueDate = dueDate && dueDate.trim() !== '' ? dueDate : fallbackDueDate;
+
     const payload = {
       schoolId: schoolId || 'school-001',
       academicYearId: selectedYearId,
       termId: selectedTermId,
       gradeLevel,
-      title: title.trim() || defaultTitle,
-      dueDate: dueDate || `${new Date().getFullYear()}-12-31`,
-      items: formattedItems,
+      title: title.trim(),
+      dueDate: formattedDueDate,
+      totalAmount: totalTermlyAmount,
+      items: items.map((it) => ({
+        name: it.name.trim(),
+        amount: getEffectiveAmount(it),
+        isOptional: it.isOptional,
+        category: it.category,
+      })),
     };
 
-    setIsLoading(true);
-    setError(null);
     try {
-      const res = await apiService.createFeeStructure(payload);
-      if (res.success && res.data) {
+      let res;
+      if (initialData?.id) {
+        res = await apiService.updateFeeStructure(initialData.id, payload);
+      } else {
+        res = await apiService.createFeeStructure(payload);
+      }
+
+      if (res?.success) {
         onCreated(res.data);
         onClose();
       } else {
-        setError(res.message || 'Failed to create fee structure');
+        setError(res?.message || 'Failed to save fee structure in the database.');
       }
     } catch (err: any) {
-      console.error('Error creating fee structure:', err);
-      setError(err.message || 'Error creating fee structure');
+      setError(err?.message || 'Network error while updating fee structure.');
     } finally {
       setIsLoading(false);
     }
   };
 
+  if (!isOpen) return null;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto animate-in fade-in">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[94vh] flex flex-col overflow-hidden border border-gray-200 my-auto">
-        {/* Modal Header */}
-        <div className="bg-[#7a1228] text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-white/10 rounded-xl">
-              <span className="material-symbols-outlined text-[24px]">receipt_long</span>
-            </div>
+      <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[92vh] flex flex-col overflow-hidden border border-gray-200 my-auto">
+        {/* Header */}
+        <div className="bg-[#7a1228] text-white px-5 py-3.5 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2.5">
+            <span className="material-symbols-outlined text-[22px]">payments</span>
             <div>
-              <h3 className="font-bold text-base sm:text-lg">
-                {initialData ? 'Duplicate / Edit Fee Structure' : 'New Termly Fee Structure'}
-              </h3>
-              <p className="text-xs text-rose-200 mt-0.5">
-                Set up termly fee schedules for CBC classes (KES)
+              <h2 className="font-bold text-sm tracking-tight">
+                {initialData ? 'Edit Database Fee Schedule' : 'New Fee Schedule'}
+              </h2>
+              <p className="text-[11px] text-rose-200">
+                Saves directly to system database for student invoices
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="hidden sm:block text-right bg-white/10 px-3 py-1.5 rounded-xl border border-white/20">
-              <span className="text-[10px] text-rose-200 uppercase font-semibold block">Total Termly Fee</span>
-              <span className="font-mono font-bold text-sm text-white">
-                KES {fullAnnualTotal.toLocaleString()}
-              </span>
-            </div>
+
+          <div className="flex items-center gap-2.5">
+            <span className="font-mono font-bold text-sm bg-white/15 px-3 py-1 rounded-lg border border-white/20">
+              KES {totalTermlyAmount.toLocaleString()}
+            </span>
             <button
+              type="button"
               onClick={onClose}
-              className="p-1.5 rounded-lg text-rose-200 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
-              title="Close modal"
+              className="p-1 rounded-lg text-rose-200 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
             >
-              <span className="material-symbols-outlined text-[22px]">close</span>
+              <span className="material-symbols-outlined text-[20px]">close</span>
             </button>
           </div>
         </div>
 
-        {/* Modal Body */}
-        <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-5">
+        {/* Body */}
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 space-y-4 text-xs">
           {error && (
-            <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium flex items-center gap-2 animate-in fade-in">
-              <span className="material-symbols-outlined text-[18px] text-red-600 shrink-0">error</span>
-              <span className="flex-1">{error}</span>
+            <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 font-medium flex items-center gap-2">
+              <span className="material-symbols-outlined text-[18px] text-red-600">error</span>
+              <span>{error}</span>
             </div>
           )}
 
-          {/* 1. Basic Structure Settings */}
-          <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200 space-y-3.5">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1">
-                  Academic Year
-                </label>
-                <select
-                  value={selectedYearId}
-                  onChange={(e) => handleYearChange(e.target.value)}
-                  required
-                  className="w-full bg-white border border-gray-300 rounded-xl p-2 text-xs text-gray-900 font-semibold focus:outline-[#7a1228]"
-                >
-                  {academicYears.length > 0 ? (
-                    academicYears.map((y) => (
-                      <option key={y.id} value={y.id}>
-                        {y.name} {y.isCurrent ? '(Active Year)' : ''}
-                      </option>
-                    ))
-                  ) : (
-                    <option value="">No years created</option>
-                  )}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1">
-                  Academic Term
-                </label>
-                <select
-                  value={selectedTermId}
-                  onChange={(e) => handleTermChange(e.target.value)}
-                  required
-                  className="w-full bg-white border border-gray-300 rounded-xl p-2 text-xs text-gray-900 font-semibold focus:outline-[#7a1228]"
-                >
-                  {terms.length > 0 ? (
-                    terms.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.name} {t.isCurrent ? '(Active Term)' : ''}
-                      </option>
-                    ))
-                  ) : (
-                    <>
-                      <option value="term-2026-t1">Term 1 (First Term)</option>
-                      <option value="term-2026-t2">Term 2 (Second Term)</option>
-                      <option value="term-2026-t3">Term 3 (Third Term)</option>
-                    </>
-                  )}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1">
-                  Class / Grade Level
-                </label>
-                <select
-                  value={gradeLevel}
-                  onChange={(e) => handleGradeChange(e.target.value)}
-                  className="w-full bg-white border border-gray-300 rounded-xl p-2 text-xs text-gray-900 font-semibold focus:outline-[#7a1228]"
-                >
-                  <optgroup label="Pre-Primary (Pre-School)">
-                    <option value="PLAYGROUP">Playgroup</option>
-                    <option value="PP1">PP1 (Pre-Primary 1)</option>
-                    <option value="PP2">PP2 (Pre-Primary 2)</option>
-                  </optgroup>
-                  <optgroup label="Lower Primary (Grade 1 - 3)">
-                    <option value="GRADE_1">Grade 1</option>
-                    <option value="GRADE_2">Grade 2</option>
-                    <option value="GRADE_3">Grade 3</option>
-                  </optgroup>
-                  <optgroup label="Upper Primary (Grade 4 - 6)">
-                    <option value="GRADE_4">Grade 4</option>
-                    <option value="GRADE_5">Grade 5</option>
-                    <option value="GRADE_6">Grade 6</option>
-                  </optgroup>
-                  <optgroup label="Junior Secondary (Grade 7 - 9)">
-                    <option value="GRADE_7">Grade 7</option>
-                    <option value="GRADE_8">Grade 8</option>
-                    <option value="GRADE_9">Grade 9</option>
-                  </optgroup>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1">
-                  Schedule Title
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Grade 1 CBC Term 1 Fee Schedule"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="w-full bg-white border border-gray-300 rounded-xl p-2 text-xs text-gray-900 font-semibold focus:outline-[#7a1228]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-700 mb-1">
-                  Due Date
-                </label>
-                <input
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  className="w-full bg-white border border-gray-300 rounded-xl p-2 text-xs text-gray-900 font-mono focus:outline-[#7a1228]"
-                />
-              </div>
+          {/* Schedule Parameters */}
+          <div className="bg-gray-50/80 rounded-xl p-3.5 border border-gray-200 grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="font-bold text-gray-700 block mb-1">Academic Year</label>
+              <select
+                value={selectedYearId}
+                onChange={(e) => handleYearChange(e.target.value)}
+                className="w-full bg-white border border-gray-300 rounded-lg px-2.5 py-1.5 font-semibold text-gray-900 focus:outline-[#7a1228]"
+              >
+                {academicYears.length > 0 ? (
+                  academicYears.map((y) => (
+                    <option key={y.id} value={y.id}>
+                      {resolveAcademicYearName(y.name || y.id)} {y.isCurrent ? '(Active)' : ''}
+                    </option>
+                  ))
+                ) : (
+                  <option value="2026">2026 (Active)</option>
+                )}
+              </select>
             </div>
 
-            {/* Quick Templates Bar */}
-            <div className="pt-2 border-t border-gray-200">
-              <span className="text-[10px] uppercase font-bold text-gray-500 block mb-1.5">
-                Load Official Rates Preset (1-Click):
-              </span>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {Object.entries(TEMPLATES).map(([key, tpl]) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => handleApplyTemplate(key)}
-                    className="p-2 rounded-xl bg-white border border-gray-200 hover:border-[#7a1228] hover:bg-rose-50/50 text-left transition-all cursor-pointer shadow-2xs group"
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <span className="material-symbols-outlined text-[16px] text-[#7a1228] group-hover:scale-110 transition-transform">
-                        {tpl.icon}
-                      </span>
-                      <span className="text-xs font-bold text-gray-800">{tpl.label}</span>
-                    </div>
-                    <div className="text-[10px] text-gray-500 truncate mt-0.5">{tpl.desc}</div>
-                  </button>
+            <div>
+              <label className="font-bold text-gray-700 block mb-1">Academic Term</label>
+              <select
+                value={selectedTermId}
+                onChange={handleTermSelect}
+                className="w-full bg-white border border-gray-300 rounded-lg px-2.5 py-1.5 font-semibold text-gray-900 focus:outline-[#7a1228]"
+              >
+                {terms.length > 0 ? (
+                  terms.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name || `Term ${parseTermNumber(t.id)}`}
+                    </option>
+                  ))
+                ) : (
+                  <>
+                    <option value="TERM_1">Term 1</option>
+                    <option value="TERM_2">Term 2</option>
+                    <option value="TERM_3">Term 3</option>
+                  </>
+                )}
+              </select>
+            </div>
+
+            <div>
+              <label className="font-bold text-gray-700 block mb-1">Class / Grade Level</label>
+              <select
+                value={gradeLevel}
+                onChange={(e) => handleGradeSelect(e.target.value)}
+                className="w-full bg-white border border-gray-300 rounded-lg px-2.5 py-1.5 font-semibold text-gray-900 focus:outline-[#7a1228]"
+              >
+                {GRADE_OPTIONS.map((grp) => (
+                  <optgroup key={grp.group} label={grp.group}>
+                    {grp.items.map((it) => (
+                      <option key={it.id} value={it.id}>
+                        {it.name}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
-              </div>
+              </select>
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="font-bold text-gray-700 block mb-1">Schedule Title</label>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => {
+                  isCustomTitleEdited.current = true;
+                  setTitle(e.target.value);
+                }}
+                placeholder="e.g. Grade 1 Term 1 Fee Schedule"
+                className="w-full bg-white border border-gray-300 rounded-lg px-2.5 py-1.5 font-semibold text-gray-900 focus:outline-[#7a1228]"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="font-bold text-gray-700 block mb-1">Term Due Date</label>
+              <input
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                className="w-full bg-white border border-gray-300 rounded-lg px-2.5 py-1.5 font-semibold text-gray-900 focus:outline-[#7a1228]"
+              />
             </div>
           </div>
 
-          {/* 2. Whole-Year Fee Line Items Table */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-gray-900">
-                  Fee Line Items ({items.length})
-                </h4>
-                <p className="text-[11px] text-gray-500">
-                  Enter the termly amount (KES) for each fee component.
-                </p>
-              </div>
+          {/* Rate Presets (Tied to active term label) */}
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+              1-Click Rate Presets ({termLabel}):
+            </span>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <button
+                type="button"
+                onClick={() => applyOfficialPreset('PRE_PRIMARY')}
+                className="px-2.5 py-1 rounded-lg bg-gray-100 hover:bg-[#7a1228] hover:text-white text-gray-700 font-bold text-[11px] transition-colors cursor-pointer"
+              >
+                Pre-Primary ({isTerm3Active ? 'KES 4,800' : 'KES 5,100'})
+              </button>
+              <button
+                type="button"
+                onClick={() => applyOfficialPreset('LOWER_PRIMARY')}
+                className="px-2.5 py-1 rounded-lg bg-gray-100 hover:bg-[#7a1228] hover:text-white text-gray-700 font-bold text-[11px] transition-colors cursor-pointer"
+              >
+                Lower Primary ({isTerm3Active ? 'KES 5,300' : 'KES 5,800'})
+              </button>
+              <button
+                type="button"
+                onClick={() => applyOfficialPreset('UPPER_PRIMARY')}
+                className="px-2.5 py-1 rounded-lg bg-gray-100 hover:bg-[#7a1228] hover:text-white text-gray-700 font-bold text-[11px] transition-colors cursor-pointer"
+              >
+                Upper Primary ({isTerm3Active ? 'KES 6,000' : 'KES 6,500'})
+              </button>
+            </div>
+          </div>
 
+          {/* Line Items Table */}
+          <div className="border border-gray-200 rounded-xl overflow-hidden shadow-2xs">
+            <div className="px-3.5 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-gray-800">Fee Components ({items.length})</span>
+                {isTerm3Active && (
+                  <span className="text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.2 rounded-full">
+                    Term 3: Activity Fee Excluded
+                  </span>
+                )}
+              </div>
               <button
                 type="button"
                 onClick={handleAddItem}
-                className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#7a1228] text-white hover:bg-[#5c0a1a] rounded-xl text-xs font-bold cursor-pointer transition-colors shadow-xs"
+                className="inline-flex items-center gap-1 text-[11px] font-bold text-[#7a1228] hover:underline cursor-pointer"
               >
-                <span className="material-symbols-outlined text-[16px]">add</span>
+                <span className="material-symbols-outlined text-[15px]">add</span>
                 <span>Add Item</span>
               </button>
             </div>
 
-            {/* Line Items Container */}
-            <div className="border border-gray-200 rounded-2xl overflow-hidden shadow-2xs bg-white">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-gray-50 text-gray-600 font-bold uppercase text-[10px] tracking-wider border-b border-gray-200">
-                    <tr>
-                      <th className="py-2.5 px-3 w-8">#</th>
-                      <th className="py-2.5 px-3 min-w-[220px]">Item Description</th>
-                      <th className="py-2.5 px-3 min-w-[140px]">Category</th>
-                      <th className="py-2.5 px-3 text-right min-w-[140px] text-[#7a1228]">Term Amount (KES)</th>
-                      <th className="py-2.5 px-2 text-center w-20">Optional?</th>
-                      <th className="py-2.5 px-2 text-center w-20">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {items.map((item, index) => {
-                      const itemAmt = Number(item.amount) || 0;
+            <div className="divide-y divide-gray-100 max-h-56 overflow-y-auto bg-white p-1">
+              {items.map((it, idx) => (
+                <div key={it.id} className="flex items-center gap-2 p-1.5 hover:bg-gray-50 rounded-lg">
+                  <span className="font-mono text-gray-400 text-[11px] w-4 text-center">{idx + 1}</span>
 
-                      return (
-                        <tr key={item.id} className="hover:bg-gray-50/70 transition-colors">
-                          <td className="py-2.5 px-3 font-mono text-gray-400 font-bold">
-                            {index + 1}
-                          </td>
-                          <td className="py-2.5 px-3">
-                            <input
-                              type="text"
-                              required
-                              placeholder="e.g. Tuition Fee"
-                              value={item.name}
-                              onChange={(e) =>
-                                setItems((prev) =>
-                                  prev.map((it) => (it.id === item.id ? { ...it, name: e.target.value } : it))
-                                )
-                              }
-                              className="w-full bg-gray-50/80 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-gray-900 focus:bg-white focus:outline-[#7a1228]"
-                            />
-                          </td>
-                          <td className="py-2.5 px-3">
-                            <select
-                              value={item.category}
-                              onChange={(e) =>
-                                setItems((prev) =>
-                                  prev.map((it) =>
-                                    it.id === item.id ? { ...it, category: e.target.value as any } : it
-                                  )
-                                )
-                              }
-                              className="w-full bg-gray-50/80 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs font-medium text-gray-700 focus:bg-white focus:outline-[#7a1228]"
-                            >
-                              <option value="TUITION">Tuition</option>
-                              <option value="ASSESSMENT">Assessment / CBC</option>
-                              <option value="ACTIVITY">Activity / Sports</option>
-                              <option value="ADMISSION">Admission (Once Off)</option>
-                              <option value="MEALS">Meals / Catering</option>
-                              <option value="TRANSPORT">Transport</option>
-                              <option value="BOARDING">Boarding</option>
-                              <option value="OTHER">Other Levy</option>
-                            </select>
-                          </td>
-                          <td className="py-2.5 px-3 text-right">
-                            <div className="flex items-center justify-end gap-1.5 bg-rose-50/40 border border-rose-200 rounded-lg px-2 py-1 focus-within:bg-white focus-within:border-[#7a1228]">
-                              <span className="text-[10px] font-bold text-gray-400">KES</span>
-                              <input
-                                type="number"
-                                min="0"
-                                placeholder="0"
-                                value={item.amount}
-                                onChange={(e) => handleUpdateAmount(item.id, e.target.value)}
-                                className="w-28 text-xs font-mono font-bold text-gray-900 text-right outline-none bg-transparent"
-                              />
-                            </div>
-                          </td>
-                          <td className="py-2.5 px-2 text-center">
-                            <input
-                              type="checkbox"
-                              checked={item.isOptional}
-                              onChange={(e) =>
-                                setItems((prev) =>
-                                  prev.map((it) => (it.id === item.id ? { ...it, isOptional: e.target.checked } : it))
-                                )
-                              }
-                              className="rounded text-[#7a1228] focus:ring-[#7a1228] cursor-pointer"
-                              title="Check if this is an optional fee (e.g. lunch or uniform)"
-                            />
-                          </td>
-                          <td className="py-2.5 px-2 text-center">
-                            <div className="flex items-center justify-center gap-1">
-                              <button
-                                type="button"
-                                onClick={() => handleDuplicateItem(item.id)}
-                                title="Duplicate"
-                                className="p-1 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100 cursor-pointer"
-                              >
-                                <span className="material-symbols-outlined text-[16px]">content_copy</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveItem(item.id)}
-                                title="Remove line item"
-                                className="p-1 rounded text-gray-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
-                              >
-                                <span className="material-symbols-outlined text-[16px]">delete</span>
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                  {/* Table Footer: Sum Totals */}
-                  <tfoot className="bg-gray-50/90 font-bold border-t-2 border-gray-200 text-xs">
-                    <tr>
-                      <td colSpan={3} className="py-2.5 px-3 uppercase text-gray-700">
-                        Total Termly Amount:
-                      </td>
-                      <td className="py-2.5 px-3 text-right font-mono font-bold text-sm text-[#7a1228]">
-                        KES {fullAnnualTotal.toLocaleString()}
-                      </td>
-                      <td colSpan={2}></td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            </div>
+                  <input
+                    type="text"
+                    value={it.name}
+                    onChange={(e) =>
+                      setItems((prev) =>
+                        prev.map((item) => (item.id === it.id ? { ...item, name: e.target.value } : item))
+                      )
+                    }
+                    placeholder="Description (e.g. Tuition Fee)"
+                    className="flex-1 bg-white border border-gray-300 rounded-md px-2 py-1 text-xs font-semibold text-gray-900"
+                    required
+                  />
 
-            {/* Quick Add-ons bar */}
-            <div className="flex items-center gap-1.5 flex-wrap pt-1 text-xs">
-              <span className="text-[10px] uppercase font-bold text-gray-400 mr-1">Quick Add-ons:</span>
-              <button
-                type="button"
-                onClick={() => handleAddAddon('LUNCH')}
-                className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-medium cursor-pointer transition-colors"
-              >
-                <span className="material-symbols-outlined text-[14px] text-amber-600">restaurant</span>
-                <span>+ Lunch Scheme (KES 3,000/term)</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleAddAddon('TRANSPORT')}
-                className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-medium cursor-pointer transition-colors"
-              >
-                <span className="material-symbols-outlined text-[14px] text-blue-600">directions_bus</span>
-                <span>+ Transport (KES 4,000/term)</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleAddAddon('ADMISSION')}
-                className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-medium cursor-pointer transition-colors"
-              >
-                <span className="material-symbols-outlined text-[14px] text-emerald-600">how_to_reg</span>
-                <span>+ Admission Fee (KES 1,500 once-off)</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleAddAddon('UNIFORM')}
-                className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-medium cursor-pointer transition-colors"
-              >
-                <span className="material-symbols-outlined text-[14px] text-purple-600">checkroom</span>
-                <span>+ Uniform / Track Suit (KES 2,000 once-off)</span>
-              </button>
+                  <select
+                    value={it.category}
+                    onChange={(e) =>
+                      setItems((prev) =>
+                        prev.map((item) => (item.id === it.id ? { ...item, category: e.target.value as any } : item))
+                      )
+                    }
+                    className="w-32 bg-white border border-gray-300 rounded-md px-1.5 py-1 text-[11px] text-gray-700 font-medium"
+                  >
+                    <option value="TUITION">Tuition</option>
+                    <option value="ASSESSMENT">Assessment / CBC</option>
+                    <option value="ACTIVITY">Activity / Sports</option>
+                    <option value="MEALS">Meals / Lunch</option>
+                    <option value="ADMISSION">Admission (Once)</option>
+                    <option value="TRANSPORT">Transport</option>
+                    <option value="OTHER">Other Levy</option>
+                  </select>
+
+                  <div className="relative w-24">
+                    <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 font-bold">
+                      KES
+                    </span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={it.amount}
+                      placeholder={it.expectedAmount || '0'}
+                      onChange={(e) =>
+                        setItems((prev) =>
+                          prev.map((item) => (item.id === it.id ? { ...item, amount: e.target.value } : item))
+                        )
+                      }
+                      className="w-full bg-white border border-gray-300 rounded-md pl-8 pr-1 py-1 text-xs font-mono font-bold text-gray-900 text-right placeholder:text-gray-400 placeholder:font-normal focus:outline-[#7a1228]"
+                    />
+                  </div>
+
+                  <label className="flex items-center gap-1 text-[11px] text-gray-500 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={it.isOptional}
+                      onChange={(e) =>
+                        setItems((prev) =>
+                          prev.map((item) => (item.id === it.id ? { ...item, isOptional: e.target.checked } : item))
+                        )
+                      }
+                      className="rounded text-[#7a1228] focus:ring-[#7a1228]"
+                    />
+                    <span>Opt</span>
+                  </label>
+
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveItem(it.id)}
+                    className="p-1 text-gray-400 hover:text-rose-600 rounded cursor-pointer"
+                    title="Remove item"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">delete</span>
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
+        </form>
 
-          {/* 3. Live Termly Summary Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 bg-gray-50 p-3.5 rounded-2xl border border-gray-200">
-            <div className="bg-white p-3 rounded-xl border border-gray-200 text-center shadow-2xs">
-              <span className="text-[10px] font-bold uppercase text-gray-500 block">Total Line Items</span>
-              <span className="text-sm sm:text-base font-mono font-bold text-gray-900 block mt-0.5">
-                {items.length} {items.length === 1 ? 'Item' : 'Items'}
-              </span>
-            </div>
-
-            <div className="bg-white p-3 rounded-xl border border-rose-100 text-center shadow-2xs">
-              <span className="text-[10px] font-bold uppercase text-gray-500 block">Mandatory Fees</span>
-              <span className="text-sm sm:text-base font-mono font-bold text-[#7a1228] block mt-0.5">
-                KES {mandatoryTotal.toLocaleString()}
-              </span>
-            </div>
-
-            <div className="bg-white p-3 rounded-xl border border-amber-100 text-center shadow-2xs">
-              <span className="text-[10px] font-bold uppercase text-gray-500 block">Optional Fees</span>
-              <span className="text-sm sm:text-base font-mono font-bold text-amber-700 block mt-0.5">
-                KES {optionalTotal.toLocaleString()}
-              </span>
-            </div>
-
-            <div className="bg-white p-3 rounded-xl border border-emerald-100 text-center shadow-2xs">
-              <span className="text-[10px] font-bold uppercase text-gray-500 block">Total Termly Fee</span>
-              <span className="text-sm sm:text-base font-mono font-bold text-emerald-700 block mt-0.5">
-                KES {fullAnnualTotal.toLocaleString()}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Modal Footer */}
+        {/* Footer */}
         <div className="px-5 py-3 bg-gray-50 border-t border-gray-200 flex items-center justify-between shrink-0">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl text-xs cursor-pointer transition-colors"
-          >
-            Cancel
-          </button>
+          <div className="flex items-center gap-3 text-xs">
+            <span className="text-gray-500">
+              Mandatory: <strong className="text-gray-900 font-mono">KES {mandatoryTotal.toLocaleString()}</strong>
+            </span>
+            <span className="text-gray-300">|</span>
+            <span className="font-bold text-[#7a1228] text-sm font-mono">
+              Total: KES {totalTermlyAmount.toLocaleString()}
+            </span>
+          </div>
 
-          <button
-            type="button"
-            disabled={isLoading || fullAnnualTotal <= 0}
-            onClick={() => handleSubmit()}
-            className="px-5 py-2 bg-[#7a1228] hover:bg-[#5c0a1a] text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-md cursor-pointer disabled:opacity-50 transition-all"
-          >
-            {isLoading ? (
-              <>
-                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>Saving Schedule...</span>
-              </>
-            ) : (
-              <>
-                <span className="material-symbols-outlined text-[18px]">check_circle</span>
-                <span>Save Termly Fee Structure</span>
-              </>
-            )}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isLoading}
+              className="px-3.5 py-1.5 rounded-xl border border-gray-300 bg-white hover:bg-gray-100 text-gray-700 font-semibold text-xs cursor-pointer disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSubmit as any}
+              disabled={isLoading || totalTermlyAmount <= 0}
+              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-[#7a1228] hover:bg-[#5c0a1a] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+            >
+              {isLoading ? (
+                <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <span className="material-symbols-outlined text-[16px]">check_circle</span>
+              )}
+              <span>{initialData?.id ? 'Update Schedule' : 'Save to Database'}</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
   );
 };
+
+export default CreateFeeStructureModal;

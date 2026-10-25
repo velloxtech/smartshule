@@ -255,6 +255,21 @@ export const SuperAdminDashboardView: React.FC<SuperAdminDashboardViewProps> = (
         </div>
 
         <div
+          onClick={() => onNavigateTab('forwarded-payments')}
+          className="p-5 rounded-2xl bg-white border border-outline-variant/30 hover:border-emerald-600/40 hover:shadow-sm transition-all cursor-pointer flex items-center gap-4"
+        >
+          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center shrink-0">
+            <span className="material-symbols-outlined text-[26px]">forward_to_inbox</span>
+          </div>
+          <div>
+            <h3 className="font-bold text-sm text-on-surface">Forwarded Payments</h3>
+            <p className="text-xs text-on-surface-variant mt-0.5">
+              Verify parent M-Pesa &amp; bank fee payment SMS queue
+            </p>
+          </div>
+        </div>
+
+        <div
           onClick={() => onNavigateTab('fee-deadline-banner')}
           className="p-5 rounded-2xl bg-white border border-outline-variant/30 hover:border-primary/40 hover:shadow-sm transition-all cursor-pointer flex items-center gap-4"
         >

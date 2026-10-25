@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { apiService } from '../../services/api';
@@ -7,52 +7,44 @@ import { CreateFeeStructureModal } from '../modals/CreateFeeStructureModal';
 import { StationeryRequirementsModal } from '../modals/StationeryRequirementsModal';
 import { resolveGradeName, resolveAcademicYearName } from '../../utils/formatters';
 
-type EducationTier = 'ALL' | 'PRE_PRIMARY' | 'LOWER_PRIMARY' | 'UPPER_PRIMARY' | 'JUNIOR_SECONDARY';
-type TermFilter = 'ALL' | 'TERM_1' | 'TERM_2' | 'TERM_3';
+const OTHER_CHARGES = [
+  { item: 'Admission Fee (New students on enrollment)', amount: 'KES 1,500', frequency: 'One-time on admission' },
+  { item: 'School Lunch Program', amount: 'KES 1,000', frequency: 'Monthly' },
+  { item: 'Official Track Suit & T-Shirt', amount: 'KES 2,100', frequency: 'Uniform Requirement' },
+  { item: 'School Assessment Book', amount: 'KES 300', frequency: 'In School' },
+  { item: 'Official School Diary', amount: 'KES 250', frequency: 'In School' },
+];
 
 export const FeeStructureView: React.FC = () => {
   const [structures, setStructures] = useState<FeeStructure[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isRequirementsOpen, setIsRequirementsOpen] = useState(false);
-  const [clonedData, setClonedData] = useState<FeeStructure | null>(null);
-
-  // Cognitive Chunking: Education Tier & Term Filtering
-  const [selectedTier, setSelectedTier] = useState<EducationTier>('ALL');
-  const [selectedTerm, setSelectedTerm] = useState<TermFilter>('ALL');
-  const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
-
-  // Search & Filtering
-  const [searchQuery, setSearchQuery] = useState('');
-  const [gradeFilter, setGradeFilter] = useState('ALL');
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
-
-  // Official document inspection modal
-  const [inspectingStructure, setInspectingStructure] = useState<FeeStructure | null>(null);
   const [school, setSchool] = useState<SchoolInfo | null>(null);
 
-  const [isInitializing, setIsInitializing] = useState(false);
-  const [initFeedback, setInitFeedback] = useState<string | null>(null);
+  // Modals state
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editingStructure, setEditingStructure] = useState<FeeStructure | null>(null);
+  const [isRequirementsOpen, setIsRequirementsOpen] = useState(false);
 
-  const loadStructures = async () => {
+  // Filters & layout state
+  const [selectedTerm, setSelectedTerm] = useState<'ALL' | 'TERM_1' | 'TERM_2' | 'TERM_3'>('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState<'matrix' | 'cards'>('matrix');
+  const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const loadData = async () => {
     setLoading(true);
     try {
       const [res, schoolRes] = await Promise.all([
         apiService.getFeeStructures().catch(() => ({ success: false, data: [] })),
         apiService.getSchool().catch(() => null),
       ]);
-
-      if (res.success && res.data) {
+      if (res?.success && Array.isArray(res.data)) {
         setStructures(res.data);
       } else {
         setStructures([]);
       }
-
-      if (schoolRes?.success && schoolRes.data) {
+      if (schoolRes?.data) {
         setSchool(schoolRes.data);
-        getSchoolLogoBase64(schoolRes.data.logoUrl);
-      } else {
-        getSchoolLogoBase64();
       }
     } catch {
       setStructures([]);
@@ -61,98 +53,103 @@ export const FeeStructureView: React.FC = () => {
     }
   };
 
-  const handleDeleteFeeStructure = async (id: string, title: string) => {
-    if (window.confirm(`Are you sure you want to delete fee schedule "${title}"? This cannot be undone.`)) {
-      try {
-        const res = await apiService.deleteFeeStructure(id);
-        if (res.success) {
-          setStructures((prev) => prev.filter((s) => s.id !== id));
-        }
-      } catch (err: any) {
-        alert(err.message || 'Failed to delete fee structure');
-      }
-    }
-  };
-
-  const handleDuplicate = (s: FeeStructure) => {
-    setClonedData(s);
-    setIsCreateOpen(true);
-  };
-
   useEffect(() => {
-    loadStructures();
+    loadData();
   }, []);
 
-  const getTierForGrade = (grade?: string): EducationTier => {
-    if (!grade) return 'ALL';
-    const g = grade.toUpperCase();
-    if (g.includes('PLAYGROUP') || g.includes('PP1') || g.includes('PP2')) return 'PRE_PRIMARY';
-    if (g.includes('GRADE_1') || g.includes('GRADE_2') || g.includes('GRADE_3') || g === 'GRADE 1' || g === 'GRADE 2' || g === 'GRADE 3') return 'LOWER_PRIMARY';
-    if (g.includes('GRADE_4') || g.includes('GRADE_5') || g.includes('GRADE_6') || g === 'GRADE 4' || g === 'GRADE 5' || g === 'GRADE 6') return 'UPPER_PRIMARY';
-    if (g.includes('GRADE_7') || g.includes('GRADE_8') || g.includes('GRADE_9') || g === 'GRADE 7' || g === 'GRADE 8' || g === 'GRADE 9') return 'JUNIOR_SECONDARY';
-    return 'ALL';
-  };
-
-  const getTermName = (termId?: string): string => {
-    if (!termId || termId === 'ALL' || termId === 'ANNUAL') return 'All Terms / Annual';
-    if (termId === 'TERM_1') return 'Term 1';
-    if (termId === 'TERM_2') return 'Term 2';
-    if (termId === 'TERM_3') return 'Term 3';
-    return termId.replace('_', ' ');
-  };
-
-  const getTermBadge = (termId?: string) => {
-    if (termId === 'TERM_1') {
-      return (
-        <span className="text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200 px-2 py-0.5 rounded-md">
-          Term 1
-        </span>
-      );
-    }
-    if (termId === 'TERM_2') {
-      return (
-        <span className="text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-md">
-          Term 2
-        </span>
-      );
-    }
-    if (termId === 'TERM_3') {
-      return (
-        <span className="text-[10px] font-bold bg-purple-50 text-purple-800 border border-purple-200 px-2 py-0.5 rounded-md">
-          Term 3
-        </span>
-      );
-    }
-    return (
-      <span className="text-[10px] font-semibold bg-gray-100 text-gray-700 border border-gray-200 px-2 py-0.5 rounded-md">
-        All Terms
-      </span>
-    );
-  };
-
-  const toggleExpandCard = (id: string) => {
-    setExpandedCards((prev) => ({ ...prev, [id]: !prev[id] }));
-  };
-
-  const expandAllCards = () => {
-    const all: Record<string, boolean> = {};
-    filteredStructures.forEach((s) => {
-      all[s.id] = true;
-    });
-    setExpandedCards(all);
-  };
-
-  const collapseAllCards = () => {
-    setExpandedCards({});
-  };
-
-  const getStructureTotal = (s: FeeStructure): number => {
+  const getStructureTotal = (s?: FeeStructure): number => {
+    if (!s) return 0;
     if (s.totalAmount) return s.totalAmount;
     if (s.items && Array.isArray(s.items)) {
       return s.items.reduce((sum, it) => sum + (Number(it.amount) || 0), 0);
     }
     return 0;
   };
+
+  const getTermName = (termId?: string): string => {
+    if (!termId || termId === 'ALL') return 'All Terms';
+    if (termId === 'TERM_1') return 'Term 1';
+    if (termId === 'TERM_2') return 'Term 2';
+    if (termId === 'TERM_3') return 'Term 3';
+    return termId.replace('_', ' ');
+  };
+
+  const handleOpenEdit = (s: FeeStructure) => {
+    setEditingStructure(s);
+    setIsCreateOpen(true);
+  };
+
+  const handleOpenCreate = () => {
+    setEditingStructure(null);
+    setIsCreateOpen(true);
+  };
+
+  const handleDelete = async (id: string, title: string) => {
+    if (!window.confirm(`Are you sure you want to delete "${title}"? This cannot be undone.`)) {
+      return;
+    }
+    try {
+      const res = await apiService.deleteFeeStructure(id);
+      if (res?.success) {
+        setStructures((prev) => prev.filter((s) => s.id !== id));
+        setFeedbackMsg({ type: 'success', text: `Fee schedule "${title}" deleted successfully.` });
+      } else {
+        throw new Error(res?.message || 'Delete failed');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Error deleting fee structure');
+    }
+  };
+
+  // Dynamically group database structures into grade categories
+  const dynamicTiers = useMemo(() => {
+    const gradeMap = new Map<string, { term1?: FeeStructure; term2?: FeeStructure; term3?: FeeStructure }>();
+
+    structures.forEach((s) => {
+      const g = s.gradeLevel || 'UNASSIGNED';
+      if (!gradeMap.has(g)) {
+        gradeMap.set(g, {});
+      }
+      const entry = gradeMap.get(g)!;
+      if (s.termId === 'TERM_1') entry.term1 = s;
+      else if (s.termId === 'TERM_2') entry.term2 = s;
+      else if (s.termId === 'TERM_3') entry.term3 = s;
+      else {
+        if (!entry.term1) entry.term1 = s;
+      }
+    });
+
+    return Array.from(gradeMap.entries()).map(([grade, terms]) => {
+      const t1 = getStructureTotal(terms.term1);
+      const t2 = getStructureTotal(terms.term2);
+      const t3 = getStructureTotal(terms.term3);
+      return {
+        gradeLevel: grade,
+        gradeName: resolveGradeName(grade),
+        term1: terms.term1,
+        term2: terms.term2,
+        term3: terms.term3,
+        totalT1: t1,
+        totalT2: t2,
+        totalT3: t3,
+        annualTotal: t1 + t2 + t3,
+      };
+    });
+  }, [structures]);
+
+  // Filtered structures for search or term filter
+  const filteredStructures = useMemo(() => {
+    return structures.filter((s) => {
+      const q = searchQuery.toLowerCase().trim();
+      const matchesSearch =
+        !q ||
+        s.title?.toLowerCase().includes(q) ||
+        s.gradeLevel?.toLowerCase().includes(q) ||
+        s.items?.some((it) => it.name.toLowerCase().includes(q));
+      const matchesTerm = selectedTerm === 'ALL' || s.termId === selectedTerm || (!s.termId && selectedTerm === 'ALL');
+      return matchesSearch && matchesTerm;
+    });
+  }, [structures, searchQuery, selectedTerm]);
 
   const getSchoolLogoBase64 = async (customUrl?: string): Promise<string | null> => {
     const urlsToTry = [customUrl, '/logo.png', '/logo.jpg'].filter(Boolean) as string[];
@@ -167,401 +164,201 @@ export const FeeStructureView: React.FC = () => {
           reader.onerror = reject;
           reader.readAsDataURL(blob);
         });
-        if (base64 && base64.startsWith('data:image')) {
-          return base64;
-        }
-      } catch {
-        // try next fallback
-      }
+        if (base64 && base64.startsWith('data:image')) return base64;
+      } catch {}
     }
     return null;
   };
 
-  const renderFeeStructurePage = (
-    doc: jsPDF,
-    structure: FeeStructure,
-    schoolInfo: SchoolInfo | null,
-    logoBase64?: string | null
-  ) => {
-    const total = getStructureTotal(structure);
-    const gradeName = resolveGradeName(structure.gradeLevel);
-    const yearName = resolveAcademicYearName(structure.academicYearId);
-    const schoolName = schoolInfo?.name || 'Grace Seeds School';
-    const motto = schoolInfo?.motto || 'The Future Begins Here';
-    const email = schoolInfo?.email || 'schoolgraceseeds@gmail.com';
-    const phone = schoolInfo?.phone || '0745436312';
-
-    // 1. Burgundy Accent Top Bar
-    doc.setFillColor(122, 18, 40);
-    doc.rect(0, 0, 210, 4, 'F');
-
-    let curY = 7;
-
-    // 2. School Logo (Centered Letterhead Crest)
-    if (logoBase64) {
-      const logoW = 18;
-      const logoH = 16;
-      const logoX = (210 - logoW) / 2;
-      try {
-        const format = logoBase64.includes('image/png') ? 'PNG' : 'JPEG';
-        doc.addImage(logoBase64, format, logoX, curY, logoW, logoH);
-      } catch {
-        try {
-          doc.addImage(logoBase64, 'JPEG', logoX, curY, logoW, logoH);
-        } catch {
-          // ignore if image format issue
-        }
-      }
-      curY += logoH + 4;
-    } else {
-      curY += 8;
+  // Generate comprehensive PDF showing each specific charge item line-by-line
+  const downloadOfficialPDF = async () => {
+    if (structures.length === 0) {
+      alert('No fee structures found in the database to export.');
+      return;
     }
 
-    // 3. School Letterhead
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const logoBase64 = await getSchoolLogoBase64(school?.logoUrl);
+
+    const schoolName = school?.name || 'GRACE SEEDS SCHOOL';
+    const address = school?.address || 'P.O BOX 12-20123, KISUMU';
+    const phone = school?.phone || '0745436312';
+    const motto = school?.motto || 'The Future Begins Here';
+
+    // Top burgundy header line
+    doc.setFillColor(122, 18, 40);
+    doc.rect(0, 0, 210, 5, 'F');
+
+    let curY = 12;
+    if (logoBase64) {
+      try {
+        doc.addImage(logoBase64, 'PNG', 14, curY, 16, 16);
+      } catch {}
+    }
+
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(16);
-    doc.setTextColor(17, 24, 39);
-    doc.text(schoolName.toUpperCase(), 105, curY, { align: 'center' });
-    curY += 5;
+    doc.setFontSize(14);
+    doc.setTextColor(122, 18, 40);
+    doc.text(schoolName, 34, curY + 4);
 
     doc.setFont('helvetica', 'italic');
     doc.setFontSize(8.5);
-    doc.setTextColor(75, 85, 99);
-    doc.text(`"${motto}"`, 105, curY, { align: 'center' });
-    curY += 4.5;
+    doc.setTextColor(100, 116, 139);
+    doc.text(`"${motto}" · ${address} · Tel: ${phone}`, 34, curY + 9);
 
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.5);
-    doc.setTextColor(107, 114, 128);
-    const address = schoolInfo?.address || 'KEMRI Street, Kisian, Kisumu, Kenya';
-    doc.text(
-      `${address} · Tel: ${phone} · Email: ${email}`,
-      105,
-      curY,
-      { align: 'center' }
-    );
-    curY += 3.5;
-
-    // Divider
-    doc.setDrawColor(229, 231, 235);
-    doc.setLineWidth(0.3);
-    doc.line(14, curY, 196, curY);
-    curY += 3;
-
-    // 4. Official Badge
-    doc.setFillColor(255, 241, 242);
-    doc.roundedRect(45, curY, 120, 6.5, 2, 2, 'F');
-    doc.setDrawColor(254, 205, 211);
-    doc.roundedRect(45, curY, 120, 6.5, 2, 2, 'S');
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.setTextColor(122, 18, 40);
-    const termLabel = getTermName(structure.termId);
-    const badgeText = structure.termId && structure.termId !== 'ALL' && structure.termId !== 'ANNUAL'
-      ? `OFFICIAL RATIFIED CBE ${termLabel.toUpperCase()} FEE SCHEDULE`
-      : 'OFFICIAL RATIFIED CBE TERMLY FEE SCHEDULE';
-    doc.text(badgeText, 105, curY + 4.3, { align: 'center' });
-    curY += 9.5;
-
-    // 5. Meta Details Card
-    doc.setFillColor(249, 250, 251);
-    doc.setDrawColor(229, 231, 235);
-    doc.roundedRect(14, curY, 182, 16, 2, 2, 'FD');
-
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(107, 114, 128);
-    doc.text('CLASS / GRADE', 20, curY + 5.5);
-    doc.text('ACADEMIC YEAR & TERM', 65, curY + 5.5);
-    doc.text('TERM DUE DATE', 110, curY + 5.5);
-    doc.text('TOTAL TERM FEE', 155, curY + 5.5);
-
     doc.setFontSize(9);
-    doc.setTextColor(17, 24, 39);
-    doc.text(gradeName, 20, curY + 11.5);
-    doc.text(`${yearName} · ${termLabel}`, 65, curY + 11.5);
-    doc.text(structure.dueDate || 'Start of Academic Term', 110, curY + 11.5);
-    doc.setTextColor(122, 18, 40);
-    doc.text(`KES ${total.toLocaleString()}`, 155, curY + 11.5);
-    curY += 19;
+    doc.setTextColor(30, 41, 59);
+    doc.text('OFFICIAL ITEMIZED FEE SCHEDULE & INVOICING BREAKDOWN', 34, curY + 14);
 
-    // 6. Itemized Breakdown Table
-    const tableRows = (structure.items || []).map((it, idx) => [
-      (idx + 1).toString(),
-      it.name,
-      it.category,
-      it.isOptional ? 'Optional' : 'Mandatory',
-      `KES ${(Number(it.amount) || 0).toLocaleString()}`
+    curY += 20;
+
+    // SECTION 1: Summary Matrix by Term
+    const summaryRows = dynamicTiers.map((t) => [
+      t.gradeName,
+      t.totalT1 > 0 ? `KES ${t.totalT1.toLocaleString()}` : '-',
+      t.totalT2 > 0 ? `KES ${t.totalT2.toLocaleString()}` : '-',
+      t.totalT3 > 0 ? `KES ${t.totalT3.toLocaleString()}` : '-',
+      `KES ${t.annualTotal.toLocaleString()}`,
     ]);
 
     autoTable(doc, {
       startY: curY,
-      head: [['#', 'Item Description', 'Category', 'Billing Type', 'Term Amount']],
-      body: tableRows.length > 0 ? tableRows : [['-', 'No items configured for this level', '-', '-', 'KES 0']],
-      foot: [['', `TOTAL TERMLY FEE (${termLabel.toUpperCase()})`, '', '', `KES ${total.toLocaleString()}`]],
+      head: [['Grade / Education Level', 'Term 1 Total', 'Term 2 Total', 'Term 3 Total', 'Annual Total']],
+      body: summaryRows,
       theme: 'grid',
-      headStyles: {
-        fillColor: [122, 18, 40],
-        textColor: [255, 255, 255],
-        fontStyle: 'bold',
-        fontSize: 8.5,
-        halign: 'left'
-      },
-      bodyStyles: {
-        fontSize: 8,
-        textColor: [31, 41, 55],
-        cellPadding: 2.5
-      },
-      alternateRowStyles: {
-        fillColor: [250, 250, 250]
-      },
-      footStyles: {
-        fillColor: [249, 250, 251],
-        textColor: [122, 18, 40],
-        fontStyle: 'bold',
-        fontSize: 8.5
-      },
+      headStyles: { fillColor: [122, 18, 40], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8.5 },
+      bodyStyles: { fontSize: 8, textColor: [31, 41, 55], cellPadding: 2.5 },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
       columnStyles: {
-        0: { cellWidth: 10, halign: 'center' },
-        1: { cellWidth: 'auto' },
-        2: { cellWidth: 35 },
-        3: { cellWidth: 26, halign: 'center' },
-        4: { cellWidth: 38, halign: 'right', fontStyle: 'bold' }
+        0: { cellWidth: 70, fontStyle: 'bold' },
+        1: { cellWidth: 28, halign: 'center' },
+        2: { cellWidth: 28, halign: 'center' },
+        3: { cellWidth: 28, halign: 'center' },
+        4: { cellWidth: 32, halign: 'center', fontStyle: 'bold' },
       },
-      margin: { left: 14, right: 14 }
+      margin: { left: 14, right: 14 },
     });
 
-    // 7. Payment Instructions & Official Endorsements
-    const lastTable = (doc as any).lastAutoTable;
-    let finalY = (lastTable && lastTable.finalY ? lastTable.finalY : 180) + 7;
-    if (finalY + 45 > 280) {
-      doc.addPage('a4', 'portrait');
-      finalY = 20;
-    }
+    let lastTable = (doc as any).lastAutoTable;
+    curY = (lastTable && lastTable.finalY ? lastTable.finalY : 100) + 8;
 
-    // Payment Box
-    doc.setFillColor(249, 250, 251);
-    doc.setDrawColor(229, 231, 235);
-    doc.roundedRect(14, finalY, 105, 34, 2, 2, 'FD');
-
+    // SECTION 2: Itemized Line Items (What is actually charged for)
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.setTextColor(17, 24, 39);
-    doc.text('Official Payment Instructions:', 18, finalY + 6);
+    doc.setFontSize(8.5);
+    doc.setTextColor(122, 18, 40);
+    doc.text('ITEMIZED FEE COMPONENTS & CHARGE BREAKDOWN', 14, curY);
+    curY += 3;
 
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.5);
-    doc.setTextColor(75, 85, 99);
-    doc.text('1. M-Pesa Paybill: 522533', 18, finalY + 12);
-    doc.text(`2. Account: 8048859#<Student Name & ${gradeName}>`, 18, finalY + 17);
-    doc.text('3. Bank: KCB Bank Kenya | Acc: 1122334455', 18, finalY + 22);
-    doc.setFontSize(7);
-    doc.setTextColor(107, 114, 128);
-    doc.text('NB: Official school receipts issued upon payment confirmation.', 18, finalY + 28);
-
-    // Signature & Stamp
-    doc.setDrawColor(156, 163, 175);
-    doc.setLineWidth(0.4);
-    doc.line(135, finalY + 18, 194, finalY + 18);
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.5);
-    doc.setTextColor(107, 114, 128);
-    doc.text('Principal / School Director Signature', 164, finalY + 22, { align: 'center' });
-    doc.text('Official School Rubber Stamp', 164, finalY + 27, { align: 'center' });
-    doc.text(`Issued: ${new Date().toLocaleDateString('en-GB')}`, 164, finalY + 32, { align: 'center' });
-
-    // 8. Footer Watermark
-    doc.setFontSize(7);
-    doc.setTextColor(156, 163, 175);
-    doc.text(
-      `Grace Seeds School Verified CBE Termly Fee Schedule  |  Valid for ${yearName} (${termLabel})  |  Generated on ${new Date().toLocaleDateString('en-GB')}`,
-      105,
-      289,
-      { align: 'center' }
-    );
-  };
-
-  const downloadPDF = async (structure: FeeStructure) => {
-    const logoBase64 = await getSchoolLogoBase64(school?.logoUrl);
-    const gradeName = resolveGradeName(structure.gradeLevel);
-    const yearName = resolveAcademicYearName(structure.academicYearId);
-    const termSlug = (structure.termId || 'term').toLowerCase();
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    renderFeeStructurePage(doc, structure, school, logoBase64);
-    doc.save(`Fee_Schedule_${gradeName.replace(/[^a-zA-Z0-9]/g, '_')}_${termSlug}_${yearName}.pdf`);
-  };
-
-  const downloadAllPDF = async () => {
-    if (structures.length === 0) {
-      alert('No fee structures available to download.');
-      return;
-    }
-    const logoBase64 = await getSchoolLogoBase64(school?.logoUrl);
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    structures.forEach((s, idx) => {
-      if (idx > 0) {
-        doc.addPage('a4', 'portrait');
-      }
-      renderFeeStructurePage(doc, s, school, logoBase64);
-    });
-    const dateStr = new Date().toISOString().split('T')[0];
-    doc.save(`Grace_Seeds_School_All_Fee_Structures_${dateStr}.pdf`);
-  };
-
-  const downloadCSV = (structure: FeeStructure) => {
-    const total = getStructureTotal(structure);
-    const gradeName = resolveGradeName(structure.gradeLevel);
-    const yearName = resolveAcademicYearName(structure.academicYearId);
-    const termLabel = getTermName(structure.termId);
-
-    const rows = [
-      ['School Name', school?.name || 'Grace Seeds School'],
-      ['Schedule Title', structure.title],
-      ['Grade / Class', gradeName],
-      ['Academic Year', yearName],
-      ['Term', termLabel],
-      ['Term Due Date', structure.dueDate || 'N/A'],
-      [''],
-      ['#', 'Item Description', 'Category', 'Billing Type', 'Term Amount (KES)'],
-      ...(structure.items || []).map((it, idx) => [
-        idx + 1,
-        `"${(it.name || '').replace(/"/g, '""')}"`,
-        it.category,
-        it.isOptional ? 'Optional' : 'Mandatory',
-        Number(it.amount) || 0
-      ]),
-      [''],
-      ['Total Term Fee (KES)', '', '', '', total]
-    ];
-
-    const csvContent = rows.map((r) => r.join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    const termSlug = (structure.termId || 'term').toLowerCase();
-    a.download = `Fee_Schedule_${gradeName.replace(/[^a-zA-Z0-9]/g, '_')}_${termSlug}_${yearName}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  const downloadAllCSV = () => {
-    if (structures.length === 0) {
-      alert('No fee structures available to download.');
-      return;
-    }
-
-    const rows: (string | number)[][] = [
-      ['Class / Grade', 'Schedule Title', 'Academic Year', 'Term', 'Item Description', 'Category', 'Billing Type', 'Term Amount (KES)', 'Total Term Fee (KES)']
-    ];
-
+    // Build itemized rows from all active database schedules
+    const itemizedRows: (string | number)[][] = [];
     structures.forEach((s) => {
-      const total = getStructureTotal(s);
-      const gradeName = resolveGradeName(s.gradeLevel);
-      const yearName = resolveAcademicYearName(s.academicYearId);
-      const termLabel = getTermName(s.termId);
-
+      const gName = resolveGradeName(s.gradeLevel);
+      const tName = getTermName(s.termId);
       if (s.items && s.items.length > 0) {
         s.items.forEach((it, idx) => {
-          rows.push([
-            idx === 0 ? gradeName : '',
-            idx === 0 ? `"${(s.title || '').replace(/"/g, '""')}"` : '',
-            idx === 0 ? yearName : '',
-            idx === 0 ? termLabel : '',
-            `"${(it.name || '').replace(/"/g, '""')}"`,
-            it.category,
+          itemizedRows.push([
+            idx === 0 ? `${gName} (${tName})` : '',
+            it.name,
+            it.category || 'Tuition',
             it.isOptional ? 'Optional' : 'Mandatory',
-            Number(it.amount) || 0,
-            idx === 0 ? total : ''
+            `KES ${(Number(it.amount) || 0).toLocaleString()}`,
           ]);
         });
       } else {
-        rows.push([gradeName, `"${(s.title || '').replace(/"/g, '""')}"`, yearName, termLabel, 'No items configured', '', '', 0, total]);
+        itemizedRows.push([`${gName} (${tName})`, 'Standard Tuition Block', 'Tuition', 'Mandatory', `KES ${(s.totalAmount || 0).toLocaleString()}`]);
       }
-      rows.push(['', '', '', '', '', '', '', '', '']);
     });
 
-    const csvContent = rows.map((r) => r.join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Grace_Seeds_School_All_Fee_Structures_${new Date().toISOString().split('T')[0]}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
+    autoTable(doc, {
+      startY: curY,
+      head: [['Class / Term Reference', 'Fee Item Description', 'Category', 'Billing Type', 'Term Amount']],
+      body: itemizedRows.length > 0 ? itemizedRows : [['-', 'No items configured', '-', '-', 'KES 0']],
+      theme: 'grid',
+      headStyles: { fillColor: [71, 85, 105], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8 },
+      bodyStyles: { fontSize: 7.5, textColor: [51, 65, 85], cellPadding: 2 },
+      alternateRowStyles: { fillColor: [250, 250, 250] },
+      columnStyles: {
+        0: { cellWidth: 55, fontStyle: 'bold' },
+        1: { cellWidth: 55 },
+        2: { cellWidth: 32 },
+        3: { cellWidth: 22, halign: 'center' },
+        4: { cellWidth: 26, halign: 'right', fontStyle: 'bold' },
+      },
+      margin: { left: 14, right: 14 },
+    });
 
-  // Filter structures with chunking
-  const filteredStructures = structures.filter((s) => {
-    const matchesSearch =
-      s.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.gradeLevel?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesGrade = gradeFilter === 'ALL' || s.gradeLevel === gradeFilter;
-    const matchesTier = selectedTier === 'ALL' || getTierForGrade(s.gradeLevel) === selectedTier;
-    const matchesTerm = selectedTerm === 'ALL' || s.termId === selectedTerm;
-    return matchesSearch && matchesGrade && matchesTier && matchesTerm;
-  });
+    lastTable = (doc as any).lastAutoTable;
+    curY = (lastTable && lastTable.finalY ? lastTable.finalY : 170) + 8;
 
-  // Calculate Tier Counts for quick mental anchoring
-  const tierCounts = {
-    ALL: structures.length,
-    PRE_PRIMARY: structures.filter((s) => getTierForGrade(s.gradeLevel) === 'PRE_PRIMARY').length,
-    LOWER_PRIMARY: structures.filter((s) => getTierForGrade(s.gradeLevel) === 'LOWER_PRIMARY').length,
-    UPPER_PRIMARY: structures.filter((s) => getTierForGrade(s.gradeLevel) === 'UPPER_PRIMARY').length,
-    JUNIOR_SECONDARY: structures.filter((s) => getTierForGrade(s.gradeLevel) === 'JUNIOR_SECONDARY').length,
-  };
-
-  const termCounts = {
-    ALL: structures.length,
-    TERM_1: structures.filter((s) => s.termId === 'TERM_1').length,
-    TERM_2: structures.filter((s) => s.termId === 'TERM_2').length,
-    TERM_3: structures.filter((s) => s.termId === 'TERM_3').length,
-  };
-
-  // Cumulative Metrics
-  const totalScheduleValue = structures.reduce((sum, s) => sum + getStructureTotal(s), 0);
-
-  const handleInitializeGraceSeeds = async () => {
-    if (!window.confirm('Initialize or update official Grace Seeds School termly fee schedules (Term 1, Term 2, Term 3 for Playgroup to Grade 6)? This sets up verified rates for Tuition, Activity, and Assessment.')) {
-      return;
+    // Check if new page is needed for Other Charges & Payment instructions
+    if (curY + 50 > 280) {
+      doc.addPage('a4', 'portrait');
+      curY = 16;
     }
-    setIsInitializing(true);
-    setInitFeedback(null);
-    try {
-      const res = await apiService.initGraceSeedsFeeStructures();
-      if (res.success) {
-        setInitFeedback('Ratified termly fee schedules (Term 1, Term 2, Term 3) initialized successfully for all classes.');
-        await loadStructures();
-      } else {
-        alert(res.message || 'Failed to initialize Grace Seeds fee structures');
-      }
-    } catch (err: any) {
-      alert(err.message || 'Error initializing fee structures');
-    } finally {
-      setIsInitializing(false);
-    }
-  };
 
-  const isAllExpanded = filteredStructures.length > 0 && filteredStructures.every((s) => expandedCards[s.id]);
+    // SECTION 3: Other Charges
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor(122, 18, 40);
+    doc.text('OTHER INSTITUTIONAL LEVIES & WELFARE CHARGES', 14, curY);
+    curY += 3;
+
+    autoTable(doc, {
+      startY: curY,
+      head: [['Charge Description', 'Amount', 'Billing Type & Frequency']],
+      body: OTHER_CHARGES.map((c) => [c.item, c.amount, c.frequency]),
+      theme: 'grid',
+      headStyles: { fillColor: [122, 18, 40], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8 },
+      bodyStyles: { fontSize: 7.5, textColor: [31, 41, 55], cellPadding: 2 },
+      columnStyles: {
+        0: { cellWidth: 95 },
+        1: { cellWidth: 35, fontStyle: 'bold' },
+        2: { cellWidth: 52 },
+      },
+      margin: { left: 14, right: 14 },
+    });
+
+    lastTable = (doc as any).lastAutoTable;
+    curY = (lastTable && lastTable.finalY ? lastTable.finalY : 220) + 8;
+
+    if (curY + 30 > 280) {
+      doc.addPage('a4', 'portrait');
+      curY = 16;
+    }
+
+    // Payment Box
+    doc.setFillColor(248, 250, 252);
+    doc.roundedRect(14, curY, 182, 20, 2, 2, 'FD');
+    doc.setDrawColor(226, 232, 240);
+    doc.roundedRect(14, curY, 182, 20, 2, 2, 'S');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(122, 18, 40);
+    doc.text('OFFICIAL PAYMENT INSTRUCTIONS:', 18, curY + 6);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(30, 41, 59);
+    doc.text('M-PESA PAYBILL: 522533   |   ACCOUNT NUMBER: 8048859#<LEARNER NAME AND GRADE>', 18, curY + 11);
+    doc.text('Official school receipts will be issued electronically upon bank confirmation.', 18, curY + 16);
+
+    doc.save('Grace_Seeds_School_Itemized_Fee_Schedule.pdf');
+  };
 
   return (
-    <div className="space-y-6 pb-12 animate-in fade-in duration-200">
-      {/* 1. CLEAN HEADER (Simplified Action Hierarchy) */}
+    <div className="space-y-6 pb-12 animate-in fade-in duration-150">
+      {/* 1. Header & Quick Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-2">
-            <span>Termly Fee Structures</span>
-            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-rose-50 text-[#7a1228] border border-rose-200">
-              {structures.length} {structures.length === 1 ? 'Schedule' : 'Schedules'}
+            <span>Fee Structures</span>
+            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+              {structures.length} Invoicing Schedules Active
             </span>
           </h1>
-          <p className="text-xs sm:text-sm text-gray-500 mt-1">
-            Approved termly fee schedules (Term 1, Term 2, Term 3) and payment channels
+          <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
+            Real-time fee structures stored in the database. Invoices generated for students dynamically pull from these records.
           </p>
         </div>
 
@@ -569,771 +366,349 @@ export const FeeStructureView: React.FC = () => {
           <button
             onClick={() => setIsRequirementsOpen(true)}
             className="inline-flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-gray-50 text-gray-700 font-semibold rounded-xl text-xs border border-gray-200 shadow-2xs transition-all cursor-pointer"
-            title="View school stationery requirements"
           >
             <span className="material-symbols-outlined text-[17px] text-gray-500">menu_book</span>
             <span>Stationery &amp; Books</span>
           </button>
 
           <button
-            onClick={downloadAllPDF}
+            onClick={downloadOfficialPDF}
             className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#7a1228] hover:bg-[#5c0a1a] text-white font-semibold rounded-xl text-xs shadow-2xs transition-all cursor-pointer"
-            title="Export all fee structures as official PDF document"
+            title="Export official itemized schedule as PDF"
           >
             <span className="material-symbols-outlined text-[17px]">picture_as_pdf</span>
-            <span>Export All (PDF)</span>
+            <span>Download Itemized PDF</span>
           </button>
 
           <button
-            onClick={downloadAllCSV}
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-gray-50 text-gray-700 font-semibold rounded-xl text-xs border border-gray-200 shadow-2xs transition-all cursor-pointer"
-            title="Export all fee structures as CSV spreadsheet"
-          >
-            <span className="material-symbols-outlined text-[17px] text-emerald-700">table_chart</span>
-            <span>Export All (CSV)</span>
-          </button>
-
-          <button
-            onClick={handleInitializeGraceSeeds}
-            disabled={isInitializing}
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-gray-50 text-gray-700 font-semibold rounded-xl text-xs border border-gray-200 shadow-2xs transition-all cursor-pointer disabled:opacity-50"
-            title="Auto-configure ratified term schedules (Grace Seeds)"
-          >
-            {isInitializing ? (
-              <span className="w-3.5 h-3.5 border-2 border-gray-700 border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <span className="material-symbols-outlined text-[17px] text-amber-600">bolt</span>
-            )}
-            <span>Init Term Schedules</span>
-          </button>
-
-          <button
-            onClick={() => {
-              setClonedData(null);
-              setIsCreateOpen(true);
-            }}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#7a1228] hover:bg-[#5c0a1a] text-white rounded-xl text-xs sm:text-sm font-semibold shadow-sm hover:shadow transition-all cursor-pointer"
+            onClick={handleOpenCreate}
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs sm:text-sm font-semibold shadow-sm transition-all cursor-pointer"
           >
             <span className="material-symbols-outlined text-[18px]">add</span>
-            <span>New Fee Structure</span>
+            <span>New Fee Schedule</span>
           </button>
         </div>
       </div>
 
-      {/* Policy Notice: Termly Schedules & One-Time Admission Fee */}
-      <div className="p-4 rounded-2xl bg-amber-50/90 border border-amber-200 text-amber-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
-        <div className="flex items-start gap-3">
-          <span className="material-symbols-outlined text-[22px] text-amber-700 shrink-0 mt-0.5">
-            verified_user
-          </span>
-          <div className="text-xs space-y-0.5">
-            <span className="font-bold block text-sm text-amber-900">
-              Termly Fee Structures &amp; Non-Duplicating Admission Policy
-            </span>
-            <p className="text-amber-800 leading-relaxed">
-              Standard fee structures below are configured <strong>term-by-term (Term 1, Term 2, Term 3)</strong> covering tuition, assessment, and activities.
-              The <strong>Admission Fee (KES 1,500)</strong> is a one-time charge attached exclusively to the <strong>Admit Learner Modal</strong> and is strictly prevented from being charged more than once per student.
-            </p>
-          </div>
-        </div>
-        <div className="shrink-0 self-end sm:self-center">
-          <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300">
-            One-Time Admission · KES 1,500
-          </span>
-        </div>
-      </div>
-
-      {/* Feedback Banner */}
-      {initFeedback && (
-        <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center justify-between animate-in fade-in">
+      {feedbackMsg && (
+        <div
+          className={`p-3.5 rounded-xl border text-xs font-bold flex items-center justify-between animate-in fade-in ${
+            feedbackMsg.type === 'success'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+              : 'bg-rose-50 border-rose-200 text-rose-800'
+          }`}
+        >
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-[18px] text-emerald-600">check_circle</span>
-            <span>{initFeedback}</span>
+            <span className="material-symbols-outlined text-[18px]">
+              {feedbackMsg.type === 'success' ? 'check_circle' : 'error'}
+            </span>
+            <span>{feedbackMsg.text}</span>
           </div>
-          <button onClick={() => setInitFeedback(null)} className="text-emerald-700 hover:text-emerald-900 cursor-pointer">
+          <button onClick={() => setFeedbackMsg(null)} className="cursor-pointer">
             <span className="material-symbols-outlined text-[16px]">close</span>
           </button>
         </div>
       )}
 
-      {/* 2. STREAMLINED SUMMARY & PAYMENT STRIP (Low Visual Clutter) */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-2xs p-4 sm:p-5 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-        {/* Payment Channel Indicator */}
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-100">
-            <span className="material-symbols-outlined text-[22px]">payments</span>
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-gray-900">M-Pesa Paybill: 522533</span>
-              <span className="text-[10px] font-semibold bg-emerald-100 text-emerald-800 px-2 py-0.2 rounded-full">
-                Active Channel
-              </span>
-            </div>
-            <p className="text-[11px] text-gray-500 font-mono mt-0.5">
-              Account format: <span className="font-semibold text-gray-700">8048859#Student Name &amp; Grade</span>
-            </p>
-          </div>
-        </div>
-
-        {/* Compact Key Financial Anchors */}
-        <div className="flex items-center gap-4 sm:gap-6 flex-wrap divide-x divide-gray-100 text-xs">
-          <div className="pr-4">
-            <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider block">Total Schedules</span>
-            <span className="text-base font-bold text-gray-900">{structures.length} Configured</span>
-          </div>
-          <div className="pl-4 pr-4">
-            <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider block">Cumulative Schedule Value</span>
-            <span className="text-base font-bold font-mono text-[#7a1228]">
-              KES {totalScheduleValue.toLocaleString()}
-            </span>
-          </div>
-          <div className="pl-4">
-            <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider block">Average Term Fee</span>
-            <span className="text-base font-bold font-mono text-gray-800">
-              KES {structures.length > 0 ? Math.round(totalScheduleValue / structures.length).toLocaleString() : 0}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* 3. COGNITIVE CHUNKING: TERM TABS & EDUCATION LEVEL TABS */}
-      <div className="space-y-2 border-b border-gray-200 pb-3">
-        {/* Term Tabs */}
+      {/* 2. Filters & View Switcher */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-white rounded-xl border border-gray-200 shadow-2xs">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs font-bold text-gray-500 uppercase tracking-wider mr-1">Term:</span>
-          {(
-            [
-              { id: 'ALL', label: 'All Terms', count: termCounts.ALL },
-              { id: 'TERM_1', label: 'Term 1', count: termCounts.TERM_1 },
-              { id: 'TERM_2', label: 'Term 2', count: termCounts.TERM_2 },
-              { id: 'TERM_3', label: 'Term 3', count: termCounts.TERM_3 },
-            ] as const
-          ).map((term) => {
-            const isActive = selectedTerm === term.id;
-            return (
-              <button
-                key={term.id}
-                onClick={() => setSelectedTerm(term.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                  isActive
-                    ? 'bg-[#7a1228] text-white shadow-xs'
-                    : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                }`}
-              >
-                <span>{term.label}</span>
-                <span
-                  className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                    isActive ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-600'
-                  }`}
-                >
-                  {term.count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+          <span className="text-xs font-bold text-gray-500 uppercase">View:</span>
+          <button
+            onClick={() => setViewMode('matrix')}
+            className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+              viewMode === 'matrix' ? 'bg-[#7a1228] text-white shadow-xs' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[15px]">table_chart</span>
+            <span>Term Matrix</span>
+          </button>
+          <button
+            onClick={() => setViewMode('cards')}
+            className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+              viewMode === 'cards' ? 'bg-[#7a1228] text-white shadow-xs' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[15px]">grid_view</span>
+            <span>Detailed Cards</span>
+          </button>
 
-        {/* Education Level Tabs */}
-        <div className="flex items-center justify-between gap-3 flex-wrap pt-1">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {(
-              [
-                { id: 'ALL', label: 'All Classes', count: tierCounts.ALL },
-                { id: 'PRE_PRIMARY', label: 'Pre-Primary', count: tierCounts.PRE_PRIMARY },
-                { id: 'LOWER_PRIMARY', label: 'Lower Primary', count: tierCounts.LOWER_PRIMARY },
-                { id: 'UPPER_PRIMARY', label: 'Upper Primary', count: tierCounts.UPPER_PRIMARY },
-                { id: 'JUNIOR_SECONDARY', label: 'Junior School', count: tierCounts.JUNIOR_SECONDARY },
-              ] as const
-            ).map((tier) => {
-              const isActive = selectedTier === tier.id;
-              return (
+          {viewMode === 'cards' && (
+            <div className="flex items-center gap-1 ml-2 pl-2 border-l border-gray-200">
+              {(['ALL', 'TERM_1', 'TERM_2', 'TERM_3'] as const).map((t) => (
                 <button
-                  key={tier.id}
-                  onClick={() => setSelectedTier(tier.id)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                    isActive
-                      ? 'bg-[#7a1228] text-white shadow-xs'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900'
+                  key={t}
+                  onClick={() => setSelectedTerm(t)}
+                  className={`px-2.5 py-0.5 rounded text-[11px] font-bold transition-all cursor-pointer ${
+                    selectedTerm === t ? 'bg-slate-800 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
                 >
-                  <span>{tier.label}</span>
-                  <span
-                    className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                      isActive ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-700'
-                    }`}
-                  >
-                    {tier.count}
-                  </span>
+                  {t === 'ALL' ? 'All Terms' : getTermName(t)}
                 </button>
-              );
-            })}
-          </div>
-
-          {/* View Toggle & Expand Controls */}
-          <div className="flex items-center gap-2">
-            {viewMode === 'grid' && filteredStructures.length > 0 && (
-              <button
-                type="button"
-                onClick={isAllExpanded ? collapseAllCards : expandAllCards}
-                className="text-xs font-semibold text-[#7a1228] hover:underline cursor-pointer flex items-center gap-1"
-              >
-                <span className="material-symbols-outlined text-[16px]">
-                  {isAllExpanded ? 'unfold_less' : 'unfold_more'}
-                </span>
-                <span>{isAllExpanded ? 'Collapse All' : 'Expand All'}</span>
-              </button>
-            )}
-
-            <div className="flex items-center bg-gray-100 p-1 rounded-xl border border-gray-200">
-              <button
-                type="button"
-                onClick={() => setViewMode('grid')}
-                title="Card Grid View"
-                className={`p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
-                  viewMode === 'grid' ? 'bg-white text-[#7a1228] shadow-xs' : 'text-gray-500 hover:text-gray-900'
-                }`}
-              >
-                <span className="material-symbols-outlined text-[16px]">grid_view</span>
-                <span className="hidden sm:inline">Cards</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode('table')}
-                title="Compact Table View"
-                className={`p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer ${
-                  viewMode === 'table' ? 'bg-white text-[#7a1228] shadow-xs' : 'text-gray-500 hover:text-gray-900'
-                }`}
-              >
-                <span className="material-symbols-outlined text-[16px]">table_rows</span>
-                <span className="hidden sm:inline">Table</span>
-              </button>
+              ))}
             </div>
-          </div>
+          )}
         </div>
-      </div>
 
-      {/* 4. SEARCH & FILTER TOOLBAR */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="relative flex-1 max-w-sm">
-          <span className="material-symbols-outlined text-[18px] text-gray-400 absolute left-3 top-1/2 -translate-y-1/2">
+        <div className="relative w-full sm:w-64">
+          <span className="material-symbols-outlined text-[18px] text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2">
             search
           </span>
           <input
             type="text"
-            placeholder="Search class or title..."
+            placeholder="Search class or item..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 bg-white border border-gray-200 rounded-xl text-xs text-gray-900 focus:outline-[#7a1228] focus:bg-white transition-colors"
+            className="w-full pl-8 pr-3 py-1 bg-gray-50 border border-gray-200 rounded-lg text-xs focus:bg-white focus:outline-[#7a1228]"
           />
         </div>
-
-        <select
-          value={gradeFilter}
-          onChange={(e) => setGradeFilter(e.target.value)}
-          className="bg-white border border-gray-200 rounded-xl px-3 py-1.5 text-xs font-semibold text-gray-700 focus:outline-[#7a1228] cursor-pointer"
-        >
-          <option value="ALL">Specific Grade: All</option>
-          <option value="PLAYGROUP">Playgroup</option>
-          <option value="PP1">PP1</option>
-          <option value="PP2">PP2</option>
-          <option value="GRADE_1">Grade 1</option>
-          <option value="GRADE_2">Grade 2</option>
-          <option value="GRADE_3">Grade 3</option>
-          <option value="GRADE_4">Grade 4</option>
-          <option value="GRADE_5">Grade 5</option>
-          <option value="GRADE_6">Grade 6</option>
-          <option value="GRADE_7">Grade 7</option>
-          <option value="GRADE_8">Grade 8</option>
-          <option value="GRADE_9">Grade 9</option>
-        </select>
       </div>
 
-      {/* 5. MAIN CONTENT (PROGRESSIVE DISCLOSURE & SCANNABILITY) */}
+      {/* 3. Main Data Presentation */}
       {loading ? (
-        <div className="p-16 text-center text-gray-500 text-xs flex flex-col items-center justify-center gap-3 bg-white rounded-2xl border border-gray-200 shadow-2xs">
+        <div className="p-16 text-center text-gray-500 text-xs flex flex-col items-center justify-center gap-3 bg-white rounded-2xl border border-gray-200">
           <span className="w-8 h-8 border-3 border-[#7a1228] border-t-transparent rounded-full animate-spin" />
-          <span className="font-semibold">Loading fee schedules...</span>
+          <span className="font-semibold">Loading fee schedules from database...</span>
         </div>
-      ) : filteredStructures.length === 0 ? (
-        <div className="p-12 text-center bg-white rounded-2xl border border-gray-200 text-gray-500 shadow-2xs space-y-3">
-          <span className="material-symbols-outlined text-4xl text-gray-300">payments</span>
-          <div>
-            <p className="font-bold text-sm text-gray-800">No fee schedules found</p>
-            <p className="text-xs text-gray-400 mt-0.5">
-              {searchQuery || gradeFilter !== 'ALL' || selectedTier !== 'ALL'
-                ? 'Try adjusting your search or tier filter.'
-                : 'Click "New Fee Structure" above or run "Auto Setup" to configure schedules.'}
-            </p>
+      ) : structures.length === 0 ? (
+        <div className="p-12 text-center bg-white rounded-2xl border border-gray-200 text-gray-500 space-y-3">
+          <span className="material-symbols-outlined text-4xl text-gray-300">database</span>
+          <p className="font-bold text-sm text-gray-800">No fee structures exist in the database</p>
+          <p className="text-xs text-gray-400">
+            Click &quot;New Fee Schedule&quot; to define your school&apos;s term fees, or check your database connection.
+          </p>
+        </div>
+      ) : viewMode === 'matrix' ? (
+        /* LIVE DATABASE MATRIX VIEW */
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-2xs overflow-hidden">
+          <div className="px-5 py-3.5 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-[#7a1228] text-[20px]">payments</span>
+              <h2 className="text-sm font-bold text-gray-900">Termly Fee Matrix (Active Database Rates)</h2>
+            </div>
+            <span className="text-xs text-gray-500 font-mono">Values in KES</span>
           </div>
-          {(searchQuery || gradeFilter !== 'ALL' || selectedTier !== 'ALL') && (
-            <button
-              type="button"
-              onClick={() => {
-                setSearchQuery('');
-                setGradeFilter('ALL');
-                setSelectedTier('ALL');
-              }}
-              className="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg text-xs transition-colors cursor-pointer"
-            >
-              Reset Filters
-            </button>
-          )}
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs sm:text-sm">
+              <thead className="bg-gray-50/60 text-gray-600 uppercase font-bold text-[11px] tracking-wider border-b border-gray-200">
+                <tr>
+                  <th className="py-3 px-4">Class / Level</th>
+                  <th className="py-3 px-3 text-center">Term 1</th>
+                  <th className="py-3 px-3 text-center">Term 2</th>
+                  <th className="py-3 px-3 text-center">Term 3</th>
+                  <th className="py-3 px-4 text-right text-gray-900 font-bold">Annual Invoiced</th>
+                  <th className="py-3 px-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 font-medium">
+                {dynamicTiers.map((tier) => (
+                  <tr key={tier.gradeLevel} className="hover:bg-rose-50/20 transition-colors">
+                    <td className="py-3.5 px-4 font-bold text-gray-900">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-[#7a1228]" />
+                        <span>{tier.gradeName}</span>
+                      </div>
+                    </td>
+
+                    {/* Term 1 Cell */}
+                    <td className="py-3.5 px-3 text-center font-mono">
+                      {tier.term1 ? (
+                        <div className="group relative inline-block cursor-pointer" onClick={() => handleOpenEdit(tier.term1!)}>
+                          <span className="font-bold text-gray-900 hover:text-[#7a1228] hover:underline">
+                            KES {tier.totalT1.toLocaleString()}
+                          </span>
+                          <span className="text-[10px] text-gray-400 block font-sans">
+                            {tier.term1.items?.length || 0} item(s) · click to edit
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-gray-300 italic text-xs">Not set</span>
+                      )}
+                    </td>
+
+                    {/* Term 2 Cell */}
+                    <td className="py-3.5 px-3 text-center font-mono">
+                      {tier.term2 ? (
+                        <div className="group relative inline-block cursor-pointer" onClick={() => handleOpenEdit(tier.term2!)}>
+                          <span className="font-bold text-gray-900 hover:text-[#7a1228] hover:underline">
+                            KES {tier.totalT2.toLocaleString()}
+                          </span>
+                          <span className="text-[10px] text-gray-400 block font-sans">
+                            {tier.term2.items?.length || 0} item(s) · click to edit
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-gray-300 italic text-xs">Not set</span>
+                      )}
+                    </td>
+
+                    {/* Term 3 Cell */}
+                    <td className="py-3.5 px-3 text-center font-mono">
+                      {tier.term3 ? (
+                        <div className="group relative inline-block cursor-pointer" onClick={() => handleOpenEdit(tier.term3!)}>
+                          <span className="font-bold text-gray-900 hover:text-[#7a1228] hover:underline">
+                            KES {tier.totalT3.toLocaleString()}
+                          </span>
+                          <span className="text-[10px] text-gray-400 block font-sans">
+                            {tier.term3.items?.length || 0} item(s) · click to edit
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-gray-300 italic text-xs">Not set</span>
+                      )}
+                    </td>
+
+                    {/* Annual Total */}
+                    <td className="py-3.5 px-4 text-right font-mono font-bold text-base text-[#7a1228]">
+                      KES {tier.annualTotal.toLocaleString()}
+                    </td>
+
+                    {/* Row Quick Actions */}
+                    <td className="py-3.5 px-3 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        {tier.term1 && (
+                          <button
+                            onClick={() => handleOpenEdit(tier.term1!)}
+                            className="p-1 rounded text-gray-500 hover:text-[#7a1228] hover:bg-rose-50 cursor-pointer"
+                            title="Edit schedule"
+                          >
+                            <span className="material-symbols-outlined text-[16px]">edit</span>
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      ) : viewMode === 'grid' ? (
-        /* CARD GRID: Clean & Scannable with Progressive Disclosure */
+      ) : (
+        /* DETAILED CARDS VIEW */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredStructures.map((s) => {
             const total = getStructureTotal(s);
-            const isExpanded = !!expandedCards[s.id];
-            const itemCount = s.items?.length || 0;
+            const items = s.items || [];
 
             return (
               <div
                 key={s.id}
-                className="bg-white rounded-2xl p-5 shadow-2xs hover:shadow-md border border-gray-200 flex flex-col justify-between transition-all group"
+                className="bg-white rounded-2xl p-4 shadow-2xs border border-gray-200 flex flex-col justify-between hover:border-gray-300 transition-all space-y-3"
               >
-                <div className="space-y-4">
-                  {/* Card Header: Class Identification & Action Toolbar */}
-                  <div className="flex items-start justify-between border-b border-gray-100 pb-3">
+                <div className="space-y-3">
+                  <div className="flex items-start justify-between border-b border-gray-100 pb-2.5">
                     <div>
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-xs font-bold text-[#7a1228] uppercase bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200">
+                        <span className="text-xs font-bold text-[#7a1228] bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
                           {resolveGradeName(s.gradeLevel)}
                         </span>
-                        <span className="text-[10px] font-semibold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md">
-                          {resolveAcademicYearName(s.academicYearId)}
+                        <span className="text-[10px] font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                          {getTermName(s.termId)}
                         </span>
-                        {getTermBadge(s.termId)}
                       </div>
-                      <h3 className="font-bold text-sm text-gray-900 mt-1 leading-snug">
+                      <h3 className="font-bold text-sm text-gray-900 mt-1 truncate" title={s.title}>
                         {s.title}
                       </h3>
-                      {s.dueDate && (
-                        <span className="text-[11px] text-gray-400 mt-0.5 block">
-                          Due: {s.dueDate}
-                        </span>
-                      )}
                     </div>
 
                     <div className="flex items-center gap-1">
                       <button
-                        type="button"
-                        onClick={() => downloadPDF(s)}
-                        title="Download official PDF fee schedule"
-                        className="p-1 rounded-lg text-rose-700 hover:text-white hover:bg-[#7a1228] transition-colors cursor-pointer"
+                        onClick={() => handleOpenEdit(s)}
+                        className="p-1.5 rounded-lg text-gray-500 hover:text-[#7a1228] hover:bg-rose-50 transition-colors cursor-pointer"
+                        title="Edit schedule in database"
                       >
-                        <span className="material-symbols-outlined text-[17px]">picture_as_pdf</span>
+                        <span className="material-symbols-outlined text-[17px]">edit</span>
                       </button>
                       <button
-                        type="button"
-                        onClick={() => handleDuplicate(s)}
-                        title="Duplicate schedule"
-                        className="p-1 rounded-lg text-gray-400 hover:text-[#7a1228] hover:bg-rose-50 transition-colors cursor-pointer"
-                      >
-                        <span className="material-symbols-outlined text-[17px]">content_copy</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteFeeStructure(s.id, s.title)}
+                        onClick={() => handleDelete(s.id, s.title)}
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
                         title="Delete schedule"
-                        className="p-1 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
                       >
                         <span className="material-symbols-outlined text-[17px]">delete</span>
                       </button>
                     </div>
                   </div>
 
-                  {/* Primary Anchor: Term Total */}
-                  <div className="bg-rose-50/50 rounded-xl p-3.5 border border-rose-100 flex items-center justify-between">
-                    <div>
-                      <span className="text-xs font-bold text-gray-700">Term Fee</span>
-                      <span className="text-[10px] text-gray-400 block">{getTermName(s.termId)} billing</span>
-                    </div>
-                    <span className="text-xl font-bold font-mono text-[#7a1228]">
+                  <div className="bg-rose-50/50 rounded-xl p-3 border border-rose-100 flex items-center justify-between">
+                    <span className="text-xs font-bold text-gray-700">Term Total:</span>
+                    <span className="text-lg font-bold font-mono text-[#7a1228]">
                       KES {total.toLocaleString()}
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 text-center text-xs">
-                    <div className="p-2 rounded-xl bg-gray-50 border border-gray-100">
-                      <span className="text-[10px] uppercase font-bold text-gray-500 block">Line Items</span>
-                      <span className="font-mono font-bold text-xs text-gray-800 block mt-0.5">
-                        {itemCount} {itemCount === 1 ? 'Item' : 'Items'}
-                      </span>
-                    </div>
-                    <div className="p-2 rounded-xl bg-gray-50 border border-gray-100">
-                      <span className="text-[10px] uppercase font-bold text-gray-500 block">Billing Period</span>
-                      <span className="font-mono font-bold text-xs text-gray-800 block mt-0.5">
-                        {getTermName(s.termId)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* PROGRESSIVE DISCLOSURE: Itemized Breakdown Accordion */}
-                  <div className="pt-1">
-                    <button
-                      type="button"
-                      onClick={() => toggleExpandCard(s.id)}
-                      className="w-full py-1.5 px-2.5 rounded-lg text-xs font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors flex items-center justify-between cursor-pointer border border-transparent hover:border-gray-200"
-                    >
-                      <span className="flex items-center gap-1.5">
-                        <span className="material-symbols-outlined text-[16px] text-gray-400">
-                          {isExpanded ? 'expand_less' : 'expand_more'}
-                        </span>
-                        <span>{isExpanded ? 'Hide Items' : `View Items (${itemCount})`}</span>
-                      </span>
-                      <span className="text-[11px] text-gray-400 font-mono">
-                        {isExpanded ? 'Collapse' : 'Expand'}
-                      </span>
-                    </button>
-
-                    {isExpanded && (
-                      <div className="mt-2 space-y-1.5 border-t border-gray-100 pt-2 animate-in fade-in duration-150">
-                        {s.items?.map((it, idx) => {
-                          const itemAmt = Number(it.amount) || 0;
-                          return (
-                            <div
-                              key={it.id || idx}
-                              className="p-2 rounded-lg bg-gray-50/70 border border-gray-100 text-xs flex items-center justify-between gap-2"
-                            >
-                              <div className="truncate">
-                                <span className="font-medium text-gray-800 truncate block">
-                                  {it.name}
-                                </span>
-                                {it.isOptional && (
-                                  <span className="text-[10px] text-gray-400">Optional levy</span>
-                                )}
-                              </div>
-                              <span className="font-mono font-bold text-gray-900 shrink-0">
-                                KES {itemAmt.toLocaleString()}
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
+                  <div className="space-y-1.5">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+                      Invoiced Line Items:
+                    </span>
+                    {items.length > 0 ? (
+                      items.map((it, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between text-xs py-1 px-2 rounded bg-gray-50 border border-gray-100"
+                        >
+                          <span className="text-gray-700 truncate">{it.name}</span>
+                          <span className="font-mono font-bold text-gray-900">
+                            KES {(Number(it.amount) || 0).toLocaleString()}
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-xs text-gray-400 italic">No breakdown items attached</div>
                     )}
                   </div>
                 </div>
 
-                {/* Card Action Footer */}
-                <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setInspectingStructure(s)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[#7a1228] hover:bg-rose-50 font-bold text-xs cursor-pointer transition-colors"
-                    >
-                      <span className="material-symbols-outlined text-[16px]">visibility</span>
-                      <span>View</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => downloadPDF(s)}
-                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-white bg-[#7a1228] hover:bg-[#5c0a1a] font-semibold text-xs cursor-pointer transition-colors shadow-2xs"
-                      title="Download official PDF fee schedule"
-                    >
-                      <span className="material-symbols-outlined text-[15px]">picture_as_pdf</span>
-                      <span>Download PDF</span>
-                    </button>
-                  </div>
-                  <span className="text-[11px] text-gray-400 font-mono">
-                    {s.academicYearId || '2026'}
-                  </span>
+                <div className="pt-2 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-400">
+                  <span>{resolveAcademicYearName(s.academicYearId)}</span>
+                  <button
+                    onClick={() => handleOpenEdit(s)}
+                    className="font-bold text-[#7a1228] hover:underline cursor-pointer flex items-center gap-1"
+                  >
+                    <span className="material-symbols-outlined text-[14px]">edit</span>
+                    <span>Edit Schedule</span>
+                  </button>
                 </div>
               </div>
             );
           })}
         </div>
-      ) : (
-        /* COMPACT TABLE VIEW */
-        <div className="bg-white rounded-2xl shadow-2xs border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs sm:text-sm">
-              <thead className="bg-gray-50 text-gray-600 uppercase font-bold text-[11px] tracking-wider border-b border-gray-200">
-                <tr>
-                  <th className="py-3 px-4">Level / Class</th>
-                  <th className="py-3 px-4">Schedule Title</th>
-                  <th className="py-3 px-4 text-center">Academic Year</th>
-                  <th className="py-3 px-4 text-center">Term</th>
-                  <th className="py-3 px-4 text-center">Items</th>
-                  <th className="py-3 px-4 text-right text-gray-900 font-bold">Term Total</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {filteredStructures.map((s) => {
-                  const total = getStructureTotal(s);
-
-                  return (
-                    <tr key={s.id} className="hover:bg-gray-50/70 transition-colors">
-                      <td className="py-3.5 px-4 font-bold text-gray-900">
-                        <span className="bg-rose-50 text-[#7a1228] px-2.5 py-1 rounded-md border border-rose-200 text-xs font-semibold">
-                          {resolveGradeName(s.gradeLevel)}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 text-xs font-semibold text-gray-700">
-                        {s.title}
-                      </td>
-                      <td className="py-3.5 px-4 text-center font-mono text-xs text-gray-600">
-                        {s.academicYearId || '2026'}
-                      </td>
-                      <td className="py-3.5 px-4 text-center">
-                        {getTermBadge(s.termId)}
-                      </td>
-                      <td className="py-3.5 px-4 text-center">
-                        <span className="bg-gray-100 text-gray-700 px-2 py-0.5 rounded font-mono text-[11px] font-semibold">
-                          {s.items?.length || 0}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 font-mono font-bold text-[#7a1228] text-right text-sm">
-                        KES {total.toLocaleString()}
-                      </td>
-                      <td className="py-3.5 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <button
-                            type="button"
-                            onClick={() => downloadPDF(s)}
-                            title="Download official PDF Fee Schedule"
-                            className="p-1 rounded text-rose-700 hover:text-white hover:bg-[#7a1228] transition-colors cursor-pointer"
-                          >
-                            <span className="material-symbols-outlined text-[17px]">picture_as_pdf</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => downloadCSV(s)}
-                            title="Download CSV spreadsheet"
-                            className="p-1 rounded text-gray-400 hover:text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer"
-                          >
-                            <span className="material-symbols-outlined text-[17px]">table_chart</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setInspectingStructure(s)}
-                            title="Inspect & Print"
-                            className="p-1 rounded text-gray-500 hover:text-[#7a1228] hover:bg-rose-50 transition-colors cursor-pointer"
-                          >
-                            <span className="material-symbols-outlined text-[17px]">visibility</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDuplicate(s)}
-                            title="Duplicate"
-                            className="p-1 rounded text-gray-500 hover:text-[#7a1228] hover:bg-rose-50 transition-colors cursor-pointer"
-                          >
-                            <span className="material-symbols-outlined text-[17px]">content_copy</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteFeeStructure(s.id, s.title)}
-                            title="Delete"
-                            className="p-1 rounded text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                          >
-                            <span className="material-symbols-outlined text-[17px]">delete</span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
       )}
 
-      {/* MODAL 1: Create / Clone Fee Structure Modal */}
+      {/* 4. Payment Channels Card */}
+      <div className="bg-gradient-to-br from-slate-900 to-[#5a0c1b] rounded-2xl p-6 text-white shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-rose-200 font-bold text-xs uppercase tracking-wider mb-2">
+            <span className="material-symbols-outlined text-[16px]">account_balance_wallet</span>
+            <span>Official Payment Channel</span>
+          </div>
+          <h3 className="text-lg font-bold tracking-tight text-white">M-Pesa Paybill &amp; Direct Deposit</h3>
+          <p className="text-xs text-rose-100/80 mt-0.5 leading-relaxed">
+            Paybill: <strong className="text-white font-mono">522533</strong> | Account Format:{' '}
+            <strong className="text-amber-300 font-mono">8048859#&lt;Learner Name and Grade&gt;</strong>
+          </p>
+        </div>
+
+        <div className="shrink-0">
+          <span className="text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+            <span className="material-symbols-outlined text-[16px]">check_circle</span>
+            <span>Real-time Invoicing Active</span>
+          </span>
+        </div>
+      </div>
+
+      {/* Create / Edit Fee Structure Modal */}
       <CreateFeeStructureModal
         isOpen={isCreateOpen}
         onClose={() => {
           setIsCreateOpen(false);
-          setClonedData(null);
+          setEditingStructure(null);
         }}
-        onCreated={() => loadStructures()}
-        initialData={clonedData}
+        onCreated={() => loadData()}
+        initialData={editingStructure}
       />
 
-      {/* MODAL 2: Official Printable Document Modal */}
-      {inspectingStructure && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto animate-in fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[92vh] flex flex-col overflow-hidden border border-gray-200 my-auto">
-            {/* Modal Actions Header */}
-            <div className="bg-[#7a1228] text-white p-4 flex items-center justify-between shrink-0 print:hidden">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[20px]">print</span>
-                <span className="font-bold text-sm">Official Ratified Fee Schedule</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => downloadPDF(inspectingStructure)}
-                  className="px-3 py-1.5 bg-white text-[#7a1228] hover:bg-rose-50 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1 shadow-2xs"
-                  title="Download official PDF fee schedule"
-                >
-                  <span className="material-symbols-outlined text-[16px]">picture_as_pdf</span>
-                  <span>Download PDF</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => downloadCSV(inspectingStructure)}
-                  className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1 border border-white/20"
-                  title="Download as Excel/CSV spreadsheet"
-                >
-                  <span className="material-symbols-outlined text-[16px]">table_chart</span>
-                  <span>CSV</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => window.print()}
-                  className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1 border border-white/20"
-                >
-                  <span className="material-symbols-outlined text-[16px]">print</span>
-                  <span>Print Document</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setInspectingStructure(null)}
-                  className="p-1 rounded-lg text-rose-200 hover:text-white hover:bg-white/10 cursor-pointer"
-                >
-                  <span className="material-symbols-outlined text-[20px]">close</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Printable Document Body */}
-            <div className="p-6 sm:p-8 overflow-y-auto flex-1 space-y-6 text-gray-900 bg-white">
-              {/* Official School Header */}
-              <div className="text-center border-b-2 border-gray-900 pb-4 space-y-1">
-                <div className="flex items-center justify-center gap-3">
-                  <img
-                    src="/logo.png"
-                    alt="School Logo"
-                    className="w-12 h-12 rounded-xl object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLElement).style.display = 'none';
-                    }}
-                  />
-                  <div>
-                    <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tight text-gray-900">
-                      {school?.name || 'Grace Seeds School'}
-                    </h2>
-                    <p className="text-xs italic text-gray-600">
-                      &quot;{school?.motto || 'The future Begins Here'}&quot;
-                    </p>
-                  </div>
-                </div>
-                <div className="text-[11px] text-gray-500 pt-1">
-                  {school?.address || 'KEMRI Street, Kisian, Kisumu, Kenya'} · Tel: {school?.phone || '0745436312'} · Email: {school?.email || 'schoolgraceseeds@gmail.com'}
-                </div>
-                <div className="pt-2">
-                  <span className="inline-block px-3 py-1 bg-gray-100 rounded-full font-bold uppercase text-xs tracking-wider text-gray-800">
-                    Official Ratified CBE Termly Fee Schedule
-                  </span>
-                </div>
-              </div>
-
-              {/* Schedule Meta Details */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-gray-50 p-3 rounded-xl border border-gray-200 text-xs">
-                <div>
-                  <span className="text-gray-500 block uppercase font-medium text-[10px]">Schedule Title</span>
-                  <span className="font-bold text-gray-900">{inspectingStructure.title}</span>
-                </div>
-                <div>
-                  <span className="text-gray-500 block uppercase font-medium text-[10px]">Grade &amp; Term</span>
-                  <span className="font-bold text-gray-900">
-                    {inspectingStructure.gradeLevel?.replace('_', ' ')} · {getTermName(inspectingStructure.termId)}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-gray-500 block uppercase font-medium text-[10px]">Term Due Date</span>
-                  <span className="font-mono font-bold text-gray-900">{inspectingStructure.dueDate || 'Start of Term'}</span>
-                </div>
-                <div>
-                  <span className="text-gray-500 block uppercase font-medium text-[10px]">Total Term Fee</span>
-                  <span className="font-mono font-bold text-[#7a1228]">
-                    KES {getStructureTotal(inspectingStructure).toLocaleString()}
-                  </span>
-                </div>
-              </div>
-
-              {/* Official Breakdown Table */}
-              <div className="border border-gray-300 rounded-xl overflow-hidden">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-gray-100 text-gray-800 font-bold border-b border-gray-300">
-                    <tr>
-                      <th className="py-2.5 px-3 w-10">#</th>
-                      <th className="py-2.5 px-3">Item Description</th>
-                      <th className="py-2.5 px-3">Category</th>
-                      <th className="py-2.5 px-3 text-center">Billing Type</th>
-                      <th className="py-2.5 px-3 text-right text-gray-900">Term Fee (KES)</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {inspectingStructure.items?.map((it, idx) => {
-                      const itemAmt = Number(it.amount) || 0;
-
-                      return (
-                        <tr key={it.id || idx}>
-                          <td className="py-2 px-3 text-gray-500 font-mono">{idx + 1}</td>
-                          <td className="py-2 px-3 font-semibold text-gray-900">
-                            {it.name}
-                          </td>
-                          <td className="py-2 px-3 text-gray-600 text-[11px]">{it.category}</td>
-                          <td className="py-2 px-3 text-center">
-                            {it.isOptional ? (
-                              <span className="text-[10px] bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-full font-medium">
-                                Optional
-                              </span>
-                            ) : (
-                              <span className="text-[10px] bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-full font-medium">
-                                Mandatory
-                              </span>
-                            )}
-                          </td>
-                          <td className="py-2 px-3 text-right font-mono font-bold text-gray-900">
-                            KES {itemAmt.toLocaleString()}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                  <tfoot className="bg-gray-100 font-bold border-t-2 border-gray-400">
-                    <tr>
-                      <td colSpan={4} className="py-2.5 px-3 uppercase text-gray-900">
-                        Total Term Fee ({getTermName(inspectingStructure.termId)}):
-                      </td>
-                      <td className="py-2.5 px-3 text-right font-mono text-base text-[#7a1228]">
-                        KES {getStructureTotal(inspectingStructure).toLocaleString()}
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-
-              {/* Payment Details & Endorsement */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 text-xs border-t border-gray-200">
-                <div className="space-y-1">
-                  <div className="font-bold text-gray-900">Official Payment Instructions:</div>
-                  <div className="text-gray-600 space-y-0.5">
-                    <div>1. KCB Buni API Paybill: <strong>522533</strong></div>
-                    <div>2. Account Number: <strong>8048859#&lt;Child Name &amp; Grade&gt;</strong></div>
-                    <div>3. Bank Transfer: KCB Bank Kenya · Account #1122334455</div>
-                  </div>
-                </div>
-
-                <div className="text-right space-y-3 pt-2 sm:pt-0">
-                  <div className="inline-block border-b border-gray-400 w-48 pb-1">
-                    <span className="text-[10px] text-gray-400 block uppercase">Principal / Director Signature</span>
-                  </div>
-                  <div className="text-[10px] text-gray-400">Official School Rubber Stamp</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Grace Seeds Stationery & Booklist Requirements Modal */}
+      {/* Stationery & Requirements Modal */}
       <StationeryRequirementsModal
         isOpen={isRequirementsOpen}
         onClose={() => setIsRequirementsOpen(false)}
@@ -1341,3 +716,5 @@ export const FeeStructureView: React.FC = () => {
     </div>
   );
 };
+
+export default FeeStructureView;

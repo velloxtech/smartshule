@@ -29,6 +29,7 @@ export const UpdateTeacherProfileSchema = z.object({
   tscNumber: z.string().optional(),
   employeeNumber: z.string().optional(),
   specialization: z.array(z.string()).optional(),
+  assignedClassStreamIds: z.array(z.string()).optional(),
   qualification: z.string().optional()
 }).passthrough();
 
@@ -130,7 +131,7 @@ export class TeacherController {
       const result = await this.teacherUseCases.assignStream(req.body);
       return res.status(200).json({
         success: true,
-        message: 'Stream assigned to teacher',
+        message: 'Stream assigned to teacher successfully',
         data: result
       });
     } catch (err) {

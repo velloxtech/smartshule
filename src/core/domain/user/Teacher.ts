@@ -5,13 +5,21 @@ export interface TeacherProps {
   tscNumber?: string; // Teachers Service Commission ID
   employeeNumber: string;
   specialization: string[]; // List of Learning Areas / Subjects they teach
-  assignedClassStreamIds: string[]; // Streams they are assigned as class teacher or subject teacher
+  assignedClassStreamIds: string[]; // Restricted to a single class/stream assignment
   qualification?: string;
 }
 
 export class Teacher extends Entity<TeacherProps> {
   public static create(props: TeacherProps, id: string, createdAt?: Date, updatedAt?: Date): Teacher {
-    return new Teacher(props, id, createdAt, updatedAt);
+    // Enforce single-class restriction on creation if multiple were provided
+    const singleStream = props.assignedClassStreamIds && props.assignedClassStreamIds.length > 0 
+      ? [props.assignedClassStreamIds[0]] 
+      : [];
+    
+    return new Teacher({
+      ...props,
+      assignedClassStreamIds: singleStream
+    }, id, createdAt, updatedAt);
   }
 
   public get userId(): string {
@@ -38,16 +46,22 @@ export class Teacher extends Entity<TeacherProps> {
     return this._props.qualification;
   }
 
+  /**
+   * Assigns a single class/stream to the teacher, overwriting any previous assignment
+   * to strictly enforce the 1-class-per-teacher rule.
+   */
   public assignStream(streamId: string): void {
-    if (!this._props.assignedClassStreamIds.includes(streamId)) {
-      this._props.assignedClassStreamIds.push(streamId);
+    if (this._props.assignedClassStreamIds.length !== 1 || this._props.assignedClassStreamIds[0] !== streamId) {
+      this._props.assignedClassStreamIds = [streamId];
       this.touch();
     }
   }
 
   public removeStream(streamId: string): void {
-    this._props.assignedClassStreamIds = this._props.assignedClassStreamIds.filter(id => id !== streamId);
-    this.touch();
+    if (this._props.assignedClassStreamIds.includes(streamId)) {
+      this._props.assignedClassStreamIds = [];
+      this.touch();
+    }
   }
 
   public updateSpecialization(subjects: string[]): void {
@@ -60,11 +74,17 @@ export class Teacher extends Entity<TeacherProps> {
     employeeNumber?: string;
     specialization?: string[];
     qualification?: string;
+    assignedClassStreamIds?: string[];
   }): void {
     if (props.tscNumber !== undefined) this._props.tscNumber = props.tscNumber;
     if (props.employeeNumber !== undefined) this._props.employeeNumber = props.employeeNumber;
     if (props.specialization !== undefined) this._props.specialization = props.specialization;
     if (props.qualification !== undefined) this._props.qualification = props.qualification;
+    if (props.assignedClassStreamIds !== undefined) {
+      this._props.assignedClassStreamIds = props.assignedClassStreamIds.length > 0 
+        ? [props.assignedClassStreamIds[0]] 
+        : [];
+    }
     this.touch();
   }
 
