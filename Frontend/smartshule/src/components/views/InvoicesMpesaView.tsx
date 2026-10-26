@@ -3,6 +3,7 @@ import { FeeTransaction, Student, StudentInvoice, FinanceSummaryData, UserRole }
 import { GenerateInvoicesModal } from '../modals/GenerateInvoicesModal';
 import { RecordPaymentModal } from '../modals/RecordPaymentModal';
 import { ForwardPaymentModal } from '../modals/ForwardPaymentModal';
+import { InvoiceDetailsModal } from '../modals/InvoiceDetailsModal';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
@@ -35,6 +36,14 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
   const [verifyMsg, setVerifyMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [channelFilter, setChannelFilter] = useState<'ALL' | 'CASH' | 'BANK_DEPOSIT' | 'MPESA' | 'CHEQUE'>('ALL');
   const [loading, setLoading] = useState(true);
+
+  // Individual Invoicing & Details modal
+  const [selectedInvoiceForDetails, setSelectedInvoiceForDetails] = useState<StudentInvoice | null>(null);
+  const [isInvoiceDetailsOpen, setIsInvoiceDetailsOpen] = useState(false);
+  const [recordPayInitialMode, setRecordPayInitialMode] = useState<'PAYMENT' | 'ARREARS' | 'INVOICE'>('PAYMENT');
+  const [invoiceSearchQuery, setInvoiceSearchQuery] = useState('');
+  const [invoiceStatusFilter, setInvoiceStatusFilter] = useState<'ALL' | 'DRAFT' | 'UNPAID' | 'PARTIALLY_PAID' | 'PAID' | 'CANCELLED'>('ALL');
+  const [invoiceGradeFilter, setInvoiceGradeFilter] = useState('ALL');
 
   // Hanging Invoice Deletion state
   const canManageInvoices = !isGuardian;
@@ -171,6 +180,43 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
     return true;
   });
 
+  const filteredInvoices = invoices.filter((inv) => {
+    const student = students.find((s) => s.id === inv.studentId);
+    const studentName = student?.name || inv.studentName || '';
+    const admNo = student?.admNo || inv.admissionNumber || '';
+    const invNo = inv.invoiceNumber || '';
+    const q = invoiceSearchQuery.toLowerCase().trim();
+
+    const matchesSearch = !q ||
+      studentName.toLowerCase().includes(q) ||
+      admNo.toLowerCase().includes(q) ||
+      invNo.toLowerCase().includes(q) ||
+      (inv.title && inv.title.toLowerCase().includes(q));
+
+    const matchesStatus = invoiceStatusFilter === 'ALL' || inv.status === invoiceStatusFilter;
+    const matchesGrade = invoiceGradeFilter === 'ALL' || (student?.grade || inv.gradeLevel) === invoiceGradeFilter;
+
+    return matchesSearch && matchesStatus && matchesGrade;
+  });
+
+  const getInvoiceStatusBadge = (status: string) => {
+    switch (status) {
+      case 'PAID':
+        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">PAID</span>;
+      case 'PARTIALLY_PAID':
+        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-200">PARTIALLY PAID</span>;
+      case 'UNPAID':
+        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-900 border border-rose-200">UNPAID</span>;
+      case 'DRAFT':
+        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-200 text-slate-800 border border-slate-300">DRAFT</span>;
+      case 'CANCELLED':
+      case 'VOIDED':
+        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-500 line-through border border-gray-300">CANCELLED</span>;
+      default:
+        return <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-900 border border-blue-200">{status}</span>;
+    }
+  };
+
   return (
     <div className="space-y-6 pb-12 font-body">
       {/* Header */}
@@ -209,19 +255,35 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
               )}
 
               <button
+                onClick={() => {
+                  setRecordPayInitialMode('INVOICE');
+                  setSelectedInvoiceForPay(undefined);
+                  setSelectedStudentForPay(students.length > 0 ? students[0] : undefined);
+                  setIsRecordPayOpen(true);
+                }}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#7a1228] hover:bg-[#600e1f] text-white rounded-lg text-xs font-bold shadow-xs transition-all cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[16px]">receipt_long</span>
+                <span>Create Individual Invoice</span>
+              </button>
+
+              <button
                 onClick={() => setIsGenInvoicesOpen(true)}
                 className="inline-flex items-center gap-1.5 px-3 py-2 bg-surface-container hover:bg-surface-container-high text-primary rounded-lg text-xs font-bold border border-outline-variant/30 transition-all cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[16px]">receipt</span>
-                <span>Generate Invoices</span>
+                <span>Bulk Generate Invoices</span>
               </button>
 
               <button
-                onClick={() => setIsRecordPayOpen(true)}
+                onClick={() => {
+                  setRecordPayInitialMode('PAYMENT');
+                  setIsRecordPayOpen(true);
+                }}
                 className="inline-flex items-center gap-1.5 px-3 py-2 bg-surface-container hover:bg-surface-container-high text-on-surface rounded-lg text-xs font-bold border border-outline-variant/30 transition-all cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[16px]">point_of_sale</span>
-                <span>Record Bank Deposit / Cash</span>
+                <span>Unified Fee & Arrears Entry</span>
               </button>
             </>
           )}
@@ -367,13 +429,55 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
               </button>
             </div>
           )}
-          <div className="p-4 border-b border-surface-container flex items-center justify-between">
-            <h3 className="font-bold text-sm text-on-surface">
-              {isGuardian ? 'Child Term Invoices' : 'All Student Fee Invoices'}
-            </h3>
-            <span className="text-xs text-on-surface-variant">
-              Showing {invoices.length} billing records
+          <div className="p-4 border-b border-surface-container flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="font-bold text-sm text-on-surface">
+                {isGuardian ? 'Child Term Invoices' : 'School Fee Invoices & Lifecycle Management'}
+              </h3>
+              <p className="text-xs text-on-surface-variant">
+                Manage, draft, issue and track individual and bulk school invoices
+              </p>
+            </div>
+            <span className="text-xs text-on-surface-variant font-medium">
+              Showing <strong className="text-on-surface">{filteredInvoices.length}</strong> of {invoices.length} billing records
             </span>
+          </div>
+
+          {/* Filters & Search Toolbar */}
+          <div className="p-3 bg-surface-container-low/60 border-b border-surface-container flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[280px]">
+              <div className="relative flex-1 min-w-[200px]">
+                <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
+                <input
+                  type="text"
+                  value={invoiceSearchQuery}
+                  onChange={(e) => setInvoiceSearchQuery(e.target.value)}
+                  placeholder="Search by learner, adm no, invoice #, title..."
+                  className="w-full text-xs pl-8 pr-3 py-1.5 bg-white border border-slate-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-[#7a1228]"
+                />
+              </div>
+
+              {/* Status Filter */}
+              <div className="flex items-center gap-1 bg-white p-0.5 rounded-lg border border-slate-200 overflow-x-auto">
+                {(['ALL', 'DRAFT', 'UNPAID', 'PARTIALLY_PAID', 'PAID', 'CANCELLED'] as const).map((st) => (
+                  <button
+                    key={st}
+                    onClick={() => setInvoiceStatusFilter(st)}
+                    className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all cursor-pointer whitespace-nowrap ${
+                      invoiceStatusFilter === st
+                        ? 'bg-[#7a1228] text-white shadow-2xs'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                    }`}
+                  >
+                    {st === 'ALL'
+                      ? `All (${invoices.length})`
+                      : st === 'PARTIALLY_PAID'
+                      ? 'Partial'
+                      : st.charAt(0) + st.slice(1).toLowerCase()}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
           <div className="overflow-x-auto">
@@ -391,39 +495,46 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-container">
-                {invoices.length === 0 ? (
+                {filteredInvoices.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="py-12 text-center text-on-surface-variant">
                       <div className="flex flex-col items-center justify-center gap-2">
                         <span className="material-symbols-outlined text-3xl text-outline">receipt_long</span>
-                        <p className="font-semibold text-sm">No Invoices Found</p>
+                        <p className="font-semibold text-sm">No Invoices Match Filters</p>
                         <p className="text-xs text-on-surface-variant">
                           {isGuardian
                             ? 'There are currently no outstanding fee invoices for your linked learners.'
-                            : 'Generate invoices for the current term using the button above.'}
+                            : 'Adjust your search terms or create a new individual invoice using the button above.'}
                         </p>
                       </div>
                     </td>
                   </tr>
                 ) : (
-                  invoices.map((inv) => {
+                  filteredInvoices.map((inv) => {
                     const student = students.find((s) => s.id === inv.studentId);
                     return (
                       <tr key={inv.id} className="hover:bg-surface-container-low/50 transition-colors">
-                        <td className="py-3 px-4 font-bold font-data-mono text-primary">
-                          {inv.invoiceNumber}
+                        <td className="py-3 px-4">
+                          <div className="font-bold font-data-mono text-primary flex items-center gap-1.5">
+                            <span>{inv.invoiceNumber}</span>
+                          </div>
+                          {inv.title && (
+                            <div className="text-[11px] text-slate-500 truncate max-w-[160px]">
+                              {inv.title}
+                            </div>
+                          )}
                         </td>
                         <td className="py-3 px-4">
                           <div className="font-semibold text-on-surface">
-                            {student?.name || `Student (${inv.studentId})`}
+                            {student?.name || inv.studentName || `Student (${inv.studentId})`}
                           </div>
                           <div className="text-[11px] text-outline font-data-mono">
-                            {student?.admNo || inv.studentId} · {student?.grade || ''}
+                            {student?.admNo || inv.admissionNumber || inv.studentId} · {student?.grade || inv.gradeLevel || ''}
                           </div>
                         </td>
                         <td className="py-3 px-4">
                           <span className="text-xs text-on-surface-variant">
-                            {inv.items?.length || 0} fee components (Tuition, Meals...)
+                            {inv.items?.length || 0} line item(s)
                           </span>
                         </td>
                         <td className="py-3 px-4 text-right font-data-mono font-bold text-on-surface">
@@ -436,20 +547,42 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
                           KES {inv.balance.toLocaleString()}
                         </td>
                         <td className="py-3 px-4">
-                          <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                              inv.status === 'PAID'
-                                ? 'bg-secondary-container text-on-secondary-container'
-                                : inv.status === 'PARTIALLY_PAID'
-                                ? 'bg-amber-100 text-amber-900'
-                                : 'bg-rose-100 text-rose-900'
-                            }`}
-                          >
-                            {inv.status}
-                          </span>
+                          {getInvoiceStatusBadge(inv.status)}
                         </td>
                         <td className="py-3 px-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
+                            {/* View & PDF Details */}
+                            <button
+                              onClick={() => {
+                                setSelectedInvoiceForDetails(inv);
+                                setIsInvoiceDetailsOpen(true);
+                              }}
+                              className="px-2.5 py-1.5 bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1 shadow-2xs"
+                              title="View Invoice & Download Official PDF"
+                            >
+                              <span className="material-symbols-outlined text-[14px] text-[#7a1228]">visibility</span>
+                              <span>View / PDF</span>
+                            </button>
+
+                            {/* Issue Draft Button */}
+                            {inv.status === 'DRAFT' && !isGuardian && (
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    await apiService.issueInvoice(inv.id);
+                                    loadData();
+                                  } catch (e: any) {
+                                    alert(e.message || 'Failed to issue invoice');
+                                  }
+                                }}
+                                className="px-2.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1 shadow-2xs"
+                                title="Issue draft invoice officially"
+                              >
+                                <span className="material-symbols-outlined text-[14px]">send</span>
+                                <span>Issue</span>
+                              </button>
+                            )}
+
                             {canManageInvoices && isHangingInvoice(inv) && (
                               <button
                                 onClick={() => {
@@ -463,7 +596,7 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
                                 <span className="hidden sm:inline">Delete</span>
                               </button>
                             )}
-                            {inv.balance > 0 ? (
+                            {inv.balance > 0 && inv.status !== 'DRAFT' && inv.status !== 'CANCELLED' ? (
                               <>
                                 {!isGuardian && (
                                   <button
@@ -471,6 +604,7 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
                                       setSelectedInvoiceForPay(inv);
                                       const linkedStudent = students.find((s) => s.id === inv.studentId);
                                       setSelectedStudentForPay(linkedStudent);
+                                      setRecordPayInitialMode('PAYMENT');
                                       setIsRecordPayOpen(true);
                                     }}
                                     className="px-2.5 py-1.5 bg-surface-container hover:bg-surface-container-high text-on-surface rounded-lg text-xs font-bold border border-outline-variant/30 transition-all cursor-pointer inline-flex items-center gap-1"
@@ -490,12 +624,12 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
                                   <span>{isGuardian ? 'Forward Payment' : 'Record Payment'}</span>
                                 </button>
                               </>
-                            ) : (
+                            ) : inv.status === 'PAID' ? (
                               <span className="text-xs font-bold text-secondary flex items-center justify-end gap-1">
                                 <span className="material-symbols-outlined text-[15px]">check_circle</span>
                                 <span>Fully Settled</span>
                               </span>
-                            )}
+                            ) : null}
                           </div>
                         </td>
                       </tr>
@@ -924,6 +1058,7 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
         students={students}
         initialStudent={selectedStudentForPay}
         initialInvoice={selectedInvoiceForPay}
+        initialMode={recordPayInitialMode}
         onPaymentRecorded={() => {
           loadData();
           setIsRecordPayOpen(false);
@@ -932,6 +1067,31 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
         }}
         onArrearRecorded={() => {
           loadData();
+        }}
+        onInvoiceCreated={() => {
+          loadData();
+        }}
+        onRefreshStudents={() => {
+          loadData();
+        }}
+      />
+
+      <InvoiceDetailsModal
+        isOpen={isInvoiceDetailsOpen}
+        onClose={() => {
+          setIsInvoiceDetailsOpen(false);
+          setSelectedInvoiceForDetails(null);
+        }}
+        invoice={selectedInvoiceForDetails}
+        student={students.find((s) => s.id === selectedInvoiceForDetails?.studentId)}
+        onInvoiceUpdated={() => {
+          loadData();
+        }}
+        onRecordPayment={(inv) => {
+          setSelectedInvoiceForPay(inv);
+          setSelectedStudentForPay(students.find((s) => s.id === inv.studentId));
+          setRecordPayInitialMode('PAYMENT');
+          setIsRecordPayOpen(true);
         }}
       />
 

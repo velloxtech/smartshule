@@ -1031,8 +1031,10 @@ export interface FeeItemTermBreakdown {
 export interface FeeItem {
   id?: string;
   name: string;
-  amount: number; // Total annual amount (sum of term divisions)
-  category: 'TUITION' | 'ASSESSMENT' | 'ACTIVITY' | 'BOARDING' | 'MEALS' | 'TRANSPORT' | 'ADMISSION' | 'OTHER';
+  amount: number; // Total annual or line total amount
+  quantity?: number;
+  unitAmount?: number;
+  category: 'TUITION' | 'ASSESSMENT' | 'ACTIVITY' | 'BOARDING' | 'MEALS' | 'TRANSPORT' | 'ADMISSION' | 'OTHER' | string;
   isOptional: boolean;
   termBreakdown?: FeeItemTermBreakdown;
   termDivisions?: FeeItemTermDivision[];
@@ -1071,22 +1073,33 @@ export interface FeeStructure {
   updatedAt?: string;
 }
 
+export type InvoiceStatus = 'DRAFT' | 'UNPAID' | 'PARTIALLY_PAID' | 'PAID' | 'CANCELLED' | 'VOIDED' | 'CARRIED_FORWARD' | 'OVERDUE' | 'PENDING';
+
 export interface StudentInvoice {
   id: string;
   schoolId: string;
   studentId: string;
-  feeStructureId: string;
+  feeStructureId?: string;
   academicYearId: string;
   termId: string;
   invoiceNumber: string;
+  title?: string;
+  description?: string;
+  issueDate?: string;
   items: FeeItem[];
   amountBilled: number;
   discountAmount: number;
   amountPayable: number;
   amountPaid: number;
   balance: number;
-  status: 'PENDING' | 'UNPAID' | 'PARTIALLY_PAID' | 'PAID' | 'CANCELLED' | 'CARRIED_FORWARD' | 'OVERDUE';
+  status: InvoiceStatus | string;
   dueDate: string;
+  studentName?: string;
+  admissionNumber?: string;
+  gradeLevel?: string;
+  classroomName?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface DefaulterItem {

@@ -1357,6 +1357,51 @@ const coreApiService = {
     });
   },
 
+  createIndividualInvoice: async (data: {
+    schoolId?: string;
+    studentId: string;
+    academicYearId: string;
+    termId: string;
+    dueDate: string;
+    issueDate?: string;
+    title?: string;
+    description?: string;
+    feeStructureId?: string;
+    items: Array<{
+      name: string;
+      amount?: number;
+      unitAmount?: number;
+      quantity?: number;
+      category?: string;
+      isOptional?: boolean;
+    }>;
+    discountAmount?: number;
+    includeArrears?: boolean;
+    status?: 'DRAFT' | 'UNPAID';
+  }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/finance/invoices/individual', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  issueInvoice: async (id: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/finance/invoices/${encodeURIComponent(id)}/issue`, {
+      method: 'POST',
+    });
+  },
+
+  cancelInvoice: async (id: string, reason?: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/finance/invoices/${encodeURIComponent(id)}/cancel`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  },
+
+  getInvoiceById: async (id: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/finance/invoices/${encodeURIComponent(id)}`);
+  },
+
   syncFeeBalances: async (data?: {
     schoolId?: string;
     academicYearId?: string;
@@ -1660,11 +1705,23 @@ const coreApiService = {
     );
   },
 
-  getInvoices: async (params?: { schoolId?: string; studentId?: string; status?: string }): Promise<ApiResponse<StudentInvoice[]>> => {
+  getInvoices: async (params?: {
+    schoolId?: string;
+    studentId?: string;
+    status?: string;
+    search?: string;
+    academicYearId?: string;
+    termId?: string;
+    gradeLevel?: string;
+  }): Promise<ApiResponse<StudentInvoice[]>> => {
     const q = new URLSearchParams();
     if (params?.schoolId) q.append('schoolId', params.schoolId);
     if (params?.studentId) q.append('studentId', params.studentId);
     if (params?.status) q.append('status', params.status);
+    if (params?.search) q.append('search', params.search);
+    if (params?.academicYearId) q.append('academicYearId', params.academicYearId);
+    if (params?.termId) q.append('termId', params.termId);
+    if (params?.gradeLevel) q.append('gradeLevel', params.gradeLevel);
     const qs = q.toString();
     return apiFetch<ApiResponse<StudentInvoice[]>>(`/finance/invoices${qs ? `?${qs}` : ''}`);
   },

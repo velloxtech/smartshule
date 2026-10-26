@@ -20,11 +20,14 @@ export enum PaymentStatus {
 }
 
 export enum InvoiceStatus {
+  DRAFT = 'DRAFT',
   UNPAID = 'UNPAID',
   PARTIALLY_PAID = 'PARTIALLY_PAID',
   PAID = 'PAID',
   OVERDUE = 'OVERDUE',
-  CARRIED_FORWARD = 'CARRIED_FORWARD'
+  CARRIED_FORWARD = 'CARRIED_FORWARD',
+  CANCELLED = 'CANCELLED',
+  VOIDED = 'VOIDED'
 }
 
 export interface FeeItemTermDivision {
@@ -58,6 +61,8 @@ export interface FeeItem {
   termBreakdown?: FeeItemTermBreakdown;
   termPercentages?: FeeItemTermPercentages;
   termDivisions?: FeeItemTermDivision[];
+  quantity?: number;
+  unitAmount?: number;
 }
 
 // 1. Fee Structure Entity
@@ -314,6 +319,9 @@ export interface StudentInvoiceProps {
   balance: number;
   status: InvoiceStatus;
   dueDate: string;
+  title?: string;
+  description?: string;
+  issueDate?: string;
 }
 
 export class StudentInvoice extends Entity<StudentInvoiceProps> {
@@ -375,6 +383,38 @@ export class StudentInvoice extends Entity<StudentInvoiceProps> {
 
   public get dueDate(): string {
     return this._props.dueDate;
+  }
+
+  public get title(): string | undefined {
+    return this._props.title;
+  }
+
+  public get description(): string | undefined {
+    return this._props.description;
+  }
+
+  public get issueDate(): string | undefined {
+    return this._props.issueDate;
+  }
+
+  public issue(): void {
+    if (this._props.status === InvoiceStatus.DRAFT) {
+      this._props.status = this._props.amountPaid > 0
+        ? (this._props.balance <= 0.001 ? InvoiceStatus.PAID : InvoiceStatus.PARTIALLY_PAID)
+        : InvoiceStatus.UNPAID;
+      this.touch();
+    }
+  }
+
+  public cancel(reason?: string): void {
+    if (this._props.amountPaid > 0) {
+      throw new Error('Cannot cancel an invoice with allocated payments. Reallocate or reverse payments first.');
+    }
+    this._props.status = InvoiceStatus.CANCELLED;
+    if (reason) {
+      this._props.description = this._props.description ? `${this._props.description} | Cancelled: ${reason}` : `Cancelled: ${reason}`;
+    }
+    this.touch();
   }
 
   public recordPayment(amount: number): void {
@@ -471,6 +511,9 @@ export class StudentInvoice extends Entity<StudentInvoiceProps> {
       balance: this.balance,
       status: this.status,
       dueDate: this.dueDate,
+      title: this.title,
+      description: this.description,
+      issueDate: this.issueDate,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt
     };

@@ -90,6 +90,8 @@ import {
   UpdateFeeStructureSchema,
   ReversePaymentSchema,
   GenerateInvoicesSchema,
+  CreateIndividualInvoiceSchema,
+  CancelInvoiceSchema,
   SyncFeesSchema,
   AddManualArrearSchema,
   BatchAddManualArrearsSchema,
@@ -534,8 +536,12 @@ export function createApiRouter(container: AppContainer): Router {
   financeRouter.get('/structures', authMiddleware, financeController.listFeeStructures);
   financeRouter.delete('/structures/:id', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), financeController.deleteFeeStructure);
   financeRouter.post('/invoices/generate', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), validateBody(GenerateInvoicesSchema), financeController.generateInvoices);
+  financeRouter.post('/invoices/individual', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), validateBody(CreateIndividualInvoiceSchema), financeController.createIndividualInvoice);
+  financeRouter.post('/invoices/:id/issue', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), financeController.issueDraftInvoice);
+  financeRouter.post('/invoices/:id/cancel', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), validateBody(CancelInvoiceSchema), financeController.cancelInvoice);
   financeRouter.post('/sync-fees', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), validateBody(SyncFeesSchema), financeController.syncFees);
   financeRouter.get('/invoices', authMiddleware, financeController.listInvoices); // Parent isolated
+  financeRouter.get('/invoices/:id', authMiddleware, financeController.getInvoiceDetails); // Parent isolated
   financeRouter.delete('/invoices/:id', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), financeController.deleteInvoice);
   financeRouter.get('/summary', authMiddleware, financeController.getFinanceSummary); // Parent vs Admin summary
   financeRouter.post('/payments', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), validateBody(RecordPaymentSchema), financeController.recordPayment);
