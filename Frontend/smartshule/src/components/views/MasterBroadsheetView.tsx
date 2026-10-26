@@ -443,6 +443,8 @@ export const MasterBroadsheetView: React.FC = () => {
     const logoBase64 = await getSchoolLogoBase64();
     const schoolName = 'Grace Seeds School';
     const motto = 'The Future Begins Here';
+    const termDisplay = broadsheet.termName || academicTerms.find((t) => t.id === selectedTerm)?.name || selectedTerm || 'Term 3';
+    const yearDisplay = broadsheet.yearName || academicYears.find((y) => y.id === selectedYear)?.name || selectedYear || '2026';
 
     // Top burgundy bar
     doc.setFillColor(122, 18, 40);
@@ -518,9 +520,6 @@ export const MasterBroadsheetView: React.FC = () => {
       return level || 'ME';
     };
     const cohortRubricLevel = getShortRubricLevel(undefined, classMeanScore, classMeanRubricPoints);
-
-    const termDisplay = broadsheet.termName || academicTerms.find((t) => t.id === selectedTerm)?.name || selectedTerm;
-    const yearDisplay = broadsheet.yearName || academicYears.find((y) => y.id === selectedYear)?.name || selectedYear;
 
     // Meta card
     curY += 19;
@@ -663,6 +662,8 @@ export const MasterBroadsheetView: React.FC = () => {
     const logoBase64 = await getSchoolLogoBase64();
     const schoolName = 'Grace Seeds School';
     const motto = 'The Future Begins Here';
+    const termDisplay = broadsheet.termName || academicTerms.find((t) => t.id === selectedTerm)?.name || selectedTerm || 'Term 3';
+    const yearDisplay = broadsheet.yearName || academicYears.find((y) => y.id === selectedYear)?.name || selectedYear || '2026';
 
     doc.setFillColor(122, 18, 40);
     doc.rect(0, 0, 297, 6, 'F');
@@ -810,6 +811,8 @@ export const MasterBroadsheetView: React.FC = () => {
     const logoBase64 = await getSchoolLogoBase64();
     const schoolName = 'Grace Seeds School';
     const motto = 'The Future Begins Here';
+    const termDisplay = broadsheet.termName || academicTerms.find((t) => t.id === selectedTerm)?.name || selectedTerm || 'Term 3';
+    const yearDisplay = broadsheet.yearName || academicYears.find((y) => y.id === selectedYear)?.name || selectedYear || '2026';
 
     doc.setFillColor(122, 18, 40);
     doc.rect(0, 0, 297, 6, 'F');
@@ -952,6 +955,8 @@ export const MasterBroadsheetView: React.FC = () => {
     const logoBase64 = await getSchoolLogoBase64();
     const schoolName = 'Grace Seeds School';
     const motto = 'The Future Begins Here';
+    const termDisplay = broadsheet.termName || academicTerms.find((t) => t.id === selectedTerm)?.name || selectedTerm || 'Term 3';
+    const yearDisplay = broadsheet.yearName || academicYears.find((y) => y.id === selectedYear)?.name || selectedYear || '2026';
 
     doc.setFillColor(122, 18, 40);
     doc.rect(0, 0, 297, 6, 'F');
@@ -1091,6 +1096,8 @@ export const MasterBroadsheetView: React.FC = () => {
     const logoBase64 = await getSchoolLogoBase64();
     const schoolName = 'Grace Seeds School';
     const motto = 'The Future Begins Here';
+    const termDisplay = broadsheet.termName || academicTerms.find((t) => t.id === selectedTerm)?.name || selectedTerm || 'Term 3';
+    const yearDisplay = broadsheet.yearName || academicYears.find((y) => y.id === selectedYear)?.name || selectedYear || '2026';
 
     // Top burgundy bar
     doc.setFillColor(122, 18, 40);
@@ -1119,9 +1126,6 @@ export const MasterBroadsheetView: React.FC = () => {
     doc.setFontSize(9);
     doc.setTextColor(30, 41, 59);
     doc.text('CONSOLIDATED MASTER BROADSHEET & CBC ACADEMIC DOSSIER', 32, curY + 14);
-
-    const termDisplay = broadsheet.termName || academicTerms.find((t) => t.id === selectedTerm)?.name || selectedTerm || 'Term 3';
-    const yearDisplay = broadsheet.yearName || academicYears.find((y) => y.id === selectedYear)?.name || selectedYear || '2026';
 
     // Calculate genuine Class Mean Score directly from rows or streamMeanScore
     const validRows = (broadsheet.rows || []).filter(

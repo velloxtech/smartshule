@@ -280,8 +280,9 @@ export const SlotApplicationsView: React.FC<SlotApplicationsViewProps> = ({
         dateOfBirth: validDob,
         gradeLevel: CBCGrade,
         classroomId: matchedClass?.id,
+        classId: matchedClass?.id,
         streamId: matchedClass?.streams?.[0]?.id,
-        schoolId: matchedClass?.schoolId || 'school-001',
+        schoolId: user?.schoolId || matchedClass?.schoolId || 'school-001',
         academicYearId: `year-${new Date().getFullYear()}`,
         county: app.county || 'Kisumu',
         subCounty: app.subCounty || 'Kisumu West',
@@ -293,6 +294,7 @@ export const SlotApplicationsView: React.FC<SlotApplicationsViewProps> = ({
         guardian: {
           firstName: app.parentName.trim().split(' ')[0] || app.parentName.trim(),
           lastName: app.parentName.trim().split(' ').slice(1).join(' ') || 'Guardian',
+          phoneNumber: cleanParentPhone,
           phone: cleanParentPhone,
           emergencyContact: cleanParentPhone,
           email: app.parentEmail.trim().toLowerCase(),

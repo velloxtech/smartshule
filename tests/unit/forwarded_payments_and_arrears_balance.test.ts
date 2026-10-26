@@ -249,6 +249,7 @@ describe('Parent Forwarded Payment Verification and Arrears Persistence Tests', 
       // Verify SMS receipt confirms verification
       expect(smsSent.length).toBe(1);
       expect(smsSent[0].phone).toBe('+254722334455');
+      expect(smsSent[0].message).toContain('SH88VERIF01');
       expect(smsSent[0].message).toContain('REC-');
       expect(smsSent[0].message).toContain('New balance: KES 10,000.');
     });

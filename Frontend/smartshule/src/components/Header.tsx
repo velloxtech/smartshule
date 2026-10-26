@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Student, Teacher, AcademicContext, UserRole } from '../types';
+import { Student, Teacher, AcademicContext, AcademicTerm, UserRole } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { getRoleDisplayName, getRoleBadgeStyle } from '../utils/rbac';
 
@@ -67,13 +67,13 @@ export const Header: React.FC<HeaderProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const termsList = academicContext?.allTerms && academicContext.allTerms.length > 0
+  const termsList: AcademicTerm[] = academicContext?.allTerms && academicContext.allTerms.length > 0
     ? academicContext.allTerms
     : [
-        { id: 'term-3-2026', name: 'Term 3 - 2026', startDate: '2026-08-24', endDate: '2026-10-23', isCurrent: true, status: 'ACTIVE' as const },
-        { id: 'term-2-2026', name: 'Term 2 - 2026', startDate: '2026-05-04', endDate: '2026-08-07', isCurrent: false, status: 'ENDED' as const },
-        { id: 'term-1-2026', name: 'Term 1 - 2026', startDate: '2026-01-05', endDate: '2026-04-03', isCurrent: false, status: 'ENDED' as const },
-        { id: 'term-1-2027', name: 'Term 1 - 2027', startDate: '2027-01-04', endDate: '2027-04-02', isCurrent: false, status: 'UPCOMING' as const },
+        { id: 'term-3-2026', academicYearId: '2026', termNumber: 3, name: 'Term 3 - 2026', startDate: '2026-08-24', endDate: '2026-10-23', isCurrent: true, status: 'ACTIVE' },
+        { id: 'term-2-2026', academicYearId: '2026', termNumber: 2, name: 'Term 2 - 2026', startDate: '2026-05-04', endDate: '2026-08-07', isCurrent: false, status: 'ENDED' },
+        { id: 'term-1-2026', academicYearId: '2026', termNumber: 1, name: 'Term 1 - 2026', startDate: '2026-01-05', endDate: '2026-04-03', isCurrent: false, status: 'ENDED' },
+        { id: 'term-1-2027', academicYearId: '2027', termNumber: 1, name: 'Term 1 - 2027', startDate: '2027-01-04', endDate: '2027-04-02', isCurrent: false, status: 'UPCOMING' },
       ];
 
   const currentTermObj = academicContext?.currentTerm || termsList.find(t => t.name === currentTerm || t.isCurrent);
@@ -111,7 +111,7 @@ export const Header: React.FC<HeaderProps> = ({
     : [];
 
   return (
-    <header className="sticky top-0 z-30 w-full h-16 bg-[#800000] text-white border-b border-[#660000] shadow-md shrink-0">
+    <header className="sticky top-0 z-30 w-full h-16 bg-gradient-to-r from-[#7a0f26] via-[#85132d] to-[#6d0c20] text-white border-b border-[#a82442]/40 shadow-md shrink-0">
       <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center justify-between gap-3">
         {/* Mobile Toggle & Search Group */}
         <div className="flex items-center gap-2 md:gap-3 flex-1 max-w-xl">
@@ -156,7 +156,7 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
 
             {termDropdownOpen && (
-              <div className="absolute left-0 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-2xl bg-[#F8F5F5] p-3 shadow-2xl z-50 border border-slate-200 text-slate-900 flex flex-col gap-2 animate-in fade-in slide-in-from-top-1">
+              <div className="absolute left-0 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-2xl bg-white p-3 shadow-2xl z-50 border border-slate-200 text-slate-900 flex flex-col gap-2 animate-in fade-in slide-in-from-top-1">
                 <div className="flex items-center justify-between px-2 py-1 border-b border-slate-200">
                   <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
                     Academic Sessions
@@ -270,7 +270,7 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* Search Results Dropdown */}
             {showSearchResults && searchQuery.trim().length > 0 && (
-              <div className="absolute left-0 right-0 top-full mt-2 bg-[#F8F5F5] text-slate-900 rounded-2xl shadow-2xl border border-slate-200 max-h-96 overflow-y-auto z-50 p-2">
+              <div className="absolute left-0 right-0 top-full mt-2 bg-white text-slate-900 rounded-2xl shadow-2xl border border-slate-200 max-h-96 overflow-y-auto z-50 p-2">
                 <div className="text-[11px] font-bold text-slate-500 uppercase px-2 py-1">
                   Matching Results ({filteredStudents.length + filteredTeachers.length})
                 </div>
@@ -416,7 +416,7 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
 
             {showNotifications && (
-              <div className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-2xl bg-[#F8F5F5] p-3 shadow-2xl border border-slate-200 text-slate-900 z-50 animate-in fade-in">
+              <div className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-2xl bg-white p-3 shadow-2xl border border-slate-200 text-slate-900 z-50 animate-in fade-in">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-200">
                   <span className="text-xs font-bold text-slate-900">Notifications & Alerts</span>
                   <span className="text-[10px] font-bold text-[#800000] uppercase">Grace Seeds School</span>
@@ -441,7 +441,7 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
 
             {showHelp && (
-              <div className="absolute right-0 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-2xl bg-[#F8F5F5] p-4 shadow-2xl border border-slate-200 text-slate-900 z-50">
+              <div className="absolute right-0 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-2xl bg-white p-4 shadow-2xl border border-slate-200 text-slate-900 z-50">
                 <div className="flex items-center gap-1.5 font-bold text-xs text-[#800000] mb-2">
                   <span className="material-symbols-outlined text-[18px]">info</span>
                   <span>KICD CBE Rating Guide</span>
@@ -490,7 +490,7 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
 
             {userMenuOpen && (
-              <div className="absolute right-0 mt-2 w-64 max-w-[calc(100vw-2rem)] rounded-2xl bg-[#F8F5F5] p-3 shadow-2xl border border-slate-200 text-slate-900 z-50 animate-in fade-in">
+              <div className="absolute right-0 mt-2 w-64 max-w-[calc(100vw-2rem)] rounded-2xl bg-white p-3 shadow-2xl border border-slate-200 text-slate-900 z-50 animate-in fade-in">
                 <div className="p-2 border-b border-slate-200">
                   <div className="font-bold text-sm text-slate-900">{user?.fullName || 'Current User'}</div>
                   <div className="text-xs text-slate-500 font-mono truncate">{user?.email || 'admin@smartshule.ac.ke'}</div>

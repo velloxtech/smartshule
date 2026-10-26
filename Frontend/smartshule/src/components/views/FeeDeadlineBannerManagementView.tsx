@@ -173,7 +173,7 @@ export const FeeDeadlineBannerManagementView: React.FC = () => {
         if (res.data.updatedAt) setLastUpdatedAt(res.data.updatedAt);
         setTimeout(() => setSaveSuccess(false), 5000);
       } else {
-        setSaveError(res.error || 'Failed to save fee banner configuration.');
+        const errObj = res.error as any; setSaveError(errObj?.message || (typeof res.error === 'string' ? res.error : 'Failed to save fee banner configuration.'));
       }
     } catch (err: any) {
       console.error('Failed to update fee banner config:', err);

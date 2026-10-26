@@ -524,7 +524,7 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
 
         {/* 3. CBC Assessment Entries */}
         <div
-          onClick={onOpenUploadMarks}
+          onClick={() => onOpenUploadMarks()}
           className="rounded-xl bg-surface-container-lowest p-5 flex flex-col justify-between shadow-xs border border-outline-variant/30 relative overflow-hidden group hover:shadow-md transition-all cursor-pointer"
         >
           <div>

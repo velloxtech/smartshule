@@ -8,7 +8,9 @@ interface ForwardPaymentModalProps {
   onClose: () => void;
   students: Student[] | any[];
   initialStudent?: any;
+  initialInvoice?: any;
   onSuccess?: (payment: any) => void;
+  onSubmitted?: () => void;
 }
 
 export const ForwardPaymentModal: React.FC<ForwardPaymentModalProps> = ({

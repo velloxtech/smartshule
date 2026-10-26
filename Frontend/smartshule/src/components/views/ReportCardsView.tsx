@@ -1289,7 +1289,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
       (idx + 1).toString(),
       s.name,
       s.rubricCode || '--',
-      `${s.summativeScore || s.score || 0}%`,
+      `${s.score || 0}%`,
       s.performanceLevel.replace(/_/g, ' '),
       s.teacherRemarks || 'Satisfactory progress demonstrated.',
     ]);
