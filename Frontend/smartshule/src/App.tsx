@@ -66,6 +66,8 @@ import { CurriculumTrackerView } from './components/views/CurriculumTrackerView'
 import { FeeDeadlineBannerManagementView } from './components/views/FeeDeadlineBannerManagementView';
 import { SponsoredStudentsView } from './components/views/SponsoredStudentsView';
 import { MyDigitalSignatureView } from './components/views/MyDigitalSignatureView';
+import { DocumentSigningCenterView } from './components/views/DocumentSigningCenterView';
+import { TeacherProfileView } from './components/views/TeacherProfileView';
 
 // Modals
 import { RecordPaymentModal } from './components/modals/RecordPaymentModal';
@@ -1286,7 +1288,9 @@ export default function App() {
           {currentTab === 'system-logs' && <SystemLogsView />}
           {currentTab === 'fee-deadline-banner' && <FeeDeadlineBannerManagementView />}
           {currentTab === 'sponsored-students' && <SponsoredStudentsView />}
+          {currentTab === 'document-signing' && <DocumentSigningCenterView />}
           {currentTab === 'digital-signature' && <MyDigitalSignatureView />}
+          {currentTab === 'teacher-profile' && <TeacherProfileView />}
           {(currentTab === 'concerns' || currentTab === 'complaints') && <ConcernsView />}
           {currentTab === 'lunch-fee-management' && <LunchFeeManagementView />}
           {currentTab === 'parent-profile' && (

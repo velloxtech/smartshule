@@ -132,6 +132,7 @@ describe('Kenyan Statutory Payroll & Remuneration Calculation', () => {
       applyStatutory: true,
     });
 
+    await useCases.approvePayroll(record.id);
     const paidRecord = await useCases.markPayrollPaid(record.id, 'CASH', 'VOUCHER-2026-001');
     expect(paidRecord.status).toBe('PAID');
     expect(paidRecord.paymentMethod).toBe('CASH');

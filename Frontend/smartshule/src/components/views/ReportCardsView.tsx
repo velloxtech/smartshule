@@ -5,6 +5,7 @@ import { Student, CBCReportCardData, UserRole } from '../../types';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { resolveStreamName, resolveGradeName, resolveAcademicYearName, resolveLearningAreaName, resolveLearningAreaCode } from '../../utils/formatters';
+import { DocumentSigningModal } from '../common/DocumentSigningModal';
 
 interface ReportCardsViewProps {
   students?: Student[];
@@ -180,6 +181,78 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
     }
   }, [student?.id, selectedTermId, currentTerm?.id, currentYear?.id, isParent, isFeeCleared, checkingClearance]);
 
+  // Active term resolution
+  const activeTerm = availableTerms.find(t => t.id === selectedTermId) || currentTerm;
+
+  // Digital Signatures state & resolution for current report card
+  const [documentSignatures, setDocumentSignatures] = useState<any[]>([]);
+  const [isSigningModalOpen, setIsSigningModalOpen] = useState(false);
+
+  const reportCardDocId = useMemo(() => {
+    if (!student) return '';
+    const yr = currentYear?.name || currentYear?.year || currentYear?.id || '2026';
+    const trm = selectedTermId || currentTerm?.id || 'TERM_1';
+    return `RC_${yr}_${trm}_${student.id}`;
+  }, [student, currentYear, selectedTermId, currentTerm]);
+
+  const loadSignatures = async (docId: string) => {
+    if (!docId) return;
+    try {
+      const res = await apiService.getDocumentSignatures(docId);
+      if (res?.data && Array.isArray(res.data)) {
+        setDocumentSignatures(res.data);
+      } else {
+        setDocumentSignatures([]);
+      }
+    } catch {
+      setDocumentSignatures([]);
+    }
+  };
+
+  useEffect(() => {
+    if (reportCardDocId) {
+      loadSignatures(reportCardDocId);
+    } else {
+      setDocumentSignatures([]);
+    }
+  }, [reportCardDocId]);
+
+  const classTeacherSig = useMemo(() => {
+    return documentSignatures.find(s => {
+      const r = (s.signerRole || '').toUpperCase();
+      return r === 'CLASS_TEACHER' || r === 'TEACHER';
+    });
+  }, [documentSignatures]);
+
+  const headTeacherSig = useMemo(() => {
+    return documentSignatures.find(s => {
+      const r = (s.signerRole || '').toUpperCase();
+      return r === 'HEAD_TEACHER' || r === 'PRINCIPAL' || r === 'SUPER_ADMIN';
+    });
+  }, [documentSignatures]);
+
+  const canUserSign = useMemo(() => {
+    if (!user || isParent) return false;
+    const r = (user.role || '').toUpperCase();
+    return ['TEACHER', 'CLASS_TEACHER', 'HEAD_TEACHER', 'DEPUTY_HEAD_TEACHER', 'SUPER_ADMIN', 'ADMIN'].includes(r);
+  }, [user, isParent]);
+
+  const canonicalDocContent = useMemo(() => {
+    if (!student) return '';
+    return JSON.stringify({
+      school: schoolInfo?.name || 'Grace Seeds School',
+      studentId: student.id,
+      admNo: student.admNo,
+      name: student.name,
+      grade: student.grade,
+      stream: student.stream,
+      year: currentYear?.name || currentYear?.year || '2026',
+      term: activeTerm?.name || selectedTermId || 'Term 1',
+      reportCardData: reportCardData || {},
+      issuedAt: reportCardData?.issueDate || new Date().toISOString()
+    });
+  }, [student, schoolInfo, currentYear, activeTerm, selectedTermId, reportCardData]);
+
   // Evaluation Period: End of Term (Summative Dossier) vs Mid-Term Assessment
   const [evaluationPeriod, setEvaluationPeriod] = useState<'END_OF_TERM' | 'MID_TERM'>('END_OF_TERM');
   const isEndTerm = evaluationPeriod === 'END_OF_TERM';
@@ -347,47 +420,36 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
     // If student has recorded assessments, use them directly as the source of truth!
     if (rawEvals && rawEvals.length > 0) {
       return rawEvals.map((ev: any, index: number) => {
-        const rawScore = ev.score !== undefined && ev.score !== null ? Number(ev.score) : 75;
-        const score = rawScore <= 4 ? (rawScore === 4 ? 86 : rawScore === 3 ? 76 : rawScore === 2 ? 58 : 44) : rawScore;
+        const rawScore = ev.score !== undefined && ev.score !== null ? Number(ev.score) : null;
+        const score = rawScore !== null
+          ? (rawScore > 0 && rawScore <= 4 ? (rawScore === 4 ? 86 : rawScore === 3 ? 76 : rawScore === 2 ? 58 : 44) : rawScore)
+          : null;
 
         let rubricCode: 'EE' | 'ME' | 'AE' | 'BE' = 'ME';
         const rawLvl = (ev.levelLabel || ev.performanceLevel || '').toUpperCase();
-        if (rawLvl.includes('EE') || rawLvl.includes('EXCEED') || score >= 80) {
-          rubricCode = 'EE';
-        } else if (rawLvl.includes('ME') || rawLvl.includes('MEET') || score >= 65) {
-          rubricCode = 'ME';
-        } else if (rawLvl.includes('AE') || rawLvl.includes('APPROACH') || score >= 50) {
-          rubricCode = 'AE';
-        } else {
-          rubricCode = 'BE';
+        if (score !== null) {
+          if (rawLvl.includes('EE') || rawLvl.includes('EXCEED') || score >= 80) {
+            rubricCode = 'EE';
+          } else if (rawLvl.includes('ME') || rawLvl.includes('MEET') || score >= 65) {
+            rubricCode = 'ME';
+          } else if (rawLvl.includes('AE') || rawLvl.includes('APPROACH') || score >= 50) {
+            rubricCode = 'AE';
+          } else {
+            rubricCode = 'BE';
+          }
         }
 
-        const rubricScore = ev.rubricScore ?? (rubricCode === 'EE' ? 4 : rubricCode === 'ME' ? 3 : rubricCode === 'AE' ? 2 : 1);
-        
-        // Strictly determine available terms from database records without dummy values
-        const activeTermNum = (() => {
-          const t = availableTerms.find(term => term.id === selectedTermId) || currentTerm;
-          if (t?.termNumber) return Number(t.termNumber);
-          const idStr = (selectedTermId || currentTerm?.id || '').toLowerCase();
-          if (idStr.includes('1') || idStr.includes('t1')) return 1;
-          if (idStr.includes('2') || idStr.includes('t2')) return 2;
-          return 3;
-        })();
+        const rubricScore = ev.rubricScore ?? (score !== null ? (rubricCode === 'EE' ? 4 : rubricCode === 'ME' ? 3 : rubricCode === 'AE' ? 2 : 1) : null);
 
-        const isTerm1 = activeTermNum === 1;
-        const isTerm2 = activeTermNum === 2;
-        const isTerm3 = activeTermNum === 3;
-
-        const baseScore = score;
         const term1Score = ev.term1Score !== undefined && ev.term1Score !== null
           ? Number(ev.term1Score)
-          : baseScore;
+          : undefined;
         const term2Score = ev.term2Score !== undefined && ev.term2Score !== null
           ? Number(ev.term2Score)
-          : baseScore;
+          : undefined;
         const term3Score = ev.term3Score !== undefined && ev.term3Score !== null
           ? Number(ev.term3Score)
-          : baseScore;
+          : undefined;
         const rawName = ev.learningAreaName || ev.name || '';
         const name = resolveLearningAreaName(ev.learningAreaId || rawName, rawName) || `Subject ${index + 1}`;
         const code = ev.code || resolveLearningAreaCode(ev.learningAreaId || name);
@@ -398,91 +460,44 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
           name,
           short,
           code,
-          score,
-          rubricScore,
+          score: score !== null ? score : 0,
+          rawScore: score,
+          rubricScore: rubricScore ?? 1,
           rubricCode,
           performanceLevel: ev.performanceLevel || (rubricCode === 'EE' ? 'EXCEEDING_EXPECTATIONS' : rubricCode === 'ME' ? 'MEETING_EXPECTATIONS' : rubricCode === 'AE' ? 'APPROACHING_EXPECTATIONS' : 'BELOW_EXPECTATIONS'),
-          teacherRemarks: ev.teacherRemarks || 'Demonstrates strong understanding and mastery of core strand competencies.',
+          teacherRemarks: ev.teacherRemarks || (score !== null ? 'Demonstrates continuous understanding and progress.' : 'Pending assessment.'),
           term1Score,
           term2Score,
           term3Score,
-          isAssessed: true,
+          isAssessed: score !== null,
         };
       });
     }
 
-    // Fallback: If no evaluations recorded yet, determine expected curriculum subjects by student grade level
-    const gradeStr = (student?.grade || (student as any)?.gradeLevel || '').toUpperCase();
-    const gMatch = gradeStr.match(/GRADE_?(\d+)/) || gradeStr.match(/\b([1-9])\b/);
-    const specificGradeNum = gMatch ? gMatch[1] : null;
-
-    // Filter DB learning areas matching student's specific grade if available
-    const dbGradeAreas = (learningAreas || []).filter(la => {
-      const laGrade = (la.gradeLevel || '').toUpperCase();
-      if (specificGradeNum) {
-        return laGrade === `GRADE_${specificGradeNum}` || laGrade === `GRADE ${specificGradeNum}` || laGrade === specificGradeNum;
-      }
-      return false;
-    });
-
-    const isLowerPrimary = specificGradeNum ? ['1', '2', '3'].includes(specificGradeNum) : (gradeStr.includes('PP') || gradeStr.includes('GRADE 1') || gradeStr.includes('GRADE 2') || gradeStr.includes('GRADE 3') || gradeStr.includes('GRADE_1') || gradeStr.includes('GRADE_2') || gradeStr.includes('GRADE_3'));
-
-    let templateList: { name: string; short: string; code: string; id?: string }[] = [];
-    if (dbGradeAreas.length > 0) {
-      const seen = new Set<string>();
-      templateList = [];
-      for (const a of dbGradeAreas) {
-        const canonicalName = resolveLearningAreaName(a.id, a.name);
-        if (!seen.has(canonicalName)) {
-          seen.add(canonicalName);
-          const cCode = a.code || resolveLearningAreaCode(canonicalName);
-          templateList.push({
-            name: canonicalName,
-            short: cCode,
-            code: cCode,
-            id: a.id
-          });
-        }
-      }
-    } else if (isLowerPrimary) {
-      templateList = LOWER_PRIMARY_CBC_SUBJECTS;
-    } else {
-      templateList = STANDARD_12_CBC_SUBJECTS;
-    }
-
-    return templateList.map((subj, index) => ({
-      id: subj.id || `subj-${index}`,
-      name: subj.name,
-      short: subj.short,
-      code: subj.code,
-      score: 75,
-      rubricScore: 3,
-      rubricCode: 'ME' as const,
-      performanceLevel: 'MEETING_EXPECTATIONS',
-      teacherRemarks: 'Continuous assessment in progress.',
-      term1Score: 71,
-      term2Score: 73,
-      term3Score: 75,
-      isAssessed: false,
-    }));
-  }, [reportCardData?.learningAreaAssessments, learningAreas, student, selectedTermId, availableTerms, currentTerm]);
+    // Strictly return empty when no valid assessment marks exist in the database for this learner and term
+    return [];
+  }, [reportCardData?.learningAreaAssessments]);
 
   // Totals & Averages
-  const totalMarks = useMemo(() => {
-    return resolvedSubjects.reduce((acc, s) => acc + s.score, 0);
+  const assessedSubjects = useMemo(() => {
+    return resolvedSubjects.filter(s => s.isAssessed);
   }, [resolvedSubjects]);
 
+  const totalMarks = useMemo(() => {
+    return assessedSubjects.reduce((acc, s) => acc + s.score, 0);
+  }, [assessedSubjects]);
+
   const totalPossible = useMemo(() => {
-    return resolvedSubjects.length * 100;
-  }, [resolvedSubjects]);
+    return assessedSubjects.length * 100;
+  }, [assessedSubjects]);
 
   const overallAverage = useMemo(() => {
     if (reportCardData?.overallAverageScore !== undefined && reportCardData?.overallAverageScore !== null) {
       const avg = Number(reportCardData.overallAverageScore);
       return avg <= 4 ? Math.round(avg * 25) : Math.round(avg);
     }
-    return resolvedSubjects.length > 0 ? Math.round(totalMarks / resolvedSubjects.length) : 0;
-  }, [reportCardData?.overallAverageScore, totalMarks, resolvedSubjects.length]);
+    return assessedSubjects.length > 0 ? Math.round(totalMarks / assessedSubjects.length) : 0;
+  }, [reportCardData?.overallAverageScore, totalMarks, assessedSubjects.length]);
 
   const overallPerformanceLevel = useMemo(() => {
     if (reportCardData?.overallPerformanceLevel) {
@@ -492,11 +507,12 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
       if (lvl === 'AE' || lvl.includes('APPROACH')) return 'Approaching Expectations';
       if (lvl === 'BE' || lvl.includes('BELOW')) return 'Below Expectations';
     }
+    if (assessedSubjects.length === 0) return 'Pending Assessment';
     if (overallAverage >= 80) return 'Exceeding Expectations';
     if (overallAverage >= 65) return 'Meeting Expectations';
     if (overallAverage >= 50) return 'Approaching Expectations';
     return 'Below Expectations';
-  }, [reportCardData?.overallPerformanceLevel, overallAverage]);
+  }, [reportCardData?.overallPerformanceLevel, overallAverage, assessedSubjects.length]);
 
   const activeTermNumber = useMemo(() => {
     const t = availableTerms.find(term => term.id === selectedTermId) || currentTerm;
@@ -507,41 +523,34 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
     return 3;
   }, [selectedTermId, availableTerms, currentTerm]);
 
-  // Ensure annual 3-term progression (Term 1 to 3) is always fully resolved
+  // Strictly resolve only terms that have verified assessment records
   const recordedTerms = useMemo(() => {
-    const trends = reportCardData?.termTrends || [];
-    const t1Trend = trends.find((t: any) => t.termNumber === 1 || t.term?.includes('1'));
-    const t2Trend = trends.find((t: any) => t.termNumber === 2 || t.term?.includes('2'));
-    const t3Trend = trends.find((t: any) => t.termNumber === 3 || t.term?.includes('3'));
+    const rawTrends = (reportCardData?.termTrends || []) as any[];
+    const validTrends = rawTrends.filter(t => t && t.averageScore !== undefined && t.averageScore !== null && !isNaN(Number(t.averageScore)));
 
-    const hasT1InSubj = resolvedSubjects.some(s => s.term1Score !== undefined && s.term1Score !== null);
-    const hasT2InSubj = resolvedSubjects.some(s => s.term2Score !== undefined && s.term2Score !== null);
-    const hasT3InSubj = resolvedSubjects.some(s => s.term3Score !== undefined && s.term3Score !== null);
+    if (validTrends.length > 0) {
+      return validTrends.map(t => {
+        const tNum = Number(t.termNumber || (t.term?.includes('1') ? 1 : t.term?.includes('2') ? 2 : 3));
+        return {
+          termNumber: tNum,
+          label: t.term || `Term ${tNum}`,
+          short: `T${tNum}`,
+          averageScore: Math.round(Number(t.averageScore))
+        };
+      }).sort((a, b) => a.termNumber - b.termNumber);
+    }
 
-    const t1Avg = t1Trend?.averageScore !== undefined
-      ? Math.round(t1Trend.averageScore)
-      : hasT1InSubj
-      ? Math.round(resolvedSubjects.reduce((acc, s) => acc + (s.term1Score ?? s.score), 0) / Math.max(1, resolvedSubjects.length))
-      : Math.round(overallAverage);
+    if (assessedSubjects.length > 0) {
+      return [{
+        termNumber: activeTermNumber,
+        label: `Term ${activeTermNumber}`,
+        short: `T${activeTermNumber}`,
+        averageScore: overallAverage
+      }];
+    }
 
-    const t2Avg = t2Trend?.averageScore !== undefined
-      ? Math.round(t2Trend.averageScore)
-      : hasT2InSubj
-      ? Math.round(resolvedSubjects.reduce((acc, s) => acc + (s.term2Score ?? s.score), 0) / Math.max(1, resolvedSubjects.length))
-      : Math.round(overallAverage);
-
-    const t3Avg = t3Trend?.averageScore !== undefined
-      ? Math.round(t3Trend.averageScore)
-      : hasT3InSubj
-      ? Math.round(resolvedSubjects.reduce((acc, s) => acc + (s.term3Score ?? s.score), 0) / Math.max(1, resolvedSubjects.length))
-      : overallAverage;
-
-    return [
-      { termNumber: 1, label: 'Term 1', short: 'T1', averageScore: t1Avg },
-      { termNumber: 2, label: 'Term 2', short: 'T2', averageScore: t2Avg },
-      { termNumber: 3, label: 'Term 3', short: 'T3', averageScore: t3Avg }
-    ];
-  }, [reportCardData?.termTrends, resolvedSubjects, overallAverage]);
+    return [];
+  }, [reportCardData?.termTrends, assessedSubjects.length, activeTermNumber, overallAverage]);
 
   const termGrowth = useMemo(() => {
     if (recordedTerms.length >= 2) {
@@ -549,7 +558,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
       const last = recordedTerms[recordedTerms.length - 1].averageScore;
       return Number((last - first).toFixed(1));
     }
-    return 0;
+    return null;
   }, [recordedTerms]);
 
   const getRubricBadge = (rubric: string) => {
@@ -574,129 +583,139 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
   // Pure SVG string generator for offline HTML export and print
   const buildPerformanceGraphSVG = (
     termsList: typeof recordedTerms,
-    subjects: typeof resolvedSubjects
+    _subjects?: typeof resolvedSubjects
   ): string => {
-    const getY = (val: number) => Math.round(185 - (Math.min(100, Math.max(0, val)) / 100) * 145);
-    const rowSpacing = subjects.length > 0 ? Math.min(20, Math.max(12, Math.floor(155 / subjects.length))) : 15;
-    const barHeight = Math.min(9, Math.max(6, rowSpacing - 6));
-
-    // Ensure full annual 3-term progression (Term 1 to 3) is represented
-    const terms = termsList.length >= 3 ? termsList : [
-      { termNumber: 1, label: 'Term 1', short: 'T1', averageScore: Math.max(45, Math.min(100, Math.round((termsList[0]?.averageScore ?? 75) - 5))) },
-      { termNumber: 2, label: 'Term 2', short: 'T2', averageScore: Math.max(45, Math.min(100, Math.round((termsList[0]?.averageScore ?? 75) - 2))) },
-      { termNumber: 3, label: 'Term 3', short: 'T3', averageScore: termsList[0]?.averageScore ?? 75 }
-    ];
-
-    const [t1, t2, t3] = terms;
-    const x1 = 70;
-    const x2 = 185;
-    const x3 = 300;
-    const y1 = getY(t1.averageScore);
-    const y2 = getY(t2.averageScore);
-    const y3 = getY(t3.averageScore);
-
-    const leftSectionHTML = `
-      <path d="M ${x1} ${y1} C ${(x1 + x2) / 2} ${y1}, ${(x1 + x2) / 2} ${y2}, ${x2} ${y2} C ${(x2 + x3) / 2} ${y2}, ${(x2 + x3) / 2} ${y3}, ${x3} ${y3} L ${x3} 185 L ${x1} 185 Z" fill="url(#termCurveGrad)" />
-      <path d="M ${x1} ${y1} C ${(x1 + x2) / 2} ${y1}, ${(x1 + x2) / 2} ${y2}, ${x2} ${y2} C ${(x2 + x3) / 2} ${y2}, ${(x2 + x3) / 2} ${y3}, ${x3} ${y3}" fill="none" stroke="#800000" stroke-width="2.5" stroke-linecap="round" />
-      <circle cx="${x1}" cy="${y1}" r="4.5" fill="#ffffff" stroke="#800000" stroke-width="2" />
-      <rect x="${x1 - 16}" y="${y1 - 16}" width="32" height="12" rx="3" fill="#800000" />
-      <text x="${x1}" y="${y1 - 7}" text-anchor="middle" font-size="7.5" font-weight="bold" fill="#ffffff" font-family="system-ui, sans-serif">${t1.averageScore}%</text>
-      <text x="${x1}" y="197" text-anchor="middle" font-size="7.5" font-weight="bold" fill="#374151" font-family="system-ui, sans-serif">${t1.label}</text>
-
-      <circle cx="${x2}" cy="${y2}" r="4.5" fill="#ffffff" stroke="#800000" stroke-width="2" />
-      <rect x="${x2 - 16}" y="${y2 - 16}" width="32" height="12" rx="3" fill="#800000" />
-      <text x="${x2}" y="${y2 - 7}" text-anchor="middle" font-size="7.5" font-weight="bold" fill="#ffffff" font-family="system-ui, sans-serif">${t2.averageScore}%</text>
-      <text x="${x2}" y="197" text-anchor="middle" font-size="7.5" font-weight="bold" fill="#374151" font-family="system-ui, sans-serif">${t2.label}</text>
-
-      <circle cx="${x3}" cy="${y3}" r="5" fill="#800000" stroke="#ffffff" stroke-width="1.5" />
-      <rect x="${x3 - 16}" y="${y3 - 16}" width="32" height="12" rx="3" fill="#047857" />
-      <text x="${x3}" y="${y3 - 7}" text-anchor="middle" font-size="7.5" font-weight="bold" fill="#ffffff" font-family="system-ui, sans-serif">${t3.averageScore}%</text>
-      <text x="${x3}" y="197" text-anchor="middle" font-size="7.5" font-weight="bold" fill="#800000" font-family="system-ui, sans-serif">${t3.label}</text>
-    `;
-
-    // Legend on the right
-    let offset = 570;
-    const legendHTML = terms.map(t => {
-      const color = t.termNumber === 1 ? '#fca5a5' : t.termNumber === 2 ? '#b91c1c' : '#800000';
-      const pill = `
-        <rect x="${offset}" y="16" width="7" height="6" rx="1" fill="${color}" />
-        <text x="${offset + 10}" y="22" font-size="6.5" fill="#4b5563" font-family="system-ui, sans-serif">${t.short}</text>
-      `;
-      offset += 28;
-      return pill;
-    }).join('') + `
-      <line x1="${offset}" y1="19" x2="${offset + 10}" y2="19" stroke="#059669" stroke-dasharray="2,2" stroke-width="1.2" />
-      <text x="${offset + 13}" y="22" font-size="6.5" fill="#059669" font-family="system-ui, sans-serif">80%</text>
-    `;
-
-    const subjectBarsHTML = subjects.map((s, idx) => {
-      const rowY = 32 + idx * rowSpacing;
-      const sliceH = Math.max(2, Math.floor(barHeight / terms.length));
-      const bars = terms.map((t, tIdx) => {
-        const val = t.termNumber === 1 ? (s.term1Score ?? s.score) : t.termNumber === 2 ? (s.term2Score ?? s.score) : (s.term3Score ?? s.score);
-        const w = Math.round((Math.min(100, Math.max(0, val)) / 100) * 270);
-        const color = t.termNumber === 1 ? '#fca5a5' : t.termNumber === 2 ? '#b91c1c' : '#800000';
-        return `<rect x="455" y="${rowY + tIdx * sliceH}" width="${w}" height="${sliceH}" rx="1" fill="${color}" />`;
-      }).join('');
-
+    if (termsList.length === 0) {
       return `
-        <g>
-          <text x="445" y="${rowY + Math.round(barHeight * 0.9)}" text-anchor="end" font-size="8" font-weight="600" fill="#374151" font-family="system-ui, sans-serif">${s.short}</text>
-          <rect x="455" y="${rowY}" width="270" height="${barHeight}" rx="2" fill="#f3f4f6" />
-          ${bars}
-          <text x="732" y="${rowY + Math.round(barHeight * 0.9)}" font-size="8" font-weight="bold" fill="#800000" font-family="system-ui, sans-serif">${s.score}%</text>
-          <rect x="760" y="${rowY}" width="16" height="${barHeight}" rx="2" fill="${s.rubricCode === 'EE' ? '#047857' : s.rubricCode === 'ME' ? '#800000' : s.rubricCode === 'AE' ? '#b45309' : '#b91c1c'}" />
-          <text x="768" y="${rowY + Math.round(barHeight * 0.9)}" text-anchor="middle" font-size="7" font-weight="bold" fill="#ffffff" font-family="system-ui, sans-serif">${s.rubricCode}</text>
-        </g>
+        <svg viewBox="0 0 760 90" width="100%" height="auto" class="performance-graph-svg" xmlns="http://www.w3.org/2000/svg">
+          <rect x="5" y="5" width="750" height="80" rx="6" fill="#fafafa" stroke="#e5e7eb" stroke-width="1" />
+          <text x="380" y="48" text-anchor="middle" font-size="9" font-weight="600" fill="#6b7280" font-family="system-ui, sans-serif">
+            No term assessment data recorded for this academic year.
+          </text>
+        </svg>
       `;
-    }).join('');
+    }
 
-    const rightTitle = `${subjects.length} CBE Learning Areas Comparison (Term 1 & Term 2 & Term 3)`;
+    const getY = (val: number) => Math.round(115 - (Math.min(100, Math.max(0, val)) / 100) * 95);
+    const getRubricCode = (val: number) => (val >= 80 ? 'EE' : val >= 65 ? 'ME' : val >= 50 ? 'AE' : 'BE');
+
+    const t1 = termsList.find(t => t.termNumber === 1 || t.label.toLowerCase().includes('term 1') || t.short === 'T1');
+    const t2 = termsList.find(t => t.termNumber === 2 || t.label.toLowerCase().includes('term 2') || t.short === 'T2');
+    const t3 = termsList.find(t => t.termNumber === 3 || t.label.toLowerCase().includes('term 3') || t.short === 'T3');
+
+    const x1 = 150;
+    const x2 = 360;
+    const x3 = 570;
+
+    let connectingElements = '';
+    // Segment between Term 1 and Term 2 (only if both consecutive terms exist)
+    if (t1 && t2) {
+      const y1 = getY(t1.averageScore);
+      const y2 = getY(t2.averageScore);
+      connectingElements += `
+        <polygon points="${x1},${y1} ${x2},${y2} ${x2},115 ${x1},115" fill="url(#termProgressionGrad)" />
+        <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#800000" stroke-width="2.5" stroke-linecap="round" />
+      `;
+    }
+
+    // Segment between Term 2 and Term 3 (only if both consecutive terms exist)
+    if (t2 && t3) {
+      const y2 = getY(t2.averageScore);
+      const y3 = getY(t3.averageScore);
+      connectingElements += `
+        <polygon points="${x2},${y2} ${x3},${y3} ${x3},115 ${x2},115" fill="url(#termProgressionGrad)" />
+        <line x1="${x2}" y1="${y2}" x2="${x3}" y2="${y3}" stroke="#800000" stroke-width="2.5" stroke-linecap="round" />
+      `;
+    }
+
+    const renderPoint = (t: typeof t1, x: number) => {
+      if (!t) return '';
+      const y = getY(t.averageScore);
+      const rubric = getRubricCode(t.averageScore);
+      const badgeY = y < 35 ? y + 8 : y - 18;
+      return `
+        <circle cx="${x}" cy="${y}" r="5" fill="#800000" stroke="#ffffff" stroke-width="1.8" />
+        <circle cx="${x}" cy="${y}" r="2" fill="#ffffff" />
+        <rect x="${x - 22}" y="${badgeY}" width="44" height="13" rx="3" fill="#800000" />
+        <text x="${x}" y="${badgeY + 9.5}" text-anchor="middle" font-size="7.5" font-weight="bold" fill="#ffffff" font-family="system-ui, sans-serif">
+          ${t.averageScore}% &middot; ${rubric}
+        </text>
+      `;
+    };
+
+    let noteHTML = '';
+    if (termsList.length === 1) {
+      noteHTML = `
+        <rect x="180" y="7" width="400" height="14" rx="3" fill="#f8fafc" stroke="#e2e8f0" stroke-width="0.8" />
+        <text x="380" y="16.5" text-anchor="middle" font-size="6.8" fill="#64748b" font-family="system-ui, sans-serif">
+          Term comparison unavailable — Earlier assessment data is not recorded for this academic year.
+        </text>
+      `;
+    }
 
     return `
-      <svg viewBox="0 0 810 215" width="100%" height="auto" class="performance-graph-svg" xmlns="http://www.w3.org/2000/svg">
+      <svg viewBox="0 0 760 150" width="100%" height="auto" class="performance-graph-svg" xmlns="http://www.w3.org/2000/svg">
         <defs>
-          <linearGradient id="termCurveGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#800000" stop-opacity="0.35" />
+          <linearGradient id="termProgressionGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#800000" stop-opacity="0.25" />
             <stop offset="100%" stop-color="#800000" stop-opacity="0.0" />
           </linearGradient>
         </defs>
 
-        <!-- LEFT: Trajectory Curve (Term 1 to 3) -->
+        <!-- Outer Boundary -->
+        <rect x="5" y="5" width="750" height="140" rx="6" fill="#fafafa" stroke="#e5e7eb" stroke-width="1" />
+
+        ${noteHTML}
+
+        <!-- Benchmark Horizontal Guidelines -->
+        <line x1="60" y1="${getY(80)}" x2="640" y2="${getY(80)}" stroke="#059669" stroke-dasharray="3,3" stroke-width="0.9" stroke-opacity="0.7" />
+        <text x="645" y="${getY(80) + 3}" font-size="7" font-weight="bold" fill="#059669" font-family="system-ui, sans-serif">EE Target (80%)</text>
+
+        <line x1="60" y1="${getY(65)}" x2="640" y2="${getY(65)}" stroke="#800000" stroke-dasharray="3,3" stroke-width="0.9" stroke-opacity="0.5" />
+        <text x="645" y="${getY(65) + 3}" font-size="7" font-weight="bold" fill="#800000" font-family="system-ui, sans-serif">ME Benchmark (65%)</text>
+
+        <line x1="60" y1="${getY(50)}" x2="640" y2="${getY(50)}" stroke="#d97706" stroke-dasharray="3,3" stroke-width="0.8" stroke-opacity="0.5" />
+        <text x="645" y="${getY(50) + 3}" font-size="7" font-weight="bold" fill="#d97706" font-family="system-ui, sans-serif">AE Benchmark (50%)</text>
+
+        <!-- Baseline Axis (0%) -->
+        <line x1="60" y1="115" x2="640" y2="115" stroke="#9ca3af" stroke-width="1.2" />
+
+        <!-- Vertical Term Gridlines -->
+        <line x1="${x1}" y1="20" x2="${x1}" y2="115" stroke="#f1f5f9" stroke-dasharray="2,2" stroke-width="1" />
+        <line x1="${x2}" y1="20" x2="${x2}" y2="115" stroke="#f1f5f9" stroke-dasharray="2,2" stroke-width="1" />
+        <line x1="${x3}" y1="20" x2="${x3}" y2="115" stroke="#f1f5f9" stroke-dasharray="2,2" stroke-width="1" />
+
+        <!-- Y-Axis Ticks & Labels -->
+        <text x="54" y="${getY(100) + 3}" text-anchor="end" font-size="7" fill="#6b7280" font-family="system-ui, sans-serif">100%</text>
+        <text x="54" y="${getY(75) + 3}" text-anchor="end" font-size="7" fill="#6b7280" font-family="system-ui, sans-serif">75%</text>
+        <text x="54" y="${getY(50) + 3}" text-anchor="end" font-size="7" fill="#6b7280" font-family="system-ui, sans-serif">50%</text>
+        <text x="54" y="${getY(25) + 3}" text-anchor="end" font-size="7" fill="#6b7280" font-family="system-ui, sans-serif">25%</text>
+        <text x="54" y="118" text-anchor="end" font-size="7" fill="#6b7280" font-family="system-ui, sans-serif">0%</text>
+
+        <!-- Connecting Lines & Area Fills -->
+        ${connectingElements}
+
+        <!-- Data Point Markers & Value Badges -->
+        ${renderPoint(t1, x1)}
+        ${renderPoint(t2, x2)}
+        ${renderPoint(t3, x3)}
+
+        <!-- X-Axis Labels (Term 1, Term 2, Term 3) -->
         <g>
-          <rect x="10" y="10" width="340" height="195" rx="6" fill="#fafafa" stroke="#e5e7eb" stroke-width="1" />
-          <text x="25" y="24" font-size="8" font-weight="bold" fill="#800000" font-family="system-ui, sans-serif" text-transform="uppercase">
-            Term Aggregate Trajectory (Term 1 to 3)
+          <text x="${x1}" y="129" text-anchor="middle" font-size="8.5" font-weight="bold" fill="${t1 ? '#800000' : '#4b5563'}" font-family="system-ui, sans-serif">Term 1</text>
+          <text x="${x1}" y="140" text-anchor="middle" font-size="7" font-weight="${t1 ? '600' : 'normal'}" fill="${t1 ? '#047857' : '#9ca3af'}" font-style="${t1 ? 'normal' : 'italic'}" font-family="system-ui, sans-serif">
+            ${t1 ? `${t1.averageScore}% (${getRubricCode(t1.averageScore)})` : '-- (Unrecorded)'}
           </text>
 
-          <!-- Benchmark lines -->
-          <line x1="45" y1="${getY(80)}" x2="330" y2="${getY(80)}" stroke="#059669" stroke-dasharray="2,2" stroke-width="1" />
-          <text x="330" y="${getY(80) - 2}" text-anchor="end" font-size="6.5" font-weight="bold" fill="#059669" font-family="system-ui, sans-serif">EE Target (80%)</text>
-          
-          <line x1="45" y1="${getY(65)}" x2="330" y2="${getY(65)}" stroke="#800000" stroke-dasharray="2,2" stroke-width="0.8" stroke-opacity="0.5" />
-          <text x="330" y="${getY(65) - 2}" text-anchor="end" font-size="6.5" font-weight="bold" fill="#800000" font-family="system-ui, sans-serif">ME Floor (65%)</text>
-          
-          <line x1="45" y1="${getY(50)}" x2="330" y2="${getY(50)}" stroke="#d97706" stroke-dasharray="2,2" stroke-width="0.8" stroke-opacity="0.5" />
+          <text x="${x2}" y="129" text-anchor="middle" font-size="8.5" font-weight="bold" fill="${t2 ? '#800000' : '#4b5563'}" font-family="system-ui, sans-serif">Term 2</text>
+          <text x="${x2}" y="140" text-anchor="middle" font-size="7" font-weight="${t2 ? '600' : 'normal'}" fill="${t2 ? '#047857' : '#9ca3af'}" font-style="${t2 ? 'normal' : 'italic'}" font-family="system-ui, sans-serif">
+            ${t2 ? `${t2.averageScore}% (${getRubricCode(t2.averageScore)})` : '-- (Unrecorded)'}
+          </text>
 
-          <!-- Baseline Axis -->
-          <line x1="45" y1="185" x2="330" y2="185" stroke="#9ca3af" stroke-width="1" />
-
-          <!-- Y Axis Labels -->
-          <text x="40" y="${getY(100) + 3}" text-anchor="end" font-size="6.5" fill="#6b7280" font-family="system-ui, sans-serif">100%</text>
-          <text x="40" y="${getY(75) + 3}" text-anchor="end" font-size="6.5" fill="#6b7280" font-family="system-ui, sans-serif">75%</text>
-          <text x="40" y="${getY(50) + 3}" text-anchor="end" font-size="6.5" fill="#6b7280" font-family="system-ui, sans-serif">50%</text>
-          <text x="40" y="188" text-anchor="end" font-size="6.5" fill="#6b7280" font-family="system-ui, sans-serif">0%</text>
-
-          ${leftSectionHTML}
-        </g>
-
-        <!-- RIGHT: CBE Learning Areas Matrix -->
-        <g>
-          <rect x="360" y="10" width="440" height="195" rx="6" fill="#fafafa" stroke="#e5e7eb" stroke-width="1" />
-          <text x="375" y="24" font-size="8.5" font-weight="bold" fill="#800000" font-family="system-ui, sans-serif" text-transform="uppercase">${rightTitle}</text>
-          ${legendHTML}
-          <line x1="${455 + Math.round(0.8 * 270)}" y1="28" x2="${455 + Math.round(0.8 * 270)}" y2="200" stroke="#059669" stroke-dasharray="1.5,1.5" stroke-width="0.8" />
-          ${subjectBarsHTML}
+          <text x="${x3}" y="129" text-anchor="middle" font-size="8.5" font-weight="bold" fill="${t3 ? '#800000' : '#4b5563'}" font-family="system-ui, sans-serif">Term 3</text>
+          <text x="${x3}" y="140" text-anchor="middle" font-size="7" font-weight="${t3 ? '600' : 'normal'}" fill="${t3 ? '#047857' : '#9ca3af'}" font-style="${t3 ? 'normal' : 'italic'}" font-family="system-ui, sans-serif">
+            ${t3 ? `${t3.averageScore}% (${getRubricCode(t3.averageScore)})` : '-- (Unrecorded)'}
+          </text>
         </g>
       </svg>
     `;
@@ -987,7 +1006,13 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
         </tr>
       </thead>
       <tbody>
-        ${resolvedSubjects.map((s) => `
+        ${resolvedSubjects.length === 0 ? `
+          <tr>
+            <td colspan="4" class="center" style="padding: 16px; font-style: italic; color: #666;">
+              No assessment results recorded for this learner in the selected term.
+            </td>
+          </tr>
+        ` : resolvedSubjects.map((s) => `
           <tr>
             <td><strong>${s.name}</strong></td>
             <td class="center font-mono"><strong>${s.score}</strong></td>
@@ -1020,29 +1045,28 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
       <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding-bottom: 2px; margin-bottom: 3px;">
         <div>
           <span style="font-size: 8.5px; font-weight: 800; color: #800000; text-transform: uppercase;">
-            ${recordedTerms.length > 1 ? 'MULTI-TERM PERFORMANCE GRAPH' : 'CBC LEARNER PERFORMANCE OVERVIEW (TERM 3)'}
+            TERM PERFORMANCE PROGRESSION — TERMS 1, 2 AND 3
           </span>
           <span style="font-size: 7px; color: #666; margin-left: 6px;">
-            ${recordedTerms.length > 1 ? `Comparative trajectory across ${recordedTerms.map(t => t.label).join(' & ')}` : `Official summative evaluation across ${resolvedSubjects.length} CBC learning areas for Term 3`}
+            ${recordedTerms.length > 1
+              ? `Academic progression across recorded terms (${recordedTerms.map(t => t.label).join(' & ')})`
+              : (recordedTerms.length === 1 ? `Official summative evaluation for ${recordedTerms[0].label}` : 'No recorded assessment data')}
           </span>
         </div>
-        <div style="display: flex; gap: 4px; font-size: 7.5px;">
-          ${recordedTerms.length > 1 ? (
-            recordedTerms.map(t => `
-              <span style="background: ${t.termNumber === activeTermNumber ? '#fce8ec' : '#fdf2f2'}; border: 1px solid ${t.termNumber === activeTermNumber ? '#800000' : '#fecaca'}; padding: 1px 4px; border-radius: 3px; ${t.termNumber === activeTermNumber ? 'color: #800000; font-weight: bold;' : ''}">
-                ${t.label}: <strong>${t.averageScore}%</strong>
-              </span>
-            `).join('') + `
-              <span style="background: #ecfdf5; border: 1px solid #a7f3d0; padding: 1px 4px; border-radius: 3px; color: #047857;">Growth: <strong>${termGrowth >= 0 ? `+${termGrowth}%` : `${termGrowth}%`}</strong></span>
-            `
-          ) : `
-            <span style="background: #fce8ec; border: 1px solid #800000; padding: 1px 5px; border-radius: 3px; color: #800000; font-weight: bold;">
-              Term 3 Mean: <strong>${overallAverage}%</strong>
+        <div>
+          ${recordedTerms.length > 1 ? `
+            <span style="background: #ecfdf5; border: 1px solid #a7f3d0; padding: 1.5px 6px; border-radius: 3px; color: #047857; font-size: 7.5px; font-weight: bold;">
+              Progression: ${termGrowth !== null && termGrowth >= 0 ? `+${termGrowth} pp` : `${termGrowth} pp`} (${recordedTerms[0].short} &rarr; ${recordedTerms[recordedTerms.length - 1].short})
             </span>
-            <span style="background: #ecfdf5; border: 1px solid #a7f3d0; padding: 1px 5px; border-radius: 3px; color: #047857; font-weight: bold;">
-              Quality Pass: <strong>${Math.round((resolvedSubjects.filter(s => s.rubricCode === 'EE' || s.rubricCode === 'ME').length / Math.max(1, resolvedSubjects.length)) * 100)}%</strong>
+          ` : (recordedTerms.length === 1 ? `
+            <span style="background: #fce8ec; border: 1px solid #800000; padding: 1.5px 6px; border-radius: 3px; color: #800000; font-size: 7.5px; font-weight: bold;">
+              ${recordedTerms[0].label} Dossier
             </span>
-          `}
+          ` : `
+            <span style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 1.5px 6px; border-radius: 3px; color: #64748b; font-size: 7.5px; font-style: italic;">
+              No assessment marks
+            </span>
+          `)}
         </div>
       </div>
       ${graphSVGString}
@@ -1113,9 +1137,9 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
         </div>
       </div>
       <div style="text-align: right;">
-        <span style="color: #666; text-transform: uppercase; font-size: 7px;">Next Term Commences:</span><br/>
-        <strong style="color: #800000; font-size: 9px;">
-          ${nextTermOpening.formatted}
+        <span style="color: #666; text-transform: uppercase; font-size: 7px;">Official Date of Issue:</span><br/>
+        <strong style="color: #800000; font-size: 8.5px;">
+          ${new Date().toLocaleDateString('en-GB')}
         </strong>
       </div>
     </div>
@@ -1363,16 +1387,50 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
       finalY = 18;
     }
 
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(100, 116, 139);
-    doc.text('Class Teacher Signature: _______________________', 18, finalY);
-    doc.text('Head Teacher Official Stamp: [                             ]', 115, finalY);
+    // Class Teacher Signature Placement
+    if (classTeacherSig?.signatureDataSnapshot) {
+      try {
+        doc.addImage(classTeacherSig.signatureDataSnapshot, 'PNG', 18, finalY - 4, 38, 10);
+      } catch {}
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(6.5);
+      doc.setTextColor(22, 101, 52);
+      doc.text(`✓ Digitally Signed: ${classTeacherSig.signerName}`, 18, finalY + 8);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(5.5);
+      doc.setTextColor(100, 116, 139);
+      doc.text(`Cert Hash: ${classTeacherSig.documentHash ? classTeacherSig.documentHash.substring(0, 16) : 'VERIFIED'}... · ${new Date(classTeacherSig.signedAt).toLocaleDateString('en-GB')}`, 18, finalY + 11);
+    } else {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(100, 116, 139);
+      doc.text('Class Teacher Signature: _______________________', 18, finalY);
+    }
+
+    // Head Teacher Endorsement & Stamp Placement
+    if (headTeacherSig?.signatureDataSnapshot) {
+      try {
+        doc.addImage(headTeacherSig.signatureDataSnapshot, 'PNG', 115, finalY - 4, 38, 10);
+      } catch {}
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(6.5);
+      doc.setTextColor(22, 101, 52);
+      doc.text(`✓ Official Endorsement: ${headTeacherSig.signerName}`, 115, finalY + 8);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(5.5);
+      doc.setTextColor(100, 116, 139);
+      doc.text(`Cert Hash: ${headTeacherSig.documentHash ? headTeacherSig.documentHash.substring(0, 16) : 'VERIFIED'}... · ${new Date(headTeacherSig.signedAt).toLocaleDateString('en-GB')}`, 115, finalY + 11);
+    } else {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(100, 116, 139);
+      doc.text('Head Teacher Official Stamp: [                             ]', 115, finalY);
+    }
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(7.5);
     doc.setTextColor(122, 18, 40);
-    doc.text(`Next Term Commences: ${nextTermOpening.formatted}`, 18, finalY + 6);
+    doc.text(`Official Certification · Grace Seeds School Examination Board`, 18, finalY + 6);
 
     doc.setFontSize(7);
     doc.text(`Grace Seeds School · Official Progress Dossier · Generated on ${new Date().toLocaleString()}`, 105, 290, { align: 'center' });
@@ -1418,7 +1476,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
   }
 
   // Visual SVG coordinates calculation for JSX render
-  const getY = (val: number) => Math.round(185 - (Math.min(100, Math.max(0, val)) / 100) * 145);
+  const getY = (val: number) => Math.round(115 - (Math.min(100, Math.max(0, val)) / 100) * 95);
 
   if (isParent && !isFeeCleared) {
     const balance = currentFeeBalance;
@@ -1760,6 +1818,18 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
             <span className="material-symbols-outlined text-[16px]">download</span>
             <span>Download Report Card (PDF)</span>
           </button>
+
+          {/* Electronic Document Signing Button */}
+          {canUserSign && (
+            <button
+              onClick={() => setIsSigningModalOpen(true)}
+              className="px-3 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer"
+              title="Electronically sign this report card using your verified digital signature"
+            >
+              <span className="material-symbols-outlined text-[16px]">draw</span>
+              <span>Sign Report Card</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -1852,25 +1922,35 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {resolvedSubjects.map((s, idx) => (
-                <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/70'}>
-                  <td className="py-1.5 print:py-0.5 px-3 print:px-2 font-bold text-gray-900">
-                    {s.name}
-                  </td>
-                  <td className="py-1.5 print:py-0.5 px-2 print:px-1 text-center font-mono font-bold text-gray-900">
-                    {s.score}
-                  </td>
-                  <td className="py-1.5 print:py-0.5 px-2.5 print:px-1.5 text-center font-mono font-bold text-gray-900 text-xs print:text-[8px]">
-                    {s.rubricScore}
-                  </td>
-                  <td className="py-1.5 print:py-0.5 px-3 print:px-2 text-gray-700 text-[11px] print:text-[7.5px] leading-snug print:leading-tight">
-                    <span className="font-semibold text-gray-900 mr-1.5">
-                      {s.performanceLevel.replace(/_/g, ' ')}:
-                    </span>
-                    <span>{s.teacherRemarks}</span>
+              {resolvedSubjects.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="py-8 text-center text-gray-500">
+                    <span className="material-symbols-outlined text-gray-400 text-3xl mb-1 block">assignment_late</span>
+                    <p className="font-semibold text-gray-700">No assessment results recorded for this learner in the selected term.</p>
+                    <p className="text-xs text-gray-500 mt-1">Assessments for this term have not yet been recorded or published.</p>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                resolvedSubjects.map((s, idx) => (
+                  <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/70'}>
+                    <td className="py-1.5 print:py-0.5 px-3 print:px-2 font-bold text-gray-900">
+                      {s.name}
+                    </td>
+                    <td className="py-1.5 print:py-0.5 px-2 print:px-1 text-center font-mono font-bold text-gray-900">
+                      {s.score}
+                    </td>
+                    <td className="py-1.5 print:py-0.5 px-2.5 print:px-1.5 text-center font-mono font-bold text-gray-900 text-xs print:text-[8px]">
+                      {s.rubricScore}
+                    </td>
+                    <td className="py-1.5 print:py-0.5 px-3 print:px-2 text-gray-700 text-[11px] print:text-[7.5px] leading-snug print:leading-tight">
+                      <span className="font-semibold text-gray-900 mr-1.5">
+                        {s.performanceLevel.replace(/_/g, ' ')}:
+                      </span>
+                      <span>{s.teacherRemarks}</span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
             <tfoot className="bg-rose-50/60 font-bold border-t border-gray-300 text-gray-900 text-xs print:text-[8px]">
               <tr>
@@ -1891,263 +1971,172 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
           </table>
         </div>
 
-        {/* Performance Graph Section (Dedicated Term 3 or Multi-term if recorded) */}
-        <div className="performance-graph-section p-3.5 print:p-1.5 rounded-xl bg-gray-50/80 border border-gray-200 print:border-gray-400 space-y-2 print:space-y-1 print:bg-transparent">
+        {/* Performance Graph Section (Multi-Term Line Graph) */}
+        <div className="performance-graph-section p-3 print:p-1.5 rounded-xl bg-gray-50/80 border border-gray-200 print:border-gray-400 space-y-2 print:space-y-1 print:bg-transparent">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-200 pb-2 print:pb-1">
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-[#800000] text-[18px] print:hidden">query_stats</span>
+                <span className="material-symbols-outlined text-[#800000] text-[18px] print:hidden">show_chart</span>
                 <h4 className="font-bold text-xs print:text-[8.5px] text-[#800000] uppercase tracking-wider">
-                  {recordedTerms.length === 1
-                    ? `CBC Learning Area & Strand Performance Overview (${recordedTerms[0].label})`
-                    : `Multi-Term Performance Graph (${recordedTerms.map(t => t.label).join(' & ')})`}
+                  Term Performance Progression — Terms 1, 2 and 3
                 </h4>
               </div>
               <p className="text-[11px] print:text-[7px] text-gray-500 mt-0.5">
-                {recordedTerms.length === 1
-                  ? `Evaluated learning area performance and rubric mastery distribution across ${resolvedSubjects.length} CBC learning areas`
-                  : `Comparative progression trajectory across ${resolvedSubjects.length} CBC learning areas for the academic year`}
+                {recordedTerms.length > 1
+                  ? `Continuous academic performance trajectory across recorded terms for ${resolveAcademicYearName(currentYear?.name || currentYear?.year || currentYear?.id)}`
+                  : `Evaluated academic performance for ${recordedTerms[0]?.label || `Term ${activeTermNumber}`} (${resolveAcademicYearName(currentYear?.name || currentYear?.year || currentYear?.id)})`}
               </p>
             </div>
 
-            {/* Metric pill cards */}
-            <div className="grid grid-cols-4 gap-1.5 text-center text-xs print:text-[7.5px]">
-              {recordedTerms.length === 1 ? (
-                <>
-                  <div className="bg-[#800000]/10 border border-[#800000]/30 rounded-lg p-1.5 print:p-0.5">
-                    <span className="text-[10px] print:text-[6.5px] uppercase font-semibold text-[#800000] block">{recordedTerms[0].label} Mean</span>
-                    <span className="font-mono font-bold text-[#800000] text-xs print:text-[8px]">{overallAverage}%</span>
-                    <span className="block text-[9px] print:text-[6px] font-bold text-[#800000]">
-                      {overallAverage >= 80 ? 'EE' : overallAverage >= 65 ? 'ME' : 'AE'}
-                    </span>
-                  </div>
-                  <div className="bg-rose-50/80 border border-rose-200 rounded-lg p-1.5 print:p-0.5">
-                    <span className="text-[10px] print:text-[6.5px] uppercase font-semibold text-gray-700 block">Total Marks</span>
-                    <span className="font-mono font-bold text-gray-900 text-xs print:text-[8px]">{totalMarks} / {totalPossible}</span>
-                    <span className="block text-[9px] print:text-[6px] font-bold text-gray-600">{resolvedSubjects.length} Areas</span>
-                  </div>
-                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-1.5 print:p-0.5">
-                    <span className="text-[10px] print:text-[6.5px] uppercase font-semibold text-emerald-700 block">Quality Pass Rate</span>
-                    <span className="font-mono font-bold text-emerald-800 text-xs print:text-[8px]">
-                      {Math.round((resolvedSubjects.filter(s => s.rubricCode === 'EE' || s.rubricCode === 'ME').length / Math.max(1, resolvedSubjects.length)) * 100)}%
-                    </span>
-                    <span className="block text-[9px] print:text-[6px] font-bold text-emerald-700">EE &amp; ME Achieved</span>
-                  </div>
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-1.5 print:p-0.5">
-                    <span className="text-[10px] print:text-[6.5px] uppercase font-semibold text-amber-800 block">Assessment Status</span>
-                    <span className="font-mono font-bold text-amber-900 text-xs print:text-[8px]">Official Dossier</span>
-                    <span className="block text-[9px] print:text-[6px] font-bold text-amber-700">Term 3 Assessment</span>
-                  </div>
-                </>
+            {/* Progression Status Badge */}
+            <div className="text-right">
+              {recordedTerms.length > 1 ? (
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs print:text-[7.5px] font-bold">
+                  <span>Progression:</span>
+                  <span className="font-mono">
+                    {termGrowth !== null && termGrowth >= 0 ? `+${termGrowth} pp` : `${termGrowth} pp`}
+                  </span>
+                  <span className="text-emerald-700 text-[10px] print:text-[6.5px]">
+                    ({recordedTerms[0].short} &rarr; {recordedTerms[recordedTerms.length - 1].short})
+                  </span>
+                </div>
+              ) : recordedTerms.length === 1 ? (
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-rose-50 border border-rose-200 text-[#800000] text-xs print:text-[7.5px] font-bold">
+                  <span>{recordedTerms[0].label} Evaluation</span>
+                </div>
               ) : (
-                <>
-                  {recordedTerms.map(t => {
-                    const isEE = t.averageScore >= 80;
-                    const isME = t.averageScore >= 65;
-                    const isAE = t.averageScore >= 50;
-                    const lvl = isEE ? 'EE' : isME ? 'ME' : isAE ? 'AE' : 'BE';
-                    return (
-                      <div key={t.termNumber} className="bg-[#800000]/10 border border-[#800000]/30 rounded-lg p-1.5 print:p-0.5">
-                        <span className="text-[10px] print:text-[6.5px] uppercase font-semibold text-[#800000] block">{t.label}</span>
-                        <span className="font-mono font-bold text-[#800000] text-xs print:text-[8px]">{t.averageScore}%</span>
-                        <span className="block text-[9px] print:text-[6px] font-bold text-[#800000]">{lvl}</span>
-                      </div>
-                    );
-                  })}
-                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-1.5 print:p-0.5">
-                    <span className="text-[10px] print:text-[6.5px] uppercase font-semibold text-emerald-700 block">Growth</span>
-                    <span className="font-mono font-bold text-emerald-800 text-xs print:text-[8px]">
-                      {termGrowth >= 0 ? `+${termGrowth}%` : `${termGrowth}%`}
-                    </span>
-                    <span className="block text-[9px] print:text-[6px] font-bold text-emerald-700">Annual Track</span>
-                  </div>
-                </>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-gray-100 border border-gray-200 text-gray-500 text-xs print:text-[7.5px] font-medium italic">
+                  <span>No Assessment Records</span>
+                </div>
               )}
             </div>
           </div>
 
-          {/* Pure Vector SVG Chart */}
+          {/* Pure Vector SVG Chart matching buildPerformanceGraphSVG */}
           <div className="w-full overflow-x-auto">
-            <svg viewBox="0 0 810 215" width="100%" height="auto" className="performance-graph-svg min-w-[650px] sm:min-w-0" xmlns="http://www.w3.org/2000/svg">
-              <defs>
-                <linearGradient id="jsxTermCurveGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#800000" stopOpacity="0.35" />
-                  <stop offset="100%" stopColor="#800000" stopOpacity="0.0" />
-                </linearGradient>
-              </defs>
-
-              {/* LEFT: Trajectory Curve or Line Graph */}
-              <g>
-                <rect x="10" y="10" width="340" height="195" rx="6" fill="#ffffff" stroke="#e5e7eb" strokeWidth="1" />
-                <text x="25" y="24" fontSize="8" fontWeight="bold" fill="#800000" fontFamily="system-ui, sans-serif" textTransform="uppercase">
-                  Term Aggregate Trajectory (Term 1 to 3)
+            {recordedTerms.length === 0 ? (
+              <svg viewBox="0 0 760 90" width="100%" height="auto" className="performance-graph-svg min-w-[650px] sm:min-w-0" xmlns="http://www.w3.org/2000/svg">
+                <rect x="5" y="5" width="750" height="80" rx="6" fill="#fafafa" stroke="#e5e7eb" strokeWidth="1" />
+                <text x="380" y="48" textAnchor="middle" fontSize="9" fontWeight="600" fill="#6b7280" fontFamily="system-ui, sans-serif">
+                  No term assessment data recorded for this academic year.
                 </text>
+              </svg>
+            ) : (
+              (() => {
+                const getRubricCode = (val: number) => (val >= 80 ? 'EE' : val >= 65 ? 'ME' : val >= 50 ? 'AE' : 'BE');
+                const t1 = recordedTerms.find(t => t.termNumber === 1 || t.label.toLowerCase().includes('term 1') || t.short === 'T1');
+                const t2 = recordedTerms.find(t => t.termNumber === 2 || t.label.toLowerCase().includes('term 2') || t.short === 'T2');
+                const t3 = recordedTerms.find(t => t.termNumber === 3 || t.label.toLowerCase().includes('term 3') || t.short === 'T3');
 
-                {/* Benchmark lines */}
-                <line x1="45" y1={getY(80)} x2="330" y2={getY(80)} stroke="#059669" strokeDasharray="2,2" strokeWidth="1" />
-                <text x="330" y={getY(80) - 2} textAnchor="end" fontSize="6.5" fontWeight="bold" fill="#059669" fontFamily="system-ui, sans-serif">
-                  EE Target (80%)
-                </text>
-                
-                <line x1="45" y1={getY(65)} x2="330" y2={getY(65)} stroke="#800000" strokeDasharray="2,2" strokeWidth="0.8" strokeOpacity="0.5" />
-                <text x="330" y={getY(65) - 2} textAnchor="end" fontSize="6.5" fontWeight="bold" fill="#800000" fontFamily="system-ui, sans-serif">
-                  ME Floor (65%)
-                </text>
-                
-                <line x1="45" y1={getY(50)} x2="330" y2={getY(50)} stroke="#d97706" strokeDasharray="2,2" strokeWidth="0.8" strokeOpacity="0.5" />
+                const x1 = 150;
+                const x2 = 360;
+                const x3 = 570;
 
-                {/* Grid Baseline */}
-                <line x1="45" y1="185" x2="330" y2="185" stroke="#9ca3af" strokeWidth="1" />
-
-                {/* Y Axis Labels */}
-                <text x="40" y={getY(100) + 3} textAnchor="end" fontSize="6.5" fill="#6b7280" fontFamily="system-ui, sans-serif">100%</text>
-                <text x="40" y={getY(75) + 3} textAnchor="end" fontSize="6.5" fill="#6b7280" fontFamily="system-ui, sans-serif">75%</text>
-                <text x="40" y={getY(50) + 3} textAnchor="end" fontSize="6.5" fill="#6b7280" fontFamily="system-ui, sans-serif">50%</text>
-                <text x="40" y="188" textAnchor="end" fontSize="6.5" fill="#6b7280" fontFamily="system-ui, sans-serif">0%</text>
-
-                {/* 3-term Trajectory curve (Term 1 to 3) */}
-                {(() => {
-                  const [t1, t2, t3] = recordedTerms.length >= 3 ? recordedTerms : [
-                    { termNumber: 1, label: 'Term 1', short: 'T1', averageScore: Math.max(45, Math.min(100, Math.round((recordedTerms[0]?.averageScore ?? 75) - 5))) },
-                    { termNumber: 2, label: 'Term 2', short: 'T2', averageScore: Math.max(45, Math.min(100, Math.round((recordedTerms[0]?.averageScore ?? 75) - 2))) },
-                    { termNumber: 3, label: 'Term 3', short: 'T3', averageScore: recordedTerms[0]?.averageScore ?? 75 }
-                  ];
-                  const x1 = 70;
-                  const x2 = 185;
-                  const x3 = 300;
-                  const y1 = getY(t1.averageScore);
-                  const y2 = getY(t2.averageScore);
-                  const y3 = getY(t3.averageScore);
+                const renderPoint = (t: typeof t1, x: number) => {
+                  if (!t) return null;
+                  const y = getY(t.averageScore);
+                  const rubric = getRubricCode(t.averageScore);
+                  const badgeY = y < 35 ? y + 8 : y - 18;
                   return (
-                    <g>
-                      <path
-                        d={`M ${x1} ${y1} C ${(x1 + x2) / 2} ${y1}, ${(x1 + x2) / 2} ${y2}, ${x2} ${y2} C ${(x2 + x3) / 2} ${y2}, ${(x2 + x3) / 2} ${y3}, ${x3} ${y3} L ${x3} 185 L ${x1} 185 Z`}
-                        fill="url(#jsxTermCurveGrad)"
-                      />
-                      <path
-                        d={`M ${x1} ${y1} C ${(x1 + x2) / 2} ${y1}, ${(x1 + x2) / 2} ${y2}, ${x2} ${y2} C ${(x2 + x3) / 2} ${y2}, ${(x2 + x3) / 2} ${y3}, ${x3} ${y3}`}
-                        fill="none"
-                        stroke="#800000"
-                        strokeWidth="2.5"
-                        strokeLinecap="round"
-                      />
-                      <circle cx={x1} cy={y1} r="4.5" fill="#ffffff" stroke="#800000" strokeWidth="2" />
-                      <rect x={x1 - 16} y={y1 - 16} width="32" height="12" rx="3" fill="#800000" />
-                      <text x={x1} y={y1 - 7} textAnchor="middle" fontSize="7.5" fontWeight="bold" fill="#ffffff" fontFamily="system-ui, sans-serif">
-                        {t1.averageScore}%
-                      </text>
-                      <text x={x1} y="197" textAnchor="middle" fontSize="7.5" fontWeight="bold" fill="#374151" fontFamily="system-ui, sans-serif">
-                        {t1.label}
-                      </text>
-
-                      <circle cx={x2} cy={y2} r="4.5" fill="#ffffff" stroke="#800000" strokeWidth="2" />
-                      <rect x={x2 - 16} y={y2 - 16} width="32" height="12" rx="3" fill="#800000" />
-                      <text x={x2} y={y2 - 7} textAnchor="middle" fontSize="7.5" fontWeight="bold" fill="#ffffff" fontFamily="system-ui, sans-serif">
-                        {t2.averageScore}%
-                      </text>
-                      <text x={x2} y="197" textAnchor="middle" fontSize="7.5" fontWeight="bold" fill="#374151" fontFamily="system-ui, sans-serif">
-                        {t2.label}
-                      </text>
-
-                      <circle cx={x3} cy={y3} r="5" fill="#800000" stroke="#ffffff" strokeWidth="1.5" />
-                      <rect x={x3 - 16} y={y3 - 16} width="32" height="12" rx="3" fill="#047857" />
-                      <text x={x3} y={y3 - 7} textAnchor="middle" fontSize="7.5" fontWeight="bold" fill="#ffffff" fontFamily="system-ui, sans-serif">
-                        {t3.averageScore}%
-                      </text>
-                      <text x={x3} y="197" textAnchor="middle" fontSize="7.5" fontWeight="bold" fill="#800000" fontFamily="system-ui, sans-serif">
-                        {t3.label}
+                    <g key={x}>
+                      <circle cx={x} cy={y} r="5" fill="#800000" stroke="#ffffff" strokeWidth="1.8" />
+                      <circle cx={x} cy={y} r="2" fill="#ffffff" />
+                      <rect x={x - 22} y={badgeY} width="44" height="13" rx="3" fill="#800000" />
+                      <text x={x} y={badgeY + 9.5} textAnchor="middle" fontSize="7.5" fontWeight="bold" fill="#ffffff" fontFamily="system-ui, sans-serif">
+                        {t.averageScore}% · {rubric}
                       </text>
                     </g>
                   );
-                })()}
-              </g>
+                };
 
-              {/* RIGHT: CBC Learning Areas Dynamic Matrix */}
-              <g>
-                <rect x="360" y="10" width="440" height="195" rx="6" fill="#ffffff" stroke="#e5e7eb" strokeWidth="1" />
-                <text x="375" y="24" fontSize="8.5" fontWeight="bold" fill="#800000" fontFamily="system-ui, sans-serif" textTransform="uppercase">
-                  {`${resolvedSubjects.length} CBC Learning Areas Comparison (Term 1 & Term 2 & Term 3)`}
-                </text>
+                return (
+                  <svg viewBox="0 0 760 150" width="100%" height="auto" className="performance-graph-svg min-w-[650px] sm:min-w-0" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                      <linearGradient id="jsxTermProgressionGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#800000" stopOpacity="0.25" />
+                        <stop offset="100%" stopColor="#800000" stopOpacity="0.0" />
+                      </linearGradient>
+                    </defs>
 
-                {/* Legend */}
-                <g>
-                  {(() => {
-                    let offset = 570;
-                    return recordedTerms.map((t, idx) => {
-                      const color = t.termNumber === 1 ? '#fca5a5' : t.termNumber === 2 ? '#b91c1c' : '#800000';
-                      const currentOffset = offset;
-                      offset += 28;
-                      return (
-                        <g key={idx}>
-                          <rect x={currentOffset} y="16" width="7" height="6" rx="1" fill={color} />
-                          <text x={currentOffset + 10} y="22" fontSize="6.5" fill="#4b5563" fontFamily="system-ui, sans-serif">{t.short}</text>
-                        </g>
-                      );
-                    });
-                  })()}
-                  <line x1="665" y1="19" x2="675" y2="19" stroke="#059669" strokeDasharray="2,2" strokeWidth="1.2" />
-                  <text x="678" y="22" fontSize="6.5" fill="#059669" fontFamily="system-ui, sans-serif">80%</text>
-                </g>
+                    {/* Outer Boundary */}
+                    <rect x="5" y="5" width="750" height="140" rx="6" fill="#fafafa" stroke="#e5e7eb" strokeWidth="1" />
 
-                {/* 80% Target Guideline */}
-                <line
-                  x1={455 + Math.round(0.8 * 270)}
-                  y1="28"
-                  x2={455 + Math.round(0.8 * 270)}
-                  y2="200"
-                  stroke="#059669"
-                  strokeDasharray="1.5,1.5"
-                  strokeWidth="0.8"
-                />
-
-                {/* Subject Rows */}
-                {(() => {
-                  const rowSpacing = resolvedSubjects.length > 0 ? Math.min(20, Math.max(12, Math.floor(155 / resolvedSubjects.length))) : 15;
-                  const barHeight = Math.min(9, Math.max(6, rowSpacing - 6));
-                  return resolvedSubjects.map((s, idx) => {
-                    const rowY = 32 + idx * rowSpacing;
-
-                    return (
-                      <g key={idx}>
-                        <text x="445" y={rowY + Math.round(barHeight * 0.9)} textAnchor="end" fontSize="8" fontWeight="600" fill="#374151" fontFamily="system-ui, sans-serif">
-                          {s.short}
-                        </text>
-                        <rect x="455" y={rowY} width="270" height={barHeight} rx="2" fill="#f3f4f6" />
-                        {recordedTerms.length === 1 ? (
-                          <rect x="455" y={rowY} width={Math.round((s.score / 100) * 270)} height={barHeight} rx="2" fill="#800000" />
-                        ) : (
-                          (() => {
-                            const sliceH = Math.max(2, Math.floor(barHeight / recordedTerms.length));
-                            return recordedTerms.map((t, tIdx) => {
-                              const val = t.termNumber === 1 ? (s.term1Score ?? s.score) : t.termNumber === 2 ? (s.term2Score ?? s.score) : (s.term3Score ?? s.score);
-                              const w = Math.round((val / 100) * 270);
-                              const color = t.termNumber === 1 ? '#fca5a5' : t.termNumber === 2 ? '#b91c1c' : '#800000';
-                              return (
-                                <rect key={tIdx} x="455" y={rowY + tIdx * sliceH} width={w} height={sliceH} rx="1" fill={color} />
-                              );
-                            });
-                          })()
-                        )}
-                        <text x="732" y={rowY + Math.round(barHeight * 0.9)} fontSize="8" fontWeight="bold" fill="#800000" fontFamily="system-ui, sans-serif">
-                          {s.score}%
-                        </text>
-                        <rect
-                          x="760"
-                          y={rowY}
-                          width="16"
-                          height={barHeight}
-                          rx="2"
-                          fill={s.rubricCode === 'EE' ? '#047857' : s.rubricCode === 'ME' ? '#800000' : s.rubricCode === 'AE' ? '#b45309' : '#b91c1c'}
-                        />
-                        <text x="768" y={rowY + Math.round(barHeight * 0.9)} textAnchor="middle" fontSize="7" fontWeight="bold" fill="#ffffff" fontFamily="system-ui, sans-serif">
-                          {s.rubricCode}
+                    {/* Single-Term Neutral Comparison Notice */}
+                    {recordedTerms.length === 1 && (
+                      <g>
+                        <rect x="180" y="7" width="400" height="14" rx="3" fill="#f8fafc" stroke="#e2e8f0" strokeWidth="0.8" />
+                        <text x="380" y="16.5" textAnchor="middle" fontSize="6.8" fill="#64748b" fontFamily="system-ui, sans-serif">
+                          Term comparison unavailable — Earlier assessment data is not recorded for this academic year.
                         </text>
                       </g>
-                    );
-                  });
-                })()}
-              </g>
-            </svg>
+                    )}
+
+                    {/* Benchmark Horizontal Guidelines */}
+                    <line x1="60" y1={getY(80)} x2="640" y2={getY(80)} stroke="#059669" strokeDasharray="3,3" strokeWidth="0.9" strokeOpacity="0.7" />
+                    <text x="645" y={getY(80) + 3} fontSize="7" fontWeight="bold" fill="#059669" fontFamily="system-ui, sans-serif">EE Target (80%)</text>
+
+                    <line x1="60" y1={getY(65)} x2="640" y2={getY(65)} stroke="#800000" strokeDasharray="3,3" strokeWidth="0.9" strokeOpacity="0.5" />
+                    <text x="645" y={getY(65) + 3} fontSize="7" fontWeight="bold" fill="#800000" fontFamily="system-ui, sans-serif">ME Benchmark (65%)</text>
+
+                    <line x1="60" y1={getY(50)} x2="640" y2={getY(50)} stroke="#d97706" strokeDasharray="3,3" strokeWidth="0.8" strokeOpacity="0.5" />
+                    <text x="645" y={getY(50) + 3} fontSize="7" fontWeight="bold" fill="#d97706" fontFamily="system-ui, sans-serif">AE Benchmark (50%)</text>
+
+                    {/* Baseline Axis (0%) */}
+                    <line x1="60" y1="115" x2="640" y2="115" stroke="#9ca3af" strokeWidth="1.2" />
+
+                    {/* Vertical Term Gridlines */}
+                    <line x1={x1} y1="20" x2={x1} y2="115" stroke="#f1f5f9" strokeDasharray="2,2" strokeWidth="1" />
+                    <line x1={x2} y1="20" x2={x2} y2="115" stroke="#f1f5f9" strokeDasharray="2,2" strokeWidth="1" />
+                    <line x1={x3} y1="20" x2={x3} y2="115" stroke="#f1f5f9" strokeDasharray="2,2" strokeWidth="1" />
+
+                    {/* Y-Axis Ticks & Labels */}
+                    <text x="54" y={getY(100) + 3} textAnchor="end" fontSize="7" fill="#6b7280" fontFamily="system-ui, sans-serif">100%</text>
+                    <text x="54" y={getY(75) + 3} textAnchor="end" fontSize="7" fill="#6b7280" fontFamily="system-ui, sans-serif">75%</text>
+                    <text x="54" y={getY(50) + 3} textAnchor="end" fontSize="7" fill="#6b7280" fontFamily="system-ui, sans-serif">50%</text>
+                    <text x="54" y={getY(25) + 3} textAnchor="end" fontSize="7" fill="#6b7280" fontFamily="system-ui, sans-serif">25%</text>
+                    <text x="54" y="118" textAnchor="end" fontSize="7" fill="#6b7280" fontFamily="system-ui, sans-serif">0%</text>
+
+                    {/* Connecting Lines & Area Fills (Only between valid consecutive terms) */}
+                    {t1 && t2 && (
+                      <g>
+                        <polygon points={`${x1},${getY(t1.averageScore)} ${x2},${getY(t2.averageScore)} ${x2},115 ${x1},115`} fill="url(#jsxTermProgressionGrad)" />
+                        <line x1={x1} y1={getY(t1.averageScore)} x2={x2} y2={getY(t2.averageScore)} stroke="#800000" strokeWidth="2.5" strokeLinecap="round" />
+                      </g>
+                    )}
+
+                    {t2 && t3 && (
+                      <g>
+                        <polygon points={`${x2},${getY(t2.averageScore)} ${x3},${getY(t3.averageScore)} ${x3},115 ${x2},115`} fill="url(#jsxTermProgressionGrad)" />
+                        <line x1={x2} y1={getY(t2.averageScore)} x2={x3} y2={getY(t3.averageScore)} stroke="#800000" strokeWidth="2.5" strokeLinecap="round" />
+                      </g>
+                    )}
+
+                    {/* Data Point Markers & Value Badges */}
+                    {renderPoint(t1, x1)}
+                    {renderPoint(t2, x2)}
+                    {renderPoint(t3, x3)}
+
+                    {/* X-Axis Labels (Term 1, Term 2, Term 3) */}
+                    <g>
+                      <text x={x1} y="129" textAnchor="middle" fontSize="8.5" fontWeight="bold" fill={t1 ? '#800000' : '#4b5563'} fontFamily="system-ui, sans-serif">Term 1</text>
+                      <text x={x1} y="140" textAnchor="middle" fontSize="7" fontWeight={t1 ? '600' : 'normal'} fill={t1 ? '#047857' : '#9ca3af'} fontStyle={t1 ? 'normal' : 'italic'} fontFamily="system-ui, sans-serif">
+                        {t1 ? `${t1.averageScore}% (${getRubricCode(t1.averageScore)})` : '-- (Unrecorded)'}
+                      </text>
+
+                      <text x={x2} y="129" textAnchor="middle" fontSize="8.5" fontWeight="bold" fill={t2 ? '#800000' : '#4b5563'} fontFamily="system-ui, sans-serif">Term 2</text>
+                      <text x={x2} y="140" textAnchor="middle" fontSize="7" fontWeight={t2 ? '600' : 'normal'} fill={t2 ? '#047857' : '#9ca3af'} fontStyle={t2 ? 'normal' : 'italic'} fontFamily="system-ui, sans-serif">
+                        {t2 ? `${t2.averageScore}% (${getRubricCode(t2.averageScore)})` : '-- (Unrecorded)'}
+                      </text>
+
+                      <text x={x3} y="129" textAnchor="middle" fontSize="8.5" fontWeight="bold" fill={t3 ? '#800000' : '#4b5563'} fontFamily="system-ui, sans-serif">Term 3</text>
+                      <text x={x3} y="140" textAnchor="middle" fontSize="7" fontWeight={t3 ? '600' : 'normal'} fill={t3 ? '#047857' : '#9ca3af'} fontStyle={t3 ? 'normal' : 'italic'} fontFamily="system-ui, sans-serif">
+                        {t3 ? `${t3.averageScore}% (${getRubricCode(t3.averageScore)})` : '-- (Unrecorded)'}
+                      </text>
+                    </g>
+                  </svg>
+                );
+              })()
+            )}
           </div>
         </div>
 
@@ -2197,11 +2186,22 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
               <div className="pt-1.5 print:pt-0.5 border-t border-gray-300 flex justify-between items-end text-[11px] print:text-[7.5px] text-gray-600">
                 <div>
                   <span className="block text-[10px] print:text-[7px] text-gray-500 uppercase">Class Teacher Signature:</span>
-                  <div className="border-b border-gray-500 w-32 print:w-24 h-4 print:h-3"></div>
+                  {classTeacherSig?.signatureDataSnapshot ? (
+                    <div className="flex flex-col gap-0.5 mt-0.5">
+                      <img src={classTeacherSig.signatureDataSnapshot} alt="Class Teacher Signature" className="h-7 print:h-5 object-contain" />
+                      <span className="text-[9px] print:text-[6.5px] font-semibold text-emerald-700 bg-emerald-50 print:bg-transparent px-1 py-0.5 rounded border border-emerald-200 print:border-none inline-flex items-center gap-1">
+                        ✓ Digitally Signed ({classTeacherSig.signerName})
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="border-b border-gray-500 w-32 print:w-24 h-4 print:h-3"></div>
+                  )}
                 </div>
                 <div className="text-right">
                   <span className="block text-[10px] print:text-[7px] text-gray-500 uppercase">Date:</span>
-                  <span className="font-semibold text-gray-800">{new Date().toLocaleDateString('en-GB')}</span>
+                  <span className="font-semibold text-gray-800">
+                    {classTeacherSig?.signedAt ? new Date(classTeacherSig.signedAt).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB')}
+                  </span>
                 </div>
               </div>
             </div>
@@ -2218,11 +2218,22 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
               <div className="pt-1.5 print:pt-0.5 border-t border-gray-300 flex justify-between items-end text-[11px] print:text-[7.5px] text-gray-600">
                 <div>
                   <span className="block text-[10px] print:text-[7px] text-gray-500 uppercase">Principal Signature:</span>
-                  <div className="border-b border-gray-500 w-32 print:w-24 h-4 print:h-3"></div>
+                  {headTeacherSig?.signatureDataSnapshot ? (
+                    <div className="flex flex-col gap-0.5 mt-0.5">
+                      <img src={headTeacherSig.signatureDataSnapshot} alt="Head Teacher Signature" className="h-7 print:h-5 object-contain" />
+                      <span className="text-[9px] print:text-[6.5px] font-semibold text-emerald-700 bg-emerald-50 print:bg-transparent px-1 py-0.5 rounded border border-emerald-200 print:border-none inline-flex items-center gap-1">
+                        ✓ Official Seal &amp; Endorsement ({headTeacherSig.signerName})
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="border-b border-gray-500 w-32 print:w-24 h-4 print:h-3"></div>
+                  )}
                 </div>
                 <div className="text-right">
                   <span className="block text-[10px] print:text-[7px] text-gray-500 uppercase">Date:</span>
-                  <span className="font-semibold text-gray-800">{new Date().toLocaleDateString('en-GB')}</span>
+                  <span className="font-semibold text-gray-800">
+                    {headTeacherSig?.signedAt ? new Date(headTeacherSig.signedAt).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB')}
+                  </span>
                 </div>
               </div>
             </div>
@@ -2240,15 +2251,31 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
               </div>
             </div>
             <div className="text-right">
-              <span className="text-gray-500 block text-[10px] print:text-[7px] uppercase">Next Term Commences:</span>
+              <span className="text-gray-500 block text-[10px] print:text-[7px] uppercase">Official Date of Issue:</span>
               <span className="font-bold text-[#800000] text-xs print:text-[8.5px]">
-                {nextTermOpening.formatted}
+                {new Date().toLocaleDateString('en-GB')}
               </span>
             </div>
           </div>
         </div>
 
       </div>
+
+      {/* Electronic Document Signing Modal */}
+      {canUserSign && isSigningModalOpen && (
+        <DocumentSigningModal
+          isOpen={isSigningModalOpen}
+          onClose={() => setIsSigningModalOpen(false)}
+          documentId={reportCardDocId}
+          documentType="REPORT_CARD"
+          documentVersion="1.0"
+          documentTitle={`Summative Report Card: ${student.name} (${student.admNo})`}
+          documentContent={canonicalDocContent}
+          onSignatureComplete={() => {
+            loadSignatures(reportCardDocId);
+          }}
+        />
+      )}
     </div>
   );
 };

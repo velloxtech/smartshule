@@ -50,6 +50,16 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
         ],
       },
       {
+        id: 'teacher-profile',
+        label: 'My Teacher Profile',
+        icon: 'account_circle',
+        allowedRoles: [
+          UserRole.TEACHER,
+          UserRole.HEAD_TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
+        ],
+      },
+      {
         id: 'slot-applications',
         label: 'Slot Applications',
         icon: 'event_available',
@@ -648,6 +658,22 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
           UserRole.SUPER_ADMIN,
           UserRole.ADMIN,
           UserRole.SCHOOL_ADMIN,
+        ],
+      },
+      {
+        id: 'document-signing',
+        label: 'Document Signing Centre',
+        icon: 'fact_check',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.HEAD_TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
+          UserRole.TEACHER,
+          UserRole.BURSAR,
+          UserRole.ACCOUNTANT,
+          UserRole.ADMISSIONS,
         ],
       },
       {

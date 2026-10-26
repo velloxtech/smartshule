@@ -48,7 +48,8 @@ export type TabType =
   | 'curriculum-tracker'
   | 'fee-deadline-banner'
   | 'sponsored-students'
-  | 'digital-signature';
+  | 'digital-signature'
+  | 'teacher-profile';
 
 export interface FeeBannerConfig {
   id: string;
@@ -380,6 +381,104 @@ export interface DeletedStudentRecord {
   reason?: string;
 }
 
+export interface TeacherEmergencyContact {
+  name: string;
+  phone: string;
+  relationship: string;
+}
+
+export interface TeacherDocument {
+  id: string;
+  title: string;
+  type: string;
+  url: string;
+  uploadedAt: string;
+}
+
+export interface TeacherCorrectionRequest {
+  id: string;
+  teacherId: string;
+  userId: string;
+  schoolId: string;
+  fieldName: string;
+  fieldLabel: string;
+  currentValue?: string;
+  proposedValue: string;
+  reason: string;
+  evidenceUrl?: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  reviewedByUserId?: string;
+  reviewedByName?: string;
+  reviewRemarks?: string;
+  reviewedAt?: string;
+  createdAt: string;
+  updatedAt?: string;
+  teacher?: {
+    teacherId: string;
+    employeeNumber?: string;
+    tscNumber?: string;
+    name: string;
+    email?: string;
+    phone?: string;
+  };
+}
+
+export interface TeacherProfileData {
+  id: string;
+  userId: string;
+  tscNumber?: string;
+  employeeNumber?: string;
+  specialization?: string[];
+  assignedClassStreamIds?: string[];
+  qualification?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  nationalId?: string;
+  residentialAddress?: string;
+  profilePhotoUrl?: string;
+  employmentDate?: string;
+  employmentType?: string;
+  employmentStatus?: string;
+  department?: string;
+  emergencyContact?: TeacherEmergencyContact;
+  documents?: TeacherDocument[];
+  user?: {
+    id: string;
+    email?: string;
+    firstName: string;
+    lastName: string;
+    fullName: string;
+    role: string;
+    phone?: string;
+    status: string;
+    schoolId?: string;
+    schoolName?: string;
+    mustChangePassword?: boolean;
+    createdAt?: string;
+  };
+  assignedStreamInfo?: {
+    streamId: string;
+    streamName: string;
+    classRoomId: string;
+    className: string;
+  } | null;
+  teachingAssignments?: {
+    id?: string;
+    classRoomId?: string;
+    streamId?: string;
+    dayOfWeek: string;
+    periodNumber: number;
+    learningAreaName?: string;
+    roomName?: string;
+    startTime: string;
+    endTime: string;
+    label?: string;
+  }[];
+  pendingCorrectionRequests?: TeacherCorrectionRequest[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface Teacher {
   id: string;
   userId?: string;
@@ -395,6 +494,17 @@ export interface Teacher {
   employeeNumber?: string;
   status: 'Clocked In' | 'Absent (Permit)' | 'Absent' | 'On Leave';
   clockInTime?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  nationalId?: string;
+  residentialAddress?: string;
+  profilePhotoUrl?: string;
+  employmentDate?: string;
+  employmentType?: string;
+  employmentStatus?: string;
+  department?: string;
+  emergencyContact?: TeacherEmergencyContact;
+  documents?: TeacherDocument[];
 }
 
 export interface ClassStream {

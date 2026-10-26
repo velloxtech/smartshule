@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Teacher, UserRole, ClassRoom, StreamItem } from '../../types';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Teacher, UserRole, ClassRoom, StreamItem, TeacherCorrectionRequest } from '../../types';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
@@ -27,10 +27,6 @@ const CBC_STANDARD_CLASSES = [
   { name: 'Grade 9', gradeLevel: 'GRADE_9', educationLevel: 'JUNIOR_SCHOOL' },
 ];
 
-const formatGradeLabel = (grade: string): string => {
-  return (grade || '').replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase());
-};
-
 export const TeachersView: React.FC<TeachersViewProps> = ({
   teachers,
   onToggleClockIn,
@@ -50,22 +46,44 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
     ].includes(user.role)
   );
 
+  const [activeTab, setActiveTab] = useState<'roster' | 'corrections'>('roster');
   const [search, setSearch] = useState('');
   const [classes, setClasses] = useState<ClassRoom[]>([]);
   const [streamsMap, setStreamsMap] = useState<Record<string, StreamItem[]>>({});
   const [, setLoadingAcademic] = useState(false);
 
+  // Correction Requests State
+  const [correctionRequests, setCorrectionRequests] = useState<TeacherCorrectionRequest[]>([]);
+  const [loadingRequests, setLoadingRequests] = useState(false);
+  const [requestStatusFilter, setRequestStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('PENDING');
+  const [selectedRequestForReview, setSelectedRequestForReview] = useState<TeacherCorrectionRequest | null>(null);
+  const [reviewAction, setReviewAction] = useState<'APPROVE' | 'REJECT'>('APPROVE');
+  const [reviewRemarks, setReviewRemarks] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
+
+  // Profile Drawer / Modal State
+  const [selectedTeacherForProfile, setSelectedTeacherForProfile] = useState<Teacher | null>(null);
+  const [profileModalTab, setProfileModalTab] = useState<'details' | 'audit' | 'edit'>('details');
+  const [teacherProfileData, setTeacherProfileData] = useState<any | null>(null);
+  const [teacherAuditLogs, setTeacherAuditLogs] = useState<any[]>([]);
+  const [loadingProfileData, setLoadingProfileData] = useState(false);
+  const [savingAdminEdit, setSavingAdminEdit] = useState(false);
+  const [adminEditForm, setAdminEditForm] = useState<any>({});
+
   // Assignment Modal States
   const [isAssignOpen, setIsAssignOpen] = useState(false);
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
   const [selectedClassId, setSelectedClassId] = useState<string>('');
-  const [selectedStreamMode, setSelectedStreamMode] = useState<string>(''); // streamId | 'main-default' | '__NEW_STREAM__'
+  const [selectedStreamMode, setSelectedStreamMode] = useState<string>('');
   const [customStreamName, setCustomStreamName] = useState('');
   const [assignmentRole, setAssignmentRole] = useState('CLASS_TEACHER');
   const [assignLoading, setAssignLoading] = useState(false);
   const [assignSuccess, setAssignSuccess] = useState<string | null>(null);
   const [assignError, setAssignError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Alert
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const loadClassesAndStreams = async () => {
     setLoadingAcademic(true);
@@ -100,11 +118,25 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
     }
   };
 
-  useEffect(() => {
-    loadClassesAndStreams();
+  const loadCorrectionRequests = useCallback(async () => {
+    setLoadingRequests(true);
+    try {
+      const res = await apiService.listTeacherCorrectionRequests();
+      if (res?.success && Array.isArray(res.data)) {
+        setCorrectionRequests(res.data);
+      }
+    } catch (err) {
+      console.error('Failed to load correction requests:', err);
+    } finally {
+      setLoadingRequests(false);
+    }
   }, []);
 
-  // Compute all available class options (database + any missing standard CBC levels)
+  useEffect(() => {
+    loadClassesAndStreams();
+    loadCorrectionRequests();
+  }, [loadCorrectionRequests]);
+
   const existingNames = new Set(classes.map((c) => c.name.toLowerCase()));
   const missingStandards = CBC_STANDARD_CLASSES.filter(
     (sc) => !existingNames.has(sc.name.toLowerCase())
@@ -118,7 +150,6 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
 
   const allClassOptions = [...classes, ...missingStandards];
 
-  // Helper to translate stream IDs or raw text into readable Class - Stream label
   const resolveAssignedClassName = (assignedClass: string | undefined): string => {
     if (!assignedClass || assignedClass === 'Unassigned') return 'Unassigned';
     const parts = assignedClass.split(',').map((p) => p.trim());
@@ -143,11 +174,9 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
     setAssignmentRole('CLASS_TEACHER');
 
     let matchedClassId = '';
-    if (allClassOptions.length > 0) {
+    if (t.assignedClass && t.assignedClass !== 'Unassigned') {
       const match = allClassOptions.find((c) =>
-        t.assignedClass &&
-        (c.name.toLowerCase().includes(t.assignedClass.toLowerCase()) ||
-          t.assignedClass.toLowerCase().includes(c.name.toLowerCase()))
+        t.assignedClass.toLowerCase().includes(c.name.toLowerCase())
       );
       matchedClassId = match ? match.id : allClassOptions[0].id;
     } else {
@@ -155,15 +184,9 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
     }
 
     setSelectedClassId(matchedClassId);
-
     const streamsForClass = streamsMap[matchedClassId] || [];
     if (streamsForClass.length > 0) {
-      const matchStream = streamsForClass.find((s) =>
-        t.assignedClass &&
-        (t.assignedClass.toLowerCase().includes(s.name.toLowerCase()) ||
-          t.assignedClass.includes(s.id))
-      );
-      setSelectedStreamMode(matchStream ? matchStream.id : streamsForClass[0].id);
+      setSelectedStreamMode(streamsForClass[0].id);
     } else {
       setSelectedStreamMode('main-default');
     }
@@ -203,7 +226,6 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
       let activeClassId = selectedClassId;
       let activeClassName = '';
 
-      // 1. Resolve or create ClassRoom in DB
       let classObj = classes.find((c) => c.id === activeClassId);
 
       if (!classObj) {
@@ -231,15 +253,12 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
         activeClassName = classObj.name;
       }
 
-      // 2. Resolve or create Stream
       let targetStreamId = '';
       let targetStreamName = '';
 
       if (selectedStreamMode === 'main-default') {
         const existingMain = (streamsMap[activeClassId] || []).find(
-          (s) =>
-            s.name.toLowerCase() === 'main' ||
-            s.name.toLowerCase() === 'main stream'
+          (s) => s.name.toLowerCase() === 'main' || s.name.toLowerCase() === 'main stream'
         );
 
         if (existingMain) {
@@ -250,12 +269,10 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
             classRoomId: activeClassId,
             name: 'Main Stream',
             capacity: 40,
-            classTeacherId:
-              assignmentRole === 'CLASS_TEACHER' ? selectedTeacher.id : undefined,
           });
 
           if (!createStreamRes?.data?.id) {
-            throw new Error('Failed to create Main Stream for this class');
+            throw new Error('Failed to create default Main Stream');
           }
 
           targetStreamId = createStreamRes.data.id;
@@ -268,17 +285,13 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
         }
       } else if (selectedStreamMode === '__NEW_STREAM__') {
         if (!customStreamName.trim()) {
-          setAssignError('Please enter a name for the new stream.');
-          setAssignLoading(false);
-          return;
+          throw new Error('Please enter a stream name (e.g., East, Blue)');
         }
 
         const createStreamRes = await apiService.createStream({
           classRoomId: activeClassId,
           name: customStreamName.trim(),
           capacity: 40,
-          classTeacherId:
-            assignmentRole === 'CLASS_TEACHER' ? selectedTeacher.id : undefined,
         });
 
         if (!createStreamRes?.data?.id) {
@@ -294,61 +307,174 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
         }));
       } else {
         targetStreamId = selectedStreamMode;
-        const found = (streamsMap[activeClassId] || []).find((s) => s.id === selectedStreamMode);
+        const found = (streamsMap[activeClassId] || []).find((s) => s.id === targetStreamId);
         targetStreamName = found ? found.name : 'Stream';
       }
 
-      // 3. Assign stream to teacher in backend
-      const res = await apiService.assignStreamToTeacher(selectedTeacher.id, targetStreamId);
-      if (!res.success) {
-        throw new Error(res.message || 'Failed to assign stream to educator');
-      }
+      await apiService.assignStreamToTeacher(selectedTeacher.id, targetStreamId);
 
       const assignedLabel = `${activeClassName} - ${targetStreamName}`;
-      setAssignSuccess(`Assigned ${selectedTeacher.name} to ${assignedLabel}!`);
+      if (onAssignTeacher) {
+        onAssignTeacher(selectedTeacher.id, assignedLabel);
+      }
 
-      // 4. Update parent state
-      onAssignTeacher?.(selectedTeacher.id, assignedLabel);
-
+      setAssignSuccess(`Successfully assigned ${selectedTeacher.name} to ${assignedLabel}!`);
       setTimeout(() => {
         setIsAssignOpen(false);
         setAssignSuccess(null);
       }, 1200);
     } catch (err: any) {
-      setAssignError(err.message || 'Failed to assign class & stream');
+      setAssignError(err?.message || 'Assignment failed. Please check inputs.');
     } finally {
       setAssignLoading(false);
     }
   };
 
-  const handleDeleteTeacher = async (t: Teacher) => {
-    if (window.confirm(`Are you sure you want to delete ${t.name} (TSC: ${t.tscNumber})? This action cannot be undone.`)) {
-      setDeletingId(t.id);
-      try {
-        const res = await apiService.deleteTeacher(t.id);
-        if (res.success) {
-          onDeleteTeacher?.(t.id);
-        }
-      } catch (err: any) {
-        alert(err.message || 'Failed to delete teacher');
-      } finally {
-        setDeletingId(null);
-      }
+  const handleDeleteTeacher = async (teacher: Teacher) => {
+    if (!confirm(`Are you sure you want to delete teacher ${teacher.name} (${teacher.employeeNumber || teacher.tscNumber})? This removes their account.`)) {
+      return;
+    }
+    setDeletingId(teacher.id);
+    try {
+      await apiService.deleteTeacher(teacher.id);
+      if (onDeleteTeacher) onDeleteTeacher(teacher.id);
+      setFeedback({ type: 'success', message: `Teacher ${teacher.name} removed successfully.` });
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: err?.message || 'Failed to delete teacher.' });
+    } finally {
+      setDeletingId(null);
     }
   };
 
-  const filtered = teachers.filter(
-    (t) =>
-      t.name.toLowerCase().includes(search.toLowerCase()) ||
-      t.tscNumber.toLowerCase().includes(search.toLowerCase()) ||
-      t.role.toLowerCase().includes(search.toLowerCase()) ||
-      t.learningAreas.some((la) => la.toLowerCase().includes(search.toLowerCase()))
-  );
+  // View Teacher Profile Modal Handler
+  const handleViewFullProfile = async (teacher: Teacher) => {
+    setSelectedTeacherForProfile(teacher);
+    setProfileModalTab('details');
+    setLoadingProfileData(true);
+    setTeacherProfileData(null);
+    setTeacherAuditLogs([]);
 
-  const currentStreams = streamsMap[selectedClassId] || [];
+    try {
+      const [tRes, auditRes] = await Promise.all([
+        apiService.getTeacherById(teacher.id).catch(() => null),
+        apiService.getTeacherAuditHistory(teacher.id).catch(() => ({ success: true, data: [] })),
+      ]);
+
+      if (tRes?.data) {
+        setTeacherProfileData(tRes.data);
+        const t = tRes.data;
+        setAdminEditForm({
+          firstName: t.user?.firstName || '',
+          lastName: t.user?.lastName || '',
+          email: t.user?.email || '',
+          phone: t.user?.phone || '',
+          role: t.user?.role || 'TEACHER',
+          tscNumber: t.tscNumber || '',
+          employeeNumber: t.employeeNumber || '',
+          qualification: t.qualification || '',
+          dateOfBirth: t.dateOfBirth || '',
+          gender: t.gender || '',
+          nationalId: t.nationalId || '',
+          residentialAddress: t.residentialAddress || '',
+          department: t.department || '',
+          employmentDate: t.employmentDate || '',
+          employmentType: t.employmentType || 'FULL_TIME',
+          employmentStatus: t.employmentStatus || 'ACTIVE',
+        });
+      }
+      if (auditRes?.data) {
+        setTeacherAuditLogs(auditRes.data);
+      }
+    } catch (err) {
+      console.error('Error fetching teacher full profile:', err);
+    } finally {
+      setLoadingProfileData(false);
+    }
+  };
+
+  const handleSaveAdminProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedTeacherForProfile) return;
+
+    setSavingAdminEdit(true);
+    try {
+      const res = await apiService.adminUpdateTeacherProfile(selectedTeacherForProfile.id, adminEditForm);
+      if (res?.success) {
+        setFeedback({ type: 'success', message: 'Teacher profile updated successfully by administrator.' });
+        setTeacherProfileData(res.data);
+        setProfileModalTab('details');
+        await loadClassesAndStreams();
+      } else {
+        setFeedback({ type: 'error', message: res?.message || 'Failed to update teacher profile.' });
+      }
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: err?.message || 'Error updating teacher profile.' });
+    } finally {
+      setSavingAdminEdit(false);
+    }
+  };
+
+  // Review Correction Request Handler
+  const handleOpenReviewModal = (req: TeacherCorrectionRequest, action: 'APPROVE' | 'REJECT') => {
+    setSelectedRequestForReview(req);
+    setReviewAction(action);
+    setReviewRemarks(action === 'APPROVE' ? 'Approved upon verification of official records.' : '');
+  };
+
+  const handleSubmitReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedRequestForReview) return;
+
+    if (reviewAction === 'REJECT' && !reviewRemarks.trim()) {
+      alert('A remark or explanation is required when rejecting a correction request.');
+      return;
+    }
+
+    setSubmittingReview(true);
+    try {
+      const res = await apiService.reviewTeacherCorrectionRequest(
+        selectedRequestForReview.id,
+        reviewAction,
+        reviewRemarks.trim()
+      );
+
+      if (res?.success) {
+        setFeedback({
+          type: 'success',
+          message: `Correction request for ${selectedRequestForReview.fieldLabel} has been ${reviewAction.toLowerCase()}ed.`,
+        });
+        setSelectedRequestForReview(null);
+        await loadCorrectionRequests();
+      } else {
+        setFeedback({ type: 'error', message: res?.message || 'Review action failed.' });
+      }
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: err?.message || 'An error occurred during review.' });
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
+
+  const filteredTeachers = teachers.filter((t) => {
+    const s = search.toLowerCase();
+    return (
+      t.name.toLowerCase().includes(s) ||
+      (t.tscNumber || '').toLowerCase().includes(s) ||
+      (t.employeeNumber || '').toLowerCase().includes(s) ||
+      t.learningAreas.some((la) => la.toLowerCase().includes(s))
+    );
+  });
+
+  const pendingRequestsCount = correctionRequests.filter((r) => r.status === 'PENDING').length;
+
+  const filteredCorrectionRequests = correctionRequests.filter((r) => {
+    if (requestStatusFilter === 'ALL') return true;
+    return r.status === requestStatusFilter;
+  });
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="space-y-6 pb-16">
+      {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 font-label-md text-label-md text-on-surface-variant">
@@ -368,7 +494,7 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
             </span>
           </div>
           <p className="text-xs text-on-surface-variant mt-0.5">
-            TSC registered educators, assigned learning areas, stream allocations, and real-time roll call
+            TSC registered educators, stream allocations, profile records verification, and correction approvals.
           </p>
         </div>
 
@@ -382,21 +508,19 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
             >
               <span className="material-symbols-outlined text-rose-800 text-[16px]">share_location</span>
               <span>School Geofencing</span>
-              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-teal-100 text-teal-800">
-                GPS
-              </span>
             </button>
           )}
 
           {onOpenOnboardTeacher && canOnboard && (
             <button
               onClick={onOpenOnboardTeacher}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-primary text-white rounded-lg hover:bg-primary-container text-xs font-semibold shadow-xs transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 text-xs font-semibold shadow-xs transition-all cursor-pointer"
             >
               <span className="material-symbols-outlined text-[16px]">person_add</span>
-              <span>Onboard Teacher (Art. 237)</span>
+              <span>Onboard Teacher</span>
             </button>
           )}
+
           <span className="px-3 py-1.5 rounded-lg bg-secondary-container text-on-secondary-container text-xs font-bold flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-secondary"></span>
             {teachers.filter((t) => t.status === 'Clocked In').length}/{teachers.length} Clocked In
@@ -404,133 +528,689 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
         </div>
       </div>
 
-      {/* Search Input Bar */}
-          <div className="flex items-center justify-between gap-4">
-            <div className="relative flex-1 max-w-md">
-              <span className="absolute left-3 top-2.5 material-symbols-outlined text-outline text-[18px]">search</span>
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search by teacher name, TSC number, or learning area..."
-                className="w-full pl-9 pr-4 py-2 text-xs bg-surface-container-lowest border border-outline-variant/30 rounded-lg focus:outline-primary shadow-xs"
-              />
+      {/* Global Feedback Alert */}
+      {feedback && (
+        <div
+          className={`p-4 rounded-xl border flex items-start justify-between gap-3 text-xs font-medium animate-fadeIn ${
+            feedback.type === 'success'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+              : 'bg-rose-50 border-rose-200 text-rose-900'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-[18px]">
+              {feedback.type === 'success' ? 'check_circle' : 'error'}
+            </span>
+            <span>{feedback.message}</span>
+          </div>
+          <button onClick={() => setFeedback(null)} className="text-gray-500 hover:text-black">
+            <span className="material-symbols-outlined text-[16px]">close</span>
+          </button>
+        </div>
+      )}
+
+      {/* Tab Switcher: Faculty Roster vs Correction Requests */}
+      <div className="flex items-center justify-between border-b border-outline-variant/30 pb-1">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setActiveTab('roster')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl text-xs font-bold transition-all cursor-pointer border-b-2 ${
+              activeTab === 'roster'
+                ? 'border-primary text-primary bg-primary/5'
+                : 'border-transparent text-on-surface-variant hover:text-on-surface'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[18px]">groups</span>
+            <span>Faculty Roster ({teachers.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('corrections')}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl text-xs font-bold transition-all cursor-pointer border-b-2 ${
+              activeTab === 'corrections'
+                ? 'border-primary text-primary bg-primary/5'
+                : 'border-transparent text-on-surface-variant hover:text-on-surface'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[18px]">rule</span>
+            <span>Profile Correction Requests</span>
+            {pendingRequestsCount > 0 && (
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-500 text-white animate-pulse">
+                {pendingRequestsCount} Pending
+              </span>
+            )}
+          </button>
+        </div>
+
+        {activeTab === 'roster' && (
+          <div className="relative max-w-xs w-full">
+            <span className="absolute left-3 top-2.5 material-symbols-outlined text-outline text-[18px]">search</span>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search faculty name, TSC, EMP..."
+              className="w-full pl-9 pr-4 py-1.5 text-xs bg-surface-container-lowest border border-outline-variant/30 rounded-lg focus:outline-primary shadow-xs"
+            />
+          </div>
+        )}
+      </div>
+
+      {/* VIEW TAB 1: FACULTY ROSTER */}
+      {activeTab === 'roster' && (
+        <>
+          {filteredTeachers.length === 0 ? (
+            <div className="py-16 text-center text-on-surface-variant bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-8">
+              <span className="material-symbols-outlined text-5xl text-outline mb-2">person_off</span>
+              <p className="font-bold text-base text-on-surface">No educators found</p>
+              <p className="text-xs text-outline">Click "Onboard Teacher" to register faculty members with TSC numbers.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredTeachers.map((t) => {
+                const isClockedIn = t.status === 'Clocked In';
+                return (
+                  <div
+                    key={t.id}
+                    className="bg-surface-container-lowest rounded-xl p-5 shadow-xs border border-outline-variant/30 flex flex-col justify-between hover:shadow-md transition-all"
+                  >
+                    <div>
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">
+                            {(t.name || '')
+                              .replace('Tr. ', '')
+                              .split(' ')
+                              .map((n) => n[0])
+                              .join('')}
+                          </div>
+                          <div>
+                            <h3 className="font-headline-md text-sm font-bold text-on-surface">{t.name}</h3>
+                            <p className="text-[11px] text-on-surface-variant font-data-mono">TSC: {t.tscNumber || 'None'}</p>
+                          </div>
+                        </div>
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                            isClockedIn ? 'bg-secondary text-white' : 'bg-surface-container text-outline'
+                          }`}
+                        >
+                          {t.status}
+                        </span>
+                      </div>
+
+                      <div className="mt-4 pt-3 border-t border-surface-container space-y-2 text-xs">
+                        <div className="flex justify-between">
+                          <span className="text-on-surface-variant">Role / Designation:</span>
+                          <span className="font-semibold text-on-surface">{t.role}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-on-surface-variant">Assigned Class:</span>
+                          <span
+                            className="font-bold text-primary truncate max-w-[170px]"
+                            title={resolveAssignedClassName(t.assignedClass)}
+                          >
+                            {resolveAssignedClassName(t.assignedClass)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-on-surface-variant">Specialization:</span>
+                          <span className="font-semibold text-secondary truncate max-w-[170px]">
+                            {t.learningAreas.join(', ')}
+                          </span>
+                        </div>
+                        {t.qualification && (
+                          <div className="flex justify-between">
+                            <span className="text-on-surface-variant">Qualification:</span>
+                            <span className="text-on-surface">{t.qualification}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between">
+                          <span className="text-on-surface-variant">Direct Phone:</span>
+                          <span className="font-data-mono text-outline">{t.phone}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 pt-3 border-t border-surface-container flex items-center justify-between gap-1.5 flex-wrap">
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => handleViewFullProfile(t)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-semibold transition-all cursor-pointer shadow-2xs"
+                          title="View full profile details & audit history"
+                        >
+                          <span className="material-symbols-outlined text-[15px] text-primary">visibility</span>
+                          <span>Profile</span>
+                        </button>
+
+                        <button
+                          onClick={() => handleOpenAssignModal(t)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-primary/10 hover:bg-primary text-primary hover:text-white text-xs font-bold transition-all cursor-pointer shadow-2xs group"
+                          title={`Assign Class & Stream to ${t.name}`}
+                        >
+                          <span className="material-symbols-outlined text-[15px] text-primary group-hover:text-white transition-colors">
+                            school
+                          </span>
+                          <span>Assign</span>
+                        </button>
+                      </div>
+
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleDeleteTeacher(t)}
+                          disabled={deletingId === t.id}
+                          title="Delete Teacher Record"
+                          className="p-1.5 rounded-lg text-outline hover:text-error hover:bg-error/10 transition-colors cursor-pointer disabled:opacity-50"
+                        >
+                          <span className="material-symbols-outlined text-[16px]">
+                            {deletingId === t.id ? 'sync' : 'delete'}
+                          </span>
+                        </button>
+                        <button
+                          onClick={() => onToggleClockIn(t.id)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                            isClockedIn
+                              ? 'bg-error-container text-on-error-container hover:bg-error/20'
+                              : 'bg-primary text-white hover:bg-primary-container'
+                          }`}
+                        >
+                          {isClockedIn ? 'Clock Out' : 'Clock In'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* VIEW TAB 2: CORRECTION REQUESTS REVIEW */}
+      {activeTab === 'corrections' && (
+        <div className="bg-surface-container-lowest rounded-2xl p-6 border border-outline-variant/30 shadow-xs space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-outline-variant/20 pb-3">
+            <div>
+              <h2 className="text-base font-bold text-on-surface">Teacher Profile Correction Requests</h2>
+              <p className="text-xs text-on-surface-variant">
+                Verify requested amendments to restricted teacher credentials and approve or reject with audit trail.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-1.5 text-xs">
+              {(['PENDING', 'APPROVED', 'REJECTED', 'ALL'] as const).map((st) => (
+                <button
+                  key={st}
+                  onClick={() => setRequestStatusFilter(st)}
+                  className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                    requestStatusFilter === st
+                      ? 'bg-primary text-white shadow-xs'
+                      : 'bg-surface-container text-on-surface-variant hover:text-on-surface'
+                  }`}
+                >
+                  {st}
+                </button>
+              ))}
             </div>
           </div>
 
-      {/* Faculty Cards Grid */}
-      {filtered.length === 0 ? (
-        <div className="py-16 text-center text-on-surface-variant bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-8">
-          <div className="flex flex-col items-center justify-center gap-2">
-            <span className="material-symbols-outlined text-5xl text-outline">person_off</span>
-            <p className="font-bold text-base text-on-surface">No educators found</p>
-            <p className="text-xs text-outline">Click "Onboard CBE Teacher" to register faculty members with TSC numbers.</p>
-          </div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((t) => {
-            const isClockedIn = t.status === 'Clocked In';
-            return (
-              <div
-                key={t.id}
-                className="bg-surface-container-lowest rounded-xl p-5 shadow-xs border border-outline-variant/30 flex flex-col justify-between hover:shadow-md transition-all"
-              >
-                <div>
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">
-                        {(t.name || '')
-                          .replace('Tr. ', '')
-                          .split(' ')
-                          .map((n) => n[0])
-                          .join('')}
+          {loadingRequests ? (
+            <div className="py-12 text-center text-on-surface-variant space-y-2">
+              <span className="material-symbols-outlined text-3xl animate-spin text-primary">progress_activity</span>
+              <p className="text-xs font-semibold">Loading correction requests...</p>
+            </div>
+          ) : filteredCorrectionRequests.length === 0 ? (
+            <div className="py-12 text-center text-on-surface-variant space-y-2">
+              <span className="material-symbols-outlined text-4xl text-outline">done_all</span>
+              <p className="text-sm font-bold text-on-surface">No {requestStatusFilter.toLowerCase()} correction requests.</p>
+              <p className="text-xs">Any teacher requested profile adjustments will appear here for review.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredCorrectionRequests.map((req) => (
+                <div
+                  key={req.id}
+                  className="p-4 rounded-xl border border-outline-variant/25 bg-surface-container-low hover:bg-surface-container transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-xs"
+                >
+                  <div className="space-y-1.5 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold text-sm text-on-surface">
+                        {req.teacher?.name || 'Teacher'} ({req.teacher?.employeeNumber || 'EMP'})
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary">
+                        {req.fieldLabel || req.fieldName}
+                      </span>
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          req.status === 'APPROVED'
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : req.status === 'REJECTED'
+                            ? 'bg-rose-100 text-rose-800'
+                            : 'bg-amber-100 text-amber-800'
+                        }`}
+                      >
+                        {req.status}
+                      </span>
+                      <span className="text-[10px] text-on-surface-variant">
+                        Requested: {new Date(req.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] pt-1">
+                      <div>
+                        <span className="text-on-surface-variant">Current Value: </span>
+                        <span className="font-medium text-gray-700">{req.currentValue || 'None'}</span>
                       </div>
                       <div>
-                        <h3 className="font-headline-md text-sm font-bold text-on-surface">{t.name}</h3>
-                        <p className="text-[11px] text-on-surface-variant font-data-mono">{t.tscNumber}</p>
+                        <span className="text-on-surface-variant">Proposed Correction: </span>
+                        <strong className="text-primary">{req.proposedValue}</strong>
                       </div>
                     </div>
-                    <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                        isClockedIn ? 'bg-secondary text-white' : 'bg-surface-container text-outline'
-                      }`}
-                    >
-                      {t.status}
-                    </span>
-                  </div>
 
-                  <div className="mt-4 pt-3 border-t border-surface-container space-y-2 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-on-surface-variant">Role / Designation:</span>
-                      <span className="font-semibold text-on-surface">{t.role}</span>
+                    <div className="text-[11px] text-on-surface-variant">
+                      <span className="font-semibold">Reason: </span>
+                      <span className="italic text-on-surface">"{req.reason}"</span>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-on-surface-variant">Assigned Class:</span>
-                      <span
-                        className="font-bold text-primary truncate max-w-[170px]"
-                        title={resolveAssignedClassName(t.assignedClass)}
-                      >
-                        {resolveAssignedClassName(t.assignedClass)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-on-surface-variant">Specialization:</span>
-                      <span className="font-semibold text-secondary truncate max-w-[170px]">
-                        {t.learningAreas.join(', ')}
-                      </span>
-                    </div>
-                    {t.qualification && (
-                      <div className="flex justify-between">
-                        <span className="text-on-surface-variant">Qualification:</span>
-                        <span className="text-on-surface">{t.qualification}</span>
+
+                    {req.evidenceUrl && (
+                      <div className="text-[11px]">
+                        <a
+                          href={req.evidenceUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-primary underline inline-flex items-center gap-1 font-semibold"
+                        >
+                          <span className="material-symbols-outlined text-[12px]">attachment</span>
+                          <span>View Supporting Evidence</span>
+                        </a>
                       </div>
                     )}
-                    <div className="flex justify-between">
-                      <span className="text-on-surface-variant">Direct Phone:</span>
-                      <span className="font-data-mono text-outline">{t.phone}</span>
+
+                    {req.reviewRemarks && (
+                      <div className="p-2 rounded-lg bg-surface border border-outline-variant/30 text-[11px] space-y-0.5">
+                        <span className="font-bold text-on-surface">Reviewer ({req.reviewedByName}):</span>
+                        <p className="text-on-surface-variant">{req.reviewRemarks}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {req.status === 'PENDING' && (
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => handleOpenReviewModal(req, 'APPROVE')}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-700 text-white font-bold text-xs hover:bg-emerald-800 transition-colors shadow-xs cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-[15px]">check</span>
+                        <span>Approve</span>
+                      </button>
+                      <button
+                        onClick={() => handleOpenReviewModal(req, 'REJECT')}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-rose-700 text-white font-bold text-xs hover:bg-rose-800 transition-colors shadow-xs cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-[15px]">close</span>
+                        <span>Reject</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* MODAL: REVIEW CORRECTION REQUEST */}
+      {selectedRequestForReview && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-surface rounded-2xl max-w-md w-full p-6 shadow-xl border border-outline-variant/30 space-y-4">
+            <div className="flex items-center justify-between border-b border-outline-variant/20 pb-3">
+              <div className="flex items-center gap-2">
+                <span
+                  className={`material-symbols-outlined text-[20px] ${
+                    reviewAction === 'APPROVE' ? 'text-emerald-700' : 'text-rose-700'
+                  }`}
+                >
+                  {reviewAction === 'APPROVE' ? 'verified' : 'cancel'}
+                </span>
+                <h3 className="font-bold text-sm text-on-surface">
+                  {reviewAction === 'APPROVE' ? 'Approve' : 'Reject'} Correction Request
+                </h3>
+              </div>
+              <button onClick={() => setSelectedRequestForReview(null)} className="text-gray-500 hover:text-black">
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <div className="p-3 rounded-xl bg-surface-container text-xs space-y-1">
+              <div>
+                <span className="text-on-surface-variant">Field: </span>
+                <strong>{selectedRequestForReview.fieldLabel}</strong>
+              </div>
+              <div>
+                <span className="text-on-surface-variant">Proposed Value: </span>
+                <strong className="text-primary">{selectedRequestForReview.proposedValue}</strong>
+              </div>
+              <div>
+                <span className="text-on-surface-variant">Teacher: </span>
+                <span>{selectedRequestForReview.teacher?.name}</span>
+              </div>
+            </div>
+
+            <form onSubmit={handleSubmitReview} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-on-surface mb-1">
+                  Administrator Remarks / Reason {reviewAction === 'REJECT' && <span className="text-error">*</span>}
+                </label>
+                <textarea
+                  required={reviewAction === 'REJECT'}
+                  rows={3}
+                  value={reviewRemarks}
+                  onChange={(e) => setReviewRemarks(e.target.value)}
+                  placeholder={
+                    reviewAction === 'APPROVE'
+                      ? 'e.g. Verified against official TSC documentation.'
+                      : 'State clear reason for rejection (e.g., mismatch with TSC registry record)...'
+                  }
+                  className="w-full px-3 py-2 rounded-lg border border-outline-variant/40 bg-surface-container-lowest focus:outline-primary"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-outline-variant/20">
+                <button
+                  type="button"
+                  onClick={() => setSelectedRequestForReview(null)}
+                  className="px-3.5 py-1.5 rounded-lg border border-outline-variant/40 text-on-surface hover:bg-surface-container cursor-pointer font-bold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingReview}
+                  className={`px-4 py-2 rounded-lg text-white font-bold cursor-pointer shadow-xs inline-flex items-center gap-1.5 ${
+                    reviewAction === 'APPROVE' ? 'bg-emerald-700 hover:bg-emerald-800' : 'bg-rose-700 hover:bg-rose-800'
+                  }`}
+                >
+                  {submittingReview && <span className="material-symbols-outlined text-[15px] animate-spin">progress_activity</span>}
+                  <span>Confirm {reviewAction === 'APPROVE' ? 'Approval' : 'Rejection'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: VIEW FULL TEACHER PROFILE & AUDIT LOG */}
+      {selectedTeacherForProfile && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-surface rounded-2xl max-w-3xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-outline-variant/30 my-auto overflow-hidden">
+            {/* Modal Header */}
+            <div className="p-5 border-b border-outline-variant/20 flex items-center justify-between shrink-0 bg-surface-container-lowest">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-bold text-lg">
+                  {(selectedTeacherForProfile.name || '')
+                    .replace('Tr. ', '')
+                    .split(' ')
+                    .map((n) => n[0])
+                    .join('')}
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-on-surface">{selectedTeacherForProfile.name}</h3>
+                  <p className="text-xs text-on-surface-variant font-data-mono">
+                    TSC: {selectedTeacherForProfile.tscNumber || 'None'} • Emp No: {selectedTeacherForProfile.employeeNumber || 'Pending'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setSelectedTeacherForProfile(null)}
+                  className="p-1 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container cursor-pointer"
+                >
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Sub-tabs: Details vs Audit Trail vs Edit (Admin Override) */}
+            <div className="px-5 pt-2 flex items-center gap-3 border-b border-outline-variant/20 bg-surface-container-lowest shrink-0 text-xs font-bold">
+              <button
+                onClick={() => setProfileModalTab('details')}
+                className={`pb-2.5 border-b-2 cursor-pointer transition-all ${
+                  profileModalTab === 'details' ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant hover:text-on-surface'
+                }`}
+              >
+                Profile Details (7 Sections)
+              </button>
+              <button
+                onClick={() => setProfileModalTab('audit')}
+                className={`pb-2.5 border-b-2 cursor-pointer transition-all ${
+                  profileModalTab === 'audit' ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant hover:text-on-surface'
+                }`}
+              >
+                Audit History ({teacherAuditLogs.length})
+              </button>
+              <button
+                onClick={() => setProfileModalTab('edit')}
+                className={`pb-2.5 border-b-2 cursor-pointer transition-all ${
+                  profileModalTab === 'edit' ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant hover:text-on-surface'
+                }`}
+              >
+                Admin Direct Edit (Override)
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-4 text-xs">
+              {loadingProfileData ? (
+                <div className="py-16 text-center text-on-surface-variant space-y-2">
+                  <span className="material-symbols-outlined text-3xl animate-spin text-primary">progress_activity</span>
+                  <p className="font-semibold">Loading teacher profile details...</p>
+                </div>
+              ) : profileModalTab === 'details' ? (
+                <div className="space-y-4">
+                  {/* Personal & Contact Grid */}
+                  <div className="grid grid-cols-2 gap-4 p-4 rounded-xl bg-surface-container-low border border-outline-variant/20">
+                    <div>
+                      <span className="block text-[11px] text-on-surface-variant">Full Name</span>
+                      <span className="font-bold text-on-surface">{teacherProfileData?.user?.fullName || selectedTeacherForProfile.name}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[11px] text-on-surface-variant">Email Address</span>
+                      <span className="font-semibold text-on-surface">{teacherProfileData?.user?.email || 'None'}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[11px] text-on-surface-variant">Phone</span>
+                      <span className="font-semibold text-on-surface">{teacherProfileData?.user?.phone || selectedTeacherForProfile.phone}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[11px] text-on-surface-variant">National ID</span>
+                      <span className="font-semibold text-on-surface">{teacherProfileData?.nationalId || 'Not provided'}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[11px] text-on-surface-variant">Date of Birth</span>
+                      <span className="font-semibold text-on-surface">{teacherProfileData?.dateOfBirth || 'Not set'}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[11px] text-on-surface-variant">Gender</span>
+                      <span className="font-semibold text-on-surface">{teacherProfileData?.gender || 'Not set'}</span>
+                    </div>
+                    <div className="col-span-2">
+                      <span className="block text-[11px] text-on-surface-variant">Residential Address</span>
+                      <span className="font-semibold text-on-surface">{teacherProfileData?.residentialAddress || 'Not recorded'}</span>
+                    </div>
+                  </div>
+
+                  {/* Professional & Employment */}
+                  <div className="grid grid-cols-2 gap-4 p-4 rounded-xl bg-surface-container-low border border-outline-variant/20">
+                    <div>
+                      <span className="block text-[11px] text-on-surface-variant">TSC Number</span>
+                      <span className="font-bold text-primary">{teacherProfileData?.tscNumber || 'None'}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[11px] text-on-surface-variant">Employee Number</span>
+                      <span className="font-bold text-on-surface">{teacherProfileData?.employeeNumber || 'Pending'}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[11px] text-on-surface-variant">Qualification</span>
+                      <span className="font-semibold text-on-surface">{teacherProfileData?.qualification || 'Bachelor of Education'}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[11px] text-on-surface-variant">Department</span>
+                      <span className="font-semibold text-on-surface">{teacherProfileData?.department || 'Primary CBC'}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[11px] text-on-surface-variant">Employment Type</span>
+                      <span className="font-semibold text-on-surface">{teacherProfileData?.employmentType || 'FULL_TIME'}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[11px] text-on-surface-variant">Employment Status</span>
+                      <span className="font-bold text-emerald-700">{teacherProfileData?.employmentStatus || 'ACTIVE'}</span>
+                    </div>
+                  </div>
+
+                  {/* Emergency Contact */}
+                  <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/20">
+                    <h4 className="font-bold text-primary mb-2 uppercase text-[10px] tracking-wider">Emergency Contact</h4>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <span className="block text-[11px] text-on-surface-variant">Name</span>
+                        <span className="font-semibold text-on-surface">{teacherProfileData?.emergencyContact?.name || 'Not recorded'}</span>
+                      </div>
+                      <div>
+                        <span className="block text-[11px] text-on-surface-variant">Phone</span>
+                        <span className="font-semibold text-on-surface">{teacherProfileData?.emergencyContact?.phone || 'Not recorded'}</span>
+                      </div>
+                      <div>
+                        <span className="block text-[11px] text-on-surface-variant">Relationship</span>
+                        <span className="font-semibold text-on-surface">{teacherProfileData?.emergencyContact?.relationship || 'Not specified'}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
+              ) : profileModalTab === 'audit' ? (
+                <div className="space-y-3">
+                  <h4 className="font-bold text-on-surface">Audit History Trail</h4>
+                  {teacherAuditLogs.length === 0 ? (
+                    <p className="text-on-surface-variant italic py-6 text-center">No profile change audit records found.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {teacherAuditLogs.map((log, i) => (
+                        <div key={i} className="p-3 rounded-lg bg-surface-container-low border border-outline-variant/20 space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-primary">{log.action}</span>
+                            <span className="text-[10px] text-on-surface-variant">
+                              {new Date(log.timestamp).toLocaleString()}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-on-surface">{log.details}</p>
+                          <div className="text-[10px] text-on-surface-variant">
+                            <span>Actor: </span>
+                            <strong>{log.actorEmail || log.actorUserId || 'System'}</strong>
+                            {log.actorRole && <span> ({log.actorRole})</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Edit Admin Override Form */
+                <form onSubmit={handleSaveAdminProfile} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-bold text-on-surface mb-1">First Name</label>
+                      <input
+                        type="text"
+                        value={adminEditForm.firstName}
+                        onChange={(e) => setAdminEditForm({ ...adminEditForm, firstName: e.target.value })}
+                        className="w-full px-3 py-1.5 rounded-lg border border-outline-variant/40 bg-surface focus:outline-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-on-surface mb-1">Last Name</label>
+                      <input
+                        type="text"
+                        value={adminEditForm.lastName}
+                        onChange={(e) => setAdminEditForm({ ...adminEditForm, lastName: e.target.value })}
+                        className="w-full px-3 py-1.5 rounded-lg border border-outline-variant/40 bg-surface focus:outline-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-on-surface mb-1">Email</label>
+                      <input
+                        type="email"
+                        value={adminEditForm.email}
+                        onChange={(e) => setAdminEditForm({ ...adminEditForm, email: e.target.value })}
+                        className="w-full px-3 py-1.5 rounded-lg border border-outline-variant/40 bg-surface focus:outline-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-on-surface mb-1">Phone</label>
+                      <input
+                        type="text"
+                        value={adminEditForm.phone}
+                        onChange={(e) => setAdminEditForm({ ...adminEditForm, phone: e.target.value })}
+                        className="w-full px-3 py-1.5 rounded-lg border border-outline-variant/40 bg-surface focus:outline-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-on-surface mb-1">TSC Number</label>
+                      <input
+                        type="text"
+                        value={adminEditForm.tscNumber}
+                        onChange={(e) => setAdminEditForm({ ...adminEditForm, tscNumber: e.target.value })}
+                        className="w-full px-3 py-1.5 rounded-lg border border-outline-variant/40 bg-surface focus:outline-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-on-surface mb-1">Employee Number</label>
+                      <input
+                        type="text"
+                        value={adminEditForm.employeeNumber}
+                        onChange={(e) => setAdminEditForm({ ...adminEditForm, employeeNumber: e.target.value })}
+                        className="w-full px-3 py-1.5 rounded-lg border border-outline-variant/40 bg-surface focus:outline-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-on-surface mb-1">National ID</label>
+                      <input
+                        type="text"
+                        value={adminEditForm.nationalId}
+                        onChange={(e) => setAdminEditForm({ ...adminEditForm, nationalId: e.target.value })}
+                        className="w-full px-3 py-1.5 rounded-lg border border-outline-variant/40 bg-surface focus:outline-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-on-surface mb-1">Department</label>
+                      <input
+                        type="text"
+                        value={adminEditForm.department}
+                        onChange={(e) => setAdminEditForm({ ...adminEditForm, department: e.target.value })}
+                        className="w-full px-3 py-1.5 rounded-lg border border-outline-variant/40 bg-surface focus:outline-primary"
+                      />
+                    </div>
+                  </div>
 
-                <div className="mt-4 pt-3 border-t border-surface-container flex items-center justify-between gap-2">
-                  <button
-                    onClick={() => handleOpenAssignModal(t)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 hover:bg-primary text-primary hover:text-white text-xs font-bold transition-all cursor-pointer shadow-2xs group"
-                    title={`Assign Class & Stream to ${t.name}`}
-                  >
-                    <span className="material-symbols-outlined text-[15px] text-primary group-hover:text-white transition-colors">
-                      school
-                    </span>
-                    <span>Assign Class</span>
-                  </button>
-
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center justify-end gap-2 pt-3 border-t border-outline-variant/20">
                     <button
-                      onClick={() => handleDeleteTeacher(t)}
-                      disabled={deletingId === t.id}
-                      title="Delete Teacher Record"
-                      className="p-1 rounded text-outline hover:text-error hover:bg-error/10 transition-colors cursor-pointer disabled:opacity-50"
+                      type="button"
+                      onClick={() => setProfileModalTab('details')}
+                      className="px-3 py-1.5 rounded-lg border border-outline-variant/40 text-on-surface cursor-pointer font-bold"
                     >
-                      <span className="material-symbols-outlined text-[16px]">
-                        {deletingId === t.id ? 'sync' : 'delete'}
-                      </span>
+                      Cancel
                     </button>
                     <button
-                      onClick={() => onToggleClockIn(t.id)}
-                      className={`px-3 py-1 rounded text-xs font-semibold transition-all cursor-pointer ${
-                        isClockedIn
-                          ? 'bg-error-container text-on-error-container hover:bg-error/20'
-                          : 'bg-primary text-white hover:bg-primary-container'
-                      }`}
+                      type="submit"
+                      disabled={savingAdminEdit}
+                      className="px-4 py-1.5 rounded-lg bg-primary text-white font-bold cursor-pointer shadow-xs inline-flex items-center gap-1.5"
                     >
-                      {isClockedIn ? 'Clock Out' : 'Clock In'}
+                      {savingAdminEdit && <span className="material-symbols-outlined text-[15px] animate-spin">progress_activity</span>}
+                      <span>Save Changes (Admin Override)</span>
                     </button>
                   </div>
-                </div>
-              </div>
-            );
-          })}
+                </form>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
@@ -538,140 +1218,93 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
       {isAssignOpen && selectedTeacher && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-150">
           <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-md w-full max-h-[92vh] sm:max-h-[88vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
-            {/* Header */}
-            <div className="bg-[#7a1228] text-white p-4 flex items-center justify-between shrink-0">
+            <div className="p-4 sm:p-5 border-b border-outline-variant/20 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-[20px] text-rose-200">school</span>
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                  <span className="material-symbols-outlined text-[20px]">school</span>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-sm">Assign Class & Stream</h3>
-                  <p className="text-[11px] text-rose-200">Allocate CBE grade level and roll-call stream</p>
+                  <h3 className="font-bold text-sm text-on-surface">Assign Class & Stream</h3>
+                  <p className="text-[11px] text-on-surface-variant truncate max-w-[220px]">
+                    {selectedTeacher.name} ({selectedTeacher.employeeNumber || selectedTeacher.tscNumber})
+                  </p>
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setIsAssignOpen(false)}
-                className="text-rose-100 hover:text-white cursor-pointer p-1 rounded-lg hover:bg-white/10 transition-colors"
+                className="p-1 rounded-lg text-outline hover:text-on-surface hover:bg-surface-container transition-colors cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[18px]">close</span>
               </button>
             </div>
 
-            {/* Form */}
-            <form onSubmit={handleAssignClassAndStream} className="p-4 sm:p-5 space-y-4 text-xs overflow-y-auto flex-1 overscroll-contain">
-              {/* Selected Educator Card */}
-              <div className="flex items-center gap-3 p-3 bg-surface-container-low rounded-xl border border-outline-variant/30">
-                <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">
-                  {(selectedTeacher.name || '')
-                    .replace('Tr. ', '')
-                    .split(' ')
-                    .map((n) => n[0])
-                    .join('')}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="font-bold text-on-surface truncate text-xs">{selectedTeacher.name}</p>
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-surface-container-high text-on-surface-variant font-data-mono">
-                      {selectedTeacher.tscNumber}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-on-surface-variant mt-0.5 truncate">
-                    Currently: <span className="font-semibold text-primary">{resolveAssignedClassName(selectedTeacher.assignedClass)}</span>
-                  </p>
-                </div>
-              </div>
-
+            <form onSubmit={handleAssignClassAndStream} className="p-4 sm:p-5 space-y-4 overflow-y-auto text-xs">
               {assignSuccess && (
-                <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-2 animate-in fade-in">
-                  <span className="material-symbols-outlined text-emerald-600 text-[18px]">check_circle</span>
+                <div className="p-3 bg-teal-50 border border-teal-200 text-teal-800 rounded-lg flex items-center gap-2">
+                  <span className="material-symbols-outlined text-teal-700 text-[18px]">check_circle</span>
                   <span>{assignSuccess}</span>
                 </div>
               )}
-
               {assignError && (
-                <div className="p-3 rounded-xl bg-error-container text-on-error-container text-xs font-semibold flex items-center gap-2 border border-error/20 animate-in fade-in">
+                <div className="p-3 bg-error-container/40 border border-error/20 text-on-error-container rounded-lg flex items-center gap-2">
                   <span className="material-symbols-outlined text-error text-[18px]">error</span>
                   <span>{assignError}</span>
                 </div>
               )}
 
-              {/* Dropdown 1: Target Class / Grade Level */}
               <div>
                 <label className="block font-bold text-on-surface-variant mb-1 uppercase text-[10px] tracking-wider">
-                  1. Target CBE Class / Grade Level <span className="text-error">*</span>
+                  1. Target Class
                 </label>
-                <div className="relative">
-                  <select
-                    value={selectedClassId}
-                    onChange={(e) => handleClassChange(e.target.value)}
-                    disabled={assignLoading}
-                    className="w-full bg-surface-container-low border border-outline-variant/60 rounded-lg p-2.5 text-xs text-on-surface font-semibold focus:outline-primary focus:border-primary transition-all cursor-pointer"
-                  >
-                    {allClassOptions.length === 0 ? (
-                      <option value="">No classes available</option>
-                    ) : (
-                      allClassOptions.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name} {c.gradeLevel ? `(${formatGradeLabel(c.gradeLevel)})` : ''}
-                        </option>
-                      ))
-                    )}
-                  </select>
-                </div>
-                <p className="text-[10px] text-outline mt-1">Select the CBE class level to which this teacher is assigned.</p>
+                <select
+                  value={selectedClassId}
+                  onChange={(e) => handleClassChange(e.target.value)}
+                  className="w-full bg-surface-container-low border border-outline-variant/60 rounded-lg p-2.5 text-xs text-on-surface font-semibold focus:outline-primary cursor-pointer"
+                >
+                  {allClassOptions.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
-              {/* Dropdown 2: Target Stream Allocation */}
               <div>
                 <label className="block font-bold text-on-surface-variant mb-1 uppercase text-[10px] tracking-wider">
-                  2. Target Stream / Room Allocation <span className="text-error">*</span>
+                  2. Stream Allocation
                 </label>
-                <div className="relative">
-                  <select
-                    value={selectedStreamMode}
-                    onChange={(e) => handleStreamModeChange(e.target.value)}
-                    disabled={assignLoading}
-                    className="w-full bg-surface-container-low border border-outline-variant/60 rounded-lg p-2.5 text-xs text-on-surface font-semibold focus:outline-primary focus:border-primary transition-all cursor-pointer"
-                  >
-                    {currentStreams.map((st) => (
-                      <option key={st.id} value={st.id}>
-                        {st.name} Stream {st.capacity ? `(Capacity: ${st.capacity})` : ''}
-                      </option>
-                    ))}
-                    {currentStreams.length === 0 && (
-                      <option value="main-default">Main Stream (Default)</option>
-                    )}
-                    <option value="__NEW_STREAM__">+ Create / Allocate New Custom Stream...</option>
-                  </select>
-                </div>
-                <p className="text-[10px] text-outline mt-1">
-                  {currentStreams.length > 0
-                    ? `${currentStreams.length} active stream(s) available for this class.`
-                    : 'No stream records exist yet. "Main Stream" will be created and assigned automatically.'}
-                </p>
+                <select
+                  value={selectedStreamMode}
+                  onChange={(e) => handleStreamModeChange(e.target.value)}
+                  className="w-full bg-surface-container-low border border-outline-variant/60 rounded-lg p-2.5 text-xs text-on-surface font-semibold focus:outline-primary cursor-pointer"
+                >
+                  {(streamsMap[selectedClassId] || []).map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} Stream
+                    </option>
+                  ))}
+                  <option value="main-default">+ Assign Default (Main Stream)</option>
+                  <option value="__NEW_STREAM__">+ Create & Assign New Custom Stream...</option>
+                </select>
               </div>
 
-              {/* Custom stream name input if __NEW_STREAM__ is chosen */}
               {selectedStreamMode === '__NEW_STREAM__' && (
-                <div className="p-3 bg-amber-50/70 rounded-xl border border-amber-200 space-y-2 animate-in fade-in">
+                <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 space-y-2">
                   <label className="block font-bold text-amber-900 text-[11px]">
-                    Custom Stream Name <span className="text-error">*</span>
+                    Custom Stream Name *
                   </label>
                   <input
                     type="text"
                     value={customStreamName}
                     onChange={(e) => setCustomStreamName(e.target.value)}
-                    placeholder="e.g. East, Blue, North, St. Peter"
+                    placeholder="e.g. East, Blue, St. Peter"
                     className="w-full bg-white border border-amber-300 rounded-lg p-2 text-xs text-on-surface focus:outline-primary"
                     autoFocus
                   />
-                  <p className="text-[10px] text-amber-800">
-                    This new stream will be initialized under the selected class and linked to the teacher.
-                  </p>
                 </div>
               )}
 
-              {/* Dropdown 3: Responsibility / Role */}
               <div>
                 <label className="block font-bold text-on-surface-variant mb-1 uppercase text-[10px] tracking-wider">
                   3. Teaching Role in this Class
@@ -679,8 +1312,7 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
                 <select
                   value={assignmentRole}
                   onChange={(e) => setAssignmentRole(e.target.value)}
-                  disabled={assignLoading}
-                  className="w-full bg-surface-container-low border border-outline-variant/60 rounded-lg p-2.5 text-xs text-on-surface font-semibold focus:outline-primary focus:border-primary transition-all cursor-pointer"
+                  className="w-full bg-surface-container-low border border-outline-variant/60 rounded-lg p-2.5 text-xs text-on-surface font-semibold focus:outline-primary cursor-pointer"
                 >
                   <option value="CLASS_TEACHER">Class Teacher (Lead Educator & Roll Call)</option>
                   <option value="SUBJECT_TEACHER">Subject Teacher (CBC Learning Area)</option>
@@ -688,24 +1320,20 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
                 </select>
               </div>
 
-              {/* Action Buttons */}
               <div className="pt-2 flex items-center justify-end gap-2 border-t border-outline-variant/20">
                 <button
                   type="button"
                   onClick={() => setIsAssignOpen(false)}
-                  disabled={assignLoading}
-                  className="px-3.5 py-2 rounded-lg border border-outline-variant/60 text-xs font-semibold text-on-surface hover:bg-surface-container transition-colors cursor-pointer"
+                  className="px-3.5 py-2 rounded-lg border border-outline-variant/60 text-xs font-semibold text-on-surface hover:bg-surface-container cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={assignLoading}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary-container disabled:opacity-50 transition-all cursor-pointer shadow-xs"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary-container disabled:opacity-50 cursor-pointer shadow-xs"
                 >
-                  <span className="material-symbols-outlined text-[16px]">
-                    {assignLoading ? 'sync' : 'check'}
-                  </span>
+                  {assignLoading && <span className="material-symbols-outlined text-[15px] animate-spin">progress_activity</span>}
                   <span>{assignLoading ? 'Assigning...' : 'Confirm Assignment'}</span>
                 </button>
               </div>

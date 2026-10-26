@@ -10,7 +10,8 @@ export type SystemLogCategory =
   | 'SYSTEM'
   | 'COMPLAINTS'
   | 'CONCERNS'
-  | 'COMMUNICATION';
+  | 'COMMUNICATION'
+  | 'STAFF';
 
 export type SystemLogStatus = 'SUCCESS' | 'FAILED';
 

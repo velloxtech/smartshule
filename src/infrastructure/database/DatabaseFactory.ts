@@ -103,12 +103,16 @@ import { PostgresInventoryRepository } from './postgres/PostgresInventoryReposit
 import { InMemoryInventoryRepository } from './in-memory/InMemoryInventoryRepository';
 import { ISignatureRepository } from '../../core/ports/repositories/ISignatureRepository';
 import { InMemorySignatureRepository } from './in-memory/InMemorySignatureRepository';
+import { ITeacherCorrectionRequestRepository } from '../../core/ports/repositories/ITeacherCorrectionRequestRepository';
+import { InMemoryTeacherCorrectionRequestRepository } from './in-memory/InMemoryTeacherCorrectionRequestRepository';
+import { PostgresTeacherCorrectionRequestRepository } from './postgres/PostgresTeacherCorrectionRequestRepository';
 
 export interface RepositoryBundle {
   userRepository: IUserRepository;
   studentRepository: IStudentRepository;
   deletedStudentRepository?: IDeletedStudentRepository;
   teacherRepository: ITeacherRepository;
+  teacherCorrectionRequestRepository?: ITeacherCorrectionRequestRepository;
   guardianRepository: IGuardianRepository;
   academicRepository: IAcademicRepository;
   CBCAssessmentRepository: ICBCAssessmentRepository;
@@ -263,6 +267,7 @@ export class DatabaseFactory {
         payrollRepository: new PostgresPayrollRepository(pool),
         inventoryRepository: new PostgresInventoryRepository(pool),
         signatureRepository: new PostgresSignatureRepository(pool),
+        teacherCorrectionRequestRepository: new PostgresTeacherCorrectionRequestRepository(pool),
       };
     }
 
@@ -273,6 +278,7 @@ export class DatabaseFactory {
       studentRepository: new InMemoryStudentRepository(),
       deletedStudentRepository: new InMemoryDeletedStudentRepository(),
       teacherRepository: new InMemoryTeacherRepository(),
+      teacherCorrectionRequestRepository: new InMemoryTeacherCorrectionRequestRepository(),
       guardianRepository: new InMemoryGuardianRepository(),
       academicRepository: new InMemoryAcademicRepository(),
       CBCAssessmentRepository: new InMemoryCBCAssessmentRepository(),

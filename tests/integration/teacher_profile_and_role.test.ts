@@ -77,26 +77,39 @@ describe('Teacher & Staff Onboarding and Profile Management Integration Tests', 
     expect(res.body.data.tscNumber).toBeUndefined();
   });
 
-  it('allows authenticated teacher to update their own profile via PUT /api/v1/teachers/me/profile', async () => {
+  it('allows authenticated teacher to update their own permitted profile fields via PUT /api/v1/teachers/me/profile', async () => {
+    const res = await request(app)
+      .put('/api/v1/teachers/me/profile')
+      .set('Authorization', `Bearer ${teacherToken}`)
+      .send({
+        phone: '+254700998877',
+        residentialAddress: 'Ruiru, Kiambu County',
+        emergencyContact: {
+          name: 'David Mwangi',
+          phone: '+254711223344',
+          relationship: 'Spouse'
+        }
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.user.phone).toBe('+254700998877');
+    expect(res.body.data.residentialAddress).toBe('Ruiru, Kiambu County');
+    expect(res.body.data.emergencyContact.name).toBe('David Mwangi');
+  });
+
+  it('rejects direct updates to restricted fields via PUT /api/v1/teachers/me/profile', async () => {
     const res = await request(app)
       .put('/api/v1/teachers/me/profile')
       .set('Authorization', `Bearer ${teacherToken}`)
       .send({
         firstName: 'Sarah',
-        lastName: 'Mwangi-Ochieng',
-        phone: '+254700998877',
-        tscNumber: 'TSC/778899',
-        qualification: 'Masters in Education (M.Ed)',
-        specialization: ['English Language', 'Literature in English']
+        tscNumber: 'TSC/999999'
       });
 
-    expect(res.status).toBe(200);
-    expect(res.body.success).toBe(true);
-    expect(res.body.data.user.lastName).toBe('Mwangi-Ochieng');
-    expect(res.body.data.user.phone).toBe('+254700998877');
-    expect(res.body.data.tscNumber).toBe('TSC/778899');
-    expect(res.body.data.qualification).toBe('Masters in Education (M.Ed)');
-    expect(res.body.data.specialization).toContain('Literature in English');
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+    expect(res.body.message).toContain('Direct updates to restricted field');
   });
 
   it('allows administrator to update teacher details via PUT /api/v1/teachers/:id', async () => {
