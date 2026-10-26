@@ -337,7 +337,10 @@ export class AppContainer {
       this.CBCAssessmentRepository,
       this.attendanceRepository,
       this.feeRepository,
-      this.userRepository
+      this.userRepository,
+      this.signatureRepository,
+      this.teacherCorrectionRequestRepository,
+      this.systemLogRepository
     );
     this.visualMediaUseCases = new VisualMediaUseCases(
       this.mediaRepository,

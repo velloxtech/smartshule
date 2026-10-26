@@ -32,6 +32,7 @@ export interface ISignatureRepository {
   saveBatch(batch: DocumentSigningBatch): Promise<DocumentSigningBatch>;
   findBatchById(batchId: string): Promise<DocumentSigningBatch | null>;
   findBatchesByUserId(userId: string): Promise<DocumentSigningBatch[]>;
+  listAllBatches?(): Promise<DocumentSigningBatch[]>;
   saveBatchItems(items: DocumentSigningBatchItem[]): Promise<void>;
   updateBatchItem(item: DocumentSigningBatchItem): Promise<void>;
   findBatchItems(batchId: string): Promise<DocumentSigningBatchItem[]>;

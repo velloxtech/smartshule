@@ -1116,6 +1116,8 @@ export interface DashboardSummary {
   academicPeriod: {
     year: string;
     term: string;
+    academicYearId?: string;
+    termId?: string;
   };
   totalStudents?: number;
   totalTeachers?: number;
@@ -1123,7 +1125,11 @@ export interface DashboardSummary {
   counts: {
     totalStudents: number;
     activeStudents: number;
+    inactiveStudents?: number;
+    boysCount?: number;
+    girlsCount?: number;
     totalTeachers: number;
+    activeTeachers?: number;
     totalNonTeachingStaff?: number;
   };
   finance: {
@@ -1131,6 +1137,18 @@ export interface DashboardSummary {
     totalCollected: number;
     totalArrears: number;
     collectionRatePercentage: number;
+    totalExpenses?: number;
+    netOperatingCash?: number;
+    pendingExpensesCount?: number;
+    defaultersCount?: number;
+    paymentMethods?: {
+      mpesa: number;
+      bank: number;
+      cash: number;
+      other: number;
+    };
+    unverifiedPaymentsCount?: number;
+    unverifiedPaymentsAmount?: number;
   };
   CBCProficiency: {
     exceeding: number;
@@ -1138,6 +1156,99 @@ export interface DashboardSummary {
     approaching: number;
     below: number;
     totalAssessments: number;
+    proficiencyRate?: number;
+  };
+  academicOverview?: {
+    formativeCount: number;
+    summativeCount: number;
+    reportCardsCount: number;
+    gradeAverages: Array<{
+      gradeLevel: string;
+      averagePercentage: number;
+      totalAssessments: number;
+    }>;
+    learningAreaPerformance: Array<{
+      learningAreaId: string;
+      name: string;
+      averagePercentage: number;
+      totalAssessments: number;
+    }>;
+    termComparison: {
+      comparisonAvailable: boolean;
+      currentTermMean: number | null;
+      previousTermName?: string;
+      previousTermMean: number | null;
+      growthDelta: number | null;
+    };
+    attentionAreas: Array<{
+      name: string;
+      type: 'GRADE' | 'LEARNING_AREA';
+      belowPercentage: number;
+      reason: string;
+    }>;
+  };
+  attendanceSummary?: {
+    hasData: boolean;
+    isToday: boolean;
+    date: string;
+    totalMarked: number;
+    present: number;
+    absent: number;
+    late: number;
+    excused: number;
+    presentPercentage: number | null;
+  };
+  enrolmentOverview?: {
+    totalEnrolled: number;
+    activeCount: number;
+    inactiveCount: number;
+    boysCount: number;
+    girlsCount: number;
+    classes: Array<{
+      id: string;
+      name: string;
+      streamCount: number;
+      boys: number;
+      girls: number;
+      total: number;
+      teacherName?: string;
+    }>;
+  };
+  pendingApprovals?: {
+    totalActionable: number;
+    pendingSignaturesCount: number;
+    pendingCorrectionRequestsCount: number;
+    unverifiedPaymentsCount: number;
+    correctionRequests?: Array<{
+      id: string;
+      teacherName: string;
+      fieldName: string;
+      requestedValue: string;
+      submittedAt: string;
+    }>;
+    unverifiedPayments?: Array<{
+      id: string;
+      receiptNumber: string;
+      studentName?: string;
+      amount: number;
+      reference: string;
+      paymentDate: string;
+    }>;
+  };
+  recentActivities?: Array<{
+    id: string;
+    timestamp: string;
+    level: string;
+    category: string;
+    action: string;
+    actorEmail?: string;
+    actorRole?: string;
+    status: string;
+    details: string;
+  }>;
+  availablePeriods?: {
+    years: Array<{ id: string; name: string; isCurrent: boolean }>;
+    terms: Array<{ id: string; name: string; isCurrent: boolean; academicYearId: string }>;
   };
 }
 

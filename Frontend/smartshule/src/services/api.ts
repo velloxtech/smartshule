@@ -1989,8 +1989,21 @@ const coreApiService = {
   },
 
   // 13. Dashboard & Analytics Endpoints
-  getDashboardAnalytics: async (schoolId?: string): Promise<ApiResponse<DashboardSummary>> => {
-    return apiFetch<ApiResponse<DashboardSummary>>(`/analytics/dashboard${schoolId ? `?schoolId=${schoolId}` : ''}`);
+  getDashboardAnalytics: async (
+    optionsOrSchoolId?: string | { schoolId?: string; yearId?: string; termId?: string }
+  ): Promise<ApiResponse<DashboardSummary>> => {
+    let query = '';
+    if (typeof optionsOrSchoolId === 'string') {
+      query = `?schoolId=${encodeURIComponent(optionsOrSchoolId)}`;
+    } else if (optionsOrSchoolId) {
+      const params = new URLSearchParams();
+      if (optionsOrSchoolId.schoolId) params.append('schoolId', optionsOrSchoolId.schoolId);
+      if (optionsOrSchoolId.yearId) params.append('academicYearId', optionsOrSchoolId.yearId);
+      if (optionsOrSchoolId.termId) params.append('termId', optionsOrSchoolId.termId);
+      const qStr = params.toString();
+      if (qStr) query = `?${qStr}`;
+    }
+    return apiFetch<ApiResponse<DashboardSummary>>(`/analytics/dashboard${query}`);
   },
 
   getGuardianPortalData: async (): Promise<ApiResponse<any>> => {

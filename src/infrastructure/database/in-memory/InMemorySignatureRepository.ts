@@ -123,6 +123,11 @@ export class InMemorySignatureRepository implements ISignatureRepository {
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }
 
+  public async listAllBatches(): Promise<DocumentSigningBatch[]> {
+    return Array.from(this.batchesById.values())
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+
   public async saveBatchItems(items: DocumentSigningBatchItem[]): Promise<void> {
     if (items.length === 0) return;
     const batchId = items[0].batchId;

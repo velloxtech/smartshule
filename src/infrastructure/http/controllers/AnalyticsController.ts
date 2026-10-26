@@ -15,8 +15,16 @@ export class AnalyticsController {
         });
       }
 
-      const { schoolId } = req.query;
-      const data = await this.analyticsUseCases.getSchoolDashboardSummary(schoolId as string);
+      const schoolId = (req.query.schoolId as string) || user?.schoolId;
+      const academicYearId = (req.query.academicYearId as string) || (req.query.yearId as string);
+      const termId = req.query.termId as string;
+
+      const data = await this.analyticsUseCases.getSchoolDashboardSummary({
+        schoolId,
+        academicYearId,
+        termId
+      });
+
       return res.status(200).json({
         success: true,
         data
