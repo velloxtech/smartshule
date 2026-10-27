@@ -1267,9 +1267,7 @@ export class PostgresDatabaseInitializer {
       CREATE UNIQUE INDEX IF NOT EXISTS uq_strands_area_grade_title ON strands (learning_area_id, grade_level, LOWER(title));
       CREATE UNIQUE INDEX IF NOT EXISTS uq_sub_strands_strand_code ON sub_strands (strand_id, code);
       CREATE UNIQUE INDEX IF NOT EXISTS uq_sub_strands_strand_title ON sub_strands (strand_id, LOWER(title));
-<<<<<<< HEAD
       CREATE UNIQUE INDEX IF NOT EXISTS uq_summative_student_area_term_year ON summative_assessments (student_id, learning_area_id, term_id, academic_year_id);
-=======
 
       ALTER TABLE teachers ADD COLUMN IF NOT EXISTS date_of_birth VARCHAR(50);
       ALTER TABLE teachers ADD COLUMN IF NOT EXISTS gender VARCHAR(20);
@@ -1282,7 +1280,6 @@ export class PostgresDatabaseInitializer {
       ALTER TABLE teachers ADD COLUMN IF NOT EXISTS department VARCHAR(100);
       ALTER TABLE teachers ADD COLUMN IF NOT EXISTS emergency_contact JSONB DEFAULT '{}';
       ALTER TABLE teachers ADD COLUMN IF NOT EXISTS documents JSONB DEFAULT '[]';
->>>>>>> 6ea15e3dcc822c0b50b6b0c2c69bdba3a3de674e
     `).catch(() => {});
 
     console.log('[PostgreSQL] Database tables initialized successfully.');
