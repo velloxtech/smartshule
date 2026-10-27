@@ -1786,7 +1786,14 @@ export class PostgresGuardianRepository implements IGuardianRepository {
   public async save(g: Guardian): Promise<void> {
     const q = `INSERT INTO guardians (id, user_id, national_id, occupation, relationship, emergency_contact, student_ids, created_at, updated_at)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-               ON CONFLICT (id) DO UPDATE SET student_ids = EXCLUDED.student_ids, updated_at = NOW()`;
+               ON CONFLICT (id) DO UPDATE SET 
+                 user_id = EXCLUDED.user_id,
+                 national_id = EXCLUDED.national_id,
+                 occupation = EXCLUDED.occupation,
+                 relationship = EXCLUDED.relationship,
+                 emergency_contact = EXCLUDED.emergency_contact,
+                 student_ids = EXCLUDED.student_ids, 
+                 updated_at = NOW()`;
     await this.pool.query(q, [g.id, g.userId, g.nationalId, g.occupation, g.relationship, g.emergencyContact, JSON.stringify(g.studentIds), g.createdAt, g.updatedAt]);
   }
   public async update(g: Guardian): Promise<void> { await this.save(g); }

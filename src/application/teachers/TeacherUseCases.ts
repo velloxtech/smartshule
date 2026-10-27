@@ -1,4 +1,4 @@
-import { ITeacherRepository } from '../../core/ports/repositories/ITeacherRepository';
+import { ITeacherRepository, IGuardianRepository } from '../../core/ports/repositories/ITeacherRepository';
 import { IUserRepository } from '../../core/ports/repositories/IUserRepository';
 import { IPasswordHasher } from '../../core/ports/services/IExternalServices';
 import { ITeacherCorrectionRequestRepository } from '../../core/ports/repositories/ITeacherCorrectionRequestRepository';
@@ -10,6 +10,7 @@ import { User, UserRole, UserStatus, roleRequiresTeacherProfile } from '../../co
 import { TeacherCorrectionRequest, CorrectionRequestStatus } from '../../core/domain/user/TeacherCorrectionRequest';
 import { SystemLog } from '../../core/domain/system-log/SystemLog';
 import { IdGenerator, NotFoundError, ConflictError, ValidationError, ForbiddenError } from '../../core/domain/shared/Errors';
+import { PhoneUtils } from '../../infrastructure/utils/PhoneUtils';
 
 export interface RegisterTeacherDTO {
   email?: string;
@@ -119,7 +120,8 @@ export class TeacherUseCases {
     private readonly teacherCorrectionRequestRepository?: ITeacherCorrectionRequestRepository,
     private readonly systemLogRepository?: ISystemLogRepository,
     private readonly academicRepository?: IAcademicRepository,
-    private readonly timetableRepository?: ITimetableRepository
+    private readonly timetableRepository?: ITimetableRepository,
+    private readonly guardianRepository?: IGuardianRepository
   ) {}
 
   public async registerTeacher(
@@ -133,17 +135,48 @@ export class TeacherUseCases {
     const cleanEmail = dto.email?.trim() ? dto.email.trim().toLowerCase() : undefined;
     const cleanPhone = dto.phone?.trim();
 
+    let existingUserByEmail: User | null = null;
+    let existingUserByPhone: User | null = null;
+
     if (cleanEmail) {
-      const existingUser = await this.userRepository.findByEmail(cleanEmail);
-      if (existingUser) {
-        throw new ConflictError(`User with email '${dto.email}' already exists.`);
-      }
+      existingUserByEmail = await this.userRepository.findByEmail(cleanEmail);
     }
 
     if (cleanPhone) {
-      const existingPhoneUser = await this.userRepository.findByPhone(cleanPhone);
-      if (existingPhoneUser) {
-        throw new ConflictError(`User with phone number '${cleanPhone}' already exists.`);
+      existingUserByPhone = await this.userRepository.findByPhone(cleanPhone);
+      if (!existingUserByPhone) {
+        const allUsers = await this.userRepository.findAll();
+        existingUserByPhone = allUsers.find(u => PhoneUtils.areMatches(u.phone, cleanPhone)) || null;
+      }
+      if (!existingUserByPhone && this.guardianRepository) {
+        const guardian = await this.guardianRepository.findByPhone(cleanPhone);
+        if (guardian?.userId) {
+          existingUserByPhone = await this.userRepository.findById(guardian.userId);
+        }
+      }
+    }
+
+    // If both email and phone matched different users, that is a true conflict
+    if (existingUserByEmail && existingUserByPhone && existingUserByEmail.id !== existingUserByPhone.id) {
+      throw new ConflictError(`A user with email '${dto.email}' and another user with phone number '${cleanPhone}' already exist.`);
+    }
+
+    const existingUser = existingUserByEmail || existingUserByPhone;
+    const isParentAccount = existingUser && (existingUser.role === UserRole.GUARDIAN || existingUser.role === UserRole.PARENT);
+
+    // If existing user is NOT a parent, then it's a conflict
+    if (existingUserByEmail && !isParentAccount) {
+      throw new ConflictError(`User with email '${dto.email}' already exists.`);
+    }
+
+    if (existingUserByPhone && !isParentAccount) {
+      throw new ConflictError(`User with phone number '${cleanPhone}' already exists.`);
+    }
+
+    if (isParentAccount && existingUser) {
+      const existingTeacher = await this.teacherRepository.findByUserId(existingUser.id);
+      if (existingTeacher) {
+        throw new ConflictError(`A teacher profile already exists for this person (Employee Number: ${existingTeacher.employeeNumber}).`);
       }
     }
 
@@ -190,6 +223,146 @@ export class TeacherUseCases {
       }
     }
 
+    const requiresTeacherProfile = roleRequiresTeacherProfile(targetRole);
+
+    // DUAL ROLE HANDLING: If existing user is a parent, upgrade and link to staff/teacher
+    if (isParentAccount && existingUser) {
+      if (dto.password?.trim()) {
+        const newPasswordHash = await this.passwordHasher.hash(dto.password.trim());
+        existingUser.updatePassword(newPasswordHash);
+      }
+
+      existingUser.updateRole(targetRole);
+      existingUser.setSchoolId(targetSchoolId);
+      existingUser.updateProfile(
+        dto.firstName?.trim() || existingUser.firstName,
+        dto.lastName?.trim() || existingUser.lastName,
+        cleanPhone || existingUser.phone
+      );
+      if (cleanEmail && cleanEmail !== existingUser.email) {
+        existingUser.updateEmail(cleanEmail);
+      }
+
+      await this.userRepository.update(existingUser);
+
+      // Verify and preserve guardian linkage
+      if (this.guardianRepository) {
+        let guardian = await this.guardianRepository.findByUserId(existingUser.id);
+        if (!guardian && cleanPhone) {
+          guardian = await this.guardianRepository.findByPhone(cleanPhone);
+        }
+        if (guardian && guardian.userId !== existingUser.id) {
+          guardian.setUserId(existingUser.id);
+          await this.guardianRepository.update(guardian);
+        }
+      }
+
+      if (!requiresTeacherProfile) {
+        if (this.systemLogRepository) {
+          await this.systemLogRepository.create(
+            SystemLog.create(
+              {
+                schoolId: targetSchoolId,
+                category: 'STAFF',
+                action: 'STAFF_REGISTERED_FROM_PARENT',
+                actorUserId: actor?.userId || existingUser.id,
+                actorEmail: actor?.email || existingUser.email,
+                status: 'SUCCESS',
+                details: `Parent ${existingUser.fullName} registered as staff (${targetRole}). Enrolled child linkages preserved.`,
+                metadata: { userId: existingUser.id, role: targetRole, schoolId: targetSchoolId, isParent: true }
+              },
+              IdGenerator.generate()
+            )
+          );
+        }
+        return {
+          user: existingUser.toJSON(),
+          employeeNumber: dto.employeeNumber?.trim() || undefined
+        };
+      }
+
+      let employeeNumber = dto.employeeNumber?.trim();
+      if (!employeeNumber) {
+        const allTeachers = await this.teacherRepository.findAll();
+        const nextSeq = IdGenerator.generateNextSequentialNumber(allTeachers.map((t: any) => t.employeeNumber));
+        employeeNumber = nextSeq.startsWith('EMP-') ? nextSeq : `EMP-${nextSeq}`;
+      }
+
+      const existingEmp = await this.teacherRepository.findByEmployeeNumber(employeeNumber);
+      if (existingEmp) {
+        throw new ConflictError(`Teacher with Employee Number '${employeeNumber}' already exists.`);
+      }
+
+      let singleAssignedStream: string[] = [];
+      if (dto.assignedClassStreamIds && dto.assignedClassStreamIds.length > 0) {
+        const streamId = dto.assignedClassStreamIds[0]?.trim();
+        if (streamId) {
+          if (this.academicRepository) {
+            const stream = await this.academicRepository.findStreamById(streamId);
+            if (!stream) {
+              throw new ValidationError(`Assigned stream '${streamId}' does not exist.`);
+            }
+            const classRoom = await this.academicRepository.findClassById(stream.classRoomId);
+            if (!classRoom || classRoom.schoolId !== targetSchoolId) {
+              throw new ValidationError(`Assigned stream '${streamId}' does not belong to the selected school.`);
+            }
+          }
+          singleAssignedStream = [streamId];
+        }
+      }
+
+      const defaultSpecialization = targetRole === UserRole.TEACHER ? ['CBC Core'] : [];
+      const specialization = (dto.specialization && dto.specialization.length > 0)
+        ? dto.specialization
+        : defaultSpecialization;
+
+      const teacher = Teacher.create(
+        {
+          userId: existingUser.id,
+          tscNumber: dto.tscNumber?.trim() || undefined,
+          employeeNumber,
+          specialization,
+          assignedClassStreamIds: singleAssignedStream,
+          qualification: dto.qualification?.trim() || undefined,
+          dateOfBirth: dto.dateOfBirth?.trim() || undefined,
+          gender: dto.gender?.trim() || undefined,
+          nationalId: dto.nationalId?.trim() || undefined,
+          residentialAddress: dto.residentialAddress?.trim() || undefined,
+          employmentDate: dto.employmentDate?.trim() || undefined,
+          employmentType: dto.employmentType || 'FULL_TIME',
+          department: dto.department?.trim() || undefined,
+          emergencyContact: dto.emergencyContact || {}
+        },
+        IdGenerator.generate()
+      );
+
+      await this.teacherRepository.save(teacher);
+
+      if (this.systemLogRepository) {
+        const actionName = targetRole === UserRole.HEAD_TEACHER ? 'HEAD_TEACHER_REGISTERED_FROM_PARENT' : 'TEACHER_REGISTERED_FROM_PARENT';
+        await this.systemLogRepository.create(
+          SystemLog.create(
+            {
+              schoolId: targetSchoolId,
+              category: 'STAFF',
+              action: actionName,
+              actorUserId: actor?.userId || existingUser.id,
+              actorEmail: actor?.email || existingUser.email,
+              status: 'SUCCESS',
+              details: `Parent ${existingUser.fullName} successfully onboarded as ${targetRole.replace(/_/g, ' ')} with Employee Number ${employeeNumber}. Enrolled child linkages preserved.`,
+              metadata: { teacherId: teacher.id, userId: existingUser.id, employeeNumber, tscNumber: dto.tscNumber, role: targetRole, isParent: true }
+            },
+            IdGenerator.generate()
+          )
+        );
+      }
+
+      return {
+        ...teacher.toJSON(),
+        user: existingUser.toJSON()
+      };
+    }
+
     // Password generation: Never use a shared default password
     let rawPassword = dto.password?.trim();
     if (!rawPassword) {
@@ -203,8 +376,6 @@ export class TeacherUseCases {
       }
     }
     const passwordHash = await this.passwordHasher.hash(rawPassword);
-
-    const requiresTeacherProfile = roleRequiresTeacherProfile(targetRole);
 
     // Case 1: Non-teaching staff roles (e.g. BURSAR, ACCOUNTANT, ADMISSIONS, SCHOOL_ADMIN, ADMIN)
     if (!requiresTeacherProfile) {
@@ -472,11 +643,28 @@ export class TeacherUseCases {
       } catch {}
     }
 
+    let hasEnrolledChildren = false;
+    let enrolledChildIds: string[] = [];
+    if (this.guardianRepository && user) {
+      try {
+        let guardian = await this.guardianRepository.findByUserId(user.id);
+        if (!guardian && user.phone) {
+          guardian = await this.guardianRepository.findByPhone(user.phone);
+        }
+        if (guardian) {
+          hasEnrolledChildren = Boolean(guardian.studentIds && guardian.studentIds.length > 0);
+          enrolledChildIds = guardian.studentIds || [];
+        }
+      } catch {}
+    }
+
     return {
       ...teacher.toJSON(),
       user: user ? user.toJSON() : null,
       classTeacherAssignments,
-      subjectAssignments
+      subjectAssignments,
+      hasEnrolledChildren,
+      enrolledChildIds
     };
   }
 
@@ -704,9 +892,36 @@ export class TeacherUseCases {
     if (dto.phone !== undefined) {
       const cleanPhone = dto.phone.trim();
       if (cleanPhone && cleanPhone !== user.phone) {
-        const existingPhoneUser = await this.userRepository.findByPhone(cleanPhone);
+        let existingPhoneUser = await this.userRepository.findByPhone(cleanPhone);
+        if (!existingPhoneUser) {
+          const allUsers = await this.userRepository.findAll();
+          existingPhoneUser = allUsers.find(u => PhoneUtils.areMatches(u.phone, cleanPhone)) || null;
+        }
         if (existingPhoneUser && existingPhoneUser.id !== user.id) {
-          throw new ConflictError(`User with phone number '${cleanPhone}' already exists.`);
+          if (existingPhoneUser.role === UserRole.GUARDIAN || existingPhoneUser.role === UserRole.PARENT) {
+            if (this.guardianRepository) {
+              const guardian = await this.guardianRepository.findByUserId(existingPhoneUser.id)
+                || await this.guardianRepository.findByPhone(cleanPhone);
+              if (guardian) {
+                const userGuardian = await this.guardianRepository.findByUserId(user.id);
+                if (userGuardian && userGuardian.id !== guardian.id) {
+                  for (const sid of guardian.studentIds) {
+                    userGuardian.linkStudent(sid);
+                  }
+                  userGuardian.updateDetails({ emergencyContact: cleanPhone });
+                  await this.guardianRepository.update(userGuardian);
+                  await this.guardianRepository.delete(guardian.id);
+                } else {
+                  guardian.setUserId(user.id);
+                  guardian.updateDetails({ emergencyContact: cleanPhone });
+                  await this.guardianRepository.update(guardian);
+                }
+              }
+            }
+            await this.userRepository.delete(existingPhoneUser.id).catch(() => {});
+          } else {
+            throw new ConflictError(`User with phone number '${cleanPhone}' already exists.`);
+          }
         }
       }
       user.updateProfile(undefined, undefined, cleanPhone || undefined);
@@ -1165,9 +1380,36 @@ export class TeacherUseCases {
     if (dto.phone !== undefined) {
       const cleanPhone = dto.phone.trim();
       if (cleanPhone && cleanPhone !== user.phone?.trim()) {
-        const existingPhone = await this.userRepository.findByPhone(cleanPhone);
+        let existingPhone = await this.userRepository.findByPhone(cleanPhone);
+        if (!existingPhone) {
+          const allUsers = await this.userRepository.findAll();
+          existingPhone = allUsers.find(u => PhoneUtils.areMatches(u.phone, cleanPhone)) || null;
+        }
         if (existingPhone && existingPhone.id !== user.id) {
-          throw new ConflictError(`User with phone number '${cleanPhone}' already exists.`);
+          if (existingPhone.role === UserRole.GUARDIAN || existingPhone.role === UserRole.PARENT) {
+            if (this.guardianRepository) {
+              const guardian = await this.guardianRepository.findByUserId(existingPhone.id)
+                || await this.guardianRepository.findByPhone(cleanPhone);
+              if (guardian) {
+                const userGuardian = await this.guardianRepository.findByUserId(user.id);
+                if (userGuardian && userGuardian.id !== guardian.id) {
+                  for (const sid of guardian.studentIds) {
+                    userGuardian.linkStudent(sid);
+                  }
+                  userGuardian.updateDetails({ emergencyContact: cleanPhone });
+                  await this.guardianRepository.update(userGuardian);
+                  await this.guardianRepository.delete(guardian.id);
+                } else {
+                  guardian.setUserId(user.id);
+                  guardian.updateDetails({ emergencyContact: cleanPhone });
+                  await this.guardianRepository.update(guardian);
+                }
+              }
+            }
+            await this.userRepository.delete(existingPhone.id).catch(() => {});
+          } else {
+            throw new ConflictError(`User with phone number '${cleanPhone}' already exists.`);
+          }
         }
       }
     }
@@ -1181,7 +1423,27 @@ export class TeacherUseCases {
       if (cleanEmail && cleanEmail !== user.email?.toLowerCase()) {
         const existingUser = await this.userRepository.findByEmail(cleanEmail);
         if (existingUser && existingUser.id !== user.id) {
-          throw new ConflictError(`User with email '${dto.email}' already exists.`);
+          if (existingUser.role === UserRole.GUARDIAN || existingUser.role === UserRole.PARENT) {
+            if (this.guardianRepository) {
+              const guardian = await this.guardianRepository.findByUserId(existingUser.id);
+              if (guardian) {
+                const userGuardian = await this.guardianRepository.findByUserId(user.id);
+                if (userGuardian && userGuardian.id !== guardian.id) {
+                  for (const sid of guardian.studentIds) {
+                    userGuardian.linkStudent(sid);
+                  }
+                  await this.guardianRepository.update(userGuardian);
+                  await this.guardianRepository.delete(guardian.id);
+                } else {
+                  guardian.setUserId(user.id);
+                  await this.guardianRepository.update(guardian);
+                }
+              }
+            }
+            await this.userRepository.delete(existingUser.id).catch(() => {});
+          } else {
+            throw new ConflictError(`User with email '${dto.email}' already exists.`);
+          }
         }
         user.updateEmail(cleanEmail);
       } else if (!cleanEmail) {

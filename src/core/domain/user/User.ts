@@ -135,6 +135,11 @@ export class User extends Entity<UserProps> {
     return this._props.resetPasswordAttempts ?? 0;
   }
 
+  public setSchoolId(schoolId?: string): void {
+    this._props.schoolId = schoolId;
+    this.touch();
+  }
+
   public setMustChangePassword(mustChange: boolean): void {
     this._props.mustChangePassword = mustChange;
     this.touch();

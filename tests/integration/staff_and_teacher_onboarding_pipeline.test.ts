@@ -4,6 +4,8 @@ import { AppContainer } from '../../src/infrastructure/container';
 import { createExpressApp } from '../../src/infrastructure/http/app';
 import { setupTestFixtures } from '../helpers/testFixtures';
 import { User, UserRole, UserStatus } from '../../src/core/domain/user/User';
+import { Guardian, GuardianRelationship } from '../../src/core/domain/user/Guardian';
+import { Student, StudentGender, StudentStatus, CBCGradeLevel } from '../../src/core/domain/user/Student';
 
 describe('Staff and Teacher Onboarding & Editing Pipeline (Generic & Resilient)', () => {
   let app: Express;
@@ -696,6 +698,226 @@ describe('Staff and Teacher Onboarding & Editing Pipeline (Generic & Resilient)'
       const allTeachers = await container.teacherRepository.findAll();
       expect(allTeachers.every((t: any) => t.id !== DELETED_TEACHER_ID)).toBe(true);
       expect(allTeachers.every((t: any) => t.userId !== DELETED_USER_ID)).toBe(true);
+    });
+  });
+
+  describe('Scenario 13: Dual-Role Parent and Teacher / Staff Onboarding & Phone Resolution', () => {
+    const DUAL_PARENT_PHONE = '+254707632495';
+    const DUAL_CHILD_ID = 'stu-child-dual-01';
+    let dualParentUserId: string;
+    let dualGuardianId: string;
+    let dualTeacherId: string;
+
+    beforeAll(async () => {
+      // 1. Setup a parent user with phone +254707632495 and role GUARDIAN
+      const passwordHash = await container.passwordHasher.hash('Parent@1234');
+      dualParentUserId = 'usr-parent-dual-707632495';
+      const parentUser = User.create(
+        {
+          email: 'grace.parent@smartshule.ac.ke',
+          passwordHash,
+          firstName: 'Grace',
+          lastName: 'Wambui',
+          role: UserRole.GUARDIAN,
+          phone: DUAL_PARENT_PHONE,
+          status: UserStatus.ACTIVE,
+          schoolId: TEST_SCHOOL_ID
+        },
+        dualParentUserId
+      );
+      await container.userRepository.save(parentUser);
+
+      // 2. Setup Guardian profile linked to this parent user
+      dualGuardianId = 'grd-dual-707632495';
+      const guardian = Guardian.create(
+        {
+          userId: dualParentUserId,
+          nationalId: '12345678',
+          relationship: GuardianRelationship.MOTHER,
+          emergencyContact: DUAL_PARENT_PHONE,
+          studentIds: [DUAL_CHILD_ID]
+        },
+        dualGuardianId
+      );
+      await container.guardianRepository.save(guardian);
+
+      // 3. Setup enrolled student linked to this guardian
+      const child = Student.create(
+        {
+          admissionNumber: 'ADM-DUAL-001',
+          firstName: 'Brian',
+          lastName: 'Kariuki',
+          dateOfBirth: '2018-05-10',
+          gender: StudentGender.MALE,
+          gradeLevel: CBCGradeLevel.GRADE_1,
+          schoolId: TEST_SCHOOL_ID,
+          academicYearId: 'year-2026',
+          status: StudentStatus.ACTIVE,
+          guardianIds: [dualGuardianId]
+        },
+        DUAL_CHILD_ID
+      );
+      await container.studentRepository.save(child);
+    });
+
+    it('Step 1: Successfully onboards a teacher whose phone number +254707632495 already exists as a parent', async () => {
+      const res = await request(app)
+        .post('/api/v1/teachers')
+        .set('Authorization', `Bearer ${schoolAdminToken}`)
+        .send({
+          firstName: 'Grace',
+          lastName: 'Wambui',
+          phone: DUAL_PARENT_PHONE,
+          email: 'grace.parent@smartshule.ac.ke',
+          role: 'TEACHER',
+          tscNumber: 'TSC/707632',
+          specialization: ['Mathematics', 'Science'],
+          qualification: 'Bachelor of Education',
+          schoolId: TEST_SCHOOL_ID
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data).toBeDefined();
+
+      dualTeacherId = res.body.data.id;
+      expect(res.body.data.userId).toBe(dualParentUserId); // User ID must be preserved!
+      expect(res.body.data.employeeNumber).toBeDefined();
+      expect(res.body.data.tscNumber).toBe('TSC/707632');
+
+      // Verify the user account was upgraded rather than duplicated
+      const user = await container.userRepository.findById(dualParentUserId);
+      expect(user).toBeDefined();
+      expect(user!.role).toBe(UserRole.TEACHER);
+      expect(user!.phone).toBe(DUAL_PARENT_PHONE);
+
+      // Verify Teacher profile was created and linked to the same user
+      const teacher = await container.teacherRepository.findById(dualTeacherId);
+      expect(teacher).toBeDefined();
+      expect(teacher!.userId).toBe(dualParentUserId);
+
+      // Verify the Guardian record remains intact and linked
+      const guardian = await container.guardianRepository.findByUserId(dualParentUserId);
+      expect(guardian).toBeDefined();
+      expect(guardian!.id).toBe(dualGuardianId);
+      expect(guardian!.studentIds).toContain(DUAL_CHILD_ID);
+    });
+
+    it('Step 2: Logs in as the dual-role user and verifies both teacher role and enrolled children detection', async () => {
+      const loginRes = await request(app)
+        .post('/api/v1/auth/login')
+        .send({
+          phone: DUAL_PARENT_PHONE,
+          password: 'Parent@1234' // Existing parent password still works seamlessly
+        });
+
+      expect(loginRes.status).toBe(200);
+      expect(loginRes.body.success).toBe(true);
+      expect(loginRes.body.data.accessToken).toBeDefined();
+
+      const user = loginRes.body.data.user;
+      expect(user.id).toBe(dualParentUserId);
+      expect(user.role).toBe(UserRole.TEACHER);
+      expect(user.hasEnrolledChildren).toBe(true); // Flag enables view toggling between STAFF and PARENT!
+      expect(user.enrolledChildIds).toContain(DUAL_CHILD_ID);
+
+      const dualToken = loginRes.body.data.accessToken;
+
+      // Verify the dual-role user can access the guardian child portal
+      const portalRes = await request(app)
+        .get('/api/v1/students/guardian/me')
+        .set('Authorization', `Bearer ${dualToken}`);
+
+      expect(portalRes.status).toBe(200);
+      expect(portalRes.body.data).toBeDefined();
+      const children = portalRes.body.data.children || portalRes.body.data.students || portalRes.body.data;
+      expect(Array.isArray(children)).toBe(true);
+      expect(children.some((c: any) => c.id === DUAL_CHILD_ID || c.admissionNumber === 'ADM-DUAL-001')).toBe(true);
+    });
+
+    it('Step 3: Corrects or updates an existing teacher phone to merge with a separate parent account', async () => {
+      // 1. Onboard a teacher with an initial phone number
+      const kevinTeacher = await request(app)
+        .post('/api/v1/teachers')
+        .set('Authorization', `Bearer ${schoolAdminToken}`)
+        .send({
+          firstName: 'Kevin',
+          lastName: 'Maundu',
+          phone: '+254711888111',
+          email: 'kevin.teacher@smartshule.ac.ke',
+          role: 'TEACHER',
+          schoolId: TEST_SCHOOL_ID
+        });
+      expect(kevinTeacher.status).toBe(201);
+      const kevinTeacherId = kevinTeacher.body.data.id;
+      const kevinUserId = kevinTeacher.body.data.userId;
+
+      // 2. Setup a parent user with phone +254722999000
+      const parentUser2 = User.create(
+        {
+          email: 'kevin.parent@smartshule.ac.ke',
+          passwordHash: await container.passwordHasher.hash('Parent@9999'),
+          firstName: 'Kevin',
+          lastName: 'Maundu',
+          role: UserRole.GUARDIAN,
+          phone: '+254722999000',
+          status: UserStatus.ACTIVE,
+          schoolId: TEST_SCHOOL_ID
+        },
+        'usr-parent-kevin-stub'
+      );
+      await container.userRepository.save(parentUser2);
+
+      const guardian2 = Guardian.create(
+        {
+          userId: 'usr-parent-kevin-stub',
+          emergencyContact: '+254722999000',
+          relationship: GuardianRelationship.FATHER,
+          studentIds: ['stu-child-kevin-01']
+        },
+        'grd-kevin-stub'
+      );
+      await container.guardianRepository.save(guardian2);
+
+      // 3. Admin updates Kevin's teacher profile phone to +254722999000
+      const updateRes = await request(app)
+        .put(`/api/v1/teachers/${kevinTeacherId}/admin-profile`)
+        .set('Authorization', `Bearer ${schoolAdminToken}`)
+        .send({
+          phone: '+254722999000'
+        });
+
+      expect(updateRes.status).toBe(200);
+      expect(updateRes.body.success).toBe(true);
+      expect(updateRes.body.data.user.phone).toBe('+254722999000');
+
+      // Verify the guardian record was re-linked to Kevin's teacher user ID
+      const reLinkedGuardian = await container.guardianRepository.findByPhone('+254722999000');
+      expect(reLinkedGuardian).toBeDefined();
+      expect(reLinkedGuardian!.userId).toBe(kevinUserId);
+      expect(reLinkedGuardian!.studentIds).toContain('stu-child-kevin-01');
+
+      // Verify redundant stub parent user was cleaned up
+      const stubUser = await container.userRepository.findById('usr-parent-kevin-stub');
+      expect(stubUser).toBeNull();
+    });
+
+    it('Step 4: Rejects onboarding if phone belongs to an existing staff member who is NOT a parent', async () => {
+      // +254700000001 belongs to Arthur Pendelton (SCHOOL_ADMIN)
+      const conflictRes = await request(app)
+        .post('/api/v1/teachers')
+        .set('Authorization', `Bearer ${superAdminToken}`)
+        .send({
+          firstName: 'Duplicate',
+          lastName: 'Staff',
+          phone: '+254700000001',
+          email: 'duplicate.staff@smartshule.ac.ke',
+          role: 'TEACHER',
+          schoolId: TEST_SCHOOL_ID
+        });
+
+      expect(conflictRes.status).toBe(409);
+      expect(conflictRes.body.message).toContain("User with phone number '+254700000001' already exists.");
     });
   });
 });
