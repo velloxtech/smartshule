@@ -13,6 +13,7 @@ interface TeacherDashboardViewProps {
   onOpenUploadMarks: (student?: Student) => void;
   onOpenNewLessonPlan: () => void;
   onOpenNewScheme: () => void;
+  refreshTrigger?: number;
 }
 
 export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
@@ -20,6 +21,7 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
   onOpenUploadMarks,
   onOpenNewLessonPlan,
   onOpenNewScheme,
+  refreshTrigger = 0,
 }) => {
   const { user } = useAuth();
 
@@ -154,6 +156,9 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
             attendanceRate: s.attendanceRate ?? 0,
             CBCRating: s.CBCRating || '--',
             status: s.status === 'ACTIVE' || s.status === 'Active' ? 'Active' : (s.status || 'Active'),
+            classroomId: s.classroomId,
+            streamId: s.streamId,
+            gradeLevel: s.gradeLevel,
           }));
           setMyStudents(mapped);
         } else {
@@ -194,7 +199,7 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
     }
 
     loadTeacherData();
-  }, [todayDate]);
+  }, [todayDate, refreshTrigger]);
 
   const currentTeacherUser = teacherProfile?.user || user;
   const teacherName = currentTeacherUser ? `${currentTeacherUser.firstName} ${currentTeacherUser.lastName}` : 'Teacher';
@@ -351,59 +356,54 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
   return (
     <div className="space-y-6 pb-12">
       {/* Teacher Welcome & Profile Banner */}
-      <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-xs border border-outline-variant/30 flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="flex items-start gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-[#7a1228] text-white flex items-center justify-center font-bold text-xl shadow-md shrink-0">
-            {currentTeacherUser?.firstName?.[0] || 'T'}{currentTeacherUser?.lastName?.[0] || 'R'}
+      <div className="bg-surface-container-lowest rounded-2xl p-5 sm:p-6 shadow-xs border border-outline-variant/30 flex flex-col lg:flex-row lg:items-start justify-between gap-5 sm:gap-6">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="font-headline-lg text-2xl font-bold text-on-surface tracking-tight">
+              Welcome, Tr. {teacherName}
+            </h1>
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#7a1228]/10 text-[#7a1228]">
+              CBC Educator
+            </span>
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-data-mono font-semibold bg-surface-container text-on-surface-variant">
+              {tscNumber}
+            </span>
           </div>
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="font-headline-lg text-2xl font-bold text-on-surface">
-                Welcome, Tr. {teacherName}
-              </h1>
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#7a1228]/10 text-[#7a1228]">
-                CBC Educator
-              </span>
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-data-mono font-semibold bg-surface-container text-on-surface-variant">
-                {tscNumber}
-              </span>
-            </div>
-            <p className="text-xs text-on-surface-variant mt-1.5 flex items-center gap-2 flex-wrap">
-              <span className="inline-flex items-center gap-1 font-semibold text-primary">
-                <span className="material-symbols-outlined text-[15px]">meeting_room</span>
-                {assignedClass}
-              </span>
-              <span>·</span>
-              <span className="inline-flex items-center gap-1 text-on-surface-variant">
-                <span className="material-symbols-outlined text-[15px]">psychology</span>
-                {specialization}
-              </span>
-              {qualification && (
-                <>
-                  <span>·</span>
-                  <span className="inline-flex items-center gap-1 text-on-surface-variant font-medium">
-                    <span className="material-symbols-outlined text-[15px]">school</span>
-                    {qualification}
-                  </span>
-                </>
-              )}
-              {currentContext?.currentTerm?.name && (
-                <>
-                  <span>·</span>
-                  <span className="inline-flex items-center gap-1 font-data-mono text-secondary font-semibold">
-                    {currentContext.currentTerm.name}{currentContext.currentYear?.year ? `, ${currentContext.currentYear.year}` : ''}
-                  </span>
-                </>
-              )}
-            </p>
-          </div>
+          <p className="text-xs text-on-surface-variant mt-1.5 flex items-center gap-2 flex-wrap">
+            <span className="inline-flex items-center gap-1 font-semibold text-primary">
+              <span className="material-symbols-outlined text-[15px]">meeting_room</span>
+              {assignedClass}
+            </span>
+            <span>·</span>
+            <span className="inline-flex items-center gap-1 text-on-surface-variant">
+              <span className="material-symbols-outlined text-[15px]">psychology</span>
+              {specialization}
+            </span>
+            {qualification && (
+              <>
+                <span>·</span>
+                <span className="inline-flex items-center gap-1 text-on-surface-variant font-medium">
+                  <span className="material-symbols-outlined text-[15px]">school</span>
+                  {qualification}
+                </span>
+              </>
+            )}
+            {currentContext?.currentTerm?.name && (
+              <>
+                <span>·</span>
+                <span className="inline-flex items-center gap-1 font-data-mono text-secondary font-semibold">
+                  {currentContext.currentTerm.name}{currentContext.currentYear?.year ? `, ${currentContext.currentYear.year}` : ''}
+                </span>
+              </>
+            )}
+          </p>
         </div>
 
         {/* Quick Action Buttons Header */}
-        <div className="flex items-center gap-2.5 flex-wrap shrink-0">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 max-w-full lg:justify-end">
           <button
             onClick={() => setIsEditProfileOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-xs font-semibold shadow-xs border border-outline-variant/30 transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-xs font-semibold shadow-xs border border-outline-variant/30 transition-all cursor-pointer"
             title="Edit your teacher profile, contact information, or learning areas"
           >
             <span className="material-symbols-outlined text-[16px] text-[#7a1228]">edit_note</span>
@@ -411,14 +411,14 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
           </button>
           <button
             onClick={() => onNavigateTab('attendance-register')}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-[#7a1228] text-white hover:bg-[#5e0d1e] text-xs font-semibold shadow-xs transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-lg bg-[#7a1228] text-white hover:bg-[#5e0d1e] text-xs font-semibold shadow-xs transition-all cursor-pointer"
           >
             <span className="material-symbols-outlined text-[16px]">how_to_reg</span>
             <span>Take Roll Call</span>
           </button>
           <button
             onClick={() => onNavigateTab('occurrence-records')}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-xs font-semibold shadow-xs border border-outline-variant/30 transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-xs font-semibold shadow-xs border border-outline-variant/30 transition-all cursor-pointer"
             title="Log or view today's incidents in the Daily Occurrence Book"
           >
             <span className="material-symbols-outlined text-[16px] text-amber-700">event_note</span>
@@ -426,7 +426,7 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
           </button>
           <button
             onClick={() => onNavigateTab('curriculum-tracker')}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 text-xs font-semibold shadow-xs transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 text-xs font-semibold shadow-xs transition-all cursor-pointer"
             title="Track weekly syllabus progress & confirm coverage"
           >
             <span className="material-symbols-outlined text-[16px] text-emerald-700">fact_check</span>
@@ -434,7 +434,7 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
           </button>
           <button
             onClick={() => onOpenUploadMarks()}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-secondary text-white hover:bg-secondary-container text-xs font-semibold shadow-xs transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-lg bg-secondary text-white hover:bg-secondary-container text-xs font-semibold shadow-xs transition-all cursor-pointer"
           >
             <span className="material-symbols-outlined text-[16px]">grade</span>
             <span>Upload Marks</span>

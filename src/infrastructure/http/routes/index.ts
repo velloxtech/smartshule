@@ -416,14 +416,14 @@ export function createApiRouter(container: AppContainer): Router {
   CBCRouter.delete('/sub-strands/:id', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), CBCController.deleteSubStrand);
   
   // Formative & Summative (Teachers already had access here)
-  CBCRouter.post('/formative', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), validateBody(RecordFormativeSchema), CBCController.recordFormative);
+  CBCRouter.post('/formative', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN), validateBody(RecordFormativeSchema), CBCController.recordFormative);
   CBCRouter.get('/formative', authMiddleware, CBCController.listFormatives);
-  CBCRouter.delete('/formative/:id', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), CBCController.deleteFormative);
+  CBCRouter.delete('/formative/:id', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN), CBCController.deleteFormative);
   
-  CBCRouter.post('/summative', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), validateBody(RecordSummativeSchema), CBCController.recordSummative);
-  CBCRouter.post('/summative/batch', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), validateBody(RecordSummativeBatchSchema), CBCController.recordSummativeBatch);
+  CBCRouter.post('/summative', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN), validateBody(RecordSummativeSchema), CBCController.recordSummative);
+  CBCRouter.post('/summative/batch', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN), validateBody(RecordSummativeBatchSchema), CBCController.recordSummativeBatch);
   CBCRouter.get('/summative', authMiddleware, CBCController.listSummatives);
-  CBCRouter.delete('/summative/:id', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), CBCController.deleteSummative);
+  CBCRouter.delete('/summative/:id', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN), CBCController.deleteSummative);
   
   CBCRouter.post('/report-cards/generate', authMiddleware, requireRoles(UserRole.HEAD_TEACHER, UserRole.TEACHER, UserRole.SUPER_ADMIN), validateBody(GenerateReportCardSchema), CBCController.generateReportCard);
   CBCRouter.get('/report-cards', authMiddleware, CBCController.getReportCard);
@@ -440,20 +440,20 @@ export function createApiRouter(container: AppContainer): Router {
   // 6. SCHEMES OF WORK & LESSON PLANS ROUTES
   // ==========================================
   const curriculumRouter = Router();
-  curriculumRouter.post('/schemes', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), validateBody(CreateSchemeSchema), curriculumController.createScheme);
+  curriculumRouter.post('/schemes', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN), validateBody(CreateSchemeSchema), curriculumController.createScheme);
   curriculumRouter.post('/schemes/:id/entries', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER), validateBody(AddSchemeEntrySchema), curriculumController.addSchemeEntry);
   curriculumRouter.post('/schemes/:id/submit', authMiddleware, requireRoles(UserRole.TEACHER), curriculumController.submitScheme);
   curriculumRouter.post('/schemes/:id/review', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER), validateBody(ReviewSchemeSchema), curriculumController.reviewScheme);
   curriculumRouter.get('/schemes', authMiddleware, curriculumController.listSchemes);
   curriculumRouter.get('/schemes/:id', authMiddleware, curriculumController.getSchemeById);
-  curriculumRouter.delete('/schemes/:id', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), curriculumController.deleteScheme);
+  curriculumRouter.delete('/schemes/:id', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN), curriculumController.deleteScheme);
   
-  curriculumRouter.post('/lesson-plans', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), validateBody(CreateLessonPlanSchema), curriculumController.createLessonPlan);
+  curriculumRouter.post('/lesson-plans', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN), validateBody(CreateLessonPlanSchema), curriculumController.createLessonPlan);
   curriculumRouter.post('/lesson-plans/:id/submit', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.ADMIN, UserRole.SUPER_ADMIN), curriculumController.submitLessonPlan);
   curriculumRouter.post('/lesson-plans/:id/review', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER), validateBody(ReviewLessonPlanSchema), curriculumController.reviewLessonPlan);
   curriculumRouter.get('/lesson-plans', authMiddleware, curriculumController.listLessonPlans);
   curriculumRouter.get('/lesson-plans/:id', authMiddleware, curriculumController.getLessonPlanById);
-  curriculumRouter.delete('/lesson-plans/:id', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), curriculumController.deleteLessonPlan);
+  curriculumRouter.delete('/lesson-plans/:id', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN), curriculumController.deleteLessonPlan);
   
   // RECORDS OF WORK ROUTES
   curriculumRouter.post('/records-of-work', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.SUPER_ADMIN), recordOfWorkController.create);
@@ -480,7 +480,7 @@ export function createApiRouter(container: AppContainer): Router {
   // 8. ATTENDANCE & CLASS REGISTERS ROUTES
   // ==========================================
   const attendanceRouter = Router();
-  attendanceRouter.post('/', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), validateBody(MarkAttendanceSchema), attendanceController.markAttendance);
+  attendanceRouter.post('/', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN), validateBody(MarkAttendanceSchema), attendanceController.markAttendance);
   attendanceRouter.get('/daily', authMiddleware, attendanceController.getDailyRegister);
   attendanceRouter.get('/report', authMiddleware, attendanceController.getAttendanceReport);
   attendanceRouter.get('/student/:studentId', authMiddleware, attendanceController.getStudentSummary);
@@ -623,8 +623,8 @@ export function createApiRouter(container: AppContainer): Router {
   const mediaRouter = Router();
   mediaRouter.post('/help-requests', authMiddleware, validateBody(CreateHelpRequestSchema), mediaController.createHelpRequest);
   mediaRouter.get('/help-requests', authMiddleware, mediaController.listHelpRequests);
-  mediaRouter.post('/help-requests/:id/respond', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), validateBody(RespondHelpRequestSchema), mediaController.respondToHelpRequest);
-  mediaRouter.post('/progress-photos', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), validateBody(UploadProgressPhotoSchema), mediaController.uploadProgressPhoto);
+  mediaRouter.post('/help-requests/:id/respond', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN), validateBody(RespondHelpRequestSchema), mediaController.respondToHelpRequest);
+  mediaRouter.post('/progress-photos', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN), validateBody(UploadProgressPhotoSchema), mediaController.uploadProgressPhoto);
   mediaRouter.get('/progress-photos', authMiddleware, mediaController.listProgressPhotos);
   mediaRouter.post('/upload', authMiddleware, mediaController.uploadGeneralPhoto);
   router.use('/media', mediaRouter);
@@ -633,11 +633,11 @@ export function createApiRouter(container: AppContainer): Router {
   // 11. DIGITAL eDIARY & PARENT ACKNOWLEDGEMENT ROUTES
   // ==========================================
   const ediaryRouter = Router();
-  ediaryRouter.post('/', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), validateBody(CreateEDiarySchema), ediaryController.createEntry);
+  ediaryRouter.post('/', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN), validateBody(CreateEDiarySchema), ediaryController.createEntry);
   ediaryRouter.get('/student/:studentId', authMiddleware, ediaryController.listStudentEntries);
   ediaryRouter.get('/stream/:streamId', authMiddleware, ediaryController.listStreamEntries);
   ediaryRouter.post('/:id/acknowledge', authMiddleware, validateBody(AcknowledgeEDiarySchema), ediaryController.acknowledgeEntry);
-  ediaryRouter.delete('/:id', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN), ediaryController.deleteEntry);
+  ediaryRouter.delete('/:id', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN), ediaryController.deleteEntry);
   router.use('/ediary', ediaryRouter);
 
   // ==========================================
