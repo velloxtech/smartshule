@@ -43,6 +43,20 @@ export function isTermInitializationAuthorizedRole(role?: string | UserRole): bo
   return TERM_INITIALIZATION_AUTHORIZED_ROLES.includes(role as UserRole);
 }
 
+export const TEACHER_PROFILE_ROLES: UserRole[] = [
+  UserRole.TEACHER,
+  UserRole.HEAD_TEACHER,
+  UserRole.DEPUTY_HEAD_TEACHER
+];
+
+export function roleRequiresTeacherProfile(role?: string | UserRole): boolean {
+  if (!role) return false;
+  const normalized = String(role).toUpperCase().replace(/\s+/g, '_');
+  if (normalized === 'HEADTEACHER') return true;
+  if (normalized === 'DEPUTYHEADTEACHER') return true;
+  return TEACHER_PROFILE_ROLES.includes(normalized as UserRole);
+}
+
 export enum UserStatus {
   ACTIVE = 'ACTIVE',
   INACTIVE = 'INACTIVE',

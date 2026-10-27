@@ -6,10 +6,10 @@ import { ISystemLogRepository } from '../../core/ports/repositories/ISystemLogRe
 import { IAcademicRepository } from '../../core/ports/repositories/IAcademicRepository';
 import { ITimetableRepository } from '../../core/ports/repositories/ITimetableRepository';
 import { Teacher, TeacherEmergencyContact, TeacherDocument } from '../../core/domain/user/Teacher';
-import { User, UserRole, UserStatus } from '../../core/domain/user/User';
+import { User, UserRole, UserStatus, roleRequiresTeacherProfile } from '../../core/domain/user/User';
 import { TeacherCorrectionRequest, CorrectionRequestStatus } from '../../core/domain/user/TeacherCorrectionRequest';
 import { SystemLog } from '../../core/domain/system-log/SystemLog';
-import { IdGenerator, NotFoundError, ConflictError, ValidationError } from '../../core/domain/shared/Errors';
+import { IdGenerator, NotFoundError, ConflictError, ValidationError, ForbiddenError } from '../../core/domain/shared/Errors';
 
 export interface RegisterTeacherDTO {
   email?: string;
@@ -18,10 +18,10 @@ export interface RegisterTeacherDTO {
   firstName: string;
   lastName: string;
   phone?: string;
-  schoolId: string;
+  schoolId?: string;
   tscNumber?: string;
   employeeNumber?: string;
-  specialization: string[];
+  specialization?: string[];
   assignedClassStreamIds?: string[];
   qualification?: string;
   role?: UserRole;
@@ -122,7 +122,10 @@ export class TeacherUseCases {
     private readonly timetableRepository?: ITimetableRepository
   ) {}
 
-  public async registerTeacher(dto: RegisterTeacherDTO) {
+  public async registerTeacher(
+    dto: RegisterTeacherDTO,
+    actor?: { userId?: string; role?: UserRole; schoolId?: string; email?: string }
+  ) {
     if (!dto.email?.trim() && !dto.phone?.trim()) {
       throw new ValidationError('Either an email address or a phone number is required to onboard a teacher/staff.');
     }
@@ -144,90 +147,213 @@ export class TeacherUseCases {
       }
     }
 
+    const targetRole = dto.role && Object.values(UserRole).includes(dto.role) ? dto.role : UserRole.TEACHER;
+
+    // Privilege escalation prevention
+    if (targetRole === UserRole.SUPER_ADMIN && actor?.role !== UserRole.SUPER_ADMIN) {
+      throw new ForbiddenError('Only Super Administrators can create accounts with the SUPER_ADMIN role.');
+    }
+    if (
+      (targetRole === UserRole.HEAD_TEACHER || targetRole === UserRole.SCHOOL_ADMIN || targetRole === UserRole.ADMIN) &&
+      actor?.role === UserRole.ADMISSIONS
+    ) {
+      throw new ForbiddenError('Admissions officers are not authorized to create Head Teacher or Administrator accounts.');
+    }
+
+    // School context resolution and authorization
+    let targetSchoolId: string;
+    if (actor?.schoolId) {
+      if (dto.schoolId && dto.schoolId !== actor.schoolId && actor.role !== UserRole.SUPER_ADMIN) {
+        throw new ForbiddenError('You are not authorized to create staff accounts for a different school.');
+      }
+      targetSchoolId = actor.schoolId;
+    } else if (actor?.role === UserRole.SUPER_ADMIN) {
+      if (dto.schoolId) {
+        targetSchoolId = dto.schoolId;
+      } else if (this.academicRepository) {
+        const primarySchool = await this.academicRepository.getSchool();
+        if (!primarySchool) {
+          throw new ValidationError('No active school found. Please configure a school before creating staff.');
+        }
+        targetSchoolId = primarySchool.id;
+      } else {
+        targetSchoolId = dto.schoolId || 'school-001';
+      }
+    } else {
+      targetSchoolId = dto.schoolId || 'school-001';
+    }
+
+    if (this.academicRepository) {
+      const verifiedSchool = await this.academicRepository.getSchool(targetSchoolId);
+      if (!verifiedSchool) {
+        throw new NotFoundError('School', targetSchoolId);
+      }
+    }
+
+    // Password generation: Never use a shared default password
+    let rawPassword = dto.password?.trim();
+    if (!rawPassword) {
+      if (dto.nationalId?.trim()) {
+        rawPassword = dto.nationalId.trim();
+      } else if (cleanPhone) {
+        rawPassword = cleanPhone;
+      } else {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%';
+        rawPassword = Array.from({ length: 12 }, () => chars.charAt(Math.floor(Math.random() * chars.length))).join('');
+      }
+    }
+    const passwordHash = await this.passwordHasher.hash(rawPassword);
+
+    const requiresTeacherProfile = roleRequiresTeacherProfile(targetRole);
+
+    // Case 1: Non-teaching staff roles (e.g. BURSAR, ACCOUNTANT, ADMISSIONS, SCHOOL_ADMIN, ADMIN)
+    if (!requiresTeacherProfile) {
+      const userId = IdGenerator.generate();
+      const user = User.create(
+        {
+          email: cleanEmail,
+          passwordHash,
+          firstName: dto.firstName.trim(),
+          lastName: dto.lastName.trim(),
+          role: targetRole,
+          phone: cleanPhone,
+          status: UserStatus.ACTIVE,
+          schoolId: targetSchoolId
+        },
+        userId
+      );
+
+      await this.userRepository.save(user);
+
+      if (this.systemLogRepository) {
+        await this.systemLogRepository.create(
+          SystemLog.create(
+            {
+              schoolId: targetSchoolId,
+              category: 'STAFF',
+              action: 'STAFF_REGISTERED',
+              actorUserId: actor?.userId || user.id,
+              actorEmail: actor?.email || user.email,
+              status: 'SUCCESS',
+              details: `Staff member ${user.fullName} registered with role ${targetRole}.`,
+              metadata: { userId: user.id, role: targetRole, schoolId: targetSchoolId }
+            },
+            IdGenerator.generate()
+          )
+        );
+      }
+
+      return {
+        user: user.toJSON(),
+        employeeNumber: dto.employeeNumber?.trim() || undefined
+      };
+    }
+
+    // Case 2: Teaching faculty and pedagogical leadership roles (TEACHER, HEAD_TEACHER, DEPUTY_HEAD_TEACHER)
     let employeeNumber = dto.employeeNumber?.trim();
     if (!employeeNumber) {
       const allTeachers = await this.teacherRepository.findAll();
-      let relevantTeachers = allTeachers;
-      if (dto.schoolId) {
-        const schoolUsers = await this.userRepository.findAll({ schoolId: dto.schoolId });
-        const schoolUserIds = new Set(schoolUsers.map((u: any) => u.id));
-        relevantTeachers = allTeachers.filter((t: any) => schoolUserIds.has(t.userId));
-      }
-      employeeNumber = IdGenerator.generateNextSequentialNumber(relevantTeachers.map((t: any) => t.employeeNumber));
+      const nextSeq = IdGenerator.generateNextSequentialNumber(allTeachers.map((t: any) => t.employeeNumber));
+      employeeNumber = nextSeq.startsWith('EMP-') ? nextSeq : `EMP-${nextSeq}`;
     }
 
     const existingEmp = await this.teacherRepository.findByEmployeeNumber(employeeNumber);
     if (existingEmp) {
-      if (dto.schoolId) {
-        const existingUser = await this.userRepository.findById(existingEmp.userId);
-        if (existingUser && existingUser.schoolId === dto.schoolId) {
-          throw new ConflictError(`Teacher with Employee Number '${employeeNumber}' already exists.`);
+      throw new ConflictError(`Teacher with Employee Number '${employeeNumber}' already exists.`);
+    }
+
+    // Validate class and stream references against database
+    let singleAssignedStream: string[] = [];
+    if (dto.assignedClassStreamIds && dto.assignedClassStreamIds.length > 0) {
+      const streamId = dto.assignedClassStreamIds[0]?.trim();
+      if (streamId) {
+        if (this.academicRepository) {
+          const stream = await this.academicRepository.findStreamById(streamId);
+          if (!stream) {
+            throw new ValidationError(`Assigned stream '${streamId}' does not exist.`);
+          }
+          const classRoom = await this.academicRepository.findClassById(stream.classRoomId);
+          if (!classRoom || classRoom.schoolId !== targetSchoolId) {
+            throw new ValidationError(`Assigned stream '${streamId}' does not belong to the selected school.`);
+          }
         }
-      } else {
-        throw new ConflictError(`Teacher with Employee Number '${employeeNumber}' already exists.`);
+        singleAssignedStream = [streamId];
       }
     }
 
-    const rawPassword = dto.password?.trim() || dto.nationalId?.trim() || employeeNumber || process.env.DEFAULT_TEACHER_PASSWORD || cleanPhone || '';
-    if (!rawPassword) {
-      throw new ValidationError('A password, National ID, Employee Number, or phone number is required to initialize teacher account.');
-    }
-    const passwordHash = await this.passwordHasher.hash(rawPassword);
+    const userId = IdGenerator.generate();
+    const teacherId = IdGenerator.generate();
 
     const user = User.create(
       {
         email: cleanEmail,
         passwordHash,
-        firstName: dto.firstName,
-        lastName: dto.lastName,
-        role: dto.role && Object.values(UserRole).includes(dto.role) ? dto.role : UserRole.TEACHER,
+        firstName: dto.firstName.trim(),
+        lastName: dto.lastName.trim(),
+        role: targetRole,
         phone: cleanPhone,
         status: UserStatus.ACTIVE,
-        schoolId: dto.schoolId || 'school-001'
+        schoolId: targetSchoolId
       },
-      IdGenerator.generate()
+      userId
     );
 
-    await this.userRepository.save(user);
-
-    const singleAssignedStream = dto.assignedClassStreamIds && dto.assignedClassStreamIds.length > 0 
-      ? [dto.assignedClassStreamIds[0]] 
-      : [];
+    // Specialization: for Head Teachers without subject specialization, keep empty array
+    const defaultSpecialization = targetRole === UserRole.TEACHER ? ['CBC Core'] : [];
+    const specialization = (dto.specialization && dto.specialization.length > 0)
+      ? dto.specialization
+      : defaultSpecialization;
 
     const teacher = Teacher.create(
       {
         userId: user.id,
-        tscNumber: dto.tscNumber,
+        tscNumber: dto.tscNumber?.trim() || undefined,
         employeeNumber,
-        specialization: dto.specialization || [],
+        specialization,
         assignedClassStreamIds: singleAssignedStream,
-        qualification: dto.qualification,
-        dateOfBirth: dto.dateOfBirth,
-        gender: dto.gender,
-        nationalId: dto.nationalId,
-        residentialAddress: dto.residentialAddress,
-        employmentDate: dto.employmentDate,
-        employmentType: dto.employmentType,
-        department: dto.department,
-        emergencyContact: dto.emergencyContact
+        qualification: dto.qualification?.trim() || undefined,
+        dateOfBirth: dto.dateOfBirth?.trim() || undefined,
+        gender: dto.gender?.trim() || undefined,
+        nationalId: dto.nationalId?.trim() || undefined,
+        residentialAddress: dto.residentialAddress?.trim() || undefined,
+        employmentDate: dto.employmentDate?.trim() || undefined,
+        employmentType: dto.employmentType || 'FULL_TIME',
+        department: dto.department?.trim() || undefined,
+        emergencyContact: dto.emergencyContact || {}
       },
-      IdGenerator.generate()
+      teacherId
     );
 
-    await this.teacherRepository.save(teacher);
+    // Atomic transaction: Persist both user and teacher profile together; rollback if any fails
+    if (typeof (this.teacherRepository as any).saveWithUser === 'function') {
+      await (this.teacherRepository as any).saveWithUser(teacher, user, this.userRepository);
+    } else {
+      let userSaved = false;
+      try {
+        await this.userRepository.save(user);
+        userSaved = true;
+        await this.teacherRepository.save(teacher);
+      } catch (err) {
+        if (userSaved) {
+          await this.userRepository.delete(user.id).catch(() => {});
+        }
+        throw err;
+      }
+    }
 
     if (this.systemLogRepository) {
+      const actionName = targetRole === UserRole.HEAD_TEACHER ? 'HEAD_TEACHER_REGISTERED' : 'TEACHER_REGISTERED';
       await this.systemLogRepository.create(
         SystemLog.create(
           {
-            schoolId: user.schoolId || 'school-001',
+            schoolId: targetSchoolId,
             category: 'STAFF',
-            action: 'TEACHER_REGISTERED',
-            actorUserId: user.id,
-            actorEmail: user.email,
+            action: actionName,
+            actorUserId: actor?.userId || user.id,
+            actorEmail: actor?.email || user.email,
             status: 'SUCCESS',
-            details: `Teacher ${user.fullName} registered with Employee Number ${employeeNumber}.`,
-            metadata: { teacherId: teacher.id, employeeNumber, tscNumber: dto.tscNumber }
+            details: `${targetRole.replace(/_/g, ' ')} ${user.fullName} registered with Employee Number ${employeeNumber}.`,
+            metadata: { teacherId: teacher.id, userId: user.id, employeeNumber, tscNumber: dto.tscNumber, role: targetRole }
           },
           IdGenerator.generate()
         )
@@ -241,8 +367,31 @@ export class TeacherUseCases {
   }
 
   public async getTeacherById(teacherId: string) {
-    const teacher = await this.teacherRepository.findById(teacherId);
-    if (!teacher) throw new NotFoundError('Teacher', teacherId);
+    let teacher = await this.teacherRepository.findById(teacherId);
+    if (!teacher) {
+      teacher = await this.teacherRepository.findByUserId(teacherId);
+    }
+    if (!teacher) {
+      const user = await this.userRepository.findById(teacherId);
+      if (user) {
+        return {
+          id: user.id,
+          userId: user.id,
+          user: user.toJSON(),
+          name: user.fullName,
+          email: user.email,
+          phone: user.phone,
+          role: user.role,
+          schoolId: user.schoolId,
+          assignedClassStreamIds: [],
+          specialization: [],
+          documents: [],
+          classTeacherAssignments: [],
+          subjectAssignments: []
+        };
+      }
+      throw new NotFoundError('Teacher', teacherId);
+    }
 
     const user = await this.userRepository.findById(teacher.userId);
 
@@ -342,22 +491,36 @@ export class TeacherUseCases {
     };
   }
 
-  public async listTeachers() {
+  public async listTeachers(filters?: { schoolId?: string }) {
     const teachers = await this.teacherRepository.findAll();
-    return Promise.all(
+    const results = await Promise.all(
       teachers.map(async (t: any) => {
         const u = await this.userRepository.findById(t.userId);
         return {
           ...t.toJSON(),
+          name: u ? u.fullName : undefined,
+          email: u?.email,
+          phone: u?.phone,
           user: u ? u.toJSON() : null
         };
       })
     );
+    if (filters?.schoolId) {
+      return results.filter(t => t.user?.schoolId === filters.schoolId);
+    }
+    return results;
   }
 
   public async assignStream(dto: AssignStreamDTO) {
     const teacher = await this.teacherRepository.findById(dto.teacherId);
     if (!teacher) throw new NotFoundError('Teacher', dto.teacherId);
+
+    if (this.academicRepository) {
+      const stream = await this.academicRepository.findStreamById(dto.streamId);
+      if (!stream) {
+        throw new ValidationError(`Stream with ID '${dto.streamId}' does not exist.`);
+      }
+    }
 
     teacher.assignStream(dto.streamId);
     await this.teacherRepository.update(teacher);
@@ -965,19 +1128,49 @@ export class TeacherUseCases {
   public async adminUpdateTeacherProfile(
     teacherId: string,
     dto: UpdateTeacherProfileDTO,
-    reviewer: { id: string; name?: string; email?: string; role?: string }
+    reviewer: { id: string; name?: string; email?: string; role?: string; schoolId?: string }
   ) {
     let teacher = await this.teacherRepository.findById(teacherId);
     if (!teacher) {
       teacher = await this.teacherRepository.findByUserId(teacherId);
     }
-    if (!teacher) throw new NotFoundError('Teacher', teacherId);
 
-    const user = await this.userRepository.findById(teacher.userId);
-    if (!user) throw new NotFoundError('User for Teacher', teacher.userId);
+    let user: User | null = null;
+    if (teacher) {
+      user = await this.userRepository.findById(teacher.userId);
+    } else {
+      user = await this.userRepository.findById(teacherId);
+    }
+
+    if (!user) {
+      throw new NotFoundError('Staff or Teacher', teacherId);
+    }
+
+    // Enforce school-level authorization
+    if (reviewer?.schoolId && user.schoolId && user.schoolId !== reviewer.schoolId && reviewer.role !== UserRole.SUPER_ADMIN) {
+      throw new ForbiddenError('You are not authorized to update staff profiles from a different school.');
+    }
+
+    // Super admin privilege protection
+    if (user.role === UserRole.SUPER_ADMIN && reviewer.role !== UserRole.SUPER_ADMIN) {
+      throw new ForbiddenError('Only Super Administrators can modify Super Admin accounts.');
+    }
+    if (dto.role === UserRole.SUPER_ADMIN && reviewer.role !== UserRole.SUPER_ADMIN) {
+      throw new ForbiddenError('Only Super Administrators can assign the SUPER_ADMIN role.');
+    }
 
     const previousUser = user.toJSON();
-    const previousTeacher = teacher.toJSON();
+    const previousTeacher = teacher ? teacher.toJSON() : null;
+
+    if (dto.phone !== undefined) {
+      const cleanPhone = dto.phone.trim();
+      if (cleanPhone && cleanPhone !== user.phone?.trim()) {
+        const existingPhone = await this.userRepository.findByPhone(cleanPhone);
+        if (existingPhone && existingPhone.id !== user.id) {
+          throw new ConflictError(`User with phone number '${cleanPhone}' already exists.`);
+        }
+      }
+    }
 
     if (dto.firstName || dto.lastName || dto.phone !== undefined) {
       user.updateProfile(dto.firstName, dto.lastName, dto.phone);
@@ -1006,37 +1199,84 @@ export class TeacherUseCases {
 
     await this.userRepository.update(user);
 
-    if (dto.employeeNumber && dto.employeeNumber !== teacher.employeeNumber) {
-      const existingEmp = await this.teacherRepository.findByEmployeeNumber(dto.employeeNumber);
-      if (existingEmp && existingEmp.id !== teacher.id) {
-        throw new ConflictError(`Teacher with Employee Number '${dto.employeeNumber}' already exists.`);
+    if (teacher) {
+      if (dto.employeeNumber && dto.employeeNumber !== teacher.employeeNumber) {
+        const existingEmp = await this.teacherRepository.findByEmployeeNumber(dto.employeeNumber);
+        if (existingEmp && existingEmp.id !== teacher.id) {
+          throw new ConflictError(`Teacher with Employee Number '${dto.employeeNumber}' already exists.`);
+        }
       }
+
+      // Validate assigned stream against academic repository
+      if (dto.assignedClassStreamIds && dto.assignedClassStreamIds.length > 0) {
+        const streamId = dto.assignedClassStreamIds[0]?.trim();
+        if (streamId && this.academicRepository) {
+          const stream = await this.academicRepository.findStreamById(streamId);
+          if (!stream) {
+            throw new ValidationError(`Assigned stream '${streamId}' does not exist.`);
+          }
+          const classRoom = await this.academicRepository.findClassById(stream.classRoomId);
+          if (!classRoom || (user.schoolId && classRoom.schoolId !== user.schoolId)) {
+            throw new ValidationError(`Assigned stream '${streamId}' does not belong to the teacher's school.`);
+          }
+        }
+      }
+
+      teacher.updateDetails({
+        tscNumber: dto.tscNumber,
+        employeeNumber: dto.employeeNumber,
+        specialization: dto.specialization,
+        qualification: dto.qualification,
+        dateOfBirth: dto.dateOfBirth,
+        gender: dto.gender,
+        nationalId: dto.nationalId,
+        residentialAddress: dto.residentialAddress,
+        profilePhotoUrl: dto.profilePhotoUrl,
+        employmentDate: dto.employmentDate,
+        employmentType: dto.employmentType,
+        employmentStatus: dto.employmentStatus,
+        department: dto.department,
+        emergencyContact: dto.emergencyContact,
+        documents: dto.documents,
+        assignedClassStreamIds: dto.assignedClassStreamIds
+      });
+
+      if (dto.assignedClassStreamIds && dto.assignedClassStreamIds.length > 0) {
+        teacher.assignStream(dto.assignedClassStreamIds[0]);
+      }
+
+      await this.teacherRepository.update(teacher);
+    } else if (dto.role && roleRequiresTeacherProfile(dto.role)) {
+      let employeeNumber = dto.employeeNumber?.trim();
+      if (!employeeNumber) {
+        const allTeachers = await this.teacherRepository.findAll();
+        const nextSeq = IdGenerator.generateNextSequentialNumber(allTeachers.map((t: any) => t.employeeNumber));
+        employeeNumber = nextSeq.startsWith('EMP-') ? nextSeq : `EMP-${nextSeq}`;
+      }
+      teacher = Teacher.create(
+        {
+          userId: user.id,
+          employeeNumber,
+          tscNumber: dto.tscNumber?.trim() || undefined,
+          specialization: dto.specialization || [],
+          assignedClassStreamIds: dto.assignedClassStreamIds || [],
+          qualification: dto.qualification?.trim() || undefined,
+          dateOfBirth: dto.dateOfBirth,
+          gender: dto.gender,
+          nationalId: dto.nationalId,
+          residentialAddress: dto.residentialAddress,
+          profilePhotoUrl: dto.profilePhotoUrl,
+          employmentDate: dto.employmentDate,
+          employmentType: dto.employmentType || 'FULL_TIME',
+          employmentStatus: dto.employmentStatus || 'ACTIVE',
+          department: dto.department,
+          emergencyContact: dto.emergencyContact,
+          documents: dto.documents || []
+        },
+        IdGenerator.generate()
+      );
+      await this.teacherRepository.save(teacher);
     }
-
-    teacher.updateDetails({
-      tscNumber: dto.tscNumber,
-      employeeNumber: dto.employeeNumber,
-      specialization: dto.specialization,
-      qualification: dto.qualification,
-      dateOfBirth: dto.dateOfBirth,
-      gender: dto.gender,
-      nationalId: dto.nationalId,
-      residentialAddress: dto.residentialAddress,
-      profilePhotoUrl: dto.profilePhotoUrl,
-      employmentDate: dto.employmentDate,
-      employmentType: dto.employmentType,
-      employmentStatus: dto.employmentStatus,
-      department: dto.department,
-      emergencyContact: dto.emergencyContact,
-      documents: dto.documents,
-      assignedClassStreamIds: dto.assignedClassStreamIds
-    });
-
-    if (dto.assignedClassStreamIds && dto.assignedClassStreamIds.length > 0) {
-      teacher.assignStream(dto.assignedClassStreamIds[0]);
-    }
-
-    await this.teacherRepository.update(teacher);
 
     if (this.systemLogRepository) {
       await this.systemLogRepository.create(
@@ -1044,17 +1284,17 @@ export class TeacherUseCases {
           {
             schoolId: user.schoolId || 'school-001',
             category: 'STAFF',
-            action: 'TEACHER_PROFILE_UPDATED_BY_ADMIN',
+            action: teacher ? 'TEACHER_PROFILE_UPDATED_BY_ADMIN' : 'STAFF_PROFILE_UPDATED_BY_ADMIN',
             actorUserId: reviewer.id,
             actorEmail: reviewer.email,
             actorRole: reviewer.role || 'ADMIN',
             status: 'SUCCESS',
-            details: `Administrator ${reviewer.name || reviewer.email} updated profile for Teacher ${user.fullName} (${teacher.employeeNumber}).`,
+            details: `Administrator ${reviewer.name || reviewer.email} updated profile for ${user.role} ${user.fullName}${teacher ? ` (${teacher.employeeNumber})` : ''}.`,
             metadata: {
-              teacherId: teacher.id,
+              teacherId: teacher?.id,
               userId: user.id,
               previous: { user: previousUser, teacher: previousTeacher },
-              updated: { user: user.toJSON(), teacher: teacher.toJSON() }
+              updated: { user: user.toJSON(), teacher: teacher ? teacher.toJSON() : null }
             }
           },
           IdGenerator.generate()
@@ -1063,7 +1303,7 @@ export class TeacherUseCases {
     }
 
     return {
-      ...teacher.toJSON(),
+      ...(teacher ? teacher.toJSON() : {}),
       user: user.toJSON()
     };
   }
@@ -1094,87 +1334,28 @@ export class TeacherUseCases {
       .map((log: any) => log.toJSON());
   }
 
-  public async updateTeacherProfile(teacherIdOrUserId: string, dto: UpdateTeacherProfileDTO) {
-    let teacher = await this.teacherRepository.findById(teacherIdOrUserId);
-    if (!teacher) {
-      teacher = await this.teacherRepository.findByUserId(teacherIdOrUserId);
-    }
-    if (!teacher) {
-      throw new NotFoundError('Teacher', teacherIdOrUserId);
-    }
-
-    const user = await this.userRepository.findById(teacher.userId);
-    if (!user) {
-      throw new NotFoundError('User for Teacher', teacher.userId);
-    }
-
-    if (dto.firstName || dto.lastName || dto.phone !== undefined) {
-      user.updateProfile(dto.firstName, dto.lastName, dto.phone);
-    }
-
-    if (dto.email !== undefined) {
-      const cleanEmail = dto.email.trim() ? dto.email.trim().toLowerCase() : undefined;
-      if (cleanEmail && cleanEmail !== user.email?.toLowerCase()) {
-        const existingUser = await this.userRepository.findByEmail(cleanEmail);
-        if (existingUser && existingUser.id !== user.id) {
-          throw new ConflictError(`User with email '${dto.email}' already exists.`);
-        }
-        user.updateEmail(cleanEmail);
-      } else if (!cleanEmail) {
-        user.updateEmail(undefined);
-      }
-    }
-
-    if (dto.role && Object.values(UserRole).includes(dto.role)) {
-      user.updateRole(dto.role);
-    }
-
-    if (dto.status && Object.values(UserStatus).includes(dto.status)) {
-      user.setStatus(dto.status);
-    }
-
-    await this.userRepository.update(user);
-
-    if (dto.employeeNumber && dto.employeeNumber !== teacher.employeeNumber) {
-      const existingEmp = await this.teacherRepository.findByEmployeeNumber(dto.employeeNumber);
-      if (existingEmp && existingEmp.id !== teacher.id) {
-        throw new ConflictError(`Teacher with Employee Number '${dto.employeeNumber}' already exists.`);
-      }
-    }
-
-    teacher.updateDetails({
-      tscNumber: dto.tscNumber,
-      employeeNumber: dto.employeeNumber,
-      specialization: dto.specialization,
-      qualification: dto.qualification,
-      dateOfBirth: dto.dateOfBirth,
-      gender: dto.gender,
-      nationalId: dto.nationalId,
-      residentialAddress: dto.residentialAddress,
-      profilePhotoUrl: dto.profilePhotoUrl,
-      employmentDate: dto.employmentDate,
-      employmentType: dto.employmentType,
-      employmentStatus: dto.employmentStatus,
-      department: dto.department,
-      emergencyContact: dto.emergencyContact,
-      documents: dto.documents
-    });
-
-    if (dto.assignedClassStreamIds && dto.assignedClassStreamIds.length > 0) {
-      teacher.assignStream(dto.assignedClassStreamIds[0]);
-    }
-
-    await this.teacherRepository.update(teacher);
-
-    return {
-      ...teacher.toJSON(),
-      user: user.toJSON()
-    };
+  public async updateTeacherProfile(
+    teacherIdOrUserId: string,
+    dto: UpdateTeacherProfileDTO,
+    reviewer?: { id: string; name?: string; email?: string; role?: string; schoolId?: string }
+  ) {
+    return this.adminUpdateTeacherProfile(
+      teacherIdOrUserId,
+      dto,
+      reviewer || { id: 'admin', role: 'ADMIN' }
+    );
   }
 
   public async deleteTeacher(teacherId: string) {
     const teacher = await this.teacherRepository.findById(teacherId);
-    if (!teacher) throw new NotFoundError('Teacher', teacherId);
+    if (!teacher) {
+      const user = await this.userRepository.findById(teacherId);
+      if (user) {
+        await this.userRepository.delete(user.id);
+        return;
+      }
+      throw new NotFoundError('Teacher', teacherId);
+    }
     await this.teacherRepository.delete(teacherId);
     if (teacher.userId) {
       await this.userRepository.delete(teacher.userId);

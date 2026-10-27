@@ -11,7 +11,7 @@ export const RegisterTeacherSchema = z.object({
   firstName: z.string().min(1),
   lastName: z.string().min(1),
   phone: z.string().optional(),
-  schoolId: z.string().optional().default('school-001'),
+  schoolId: z.string().optional(),
   role: z.nativeEnum(UserRole).optional().default(UserRole.TEACHER),
   tscNumber: z.string().optional(),
   employeeNumber: z.string().optional(),
@@ -92,11 +92,13 @@ export class TeacherController {
 
   public registerTeacher = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const teacher = await this.teacherUseCases.registerTeacher(req.body);
+      const authReq = req as AuthenticatedRequest;
+      const result = await this.teacherUseCases.registerTeacher(req.body, authReq.user);
+      const isTeacher = !!(result as any).id;
       return res.status(201).json({
         success: true,
-        message: 'Teacher onboarded successfully',
-        data: teacher
+        message: isTeacher ? 'Teacher onboarded successfully' : 'Staff member onboarded successfully',
+        data: result
       });
     } catch (err) {
       next(err);
@@ -232,7 +234,8 @@ export class TeacherController {
         id: req.user?.userId || 'unknown-admin',
         name: (req.user as any)?.name || (req.user as any)?.fullName || (req.user as any)?.email,
         email: req.user?.email,
-        role: req.user?.role
+        role: req.user?.role,
+        schoolId: req.user?.schoolId
       };
       const updated = await this.teacherUseCases.adminUpdateTeacherProfile(teacherId, req.body, reviewer);
       return res.status(200).json({
@@ -247,7 +250,15 @@ export class TeacherController {
 
   public updateTeacherProfile = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const updated = await this.teacherUseCases.updateTeacherProfile(req.params.id as string, req.body);
+      const authUser = (req as AuthenticatedRequest).user;
+      const reviewer = {
+        id: authUser?.userId || 'unknown-admin',
+        name: (authUser as any)?.name || (authUser as any)?.fullName || (authUser as any)?.email,
+        email: authUser?.email,
+        role: authUser?.role,
+        schoolId: authUser?.schoolId
+      };
+      const updated = await this.teacherUseCases.updateTeacherProfile(req.params.id as string, req.body, reviewer);
       return res.status(200).json({
         success: true,
         message: 'Teacher profile updated successfully',
@@ -272,7 +283,9 @@ export class TeacherController {
 
   public listTeachers = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const teachers = await this.teacherUseCases.listTeachers();
+      const authReq = req as AuthenticatedRequest;
+      const schoolId = (req.query.schoolId as string) || authReq.user?.schoolId;
+      const teachers = await this.teacherUseCases.listTeachers({ schoolId });
       return res.status(200).json({
         success: true,
         count: teachers.length,

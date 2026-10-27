@@ -654,7 +654,7 @@ export default function App() {
       status: 'Clocked In',
       clockInTime: '08:00 AM',
     };
-    setTeachers((prev) => [newT, ...prev]);
+    setTeachers((prev) => [newT, ...prev.filter((t) => t.id !== newT.id)]);
 
     const newAct: SystemActivity = {
       id: `act-${Date.now()}`,
@@ -1090,7 +1090,7 @@ export default function App() {
             />
           )}
 
-          {currentTab === 'teachers-staff' && (
+          {(currentTab === 'teachers-staff' || (currentTab as string) === 'teachers') && (
             <TeachersView
               teachers={teachers}
               onToggleClockIn={handleToggleClockIn}
@@ -1102,6 +1102,11 @@ export default function App() {
               }
               onDeleteTeacher={(deletedId) =>
                 setTeachers((prev) => prev.filter((t) => t.id !== deletedId))
+              }
+              onTeacherUpdated={(updatedTeacher) =>
+                setTeachers((prev) =>
+                  prev.map((t) => (t.id === updatedTeacher.id ? updatedTeacher : t))
+                )
               }
               onAssignTeacher={(teacherId, assignedLabel) =>
                 setTeachers((prev) =>

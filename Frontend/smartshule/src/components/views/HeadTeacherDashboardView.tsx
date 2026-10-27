@@ -97,7 +97,7 @@ export const HeadTeacherDashboardView: React.FC<HeadTeacherDashboardViewProps> =
               </button>
             )}
             <button
-              onClick={() => onNavigateTab('teachers')}
+              onClick={() => onNavigateTab('teachers-staff')}
               className="px-4 py-2.5 rounded-xl bg-purple-800/80 hover:bg-purple-800 text-white font-semibold text-xs border border-purple-400/30 flex items-center gap-2 transition-all cursor-pointer"
             >
               <span className="material-symbols-outlined text-[18px]">badge</span>
@@ -279,7 +279,7 @@ export const HeadTeacherDashboardView: React.FC<HeadTeacherDashboardViewProps> =
               </button>
 
               <button
-                onClick={() => onNavigateTab('teachers')}
+                onClick={() => onNavigateTab('teachers-staff')}
                 className="w-full p-3 rounded-xl border border-outline-variant/30 hover:bg-purple-50/50 hover:border-purple-300 transition-all flex items-center gap-3 text-left cursor-pointer"
               >
                 <span className="material-symbols-outlined text-purple-700 text-[22px]">badge</span>

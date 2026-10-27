@@ -239,7 +239,8 @@ export class AppContainer {
       this.tokenService,
       this.notificationService,
       this.guardianRepository,
-      this.studentRepository
+      this.studentRepository,
+      this.systemLogRepository
     );
     this.studentUseCases = new StudentUseCases(
       this.studentRepository,

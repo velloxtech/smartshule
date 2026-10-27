@@ -1,5 +1,6 @@
 import { Teacher } from '../../domain/user/Teacher';
 import { Guardian } from '../../domain/user/Guardian';
+import { User } from '../../domain/user/User';
 
 export interface ITeacherRepository {
   findById(id: string): Promise<Teacher | null>;
@@ -7,6 +8,7 @@ export interface ITeacherRepository {
   findByEmployeeNumber(empNumber: string): Promise<Teacher | null>;
   findAll(): Promise<Teacher[]>;
   save(teacher: Teacher): Promise<void>;
+  saveWithUser?(teacher: Teacher, user: User, userRepository?: any): Promise<void>;
   update(teacher: Teacher): Promise<void>;
   delete(id: string): Promise<void>;
 }

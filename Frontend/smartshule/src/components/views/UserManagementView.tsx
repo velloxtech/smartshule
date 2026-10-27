@@ -116,7 +116,7 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
         lastName: newLastName.trim(),
         role: newRole,
         phone: newPhone.trim() || undefined,
-        schoolId: currentUser?.schoolId || 'school-001',
+        schoolId: currentUser?.schoolId || undefined,
       });
       if (res.success && res.data) {
         setUsers((prev) => [res.data, ...prev]);

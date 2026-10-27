@@ -10,6 +10,7 @@ interface TeachersViewProps {
   onDeleteTeacher?: (teacherId: string) => void;
   onAssignTeacher?: (teacherId: string, assignedClass: string) => void;
   onNavigateTab?: (tabId: string) => void;
+  onTeacherUpdated?: (updatedTeacher: Teacher) => void;
 }
 
 const CBC_STANDARD_CLASSES = [
@@ -34,6 +35,7 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
   onDeleteTeacher,
   onAssignTeacher,
   onNavigateTab,
+  onTeacherUpdated,
 }) => {
   const { user } = useAuth();
   const canOnboard = Boolean(
@@ -69,6 +71,8 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
   const [loadingProfileData, setLoadingProfileData] = useState(false);
   const [savingAdminEdit, setSavingAdminEdit] = useState(false);
   const [adminEditForm, setAdminEditForm] = useState<any>({});
+  const [modalError, setModalError] = useState<string | null>(null);
+  const [modalSuccess, setModalSuccess] = useState<string | null>(null);
 
   // Assignment Modal States
   const [isAssignOpen, setIsAssignOpen] = useState(false);
@@ -347,12 +351,14 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
   };
 
   // View Teacher Profile Modal Handler
-  const handleViewFullProfile = async (teacher: Teacher) => {
+  const handleViewFullProfile = async (teacher: Teacher, initialTab: 'details' | 'audit' | 'edit' = 'details') => {
     setSelectedTeacherForProfile(teacher);
-    setProfileModalTab('details');
+    setProfileModalTab(initialTab);
     setLoadingProfileData(true);
     setTeacherProfileData(null);
     setTeacherAuditLogs([]);
+    setModalError(null);
+    setModalSuccess(null);
 
     try {
       const [tRes, auditRes] = await Promise.all([
@@ -363,6 +369,7 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
       if (tRes?.data) {
         setTeacherProfileData(tRes.data);
         const t = tRes.data;
+        const specs = Array.isArray(t.specialization) ? t.specialization.join(', ') : (t.specialization || '');
         setAdminEditForm({
           firstName: t.user?.firstName || '',
           lastName: t.user?.lastName || '',
@@ -372,6 +379,7 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
           tscNumber: t.tscNumber || '',
           employeeNumber: t.employeeNumber || '',
           qualification: t.qualification || '',
+          specialization: specs,
           dateOfBirth: t.dateOfBirth || '',
           gender: t.gender || '',
           nationalId: t.nationalId || '',
@@ -380,6 +388,9 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
           employmentDate: t.employmentDate || '',
           employmentType: t.employmentType || 'FULL_TIME',
           employmentStatus: t.employmentStatus || 'ACTIVE',
+          emergencyContactName: t.emergencyContact?.name || '',
+          emergencyContactPhone: t.emergencyContact?.phone || '',
+          emergencyContactRelationship: t.emergencyContact?.relationship || '',
         });
       }
       if (auditRes?.data) {
@@ -392,23 +403,75 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
     }
   };
 
+  const handleOpenDirectEdit = (teacher: Teacher) => {
+    handleViewFullProfile(teacher, 'edit');
+  };
+
   const handleSaveAdminProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedTeacherForProfile) return;
 
     setSavingAdminEdit(true);
+    setModalError(null);
+    setModalSuccess(null);
+
     try {
-      const res = await apiService.adminUpdateTeacherProfile(selectedTeacherForProfile.id, adminEditForm);
+      const payload: any = {
+        firstName: adminEditForm.firstName?.trim(),
+        lastName: adminEditForm.lastName?.trim(),
+        email: adminEditForm.email?.trim() ? adminEditForm.email.trim().toLowerCase() : undefined,
+        phone: adminEditForm.phone?.trim() || undefined,
+        role: adminEditForm.role,
+        tscNumber: adminEditForm.tscNumber?.trim() || undefined,
+        employeeNumber: adminEditForm.employeeNumber?.trim() || undefined,
+        qualification: adminEditForm.qualification?.trim() || undefined,
+        specialization: adminEditForm.specialization
+          ? adminEditForm.specialization.split(',').map((s: string) => s.trim()).filter(Boolean)
+          : undefined,
+        dateOfBirth: adminEditForm.dateOfBirth?.trim() || undefined,
+        gender: adminEditForm.gender?.trim() || undefined,
+        nationalId: adminEditForm.nationalId?.trim() || undefined,
+        residentialAddress: adminEditForm.residentialAddress?.trim() || undefined,
+        department: adminEditForm.department?.trim() || undefined,
+        employmentDate: adminEditForm.employmentDate?.trim() || undefined,
+        employmentType: adminEditForm.employmentType?.trim() || undefined,
+        employmentStatus: adminEditForm.employmentStatus?.trim() || undefined,
+      };
+
+      if (adminEditForm.emergencyContactName?.trim() || adminEditForm.emergencyContactPhone?.trim()) {
+        payload.emergencyContact = {
+          name: adminEditForm.emergencyContactName?.trim() || 'Emergency Contact',
+          phone: adminEditForm.emergencyContactPhone?.trim() || '',
+          relationship: adminEditForm.emergencyContactRelationship?.trim() || 'Next of Kin'
+        };
+      }
+
+      const res = await apiService.adminUpdateTeacherProfile(selectedTeacherForProfile.id, payload);
       if (res?.success) {
-        setFeedback({ type: 'success', message: 'Teacher profile updated successfully by administrator.' });
+        setFeedback({ type: 'success', message: 'Staff/Teacher profile updated successfully by administrator.' });
+        setModalSuccess('Profile changes saved successfully!');
         setTeacherProfileData(res.data);
-        setProfileModalTab('details');
-        await loadClassesAndStreams();
+        const updatedTeacher: Teacher = {
+          ...selectedTeacherForProfile,
+          name: res.data?.user ? `${res.data.user.firstName} ${res.data.user.lastName}` : selectedTeacherForProfile.name,
+          email: res.data?.user?.email || selectedTeacherForProfile.email,
+          phone: res.data?.user?.phone || selectedTeacherForProfile.phone,
+          tscNumber: res.data?.tscNumber || selectedTeacherForProfile.tscNumber,
+          employeeNumber: res.data?.employeeNumber || selectedTeacherForProfile.employeeNumber,
+          role: res.data?.user?.role ? res.data.user.role.replace(/_/g, ' ') : selectedTeacherForProfile.role,
+        };
+        setSelectedTeacherForProfile(updatedTeacher);
+        if (onTeacherUpdated) {
+          onTeacherUpdated(updatedTeacher);
+        }
+        // Refresh audit logs
+        const auditRes = await apiService.getTeacherAuditHistory(selectedTeacherForProfile.id).catch(() => ({ data: [] }));
+        if (auditRes?.data) setTeacherAuditLogs(auditRes.data);
       } else {
-        setFeedback({ type: 'error', message: res?.message || 'Failed to update teacher profile.' });
+        setModalError(res?.message || 'Failed to update teacher profile.');
       }
     } catch (err: any) {
-      setFeedback({ type: 'error', message: err?.message || 'Error updating teacher profile.' });
+      setModalError(err?.message || 'Error updating teacher profile.');
     } finally {
       setSavingAdminEdit(false);
     }
@@ -459,6 +522,8 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
     const s = search.toLowerCase();
     return (
       t.name.toLowerCase().includes(s) ||
+      (t.email || '').toLowerCase().includes(s) ||
+      (t.phone || '').toLowerCase().includes(s) ||
       (t.tscNumber || '').toLowerCase().includes(s) ||
       (t.employeeNumber || '').toLowerCase().includes(s) ||
       t.learningAreas.some((la) => la.toLowerCase().includes(s))
@@ -680,6 +745,15 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
                         >
                           <span className="material-symbols-outlined text-[15px] text-primary">visibility</span>
                           <span>Profile</span>
+                        </button>
+
+                        <button
+                          onClick={() => handleOpenDirectEdit(t)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-bold transition-all cursor-pointer shadow-2xs"
+                          title={`Edit and correct details for ${t.name}`}
+                        >
+                          <span className="material-symbols-outlined text-[15px] text-amber-700">edit</span>
+                          <span>Edit</span>
                         </button>
 
                         <button
@@ -1115,78 +1189,264 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
               ) : (
                 /* Edit Admin Override Form */
                 <form onSubmit={handleSaveAdminProfile} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block font-bold text-on-surface mb-1">First Name</label>
-                      <input
-                        type="text"
-                        value={adminEditForm.firstName}
-                        onChange={(e) => setAdminEditForm({ ...adminEditForm, firstName: e.target.value })}
-                        className="w-full px-3 py-1.5 rounded-lg border border-outline-variant/40 bg-surface focus:outline-primary"
-                      />
+                  {modalError && (
+                    <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[18px] text-rose-600 shrink-0">error</span>
+                      <span className="font-semibold">{modalError}</span>
                     </div>
-                    <div>
-                      <label className="block font-bold text-on-surface mb-1">Last Name</label>
-                      <input
-                        type="text"
-                        value={adminEditForm.lastName}
-                        onChange={(e) => setAdminEditForm({ ...adminEditForm, lastName: e.target.value })}
-                        className="w-full px-3 py-1.5 rounded-lg border border-outline-variant/40 bg-surface focus:outline-primary"
-                      />
+                  )}
+
+                  {modalSuccess && (
+                    <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[18px] text-emerald-600 shrink-0">check_circle</span>
+                      <span className="font-semibold">{modalSuccess}</span>
                     </div>
-                    <div>
-                      <label className="block font-bold text-on-surface mb-1">Email</label>
-                      <input
-                        type="email"
-                        value={adminEditForm.email}
-                        onChange={(e) => setAdminEditForm({ ...adminEditForm, email: e.target.value })}
-                        className="w-full px-3 py-1.5 rounded-lg border border-outline-variant/40 bg-surface focus:outline-primary"
-                      />
+                  )}
+
+                  {/* Section 1: Identity & Role */}
+                  <div className="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant/30 space-y-3">
+                    <h4 className="font-bold text-xs text-primary uppercase tracking-wider flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[16px]">badge</span>
+                      <span>Account & Basic Identity</span>
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block font-bold text-on-surface mb-1">
+                          First Name <span className="text-error">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={adminEditForm.firstName || ''}
+                          onChange={(e) => setAdminEditForm({ ...adminEditForm, firstName: e.target.value })}
+                          className="w-full px-3 py-1.5 rounded-lg border border-outline-variant/40 bg-surface focus:outline-primary"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-bold text-on-surface mb-1">
+                          Last Name <span className="text-error">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={adminEditForm.lastName || ''}
+                          onChange={(e) => setAdminEditForm({ ...adminEditForm, lastName: e.target.value })}
+                          className="w-full px-3 py-1.5 rounded-lg border border-outline-variant/40 bg-surface focus:outline-primary"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-bold text-on-surface mb-1">Email Address</label>
+                        <input
+                          type="email"
+                          value={adminEditForm.email || ''}
+                          onChange={(e) => setAdminEditForm({ ...adminEditForm, email: e.target.value })}
+                          className="w-full px-3 py-1.5 rounded-lg border border-outline-variant/40 bg-surface focus:outline-primary"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-bold text-on-surface mb-1">Phone Number</label>
+                        <input
+                          type="tel"
+                          value={adminEditForm.phone || ''}
+                          onChange={(e) => setAdminEditForm({ ...adminEditForm, phone: e.target.value })}
+                          placeholder="e.g. +254712345678"
+                          className="w-full px-3 py-1.5 rounded-lg border border-outline-variant/40 bg-surface focus:outline-primary font-data-mono"
+                        />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className="block font-bold text-on-surface mb-1">System Role</label>
+                        <select
+                          value={adminEditForm.role || 'TEACHER'}
+                          onChange={(e) => setAdminEditForm({ ...adminEditForm, role: e.target.value })}
+                          className="w-full px-3 py-1.5 rounded-lg border border-outline-variant/40 bg-surface focus:outline-primary cursor-pointer font-bold"
+                        >
+                          <option value="TEACHER">Teacher (Faculty Educator)</option>
+                          <option value="HEAD_TEACHER">Head Teacher (Pedagogical Head)</option>
+                          <option value="DEPUTY_HEAD_TEACHER">Deputy Head Teacher</option>
+                          <option value="BURSAR">Bursar (Finance Officer)</option>
+                          <option value="ACCOUNTANT">Accountant</option>
+                          <option value="ADMISSIONS">Admissions Officer</option>
+                          <option value="SCHOOL_ADMIN">School Administrator</option>
+                          <option value="ADMIN">System Administrator</option>
+                        </select>
+                      </div>
                     </div>
-                    <div>
-                      <label className="block font-bold text-on-surface mb-1">Phone</label>
-                      <input
-                        type="text"
-                        value={adminEditForm.phone}
-                        onChange={(e) => setAdminEditForm({ ...adminEditForm, phone: e.target.value })}
-                        className="w-full px-3 py-1.5 rounded-lg border border-outline-variant/40 bg-surface focus:outline-primary"
-                      />
+                  </div>
+
+                  {/* Section 2: Biodata & Demographics */}
+                  <div className="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant/30 space-y-3">
+                    <h4 className="font-bold text-xs text-secondary uppercase tracking-wider flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[16px]">person</span>
+                      <span>Personal Demographics & Identification</span>
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block font-bold text-on-surface mb-1">National ID / Passport</label>
+                        <input
+                          type="text"
+                          value={adminEditForm.nationalId || ''}
+                          onChange={(e) => setAdminEditForm({ ...adminEditForm, nationalId: e.target.value })}
+                          className="w-full px-3 py-1.5 rounded-lg border border-outline-variant/40 bg-surface focus:outline-primary"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-bold text-on-surface mb-1">Date of Birth</label>
+                        <input
+                          type="date"
+                          value={adminEditForm.dateOfBirth || ''}
+                          onChange={(e) => setAdminEditForm({ ...adminEditForm, dateOfBirth: e.target.value })}
+                          className="w-full px-3 py-1.5 rounded-lg border border-outline-variant/40 bg-surface focus:outline-primary"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-bold text-on-surface mb-1">Gender</label>
+                        <select
+                          value={adminEditForm.gender || ''}
+                          onChange={(e) => setAdminEditForm({ ...adminEditForm, gender: e.target.value })}
+                          className="w-full px-3 py-1.5 rounded-lg border border-outline-variant/40 bg-surface focus:outline-primary cursor-pointer"
+                        >
+                          <option value="">Select Gender</option>
+                          <option value="MALE">Male</option>
+                          <option value="FEMALE">Female</option>
+                          <option value="OTHER">Other</option>
+                        </select>
+                      </div>
+                      <div className="sm:col-span-3">
+                        <label className="block font-bold text-on-surface mb-1">Residential Address</label>
+                        <input
+                          type="text"
+                          value={adminEditForm.residentialAddress || ''}
+                          onChange={(e) => setAdminEditForm({ ...adminEditForm, residentialAddress: e.target.value })}
+                          placeholder="e.g. Estate / House No, City / County"
+                          className="w-full px-3 py-1.5 rounded-lg border border-outline-variant/40 bg-surface focus:outline-primary"
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <label className="block font-bold text-on-surface mb-1">TSC Number</label>
-                      <input
-                        type="text"
-                        value={adminEditForm.tscNumber}
-                        onChange={(e) => setAdminEditForm({ ...adminEditForm, tscNumber: e.target.value })}
-                        className="w-full px-3 py-1.5 rounded-lg border border-outline-variant/40 bg-surface focus:outline-primary"
-                      />
+                  </div>
+
+                  {/* Section 3: Professional & Employment */}
+                  <div className="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant/30 space-y-3">
+                    <h4 className="font-bold text-xs text-on-surface uppercase tracking-wider flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[16px]">work</span>
+                      <span>Credentials & Employment Record</span>
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block font-bold text-on-surface mb-1">Employee Number</label>
+                        <input
+                          type="text"
+                          value={adminEditForm.employeeNumber || ''}
+                          onChange={(e) => setAdminEditForm({ ...adminEditForm, employeeNumber: e.target.value })}
+                          placeholder="e.g. EMP-1001"
+                          className="w-full px-3 py-1.5 rounded-lg border border-outline-variant/40 bg-surface focus:outline-primary font-data-mono"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-bold text-on-surface mb-1">TSC Number</label>
+                        <input
+                          type="text"
+                          value={adminEditForm.tscNumber || ''}
+                          onChange={(e) => setAdminEditForm({ ...adminEditForm, tscNumber: e.target.value })}
+                          placeholder="e.g. TSC/123456"
+                          className="w-full px-3 py-1.5 rounded-lg border border-outline-variant/40 bg-surface focus:outline-primary font-data-mono"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-bold text-on-surface mb-1">Highest Qualification</label>
+                        <input
+                          type="text"
+                          value={adminEditForm.qualification || ''}
+                          onChange={(e) => setAdminEditForm({ ...adminEditForm, qualification: e.target.value })}
+                          placeholder="e.g. B.Ed (Science), Diploma in Education"
+                          className="w-full px-3 py-1.5 rounded-lg border border-outline-variant/40 bg-surface focus:outline-primary"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-bold text-on-surface mb-1">Department</label>
+                        <input
+                          type="text"
+                          value={adminEditForm.department || ''}
+                          onChange={(e) => setAdminEditForm({ ...adminEditForm, department: e.target.value })}
+                          placeholder="e.g. Sciences, Languages, Administration"
+                          className="w-full px-3 py-1.5 rounded-lg border border-outline-variant/40 bg-surface focus:outline-primary"
+                        />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className="block font-bold text-on-surface mb-1">Specialization / Subjects (Comma-separated)</label>
+                        <input
+                          type="text"
+                          value={adminEditForm.specialization || ''}
+                          onChange={(e) => setAdminEditForm({ ...adminEditForm, specialization: e.target.value })}
+                          placeholder="e.g. Mathematics, Integrated Science"
+                          className="w-full px-3 py-1.5 rounded-lg border border-outline-variant/40 bg-surface focus:outline-primary"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-bold text-on-surface mb-1">Employment Type</label>
+                        <select
+                          value={adminEditForm.employmentType || 'FULL_TIME'}
+                          onChange={(e) => setAdminEditForm({ ...adminEditForm, employmentType: e.target.value })}
+                          className="w-full px-3 py-1.5 rounded-lg border border-outline-variant/40 bg-surface focus:outline-primary cursor-pointer"
+                        >
+                          <option value="FULL_TIME">Full Time</option>
+                          <option value="PART_TIME">Part Time</option>
+                          <option value="CONTRACT">Contract</option>
+                          <option value="INTERN">Intern / Volunteer</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block font-bold text-on-surface mb-1">Employment Status</label>
+                        <select
+                          value={adminEditForm.employmentStatus || 'ACTIVE'}
+                          onChange={(e) => setAdminEditForm({ ...adminEditForm, employmentStatus: e.target.value })}
+                          className="w-full px-3 py-1.5 rounded-lg border border-outline-variant/40 bg-surface focus:outline-primary cursor-pointer"
+                        >
+                          <option value="ACTIVE">Active</option>
+                          <option value="ON_LEAVE">On Leave</option>
+                          <option value="SUSPENDED">Suspended</option>
+                          <option value="TERMINATED">Terminated</option>
+                        </select>
+                      </div>
                     </div>
-                    <div>
-                      <label className="block font-bold text-on-surface mb-1">Employee Number</label>
-                      <input
-                        type="text"
-                        value={adminEditForm.employeeNumber}
-                        onChange={(e) => setAdminEditForm({ ...adminEditForm, employeeNumber: e.target.value })}
-                        className="w-full px-3 py-1.5 rounded-lg border border-outline-variant/40 bg-surface focus:outline-primary"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-bold text-on-surface mb-1">National ID</label>
-                      <input
-                        type="text"
-                        value={adminEditForm.nationalId}
-                        onChange={(e) => setAdminEditForm({ ...adminEditForm, nationalId: e.target.value })}
-                        className="w-full px-3 py-1.5 rounded-lg border border-outline-variant/40 bg-surface focus:outline-primary"
-                      />
-                    </div>
-                    <div>
-                      <label className="block font-bold text-on-surface mb-1">Department</label>
-                      <input
-                        type="text"
-                        value={adminEditForm.department}
-                        onChange={(e) => setAdminEditForm({ ...adminEditForm, department: e.target.value })}
-                        className="w-full px-3 py-1.5 rounded-lg border border-outline-variant/40 bg-surface focus:outline-primary"
-                      />
+                  </div>
+
+                  {/* Section 4: Emergency Contact */}
+                  <div className="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant/30 space-y-3">
+                    <h4 className="font-bold text-xs text-rose-700 uppercase tracking-wider flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[16px]">contact_emergency</span>
+                      <span>Emergency Contact Details</span>
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block font-bold text-on-surface mb-1">Contact Name</label>
+                        <input
+                          type="text"
+                          value={adminEditForm.emergencyContactName || ''}
+                          onChange={(e) => setAdminEditForm({ ...adminEditForm, emergencyContactName: e.target.value })}
+                          placeholder="e.g. Jane Mwangi"
+                          className="w-full px-3 py-1.5 rounded-lg border border-outline-variant/40 bg-surface focus:outline-primary"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-bold text-on-surface mb-1">Contact Phone</label>
+                        <input
+                          type="tel"
+                          value={adminEditForm.emergencyContactPhone || ''}
+                          onChange={(e) => setAdminEditForm({ ...adminEditForm, emergencyContactPhone: e.target.value })}
+                          placeholder="e.g. +254711223344"
+                          className="w-full px-3 py-1.5 rounded-lg border border-outline-variant/40 bg-surface focus:outline-primary font-data-mono"
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-bold text-on-surface mb-1">Relationship</label>
+                        <input
+                          type="text"
+                          value={adminEditForm.emergencyContactRelationship || ''}
+                          onChange={(e) => setAdminEditForm({ ...adminEditForm, emergencyContactRelationship: e.target.value })}
+                          placeholder="e.g. Spouse, Sibling"
+                          className="w-full px-3 py-1.5 rounded-lg border border-outline-variant/40 bg-surface focus:outline-primary"
+                        />
+                      </div>
                     </div>
                   </div>
 
@@ -1194,17 +1454,17 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
                     <button
                       type="button"
                       onClick={() => setProfileModalTab('details')}
-                      className="px-3 py-1.5 rounded-lg border border-outline-variant/40 text-on-surface cursor-pointer font-bold"
+                      className="px-4 py-2 rounded-lg border border-outline-variant/40 text-on-surface cursor-pointer font-bold hover:bg-surface-container"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
                       disabled={savingAdminEdit}
-                      className="px-4 py-1.5 rounded-lg bg-primary text-white font-bold cursor-pointer shadow-xs inline-flex items-center gap-1.5"
+                      className="px-5 py-2 rounded-lg bg-primary hover:bg-primary-container text-white font-bold cursor-pointer shadow-xs inline-flex items-center gap-1.5 disabled:opacity-50"
                     >
                       {savingAdminEdit && <span className="material-symbols-outlined text-[15px] animate-spin">progress_activity</span>}
-                      <span>Save Changes (Admin Override)</span>
+                      <span>Save Profile Changes</span>
                     </button>
                   </div>
                 </form>

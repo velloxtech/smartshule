@@ -281,7 +281,12 @@ export class AuthController {
 
   public adminCreateUser = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const schoolId = req.body.schoolId || req.user?.schoolId || 'school-001';
+      let schoolId = req.user?.schoolId;
+      if (!schoolId) {
+        schoolId = req.body.schoolId;
+      } else if (req.body.schoolId && req.body.schoolId !== schoolId && req.user?.role !== UserRole.SUPER_ADMIN) {
+        return res.status(403).json({ success: false, message: 'You are not authorized to create users for a different school.' });
+      }
       const user = await this.authUseCases.adminCreateUser(
         {
           ...req.body,

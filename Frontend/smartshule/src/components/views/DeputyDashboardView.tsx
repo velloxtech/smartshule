@@ -113,7 +113,7 @@ export const DeputyDashboardView: React.FC<DeputyDashboardViewProps> = ({
               <span>Timetable Grid</span>
             </button>
             <button
-              onClick={() => onNavigateTab('teachers')}
+              onClick={() => onNavigateTab('teachers-staff')}
               className="px-4 py-2.5 rounded-xl bg-indigo-800/80 hover:bg-indigo-800 text-white font-semibold text-xs border border-indigo-400/30 flex items-center gap-2 transition-all cursor-pointer"
             >
               <span className="material-symbols-outlined text-[18px]">badge</span>
@@ -252,7 +252,7 @@ export const DeputyDashboardView: React.FC<DeputyDashboardViewProps> = ({
       {/* Deputy Operations Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div
-          onClick={() => onNavigateTab('teachers')}
+          onClick={() => onNavigateTab('teachers-staff')}
           className="p-5 rounded-2xl bg-white border border-outline-variant/30 hover:border-indigo-400 hover:shadow-sm transition-all cursor-pointer flex items-center gap-4"
         >
           <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center shrink-0">

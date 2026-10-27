@@ -928,13 +928,14 @@ const coreApiService = {
     firstName: string;
     lastName: string;
     phone?: string;
-    schoolId: string;
+    schoolId?: string;
     role?: string;
     tscNumber?: string;
-    employeeNumber: string;
-    specialization: string[];
+    employeeNumber?: string;
+    specialization?: string[];
     assignedClassStreamIds?: string[];
     qualification?: string;
+    department?: string;
   }): Promise<ApiResponse<any>> => {
     return apiFetch<ApiResponse<any>>('/teachers', {
       method: 'POST',

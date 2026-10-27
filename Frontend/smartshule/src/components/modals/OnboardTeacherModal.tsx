@@ -15,14 +15,16 @@ import { generateNextSequentialNumber } from '../../utils/sequenceGenerator';
 
 export const STAFF_ROLES = [
   { value: 'TEACHER', label: 'Teacher / Subject Educator' },
+  { value: 'HEAD_TEACHER', label: 'Head Teacher / Principal' },
+  { value: 'DEPUTY_HEAD_TEACHER', label: 'Deputy Head Teacher' },
   { value: 'ADMISSIONS', label: 'Admissions Officer' },
   { value: 'BURSAR', label: 'Bursar' },
   { value: 'ACCOUNTANT', label: 'Accountant / Finance Officer' },
-  { value: 'HEAD_TEACHER', label: 'Head Teacher / Principal' },
-  { value: 'DEPUTY_HEAD_TEACHER', label: 'Deputy Head Teacher' },
   { value: 'SCHOOL_ADMIN', label: 'School Administrator' },
   { value: 'ADMIN', label: 'System Administrator' },
 ];
+
+export const isTeachingRole = (r: string) => ['TEACHER', 'HEAD_TEACHER', 'DEPUTY_HEAD_TEACHER'].includes(r);
 
 interface OnboardTeacherModalProps {
   isOpen: boolean;
@@ -38,9 +40,10 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
   existingTeachers,
 }) => {
   const { user } = useAuth();
-  const [schoolId, setSchoolId] = useState<string>(user?.schoolId || 'school-001');
+  const [schoolId, setSchoolId] = useState<string>(user?.schoolId || '');
   const [currentSection, setCurrentSection] = useState<1 | 2 | 3>(1);
   const [role, setRole] = useState<string>('TEACHER');
+  const [department, setDepartment] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [nationalId, setNationalId] = useState('');
@@ -188,21 +191,9 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
         return false;
       }
     } else if (section === 2) {
-      if (tscNumber.trim() && !isValidTscNumber(tscNumber)) {
+      if (isTeachingRole(role) && tscNumber.trim() && !isValidTscNumber(tscNumber)) {
         setError('Please enter a valid Teachers Service Commission (TSC) number format (e.g. TSC/123456 or 123456).');
         return false;
-      }
-      const specArray = Array.from(
-        new Set([
-          ...selectedSubjects,
-          ...specializations
-            .split(',')
-            .map((s) => s.trim())
-            .filter((s) => s.length > 0),
-        ])
-      );
-      if (role === 'TEACHER' && specArray.length === 0 && dbLearningAreas.length > 0) {
-        // Warning or default if teacher has no specialization
       }
     } else if (section === 3) {
       if (!chapterSixPledge) {
@@ -224,17 +215,20 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
     setIsLoading(true);
     setError(null);
 
-    const specArray = Array.from(
-      new Set([
-        ...selectedSubjects,
-        ...specializations
-          .split(',')
-          .map((s) => s.trim())
-          .filter((s) => s.length > 0),
-      ])
-    );
+    const isTeacher = isTeachingRole(role);
+    const specArray = isTeacher
+      ? Array.from(
+          new Set([
+            ...selectedSubjects,
+            ...specializations
+              .split(',')
+              .map((s) => s.trim())
+              .filter((s) => s.length > 0),
+          ])
+        )
+      : [];
 
-    const formattedTsc = tscNumber.trim() ? formatTscNumber(tscNumber) : undefined;
+    const formattedTsc = isTeacher && tscNumber.trim() ? formatTscNumber(tscNumber) : undefined;
     const cleanPhone = formatKenyanPhone(phone);
 
     // Resolve human-readable assigned class name
@@ -248,25 +242,34 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
     }
 
     try {
-      const res = await apiService.registerTeacher({
+      const payload: any = {
         email: email.trim() || undefined,
         password: cleanPhone || nationalId.trim(),
         nationalId: nationalId.trim(),
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         phone: cleanPhone,
-        schoolId: user?.schoolId || schoolId || 'school-001',
+        schoolId: user?.schoolId || schoolId || undefined,
         role,
-        employeeNumber: employeeNumber.trim() || '01',
-        tscNumber: formattedTsc,
-        specialization: specArray.length > 0 ? specArray : (role === 'TEACHER' ? ['CBC Core'] : []),
-        assignedClassStreamIds: selectedStreamId ? [selectedStreamId] : [],
-        qualification,
-      });
+        employeeNumber: employeeNumber.trim() || undefined,
+        qualification: qualification.trim() || undefined,
+        department: department.trim() || undefined,
+      };
+
+      if (isTeacher) {
+        payload.tscNumber = formattedTsc;
+        payload.specialization = specArray.length > 0 ? specArray : (role === 'TEACHER' ? ['CBC Core'] : []);
+        payload.assignedClassStreamIds = role === 'TEACHER' && selectedStreamId ? [selectedStreamId] : [];
+      } else {
+        payload.specialization = [];
+        payload.assignedClassStreamIds = [];
+      }
+
+      const res = await apiService.registerTeacher(payload);
 
       if (res.success && res.data) {
         // Link teacher to stream if selected
-        if (selectedStreamId && res.data.id) {
+        if (selectedStreamId && res.data.id && role === 'TEACHER') {
           try {
             await apiService.assignStreamToTeacher(res.data.id, selectedStreamId);
           } catch {
@@ -320,14 +323,14 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="font-bold text-base sm:text-lg leading-tight text-white">
-                    Onboard CBE Teacher
+                    {role === 'HEAD_TEACHER' ? 'Onboard Head Teacher' : isTeachingRole(role) ? 'Onboard CBE Teacher' : 'Onboard Staff Member'}
                   </h3>
                   <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-400/30">
-                    TSC & Chapter 6 Aligned
+                    {isTeachingRole(role) ? 'TSC & Chapter 6 Aligned' : 'Staff Onboarding'}
                   </span>
                 </div>
                 <p className="text-xs text-rose-100/90 mt-0.5">
-                  Teachers Service Commission Act · Constitution of Kenya (Article 237)
+                  {isTeachingRole(role) ? 'Teachers Service Commission Act · Constitution of Kenya (Article 237)' : 'School Staff Registry & RBAC System'}
                 </p>
               </div>
             </div>
@@ -344,7 +347,7 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
           <div className="mt-4 pt-3 border-t border-white/15 grid grid-cols-3 gap-2">
             {[
               { num: 1, title: 'Personal Biodata', tag: 'Identity' },
-              { num: 2, title: 'TSC Mandate', tag: 'Article 237' },
+              { num: 2, title: isTeachingRole(role) ? (role === 'HEAD_TEACHER' ? 'Leadership & TSC' : 'TSC Mandate') : 'Staff Role & Dept', tag: isTeachingRole(role) ? 'Article 237' : 'Department' },
               { num: 3, title: 'Integrity Pledge', tag: 'Chapter Six' },
             ].map((s) => {
               const isActive = currentSection === s.num;
@@ -551,8 +554,74 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
             </div>
           )}
 
-          {/* SECTION 2: ARTICLE 237 TSC MANDATE & CREDENTIALS */}
-          {currentSection === 2 && (
+          {/* SECTION 2: NON-TEACHING STAFF DETAILS */}
+          {currentSection === 2 && !isTeachingRole(role) && (
+            <div className="space-y-3.5 animate-in fade-in">
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-900 flex items-start gap-2.5">
+                <span className="material-symbols-outlined text-[20px] text-blue-700 shrink-0 mt-0.5">
+                  badge
+                </span>
+                <div>
+                  <strong className="font-bold block">Non-Teaching Staff Assignment:</strong>
+                  Onboarding staff member with role <strong>{STAFF_ROLES.find((r) => r.value === role)?.label || role}</strong>. A user account with role permissions and school association will be created without requiring a TSC teacher profile.
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                    Department / Operating Unit
+                  </label>
+                  <input
+                    type="text"
+                    value={department}
+                    onChange={(e) => setDepartment(e.target.value)}
+                    placeholder="e.g. Accounts & Finance, Admissions, Operations"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white"
+                  />
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-600">
+                      Staff Employee Number
+                    </label>
+                    <span className="text-[10px] text-emerald-700 font-semibold bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
+                      Optional
+                    </span>
+                  </div>
+                  <input
+                    type="text"
+                    value={employeeNumber}
+                    onChange={(e) => setEmployeeNumber(e.target.value)}
+                    placeholder="e.g. EMP-01"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white font-mono"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                  Highest Academic / Professional Qualification
+                </label>
+                <select
+                  value={qualification}
+                  onChange={(e) => setQualification(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white"
+                >
+                  <option value="Bachelor of Commerce / Finance / CPA">Bachelor of Commerce / Finance / CPA</option>
+                  <option value="Diploma / Degree in Business Administration">Diploma / Degree in Business Administration</option>
+                  <option value="Certified Public Accountant (CPA-K)">Certified Public Accountant (CPA-K)</option>
+                  <option value="Diploma in Procurement & Supply Chain">Diploma in Procurement & Supply Chain</option>
+                  <option value="B.A. Public Administration">B.A. Public Administration</option>
+                  <option value="Certificate in Computer Applications / ICT">Certificate in Computer Applications / ICT</option>
+                  <option value="Other Professional Qualification">Other Professional Qualification</option>
+                </select>
+              </div>
+            </div>
+          )}
+
+          {/* SECTION 2: TEACHING & LEADERSHIP CREDENTIALS */}
+          {currentSection === 2 && isTeachingRole(role) && (
             <div className="space-y-3.5 animate-in fade-in">
               <div className="p-3 bg-amber-50/90 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-start gap-2.5">
                 <span className="material-symbols-outlined text-[20px] text-amber-700 shrink-0 mt-0.5">

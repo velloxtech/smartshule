@@ -2,6 +2,8 @@ import crypto from 'crypto';
 import { IUserRepository } from '../../core/ports/repositories/IUserRepository';
 import { IGuardianRepository } from '../../core/ports/repositories/ITeacherRepository';
 import { IStudentRepository } from '../../core/ports/repositories/IStudentRepository';
+import { ISystemLogRepository } from '../../core/ports/repositories/ISystemLogRepository';
+import { SystemLog } from '../../core/domain/system-log/SystemLog';
 import { StudentStatus } from '../../core/domain/user/Student';
 import { IAuthTokenService, IPasswordHasher, INotificationService } from '../../core/ports/services/IExternalServices';
 import { User, UserRole, UserStatus } from '../../core/domain/user/User';
@@ -57,7 +59,8 @@ export class AuthUseCases {
     private readonly tokenService: IAuthTokenService,
     private readonly notificationService?: INotificationService,
     private readonly guardianRepository?: IGuardianRepository,
-    private readonly studentRepository?: IStudentRepository
+    private readonly studentRepository?: IStudentRepository,
+    private readonly systemLogRepository?: ISystemLogRepository
   ) {}
 
   public async register(dto: RegisterUserDTO): Promise<AuthResponseDTO> {
@@ -732,7 +735,15 @@ export class AuthUseCases {
       }
     }
 
-    const initialPassword = dto.password?.trim() || cleanPhone || 'ChangeMe@123';
+    let initialPassword = dto.password?.trim();
+    if (!initialPassword) {
+      if (cleanPhone) {
+        initialPassword = cleanPhone;
+      } else {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%';
+        initialPassword = Array.from({ length: 12 }, () => chars.charAt(Math.floor(Math.random() * chars.length))).join('');
+      }
+    }
     const passwordHash = await this.passwordHasher.hash(initialPassword);
     const userId = IdGenerator.generate();
 
@@ -757,7 +768,7 @@ export class AuthUseCases {
   public async adminUpdateUser(
     userId: string,
     dto: { firstName?: string; lastName?: string; phone?: string; role?: UserRole; email?: string },
-    requestingUser?: { userId: string; role: UserRole }
+    requestingUser?: { userId: string; role: UserRole; schoolId?: string }
   ) {
     const user = await this.userRepository.findById(userId);
     if (!user) {
@@ -772,6 +783,10 @@ export class AuthUseCases {
       throw new ForbiddenError('Only Super Administrators can assign the SUPER_ADMIN role.');
     }
 
+    if (requestingUser?.schoolId && user.schoolId && user.schoolId !== requestingUser.schoolId && requestingUser.role !== UserRole.SUPER_ADMIN) {
+      throw new ForbiddenError('You are not authorized to modify users from a different school.');
+    }
+
     if (dto.email !== undefined) {
       const cleanEmail = dto.email.toLowerCase().trim();
       if (cleanEmail && cleanEmail !== user.email?.toLowerCase()) {
@@ -784,6 +799,8 @@ export class AuthUseCases {
         user.updateEmail(undefined);
       }
     }
+
+    const previousUser = user.toJSON();
 
     if (dto.phone !== undefined) {
       const cleanPhone = dto.phone.trim();
@@ -802,6 +819,29 @@ export class AuthUseCases {
     }
 
     await this.userRepository.update(user);
+
+    if (this.systemLogRepository) {
+      await this.systemLogRepository.create(
+        SystemLog.create(
+          {
+            schoolId: user.schoolId || requestingUser?.schoolId || 'school-001',
+            category: 'STAFF',
+            action: 'USER_PROFILE_UPDATED_BY_ADMIN',
+            actorUserId: requestingUser?.userId || 'system',
+            actorRole: requestingUser?.role || 'ADMIN',
+            status: 'SUCCESS',
+            details: `Administrator updated profile for ${user.role} ${user.fullName}.`,
+            metadata: {
+              userId: user.id,
+              previous: previousUser,
+              updated: user.toJSON()
+            }
+          },
+          IdGenerator.generate()
+        )
+      );
+    }
+
     return user.toJSON();
   }
 

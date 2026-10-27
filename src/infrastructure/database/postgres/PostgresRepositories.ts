@@ -1638,6 +1638,107 @@ export class PostgresTeacherRepository implements ITeacherRepository {
       }
     }
   }
+  public async saveWithUser(t: Teacher, u: User): Promise<void> {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      const userQ = `INSERT INTO users (
+                       id, email, password_hash, first_name, last_name, role, phone, status, school_id, 
+                       must_change_password, reset_password_token, reset_password_expires, reset_password_attempts, 
+                       created_at, updated_at
+                     )
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+                     ON CONFLICT (id) DO UPDATE SET 
+                       email = EXCLUDED.email, 
+                       password_hash = EXCLUDED.password_hash, 
+                       first_name = EXCLUDED.first_name, 
+                       last_name = EXCLUDED.last_name, 
+                       role = EXCLUDED.role, 
+                       phone = EXCLUDED.phone, 
+                       status = EXCLUDED.status, 
+                       school_id = EXCLUDED.school_id, 
+                       must_change_password = EXCLUDED.must_change_password,
+                       reset_password_token = EXCLUDED.reset_password_token,
+                       reset_password_expires = EXCLUDED.reset_password_expires,
+                       reset_password_attempts = EXCLUDED.reset_password_attempts,
+                       updated_at = NOW()`;
+      const cleanEmail = (u.email && u.email.trim() !== '') ? u.email.trim().toLowerCase() : null;
+      await client.query(userQ, [
+        u.id,
+        cleanEmail,
+        u.passwordHash,
+        u.firstName,
+        u.lastName,
+        u.role,
+        u.phone || null,
+        u.status,
+        (u.schoolId && u.schoolId.trim() !== '') ? u.schoolId : null,
+        u.mustChangePassword,
+        u.resetPasswordToken || null,
+        u.resetPasswordExpires || null,
+        u.resetPasswordAttempts,
+        u.createdAt,
+        u.updatedAt
+      ]);
+
+      const teacherQ = `INSERT INTO teachers (
+                          id, user_id, tsc_number, employee_number, specialization, assigned_class_stream_ids,
+                          qualification, date_of_birth, gender, national_id, residential_address, profile_photo_url,
+                          employment_date, employment_type, employment_status, department, emergency_contact, documents,
+                          created_at, updated_at
+                        )
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+                        ON CONFLICT (id) DO UPDATE SET
+                          tsc_number = EXCLUDED.tsc_number,
+                          employee_number = EXCLUDED.employee_number,
+                          specialization = EXCLUDED.specialization,
+                          assigned_class_stream_ids = EXCLUDED.assigned_class_stream_ids,
+                          qualification = EXCLUDED.qualification,
+                          date_of_birth = EXCLUDED.date_of_birth,
+                          gender = EXCLUDED.gender,
+                          national_id = EXCLUDED.national_id,
+                          residential_address = EXCLUDED.residential_address,
+                          profile_photo_url = EXCLUDED.profile_photo_url,
+                          employment_date = EXCLUDED.employment_date,
+                          employment_type = EXCLUDED.employment_type,
+                          employment_status = EXCLUDED.employment_status,
+                          department = EXCLUDED.department,
+                          emergency_contact = EXCLUDED.emergency_contact,
+                          documents = EXCLUDED.documents,
+                          updated_at = NOW()`;
+      await client.query(teacherQ, [
+        t.id,
+        t.userId,
+        t.tscNumber || null,
+        t.employeeNumber,
+        JSON.stringify(t.specialization || []),
+        JSON.stringify(t.assignedClassStreamIds || []),
+        t.qualification || null,
+        t.dateOfBirth || null,
+        t.gender || null,
+        t.nationalId || null,
+        t.residentialAddress || null,
+        t.profilePhotoUrl || null,
+        t.employmentDate || null,
+        t.employmentType || 'FULL_TIME',
+        t.employmentStatus || 'ACTIVE',
+        t.department || null,
+        JSON.stringify(t.emergencyContact || {}),
+        JSON.stringify(t.documents || []),
+        t.createdAt,
+        t.updatedAt
+      ]);
+
+      await client.query('COMMIT');
+    } catch (err) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
   public async update(t: Teacher): Promise<void> { await this.save(t); }
   public async delete(id: string): Promise<void> { await this.pool.query('DELETE FROM teachers WHERE id = $1', [id]); }
 }

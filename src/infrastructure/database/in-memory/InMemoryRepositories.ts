@@ -205,6 +205,20 @@ export class InMemoryTeacherRepository implements ITeacherRepository {
     this.teachers.set(teacher.id, teacher);
   }
 
+  public async saveWithUser(teacher: Teacher, user: User, userRepository?: any): Promise<void> {
+    if (userRepository) {
+      await userRepository.save(user);
+      try {
+        await this.save(teacher);
+      } catch (err) {
+        await userRepository.delete(user.id).catch(() => {});
+        throw err;
+      }
+    } else {
+      await this.save(teacher);
+    }
+  }
+
   public async update(teacher: Teacher): Promise<void> {
     this.teachers.set(teacher.id, teacher);
   }
