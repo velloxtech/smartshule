@@ -1192,6 +1192,7 @@ export class PostgresDatabaseInitializer {
       CREATE UNIQUE INDEX IF NOT EXISTS uq_strands_area_grade_title ON strands (learning_area_id, grade_level, LOWER(title));
       CREATE UNIQUE INDEX IF NOT EXISTS uq_sub_strands_strand_code ON sub_strands (strand_id, code);
       CREATE UNIQUE INDEX IF NOT EXISTS uq_sub_strands_strand_title ON sub_strands (strand_id, LOWER(title));
+      CREATE UNIQUE INDEX IF NOT EXISTS uq_summative_student_area_term_year ON summative_assessments (student_id, learning_area_id, term_id, academic_year_id);
     `).catch(() => {});
 
     console.log('[PostgreSQL] Database tables initialized successfully.');
@@ -1828,24 +1829,66 @@ export class PostgresCBCAssessmentRepository implements ICBCAssessmentRepository
     return res.rows.map(r => SummativeAssessment.create({ studentId: r.student_id, teacherId: r.teacher_id, learningAreaId: r.learning_area_id, termId: r.term_id, academicYearId: r.academic_year_id, strandScores: typeof r.strand_scores === 'string' ? JSON.parse(r.strand_scores) : r.strand_scores, overallPerformanceLevel: r.overall_performance_level, teacherRemarks: r.teacher_remarks, evaluationDate: r.evaluation_date }, r.id, r.created_at, r.updated_at));
   }
   public async saveSummative(s: SummativeAssessment): Promise<void> {
-    const q = `INSERT INTO summative_assessments (id, student_id, teacher_id, learning_area_id, term_id, academic_year_id, strand_scores, overall_performance_level, teacher_remarks, evaluation_date, created_at, updated_at)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-               ON CONFLICT (student_id, learning_area_id, term_id, academic_year_id)
-               DO UPDATE SET overall_performance_level = EXCLUDED.overall_performance_level, strand_scores = EXCLUDED.strand_scores, teacher_remarks = EXCLUDED.teacher_remarks, evaluation_date = EXCLUDED.evaluation_date, teacher_id = EXCLUDED.teacher_id, updated_at = NOW()`;
-    await this.pool.query(q, [
-      s.id,
-      s.studentId,
-      (s.teacherId && s.teacherId.trim() !== '') ? s.teacherId : 'tch-default-01',
-      s.learningAreaId,
-      (s.termId && s.termId.trim() !== '') ? s.termId : 'term-default',
-      (s.academicYearId && s.academicYearId.trim() !== '') ? s.academicYearId : 'year-default',
-      JSON.stringify(s.strandScores || []),
-      s.overallPerformanceLevel,
-      s.teacherRemarks || 'Meeting expectations',
-      s.evaluationDate || new Date().toISOString().split('T')[0],
-      s.createdAt,
-      s.updatedAt
-    ]);
+    try {
+      const q = `INSERT INTO summative_assessments (id, student_id, teacher_id, learning_area_id, term_id, academic_year_id, strand_scores, overall_performance_level, teacher_remarks, evaluation_date, created_at, updated_at)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                 ON CONFLICT (student_id, learning_area_id, term_id, academic_year_id)
+                 DO UPDATE SET overall_performance_level = EXCLUDED.overall_performance_level, strand_scores = EXCLUDED.strand_scores, teacher_remarks = EXCLUDED.teacher_remarks, evaluation_date = EXCLUDED.evaluation_date, teacher_id = EXCLUDED.teacher_id, updated_at = NOW()`;
+      await this.pool.query(q, [
+        s.id,
+        s.studentId,
+        (s.teacherId && s.teacherId.trim() !== '') ? s.teacherId : 'tch-default-01',
+        s.learningAreaId,
+        (s.termId && s.termId.trim() !== '') ? s.termId : 'term-default',
+        (s.academicYearId && s.academicYearId.trim() !== '') ? s.academicYearId : 'year-default',
+        JSON.stringify(s.strandScores || []),
+        s.overallPerformanceLevel,
+        s.teacherRemarks || 'Meeting expectations',
+        s.evaluationDate || new Date().toISOString().split('T')[0],
+        s.createdAt,
+        s.updatedAt
+      ]);
+    } catch (err) {
+      // Robust fallback: query existing record by composite key
+      const altTerm = s.termId?.includes('-t') ? s.termId.replace('-t', '-') : s.termId?.replace(/-(\d)$/, '-t$1');
+      const existing = await this.pool.query(
+        'SELECT id FROM summative_assessments WHERE student_id = $1 AND learning_area_id = $2 AND (term_id = $3 OR term_id = $4) AND academic_year_id = $5 LIMIT 1',
+        [s.studentId, s.learningAreaId, s.termId, altTerm || s.termId, s.academicYearId]
+      );
+      if (existing.rows.length > 0) {
+        await this.pool.query(
+          `UPDATE summative_assessments SET overall_performance_level = $1, strand_scores = $2, teacher_remarks = $3, evaluation_date = $4, teacher_id = $5, updated_at = NOW() WHERE id = $6`,
+          [
+            s.overallPerformanceLevel,
+            JSON.stringify(s.strandScores || []),
+            s.teacherRemarks || 'Meeting expectations',
+            s.evaluationDate || new Date().toISOString().split('T')[0],
+            (s.teacherId && s.teacherId.trim() !== '') ? s.teacherId : 'tch-default-01',
+            existing.rows[0].id
+          ]
+        );
+      } else {
+        await this.pool.query(
+          `INSERT INTO summative_assessments (id, student_id, teacher_id, learning_area_id, term_id, academic_year_id, strand_scores, overall_performance_level, teacher_remarks, evaluation_date, created_at, updated_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+             ON CONFLICT (id) DO UPDATE SET overall_performance_level = EXCLUDED.overall_performance_level, strand_scores = EXCLUDED.strand_scores, teacher_remarks = EXCLUDED.teacher_remarks, evaluation_date = EXCLUDED.evaluation_date, teacher_id = EXCLUDED.teacher_id, updated_at = NOW()`,
+          [
+            s.id,
+            s.studentId,
+            (s.teacherId && s.teacherId.trim() !== '') ? s.teacherId : 'tch-default-01',
+            s.learningAreaId,
+            (s.termId && s.termId.trim() !== '') ? s.termId : 'term-default',
+            (s.academicYearId && s.academicYearId.trim() !== '') ? s.academicYearId : 'year-default',
+            JSON.stringify(s.strandScores || []),
+            s.overallPerformanceLevel,
+            s.teacherRemarks || 'Meeting expectations',
+            s.evaluationDate || new Date().toISOString().split('T')[0],
+            s.createdAt,
+            s.updatedAt
+          ]
+        );
+      }
+    }
   }
   public async updateSummative(s: SummativeAssessment): Promise<void> { await this.saveSummative(s); }
   public async deleteSummative(id: string): Promise<void> {

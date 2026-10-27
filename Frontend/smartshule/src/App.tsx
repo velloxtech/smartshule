@@ -131,6 +131,14 @@ export default function App() {
   const [uploadMarksInitialStudent, setUploadMarksInitialStudent] = useState<Student | undefined>(undefined);
   const [uploadMarksInitialType, setUploadMarksInitialType] = useState<'SUMMATIVE' | 'FORMATIVE'>('SUMMATIVE');
   const [marksRefreshTrigger, setMarksRefreshTrigger] = useState(0);
+  const [toastNotification, setToastNotification] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
+
+  const showToast = useCallback((message: string, type: 'success' | 'info' | 'error' = 'success') => {
+    setToastNotification({ message, type });
+    setTimeout(() => {
+      setToastNotification((curr) => (curr?.message === message ? null : curr));
+    }, 4500);
+  }, []);
   const [createLessonPlanModalOpen, setCreateLessonPlanModalOpen] = useState(false);
   const [createSchemeModalOpen, setCreateSchemeModalOpen] = useState(false);
   const [backendConnected, setBackendConnected] = useState(false);
@@ -984,10 +992,12 @@ export default function App() {
                       onOpenUploadMarks={(student) => {
                         const st = (student && typeof student === 'object' && 'id' in student && typeof (student as any).id === 'string') ? student : undefined;
                         setUploadMarksInitialStudent(st);
+                        setUploadMarksInitialType('SUMMATIVE');
                         setUploadMarksModalOpen(true);
                       }}
                       onOpenNewLessonPlan={() => setCreateLessonPlanModalOpen(true)}
                       onOpenNewScheme={() => setCreateSchemeModalOpen(true)}
+                      refreshTrigger={marksRefreshTrigger}
                     />
                   );
                 case UserRole.PARENT:
@@ -1392,13 +1402,34 @@ export default function App() {
           setUploadMarksModalOpen(false);
           setUploadMarksInitialStudent(undefined);
         }}
-        onMarksUploaded={() => {
+        onMarksUploaded={(msg) => {
           setMarksRefreshTrigger((prev) => prev + 1);
           refreshStudentsAndFees();
+          showToast(msg || 'Marks uploaded successfully', 'success');
         }}
         initialStudent={uploadMarksInitialStudent}
         initialAssessmentType={uploadMarksInitialType}
       />
+
+      {toastNotification && (
+        <div className="fixed top-5 right-5 z-[9999] max-w-md bg-white border border-emerald-500 rounded-2xl p-4 shadow-2xl flex items-center gap-3 animate-slide-up transition-all">
+          <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+            <span className="material-symbols-outlined text-[24px]">check_circle</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-xs font-black text-slate-900 uppercase tracking-wider">Marks Notification</div>
+            <div className="text-xs font-semibold text-emerald-800 break-words mt-0.5">
+              {toastNotification.message}
+            </div>
+          </div>
+          <button
+            onClick={() => setToastNotification(null)}
+            className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
+          >
+            <span className="material-symbols-outlined text-[18px]">close</span>
+          </button>
+        </div>
+      )}
 
       <CreateLessonPlanModal
         isOpen={createLessonPlanModalOpen}

@@ -195,7 +195,7 @@ export class CBCAssessmentController {
 
       return res.status(201).json({
         success: true,
-        message: 'Formative assessment recorded successfully',
+        message: 'Marks uploaded successfully',
         data: assessment
       });
     } catch (err: any) {
@@ -276,7 +276,7 @@ export class CBCAssessmentController {
 
       return res.status(201).json({
         success: true,
-        message: 'Summative assessment recorded successfully',
+        message: 'Marks uploaded successfully',
         data: assessment
       });
     } catch (err: any) {
@@ -319,7 +319,7 @@ export class CBCAssessmentController {
 
       return res.status(201).json({
         success: true,
-        message: `Successfully uploaded ${results.length} subject marks`,
+        message: 'Marks uploaded successfully',
         data: results
       });
     } catch (err: any) {

@@ -261,7 +261,10 @@ export class CBCAssessmentUseCases {
 
   // 2. Formative Assessment
   public async recordFormativeAssessment(dto: RecordFormativeDTO) {
-    const student = await this.studentRepository.findById(dto.studentId);
+    let student = await this.studentRepository.findById(dto.studentId);
+    if (!student) {
+      student = await this.studentRepository.findByAdmissionNumber(dto.studentId);
+    }
     if (!student) throw new NotFoundError('Student', dto.studentId);
 
     const subStrand = await this.CBCRepository.findSubStrandById(dto.subStrandId);
@@ -518,7 +521,10 @@ export class CBCAssessmentUseCases {
   }
 
   public async recordSummativeAssessment(dto: RecordSummativeDTO) {
-    const student = await this.studentRepository.findById(dto.studentId);
+    let student = await this.studentRepository.findById(dto.studentId);
+    if (!student) {
+      student = await this.studentRepository.findByAdmissionNumber(dto.studentId);
+    }
     if (!student) throw new NotFoundError('Student', dto.studentId);
 
     // Enforce marks validation

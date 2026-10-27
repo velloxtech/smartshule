@@ -48,7 +48,7 @@ export interface SubjectMarkEntry {
 interface UploadMarksModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onMarksUploaded?: () => void;
+  onMarksUploaded?: (msg?: string) => void;
   initialStudent?: Student;
   initialAssessmentType?: 'SUMMATIVE' | 'FORMATIVE';
 }
@@ -542,9 +542,12 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
           const mapped = stRes.data.map(normalizeStudent);
           setStudents(mapped);
           if (initialStudent?.id) {
-            setSelectedStudentId(initialStudent.id);
-            if (initialStudent.classroomId) setFilterClassId(initialStudent.classroomId);
-            if (initialStudent.streamId) setFilterStreamId(initialStudent.streamId);
+            const match = mapped.find((m) => m.id === initialStudent.id || m.admNo === initialStudent.admNo);
+            setSelectedStudentId(match ? match.id : initialStudent.id);
+            const effClass = initialStudent.classroomId || match?.classroomId;
+            const effStream = initialStudent.streamId || match?.streamId;
+            if (effClass) setFilterClassId(effClass);
+            if (effStream) setFilterStreamId(effStream);
           } else if (mapped.length > 0) {
             setSelectedStudentId(mapped[0].id);
           }
@@ -1059,7 +1062,11 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
 
     const effectiveYearId = academicYearId || `year-${new Date().getFullYear()}`;
     const effectiveTermId = termId || `term-${effectiveYearId}-t1`;
-    const effectiveTeacherId = (user?.id && user.id.trim() !== '') ? user.id : 'tch-default-01';
+    const effectiveTeacherId = (user?.id && user.id.trim() !== '')
+      ? user.id
+      : (user?.userId && user.userId.trim() !== '')
+      ? user.userId
+      : 'tch-default-01';
 
     try {
       if (assessmentType === 'SUMMATIVE') {
@@ -1072,6 +1079,22 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
           setError('Please enter marks for at least one subject before saving.');
           setIsLoading(false);
           return;
+        }
+
+        for (const sub of validSubjects) {
+          const entry = subjectMarks[sub.id];
+          const raw = parseFloat(entry.rawScore);
+          const max = parseFloat(entry.maxScore) || 100;
+          if (raw < 0) {
+            setError(`Assessment score for ${sub.name} cannot be negative.`);
+            setIsLoading(false);
+            return;
+          }
+          if (raw > max) {
+            setError(`Assessment score for ${sub.name} (${raw}) cannot exceed maximum allowed marks (${max}).`);
+            setIsLoading(false);
+            return;
+          }
         }
 
         const assessments = validSubjects.map((sub) => {
@@ -1105,18 +1128,19 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
         const res = await apiService.recordSummativeBatch({ assessments });
         if (res.success || Array.isArray(res.data)) {
           const studentName = student.name || 'Learner';
-          setSuccessMessage(`Marks saved for ${validSubjects.length} subjects for ${studentName}! Mean: ${marksSummary.meanPct}% (${marksSummary.overallLevel})`);
-          onMarksUploaded?.();
+          const successMsg = `Marks uploaded successfully! ${validSubjects.length} subjects recorded for ${studentName}. Mean: ${marksSummary.meanPct}% (${marksSummary.overallLevel})`;
+          setSuccessMessage(successMsg);
+          onMarksUploaded?.(successMsg);
 
           if (shouldAdvance && hasNext) {
             setTimeout(() => {
               goToNextStudent();
               setSuccessMessage(null);
-            }, 800);
+            }, 1000);
           } else if (!shouldAdvance) {
             setTimeout(() => {
               onClose();
-            }, 1200);
+            }, 1600);
           }
         } else {
           throw new Error(res.message || 'Failed to batch save summative marks');
@@ -1152,12 +1176,15 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
         };
 
         const res = await apiService.recordFormativeAssessment(payload);
-        if (res.success) {
-          setSuccessMessage(`Formative evaluation recorded successfully as ${performanceLevel}!`);
+        if (res.success || (res as any).data) {
+          const successMsg = `Marks uploaded successfully! Formative evaluation recorded as ${performanceLevel}.`;
+          setSuccessMessage(successMsg);
           setTimeout(() => {
-            onMarksUploaded?.();
+            onMarksUploaded?.(successMsg);
             onClose();
-          }, 1200);
+          }, 1600);
+        } else {
+          throw new Error(res.message || 'Failed to record formative assessment');
         }
       }
     } catch (err: any) {
@@ -1203,9 +1230,12 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
           )}
 
           {successMessage && (
-            <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px]">check_circle</span>
-              <span>{successMessage}</span>
+            <div className="p-4 rounded-xl bg-emerald-50 border-2 border-emerald-500 text-emerald-900 font-bold flex items-center gap-3 shadow-md">
+              <span className="material-symbols-outlined text-[24px] text-emerald-600">check_circle</span>
+              <div className="flex-1">
+                <div className="text-sm font-black text-emerald-900">Marks Uploaded Successfully</div>
+                <div className="text-xs text-emerald-700 font-medium mt-0.5">{successMessage}</div>
+              </div>
             </div>
           )}
 
