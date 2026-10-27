@@ -266,7 +266,12 @@ export class AppContainer {
       this.academicRepository,
       this.timetableRepository
     );
-    this.academicUseCases = new AcademicUseCases(this.academicRepository);
+    this.academicUseCases = new AcademicUseCases(
+      this.academicRepository,
+      this.teacherRepository,
+      this.userRepository,
+      this.systemLogRepository
+    );
     this.CBCUseCases = new CBCAssessmentUseCases(
       this.CBCAssessmentRepository,
       this.studentRepository,

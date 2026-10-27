@@ -245,9 +245,89 @@ export class TeacherUseCases {
     if (!teacher) throw new NotFoundError('Teacher', teacherId);
 
     const user = await this.userRepository.findById(teacher.userId);
+
+    let classTeacherAssignments: any[] = [];
+    let subjectAssignments: any[] = [];
+    if (this.academicRepository) {
+      try {
+        const ctas = await this.academicRepository.findClassTeacherAssignments({ teacherId: teacher.id });
+        classTeacherAssignments = await Promise.all(
+          ctas.map(async a => {
+            let className = '';
+            let streamName = '';
+            let academicYearName = '';
+            try {
+              const c = await this.academicRepository!.findClassById(a.classRoomId);
+              if (c) className = c.name;
+            } catch {}
+            if (a.streamId) {
+              try {
+                const s = await this.academicRepository!.findStreamById(a.streamId);
+                if (s) streamName = s.name;
+              } catch {}
+            }
+            try {
+              const y = await this.academicRepository!.findYearById(a.academicYearId);
+              if (y) academicYearName = y.name;
+            } catch {}
+            return {
+              ...a.toJSON(),
+              className,
+              streamName,
+              academicYearName
+            };
+          })
+        );
+
+        const stas = await this.academicRepository.findSubjectTeacherAssignments({ teacherId: teacher.id });
+        subjectAssignments = await Promise.all(
+          stas.map(async s => {
+            let learningAreaName = '';
+            let learningAreaCode = '';
+            let className = '';
+            let streamName = '';
+            let academicYearName = '';
+            try {
+              const la = await this.academicRepository!.findLearningAreaById(s.learningAreaId);
+              if (la) {
+                learningAreaName = la.name;
+                learningAreaCode = la.code;
+              }
+            } catch {}
+            if (s.classRoomId) {
+              try {
+                const c = await this.academicRepository!.findClassById(s.classRoomId);
+                if (c) className = c.name;
+              } catch {}
+            }
+            if (s.streamId) {
+              try {
+                const st = await this.academicRepository!.findStreamById(s.streamId);
+                if (st) streamName = st.name;
+              } catch {}
+            }
+            try {
+              const y = await this.academicRepository!.findYearById(s.academicYearId);
+              if (y) academicYearName = y.name;
+            } catch {}
+            return {
+              ...s.toJSON(),
+              learningAreaName,
+              learningAreaCode,
+              className,
+              streamName,
+              academicYearName
+            };
+          })
+        );
+      } catch {}
+    }
+
     return {
       ...teacher.toJSON(),
-      user: user ? user.toJSON() : null
+      user: user ? user.toJSON() : null,
+      classTeacherAssignments,
+      subjectAssignments
     };
   }
 
@@ -336,11 +416,92 @@ export class TeacherUseCases {
       }
     }
 
+    let classTeacherAssignments: any[] = [];
+    let subjectAssignments: any[] = [];
+    if (this.academicRepository) {
+      try {
+        const ctas = await this.academicRepository.findClassTeacherAssignments({ teacherId: teacher.id });
+        classTeacherAssignments = await Promise.all(
+          ctas.map(async a => {
+            let className = '';
+            let streamName = '';
+            let academicYearName = '';
+            try {
+              const c = await this.academicRepository!.findClassById(a.classRoomId);
+              if (c) className = c.name;
+            } catch {}
+            if (a.streamId) {
+              try {
+                const s = await this.academicRepository!.findStreamById(a.streamId);
+                if (s) streamName = s.name;
+              } catch {}
+            }
+            try {
+              const y = await this.academicRepository!.findYearById(a.academicYearId);
+              if (y) academicYearName = y.name;
+            } catch {}
+            return {
+              ...a.toJSON(),
+              className,
+              streamName,
+              academicYearName
+            };
+          })
+        );
+
+        const stas = await this.academicRepository.findSubjectTeacherAssignments({ teacherId: teacher.id });
+        subjectAssignments = await Promise.all(
+          stas.map(async s => {
+            let learningAreaName = '';
+            let learningAreaCode = '';
+            let className = '';
+            let streamName = '';
+            let academicYearName = '';
+            try {
+              const la = await this.academicRepository!.findLearningAreaById(s.learningAreaId);
+              if (la) {
+                learningAreaName = la.name;
+                learningAreaCode = la.code;
+              }
+            } catch {}
+            if (s.classRoomId) {
+              try {
+                const c = await this.academicRepository!.findClassById(s.classRoomId);
+                if (c) className = c.name;
+              } catch {}
+            }
+            if (s.streamId) {
+              try {
+                const st = await this.academicRepository!.findStreamById(s.streamId);
+                if (st) streamName = st.name;
+              } catch {}
+            }
+            try {
+              const y = await this.academicRepository!.findYearById(s.academicYearId);
+              if (y) academicYearName = y.name;
+            } catch {}
+            return {
+              ...s.toJSON(),
+              learningAreaName,
+              learningAreaCode,
+              className,
+              streamName,
+              academicYearName
+            };
+          })
+        );
+      } catch {
+        // Fall back gracefully
+      }
+    }
+
     return {
       ...teacher.toJSON(),
       user: user.toJSON(),
       assignedStreamInfo,
       teachingAssignments,
+      classTeacherAssignments,
+      subjectAssignments,
       pendingCorrectionRequests
     };
   }

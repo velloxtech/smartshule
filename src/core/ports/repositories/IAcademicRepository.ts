@@ -1,6 +1,7 @@
 import { School } from '../../domain/academic/School';
 import { AcademicYear, AcademicTerm } from '../../domain/academic/AcademicYear';
 import { ClassRoom, Stream, LearningArea } from '../../domain/academic/ClassRoom';
+import { ClassTeacherAssignment, SubjectTeacherAssignment } from '../../domain/academic/TeacherAssignment';
 import { CBCGradeLevel } from '../../domain/user/Student';
 
 export interface IAcademicRepository {
@@ -42,4 +43,28 @@ export interface IAcademicRepository {
   findAllLearningAreas(filters?: { gradeLevel?: CBCGradeLevel; schoolId?: string }): Promise<LearningArea[]>;
   saveLearningArea(area: LearningArea): Promise<void>;
   deleteLearningArea(id: string): Promise<void>;
+
+  // Class Teacher Assignments
+  saveClassTeacherAssignment(assignment: ClassTeacherAssignment): Promise<void>;
+  findClassTeacherAssignments(filters?: {
+    schoolId?: string;
+    academicYearId?: string;
+    classRoomId?: string;
+    streamId?: string;
+    teacherId?: string;
+    isActive?: boolean;
+  }): Promise<ClassTeacherAssignment[]>;
+
+  // Subject Teacher Assignments
+  saveSubjectTeacherAssignment(assignment: SubjectTeacherAssignment): Promise<void>;
+  findSubjectTeacherAssignments(filters?: {
+    schoolId?: string;
+    academicYearId?: string;
+    classRoomId?: string;
+    streamId?: string;
+    learningAreaId?: string;
+    teacherId?: string;
+    role?: string;
+    isActive?: boolean;
+  }): Promise<SubjectTeacherAssignment[]>;
 }

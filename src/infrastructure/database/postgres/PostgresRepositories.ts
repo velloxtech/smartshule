@@ -57,6 +57,7 @@ import { Guardian, GuardianRelationship } from '../../../core/domain/user/Guardi
 import { School } from '../../../core/domain/academic/School';
 import { AcademicYear, AcademicTerm } from '../../../core/domain/academic/AcademicYear';
 import { ClassRoom, Stream, LearningArea, EducationLevel } from '../../../core/domain/academic/ClassRoom';
+import { ClassTeacherAssignment, SubjectTeacherAssignment } from '../../../core/domain/academic/TeacherAssignment';
 import {
   Strand,
   SubStrand,
@@ -229,6 +230,42 @@ export class PostgresDatabaseInitializer {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+
+      CREATE TABLE IF NOT EXISTS class_teacher_assignments (
+        id VARCHAR(100) PRIMARY KEY,
+        school_id VARCHAR(100) NOT NULL,
+        academic_year_id VARCHAR(100) NOT NULL,
+        classroom_id VARCHAR(100) NOT NULL,
+        stream_id VARCHAR(100),
+        teacher_id VARCHAR(100) NOT NULL,
+        assigned_by_user_id VARCHAR(100),
+        effective_from VARCHAR(50),
+        effective_to VARCHAR(50),
+        is_active BOOLEAN NOT NULL DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS idx_cta_class_year ON class_teacher_assignments (classroom_id, academic_year_id, is_active);
+      CREATE INDEX IF NOT EXISTS idx_cta_teacher ON class_teacher_assignments (teacher_id, is_active);
+
+      CREATE TABLE IF NOT EXISTS subject_teacher_assignments (
+        id VARCHAR(100) PRIMARY KEY,
+        school_id VARCHAR(100) NOT NULL,
+        academic_year_id VARCHAR(100) NOT NULL,
+        classroom_id VARCHAR(100),
+        stream_id VARCHAR(100),
+        learning_area_id VARCHAR(100) NOT NULL,
+        teacher_id VARCHAR(100) NOT NULL,
+        role VARCHAR(50) NOT NULL DEFAULT 'SUBJECT_LEAD',
+        assigned_by_user_id VARCHAR(100),
+        effective_from VARCHAR(50),
+        effective_to VARCHAR(50),
+        is_active BOOLEAN NOT NULL DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS idx_sta_subject_class_year ON subject_teacher_assignments (learning_area_id, classroom_id, academic_year_id, is_active);
+      CREATE INDEX IF NOT EXISTS idx_sta_teacher ON subject_teacher_assignments (teacher_id, is_active);
 
       CREATE TABLE IF NOT EXISTS learning_areas (
         id VARCHAR(100) PRIMARY KEY,
@@ -1790,6 +1827,198 @@ export class PostgresAcademicRepository implements IAcademicRepository {
                ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, updated_at = NOW()`;
     await this.pool.query(q, [la.id, la.name, la.code, la.gradeLevel, la.educationLevel, la.isElective, la.schoolId, la.createdAt, la.updatedAt]);
   }
+  public async saveClassTeacherAssignment(a: ClassTeacherAssignment): Promise<void> {
+    const q = `INSERT INTO class_teacher_assignments (
+                 id, school_id, academic_year_id, classroom_id, stream_id,
+                 teacher_id, assigned_by_user_id, effective_from, effective_to,
+                 is_active, created_at, updated_at
+               ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+               ON CONFLICT (id) DO UPDATE SET
+                 effective_to = EXCLUDED.effective_to,
+                 is_active = EXCLUDED.is_active,
+                 updated_at = NOW()`;
+    await this.pool.query(q, [
+      a.id,
+      a.schoolId,
+      a.academicYearId,
+      a.classRoomId,
+      a.streamId || null,
+      a.teacherId,
+      a.assignedByUserId || null,
+      a.effectiveFrom || null,
+      a.effectiveTo || null,
+      a.isActive,
+      a.createdAt,
+      a.updatedAt
+    ]);
+  }
+
+  public async findClassTeacherAssignments(filters?: {
+    schoolId?: string;
+    academicYearId?: string;
+    classRoomId?: string;
+    streamId?: string;
+    teacherId?: string;
+    isActive?: boolean;
+  }): Promise<ClassTeacherAssignment[]> {
+    let q = 'SELECT * FROM class_teacher_assignments';
+    const params: any[] = [];
+    const conditions: string[] = [];
+
+    if (filters?.schoolId) {
+      params.push(filters.schoolId);
+      conditions.push(`school_id = $${params.length}`);
+    }
+    if (filters?.academicYearId) {
+      params.push(filters.academicYearId);
+      conditions.push(`academic_year_id = $${params.length}`);
+    }
+    if (filters?.classRoomId) {
+      params.push(filters.classRoomId);
+      conditions.push(`classroom_id = $${params.length}`);
+    }
+    if (filters?.streamId) {
+      params.push(filters.streamId);
+      conditions.push(`stream_id = $${params.length}`);
+    }
+    if (filters?.teacherId) {
+      params.push(filters.teacherId);
+      conditions.push(`teacher_id = $${params.length}`);
+    }
+    if (filters?.isActive !== undefined) {
+      params.push(filters.isActive);
+      conditions.push(`is_active = $${params.length}`);
+    }
+
+    if (conditions.length > 0) {
+      q += ' WHERE ' + conditions.join(' AND ');
+    }
+    q += ' ORDER BY created_at DESC';
+
+    const res = await this.pool.query(q, params);
+    return res.rows.map(r =>
+      ClassTeacherAssignment.create(
+        {
+          schoolId: r.school_id,
+          academicYearId: r.academic_year_id,
+          classRoomId: r.classroom_id,
+          streamId: r.stream_id,
+          teacherId: r.teacher_id,
+          assignedByUserId: r.assigned_by_user_id,
+          effectiveFrom: r.effective_from,
+          effectiveTo: r.effective_to,
+          isActive: r.is_active
+        },
+        r.id,
+        r.created_at,
+        r.updated_at
+      )
+    );
+  }
+
+  public async saveSubjectTeacherAssignment(a: SubjectTeacherAssignment): Promise<void> {
+    const q = `INSERT INTO subject_teacher_assignments (
+                 id, school_id, academic_year_id, classroom_id, stream_id,
+                 learning_area_id, teacher_id, role, assigned_by_user_id,
+                 effective_from, effective_to, is_active, created_at, updated_at
+               ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+               ON CONFLICT (id) DO UPDATE SET
+                 effective_to = EXCLUDED.effective_to,
+                 is_active = EXCLUDED.is_active,
+                 updated_at = NOW()`;
+    await this.pool.query(q, [
+      a.id,
+      a.schoolId,
+      a.academicYearId,
+      a.classRoomId || null,
+      a.streamId || null,
+      a.learningAreaId,
+      a.teacherId,
+      a.role,
+      a.assignedByUserId || null,
+      a.effectiveFrom || null,
+      a.effectiveTo || null,
+      a.isActive,
+      a.createdAt,
+      a.updatedAt
+    ]);
+  }
+
+  public async findSubjectTeacherAssignments(filters?: {
+    schoolId?: string;
+    academicYearId?: string;
+    classRoomId?: string;
+    streamId?: string;
+    learningAreaId?: string;
+    teacherId?: string;
+    role?: string;
+    isActive?: boolean;
+  }): Promise<SubjectTeacherAssignment[]> {
+    let q = 'SELECT * FROM subject_teacher_assignments';
+    const params: any[] = [];
+    const conditions: string[] = [];
+
+    if (filters?.schoolId) {
+      params.push(filters.schoolId);
+      conditions.push(`school_id = $${params.length}`);
+    }
+    if (filters?.academicYearId) {
+      params.push(filters.academicYearId);
+      conditions.push(`academic_year_id = $${params.length}`);
+    }
+    if (filters?.classRoomId) {
+      params.push(filters.classRoomId);
+      conditions.push(`classroom_id = $${params.length}`);
+    }
+    if (filters?.streamId) {
+      params.push(filters.streamId);
+      conditions.push(`stream_id = $${params.length}`);
+    }
+    if (filters?.learningAreaId) {
+      params.push(filters.learningAreaId);
+      conditions.push(`learning_area_id = $${params.length}`);
+    }
+    if (filters?.teacherId) {
+      params.push(filters.teacherId);
+      conditions.push(`teacher_id = $${params.length}`);
+    }
+    if (filters?.role) {
+      params.push(filters.role);
+      conditions.push(`role = $${params.length}`);
+    }
+    if (filters?.isActive !== undefined) {
+      params.push(filters.isActive);
+      conditions.push(`is_active = $${params.length}`);
+    }
+
+    if (conditions.length > 0) {
+      q += ' WHERE ' + conditions.join(' AND ');
+    }
+    q += ' ORDER BY created_at DESC';
+
+    const res = await this.pool.query(q, params);
+    return res.rows.map(r =>
+      SubjectTeacherAssignment.create(
+        {
+          schoolId: r.school_id,
+          academicYearId: r.academic_year_id,
+          classRoomId: r.classroom_id,
+          streamId: r.stream_id,
+          learningAreaId: r.learning_area_id,
+          teacherId: r.teacher_id,
+          role: r.role as any,
+          assignedByUserId: r.assigned_by_user_id,
+          effectiveFrom: r.effective_from,
+          effectiveTo: r.effective_to,
+          isActive: r.is_active
+        },
+        r.id,
+        r.created_at,
+        r.updated_at
+      )
+    );
+  }
+
   public async deleteClass(id: string): Promise<void> {
     await this.pool.query('UPDATE students SET classroom_id = NULL WHERE classroom_id = $1', [id]);
     await this.pool.query('DELETE FROM timetables WHERE classroom_id = $1', [id]);

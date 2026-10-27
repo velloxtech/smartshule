@@ -89,7 +89,8 @@ export const PromoteStudentSchema = z.object({
   targetTermId: z.string().optional(),
   targetClassroomId: z.string().optional(),
   targetStreamId: z.string().optional(),
-  carryForwardBalance: z.boolean().optional().default(true)
+  carryForwardBalance: z.boolean().optional().default(true),
+  teacherContinuityMode: z.enum(['FOLLOW_COHORT', 'DESTINATION_DEFAULT', 'LEAVE_PENDING']).optional()
 }).passthrough();
 
 export const BulkPromoteStudentsSchema = z.object({
@@ -99,7 +100,8 @@ export const BulkPromoteStudentsSchema = z.object({
   targetTermId: z.string().optional(),
   targetClassroomId: z.string().optional(),
   targetStreamId: z.string().optional(),
-  carryForwardBalance: z.boolean().optional().default(true)
+  carryForwardBalance: z.boolean().optional().default(true),
+  teacherContinuityMode: z.enum(['FOLLOW_COHORT', 'DESTINATION_DEFAULT', 'LEAVE_PENDING']).optional()
 }).passthrough();
 
 import { SystemLogUseCases } from '../../../application/system-logs/SystemLogUseCases';

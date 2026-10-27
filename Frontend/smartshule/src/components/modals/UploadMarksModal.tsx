@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { apiService } from '../../services/api';
+import { apiService, MarksTemplateResult, MarksValidationResult, MarksCommitResult } from '../../services/api';
 import {
   Student,
   BackendLearningArea,
@@ -386,6 +386,17 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
   const [subjectMarks, setSubjectMarks] = useState<Record<string, SubjectMarkEntry>>({});
   const [loadingExistingMarks, setLoadingExistingMarks] = useState<boolean>(false);
   const [existingMarksCount, setExistingMarksCount] = useState<number>(0);
+
+  // Bulk CSV Import States
+  const [entryMode, setEntryMode] = useState<'MANUAL_FORM' | 'BULK_CSV'>('MANUAL_FORM');
+  const [bulkSubjectId, setBulkSubjectId] = useState<string>('');
+  const [bulkMaxScore, setBulkMaxScore] = useState<string>('100');
+  const [csvFileName, setCsvFileName] = useState<string>('');
+  const [parsedRows, setParsedRows] = useState<any[]>([]);
+  const [validationResult, setValidationResult] = useState<MarksValidationResult | null>(null);
+  const [isValidatingCsv, setIsValidatingCsv] = useState(false);
+  const [isDownloadingTemplate, setIsDownloadingTemplate] = useState(false);
+  const [isCommittingCsv, setIsCommittingCsv] = useState(false);
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1168,6 +1179,155 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
     }
   };
 
+  const handleDownloadTemplate = async () => {
+    if (!filterClassId) {
+      setError('Please select a class before downloading the marks template.');
+      return;
+    }
+    const targetSubjectId = bulkSubjectId || selectedLearningAreaId || (effectiveSubjects.length > 0 ? effectiveSubjects[0].id : '');
+    if (!targetSubjectId) {
+      setError('Please select a subject / learning area for the marks template.');
+      return;
+    }
+
+    setIsDownloadingTemplate(true);
+    setError(null);
+    try {
+      const res = await apiService.getMarksTemplate({
+        academicYearId: academicYearId || (academicYears.find(y => y.isCurrent)?.id || academicYears[0]?.id || 'year-2026'),
+        termId: termId || (terms.find(t => t.isCurrent)?.id || terms[0]?.id || 'term-2026-t1'),
+        classRoomId: filterClassId,
+        streamId: filterStreamId || undefined,
+        learningAreaId: targetSubjectId,
+        maxScore: Number(bulkMaxScore) || 100
+      });
+
+      if (res.success && res.data) {
+        const blob = new Blob([res.data.csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', res.data.filename);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        setSuccessMessage(`Pre-filled marksheet template downloaded for ${res.data.className} (${res.data.studentsCount} enrolled learners).`);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to generate marks template.');
+    } finally {
+      setIsDownloadingTemplate(false);
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCsvFileName(file.name);
+    setError(null);
+    setSuccessMessage(null);
+    setValidationResult(null);
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const text = event.target?.result as string;
+      if (!text) return;
+
+      const lines = text.split(/\r?\n/).filter((l) => l.trim() !== '');
+      if (lines.length < 2) {
+        setError('CSV file appears to be empty or contains only a header.');
+        return;
+      }
+
+      const rows: any[] = [];
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i];
+        const regex = /(?:^|,)(\"(?:[^\"]+|\"\")*\"|[^,]*)/g;
+        const matches: string[] = [];
+        let match;
+        while ((match = regex.exec(line)) !== null) {
+          let val = match[1] || '';
+          if (val.startsWith('"') && val.endsWith('"')) {
+            val = val.substring(1, val.length - 1).replace(/""/g, '"');
+          }
+          matches.push(val.trim());
+          if (regex.lastIndex >= line.length) break;
+        }
+
+        if (matches.length > 0 && matches[0]) {
+          rows.push({
+            admissionNumber: matches[0],
+            learnerName: matches[1] || undefined,
+            score: matches[2] !== undefined && matches[2] !== '' ? matches[2] : undefined,
+            maxScore: matches[3] !== undefined && matches[3] !== '' ? matches[3] : bulkMaxScore,
+            performanceLevel: matches[4] !== undefined && matches[4] !== '' ? matches[4] : undefined,
+            teacherRemarks: matches[5] !== undefined && matches[5] !== '' ? matches[5] : undefined,
+          });
+        }
+      }
+
+      setParsedRows(rows);
+
+      const targetSubjectId = bulkSubjectId || selectedLearningAreaId || (effectiveSubjects.length > 0 ? effectiveSubjects[0].id : '');
+      if (!filterClassId || !targetSubjectId) {
+        setError('Please ensure Class and Learning Area are selected above before validating CSV.');
+        return;
+      }
+
+      setIsValidatingCsv(true);
+      try {
+        const vRes = await apiService.validateMarksUpload({
+          academicYearId: academicYearId || (academicYears.find((y) => y.isCurrent)?.id || academicYears[0]?.id || 'year-2026'),
+          termId: termId || (terms.find((t) => t.isCurrent)?.id || terms[0]?.id || 'term-2026-t1'),
+          classRoomId: filterClassId,
+          streamId: filterStreamId || undefined,
+          learningAreaId: targetSubjectId,
+          maxScore: Number(bulkMaxScore) || 100,
+          rows,
+        });
+
+        if (vRes.success && vRes.data) {
+          setValidationResult(vRes.data);
+        }
+      } catch (err: any) {
+        setError(err.message || 'CSV validation failed.');
+      } finally {
+        setIsValidatingCsv(false);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleCommitCsv = async () => {
+    if (!validationResult || validationResult.invalidRows > 0) return;
+    const targetSubjectId = bulkSubjectId || selectedLearningAreaId || (effectiveSubjects.length > 0 ? effectiveSubjects[0].id : '');
+
+    setIsCommittingCsv(true);
+    setError(null);
+    setSuccessMessage(null);
+    try {
+      const res = await apiService.commitMarksUpload({
+        academicYearId: academicYearId || (academicYears.find((y) => y.isCurrent)?.id || academicYears[0]?.id || 'year-2026'),
+        termId: termId || (terms.find((t) => t.isCurrent)?.id || terms[0]?.id || 'term-2026-t1'),
+        classRoomId: filterClassId,
+        streamId: filterStreamId || undefined,
+        learningAreaId: targetSubjectId,
+        maxScore: Number(bulkMaxScore) || 100,
+        rows: parsedRows,
+      });
+
+      if (res.success && res.data) {
+        setSuccessMessage(res.data.message || 'Marks successfully uploaded and persisted!');
+        if (onMarksUploaded) onMarksUploaded();
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to commit marks upload.');
+    } finally {
+      setIsCommittingCsv(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   const currentLearner = students.find((s) => s.id === selectedStudentId);
@@ -1194,7 +1354,413 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1 overscroll-contain text-xs">
+        {/* Mode Switcher */}
+        <div className="p-3 bg-surface-container-low border-b border-outline-variant/30 flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              setEntryMode('MANUAL_FORM');
+              setError(null);
+            }}
+            className={`flex-1 py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+              entryMode === 'MANUAL_FORM'
+                ? 'bg-[#7a1228] text-white shadow-xs'
+                : 'bg-white text-on-surface-variant hover:bg-surface-container border border-outline-variant/30'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[16px]">person_edit</span>
+            <span>Manual Individual Entry</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setEntryMode('BULK_CSV');
+              setError(null);
+            }}
+            className={`flex-1 py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+              entryMode === 'BULK_CSV'
+                ? 'bg-[#7a1228] text-white shadow-xs'
+                : 'bg-white text-on-surface-variant hover:bg-surface-container border border-outline-variant/30'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[16px]">file_upload</span>
+            <span>Bulk CSV File Import</span>
+          </button>
+        </div>
+
+        {entryMode === 'BULK_CSV' ? (
+          <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1 overscroll-contain text-xs">
+            {error && (
+              <div className="p-3 rounded-lg bg-error/10 border border-error/20 text-error font-medium flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px]">error</span>
+                <span>{error}</span>
+              </div>
+            )}
+
+            {successMessage && (
+              <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                <span>{successMessage}</span>
+              </div>
+            )}
+
+            {/* 1. Selection & Configuration */}
+            <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[16px] text-[#7a1228]">tune</span>
+                <span>1. Select Class, Subject & Assessment Session</span>
+              </span>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                    Class / Grade *
+                  </label>
+                  <select
+                    value={filterClassId}
+                    onChange={(e) => setFilterClassId(e.target.value)}
+                    className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-900 cursor-pointer"
+                  >
+                    <option value="">-- Choose Class --</option>
+                    {classes.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                    Stream (Optional)
+                  </label>
+                  <select
+                    value={filterStreamId}
+                    onChange={(e) => setFilterStreamId(e.target.value)}
+                    className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-900 cursor-pointer"
+                  >
+                    <option value="">All Streams / Whole Grade</option>
+                    {streams.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        Stream {s.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                    Learning Area / Subject *
+                  </label>
+                  <select
+                    value={bulkSubjectId || selectedLearningAreaId}
+                    onChange={(e) => {
+                      setBulkSubjectId(e.target.value);
+                      setSelectedLearningAreaId(e.target.value);
+                    }}
+                    className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-900 cursor-pointer"
+                  >
+                    <option value="">-- Choose Subject --</option>
+                    {(effectiveSubjects.length > 0 ? effectiveSubjects : learningAreas).map((la: any) => (
+                      <option key={la.id} value={la.id}>
+                        {la.name} {la.code ? `(${la.code})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                    Academic Year
+                  </label>
+                  <select
+                    value={academicYearId}
+                    onChange={(e) => setAcademicYearId(e.target.value)}
+                    className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-900 cursor-pointer"
+                  >
+                    {academicYears.map((yr) => (
+                      <option key={yr.id} value={yr.id}>
+                        Year {resolveAcademicYearName(yr.name || yr.id)} {yr.isCurrent ? '(Current)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Term</label>
+                  <select
+                    value={termId}
+                    onChange={(e) => setTermId(e.target.value)}
+                    className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-900 cursor-pointer"
+                  >
+                    {terms.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name} {t.isCurrent ? '(Current)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Max Score</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="1000"
+                    value={bulkMaxScore}
+                    onChange={(e) => setBulkMaxScore(e.target.value)}
+                    className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-900"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* 2. Download Template & Upload CSV */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="p-4 rounded-xl border border-outline-variant/30 bg-surface-container-low flex flex-col justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="font-bold text-on-surface flex items-center gap-1.5 text-xs">
+                    <span className="material-symbols-outlined text-[18px] text-primary">download</span>
+                    <span>Download Marksheet Template</span>
+                  </div>
+                  <p className="text-[11px] text-on-surface-variant leading-relaxed">
+                    Download a pre-populated CSV containing active learners, admission numbers, and full names for this class.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleDownloadTemplate}
+                  disabled={isDownloadingTemplate || !filterClassId}
+                  className="px-4 py-2 bg-slate-900 text-white rounded-lg font-bold hover:bg-black transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 text-xs"
+                >
+                  <span className="material-symbols-outlined text-[16px]">file_download</span>
+                  <span>{isDownloadingTemplate ? 'Generating CSV...' : 'Download Pre-filled CSV'}</span>
+                </button>
+              </div>
+
+              <div className="p-4 rounded-xl border border-dashed border-primary/40 bg-primary/5 flex flex-col justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="font-bold text-primary flex items-center gap-1.5 text-xs">
+                    <span className="material-symbols-outlined text-[18px]">upload_file</span>
+                    <span>Upload Completed Marksheet</span>
+                  </div>
+                  <p className="text-[11px] text-on-surface-variant leading-relaxed">
+                    Select the completed CSV. Blank marks are safely preserved as missing (never silently zeroed).
+                  </p>
+                </div>
+                <label className="px-4 py-2 bg-primary text-white rounded-lg font-bold hover:bg-primary-container transition-all cursor-pointer flex items-center justify-center gap-1.5 text-xs">
+                  <span className="material-symbols-outlined text-[16px]">cloud_upload</span>
+                  <span>{csvFileName ? `Replace (${csvFileName})` : 'Choose CSV File to Validate'}</span>
+                  <input type="file" accept=".csv" onChange={handleFileUpload} className="hidden" />
+                </label>
+              </div>
+            </div>
+
+            {/* 3. Validation Feedback */}
+            {isValidatingCsv && (
+              <div className="p-6 text-center text-on-surface-variant bg-surface-container-low rounded-xl border border-outline-variant/30 flex items-center justify-center gap-2">
+                <span className="material-symbols-outlined animate-spin text-primary">progress_activity</span>
+                <span className="font-semibold text-xs">
+                  Validating learner marks, score ranges & duplicates...
+                </span>
+              </div>
+            )}
+
+            {validationResult && !isValidatingCsv && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-xs uppercase tracking-wider text-on-surface">
+                    Import Pre-Validation Summary
+                  </span>
+                  <span className="text-[11px] text-outline">
+                    {validationResult.totalRows} row(s) analyzed
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <div className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200">
+                    <span className="text-[10px] font-bold text-emerald-800 uppercase block">
+                      Valid to Record
+                    </span>
+                    <span className="text-base font-bold text-emerald-900 font-data-mono">
+                      {validationResult.validRows}
+                    </span>
+                    <span className="text-[10px] text-emerald-700 block mt-0.5">
+                      {validationResult.createsCount} new, {validationResult.updatesCount} update(s)
+                    </span>
+                  </div>
+
+                  <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200">
+                    <span className="text-[10px] font-bold text-amber-800 uppercase block">
+                      Blank / Missing Marks
+                    </span>
+                    <span className="text-base font-bold text-amber-900 font-data-mono">
+                      {validationResult.missingRows}
+                    </span>
+                    <span className="text-[10px] text-amber-700 block mt-0.5">
+                      Preserved as missing (not 0)
+                    </span>
+                  </div>
+
+                  <div
+                    className={`p-2.5 rounded-lg border ${
+                      validationResult.invalidRows > 0
+                        ? 'bg-rose-50 border-rose-300'
+                        : 'bg-slate-50 border-slate-200'
+                    }`}
+                  >
+                    <span
+                      className={`text-[10px] font-bold uppercase block ${
+                        validationResult.invalidRows > 0 ? 'text-rose-800' : 'text-slate-600'
+                      }`}
+                    >
+                      Errors / Invalid
+                    </span>
+                    <span
+                      className={`text-base font-bold font-data-mono ${
+                        validationResult.invalidRows > 0 ? 'text-rose-900' : 'text-slate-700'
+                      }`}
+                    >
+                      {validationResult.invalidRows}
+                    </span>
+                    <span className="text-[10px] text-slate-500 block mt-0.5">
+                      {validationResult.invalidRows > 0 ? 'Must fix before save' : 'No errors found'}
+                    </span>
+                  </div>
+
+                  <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200">
+                    <span className="text-[10px] font-bold text-slate-600 uppercase block">Duplicates</span>
+                    <span className="text-base font-bold text-slate-800 font-data-mono">
+                      {validationResult.duplicatesCount}
+                    </span>
+                    <span className="text-[10px] text-slate-500 block mt-0.5">In upload file</span>
+                  </div>
+                </div>
+
+                {validationResult.errors.length > 0 && (
+                  <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 space-y-1.5 text-xs text-rose-900">
+                    <div className="font-bold flex items-center gap-1.5 text-rose-950">
+                      <span className="material-symbols-outlined text-[16px]">warning</span>
+                      <span>Flagged Row Issues ({validationResult.errors.length}):</span>
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1 max-h-32 overflow-y-auto">
+                      {validationResult.errors.map((e, idx) => (
+                        <li key={idx}>
+                          Row {e.rowNumber} {e.admissionNumber ? `(${e.admissionNumber})` : ''}: {e.error}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                <div className="border border-outline-variant/30 rounded-xl overflow-hidden max-h-56 overflow-y-auto">
+                  <table className="w-full text-left border-collapse text-[11px]">
+                    <thead className="bg-surface-container sticky top-0 border-b border-outline-variant/30 text-on-surface-variant uppercase text-[10px]">
+                      <tr>
+                        <th className="p-2">Row</th>
+                        <th className="p-2">Adm No</th>
+                        <th className="p-2">Learner Name</th>
+                        <th className="p-2">Score</th>
+                        <th className="p-2">Level</th>
+                        <th className="p-2">Status / Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-outline-variant/10">
+                      {validationResult.previewRows.map((r, i) => (
+                        <tr
+                          key={i}
+                          className={
+                            r.status === 'INVALID'
+                              ? 'bg-rose-50/60'
+                              : r.status === 'MISSING'
+                              ? 'bg-amber-50/30'
+                              : ''
+                          }
+                        >
+                          <td className="p-2 font-mono text-outline">{r.rowNumber}</td>
+                          <td className="p-2 font-bold font-mono">{r.admissionNumber || '-'}</td>
+                          <td className="p-2">{r.learnerName || '-'}</td>
+                          <td className="p-2 font-mono font-bold">
+                            {r.score !== undefined ? (
+                              `${r.score}/${r.maxScore}`
+                            ) : (
+                              <span className="text-amber-800 italic">Blank</span>
+                            )}
+                          </td>
+                          <td className="p-2">
+                            {r.performanceLevel ? (
+                              <span className="px-1.5 py-0.5 rounded font-bold text-[10px] bg-primary/10 text-primary">
+                                {r.performanceLevel}
+                              </span>
+                            ) : (
+                              '-'
+                            )}
+                          </td>
+                          <td className="p-2">
+                            {r.status === 'VALID' ? (
+                              <span
+                                className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                  r.action === 'CREATE'
+                                    ? 'bg-emerald-100 text-emerald-800'
+                                    : 'bg-blue-100 text-blue-800'
+                                }`}
+                              >
+                                {r.action === 'CREATE' ? 'New Record' : 'Will Update'}
+                              </span>
+                            ) : r.status === 'MISSING' ? (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-800">
+                                Preserved Missing
+                              </span>
+                            ) : (
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800">
+                                {r.error || 'Invalid'}
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* 4. Action buttons */}
+            <div className="pt-3 flex items-center justify-between gap-2.5 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 border border-slate-300 rounded-lg text-slate-700 font-bold hover:bg-slate-50 transition-colors cursor-pointer text-xs"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={handleCommitCsv}
+                disabled={
+                  isCommittingCsv ||
+                  !validationResult ||
+                  validationResult.invalidRows > 0 ||
+                  validationResult.validRows === 0
+                }
+                className="px-5 py-2.5 bg-[#7a1228] text-white font-bold rounded-lg hover:bg-[#5e0d1e] shadow-md transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5 text-xs"
+              >
+                <span className="material-symbols-outlined text-[16px]">save</span>
+                <span>
+                  {isCommittingCsv
+                    ? 'Saving marks...'
+                    : validationResult
+                    ? `Commit ${validationResult.validRows} Mark(s) to Database`
+                    : 'Upload & Validate CSV to Commit'}
+                </span>
+              </button>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1 overscroll-contain text-xs">
           {error && (
             <div className="p-3 rounded-lg bg-error/10 border border-error/20 text-error font-medium flex items-center gap-2">
               <span className="material-symbols-outlined text-[18px]">error</span>
@@ -1952,6 +2518,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
             </div>
           </div>
         </form>
+        )}
       </div>
     </div>
   );

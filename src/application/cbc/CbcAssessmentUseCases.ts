@@ -27,7 +27,7 @@ import {
   ValueAssessmentEntry,
   TermTrendEntry
 } from '../../core/domain/cbc/CbcAssessment';
-import { CBCGradeLevel } from '../../core/domain/user/Student';
+import { CBCGradeLevel, StudentStatus } from '../../core/domain/user/Student';
 import { EducationLevel, LearningArea } from '../../core/domain/academic/ClassRoom';
 import { IdGenerator, NotFoundError, ValidationError, ForbiddenError, ConflictError } from '../../core/domain/shared/Errors';
 
@@ -1260,5 +1260,465 @@ export class CBCAssessmentUseCases {
       }
     }
     await this.CBCRepository.deleteSummative(id);
+  }
+
+  // ==========================================
+  // MARKS UPLOAD & MARKSHEET PIPELINE
+  // ==========================================
+
+  private async assertTeacherAuthorizedForMarks(
+    classRoomId: string,
+    streamId: string | undefined,
+    learningAreaId: string,
+    academicYearId: string,
+    requestingUser?: UserContext
+  ): Promise<{ teacherId?: string }> {
+    if (!requestingUser) return {};
+
+    const role = (requestingUser.role || '').toUpperCase();
+    const adminRoles = [
+      UserRole.SUPER_ADMIN,
+      UserRole.ADMIN,
+      UserRole.SCHOOL_ADMIN,
+      UserRole.HEAD_TEACHER,
+      UserRole.DEPUTY_HEAD_TEACHER
+    ].map(r => r.toUpperCase());
+
+    if (adminRoles.includes(role)) {
+      return {};
+    }
+
+    if (role === UserRole.TEACHER) {
+      if (!this.teacherRepository) return {};
+      const teacher = await this.teacherRepository.findByUserId(requestingUser.userId);
+      if (!teacher) {
+        throw new ForbiddenError('No teacher profile associated with your account.');
+      }
+
+      // 1. Check if class teacher for this class/stream
+      const classTeacherAssignments = await this.academicRepository.findClassTeacherAssignments({
+        teacherId: teacher.id,
+        classRoomId,
+        streamId,
+        academicYearId,
+        isActive: true
+      });
+      if (classTeacherAssignments.length > 0) {
+        return { teacherId: teacher.id };
+      }
+
+      // 2. Check legacy stream assignment
+      if (streamId && teacher.assignedClassStreamIds.includes(streamId)) {
+        return { teacherId: teacher.id };
+      }
+
+      // 3. Check if subject teacher / lead for this learning area
+      const subjectAssignments = await this.academicRepository.findSubjectTeacherAssignments({
+        teacherId: teacher.id,
+        learningAreaId,
+        academicYearId,
+        isActive: true
+      });
+      const matchingSubj = subjectAssignments.find(
+        s => !s.classRoomId || s.classRoomId === classRoomId || (streamId && s.streamId === streamId)
+      );
+      if (matchingSubj) {
+        return { teacherId: teacher.id };
+      }
+
+      throw new ForbiddenError('You are not authorized to upload or enter marks for this class/subject.');
+    }
+
+    throw new ForbiddenError('You are not authorized to upload or enter marks.');
+  }
+
+  public async generateMarksTemplate(
+    query: {
+      schoolId?: string;
+      academicYearId: string;
+      termId: string;
+      classRoomId: string;
+      streamId?: string;
+      learningAreaId: string;
+      assessmentType?: string;
+      maxScore?: number;
+    },
+    requestingUser?: UserContext
+  ) {
+    await this.assertTeacherAuthorizedForMarks(
+      query.classRoomId,
+      query.streamId,
+      query.learningAreaId,
+      query.academicYearId,
+      requestingUser
+    );
+
+    const classRoom = await this.academicRepository.findClassById(query.classRoomId);
+    if (!classRoom) throw new NotFoundError('Classroom', query.classRoomId);
+
+    const learningArea = await this.academicRepository.findLearningAreaById(query.learningAreaId);
+    if (!learningArea) throw new NotFoundError('Learning Area', query.learningAreaId);
+
+    let streamName = '';
+    if (query.streamId) {
+      const stream = await this.academicRepository.findStreamById(query.streamId);
+      if (stream) streamName = stream.name;
+    }
+
+    // Retrieve active students enrolled in class/stream
+    const allStudents = await this.studentRepository.findAll({
+      classroomId: query.classRoomId,
+      streamId: query.streamId,
+      schoolId: query.schoolId
+    });
+    const students = allStudents.filter(s => s.status === StudentStatus.ACTIVE);
+
+    // Sort alphabetically by name
+    students.sort((a, b) => {
+      const nameA = `${a.lastName} ${a.firstName}`.toLowerCase();
+      const nameB = `${b.lastName} ${b.firstName}`.toLowerCase();
+      return nameA.localeCompare(nameB);
+    });
+
+    const maxScore = query.maxScore || 100;
+
+    // Build CSV
+    const headers = ['Admission Number', 'Learner Name', 'Score', 'Max Score', 'Performance Level', 'Teacher Remarks'];
+    const rows = [headers.join(',')];
+
+    for (const s of students) {
+      const cleanName = s.fullName.replace(/"/g, '""');
+      const cleanAdm = s.admissionNumber.replace(/"/g, '""');
+      rows.push(`"${cleanAdm}","${cleanName}","","${maxScore}","",""`);
+    }
+
+    const csvContent = rows.join('\n');
+    const safeClassName = classRoom.name.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const safeSubjName = (learningArea.code || learningArea.name).replace(/[^a-zA-Z0-9_-]/g, '_');
+    const filename = `Marksheet_${safeClassName}${streamName ? `_${streamName}` : ''}_${safeSubjName}.csv`;
+
+    return {
+      filename,
+      csvContent,
+      studentsCount: students.length,
+      className: classRoom.name,
+      streamName: streamName || undefined,
+      learningAreaName: learningArea.name
+    };
+  }
+
+  public async validateMarksUpload(
+    dto: {
+      schoolId?: string;
+      academicYearId: string;
+      termId: string;
+      classRoomId: string;
+      streamId?: string;
+      learningAreaId: string;
+      maxScore?: number;
+      rows: Array<{
+        admissionNumber: string;
+        learnerName?: string;
+        score?: string | number;
+        maxScore?: string | number;
+        performanceLevel?: string;
+        teacherRemarks?: string;
+      }>;
+    },
+    requestingUser?: UserContext
+  ) {
+    await this.assertTeacherAuthorizedForMarks(
+      dto.classRoomId,
+      dto.streamId,
+      dto.learningAreaId,
+      dto.academicYearId,
+      requestingUser
+    );
+
+    const classRoom = await this.academicRepository.findClassById(dto.classRoomId);
+    if (!classRoom) throw new NotFoundError('Classroom', dto.classRoomId);
+
+    const learningArea = await this.academicRepository.findLearningAreaById(dto.learningAreaId);
+    if (!learningArea) throw new NotFoundError('Learning Area', dto.learningAreaId);
+
+    // Get active students for matching
+    const allStudents = await this.studentRepository.findAll({
+      classroomId: dto.classRoomId,
+      streamId: dto.streamId,
+      schoolId: dto.schoolId
+    });
+    const students = allStudents.filter(s => s.status === StudentStatus.ACTIVE);
+
+    const studentMap = new Map<string, any>();
+    for (const s of students) {
+      studentMap.set(s.admissionNumber.trim().toUpperCase(), s);
+    }
+
+    // Get existing summatives to detect create vs update
+    const existingSummatives = await this.CBCRepository.findSummatives({
+      learningAreaId: dto.learningAreaId,
+      termId: dto.termId,
+      academicYearId: dto.academicYearId
+    });
+    const existingSummativeMap = new Map<string, SummativeAssessment>();
+    for (const s of existingSummatives) {
+      existingSummativeMap.set(s.studentId, s);
+    }
+
+    const previewRows: any[] = [];
+    const errors: Array<{ rowNumber: number; admissionNumber: string; error: string }> = [];
+    const seenAdmissionsInFile = new Set<string>();
+
+    let createsCount = 0;
+    let updatesCount = 0;
+    let missingRows = 0;
+    let duplicatesCount = 0;
+
+    const defaultMaxScore = dto.maxScore || 100;
+
+    for (let i = 0; i < dto.rows.length; i++) {
+      const row = dto.rows[i];
+      const rowNum = i + 1;
+      const rawAdm = (row.admissionNumber || '').trim();
+
+      if (!rawAdm) {
+        errors.push({ rowNumber: rowNum, admissionNumber: '', error: 'Missing admission number on row.' });
+        previewRows.push({
+          rowNumber: rowNum,
+          studentId: '',
+          admissionNumber: '',
+          learnerName: row.learnerName || '',
+          score: undefined,
+          maxScore: defaultMaxScore,
+          status: 'INVALID',
+          action: 'SKIP',
+          error: 'Missing admission number'
+        });
+        continue;
+      }
+
+      const admKey = rawAdm.toUpperCase();
+
+      // Check duplicates in file
+      if (seenAdmissionsInFile.has(admKey)) {
+        duplicatesCount++;
+        errors.push({
+          rowNumber: rowNum,
+          admissionNumber: rawAdm,
+          error: `Duplicate admission number '${rawAdm}' appears multiple times in upload file.`
+        });
+        previewRows.push({
+          rowNumber: rowNum,
+          studentId: '',
+          admissionNumber: rawAdm,
+          learnerName: row.learnerName || '',
+          score: undefined,
+          maxScore: defaultMaxScore,
+          status: 'INVALID',
+          action: 'SKIP',
+          error: 'Duplicate admission number in file'
+        });
+        continue;
+      }
+      seenAdmissionsInFile.add(admKey);
+
+      // Match student in class
+      const student = studentMap.get(admKey);
+      if (!student) {
+        errors.push({
+          rowNumber: rowNum,
+          admissionNumber: rawAdm,
+          error: `Learner with admission number '${rawAdm}' is not enrolled in ${classRoom.name}.`
+        });
+        previewRows.push({
+          rowNumber: rowNum,
+          studentId: '',
+          admissionNumber: rawAdm,
+          learnerName: row.learnerName || 'Not found',
+          score: undefined,
+          maxScore: defaultMaxScore,
+          status: 'INVALID',
+          action: 'SKIP',
+          error: `Learner not enrolled in ${classRoom.name}`
+        });
+        continue;
+      }
+
+      const learnerName = student.fullName;
+      const rawScoreStr = row.score !== undefined && row.score !== null ? String(row.score).trim() : '';
+      const rowMaxScore = row.maxScore !== undefined && row.maxScore !== null && String(row.maxScore).trim() !== ''
+        ? Number(row.maxScore)
+        : defaultMaxScore;
+
+      // Handle missing marks: preserve as missing, NEVER convert to 0!
+      if (rawScoreStr === '') {
+        missingRows++;
+        previewRows.push({
+          rowNumber: rowNum,
+          studentId: student.id,
+          admissionNumber: rawAdm,
+          learnerName,
+          score: undefined,
+          maxScore: rowMaxScore,
+          performanceLevel: undefined,
+          teacherRemarks: row.teacherRemarks,
+          status: 'MISSING',
+          action: 'SKIP',
+          note: 'Mark is blank - preserved as missing (not zeroed)'
+        });
+        continue;
+      }
+
+      // Validate numeric score
+      const scoreNum = Number(rawScoreStr);
+      if (isNaN(scoreNum) || scoreNum < 0 || scoreNum > rowMaxScore) {
+        errors.push({
+          rowNumber: rowNum,
+          admissionNumber: rawAdm,
+          error: `Score '${rawScoreStr}' is out of range. Must be between 0 and ${rowMaxScore}.`
+        });
+        previewRows.push({
+          rowNumber: rowNum,
+          studentId: student.id,
+          admissionNumber: rawAdm,
+          learnerName,
+          score: scoreNum,
+          maxScore: rowMaxScore,
+          status: 'INVALID',
+          action: 'SKIP',
+          error: `Score out of range (0-${rowMaxScore})`
+        });
+        continue;
+      }
+
+      // Derive or validate performance level
+      let perfLevel: PerformanceLevel;
+      const rawPerf = (row.performanceLevel || '').trim().toUpperCase();
+      if (rawPerf && Object.values(PerformanceLevel).includes(rawPerf as PerformanceLevel)) {
+        perfLevel = rawPerf as PerformanceLevel;
+      } else {
+        const pct = (scoreNum / rowMaxScore) * 100;
+        if (pct >= 80) perfLevel = PerformanceLevel.EXCEEDING_EXPECTATIONS;
+        else if (pct >= 65) perfLevel = PerformanceLevel.MEETING_EXPECTATIONS;
+        else if (pct >= 50) perfLevel = PerformanceLevel.APPROACHING_EXPECTATIONS;
+        else perfLevel = PerformanceLevel.BELOW_EXPECTATIONS;
+      }
+
+      const isUpdate = existingSummativeMap.has(student.id);
+      if (isUpdate) updatesCount++;
+      else createsCount++;
+
+      previewRows.push({
+        rowNumber: rowNum,
+        studentId: student.id,
+        admissionNumber: rawAdm,
+        learnerName,
+        score: scoreNum,
+        maxScore: rowMaxScore,
+        performanceLevel: perfLevel,
+        teacherRemarks: row.teacherRemarks || undefined,
+        status: 'VALID',
+        action: isUpdate ? 'UPDATE' : 'CREATE'
+      });
+    }
+
+    const invalidRows = errors.length;
+    const validRows = createsCount + updatesCount;
+
+    return {
+      totalRows: dto.rows.length,
+      validRows,
+      missingRows,
+      invalidRows,
+      createsCount,
+      updatesCount,
+      duplicatesCount,
+      errors,
+      previewRows
+    };
+  }
+
+  public async commitMarksUpload(
+    dto: {
+      schoolId?: string;
+      academicYearId: string;
+      termId: string;
+      classRoomId: string;
+      streamId?: string;
+      learningAreaId: string;
+      maxScore?: number;
+      rows: Array<{
+        admissionNumber: string;
+        learnerName?: string;
+        score?: string | number;
+        maxScore?: string | number;
+        performanceLevel?: string;
+        teacherRemarks?: string;
+      }>;
+    },
+    requestingUser?: UserContext
+  ) {
+    const authInfo = await this.assertTeacherAuthorizedForMarks(
+      dto.classRoomId,
+      dto.streamId,
+      dto.learningAreaId,
+      dto.academicYearId,
+      requestingUser
+    );
+
+    const validation = await this.validateMarksUpload(dto, requestingUser);
+
+    if (validation.invalidRows > 0) {
+      throw new ValidationError(
+        `Cannot commit marks upload: ${validation.invalidRows} invalid row(s) detected. Please fix highlighted errors before saving.`
+      );
+    }
+
+    let assignedTeacherId = authInfo.teacherId;
+    if (!assignedTeacherId && this.teacherRepository && requestingUser) {
+      const t = await this.teacherRepository.findByUserId(requestingUser.userId).catch(() => null);
+      if (t) assignedTeacherId = t.id;
+    }
+    const finalTeacherId = assignedTeacherId || 'tch-default-01';
+
+    let recorded = 0;
+    let updated = 0;
+
+    for (const preview of validation.previewRows) {
+      if (preview.status !== 'VALID' || preview.score === undefined) {
+        continue;
+      }
+
+      await this.recordSummativeAssessment({
+        studentId: preview.studentId,
+        teacherId: finalTeacherId,
+        learningAreaId: dto.learningAreaId,
+        termId: dto.termId,
+        academicYearId: dto.academicYearId,
+        strandScores: [
+          {
+            strandId: dto.learningAreaId,
+            performanceLevel: preview.performanceLevel,
+            rawScore: preview.score,
+            maxScore: preview.maxScore
+          }
+        ],
+        overallPerformanceLevel: preview.performanceLevel,
+        teacherRemarks: preview.teacherRemarks || 'Meeting CBC curriculum learning expectations.',
+        evaluationDate: new Date().toISOString().split('T')[0]
+      });
+
+      if (preview.action === 'CREATE') recorded++;
+      else updated++;
+    }
+
+    return {
+      success: true,
+      totalProcessed: validation.totalRows,
+      recordedCount: recorded,
+      updatedCount: updated,
+      skippedMissingCount: validation.missingRows,
+      message: `Successfully saved marks: ${recorded} new record(s) created, ${updated} record(s) updated, and ${validation.missingRows} blank mark(s) preserved.`
+    };
   }
 }

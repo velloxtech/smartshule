@@ -5,6 +5,7 @@ import { Student, StudentInvoice, UserRole, FeeStructure } from '../../types';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { RecordPaymentModal } from '../modals/RecordPaymentModal';
+import { LearnerFeeCollectionDesk } from './LearnerFeeCollectionDesk';
 
 export interface StudentFeeCheckerViewProps {
   students: Student[];
@@ -22,6 +23,7 @@ export interface StudentFinancials {
   arrearsDue: number;
   overpayment: number;
   status: 'SPONSORED' | 'OVERPAID' | 'CLEARED' | 'PARTIAL' | 'ARREARS' | 'UNBILLED';
+  statusLabel?: string;
 }
 
 export const getStudentFinancials = (
@@ -42,6 +44,7 @@ export const getStudentFinancials = (
       arrearsDue: 0,
       overpayment: 0,
       status: 'SPONSORED',
+      statusLabel: '100% Scholarship (Exempt)',
     };
   }
 
@@ -52,7 +55,8 @@ export const getStudentFinancials = (
     const paid = Number(backendAccount.paidFees) || 0;
     const balance = Math.max(0, Number(backendAccount.balance) || 0);
     const overpayment = Number(backendAccount.overpaymentCredit) || 0;
-    const status = backendAccount.status || (overpayment > 0 && balance === 0 ? 'OVERPAID' : balance === 0 ? 'CLEARED' : paid > 0 ? 'PARTIAL' : 'ARREARS');
+    const status = backendAccount.status || (overpayment > 0 && balance === 0 ? 'OVERPAID' : balance === 0 && priorArrears === 0 ? 'CLEARED' : paid > 0 ? 'PARTIAL' : 'ARREARS');
+    const statusLabel = backendAccount.statusLabel || (status === 'CLEARED' ? 'Fees Cleared' : status === 'OVERPAID' ? `Advance Credit (+KES ${overpayment.toLocaleString()})` : balance > 0 && priorArrears > 0 && paid >= billed ? 'Current Term Cleared, Arrears Remain' : status === 'PARTIAL' ? 'Partially Paid' : 'Arrears Outstanding');
     return {
       isSponsored: false,
       billed,
@@ -63,6 +67,7 @@ export const getStudentFinancials = (
       arrearsDue: balance,
       overpayment,
       status,
+      statusLabel,
     };
   }
 
@@ -144,16 +149,25 @@ export const getStudentFinancials = (
 
   // 6. Financial Status
   let status: StudentFinancials['status'];
+  let statusLabel = 'Arrears Outstanding';
   if (overpayment > 0 && balance === 0) {
     status = 'OVERPAID';
-  } else if (balance === 0 && (paid > 0 || totalDue > 0)) {
+    statusLabel = `Advance Credit (+KES ${overpayment.toLocaleString()})`;
+  } else if (balance === 0 && priorArrears === 0 && (paid > 0 || totalDue > 0)) {
     status = 'CLEARED';
+    statusLabel = 'Fees Cleared';
   } else if (billed === 0 && priorArrears === 0 && balance === 0) {
     status = 'UNBILLED';
+    statusLabel = 'Not Billed';
+  } else if (balance > 0 && priorArrears > 0 && paid >= billed) {
+    status = 'PARTIAL';
+    statusLabel = 'Current Term Cleared, Arrears Remain';
   } else if (paid > 0 && balance > 0) {
     status = 'PARTIAL';
+    statusLabel = 'Partially Paid';
   } else {
     status = 'ARREARS';
+    statusLabel = 'Arrears Outstanding';
   }
 
   return {
@@ -166,6 +180,7 @@ export const getStudentFinancials = (
     arrearsDue: balance,
     overpayment,
     status,
+    statusLabel,
   };
 };
 
@@ -175,6 +190,9 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
   initialStudentId,
 }) => {
   const { user } = useAuth();
+
+  // Mode: Director & Cashier Fast-Track Desk vs Full Roster Accounting Ledger
+  const [viewMode, setViewMode] = useState<'cashier_desk' | 'full_roster'>('cashier_desk');
 
   // Search & Filter States
   const [searchQuery, setSearchQuery] = useState('');
@@ -248,6 +266,25 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
   useEffect(() => {
     loadStudentAccounts();
   }, [selectedTerm]);
+
+  // Synchronize fee accounts whenever switching to full roster view
+  useEffect(() => {
+    if (viewMode === 'full_roster') {
+      loadStudentAccounts();
+    }
+  }, [viewMode]);
+
+  // Re-fetch fee accounts whenever student prop list updates
+  useEffect(() => {
+    loadStudentAccounts();
+  }, [students]);
+
+  const handleRefreshAll = async () => {
+    if (onRefreshStudents) {
+      await onRefreshStudents();
+    }
+    await loadStudentAccounts();
+  };
 
   // Modals & Active Student State
   const [isRecordPaymentOpen, setIsRecordPaymentOpen] = useState(false);
@@ -851,6 +888,66 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
 
   return (
     <div className="space-y-4 pb-16 font-body">
+      {/* 0. Top Mode Selector: Cashier Fast-Track Desk vs All Students Accounting Ledger */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-white border border-slate-200 shadow-2xs">
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-xl bg-[#7a1228] text-white flex items-center justify-center font-bold shrink-0">
+            <span className="material-symbols-outlined text-[20px]">
+              {viewMode === 'cashier_desk' ? 'point_of_sale' : 'table_rows'}
+            </span>
+          </div>
+          <div>
+            <div className="text-xs font-bold text-slate-900">
+              {viewMode === 'cashier_desk' ? 'Fee Collection & Cashier Desk' : 'Full Student Finances & Fee Register'}
+            </div>
+            <div className="text-[11px] text-slate-500">
+              {viewMode === 'cashier_desk'
+                ? 'Search a learner, view fee position, record payment, and issue receipts'
+                : 'Comprehensive institutional accounting ledger with multi-column grid and PDF exports'}
+            </div>
+          </div>
+        </div>
+
+        <div className="inline-flex p-1 rounded-xl bg-slate-100 border border-slate-200 text-xs font-bold self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={() => setViewMode('cashier_desk')}
+            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
+              viewMode === 'cashier_desk'
+                ? 'bg-[#7a1228] text-white shadow-xs font-bold'
+                : 'text-slate-700 hover:text-[#7a1228] font-semibold'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[16px]">point_of_sale</span>
+            <span>Fee Collection (Cashier Desk)</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('full_roster')}
+            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
+              viewMode === 'full_roster'
+                ? 'bg-[#7a1228] text-white shadow-xs font-bold'
+                : 'text-slate-700 hover:text-[#7a1228] font-semibold'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[16px]">table_rows</span>
+            <span>Full Ledger & Class Roster</span>
+          </button>
+        </div>
+      </div>
+
+      {viewMode === 'cashier_desk' ? (
+        <LearnerFeeCollectionDesk
+          students={students}
+          onRefreshStudents={handleRefreshAll}
+          initialStudentId={initialStudentId}
+          onNavigateToFullLedger={() => {
+            setViewMode('full_roster');
+            loadStudentAccounts();
+          }}
+        />
+      ) : (
+        <>
       {/* 1. Header Toolbar with Title & Action Buttons */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -879,6 +976,20 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
 
         {/* Global Action Shortcuts */}
         <div className="flex flex-wrap items-center gap-2">
+          {/* Refresh Ledger Button */}
+          <button
+            type="button"
+            onClick={loadStudentAccounts}
+            disabled={isLoadingAccounts}
+            className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+            title="Refresh student fee accounts and payments from database"
+          >
+            <span className={`material-symbols-outlined text-[16px] text-primary ${isLoadingAccounts ? 'animate-spin' : ''}`}>
+              refresh
+            </span>
+            <span>{isLoadingAccounts ? 'Refreshing...' : 'Refresh Ledger'}</span>
+          </button>
+
           {/* Download Official PDF Ledger */}
           <button
             type="button"
@@ -2318,6 +2429,8 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
             </div>
           </div>
         </div>
+      )}
+      </>
       )}
     </div>
   );

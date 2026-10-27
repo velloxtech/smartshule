@@ -83,6 +83,28 @@ export const RecordSummativeBatchSchema = z.object({
   assessments: z.array(RecordSummativeSchema).min(1, 'At least one subject mark is required')
 });
 
+export const ValidateMarksUploadSchema = z.object({
+  schoolId: z.string().optional(),
+  academicYearId: z.string().min(1),
+  termId: z.string().min(1),
+  classRoomId: z.string().min(1),
+  streamId: z.string().optional(),
+  learningAreaId: z.string().min(1),
+  maxScore: z.number().optional().default(100),
+  rows: z.array(
+    z.object({
+      admissionNumber: z.string().min(1),
+      learnerName: z.string().optional(),
+      score: z.union([z.string(), z.number()]).optional(),
+      maxScore: z.union([z.string(), z.number()]).optional(),
+      performanceLevel: z.string().optional(),
+      teacherRemarks: z.string().optional()
+    })
+  ).min(1, 'At least one learner row is required')
+});
+
+export const CommitMarksUploadSchema = ValidateMarksUploadSchema;
+
 export const GenerateReportCardSchema = z.object({
   studentId: z.string().min(1),
   termId: z.string().min(1),
@@ -481,6 +503,46 @@ export class CBCAssessmentController {
       }).catch(() => {});
 
       return res.status(200).json({ success: true, message: 'Summative assessment deleted successfully' });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public generateMarksTemplate = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { schoolId, academicYearId, termId, classRoomId, streamId, learningAreaId, assessmentType, maxScore } = req.query;
+      const result = await this.CBCUseCases.generateMarksTemplate(
+        {
+          schoolId: schoolId as string,
+          academicYearId: academicYearId as string,
+          termId: termId as string,
+          classRoomId: classRoomId as string,
+          streamId: streamId as string,
+          learningAreaId: learningAreaId as string,
+          assessmentType: assessmentType as string,
+          maxScore: maxScore ? Number(maxScore) : 100
+        },
+        (req as any).user
+      );
+      return res.status(200).json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public validateMarksUpload = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await this.CBCUseCases.validateMarksUpload(req.body, (req as any).user);
+      return res.status(200).json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public commitMarksUpload = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await this.CBCUseCases.commitMarksUpload(req.body, (req as any).user);
+      return res.status(200).json({ success: true, data: result });
     } catch (err) {
       next(err);
     }

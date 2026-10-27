@@ -18,6 +18,7 @@ export const LearnerProfileModal: React.FC<LearnerProfileModalProps> = ({
 }) => {
   const { user } = useAuth();
   const [studentDetails, setStudentDetails] = useState<any>(null);
+  const [feePosition, setFeePosition] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
 
   const isTeacher = user?.role === UserRole.TEACHER;
@@ -32,6 +33,15 @@ export const LearnerProfileModal: React.FC<LearnerProfileModalProps> = ({
         if (res?.data) {
           setStudentDetails(res.data);
         }
+
+        if (!isTeacher) {
+          try {
+            const feeRes = await apiService.getLearnerFeePosition(student!.id);
+            if (feeRes?.success && feeRes.data) {
+              setFeePosition(feeRes.data);
+            }
+          } catch {}
+        }
       } catch (err) {
         console.error('Failed to load learner details:', err);
       } finally {
@@ -40,7 +50,7 @@ export const LearnerProfileModal: React.FC<LearnerProfileModalProps> = ({
     }
 
     loadFullDetails();
-  }, [isOpen, student]);
+  }, [isOpen, student, isTeacher]);
 
   if (!isOpen || !student) return null;
 
@@ -91,6 +101,50 @@ export const LearnerProfileModal: React.FC<LearnerProfileModalProps> = ({
               <span className="text-[10px] bg-secondary-container text-on-secondary-container px-2 py-0.5 rounded font-bold">
                 Financial Data Hidden
               </span>
+            </div>
+          )}
+
+          {/* Authoritative Financial Position (Visible to authorized non-teachers) */}
+          {!isTeacher && feePosition?.financialPosition && (
+            <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-bold uppercase text-[11px] text-[#7a1228] tracking-wider block">
+                  Authoritative Fee Position
+                </span>
+                <span
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                    feePosition.financialPosition.status === 'CLEARED'
+                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                      : feePosition.financialPosition.status === 'OVERPAID'
+                      ? 'bg-teal-100 text-teal-800 border border-teal-200'
+                      : feePosition.financialPosition.status === 'PARTIAL'
+                      ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                      : 'bg-rose-100 text-rose-800 border border-rose-200'
+                  }`}
+                >
+                  {feePosition.financialPosition.statusLabel || feePosition.financialPosition.status}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-on-surface font-mono text-xs pt-1">
+                <div className="p-2 rounded-lg bg-surface border border-outline-variant/20">
+                  <span className="text-[10px] text-on-surface-variant block font-sans">Fees This Term</span>
+                  <span className="font-bold">KES {Number(feePosition.financialPosition.feesThisTerm).toLocaleString()}</span>
+                </div>
+                <div className="p-2 rounded-lg bg-surface border border-outline-variant/20">
+                  <span className="text-[10px] text-on-surface-variant block font-sans">Previous Arrears</span>
+                  <span className="font-bold text-amber-700">KES {Number(feePosition.financialPosition.previousBalance).toLocaleString()}</span>
+                </div>
+                <div className="p-2 rounded-lg bg-surface border border-outline-variant/20">
+                  <span className="text-[10px] text-on-surface-variant block font-sans">Total Paid</span>
+                  <span className="font-bold text-emerald-700">KES {Number(feePosition.financialPosition.totalPaid).toLocaleString()}</span>
+                </div>
+                <div className="p-2 rounded-lg bg-surface border border-outline-variant/20">
+                  <span className="text-[10px] text-on-surface-variant block font-sans">Net Balance</span>
+                  <span className={`font-bold ${feePosition.financialPosition.outstandingBalance > 0 ? 'text-rose-700' : 'text-emerald-700'}`}>
+                    KES {Number(feePosition.financialPosition.outstandingBalance).toLocaleString()}
+                  </span>
+                </div>
+              </div>
             </div>
           )}
 

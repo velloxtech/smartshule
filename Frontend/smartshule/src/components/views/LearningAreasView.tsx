@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { apiService } from '../../services/api';
-import { BackendLearningArea, ClassRoom, StreamItem, Teacher } from '../../types';
+import { apiService, SubjectTeacherAssignmentItem } from '../../services/api';
+import { BackendLearningArea, ClassRoom, StreamItem, Teacher, AcademicYear } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 
 export const LearningAreasView: React.FC = () => {
@@ -9,6 +9,9 @@ export const LearningAreasView: React.FC = () => {
   const [classes, setClasses] = useState<ClassRoom[]>([]);
   const [streamsMap, setStreamsMap] = useState<Record<string, StreamItem[]>>({});
   const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [subjectAssignments, setSubjectAssignments] = useState<SubjectTeacherAssignmentItem[]>([]);
+  const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
+  const [selectedYearId, setSelectedYearId] = useState<string>('');
   const [schoolInfo, setSchoolInfo] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -19,6 +22,26 @@ export const LearningAreasView: React.FC = () => {
   const [isAddSubjectOpen, setIsAddSubjectOpen] = useState(false);
   const [isAddStreamOpen, setIsAddStreamOpen] = useState(false);
   const [isAddClassOpen, setIsAddClassOpen] = useState(false);
+
+  // Subject Leadership Modal
+  const [isAssignLeadOpen, setIsAssignLeadOpen] = useState(false);
+  const [assigningLeadTarget, setAssigningLeadTarget] = useState<{
+    learningAreaId: string;
+    learningAreaName: string;
+    learningAreaCode: string;
+    currentTeacherId?: string;
+  } | null>(null);
+  const [leadTeacherId, setLeadTeacherId] = useState('');
+  const [leadRole, setLeadRole] = useState<'SUBJECT_LEAD' | 'SUBJECT_TEACHER'>('SUBJECT_LEAD');
+  const [leadEffectiveFrom, setLeadEffectiveFrom] = useState(new Date().toISOString().split('T')[0]);
+  const [isSubmittingLead, setIsSubmittingLead] = useState(false);
+
+  // Subject History Modal
+  const [isSubjectHistoryOpen, setIsSubjectHistoryOpen] = useState(false);
+  const [subjectHistoryTarget, setSubjectHistoryTarget] = useState<{
+    learningAreaId: string;
+    learningAreaName: string;
+  } | null>(null);
 
   // Subject Form State (Simplified for Global Subjects)
   const [subjectName, setSubjectName] = useState('');
@@ -43,15 +66,27 @@ export const LearningAreasView: React.FC = () => {
   const loadAllData = async () => {
     setLoading(true);
     try {
-      const [scRes, laRes, cRes, tRes] = await Promise.all([
+      const [scRes, laRes, cRes, tRes, yRes, staRes] = await Promise.all([
         apiService.getSchool().catch(() => null),
         apiService.getLearningAreas().catch(() => null),
         apiService.getClasses().catch(() => null),
         apiService.getTeachers().catch(() => null),
+        apiService.getYears().catch(() => null),
+        apiService.getSubjectTeacherAssignments().catch(() => null),
       ]);
 
       if (scRes?.data) setSchoolInfo(scRes.data);
       if (laRes?.data) setLearningAreas(laRes.data || []);
+      if (yRes?.data && Array.isArray(yRes.data)) {
+        setAcademicYears(yRes.data);
+        if (!selectedYearId) {
+          const current = yRes.data.find((y: any) => y.isCurrent) || yRes.data[0];
+          if (current) setSelectedYearId(current.id);
+        }
+      }
+      if (staRes?.data && Array.isArray(staRes.data)) {
+        setSubjectAssignments(staRes.data);
+      }
       if (cRes?.data) {
         setClasses(cRes.data || []);
         if (cRes.data.length > 0 && !streamClassRoomId) {
@@ -72,6 +107,58 @@ export const LearningAreasView: React.FC = () => {
       console.error('Failed to load academic data:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const openAssignLeadModal = (
+    learningAreaId: string,
+    learningAreaName: string,
+    learningAreaCode: string,
+    currentTeacherId?: string
+  ) => {
+    setAssigningLeadTarget({ learningAreaId, learningAreaName, learningAreaCode, currentTeacherId });
+    setLeadTeacherId(currentTeacherId || '');
+    setLeadRole('SUBJECT_LEAD');
+    setLeadEffectiveFrom(new Date().toISOString().split('T')[0]);
+    setIsAssignLeadOpen(true);
+  };
+
+  const openSubjectHistoryModal = (learningAreaId: string, learningAreaName: string) => {
+    setSubjectHistoryTarget({ learningAreaId, learningAreaName });
+    setIsSubjectHistoryOpen(true);
+  };
+
+  const handleAssignLead = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!assigningLeadTarget || !leadTeacherId) return;
+    const activeSchoolId = user?.schoolId || schoolInfo?.id || 'school-001';
+    const targetYearId = selectedYearId || academicYears.find((y) => y.isCurrent)?.id || academicYears[0]?.id || 'year-2026';
+
+    setIsSubmittingLead(true);
+    try {
+      const res = await apiService.assignSubjectTeacher({
+        schoolId: activeSchoolId,
+        academicYearId: targetYearId,
+        learningAreaId: assigningLeadTarget.learningAreaId,
+        teacherId: leadTeacherId,
+        role: leadRole,
+        effectiveFrom: leadEffectiveFrom,
+      });
+
+      if (res.success) {
+        setIsAssignLeadOpen(false);
+        setAssigningLeadTarget(null);
+        setLeadTeacherId('');
+        setFeedback({
+          type: 'success',
+          message: `Lead educator assigned for "${assigningLeadTarget.learningAreaName}" successfully!`,
+        });
+        await loadAllData();
+      }
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: err.message || 'Failed to assign subject lead' });
+    } finally {
+      setIsSubmittingLead(false);
     }
   };
 
@@ -257,10 +344,55 @@ export const LearningAreasView: React.FC = () => {
                     </span>
                   </div>
                   <h3 className="text-base font-bold text-slate-900 mt-3">{la.name}</h3>
-                  <div className="mt-4 flex justify-between items-center text-xs">
-                    <span className="text-slate-500">Lead Educator:</span>
-                    <span className="font-semibold text-slate-900">{getTeacherName(la.teacherId)}</span>
-                  </div>
+                  {(() => {
+                    const activeLead = subjectAssignments.find(
+                      (a) => a.isActive && a.learningAreaId === la.id && a.role === 'SUBJECT_LEAD'
+                    );
+                    const leadName = activeLead?.teacherName || getTeacherName(la.teacherId);
+                    const isAssigned = leadName && leadName !== 'Unassigned';
+
+                    return (
+                      <div className="mt-4 pt-3 border-t border-slate-200/80 space-y-2 text-xs">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="material-symbols-outlined text-[15px] text-[#800000]">psychology</span>
+                            <span className="text-slate-500 font-medium shrink-0">Subject Lead:</span>
+                            {isAssigned ? (
+                              <span className="font-bold text-[#800000] bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded text-[11px] truncate">
+                                {leadName}
+                              </span>
+                            ) : (
+                              <span className="text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded text-[10px] font-medium">
+                                Unassigned
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              onClick={() =>
+                                openAssignLeadModal(
+                                  la.id,
+                                  la.name,
+                                  la.code,
+                                  activeLead?.teacherId || la.teacherId
+                                )
+                              }
+                              className="text-[11px] font-semibold text-[#800000] hover:underline cursor-pointer"
+                            >
+                              {isAssigned ? 'Reassign' : 'Assign'}
+                            </button>
+                            <button
+                              onClick={() => openSubjectHistoryModal(la.id, la.name)}
+                              title="Leadership History"
+                              className="p-0.5 text-slate-400 hover:text-slate-700 cursor-pointer"
+                            >
+                              <span className="material-symbols-outlined text-[14px]">history</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
                 <div className="mt-4 pt-3 border-t border-slate-200 flex items-center justify-between text-xs">
                   <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded">Global (All Classes)</span>
@@ -505,6 +637,187 @@ export const LearningAreasView: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Assign Subject Lead Educator Modal */}
+      {isAssignLeadOpen && assigningLeadTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-[#F8F5F5] rounded-2xl shadow-2xl max-w-md w-full border border-slate-200 overflow-hidden flex flex-col">
+            <div className="bg-[#800000] text-white p-4 flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-sm">Assign Subject Leadership</h3>
+                <p className="text-rose-100 text-[11px] mt-0.5">
+                  {assigningLeadTarget.learningAreaName} ({assigningLeadTarget.learningAreaCode})
+                </p>
+              </div>
+              <button
+                onClick={() => setIsAssignLeadOpen(false)}
+                className="text-rose-100 hover:text-white cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[18px]">close</span>
+              </button>
+            </div>
+            <form onSubmit={handleAssignLead} className="p-5 space-y-3.5 text-xs">
+              <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-[11px] space-y-1">
+                <div className="font-bold flex items-center gap-1 text-amber-950">
+                  <span className="material-symbols-outlined text-[15px]">verified_user</span>
+                  <span>Leadership Integrity</span>
+                </div>
+                <p className="leading-relaxed">
+                  Assigning a new Subject Lead safely marks prior lead assignments as inactive with an effective end date while preserving full historical records.
+                </p>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1 uppercase">Select Educator *</label>
+                <select
+                  required
+                  value={leadTeacherId}
+                  onChange={(e) => setLeadTeacherId(e.target.value)}
+                  className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 font-semibold focus:outline-[#800000]"
+                >
+                  <option value="">-- Choose Educator --</option>
+                  {teachers.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} ({t.employeeNumber || t.tscNumber || 'Educator'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1 uppercase">Leadership Role</label>
+                  <select
+                    value={leadRole}
+                    onChange={(e) => setLeadRole(e.target.value as any)}
+                    className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 font-semibold focus:outline-[#800000]"
+                  >
+                    <option value="SUBJECT_LEAD">Subject Lead (HOD)</option>
+                    <option value="SUBJECT_TEACHER">Subject Teacher</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1 uppercase">Effective Date</label>
+                  <input
+                    type="date"
+                    required
+                    value={leadEffectiveFrom}
+                    onChange={(e) => setLeadEffectiveFrom(e.target.value)}
+                    className="w-full bg-white border border-slate-300 rounded-xl p-2.5 text-slate-900 focus:outline-[#800000]"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2 flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAssignLeadOpen(false)}
+                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingLead || !leadTeacherId}
+                  className="flex-1 py-2.5 bg-[#800000] hover:bg-[#660000] text-white font-bold rounded-xl shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  {isSubmittingLead ? 'Saving...' : 'Confirm Assignment'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Subject Leadership History Modal */}
+      {isSubjectHistoryOpen && subjectHistoryTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-[#F8F5F5] rounded-2xl shadow-2xl max-w-lg w-full border border-slate-200 overflow-hidden flex flex-col">
+            <div className="bg-slate-900 text-white p-4 flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-sm">Subject Leadership History</h3>
+                <p className="text-slate-300 text-[11px] mt-0.5">
+                  {subjectHistoryTarget.learningAreaName}
+                </p>
+              </div>
+              <button
+                onClick={() => setIsSubjectHistoryOpen(false)}
+                className="text-slate-300 hover:text-white cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[18px]">close</span>
+              </button>
+            </div>
+            <div className="p-4 space-y-2.5 max-h-[60vh] overflow-y-auto text-xs">
+              {(() => {
+                const history = subjectAssignments.filter(
+                  (a) => a.learningAreaId === subjectHistoryTarget.learningAreaId
+                );
+                if (history.length === 0) {
+                  return (
+                    <div className="py-8 text-center text-slate-500">
+                      <span className="material-symbols-outlined text-4xl text-slate-400 mb-1">history_edu</span>
+                      <p className="font-semibold">No recorded teacher assignment history for this subject.</p>
+                    </div>
+                  );
+                }
+                return (
+                  <div className="space-y-2">
+                    {history.map((h) => (
+                      <div
+                        key={h.id}
+                        className={`p-3 rounded-xl border flex items-start justify-between gap-3 ${
+                          h.isActive
+                            ? 'bg-rose-50/70 border-rose-200'
+                            : 'bg-white border-slate-200 opacity-80'
+                        }`}
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-slate-900 text-sm">
+                              {h.teacherName || h.teacherId}
+                            </span>
+                            <span
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                h.role === 'SUBJECT_LEAD'
+                                  ? 'bg-[#800000] text-white'
+                                  : 'bg-slate-200 text-slate-800'
+                              }`}
+                            >
+                              {h.role === 'SUBJECT_LEAD' ? 'Subject Lead' : 'Subject Teacher'}
+                            </span>
+                            {h.isActive && (
+                              <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                Active
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-slate-600">
+                            Academic Year: <span className="font-semibold">{h.academicYearName || h.academicYearId}</span>
+                          </div>
+                          <div className="text-[10px] text-slate-400 flex items-center gap-2">
+                            <span>From: {h.effectiveFrom || 'Start'}</span>
+                            {h.effectiveTo && <span>To: {h.effectiveTo}</span>}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+            <div className="p-3 bg-slate-100 border-t border-slate-200 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setIsSubjectHistoryOpen(false)}
+                className="px-4 py-1.5 bg-slate-900 text-white rounded-xl font-bold hover:bg-black cursor-pointer text-xs"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -8,6 +8,7 @@ import {
   ClassRoom,
 } from '../../types';
 import { apiService } from '../../services/api';
+import { resolveGradeName, resolveStreamName } from '../../utils/formatters';
 
 interface SummativeAssessmentsViewProps {
   students?: Student[];
@@ -208,8 +209,8 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
               id: st.id,
               admNo: st.admissionNumber || st.admNo || '--',
               name: st.name || st.fullName || `${st.firstName || ''} ${st.lastName || ''}`.trim() || 'Learner',
-              grade: st.className || (st.gradeLevel ? st.gradeLevel.replace(/_/g, ' ') : 'Grade 3'),
-              stream: st.streamName || st.stream || 'Grade 3',
+              grade: st.className || resolveGradeName(st.grade || st.gradeLevel),
+              stream: st.streamName || resolveStreamName(st.streamId, st.stream, st.gradeLevel) || 'Main Stream',
               gender:
                 (st.gender || 'M').toUpperCase().startsWith('F') ||
                 (st.gender || 'M').toUpperCase().startsWith('G')
@@ -529,13 +530,14 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
 
     summatives.forEach((s) => {
       if (!candidateMap.has(s.studentId)) {
+        const found = internalStudents.find((st) => st.id === s.studentId);
         candidateMap.set(s.studentId, {
           id: s.studentId,
-          admNo: (s as any).admissionNumber || '--',
-          name: (s as any).studentName || 'Learner',
-          grade: (s as any).gradeLevel || 'Grade 3',
-          stream: (s as any).streamName || 'Grade 3',
-          gender: 'M',
+          admNo: (s as any).admissionNumber || found?.admNo || '--',
+          name: (s as any).studentName || found?.name || 'Learner',
+          grade: found?.grade || resolveGradeName((s as any).gradeLevel || found?.gradeLevel),
+          stream: found?.stream || resolveStreamName((s as any).streamId || found?.streamId, (s as any).streamName || found?.stream, (s as any).gradeLevel || found?.gradeLevel) || 'Main Stream',
+          gender: found?.gender || 'M',
         } as any);
       }
     });
@@ -625,8 +627,8 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
         studentId: st.id,
         admNo: st.admNo || 'ADM',
         name: st.name || 'Learner',
-        grade: st.grade || 'Grade 3',
-        stream: st.stream || 'Grade 3',
+        grade: resolveGradeName(st.grade || st.gradeLevel),
+        stream: resolveStreamName(st.streamId, st.stream || (st as any).streamName, st.gradeLevel) || 'Main Stream',
         gender,
         student: st,
         subjectScores,

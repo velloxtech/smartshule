@@ -1498,40 +1498,27 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
               {/* Amount & Date Row */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
-                    Amount Paid (KES) *
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-bold uppercase text-slate-600">
+                      Amount Paid (KES) *
+                    </label>
+                    <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                      Flexible Installments Accepted
+                    </span>
+                  </div>
                   <input
                     type="number"
                     required
                     min="1"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
-                    placeholder="e.g. 5000"
+                    placeholder="Enter amount (any small installment accepted, e.g. 200, 500, 1000)"
                     className="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#7a1228] font-mono font-bold"
                   />
-                  {/* Preset quick buttons */}
-                  {currentInvoice && currentInvoice.balance > 0 && (
-                    <div className="flex items-center gap-1.5 mt-1.5">
-                      <span className="text-[10px] text-slate-400">Quick:</span>
-                      <button
-                        type="button"
-                        onClick={() => setAmount(String(currentInvoice.balance))}
-                        className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-mono font-bold cursor-pointer hover:bg-emerald-100"
-                      >
-                        Full Bal (KES {currentInvoice.balance.toLocaleString()})
-                      </button>
-                      {currentInvoice.balance > 2000 && (
-                        <button
-                          type="button"
-                          onClick={() => setAmount(String(Math.round(currentInvoice.balance / 2)))}
-                          className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 text-[10px] font-mono cursor-pointer hover:bg-slate-200"
-                        >
-                          Half (KES {Math.round(currentInvoice.balance / 2).toLocaleString()})
-                        </button>
-                      )}
-                    </div>
-                  )}
+                  <p className="text-[11px] text-slate-500 mt-1.5 flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[14px] text-emerald-600">payments</span>
+                    <span>Accept any payment size — no fixed amounts or minimum payment required.</span>
+                  </p>
                 </div>
                 <div>
                   <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
@@ -1982,30 +1969,11 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
                   />
                 </div>
 
-                {/* Quick Presets */}
-                <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                  <span className="text-[10px] text-slate-400 font-semibold">Presets:</span>
-                  {[1000, 2500, 5000, 10000, 15000].map((amt) => (
-                    <button
-                      key={amt}
-                      type="button"
-                      onClick={() => setArrearAmount(amt)}
-                      className="px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-[10px] font-mono text-slate-800 border border-slate-300 cursor-pointer"
-                    >
-                      +{amt.toLocaleString()}
-                    </button>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setArrearAmount(0);
-                      setArrearMode('SET');
-                    }}
-                    className="px-2 py-0.5 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-mono font-bold cursor-pointer hover:bg-rose-100"
-                  >
-                    Clear to Zero (0)
-                  </button>
-                </div>
+                {/* Flexible Arrears Input */}
+                <p className="text-[11px] text-slate-500 mt-1.5 flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[14px] text-amber-600">verified</span>
+                  <span>Enter the exact unrecorded arrears figure from physical school records.</span>
+                </p>
               </div>
 
               {/* Arrear Reason / Category Presets */}

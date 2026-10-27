@@ -351,8 +351,8 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
     items: [
       {
         id: 'student-fee-search',
-        label: 'Student Fee Accounts',
-        icon: 'person_search',
+        label: 'Fee Collection & Accounts',
+        icon: 'point_of_sale',
         allowedRoles: [
           UserRole.SUPER_ADMIN,
           UserRole.ADMIN,

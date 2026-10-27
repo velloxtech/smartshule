@@ -77,6 +77,27 @@ export const CreateLearningAreaSchema = z.object({
   teacherId: z.string().optional()
 });
 
+export const AssignClassTeacherSchema = z.object({
+  schoolId: z.string().min(1),
+  academicYearId: z.string().min(1),
+  classRoomId: z.string().min(1),
+  streamId: z.string().optional(),
+  teacherId: z.string().min(1),
+  effectiveFrom: z.string().optional(),
+  reason: z.string().optional()
+});
+
+export const AssignSubjectTeacherSchema = z.object({
+  schoolId: z.string().min(1),
+  academicYearId: z.string().min(1),
+  classRoomId: z.string().optional(),
+  streamId: z.string().optional(),
+  learningAreaId: z.string().min(1),
+  teacherId: z.string().min(1),
+  role: z.enum(['SUBJECT_LEAD', 'SUBJECT_TEACHER', 'ASSESSMENT_APPROVER']).optional(),
+  effectiveFrom: z.string().optional()
+});
+
 
 export class AcademicController {
   constructor(
@@ -328,6 +349,74 @@ export class AcademicController {
     try {
       await this.academicUseCases.deleteLearningArea(req.params.id as string);
       return res.status(200).json({ success: true, message: 'Learning area deleted successfully' });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public assignClassTeacher = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const assignment = await this.academicUseCases.assignClassTeacher(req.body, (req as any).user);
+      return res.status(201).json({ success: true, data: assignment });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public listClassTeacherAssignments = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { schoolId, academicYearId, classRoomId, streamId, teacherId, isActive } = req.query;
+      const assignments = await this.academicUseCases.listClassTeacherAssignments({
+        schoolId: schoolId as string,
+        academicYearId: academicYearId as string,
+        classRoomId: classRoomId as string,
+        streamId: streamId as string,
+        teacherId: teacherId as string,
+        isActive: isActive !== undefined ? isActive === 'true' : undefined
+      });
+      return res.status(200).json({ success: true, data: assignments });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public assignSubjectTeacher = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const assignment = await this.academicUseCases.assignSubjectTeacher(req.body, (req as any).user);
+      return res.status(201).json({ success: true, data: assignment });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public listSubjectTeacherAssignments = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { schoolId, academicYearId, classRoomId, streamId, learningAreaId, teacherId, role, isActive } = req.query;
+      const assignments = await this.academicUseCases.listSubjectTeacherAssignments({
+        schoolId: schoolId as string,
+        academicYearId: academicYearId as string,
+        classRoomId: classRoomId as string,
+        streamId: streamId as string,
+        learningAreaId: learningAreaId as string,
+        teacherId: teacherId as string,
+        role: role as string,
+        isActive: isActive !== undefined ? isActive === 'true' : undefined
+      });
+      return res.status(200).json({ success: true, data: assignments });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public deactivateSubjectTeacherAssignment = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { effectiveTo } = req.body;
+      const assignment = await this.academicUseCases.deactivateSubjectTeacherAssignment(
+        req.params.id as string,
+        effectiveTo,
+        (req as any).user
+      );
+      return res.status(200).json({ success: true, data: assignment, message: 'Subject assignment deactivated successfully' });
     } catch (err) {
       next(err);
     }

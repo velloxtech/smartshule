@@ -1,7 +1,11 @@
 import { IAcademicRepository } from '../../core/ports/repositories/IAcademicRepository';
+import { ITeacherRepository } from '../../core/ports/repositories/ITeacherRepository';
+import { IUserRepository } from '../../core/ports/repositories/IUserRepository';
+import { ISystemLogRepository } from '../../core/ports/repositories/ISystemLogRepository';
 import { School, SchoolProps } from '../../core/domain/academic/School';
 import { AcademicYear, AcademicTerm } from '../../core/domain/academic/AcademicYear';
 import { ClassRoom, Stream, LearningArea, EducationLevel } from '../../core/domain/academic/ClassRoom';
+import { ClassTeacherAssignment, SubjectTeacherAssignment, SubjectTeacherRole } from '../../core/domain/academic/TeacherAssignment';
 import { CBCGradeLevel } from '../../core/domain/user/Student';
 import { UserRole, isTermInitializationAuthorizedRole, TERM_INITIALIZATION_AUTHORIZED_ROLES } from '../../core/domain/user/User';
 import { IdGenerator, NotFoundError, ForbiddenError, ValidationError, ConflictError } from '../../core/domain/shared/Errors';
@@ -13,8 +17,29 @@ export interface UserContext {
   schoolId?: string;
 }
 
+const ACADEMIC_ADMIN_ROLES: string[] = [
+  UserRole.SUPER_ADMIN,
+  UserRole.ADMIN,
+  UserRole.SCHOOL_ADMIN,
+  UserRole.HEAD_TEACHER,
+  UserRole.DEPUTY_HEAD_TEACHER,
+  'PRINCIPAL',
+  'DIRECTOR',
+  'MANAGEMENT'
+].map(r => String(r).toUpperCase());
+
+function isAcademicAdminRole(role?: string): boolean {
+  if (!role) return false;
+  return ACADEMIC_ADMIN_ROLES.includes(role.toUpperCase());
+}
+
 export class AcademicUseCases {
-  constructor(private readonly academicRepository: IAcademicRepository) {}
+  constructor(
+    private readonly academicRepository: IAcademicRepository,
+    private readonly teacherRepository?: ITeacherRepository,
+    private readonly userRepository?: IUserRepository,
+    private readonly systemLogRepository?: ISystemLogRepository
+  ) {}
 
   // School
   public async setupSchool(props: SchoolProps, schoolId?: string) {
@@ -724,5 +749,403 @@ export class AcademicUseCases {
 
   public async deleteLearningArea(id: string): Promise<void> {
     await this.academicRepository.deleteLearningArea(id);
+  }
+
+  // ==========================================
+  // TEACHER ASSIGNMENTS & REASSIGNMENTS
+  // ==========================================
+
+  public async assignClassTeacher(
+    dto: {
+      schoolId: string;
+      academicYearId: string;
+      classRoomId: string;
+      streamId?: string;
+      teacherId: string;
+      effectiveFrom?: string;
+      reason?: string;
+    },
+    requestingUser?: UserContext
+  ) {
+    if (requestingUser && !isAcademicAdminRole(requestingUser.role)) {
+      throw new ForbiddenError('Only school administrators and head teachers can assign class teachers.');
+    }
+
+    if (!dto.schoolId) throw new ValidationError('schoolId is required');
+    if (!dto.academicYearId) throw new ValidationError('academicYearId is required');
+    if (!dto.classRoomId) throw new ValidationError('classRoomId is required');
+    if (!dto.teacherId) throw new ValidationError('teacherId is required');
+
+    // Validate Classroom
+    const classroom = await this.academicRepository.findClassById(dto.classRoomId);
+    if (!classroom) {
+      throw new NotFoundError('Classroom', dto.classRoomId);
+    }
+
+    // Validate Stream if provided
+    let stream: Stream | null = null;
+    if (dto.streamId) {
+      stream = await this.academicRepository.findStreamById(dto.streamId);
+      if (!stream) {
+        throw new NotFoundError('Stream', dto.streamId);
+      }
+      if (stream.classRoomId !== dto.classRoomId) {
+        throw new ValidationError(`Stream ${stream.name} does not belong to class ${classroom.name}`);
+      }
+    }
+
+    // Validate Teacher if teacherRepository available
+    let teacherUser: any = null;
+    if (this.teacherRepository) {
+      const teacher = await this.teacherRepository.findById(dto.teacherId);
+      if (!teacher) {
+        throw new NotFoundError('Teacher', dto.teacherId);
+      }
+      if (this.userRepository) {
+        teacherUser = await this.userRepository.findById(teacher.userId);
+      }
+    }
+
+    const effectiveFrom = dto.effectiveFrom || new Date().toISOString().split('T')[0];
+
+    // Find any existing active assignments for this class/stream & academic year
+    const existingAssignments = await this.academicRepository.findClassTeacherAssignments({
+      schoolId: dto.schoolId,
+      academicYearId: dto.academicYearId,
+      classRoomId: dto.classRoomId,
+      streamId: dto.streamId,
+      isActive: true
+    });
+
+    for (const oldAssignment of existingAssignments) {
+      if (oldAssignment.teacherId === dto.teacherId) {
+        return oldAssignment.toJSON();
+      }
+      // Deactivate safely preserving historical record
+      oldAssignment.deactivate(effectiveFrom);
+      await this.academicRepository.saveClassTeacherAssignment(oldAssignment);
+    }
+
+    // Create new assignment
+    const assignment = ClassTeacherAssignment.create(
+      {
+        schoolId: dto.schoolId,
+        academicYearId: dto.academicYearId,
+        classRoomId: dto.classRoomId,
+        streamId: dto.streamId,
+        teacherId: dto.teacherId,
+        assignedByUserId: requestingUser?.userId,
+        effectiveFrom,
+        isActive: true
+      },
+      IdGenerator.generate()
+    );
+
+    await this.academicRepository.saveClassTeacherAssignment(assignment);
+
+    // Sync stream.classTeacherId for backward compatibility
+    if (stream) {
+      stream.setClassTeacher(dto.teacherId);
+      await this.academicRepository.updateStream(stream);
+    }
+
+    // Sync teacher.assignedClassStreamIds for backward compatibility
+    if (this.teacherRepository && dto.streamId) {
+      const teacher = await this.teacherRepository.findById(dto.teacherId);
+      if (teacher) {
+        teacher.assignStream(dto.streamId);
+        await this.teacherRepository.update(teacher);
+      }
+    }
+
+    // Audit log if system log available
+    if (this.systemLogRepository) {
+      await this.systemLogRepository.create({
+        schoolId: dto.schoolId,
+        level: 'INFO',
+        category: 'ACADEMICS',
+        action: 'CLASS_TEACHER_ASSIGNED',
+        actorUserId: requestingUser?.userId,
+        actorEmail: requestingUser?.email,
+        actorRole: requestingUser?.role,
+        status: 'SUCCESS',
+        details: `Assigned teacher ${teacherUser ? `${teacherUser.firstName} ${teacherUser.lastName}` : dto.teacherId} to ${classroom.name}${stream ? ` (${stream.name})` : ''}`,
+        metadata: {
+          assignmentId: assignment.id,
+          classRoomId: dto.classRoomId,
+          streamId: dto.streamId,
+          teacherId: dto.teacherId,
+          academicYearId: dto.academicYearId,
+          reason: dto.reason
+        }
+      } as any).catch(() => {});
+    }
+
+    return assignment.toJSON();
+  }
+
+  public async listClassTeacherAssignments(filters?: {
+    schoolId?: string;
+    academicYearId?: string;
+    classRoomId?: string;
+    streamId?: string;
+    teacherId?: string;
+    isActive?: boolean;
+  }) {
+    const assignments = await this.academicRepository.findClassTeacherAssignments(filters);
+
+    const enriched = await Promise.all(
+      assignments.map(async a => {
+        let teacherName = 'Assigned Teacher';
+        let teacherEmployeeNumber = '';
+        if (this.teacherRepository) {
+          try {
+            const t = await this.teacherRepository.findById(a.teacherId);
+            if (t) {
+              teacherEmployeeNumber = t.employeeNumber;
+              if (this.userRepository) {
+                const u = await this.userRepository.findById(t.userId);
+                if (u) teacherName = `${u.firstName} ${u.lastName}`.trim();
+              }
+            }
+          } catch {}
+        }
+
+        let className = '';
+        try {
+          const c = await this.academicRepository.findClassById(a.classRoomId);
+          if (c) className = c.name;
+        } catch {}
+
+        let streamName = '';
+        if (a.streamId) {
+          try {
+            const s = await this.academicRepository.findStreamById(a.streamId);
+            if (s) streamName = s.name;
+          } catch {}
+        }
+
+        let academicYearName = '';
+        try {
+          const y = await this.academicRepository.findYearById(a.academicYearId);
+          if (y) academicYearName = y.name;
+        } catch {}
+
+        return {
+          ...a.toJSON(),
+          teacherName,
+          teacherEmployeeNumber,
+          className,
+          streamName,
+          academicYearName
+        };
+      })
+    );
+
+    return enriched;
+  }
+
+  public async assignSubjectTeacher(
+    dto: {
+      schoolId: string;
+      academicYearId: string;
+      classRoomId?: string;
+      streamId?: string;
+      learningAreaId: string;
+      teacherId: string;
+      role?: SubjectTeacherRole;
+      effectiveFrom?: string;
+    },
+    requestingUser?: UserContext
+  ) {
+    if (requestingUser && !isAcademicAdminRole(requestingUser.role)) {
+      throw new ForbiddenError('Only school administrators and head teachers can assign subject teachers.');
+    }
+
+    if (!dto.schoolId) throw new ValidationError('schoolId is required');
+    if (!dto.academicYearId) throw new ValidationError('academicYearId is required');
+    if (!dto.learningAreaId) throw new ValidationError('learningAreaId is required');
+    if (!dto.teacherId) throw new ValidationError('teacherId is required');
+
+    // Validate learning area
+    const learningArea = await this.academicRepository.findLearningAreaById(dto.learningAreaId);
+    if (!learningArea) {
+      throw new NotFoundError('Learning Area', dto.learningAreaId);
+    }
+
+    // Validate teacher
+    let teacherUser: any = null;
+    if (this.teacherRepository) {
+      const teacher = await this.teacherRepository.findById(dto.teacherId);
+      if (!teacher) {
+        throw new NotFoundError('Teacher', dto.teacherId);
+      }
+      if (this.userRepository) {
+        teacherUser = await this.userRepository.findById(teacher.userId);
+      }
+    }
+
+    const role = dto.role || 'SUBJECT_LEAD';
+    const effectiveFrom = dto.effectiveFrom || new Date().toISOString().split('T')[0];
+
+    // If SUBJECT_LEAD, deactivate any previous active SUBJECT_LEAD for this learning area and class/stream
+    if (role === 'SUBJECT_LEAD') {
+      const existingLeads = await this.academicRepository.findSubjectTeacherAssignments({
+        schoolId: dto.schoolId,
+        academicYearId: dto.academicYearId,
+        classRoomId: dto.classRoomId,
+        streamId: dto.streamId,
+        learningAreaId: dto.learningAreaId,
+        role: 'SUBJECT_LEAD',
+        isActive: true
+      });
+
+      for (const oldLead of existingLeads) {
+        if (oldLead.teacherId === dto.teacherId) {
+          return oldLead.toJSON();
+        }
+        oldLead.deactivate(effectiveFrom);
+        await this.academicRepository.saveSubjectTeacherAssignment(oldLead);
+      }
+    }
+
+    const assignment = SubjectTeacherAssignment.create(
+      {
+        schoolId: dto.schoolId,
+        academicYearId: dto.academicYearId,
+        classRoomId: dto.classRoomId,
+        streamId: dto.streamId,
+        learningAreaId: dto.learningAreaId,
+        teacherId: dto.teacherId,
+        role,
+        assignedByUserId: requestingUser?.userId,
+        effectiveFrom,
+        isActive: true
+      },
+      IdGenerator.generate()
+    );
+
+    await this.academicRepository.saveSubjectTeacherAssignment(assignment);
+
+    // Audit log
+    if (this.systemLogRepository) {
+      await this.systemLogRepository.create({
+        schoolId: dto.schoolId,
+        level: 'INFO',
+        category: 'ACADEMICS',
+        action: 'SUBJECT_TEACHER_ASSIGNED',
+        actorUserId: requestingUser?.userId,
+        actorEmail: requestingUser?.email,
+        actorRole: requestingUser?.role,
+        status: 'SUCCESS',
+        details: `Assigned teacher ${teacherUser ? `${teacherUser.firstName} ${teacherUser.lastName}` : dto.teacherId} as ${role} for ${learningArea.name}`,
+        metadata: {
+          assignmentId: assignment.id,
+          learningAreaId: dto.learningAreaId,
+          teacherId: dto.teacherId,
+          role,
+          academicYearId: dto.academicYearId
+        }
+      } as any).catch(() => {});
+    }
+
+    return assignment.toJSON();
+  }
+
+  public async listSubjectTeacherAssignments(filters?: {
+    schoolId?: string;
+    academicYearId?: string;
+    classRoomId?: string;
+    streamId?: string;
+    learningAreaId?: string;
+    teacherId?: string;
+    role?: string;
+    isActive?: boolean;
+  }) {
+    const assignments = await this.academicRepository.findSubjectTeacherAssignments(filters);
+
+    const enriched = await Promise.all(
+      assignments.map(async a => {
+        let teacherName = 'Assigned Teacher';
+        let teacherEmployeeNumber = '';
+        if (this.teacherRepository) {
+          try {
+            const t = await this.teacherRepository.findById(a.teacherId);
+            if (t) {
+              teacherEmployeeNumber = t.employeeNumber;
+              if (this.userRepository) {
+                const u = await this.userRepository.findById(t.userId);
+                if (u) teacherName = `${u.firstName} ${u.lastName}`.trim();
+              }
+            }
+          } catch {}
+        }
+
+        let learningAreaName = '';
+        let learningAreaCode = '';
+        try {
+          const la = await this.academicRepository.findLearningAreaById(a.learningAreaId);
+          if (la) {
+            learningAreaName = la.name;
+            learningAreaCode = la.code;
+          }
+        } catch {}
+
+        let className = '';
+        if (a.classRoomId) {
+          try {
+            const c = await this.academicRepository.findClassById(a.classRoomId);
+            if (c) className = c.name;
+          } catch {}
+        }
+
+        let streamName = '';
+        if (a.streamId) {
+          try {
+            const s = await this.academicRepository.findStreamById(a.streamId);
+            if (s) streamName = s.name;
+          } catch {}
+        }
+
+        let academicYearName = '';
+        try {
+          const y = await this.academicRepository.findYearById(a.academicYearId);
+          if (y) academicYearName = y.name;
+        } catch {}
+
+        return {
+          ...a.toJSON(),
+          teacherName,
+          teacherEmployeeNumber,
+          learningAreaName,
+          learningAreaCode,
+          className,
+          streamName,
+          academicYearName
+        };
+      })
+    );
+
+    return enriched;
+  }
+
+  public async deactivateSubjectTeacherAssignment(
+    assignmentId: string,
+    effectiveTo?: string,
+    requestingUser?: UserContext
+  ) {
+    if (requestingUser && !isAcademicAdminRole(requestingUser.role)) {
+      throw new ForbiddenError('Only school administrators and head teachers can deactivate subject assignments.');
+    }
+
+    const assignments = await this.academicRepository.findSubjectTeacherAssignments({ schoolId: requestingUser?.schoolId });
+    const assignment = assignments.find(a => a.id === assignmentId);
+    if (!assignment) {
+      throw new NotFoundError('Subject Teacher Assignment', assignmentId);
+    }
+
+    assignment.deactivate(effectiveTo || new Date().toISOString().split('T')[0]);
+    await this.academicRepository.saveSubjectTeacherAssignment(assignment);
+    return assignment.toJSON();
   }
 }

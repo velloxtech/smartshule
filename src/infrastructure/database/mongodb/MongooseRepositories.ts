@@ -50,6 +50,7 @@ import { Guardian, GuardianRelationship } from '../../../core/domain/user/Guardi
 import { School } from '../../../core/domain/academic/School';
 import { AcademicYear, AcademicTerm } from '../../../core/domain/academic/AcademicYear';
 import { ClassRoom, Stream, LearningArea, EducationLevel } from '../../../core/domain/academic/ClassRoom';
+import { ClassTeacherAssignment, SubjectTeacherAssignment } from '../../../core/domain/academic/TeacherAssignment';
 import {
   Strand,
   SubStrand,
@@ -195,6 +196,38 @@ const StreamSchema = new Schema({
   name: { type: String, required: true },
   capacity: { type: Number, required: true },
   classTeacherId: String,
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
+
+const ClassTeacherAssignmentSchema = new Schema({
+  _id: { type: String, required: true },
+  schoolId: { type: String, required: true },
+  academicYearId: { type: String, required: true },
+  classRoomId: { type: String, required: true },
+  streamId: String,
+  teacherId: { type: String, required: true },
+  assignedByUserId: String,
+  effectiveFrom: String,
+  effectiveTo: String,
+  isActive: { type: Boolean, default: true },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
+
+const SubjectTeacherAssignmentSchema = new Schema({
+  _id: { type: String, required: true },
+  schoolId: { type: String, required: true },
+  academicYearId: { type: String, required: true },
+  classRoomId: String,
+  streamId: String,
+  learningAreaId: { type: String, required: true },
+  teacherId: { type: String, required: true },
+  role: { type: String, default: 'SUBJECT_LEAD' },
+  assignedByUserId: String,
+  effectiveFrom: String,
+  effectiveTo: String,
+  isActive: { type: Boolean, default: true },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
@@ -483,6 +516,8 @@ const InvoiceModel = mongoose.models.StudentInvoice || mongoose.model('StudentIn
 const PaymentModel = mongoose.models.Payment || mongoose.model('Payment', PaymentSchema);
 const ExpenseModel = mongoose.models.Expense || mongoose.model('Expense', ExpenseSchema);
 const OtherIncomeModel = mongoose.models.OtherIncome || mongoose.model('OtherIncome', OtherIncomeSchema);
+const ClassTeacherAssignmentModel = mongoose.models.ClassTeacherAssignment || mongoose.model('ClassTeacherAssignment', ClassTeacherAssignmentSchema);
+const SubjectTeacherAssignmentModel = mongoose.models.SubjectTeacherAssignment || mongoose.model('SubjectTeacherAssignment', SubjectTeacherAssignmentSchema);
 const DeletedStudentSchema = new Schema({
   _id: { type: String, required: true },
   studentId: { type: String, required: true },
@@ -787,6 +822,64 @@ export class MongoAcademicRepository implements IAcademicRepository {
   }
   public async deleteLearningArea(id: string): Promise<void> {
     await LearningAreaModel.findByIdAndDelete(id);
+  }
+
+  public async saveClassTeacherAssignment(assignment: ClassTeacherAssignment): Promise<void> {
+    await ClassTeacherAssignmentModel.findOneAndUpdate(
+      { _id: assignment.id },
+      { ...assignment.toJSON(), _id: assignment.id },
+      { upsert: true }
+    );
+  }
+
+  public async findClassTeacherAssignments(filters?: {
+    schoolId?: string;
+    academicYearId?: string;
+    classRoomId?: string;
+    streamId?: string;
+    teacherId?: string;
+    isActive?: boolean;
+  }): Promise<ClassTeacherAssignment[]> {
+    const query: any = {};
+    if (filters?.schoolId) query.schoolId = filters.schoolId;
+    if (filters?.academicYearId) query.academicYearId = filters.academicYearId;
+    if (filters?.classRoomId) query.classRoomId = filters.classRoomId;
+    if (filters?.streamId) query.streamId = filters.streamId;
+    if (filters?.teacherId) query.teacherId = filters.teacherId;
+    if (filters?.isActive !== undefined) query.isActive = filters.isActive;
+    const docs = await ClassTeacherAssignmentModel.find(query).sort({ createdAt: -1 }).lean();
+    return docs.map((d: any) => ClassTeacherAssignment.create(d, d._id, d.createdAt, d.updatedAt));
+  }
+
+  public async saveSubjectTeacherAssignment(assignment: SubjectTeacherAssignment): Promise<void> {
+    await SubjectTeacherAssignmentModel.findOneAndUpdate(
+      { _id: assignment.id },
+      { ...assignment.toJSON(), _id: assignment.id },
+      { upsert: true }
+    );
+  }
+
+  public async findSubjectTeacherAssignments(filters?: {
+    schoolId?: string;
+    academicYearId?: string;
+    classRoomId?: string;
+    streamId?: string;
+    learningAreaId?: string;
+    teacherId?: string;
+    role?: string;
+    isActive?: boolean;
+  }): Promise<SubjectTeacherAssignment[]> {
+    const query: any = {};
+    if (filters?.schoolId) query.schoolId = filters.schoolId;
+    if (filters?.academicYearId) query.academicYearId = filters.academicYearId;
+    if (filters?.classRoomId) query.classRoomId = filters.classRoomId;
+    if (filters?.streamId) query.streamId = filters.streamId;
+    if (filters?.learningAreaId) query.learningAreaId = filters.learningAreaId;
+    if (filters?.teacherId) query.teacherId = filters.teacherId;
+    if (filters?.role) query.role = filters.role;
+    if (filters?.isActive !== undefined) query.isActive = filters.isActive;
+    const docs = await SubjectTeacherAssignmentModel.find(query).sort({ createdAt: -1 }).lean();
+    return docs.map((d: any) => SubjectTeacherAssignment.create(d, d._id, d.createdAt, d.updatedAt));
   }
 }
 

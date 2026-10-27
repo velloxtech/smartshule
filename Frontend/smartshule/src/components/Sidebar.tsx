@@ -337,6 +337,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           Arrears
                         </span>
                       )}
+                      {item.id === 'student-fee-search' && (
+                        <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full uppercase shrink-0 ${
+                          isActive ? 'bg-white/20 text-white' : 'bg-emerald-700/15 text-emerald-800'
+                        }`}>
+                          Cashier
+                        </span>
+                      )}
                       {item.id === 'forwarded-payments' && (
                         <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full uppercase shrink-0 ${
                           isActive ? 'bg-white/20 text-white' : 'bg-emerald-700/15 text-emerald-800'

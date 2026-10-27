@@ -109,8 +109,12 @@ export const AddManualArrearSchema = z.object({
   academicYearId: z.string().optional(),
   termId: z.string().optional(),
   dueDate: z.string().optional(),
+  source: z.string().optional(),
+  referenceNote: z.string().optional(),
   notes: z.string().optional(),
-  mode: z.enum(['SET', 'ADD']).optional().default('ADD')
+  mode: z.enum(['SET', 'ADD']).optional().default('ADD'),
+  confirmDuplicate: z.boolean().optional().default(false),
+  allowDuplicate: z.boolean().optional().default(false)
 }).passthrough();
 
 export const BatchAddManualArrearsSchema = z.object({
@@ -127,8 +131,9 @@ export const BatchAddManualArrearsSchema = z.object({
 }).passthrough();
 
 export const RecordPaymentSchema = z.object({
-  schoolId: z.string().min(1),
-  invoiceId: z.string().min(1),
+  schoolId: z.string().optional().default('school-001'),
+  invoiceId: z.string().optional(),
+  studentId: z.string().optional(),
   amount: z.number().positive(),
   paymentMethod: z.nativeEnum(PaymentMethod),
   transactionReference: z.string().optional(),
@@ -141,7 +146,9 @@ export const RecordPaymentSchema = z.object({
   slipNumber: z.string().optional(),
   depositorName: z.string().optional(),
   receivedFrom: z.string().optional()
-}).passthrough();
+}).passthrough().refine(data => !!data.invoiceId || !!data.studentId, {
+  message: 'Either invoiceId or studentId must be provided'
+});
 
 export const MpesaStkPushSchema = z.object({
   invoiceId: z.string().min(1),
@@ -1049,6 +1056,24 @@ export class FinanceController {
         gradeLevel: gradeLevel as string,
         requestingUser: req.user
       });
+      return res.status(200).json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public getLearnerFeePosition = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const studentId = req.params.studentId as string;
+      const { termId, academicYearId } = req.query;
+      const result = await this.feeUseCases.getLearnerFeePosition(
+        studentId,
+        {
+          termId: termId as string,
+          academicYearId: academicYearId as string
+        },
+        req.user
+      );
       return res.status(200).json({ success: true, data: result });
     } catch (err) {
       next(err);

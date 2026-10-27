@@ -596,6 +596,9 @@ export class BroadsheetUseCases {
     if ((!students || students.length === 0) && classRoom?.id) {
       students = await this.studentRepository.findAll({ classroomId: classRoom.id });
     }
+    if ((!students || students.length === 0) && classRoom?.gradeLevel) {
+      students = await this.studentRepository.findAll({ gradeLevel: classRoom.gradeLevel as any });
+    }
 
     const altTermId = termId.includes('-t') ? termId.replace('-t', '-') : termId.replace(/-(\d)$/, '-t$1');
 

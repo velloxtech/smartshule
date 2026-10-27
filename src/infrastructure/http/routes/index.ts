@@ -46,7 +46,9 @@ import {
   UpdateTermSchema,
   CreateClassRoomSchema,
   CreateStreamSchema,
-  CreateLearningAreaSchema
+  CreateLearningAreaSchema,
+  AssignClassTeacherSchema,
+  AssignSubjectTeacherSchema
 } from '../controllers/AcademicController';
 
 import {
@@ -58,7 +60,9 @@ import {
   RecordFormativeSchema,
   RecordSummativeSchema,
   RecordSummativeBatchSchema,
-  GenerateReportCardSchema
+  GenerateReportCardSchema,
+  ValidateMarksUploadSchema,
+  CommitMarksUploadSchema
 } from '../controllers/CbcAssessmentController';
 
 import {
@@ -319,6 +323,13 @@ export function createApiRouter(container: AppContainer): Router {
   academicRouter.delete('/streams/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN, UserRole.HEAD_TEACHER), academicController.deleteStream);
   academicRouter.delete('/learning-areas/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN, UserRole.HEAD_TEACHER), academicController.deleteLearningArea);
 
+  // Teacher Assignments & Reassignments
+  academicRouter.post('/class-teacher', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN, UserRole.HEAD_TEACHER), validateBody(AssignClassTeacherSchema), academicController.assignClassTeacher);
+  academicRouter.get('/class-teacher', authMiddleware, academicController.listClassTeacherAssignments);
+  academicRouter.post('/subject-assignments', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN, UserRole.HEAD_TEACHER), validateBody(AssignSubjectTeacherSchema), academicController.assignSubjectTeacher);
+  academicRouter.get('/subject-assignments', authMiddleware, academicController.listSubjectTeacherAssignments);
+  academicRouter.delete('/subject-assignments/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN, UserRole.HEAD_TEACHER), academicController.deactivateSubjectTeacherAssignment);
+
   router.use('/academics', academicRouter);
 
   // ==========================================
@@ -417,6 +428,11 @@ export function createApiRouter(container: AppContainer): Router {
   CBCRouter.post('/report-cards/generate', authMiddleware, requireRoles(UserRole.HEAD_TEACHER, UserRole.TEACHER, UserRole.SUPER_ADMIN), validateBody(GenerateReportCardSchema), CBCController.generateReportCard);
   CBCRouter.get('/report-cards', authMiddleware, CBCController.getReportCard);
   CBCRouter.get('/analytics', authMiddleware, CBCController.getAnalytics);
+
+  // Marks Upload Pipeline (CSV Template, Pre-import Validation, Transactional Commit)
+  CBCRouter.get('/marks-template', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN), CBCController.generateMarksTemplate);
+  CBCRouter.post('/marks-upload/validate', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN), validateBody(ValidateMarksUploadSchema), CBCController.validateMarksUpload);
+  CBCRouter.post('/marks-upload/commit', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN), validateBody(CommitMarksUploadSchema), CBCController.commitMarksUpload);
   
   router.use('/CBC', CBCRouter);
   router.use('/cbc', CBCRouter);
@@ -553,6 +569,7 @@ export function createApiRouter(container: AppContainer): Router {
   financeRouter.get('/payments/forwarded', authMiddleware, financeController.getForwardedTransactions);
   financeRouter.post('/payments/forwarded/:id/verify', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), validateBody(VerifyForwardedPaymentSchema), financeController.verifyForwardedTransaction);
   financeRouter.get('/statements/:studentId', authMiddleware, financeController.getFeeStatement); // Parent isolated
+  financeRouter.get('/students/:studentId/fee-position', authMiddleware, financeController.getLearnerFeePosition); // Director & Cashier fast-track fee position
   financeRouter.get('/student-accounts', authMiddleware, financeController.getStudentFeeAccounts);
   financeRouter.get('/credits/:studentId', authMiddleware, financeController.getStudentCredits);
   financeRouter.post('/credits/apply', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), financeController.applyCreditToInvoice);

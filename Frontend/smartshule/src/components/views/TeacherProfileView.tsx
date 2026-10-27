@@ -632,6 +632,82 @@ export const TeacherProfileView: React.FC = () => {
                 <span className="material-symbols-outlined text-2xl text-primary/40">meeting_room</span>
               </div>
 
+              {/* Official Class Teacher Assignments */}
+              {profile?.classTeacherAssignments && profile.classTeacherAssignments.length > 0 && (
+                <div className="space-y-1.5">
+                  <span className="block text-[11px] font-bold text-on-surface-variant">Class Teacher Responsibilities</span>
+                  <div className="space-y-1">
+                    {profile.classTeacherAssignments.map((a: any, i: number) => (
+                      <div
+                        key={i}
+                        className={`p-2 rounded-lg border text-[11px] flex items-center justify-between ${
+                          a.isActive ? 'bg-primary/5 border-primary/30' : 'bg-surface-container-low border-outline-variant/20'
+                        }`}
+                      >
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-on-surface">
+                              {a.className} {a.streamName ? `(${a.streamName})` : ''}
+                            </span>
+                            {a.isActive ? (
+                              <span className="bg-emerald-100 text-emerald-800 text-[9px] font-bold px-1.5 py-0.2 rounded-full">
+                                Active
+                              </span>
+                            ) : (
+                              <span className="bg-slate-200 text-slate-700 text-[9px] font-medium px-1.5 py-0.2 rounded-full">
+                                Past
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[10px] text-outline">
+                            Year: {a.academicYearName || a.academicYearId} • From {a.effectiveFrom || 'Start'}
+                            {a.effectiveTo ? ` to ${a.effectiveTo}` : ''}
+                          </span>
+                        </div>
+                        <span className="material-symbols-outlined text-outline text-[16px]">school</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Subject Leadership Roles */}
+              {profile?.subjectAssignments && profile.subjectAssignments.length > 0 && (
+                <div className="space-y-1.5">
+                  <span className="block text-[11px] font-bold text-on-surface-variant">Subject Leadership & Allocations</span>
+                  <div className="space-y-1">
+                    {profile.subjectAssignments.map((sa: any, i: number) => (
+                      <div
+                        key={i}
+                        className={`p-2 rounded-lg border text-[11px] flex items-center justify-between ${
+                          sa.isActive ? 'bg-rose-50/60 border-rose-200' : 'bg-surface-container-low border-outline-variant/20'
+                        }`}
+                      >
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-on-surface">
+                              {sa.learningAreaName} {sa.learningAreaCode ? `(${sa.learningAreaCode})` : ''}
+                            </span>
+                            <span
+                              className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full ${
+                                sa.role === 'SUBJECT_LEAD' ? 'bg-[#800000] text-white' : 'bg-slate-200 text-slate-800'
+                              }`}
+                            >
+                              {sa.role === 'SUBJECT_LEAD' ? 'Subject Lead' : 'Educator'}
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-outline">
+                            Year: {sa.academicYearName || sa.academicYearId}
+                            {sa.className ? ` • Class: ${sa.className}` : ' • School-wide'}
+                          </span>
+                        </div>
+                        <span className="material-symbols-outlined text-outline text-[16px]">psychology</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div>
                 <span className="block text-[11px] font-bold text-on-surface-variant mb-2">Weekly Teaching Schedule</span>
                 {profile?.teachingAssignments && profile.teachingAssignments.length > 0 ? (

@@ -221,6 +221,93 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
   return res.json();
 }
 
+export interface ClassTeacherAssignmentItem {
+  id: string;
+  schoolId: string;
+  academicYearId: string;
+  academicYearName?: string;
+  classRoomId: string;
+  className?: string;
+  streamId?: string;
+  streamName?: string;
+  teacherId: string;
+  teacherName?: string;
+  teacherEmployeeNumber?: string;
+  assignedByUserId?: string;
+  effectiveFrom?: string;
+  effectiveTo?: string;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface SubjectTeacherAssignmentItem {
+  id: string;
+  schoolId: string;
+  academicYearId: string;
+  academicYearName?: string;
+  classRoomId?: string;
+  className?: string;
+  streamId?: string;
+  streamName?: string;
+  learningAreaId: string;
+  learningAreaName?: string;
+  learningAreaCode?: string;
+  teacherId: string;
+  teacherName?: string;
+  teacherEmployeeNumber?: string;
+  role: 'SUBJECT_LEAD' | 'SUBJECT_TEACHER' | 'ASSESSMENT_APPROVER';
+  assignedByUserId?: string;
+  effectiveFrom?: string;
+  effectiveTo?: string;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface MarksTemplateResult {
+  filename: string;
+  csvContent: string;
+  studentsCount: number;
+  className: string;
+  streamName?: string;
+  learningAreaName: string;
+}
+
+export interface MarksValidationResult {
+  totalRows: number;
+  validRows: number;
+  missingRows: number;
+  invalidRows: number;
+  createsCount: number;
+  updatesCount: number;
+  duplicatesCount: number;
+  errors: Array<{ rowNumber: number; admissionNumber: string; error: string }>;
+  previewRows: Array<{
+    rowNumber: number;
+    studentId: string;
+    admissionNumber: string;
+    learnerName: string;
+    score?: number;
+    maxScore: number;
+    performanceLevel?: string;
+    teacherRemarks?: string;
+    status: 'VALID' | 'MISSING' | 'INVALID';
+    action: 'CREATE' | 'UPDATE' | 'SKIP';
+    error?: string;
+    note?: string;
+  }>;
+}
+
+export interface MarksCommitResult {
+  success: boolean;
+  totalProcessed: number;
+  recordedCount: number;
+  updatedCount: number;
+  skippedMissingCount: number;
+  message: string;
+}
+
 const coreApiService = {
   // Health & Status Check
   checkHealth: async (): Promise<boolean> => {
@@ -535,6 +622,81 @@ const coreApiService = {
     });
   },
 
+  // Teacher Assignments & Reassignments
+  assignClassTeacher: async (data: {
+    schoolId: string;
+    academicYearId: string;
+    classRoomId: string;
+    streamId?: string;
+    teacherId: string;
+    effectiveFrom?: string;
+    reason?: string;
+  }): Promise<ApiResponse<ClassTeacherAssignmentItem>> => {
+    return apiFetch<ApiResponse<ClassTeacherAssignmentItem>>('/academics/class-teacher', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  getClassTeacherAssignments: async (params?: {
+    schoolId?: string;
+    academicYearId?: string;
+    classRoomId?: string;
+    streamId?: string;
+    teacherId?: string;
+    isActive?: boolean;
+  }): Promise<ApiResponse<ClassTeacherAssignmentItem[]>> => {
+    const q = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([k, v]) => {
+        if (v !== undefined && v !== null && v !== '') q.append(k, String(v));
+      });
+    }
+    return apiFetch<ApiResponse<ClassTeacherAssignmentItem[]>>(`/academics/class-teacher?${q.toString()}`);
+  },
+
+  assignSubjectTeacher: async (data: {
+    schoolId: string;
+    academicYearId: string;
+    classRoomId?: string;
+    streamId?: string;
+    learningAreaId: string;
+    teacherId: string;
+    role?: string;
+    effectiveFrom?: string;
+  }): Promise<ApiResponse<SubjectTeacherAssignmentItem>> => {
+    return apiFetch<ApiResponse<SubjectTeacherAssignmentItem>>('/academics/subject-assignments', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  getSubjectTeacherAssignments: async (params?: {
+    schoolId?: string;
+    academicYearId?: string;
+    classRoomId?: string;
+    streamId?: string;
+    learningAreaId?: string;
+    teacherId?: string;
+    role?: string;
+    isActive?: boolean;
+  }): Promise<ApiResponse<SubjectTeacherAssignmentItem[]>> => {
+    const q = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([k, v]) => {
+        if (v !== undefined && v !== null && v !== '') q.append(k, String(v));
+      });
+    }
+    return apiFetch<ApiResponse<SubjectTeacherAssignmentItem[]>>(`/academics/subject-assignments?${q.toString()}`);
+  },
+
+  deleteSubjectTeacherAssignment: async (id: string, effectiveTo?: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/academics/subject-assignments/${id}`, {
+      method: 'DELETE',
+      body: effectiveTo ? JSON.stringify({ effectiveTo }) : undefined
+    });
+  },
+
   // 3. Students & Guardians Endpoints
   getStudents: async (filters?: {
     schoolId?: string;
@@ -663,6 +825,7 @@ const coreApiService = {
       targetClassroomId?: string;
       targetStreamId?: string;
       carryForwardBalance?: boolean;
+      teacherContinuityMode?: 'FOLLOW_COHORT' | 'DESTINATION_DEFAULT' | 'LEAVE_PENDING';
     }
   ): Promise<ApiResponse<any>> => {
     return apiFetch<ApiResponse<any>>(`/students/${id}/promote`, {
@@ -679,6 +842,7 @@ const coreApiService = {
     targetClassroomId?: string;
     targetStreamId?: string;
     carryForwardBalance?: boolean;
+    teacherContinuityMode?: 'FOLLOW_COHORT' | 'DESTINATION_DEFAULT' | 'LEAVE_PENDING';
   }): Promise<ApiResponse<any>> => {
     return apiFetch<ApiResponse<any>>('/students/promote-bulk', {
       method: 'POST',
@@ -981,6 +1145,69 @@ const coreApiService = {
     return apiFetch<ApiResponse<BackendSummativeAssessment[]>>('/CBC/summative/batch', {
       method: 'POST',
       body: JSON.stringify(data),
+    });
+  },
+
+  getMarksTemplate: async (params: {
+    schoolId?: string;
+    academicYearId: string;
+    termId: string;
+    classRoomId: string;
+    streamId?: string;
+    learningAreaId: string;
+    assessmentType?: string;
+    maxScore?: number;
+  }): Promise<ApiResponse<MarksTemplateResult>> => {
+    const q = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') q.append(k, String(v));
+    });
+    return apiFetch<ApiResponse<MarksTemplateResult>>(`/cbc/marks-template?${q.toString()}`);
+  },
+
+  validateMarksUpload: async (data: {
+    schoolId?: string;
+    academicYearId: string;
+    termId: string;
+    classRoomId: string;
+    streamId?: string;
+    learningAreaId: string;
+    maxScore?: number;
+    rows: Array<{
+      admissionNumber: string;
+      learnerName?: string;
+      score?: string | number;
+      maxScore?: string | number;
+      performanceLevel?: string;
+      teacherRemarks?: string;
+    }>;
+  }): Promise<ApiResponse<MarksValidationResult>> => {
+    return apiFetch<ApiResponse<MarksValidationResult>>('/cbc/marks-upload/validate', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  },
+
+  commitMarksUpload: async (data: {
+    schoolId?: string;
+    academicYearId: string;
+    termId: string;
+    classRoomId: string;
+    streamId?: string;
+    learningAreaId: string;
+    maxScore?: number;
+    rows: Array<{
+      admissionNumber: string;
+      learnerName?: string;
+      score?: string | number;
+      maxScore?: string | number;
+      performanceLevel?: string;
+      teacherRemarks?: string;
+    }>;
+  }): Promise<ApiResponse<MarksCommitResult>> => {
+    return apiFetch<ApiResponse<MarksCommitResult>>('/cbc/marks-upload/commit', {
+      method: 'POST',
+      body: JSON.stringify(data)
     });
   },
 
@@ -1536,6 +1763,17 @@ const coreApiService = {
     return apiFetch<ApiResponse<any>>(`/finance/statements/${studentId}`);
   },
 
+  getLearnerFeePosition: async (
+    studentId: string,
+    params?: { termId?: string; academicYearId?: string }
+  ): Promise<ApiResponse<any>> => {
+    const q = new URLSearchParams();
+    if (params?.termId) q.append('termId', params.termId);
+    if (params?.academicYearId) q.append('academicYearId', params.academicYearId);
+    const qs = q.toString() ? `?${q.toString()}` : '';
+    return apiFetch<ApiResponse<any>>(`/finance/students/${studentId}/fee-position${qs}`);
+  },
+
   getStudentFeeAccounts: async (params?: {
     schoolId?: string;
     termId?: string;
@@ -1672,8 +1910,12 @@ const coreApiService = {
     academicYearId?: string;
     termId?: string;
     dueDate?: string;
+    source?: string;
+    referenceNote?: string;
     notes?: string;
     mode?: 'SET' | 'ADD';
+    confirmDuplicate?: boolean;
+    allowDuplicate?: boolean;
   }): Promise<ApiResponse<any>> => {
     return apiFetch<ApiResponse<any>>('/finance/arrears', {
       method: 'POST',

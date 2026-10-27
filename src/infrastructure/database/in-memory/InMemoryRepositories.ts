@@ -47,6 +47,7 @@ import { Guardian } from '../../../core/domain/user/Guardian';
 import { School } from '../../../core/domain/academic/School';
 import { AcademicYear, AcademicTerm } from '../../../core/domain/academic/AcademicYear';
 import { ClassRoom, Stream, LearningArea } from '../../../core/domain/academic/ClassRoom';
+import { ClassTeacherAssignment, SubjectTeacherAssignment } from '../../../core/domain/academic/TeacherAssignment';
 import {
   Strand,
   SubStrand,
@@ -262,6 +263,8 @@ export class InMemoryAcademicRepository implements IAcademicRepository {
   private classes: Map<string, ClassRoom> = new Map();
   private streams: Map<string, Stream> = new Map();
   private learningAreas: Map<string, LearningArea> = new Map();
+  private classTeacherAssignments: Map<string, ClassTeacherAssignment> = new Map();
+  private subjectTeacherAssignments: Map<string, SubjectTeacherAssignment> = new Map();
 
   public async getSchool(id?: string): Promise<School | null> {
     return this.school;
@@ -384,6 +387,56 @@ export class InMemoryAcademicRepository implements IAcademicRepository {
 
   public async saveLearningArea(area: LearningArea): Promise<void> {
     this.learningAreas.set(area.id, area);
+  }
+
+  // Class Teacher Assignments
+  public async saveClassTeacherAssignment(assignment: ClassTeacherAssignment): Promise<void> {
+    this.classTeacherAssignments.set(assignment.id, assignment);
+  }
+
+  public async findClassTeacherAssignments(filters?: {
+    schoolId?: string;
+    academicYearId?: string;
+    classRoomId?: string;
+    streamId?: string;
+    teacherId?: string;
+    isActive?: boolean;
+  }): Promise<ClassTeacherAssignment[]> {
+    let result = Array.from(this.classTeacherAssignments.values());
+    if (filters?.schoolId) result = result.filter(a => a.schoolId === filters.schoolId);
+    if (filters?.academicYearId) result = result.filter(a => a.academicYearId === filters.academicYearId);
+    if (filters?.classRoomId) result = result.filter(a => a.classRoomId === filters.classRoomId);
+    if (filters?.streamId) result = result.filter(a => a.streamId === filters.streamId);
+    if (filters?.teacherId) result = result.filter(a => a.teacherId === filters.teacherId);
+    if (filters?.isActive !== undefined) result = result.filter(a => a.isActive === filters.isActive);
+    return result.sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0));
+  }
+
+  // Subject Teacher Assignments
+  public async saveSubjectTeacherAssignment(assignment: SubjectTeacherAssignment): Promise<void> {
+    this.subjectTeacherAssignments.set(assignment.id, assignment);
+  }
+
+  public async findSubjectTeacherAssignments(filters?: {
+    schoolId?: string;
+    academicYearId?: string;
+    classRoomId?: string;
+    streamId?: string;
+    learningAreaId?: string;
+    teacherId?: string;
+    role?: string;
+    isActive?: boolean;
+  }): Promise<SubjectTeacherAssignment[]> {
+    let result = Array.from(this.subjectTeacherAssignments.values());
+    if (filters?.schoolId) result = result.filter(a => a.schoolId === filters.schoolId);
+    if (filters?.academicYearId) result = result.filter(a => a.academicYearId === filters.academicYearId);
+    if (filters?.classRoomId) result = result.filter(a => a.classRoomId === filters.classRoomId);
+    if (filters?.streamId) result = result.filter(a => a.streamId === filters.streamId);
+    if (filters?.learningAreaId) result = result.filter(a => a.learningAreaId === filters.learningAreaId);
+    if (filters?.teacherId) result = result.filter(a => a.teacherId === filters.teacherId);
+    if (filters?.role) result = result.filter(a => a.role === filters.role);
+    if (filters?.isActive !== undefined) result = result.filter(a => a.isActive === filters.isActive);
+    return result.sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0));
   }
 
   public async deleteClass(id: string): Promise<void> {

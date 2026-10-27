@@ -67,8 +67,10 @@ export class ValidationError extends DomainError {
 }
 
 export class ConflictError extends DomainError {
-  constructor(message: string) {
+  public readonly details?: unknown;
+  constructor(message: string, details?: unknown) {
     super(message, 'CONFLICT_ERROR', 409);
+    this.details = details;
   }
 }
 

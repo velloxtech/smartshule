@@ -96,10 +96,10 @@ export const ArrearsView: React.FC<ArrearsViewProps> = ({
 
     return {
       totalLearners,
-      defaultersCount: arrearsSummary?.totalLearnersWithArrears ?? learnersWithArrears.length,
-      totalArrears: arrearsSummary?.totalOutstandingArrears ?? totalArrearsAmount,
-      averageArrear: arrearsSummary?.averageArrear ?? averageArrear,
-      maxArrear: arrearsSummary?.maxSingleArrear ?? maxArrear,
+      defaultersCount: Number(arrearsSummary?.totalLearnersWithArrears ?? learnersWithArrears.length) || 0,
+      totalArrears: Number(arrearsSummary?.totalOutstandingArrears ?? totalArrearsAmount) || 0,
+      averageArrear: Number(arrearsSummary?.averageArrear ?? averageArrear) || 0,
+      maxArrear: Number(arrearsSummary?.maxSingleArrear ?? maxArrear) || 0,
       collectionEfficiency:
         totalLearners > 0
           ? Math.round(((totalLearners - learnersWithArrears.length) / totalLearners) * 100)

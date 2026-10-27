@@ -75,6 +75,7 @@ export const PromoteStudentModal: React.FC<PromoteStudentModalProps> = ({
   const [availableStreams, setAvailableStreams] = useState<{ id: string; name: string }[]>([]);
   const [targetStreamId, setTargetStreamId] = useState('');
   const [carryForwardBalance, setCarryForwardBalance] = useState(true);
+  const [teacherContinuityMode, setTeacherContinuityMode] = useState<'FOLLOW_COHORT' | 'DESTINATION_DEFAULT' | 'LEAVE_PENDING'>('DESTINATION_DEFAULT');
   const [feeStructures, setFeeStructures] = useState<FeeStructure[]>([]);
 
   const [isLoading, setIsLoading] = useState(false);
@@ -238,6 +239,7 @@ export const PromoteStudentModal: React.FC<PromoteStudentModalProps> = ({
           targetTermId: selectedTermId || undefined,
           targetStreamId: targetStreamId || undefined,
           carryForwardBalance,
+          teacherContinuityMode,
         });
 
         if (res.success) {
@@ -256,6 +258,7 @@ export const PromoteStudentModal: React.FC<PromoteStudentModalProps> = ({
           targetTermId: selectedTermId || undefined,
           targetStreamId: targetStreamId || undefined,
           carryForwardBalance,
+          teacherContinuityMode,
         });
 
         if (res.success) {
@@ -432,6 +435,95 @@ export const PromoteStudentModal: React.FC<PromoteStudentModalProps> = ({
                   </option>
                 ))}
               </select>
+            </div>
+          )}
+
+          {/* Class Teacher Continuity Policy */}
+          {targetGradeLevel !== 'GRADUATED' && (
+            <div className="border border-outline-variant/30 rounded-xl p-3.5 bg-surface-container-lowest space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-on-surface flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[18px] text-primary">school</span>
+                  Class Teacher Continuity Option
+                </span>
+                <span className="text-[10px] bg-primary/10 text-primary font-bold px-2 py-0.5 rounded-full">
+                  Explicit Policy
+                </span>
+              </div>
+              <p className="text-[11px] text-on-surface-variant">
+                Determine how the class teacher assignment is handled when promoting this cohort into {targetGradeLevel.replace('_', ' ')}.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+                <label
+                  className={`p-2.5 rounded-lg border cursor-pointer transition-all flex flex-col justify-between gap-1.5 ${
+                    teacherContinuityMode === 'DESTINATION_DEFAULT'
+                      ? 'bg-primary/5 border-primary shadow-xs'
+                      : 'bg-surface-container-low border-outline-variant/20 hover:border-outline-variant'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-xs text-on-surface">Destination Default</span>
+                    <input
+                      type="radio"
+                      name="teacherContinuity"
+                      value="DESTINATION_DEFAULT"
+                      checked={teacherContinuityMode === 'DESTINATION_DEFAULT'}
+                      onChange={() => setTeacherContinuityMode('DESTINATION_DEFAULT')}
+                      className="text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
+                    />
+                  </div>
+                  <p className="text-[10px] text-on-surface-variant leading-relaxed">
+                    Keep the teacher already assigned to destination class.
+                  </p>
+                </label>
+
+                <label
+                  className={`p-2.5 rounded-lg border cursor-pointer transition-all flex flex-col justify-between gap-1.5 ${
+                    teacherContinuityMode === 'FOLLOW_COHORT'
+                      ? 'bg-primary/5 border-primary shadow-xs'
+                      : 'bg-surface-container-low border-outline-variant/20 hover:border-outline-variant'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-xs text-on-surface">Follow Cohort</span>
+                    <input
+                      type="radio"
+                      name="teacherContinuity"
+                      value="FOLLOW_COHORT"
+                      checked={teacherContinuityMode === 'FOLLOW_COHORT'}
+                      onChange={() => setTeacherContinuityMode('FOLLOW_COHORT')}
+                      className="text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
+                    />
+                  </div>
+                  <p className="text-[10px] text-on-surface-variant leading-relaxed">
+                    Move cohort's current class teacher into the new grade.
+                  </p>
+                </label>
+
+                <label
+                  className={`p-2.5 rounded-lg border cursor-pointer transition-all flex flex-col justify-between gap-1.5 ${
+                    teacherContinuityMode === 'LEAVE_PENDING'
+                      ? 'bg-primary/5 border-primary shadow-xs'
+                      : 'bg-surface-container-low border-outline-variant/20 hover:border-outline-variant'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-xs text-on-surface">Leave Pending</span>
+                    <input
+                      type="radio"
+                      name="teacherContinuity"
+                      value="LEAVE_PENDING"
+                      checked={teacherContinuityMode === 'LEAVE_PENDING'}
+                      onChange={() => setTeacherContinuityMode('LEAVE_PENDING')}
+                      className="text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer"
+                    />
+                  </div>
+                  <p className="text-[10px] text-on-surface-variant leading-relaxed">
+                    Leave destination class unassigned for administrator review.
+                  </p>
+                </label>
+              </div>
             </div>
           )}
 

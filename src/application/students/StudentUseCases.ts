@@ -19,6 +19,7 @@ import { IdGenerator, NotFoundError, ConflictError, ValidationError, ForbiddenEr
 import { IPasswordHasher } from '../../core/ports/services/IExternalServices';
 import { StudentInvoice, InvoiceStatus, FeeStructure, FeeItem, Payment, PaymentStatus } from '../../core/domain/finance/Fee';
 import { ClassRoom, EducationLevel } from '../../core/domain/academic/ClassRoom';
+import { ClassTeacherAssignment } from '../../core/domain/academic/TeacherAssignment';
 
 export const CBC_GRADE_PROGRESSION: Record<CBCGradeLevel, CBCGradeLevel | 'GRADUATED'> = {
   [CBCGradeLevel.PLAYGROUP]: CBCGradeLevel.PP1,
@@ -38,6 +39,8 @@ export const CBC_GRADE_PROGRESSION: Record<CBCGradeLevel, CBCGradeLevel | 'GRADU
   [CBCGradeLevel.SENIOR_3]: 'GRADUATED',
 };
 
+export type TeacherContinuityMode = 'FOLLOW_COHORT' | 'DESTINATION_DEFAULT' | 'LEAVE_PENDING';
+
 export interface PromoteStudentDTO {
   targetGradeLevel?: CBCGradeLevel;
   targetAcademicYearId?: string;
@@ -45,6 +48,7 @@ export interface PromoteStudentDTO {
   targetClassroomId?: string;
   targetStreamId?: string;
   carryForwardBalance?: boolean;
+  teacherContinuityMode?: TeacherContinuityMode;
 }
 
 export interface BulkPromoteStudentsDTO {
@@ -55,6 +59,7 @@ export interface BulkPromoteStudentsDTO {
   targetClassroomId?: string;
   targetStreamId?: string;
   carryForwardBalance?: boolean;
+  teacherContinuityMode?: TeacherContinuityMode;
 }
 
 export interface UserContext {
@@ -310,6 +315,16 @@ export class StudentUseCases {
       classroomId = matchedClass.id;
     }
 
+    let streamId = dto.streamId;
+    if (!streamId && classroomId && this.academicRepository) {
+      try {
+        const streams = await this.academicRepository.findStreamsByClass(classroomId);
+        if (streams && streams.length > 0) {
+          streamId = streams[0].id;
+        }
+      } catch {}
+    }
+
     const student = Student.create(
       {
         admissionNumber,
@@ -321,7 +336,7 @@ export class StudentUseCases {
         gender: dto.gender,
         gradeLevel: dto.gradeLevel,
         classroomId,
-        streamId: dto.streamId || undefined,
+        streamId: streamId || undefined,
         schoolId: dto.schoolId,
         academicYearId: dto.academicYearId,
         guardianIds,
@@ -870,6 +885,19 @@ export class StudentUseCases {
         } catch {}
       }
 
+      // If classroomId was missing on student, resolve from gradeLevel
+      if (!className && !studentJson.classroomId && studentJson.gradeLevel) {
+        try {
+          const classes = await this.academicRepository.findAllClasses(studentJson.schoolId);
+          const matched = classes.find(c => c.gradeLevel === studentJson.gradeLevel);
+          if (matched) {
+            studentJson.classroomId = matched.id;
+            className = matched.name;
+            if (classCache) classCache.set(matched.id, matched);
+          }
+        } catch {}
+      }
+
       if (!streamName && studentJson.streamId) {
         try {
           if (streamCache && streamCache.has(studentJson.streamId)) {
@@ -880,6 +908,18 @@ export class StudentUseCases {
               streamName = str.name;
               if (streamCache) streamCache.set(studentJson.streamId, str);
             }
+          }
+        } catch {}
+      }
+
+      // If streamId was missing on student, resolve default stream from classroomId
+      if (!streamName && !studentJson.streamId && studentJson.classroomId) {
+        try {
+          const streams = await this.academicRepository.findStreamsByClass(studentJson.classroomId);
+          if (streams && streams.length > 0) {
+            studentJson.streamId = streams[0].id;
+            streamName = streams[0].name;
+            if (streamCache) streamCache.set(streams[0].id, streams[0]);
           }
         } catch {}
       }
@@ -901,8 +941,17 @@ export class StudentUseCases {
 
     // Fallbacks if not found in repository
     if (!className && studentJson.gradeLevel) {
-      const g = String(studentJson.gradeLevel).toUpperCase().replace(/_/g, ' ');
-      className = g.charAt(0) + g.slice(1).toLowerCase().replace(/pp([12])/i, 'PP$1').replace(/grade\s*(\d+)/i, 'Grade $1');
+      const upper = String(studentJson.gradeLevel).toUpperCase().trim();
+      if (upper === 'PP1' || upper === 'PRE_PRIMARY_1') {
+        className = 'PP1';
+      } else if (upper === 'PP2' || upper === 'PRE_PRIMARY_2') {
+        className = 'PP2';
+      } else if (upper === 'PLAYGROUP') {
+        className = 'Playgroup';
+      } else {
+        const g = upper.replace(/_/g, ' ');
+        className = (g.charAt(0) + g.slice(1).toLowerCase()).replace(/pp([12])/i, 'PP$1').replace(/grade\s*(\d+)/i, 'Grade $1');
+      }
     }
 
     if (!streamName && studentJson.streamId) {
@@ -1680,6 +1729,10 @@ export class StudentUseCases {
     }
     if (!targetTermId) targetTermId = `term-${targetAcademicYearId}-t1`;
 
+    const sourceClassroomId = student.classroomId;
+    const sourceStreamId = student.streamId;
+    const sourceAcademicYearId = student.academicYearId;
+
     // Update student's grade, stream, classroom, academic year
     student.promoteOrTransfer(
       nextGrade as CBCGradeLevel,
@@ -1689,6 +1742,90 @@ export class StudentUseCases {
     );
     student.setStatus(StudentStatus.ACTIVE);
     await this.studentRepository.update(student);
+
+    // Apply teacher continuity mode if specified
+    if (dto.teacherContinuityMode && this.academicRepository) {
+      try {
+        const destClassroomId = dto.targetClassroomId || student.classroomId;
+        const destStreamId = dto.targetStreamId !== undefined ? dto.targetStreamId : student.streamId;
+
+        if (dto.teacherContinuityMode === 'FOLLOW_COHORT') {
+          // Find active teacher for cohort's source class/stream
+          const sourceAssignments = await this.academicRepository.findClassTeacherAssignments({
+            schoolId: student.schoolId,
+            academicYearId: sourceAcademicYearId,
+            classRoomId: sourceClassroomId,
+            streamId: sourceStreamId,
+            isActive: true
+          });
+
+          if (sourceAssignments.length > 0 && destClassroomId && targetAcademicYearId) {
+            const cohortTeacherId = sourceAssignments[0].teacherId;
+
+            const targetAssignments = await this.academicRepository.findClassTeacherAssignments({
+              schoolId: student.schoolId,
+              academicYearId: targetAcademicYearId,
+              classRoomId: destClassroomId,
+              streamId: destStreamId,
+              isActive: true
+            });
+
+            const alreadyAssigned = targetAssignments.some(a => a.teacherId === cohortTeacherId);
+            if (!alreadyAssigned) {
+              for (const oldA of targetAssignments) {
+                oldA.deactivate(new Date().toISOString().split('T')[0]);
+                await this.academicRepository.saveClassTeacherAssignment(oldA);
+              }
+
+              const newAssignment = ClassTeacherAssignment.create(
+                {
+                  schoolId: student.schoolId,
+                  academicYearId: targetAcademicYearId,
+                  classRoomId: destClassroomId,
+                  streamId: destStreamId,
+                  teacherId: cohortTeacherId,
+                  effectiveFrom: new Date().toISOString().split('T')[0],
+                  isActive: true
+                },
+                IdGenerator.generate()
+              );
+              await this.academicRepository.saveClassTeacherAssignment(newAssignment);
+
+              if (destStreamId) {
+                const st = await this.academicRepository.findStreamById(destStreamId);
+                if (st) {
+                  st.setClassTeacher(cohortTeacherId);
+                  await this.academicRepository.updateStream(st);
+                }
+              }
+            }
+          }
+        } else if (dto.teacherContinuityMode === 'LEAVE_PENDING') {
+          if (destClassroomId && targetAcademicYearId) {
+            const targetAssignments = await this.academicRepository.findClassTeacherAssignments({
+              schoolId: student.schoolId,
+              academicYearId: targetAcademicYearId,
+              classRoomId: destClassroomId,
+              streamId: destStreamId,
+              isActive: true
+            });
+            for (const a of targetAssignments) {
+              a.deactivate(new Date().toISOString().split('T')[0]);
+              await this.academicRepository.saveClassTeacherAssignment(a);
+            }
+            if (destStreamId) {
+              const st = await this.academicRepository.findStreamById(destStreamId);
+              if (st) {
+                st.setClassTeacher(undefined);
+                await this.academicRepository.updateStream(st);
+              }
+            }
+          }
+        }
+      } catch (continuityErr) {
+        // Continue promotion without breaking student record update
+      }
+    }
 
     // Verify targetTermId and targetAcademicYearId foreign key integrity
     if (this.academicRepository) {
@@ -1962,7 +2099,8 @@ export class StudentUseCases {
           targetTermId: dto.targetTermId,
           targetClassroomId: dto.targetClassroomId,
           targetStreamId: dto.targetStreamId,
-          carryForwardBalance: dto.carryForwardBalance
+          carryForwardBalance: dto.carryForwardBalance,
+          teacherContinuityMode: dto.teacherContinuityMode
         });
         results.push(res);
       } catch (err: any) {
