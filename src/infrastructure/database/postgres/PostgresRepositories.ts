@@ -45,6 +45,9 @@ import { ISignatureRepository } from '../../../core/ports/repositories/ISignatur
 import { DigitalSignatureProfile, SignatureType } from '../../../core/domain/signature/DigitalSignatureProfile';
 import { DocumentSigningChallenge } from '../../../core/domain/signature/DocumentSigningChallenge';
 import { DocumentSignatureRecord } from '../../../core/domain/signature/DocumentSignatureRecord';
+import { SigningPolicy, getDefaultSigningPolicies } from '../../../core/domain/signature/SigningPolicy';
+import { DocumentSigningBatch } from '../../../core/domain/signature/DocumentSigningBatch';
+import { DocumentSigningBatchItem } from '../../../core/domain/signature/DocumentSigningBatchItem';
 
 import { User, UserRole, UserStatus } from '../../../core/domain/user/User';
 import { Student, StudentGender, CBCGradeLevel, StudentStatus } from '../../../core/domain/user/Student';
@@ -1130,6 +1133,78 @@ export class PostgresDatabaseInitializer {
       );
       CREATE INDEX IF NOT EXISTS idx_doc_sig_records_doc ON document_signature_records(document_id);
       CREATE INDEX IF NOT EXISTS idx_doc_sig_records_signer ON document_signature_records(signer_user_id);
+
+      CREATE TABLE IF NOT EXISTS signature_policies (
+        id VARCHAR(64) PRIMARY KEY,
+        document_type VARCHAR(64) NOT NULL UNIQUE,
+        title VARCHAR(128) NOT NULL,
+        description TEXT,
+        requires_signature BOOLEAN NOT NULL DEFAULT TRUE,
+        allowed_roles TEXT[] NOT NULL,
+        required_signatures_count INTEGER NOT NULL DEFAULT 1,
+        signing_order VARCHAR(32) NOT NULL DEFAULT 'PARALLEL',
+        allow_bulk_signing BOOLEAN NOT NULL DEFAULT FALSE,
+        placements JSONB NOT NULL DEFAULT '[]'::jsonb,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS document_signing_batches (
+        id VARCHAR(64) PRIMARY KEY,
+        user_id VARCHAR(64) NOT NULL,
+        signatory_role VARCHAR(64) NOT NULL,
+        document_type VARCHAR(64) NOT NULL,
+        scope_description VARCHAR(255) NOT NULL,
+        total_count INTEGER NOT NULL DEFAULT 0,
+        signed_count INTEGER NOT NULL DEFAULT 0,
+        failed_count INTEGER NOT NULL DEFAULT 0,
+        status VARCHAR(32) NOT NULL DEFAULT 'PREPARED',
+        batch_digest VARCHAR(128) NOT NULL,
+        otp_challenge_id VARCHAR(64),
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+        completed_at TIMESTAMP WITH TIME ZONE
+      );
+      CREATE INDEX IF NOT EXISTS idx_doc_sig_batches_user ON document_signing_batches(user_id);
+
+      CREATE TABLE IF NOT EXISTS document_signing_batch_items (
+        id VARCHAR(64) PRIMARY KEY,
+        batch_id VARCHAR(64) NOT NULL REFERENCES document_signing_batches(id) ON DELETE CASCADE,
+        document_id VARCHAR(128) NOT NULL,
+        document_title VARCHAR(255) NOT NULL,
+        student_id VARCHAR(64),
+        student_name VARCHAR(255),
+        document_version VARCHAR(64) NOT NULL,
+        document_hash VARCHAR(128) NOT NULL,
+        status VARCHAR(32) NOT NULL DEFAULT 'READY',
+        failure_reason TEXT,
+        signature_record_id VARCHAR(64),
+        signed_at TIMESTAMP WITH TIME ZONE,
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_batch_items_batch ON document_signing_batch_items(batch_id);
+      CREATE INDEX IF NOT EXISTS idx_batch_items_doc ON document_signing_batch_items(document_id);
+
+      CREATE TABLE IF NOT EXISTS teacher_correction_requests (
+        id VARCHAR(100) PRIMARY KEY,
+        teacher_id VARCHAR(100) NOT NULL,
+        user_id VARCHAR(100) NOT NULL,
+        school_id VARCHAR(100) NOT NULL,
+        field_name VARCHAR(100) NOT NULL,
+        field_label VARCHAR(100) NOT NULL,
+        current_value TEXT,
+        proposed_value TEXT NOT NULL,
+        reason TEXT NOT NULL,
+        evidence_url TEXT,
+        status VARCHAR(50) DEFAULT 'PENDING',
+        reviewed_by_user_id VARCHAR(100),
+        reviewed_by_name VARCHAR(100),
+        review_remarks TEXT,
+        reviewed_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS idx_tcr_teacher ON teacher_correction_requests(teacher_id);
+      CREATE INDEX IF NOT EXISTS idx_tcr_school_status ON teacher_correction_requests(school_id, status);
     `;
 
     await pool.query(ddl);
@@ -1192,7 +1267,22 @@ export class PostgresDatabaseInitializer {
       CREATE UNIQUE INDEX IF NOT EXISTS uq_strands_area_grade_title ON strands (learning_area_id, grade_level, LOWER(title));
       CREATE UNIQUE INDEX IF NOT EXISTS uq_sub_strands_strand_code ON sub_strands (strand_id, code);
       CREATE UNIQUE INDEX IF NOT EXISTS uq_sub_strands_strand_title ON sub_strands (strand_id, LOWER(title));
+<<<<<<< HEAD
       CREATE UNIQUE INDEX IF NOT EXISTS uq_summative_student_area_term_year ON summative_assessments (student_id, learning_area_id, term_id, academic_year_id);
+=======
+
+      ALTER TABLE teachers ADD COLUMN IF NOT EXISTS date_of_birth VARCHAR(50);
+      ALTER TABLE teachers ADD COLUMN IF NOT EXISTS gender VARCHAR(20);
+      ALTER TABLE teachers ADD COLUMN IF NOT EXISTS national_id VARCHAR(50);
+      ALTER TABLE teachers ADD COLUMN IF NOT EXISTS residential_address TEXT;
+      ALTER TABLE teachers ADD COLUMN IF NOT EXISTS profile_photo_url TEXT;
+      ALTER TABLE teachers ADD COLUMN IF NOT EXISTS employment_date VARCHAR(50);
+      ALTER TABLE teachers ADD COLUMN IF NOT EXISTS employment_type VARCHAR(50) DEFAULT 'FULL_TIME';
+      ALTER TABLE teachers ADD COLUMN IF NOT EXISTS employment_status VARCHAR(50) DEFAULT 'ACTIVE';
+      ALTER TABLE teachers ADD COLUMN IF NOT EXISTS department VARCHAR(100);
+      ALTER TABLE teachers ADD COLUMN IF NOT EXISTS emergency_contact JSONB DEFAULT '{}';
+      ALTER TABLE teachers ADD COLUMN IF NOT EXISTS documents JSONB DEFAULT '[]';
+>>>>>>> 6ea15e3dcc822c0b50b6b0c2c69bdba3a3de674e
     `).catch(() => {});
 
     console.log('[PostgreSQL] Database tables initialized successfully.');
@@ -1404,7 +1494,18 @@ export class PostgresTeacherRepository implements ITeacherRepository {
       employeeNumber: r.employee_number,
       specialization: typeof r.specialization === 'string' ? JSON.parse(r.specialization) : (r.specialization || []),
       assignedClassStreamIds: typeof r.assigned_class_stream_ids === 'string' ? JSON.parse(r.assigned_class_stream_ids) : (r.assigned_class_stream_ids || []),
-      qualification: r.qualification
+      qualification: r.qualification,
+      dateOfBirth: r.date_of_birth,
+      gender: r.gender,
+      nationalId: r.national_id,
+      residentialAddress: r.residential_address,
+      profilePhotoUrl: r.profile_photo_url,
+      employmentDate: r.employment_date,
+      employmentType: r.employment_type || 'FULL_TIME',
+      employmentStatus: r.employment_status || 'ACTIVE',
+      department: r.department,
+      emergencyContact: typeof r.emergency_contact === 'string' ? JSON.parse(r.emergency_contact) : (r.emergency_contact || {}),
+      documents: typeof r.documents === 'string' ? JSON.parse(r.documents) : (r.documents || [])
     }, r.id, r.created_at, r.updated_at);
   }
   public async findById(id: string): Promise<Teacher | null> {
@@ -1424,10 +1525,53 @@ export class PostgresTeacherRepository implements ITeacherRepository {
     return res.rows.map(r => this.mapRow(r));
   }
   public async save(t: Teacher): Promise<void> {
-    const q = `INSERT INTO teachers (id, user_id, tsc_number, employee_number, specialization, assigned_class_stream_ids, qualification, created_at, updated_at)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-               ON CONFLICT (id) DO UPDATE SET assigned_class_stream_ids = EXCLUDED.assigned_class_stream_ids, specialization = EXCLUDED.specialization, updated_at = NOW()`;
-    await this.pool.query(q, [t.id, t.userId, t.tscNumber, t.employeeNumber, JSON.stringify(t.specialization), JSON.stringify(t.assignedClassStreamIds), t.qualification, t.createdAt, t.updatedAt]);
+    const q = `INSERT INTO teachers (
+                 id, user_id, tsc_number, employee_number, specialization, assigned_class_stream_ids,
+                 qualification, date_of_birth, gender, national_id, residential_address, profile_photo_url,
+                 employment_date, employment_type, employment_status, department, emergency_contact, documents,
+                 created_at, updated_at
+               )
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+               ON CONFLICT (id) DO UPDATE SET
+                 tsc_number = EXCLUDED.tsc_number,
+                 employee_number = EXCLUDED.employee_number,
+                 specialization = EXCLUDED.specialization,
+                 assigned_class_stream_ids = EXCLUDED.assigned_class_stream_ids,
+                 qualification = EXCLUDED.qualification,
+                 date_of_birth = EXCLUDED.date_of_birth,
+                 gender = EXCLUDED.gender,
+                 national_id = EXCLUDED.national_id,
+                 residential_address = EXCLUDED.residential_address,
+                 profile_photo_url = EXCLUDED.profile_photo_url,
+                 employment_date = EXCLUDED.employment_date,
+                 employment_type = EXCLUDED.employment_type,
+                 employment_status = EXCLUDED.employment_status,
+                 department = EXCLUDED.department,
+                 emergency_contact = EXCLUDED.emergency_contact,
+                 documents = EXCLUDED.documents,
+                 updated_at = NOW()`;
+    await this.pool.query(q, [
+      t.id,
+      t.userId,
+      t.tscNumber,
+      t.employeeNumber,
+      JSON.stringify(t.specialization),
+      JSON.stringify(t.assignedClassStreamIds),
+      t.qualification,
+      t.dateOfBirth,
+      t.gender,
+      t.nationalId,
+      t.residentialAddress,
+      t.profilePhotoUrl,
+      t.employmentDate,
+      t.employmentType,
+      t.employmentStatus,
+      t.department,
+      JSON.stringify(t.emergencyContact || {}),
+      JSON.stringify(t.documents || []),
+      t.createdAt,
+      t.updatedAt
+    ]);
   }
   public async update(t: Teacher): Promise<void> { await this.save(t); }
   public async delete(id: string): Promise<void> { await this.pool.query('DELETE FROM teachers WHERE id = $1', [id]); }
@@ -3398,6 +3542,241 @@ export class PostgresSignatureRepository implements ISignatureRepository {
       [userId]
     );
     return res.rows.map(row => this.mapRecord(row));
+  }
+
+  public async listAllSignatureRecords(limit = 100, offset = 0): Promise<DocumentSignatureRecord[]> {
+    const res = await this.pool.query(
+      `SELECT * FROM document_signature_records ORDER BY signed_at DESC LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    );
+    return res.rows.map(row => this.mapRecord(row));
+  }
+
+  // Policies
+  public async findPolicyByDocumentType(documentType: string): Promise<SigningPolicy | null> {
+    const res = await this.pool.query(
+      `SELECT * FROM signature_policies WHERE document_type = $1 LIMIT 1`,
+      [documentType]
+    );
+    if (res.rows.length === 0) {
+      const defaultPol = getDefaultSigningPolicies().find(p => p.documentType === documentType);
+      if (defaultPol) {
+        return new SigningPolicy(defaultPol);
+      }
+      return null;
+    }
+    return this.mapPolicy(res.rows[0]);
+  }
+
+  public async savePolicy(policy: SigningPolicy): Promise<SigningPolicy> {
+    await this.pool.query(
+      `INSERT INTO signature_policies (
+        id, document_type, title, description, requires_signature,
+        allowed_roles, required_signatures_count, signing_order, allow_bulk_signing,
+        placements, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      ON CONFLICT (document_type) DO UPDATE SET
+        title = EXCLUDED.title,
+        description = EXCLUDED.description,
+        requires_signature = EXCLUDED.requires_signature,
+        allowed_roles = EXCLUDED.allowed_roles,
+        required_signatures_count = EXCLUDED.required_signatures_count,
+        signing_order = EXCLUDED.signing_order,
+        allow_bulk_signing = EXCLUDED.allow_bulk_signing,
+        placements = EXCLUDED.placements,
+        updated_at = EXCLUDED.updated_at`,
+      [
+        policy.id,
+        policy.documentType,
+        policy.title,
+        policy.description,
+        policy.requiresSignature,
+        policy.allowedRoles,
+        policy.requiredSignaturesCount,
+        policy.signingOrder,
+        policy.allowBulkSigning,
+        JSON.stringify(policy.placements),
+        policy.createdAt,
+        policy.updatedAt
+      ]
+    );
+    return policy;
+  }
+
+  public async listPolicies(): Promise<SigningPolicy[]> {
+    const res = await this.pool.query(
+      `SELECT * FROM signature_policies ORDER BY title ASC`
+    );
+    const existing = res.rows.map(row => this.mapPolicy(row));
+    const existingTypes = new Set(existing.map(p => p.documentType));
+    const defaults = getDefaultSigningPolicies();
+    for (const d of defaults) {
+      if (!existingTypes.has(d.documentType)) {
+        existing.push(new SigningPolicy(d));
+      }
+    }
+    return existing;
+  }
+
+  // Batches
+  public async saveBatch(batch: DocumentSigningBatch): Promise<DocumentSigningBatch> {
+    await this.pool.query(
+      `INSERT INTO document_signing_batches (
+        id, user_id, signatory_role, document_type, scope_description,
+        total_count, signed_count, failed_count, status, batch_digest,
+        otp_challenge_id, created_at, completed_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      ON CONFLICT (id) DO UPDATE SET
+        signed_count = EXCLUDED.signed_count,
+        failed_count = EXCLUDED.failed_count,
+        status = EXCLUDED.status,
+        otp_challenge_id = EXCLUDED.otp_challenge_id,
+        completed_at = EXCLUDED.completed_at`,
+      [
+        batch.id,
+        batch.userId,
+        batch.signatoryRole,
+        batch.documentType,
+        batch.scopeDescription,
+        batch.totalCount,
+        batch.signedCount,
+        batch.failedCount,
+        batch.status,
+        batch.batchDigest,
+        batch.otpChallengeId || null,
+        batch.createdAt,
+        batch.completedAt || null
+      ]
+    );
+    return batch;
+  }
+
+  public async findBatchById(batchId: string): Promise<DocumentSigningBatch | null> {
+    const res = await this.pool.query(
+      `SELECT * FROM document_signing_batches WHERE id = $1 LIMIT 1`,
+      [batchId]
+    );
+    if (res.rows.length === 0) return null;
+    return this.mapBatch(res.rows[0]);
+  }
+
+  public async findBatchesByUserId(userId: string): Promise<DocumentSigningBatch[]> {
+    const res = await this.pool.query(
+      `SELECT * FROM document_signing_batches WHERE user_id = $1 ORDER BY created_at DESC`,
+      [userId]
+    );
+    return res.rows.map(row => this.mapBatch(row));
+  }
+
+  public async saveBatchItems(items: DocumentSigningBatchItem[]): Promise<void> {
+    for (const item of items) {
+      await this.pool.query(
+        `INSERT INTO document_signing_batch_items (
+          id, batch_id, document_id, document_title, student_id, student_name,
+          document_version, document_hash, status, failure_reason,
+          signature_record_id, signed_at, created_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        ON CONFLICT (id) DO UPDATE SET
+          status = EXCLUDED.status,
+          failure_reason = EXCLUDED.failure_reason,
+          signature_record_id = EXCLUDED.signature_record_id,
+          signed_at = EXCLUDED.signed_at`,
+        [
+          item.id,
+          item.batchId,
+          item.documentId,
+          item.documentTitle,
+          item.studentId || null,
+          item.studentName || null,
+          item.documentVersion,
+          item.documentHash,
+          item.status,
+          item.failureReason || null,
+          item.signatureRecordId || null,
+          item.signedAt || null,
+          item.createdAt
+        ]
+      );
+    }
+  }
+
+  public async updateBatchItem(item: DocumentSigningBatchItem): Promise<void> {
+    await this.pool.query(
+      `UPDATE document_signing_batch_items SET
+        status = $1,
+        failure_reason = $2,
+        signature_record_id = $3,
+        signed_at = $4
+      WHERE id = $5`,
+      [
+        item.status,
+        item.failureReason || null,
+        item.signatureRecordId || null,
+        item.signedAt || null,
+        item.id
+      ]
+    );
+  }
+
+  public async findBatchItems(batchId: string): Promise<DocumentSigningBatchItem[]> {
+    const res = await this.pool.query(
+      `SELECT * FROM document_signing_batch_items WHERE batch_id = $1 ORDER BY student_name ASC, document_title ASC`,
+      [batchId]
+    );
+    return res.rows.map(row => this.mapBatchItem(row));
+  }
+
+  private mapPolicy(row: any): SigningPolicy {
+    return new SigningPolicy({
+      id: row.id,
+      documentType: row.document_type,
+      title: row.title,
+      description: row.description || '',
+      requiresSignature: row.requires_signature,
+      allowedRoles: row.allowed_roles || [],
+      requiredSignaturesCount: row.required_signatures_count,
+      signingOrder: row.signing_order,
+      allowBulkSigning: row.allow_bulk_signing,
+      placements: typeof row.placements === 'string' ? JSON.parse(row.placements) : (row.placements || []),
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at)
+    });
+  }
+
+  private mapBatch(row: any): DocumentSigningBatch {
+    return new DocumentSigningBatch({
+      id: row.id,
+      userId: row.user_id,
+      signatoryRole: row.signatory_role,
+      documentType: row.document_type,
+      scopeDescription: row.scope_description,
+      totalCount: row.total_count,
+      signedCount: row.signed_count,
+      failedCount: row.failed_count,
+      status: row.status,
+      batchDigest: row.batch_digest,
+      otpChallengeId: row.otp_challenge_id || undefined,
+      createdAt: new Date(row.created_at),
+      completedAt: row.completed_at ? new Date(row.completed_at) : undefined
+    });
+  }
+
+  private mapBatchItem(row: any): DocumentSigningBatchItem {
+    return new DocumentSigningBatchItem({
+      id: row.id,
+      batchId: row.batch_id,
+      documentId: row.document_id,
+      documentTitle: row.document_title,
+      studentId: row.student_id || undefined,
+      studentName: row.student_name || undefined,
+      documentVersion: row.document_version,
+      documentHash: row.document_hash,
+      status: row.status,
+      failureReason: row.failure_reason || undefined,
+      signatureRecordId: row.signature_record_id || undefined,
+      signedAt: row.signed_at ? new Date(row.signed_at) : undefined,
+      createdAt: new Date(row.created_at)
+    });
   }
 
   private mapRecord(row: any): DocumentSignatureRecord {

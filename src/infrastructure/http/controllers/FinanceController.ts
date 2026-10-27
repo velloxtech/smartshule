@@ -65,6 +65,36 @@ export const GenerateInvoicesSchema = z.object({
   studentId: z.string().optional()
 });
 
+export const CreateIndividualInvoiceSchema = z.object({
+  schoolId: z.string().optional(),
+  studentId: z.string().min(1, 'Student ID is required'),
+  academicYearId: z.string().min(1, 'Academic Year ID is required'),
+  termId: z.string().min(1, 'Term ID is required'),
+  dueDate: z.string().min(1, 'Due date is required'),
+  issueDate: z.string().optional(),
+  title: z.string().optional(),
+  description: z.string().optional(),
+  feeStructureId: z.string().optional(),
+  items: z.array(
+    z.object({
+      id: z.string().optional(),
+      name: z.string().min(1, 'Line item name is required'),
+      amount: z.number().nonnegative('Amount cannot be negative').optional(),
+      unitAmount: z.number().nonnegative('Unit amount cannot be negative').optional(),
+      quantity: z.number().int().positive().optional().default(1),
+      category: z.string().optional().default('OTHER'),
+      isOptional: z.boolean().optional().default(false)
+    })
+  ).min(1, 'At least one line item is required'),
+  discountAmount: z.number().nonnegative().optional().default(0),
+  includeArrears: z.boolean().optional().default(false),
+  status: z.enum(['DRAFT', 'UNPAID']).optional().default('UNPAID')
+}).passthrough();
+
+export const CancelInvoiceSchema = z.object({
+  reason: z.string().optional()
+});
+
 export const SyncFeesSchema = z.object({
   schoolId: z.string().optional(),
   academicYearId: z.string().optional(),
@@ -286,6 +316,99 @@ export class FinanceController {
     }
   };
 
+  public createIndividualInvoice = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const userSchoolId = req.user?.schoolId;
+      const payload = {
+        ...req.body,
+        schoolId: req.body?.schoolId || userSchoolId
+      };
+      const result = await this.feeUseCases.createIndividualInvoice(payload, req.user);
+
+      this.systemLogUseCases?.log({
+        level: 'AUDIT',
+        category: 'FINANCE',
+        action: result.invoice.status === 'DRAFT' ? 'DRAFT_INVOICE_SAVED' : 'INDIVIDUAL_INVOICE_ISSUED',
+        actorEmail: req.user?.email,
+        actorUserId: req.user?.userId,
+        actorRole: req.user?.role,
+        ipAddress: req.ip || (req.socket?.remoteAddress as string),
+        status: 'SUCCESS',
+        details: `Individual invoice ${result.invoice.invoiceNumber} created for student ${result.invoice.studentId} with amount ${result.invoice.amountPayable} (Status: ${result.invoice.status})`,
+        metadata: {
+          invoiceId: result.invoice.id,
+          invoiceNumber: result.invoice.invoiceNumber,
+          studentId: result.invoice.studentId,
+          amountPayable: result.invoice.amountPayable,
+          status: result.invoice.status
+        }
+      }).catch(() => {});
+
+      return res.status(201).json({ success: true, data: result.invoice, message: result.message });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public issueDraftInvoice = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const id = req.params.id as string;
+      const result = await this.feeUseCases.issueDraftInvoice(id, req.user);
+
+      this.systemLogUseCases?.log({
+        level: 'AUDIT',
+        category: 'FINANCE',
+        action: 'INVOICE_ISSUED',
+        actorEmail: req.user?.email,
+        actorUserId: req.user?.userId,
+        actorRole: req.user?.role,
+        ipAddress: req.ip || (req.socket?.remoteAddress as string),
+        status: 'SUCCESS',
+        details: `Draft invoice ${result.invoice.invoiceNumber} (${id}) officially issued`,
+        metadata: { invoiceId: id, invoiceNumber: result.invoice.invoiceNumber, studentId: result.invoice.studentId }
+      }).catch(() => {});
+
+      return res.status(200).json({ success: true, data: result.invoice, message: result.message });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public cancelInvoice = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const id = req.params.id as string;
+      const reason = req.body?.reason as string;
+      const result = await this.feeUseCases.cancelInvoice(id, reason, req.user);
+
+      this.systemLogUseCases?.log({
+        level: 'AUDIT',
+        category: 'FINANCE',
+        action: 'INVOICE_CANCELLED',
+        actorEmail: req.user?.email,
+        actorUserId: req.user?.userId,
+        actorRole: req.user?.role,
+        ipAddress: req.ip || (req.socket?.remoteAddress as string),
+        status: 'SUCCESS',
+        details: `Invoice ${id} cancelled. Reason: ${reason || 'N/A'}`,
+        metadata: { invoiceId: id, reason }
+      }).catch(() => {});
+
+      return res.status(200).json({ success: true, data: result.invoice, message: result.message });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public getInvoiceDetails = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const id = req.params.id as string;
+      const invoice = await this.feeUseCases.getInvoiceDetails(id, req.user);
+      return res.status(200).json({ success: true, data: invoice });
+    } catch (err) {
+      next(err);
+    }
+  };
+
   public syncFees = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const userSchoolId = req.user?.schoolId;
@@ -301,11 +424,14 @@ export class FinanceController {
 
   public listInvoices = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
-      const { schoolId, studentId, termId, status } = req.query;
+      const { schoolId, studentId, termId, status, academicYearId, gradeLevel, search } = req.query;
       const invoices = await this.feeUseCases.listInvoices({
         schoolId: schoolId as string,
         studentId: studentId as string,
         termId: termId as string,
+        academicYearId: academicYearId as string,
+        gradeLevel: gradeLevel as any,
+        search: search as string,
         status: status as any,
         requestingUser: req.user
       });

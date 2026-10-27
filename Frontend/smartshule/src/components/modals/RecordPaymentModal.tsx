@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { apiService } from '../../services/api';
-import { Student, StudentInvoice, AcademicYear, AcademicTerm } from '../../types';
+import { Student, StudentInvoice, AcademicYear, AcademicTerm, FeeStructure } from '../../types';
 import { useAuth } from '../../context/AuthContext';
+import { InvoiceDetailsModal } from './InvoiceDetailsModal';
 import {
   detectReceiptPrinter,
   setReceiptAutoPrint,
@@ -14,14 +15,15 @@ export interface RecordPaymentModalProps {
   students: Student[];
   initialStudent?: Student;
   initialInvoice?: StudentInvoice;
-  initialMode?: 'PAYMENT' | 'ARREARS';
+  initialMode?: 'PAYMENT' | 'ARREARS' | 'INVOICE';
   onPaymentRecorded?: (payment: any) => void;
   onArrearRecorded?: (arrearData: any) => void;
+  onInvoiceCreated?: (invoice: any) => void;
   onRefreshStudents?: () => void | Promise<void>;
 }
 
 type PaymentChannel = 'CASH' | 'BANK_DEPOSIT' | 'MPESA' | 'BANK_TRANSFER' | 'CHEQUE';
-type EntryTab = 'PAYMENT' | 'ARREARS';
+type EntryTab = 'PAYMENT' | 'ARREARS' | 'INVOICE';
 
 const KENYAN_BANKS = [
   'KCB Bank Kenya',
@@ -57,6 +59,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
   initialMode = 'PAYMENT',
   onPaymentRecorded,
   onArrearRecorded,
+  onInvoiceCreated,
   onRefreshStudents,
 }) => {
   const { user } = useAuth();
@@ -140,6 +143,36 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
   const [arrearNotes, setArrearNotes] = useState('');
   const [isSubmittingArrear, setIsSubmittingArrear] = useState(false);
 
+  // --- INDIVIDUAL INVOICE SPECIFIC FIELDS ---
+  const [invoiceTitle, setInvoiceTitle] = useState('Term Tuition & School Levies');
+  const [invoiceDescription, setInvoiceDescription] = useState('');
+  const [invoiceYear, setInvoiceYear] = useState('');
+  const [invoiceTerm, setInvoiceTerm] = useState('');
+  const [invoiceIssueDate, setInvoiceIssueDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [invoiceDueDate, setInvoiceDueDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 14);
+    return d.toISOString().split('T')[0];
+  });
+  const [invoiceItems, setInvoiceItems] = useState<Array<{
+    id: string;
+    name: string;
+    category: string;
+    quantity: number;
+    unitAmount: number;
+    amount: number;
+    isOptional: boolean;
+  }>>([
+    { id: '1', name: 'Tuition Fee', category: 'TUITION', quantity: 1, unitAmount: 0, amount: 0, isOptional: false }
+  ]);
+  const [invoiceDiscount, setInvoiceDiscount] = useState<number | ''>(0);
+  const [includeArrearsInInvoice, setIncludeArrearsInInvoice] = useState(false);
+  const [feeStructures, setFeeStructures] = useState<FeeStructure[]>([]);
+  const [selectedFeeStructureId, setSelectedFeeStructureId] = useState('');
+  const [isSubmittingInvoice, setIsSubmittingInvoice] = useState(false);
+  const [createdInvoice, setCreatedInvoice] = useState<StudentInvoice | null>(null);
+  const [isInvoiceDetailsOpen, setIsInvoiceDetailsOpen] = useState(false);
+
   const handleArrearYearChange = async (yearId: string) => {
     setArrearYear(yearId);
     try {
@@ -158,6 +191,77 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
     }
   };
 
+  const handleInvoiceYearChange = async (yearId: string) => {
+    setInvoiceYear(yearId);
+    try {
+      const res = await apiService.getTerms(yearId);
+      if (res?.success && res.data && res.data.length > 0) {
+        setAcademicTerms(res.data);
+        const activeT = res.data.find(t => t.isCurrent) || res.data[0];
+        setInvoiceTerm(activeT.id);
+      } else {
+        setInvoiceTerm('');
+      }
+    } catch {
+      setInvoiceTerm('');
+    }
+  };
+
+  const handleAddInvoiceItem = () => {
+    const nextId = String(Date.now() + Math.random());
+    setInvoiceItems(prev => [
+      ...prev,
+      { id: nextId, name: '', category: 'TUITION', quantity: 1, unitAmount: 0, amount: 0, isOptional: false }
+    ]);
+  };
+
+  const handleRemoveInvoiceItem = (id: string) => {
+    if (invoiceItems.length <= 1) return;
+    setInvoiceItems(prev => prev.filter(it => it.id !== id));
+  };
+
+  const handleInvoiceItemChange = (id: string, field: 'name' | 'category' | 'quantity' | 'unitAmount', val: any) => {
+    setInvoiceItems(prev => prev.map(item => {
+      if (item.id !== id) return item;
+      const updated = { ...item, [field]: val };
+      if (field === 'quantity' || field === 'unitAmount') {
+        const q = field === 'quantity' ? Math.max(1, Number(val) || 1) : item.quantity;
+        const u = field === 'unitAmount' ? Math.max(0, Number(val) || 0) : item.unitAmount;
+        updated.quantity = q;
+        updated.unitAmount = u;
+        updated.amount = q * u;
+      }
+      return updated;
+    }));
+  };
+
+  const handleApplyFeeStructure = (structureId: string) => {
+    setSelectedFeeStructureId(structureId);
+    const fs = feeStructures.find(s => s.id === structureId);
+    if (!fs || !fs.items || fs.items.length === 0) return;
+
+    const loaded = fs.items.map((it, idx) => {
+      let termAmt = it.amount;
+      if (it.termBreakdown) {
+        const selectedTermObj = academicTerms.find(t => t.id === invoiceTerm);
+        const tNum = selectedTermObj?.termNumber || 1;
+        if (tNum === 1 && it.termBreakdown.term1 !== undefined) termAmt = it.termBreakdown.term1;
+        else if (tNum === 2 && it.termBreakdown.term2 !== undefined) termAmt = it.termBreakdown.term2;
+        else if (tNum === 3 && it.termBreakdown.term3 !== undefined) termAmt = it.termBreakdown.term3;
+      }
+      return {
+        id: String(idx + 1),
+        name: it.name,
+        category: it.category || 'TUITION',
+        quantity: 1,
+        unitAmount: termAmt || 0,
+        amount: termAmt || 0,
+        isOptional: it.isOptional || false
+      };
+    });
+    setInvoiceItems(loaded);
+  };
+
   // Detect connected receipt printers on modal open
   useEffect(() => {
     if (isOpen) {
@@ -165,18 +269,27 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
         setPrinterStatus(status);
       });
 
-      // Load active academic year and terms for arrears
+      // Load active academic year and terms for arrears & invoicing
       apiService.getYears().then(async (yRes) => {
         if (yRes?.success && Array.isArray(yRes.data) && yRes.data.length > 0) {
           setAcademicYears(yRes.data);
           const activeY = yRes.data.find(y => y.isCurrent) || yRes.data[0];
           setArrearYear(activeY.id);
+          setInvoiceYear(activeY.id);
           const tRes = await apiService.getTerms(activeY.id).catch(() => null);
           if (tRes?.success && Array.isArray(tRes.data) && tRes.data.length > 0) {
             setAcademicTerms(tRes.data);
             const activeT = tRes.data.find(t => t.isCurrent) || tRes.data[0];
             setArrearTerm(activeT.id);
+            setInvoiceTerm(activeT.id);
           }
+        }
+      }).catch(() => {});
+
+      // Load fee structures for 1-click loading into invoice
+      apiService.getFeeStructures().then((fsRes) => {
+        if (fsRes?.success && Array.isArray(fsRes.data)) {
+          setFeeStructures(fsRes.data);
         }
       }).catch(() => {});
     }
@@ -216,6 +329,11 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
       setForwardedSmsText('');
       setIsForwardedBoxOpen(false);
       setExtractedSmsSummary(null);
+      setCreatedInvoice(null);
+      setIsInvoiceDetailsOpen(false);
+      setInvoiceDiscount(0);
+      setIncludeArrearsInInvoice(false);
+      setSelectedFeeStructureId('');
       setSuggestedStudent(null);
       setDuplicateWarning(null);
       setIsStaffVerified(false);
@@ -307,6 +425,93 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
   const numArrear = Number(arrearAmount) || 0;
   const projectedTotalBalanceAfterArrear =
     arrearMode === 'SET' ? numArrear : effectiveBalance + numArrear;
+
+  // Calculations for Individual Invoice
+  const invoiceItemsSubtotal = invoiceItems.reduce((acc, it) => acc + (Number(it.amount) || 0), 0);
+  const studentArrearsComponent = includeArrearsInInvoice && effectiveBalance > 0 ? effectiveBalance : 0;
+  const invoiceTotalBilled = invoiceItemsSubtotal + studentArrearsComponent;
+  const invoiceDiscountVal = Math.max(0, Number(invoiceDiscount) || 0);
+  const invoiceAmountPayable = Math.max(0, invoiceTotalBilled - invoiceDiscountVal);
+
+  const handleSaveIndividualInvoice = async (status: 'DRAFT' | 'UNPAID') => {
+    if (!selectedStudentId) {
+      setFeedback({ type: 'error', message: 'Please select a learner first.' });
+      return;
+    }
+    if (!invoiceYear) {
+      setFeedback({ type: 'error', message: 'Please select an academic year.' });
+      return;
+    }
+    if (!invoiceTerm) {
+      setFeedback({ type: 'error', message: 'Please select a term.' });
+      return;
+    }
+    if (!invoiceDueDate) {
+      setFeedback({ type: 'error', message: 'Please specify an invoice due date.' });
+      return;
+    }
+    if (invoiceItems.length === 0 || invoiceItems.some(i => !i.name.trim())) {
+      setFeedback({ type: 'error', message: 'All line items must have a valid description.' });
+      return;
+    }
+    if (invoiceItemsSubtotal <= 0 && studentArrearsComponent <= 0) {
+      setFeedback({ type: 'error', message: 'Invoice total must be greater than zero.' });
+      return;
+    }
+    if (invoiceDiscountVal > invoiceTotalBilled) {
+      setFeedback({ type: 'error', message: 'Discount cannot exceed total billed amount.' });
+      return;
+    }
+
+    setIsSubmittingInvoice(true);
+    setFeedback(null);
+    try {
+      const payload = {
+        schoolId: schoolId || currentStudent?.schoolId,
+        studentId: selectedStudentId,
+        academicYearId: invoiceYear,
+        termId: invoiceTerm,
+        dueDate: invoiceDueDate,
+        issueDate: invoiceIssueDate,
+        title: invoiceTitle.trim() || 'Student Fee Invoice',
+        description: invoiceDescription.trim() || undefined,
+        feeStructureId: selectedFeeStructureId || undefined,
+        items: invoiceItems.map(it => ({
+          name: it.name.trim(),
+          amount: it.amount,
+          unitAmount: it.unitAmount,
+          quantity: it.quantity,
+          category: it.category,
+          isOptional: it.isOptional
+        })),
+        discountAmount: invoiceDiscountVal,
+        includeArrears: includeArrearsInInvoice,
+        status: status
+      };
+
+      const res = await apiService.createIndividualInvoice(payload);
+      if (res?.success === false) {
+        throw new Error(res.message || 'Failed to create invoice');
+      }
+
+      const created = res.data;
+      setCreatedInvoice(created);
+      setFeedback({
+        type: 'success',
+        message: status === 'DRAFT'
+          ? `Draft invoice saved successfully (${created.invoiceNumber}). It does not create an active financial obligation.`
+          : `Invoice ${created.invoiceNumber} officially issued to ${currentStudent?.name || 'learner'}. Total: KES ${created.amountPayable.toLocaleString()}.`
+      });
+
+      await fetchStudentInvoices(selectedStudentId);
+      if (onInvoiceCreated) onInvoiceCreated(created);
+      if (onRefreshStudents) onRefreshStudents();
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: err.message || 'An error occurred while creating invoice.' });
+    } finally {
+      setIsSubmittingInvoice(false);
+    }
+  };
 
   // Filter students for search
   const filteredStudents = students.filter(
@@ -1105,6 +1310,21 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
             >
               <span className="material-symbols-outlined text-[17px] text-rose-700">assignment_late</span>
               <span>Record / Adjust Arrears</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('INVOICE');
+                setFeedback(null);
+              }}
+              className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                activeTab === 'INVOICE'
+                  ? 'bg-white text-[#7a1228] shadow-xs border border-slate-200/80 font-black'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[17px] text-blue-700">receipt_long</span>
+              <span>Create Individual Invoice</span>
             </button>
           </div>
 
@@ -1956,7 +2176,448 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
               )}
             </form>
           )}
+
+          {/* ================================================================= */}
+          {/* TAB 3: CREATE INDIVIDUAL INVOICE (Learner Specific Invoicing)    */}
+          {/* ================================================================= */}
+          {activeTab === 'INVOICE' && (
+            <div className="space-y-4 animate-fade-in">
+              {/* Check if learner is sponsored */}
+              {currentStudent?.isSponsored ? (
+                <div className="p-4 bg-amber-50 border border-amber-300 rounded-xl flex items-start gap-3">
+                  <span className="material-symbols-outlined text-amber-700 text-xl">workspace_premium</span>
+                  <div>
+                    <h4 className="font-bold text-amber-900 text-xs">Institutional Scholarship Program Active</h4>
+                    <p className="text-xs text-amber-800 mt-1 leading-relaxed">
+                      Learner <span className="font-bold">{currentStudent.name}</span> is enrolled under Grace Seeds School's 100% Fee Waiver Institutional Scholarship. They have zero fee liabilities and cannot be billed new invoices.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* Period & Invoice Setup */}
+                  <div className="bg-slate-50/80 p-3.5 rounded-xl border border-slate-200 space-y-3">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
+                        <span className="material-symbols-outlined text-sm text-[#7a1228]">calendar_month</span>
+                        <span>Invoice Configuration & Billing Period</span>
+                      </div>
+                      {/* Structure quick-import */}
+                      {feeStructures.length > 0 && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] text-slate-500 font-medium">Quick Pre-fill:</span>
+                          <select
+                            value={selectedFeeStructureId}
+                            onChange={(e) => handleApplyFeeStructure(e.target.value)}
+                            className="text-xs py-1 px-2.5 bg-white border border-slate-300 rounded-lg text-slate-700 focus:outline-hidden focus:ring-1 focus:ring-[#7a1228]"
+                          >
+                            <option value="">Load from Class Fee Structure...</option>
+                            {feeStructures.map((fs) => (
+                              <option key={fs.id} value={fs.id}>
+                                {fs.gradeLevel} - {fs.title} (KES {fs.totalAmount?.toLocaleString()})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                          Academic Year <span className="text-rose-600">*</span>
+                        </label>
+                        <select
+                          value={invoiceYear}
+                          onChange={(e) => handleInvoiceYearChange(e.target.value)}
+                          className="w-full text-xs px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-[#7a1228]"
+                        >
+                          <option value="">Select Year...</option>
+                          {academicYears.map((y) => (
+                            <option key={y.id} value={y.id}>
+                              {y.year} {y.isCurrent ? '(Current)' : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                          Term <span className="text-rose-600">*</span>
+                        </label>
+                        <select
+                          value={invoiceTerm}
+                          onChange={(e) => setInvoiceTerm(e.target.value)}
+                          className="w-full text-xs px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-[#7a1228]"
+                        >
+                          <option value="">Select Term...</option>
+                          {academicTerms.map((t) => (
+                            <option key={t.id} value={t.id}>
+                              {t.name} {t.isCurrent ? '(Current)' : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                          Issue Date
+                        </label>
+                        <input
+                          type="date"
+                          value={invoiceIssueDate}
+                          onChange={(e) => setInvoiceIssueDate(e.target.value)}
+                          className="w-full text-xs px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-[#7a1228]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                          Payment Due Date <span className="text-rose-600">*</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={invoiceDueDate}
+                          onChange={(e) => setInvoiceDueDate(e.target.value)}
+                          className="w-full text-xs px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-[#7a1228]"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                          Invoice Title / Purpose
+                        </label>
+                        <input
+                          type="text"
+                          value={invoiceTitle}
+                          onChange={(e) => setInvoiceTitle(e.target.value)}
+                          placeholder="e.g. Term Tuition & School Levies"
+                          className="w-full text-xs px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-[#7a1228]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                          Optional Notes / Comments
+                        </label>
+                        <input
+                          type="text"
+                          value={invoiceDescription}
+                          onChange={(e) => setInvoiceDescription(e.target.value)}
+                          placeholder="e.g. Tailored invoice for special elective or boarding requirements"
+                          className="w-full text-xs px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg focus:outline-hidden focus:ring-1 focus:ring-[#7a1228]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Line Items Table */}
+                  <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-xs">
+                    <div className="bg-slate-100 px-3.5 py-2.5 border-b border-slate-200 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-[17px] text-[#7a1228]">checklist</span>
+                        <h4 className="text-xs font-bold text-slate-800">Itemized Fee Charges</h4>
+                        <span className="text-[11px] text-slate-500">({invoiceItems.length} line items)</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleAddInvoiceItem}
+                        className="px-2.5 py-1 text-xs font-bold text-[#7a1228] bg-white border border-[#7a1228]/30 rounded-lg hover:bg-rose-50 flex items-center gap-1 transition-colors cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-sm">add</span>
+                        <span>Add Fee Item</span>
+                      </button>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs text-left">
+                        <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200">
+                          <tr>
+                            <th className="py-2 px-3 w-8 text-center">#</th>
+                            <th className="py-2 px-3">Item Description *</th>
+                            <th className="py-2 px-3 w-36">Category</th>
+                            <th className="py-2 px-3 w-20 text-center">Qty</th>
+                            <th className="py-2 px-3 w-32 text-right">Unit Price (KES)</th>
+                            <th className="py-2 px-3 w-32 text-right">Line Total</th>
+                            <th className="py-2 px-3 w-10 text-center"></th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {invoiceItems.map((item, idx) => (
+                            <tr key={item.id} className="hover:bg-slate-50/50">
+                              <td className="py-2 px-3 text-center text-slate-400 font-mono text-[11px]">{idx + 1}</td>
+                              <td className="py-2 px-3">
+                                <input
+                                  type="text"
+                                  value={item.name}
+                                  onChange={(e) => handleInvoiceItemChange(item.id, 'name', e.target.value)}
+                                  placeholder="e.g. Tuition, Meals, Activity Fee"
+                                  className="w-full text-xs px-2 py-1 border border-slate-300 rounded focus:outline-hidden focus:ring-1 focus:ring-[#7a1228]"
+                                />
+                              </td>
+                              <td className="py-2 px-3">
+                                <select
+                                  value={item.category}
+                                  onChange={(e) => handleInvoiceItemChange(item.id, 'category', e.target.value)}
+                                  className="w-full text-xs px-1.5 py-1 border border-slate-300 rounded bg-white focus:outline-hidden focus:ring-1 focus:ring-[#7a1228]"
+                                >
+                                  <option value="TUITION">Tuition</option>
+                                  <option value="ASSESSMENT">Assessment</option>
+                                  <option value="ACTIVITY">Activity</option>
+                                  <option value="BOARDING">Boarding</option>
+                                  <option value="MEALS">Meals</option>
+                                  <option value="TRANSPORT">Transport</option>
+                                  <option value="ADMISSION">Admission</option>
+                                  <option value="OTHER">Other</option>
+                                </select>
+                              </td>
+                              <td className="py-2 px-3 text-center">
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={item.quantity}
+                                  onChange={(e) => handleInvoiceItemChange(item.id, 'quantity', e.target.value)}
+                                  className="w-16 text-xs px-2 py-1 border border-slate-300 rounded text-center focus:outline-hidden focus:ring-1 focus:ring-[#7a1228]"
+                                />
+                              </td>
+                              <td className="py-2 px-3 text-right">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={item.unitAmount === 0 ? '' : item.unitAmount}
+                                  onChange={(e) => handleInvoiceItemChange(item.id, 'unitAmount', e.target.value)}
+                                  placeholder="0"
+                                  className="w-28 text-xs px-2 py-1 border border-slate-300 rounded text-right font-mono focus:outline-hidden focus:ring-1 focus:ring-[#7a1228]"
+                                />
+                              </td>
+                              <td className="py-2 px-3 text-right font-mono font-bold text-slate-800">
+                                KES {item.amount.toLocaleString()}
+                              </td>
+                              <td className="py-2 px-3 text-center">
+                                {invoiceItems.length > 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveInvoiceItem(item.id)}
+                                    className="text-slate-400 hover:text-rose-600 transition-colors p-1"
+                                    title="Remove fee item"
+                                  >
+                                    <span className="material-symbols-outlined text-[16px]">delete</span>
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Arrears Transparency & Discounts */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                    <div className="space-y-2">
+                      <span className="text-xs font-bold text-slate-800 block">Arrears & Carry-Forward Integration</span>
+                      <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={includeArrearsInInvoice}
+                          onChange={(e) => setIncludeArrearsInInvoice(e.target.checked)}
+                          className="mt-0.5 rounded text-[#7a1228] focus:ring-[#7a1228]"
+                        />
+                        <div className="text-xs">
+                          <span className="font-semibold text-slate-800">
+                            Include previous outstanding arrears as separate line item
+                          </span>
+                          <p className="text-[11px] text-slate-500 mt-0.5">
+                            Transparently itemizes prior unpaid balance without silently rolling it into tuition.
+                          </p>
+                          {includeArrearsInInvoice && (
+                            <div className="mt-1.5 p-2 bg-amber-50 border border-amber-200 rounded-lg text-amber-900 font-mono text-[11px]">
+                              {effectiveBalance > 0 ? (
+                                <span>Line item added: <strong>Previous Outstanding Arrears: KES {effectiveBalance.toLocaleString()}</strong></span>
+                              ) : (
+                                <span className="text-emerald-700 font-sans font-medium">Learner has zero prior arrears. No additional line added.</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </label>
+                    </div>
+
+                    <div>
+                      <span className="text-xs font-bold text-slate-800 block mb-1">Discounts / Waivers / Adjustments</span>
+                      <div className="space-y-1">
+                        <label className="block text-[11px] text-slate-600">
+                          Discount Amount (KES)
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          max={invoiceTotalBilled}
+                          value={invoiceDiscount === '' ? '' : invoiceDiscount}
+                          onChange={(e) => setInvoiceDiscount(e.target.value === '' ? '' : Math.max(0, Number(e.target.value)))}
+                          placeholder="0"
+                          className="w-full text-xs px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg font-mono focus:outline-hidden focus:ring-1 focus:ring-[#7a1228]"
+                        />
+                        <span className="text-[10px] text-slate-400">
+                          Reduces net payable amount. Cannot exceed total billed charges.
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Live Interactive Invoice Preview Card */}
+                  <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white p-4 rounded-xl shadow-md border border-slate-700/60 space-y-3">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-amber-400 text-lg">receipt_long</span>
+                        <span className="font-bold text-xs uppercase tracking-wider text-amber-200">
+                          Live Invoice Preview & Calculations
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-white/70">
+                        Grace Seeds School &bull; "The Future Begins Here"
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs py-1">
+                      <div>
+                        <span className="text-white/60 block text-[11px]">Learner</span>
+                        <span className="font-semibold">{currentStudent?.name || 'Selected Student'}</span>
+                      </div>
+                      <div>
+                        <span className="text-white/60 block text-[11px]">Admission No</span>
+                        <span className="font-mono font-semibold">{currentStudent?.admNo || '--'}</span>
+                      </div>
+                      <div>
+                        <span className="text-white/60 block text-[11px]">Due Date</span>
+                        <span className="font-mono">{invoiceDueDate || 'Upon Receipt'}</span>
+                      </div>
+                      <div>
+                        <span className="text-white/60 block text-[11px]">Invoice Type</span>
+                        <span className="font-semibold text-amber-300">Individual Direct</span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-between gap-4 border-t border-white/10 pt-3">
+                      <div className="flex items-center gap-6 text-xs">
+                        <div>
+                          <span className="text-white/60 text-[11px] block">Items Subtotal:</span>
+                          <span className="font-mono font-semibold text-white">KES {invoiceItemsSubtotal.toLocaleString()}</span>
+                        </div>
+                        {studentArrearsComponent > 0 && (
+                          <div>
+                            <span className="text-amber-300/80 text-[11px] block">Arrears Item:</span>
+                            <span className="font-mono font-semibold text-amber-300">+ KES {studentArrearsComponent.toLocaleString()}</span>
+                          </div>
+                        )}
+                        {invoiceDiscountVal > 0 && (
+                          <div>
+                            <span className="text-emerald-300/80 text-[11px] block">Discount:</span>
+                            <span className="font-mono font-semibold text-emerald-300">- KES {invoiceDiscountVal.toLocaleString()}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="text-right">
+                        <span className="text-[11px] text-white/70 block uppercase font-bold tracking-wider">
+                          Net Amount Payable
+                        </span>
+                        <span className="text-xl font-black font-mono text-amber-400">
+                          KES {invoiceAmountPayable.toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Submission Action Buttons */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        disabled={isSubmittingInvoice}
+                        onClick={() => handleSaveIndividualInvoice('DRAFT')}
+                        className="px-4 py-2 text-xs font-bold text-slate-700 bg-slate-100 border border-slate-300 rounded-xl hover:bg-slate-200 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                      >
+                        <span className="material-symbols-outlined text-[17px] text-slate-600">drafts</span>
+                        <span>{isSubmittingInvoice ? 'Saving...' : 'Save as Draft'}</span>
+                      </button>
+                      <span className="text-[11px] text-slate-400 hidden sm:inline">
+                        (Drafts do not create active obligations or affect arrears)
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        disabled={isSubmittingInvoice}
+                        onClick={() => handleSaveIndividualInvoice('UNPAID')}
+                        className="px-5 py-2 text-xs font-bold text-white bg-[#7a1228] hover:bg-[#600e1f] rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">send</span>
+                        <span>{isSubmittingInvoice ? 'Issuing Invoice...' : `Issue Invoice (KES ${invoiceAmountPayable.toLocaleString()})`}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Created Invoice Quick-Action Notice */}
+                  {createdInvoice && (
+                    <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between gap-3 flex-wrap">
+                      <div className="flex items-center gap-2.5">
+                        <span className="material-symbols-outlined text-emerald-700 text-xl">check_circle</span>
+                        <div>
+                          <span className="text-xs font-bold text-emerald-900 block">
+                            Invoice {createdInvoice.invoiceNumber} Ready
+                          </span>
+                          <span className="text-[11px] text-emerald-700">
+                            Status: <strong className="uppercase">{createdInvoice.status}</strong> &bull; Amount: KES {createdInvoice.amountPayable.toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setIsInvoiceDetailsOpen(true)}
+                          className="px-3 py-1.5 bg-white border border-emerald-300 text-emerald-800 font-bold text-xs rounded-lg hover:bg-emerald-100 flex items-center gap-1.5 shadow-xs cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-sm text-[#7a1228]">visibility</span>
+                          <span>View & Download PDF</span>
+                        </button>
+                        {createdInvoice.status !== 'DRAFT' && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedInvoiceId(createdInvoice.id);
+                              setActiveTab('PAYMENT');
+                            }}
+                            className="px-3 py-1.5 bg-amber-600 text-white font-bold text-xs rounded-lg hover:bg-amber-700 flex items-center gap-1.5 shadow-xs cursor-pointer"
+                          >
+                            <span className="material-symbols-outlined text-sm">payments</span>
+                            <span>Record Payment</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
         </div>
+
+        {/* Invoice Details & PDF Modal */}
+        <InvoiceDetailsModal
+          isOpen={isInvoiceDetailsOpen}
+          onClose={() => setIsInvoiceDetailsOpen(false)}
+          invoice={createdInvoice}
+          student={currentStudent}
+          onRecordPayment={(inv) => {
+            setIsInvoiceDetailsOpen(false);
+            setSelectedInvoiceId(inv.id);
+            setActiveTab('PAYMENT');
+          }}
+        />
       </div>
     </div>
   );

@@ -5,6 +5,9 @@ import {
   ApiResponse,
   Student,
   Teacher,
+  TeacherProfileData,
+  TeacherCorrectionRequest,
+  TeacherEmergencyContact,
   AssessmentRecord,
   SchoolInfo,
   AcademicYear,
@@ -684,8 +687,66 @@ const coreApiService = {
   },
 
   // 4. Teachers & Staff Endpoints
-  getMyTeacherProfile: async (): Promise<ApiResponse<any>> => {
-    return apiFetch<ApiResponse<any>>('/teachers/me/profile');
+  getMyTeacherProfile: async (): Promise<ApiResponse<TeacherProfileData>> => {
+    return apiFetch<ApiResponse<TeacherProfileData>>('/teachers/me/profile');
+  },
+
+  updateMyTeacherProfile: async (data: {
+    phone?: string;
+    residentialAddress?: string;
+    emergencyContact?: TeacherEmergencyContact;
+    profilePhotoUrl?: string;
+  }): Promise<ApiResponse<TeacherProfileData>> => {
+    return apiFetch<ApiResponse<TeacherProfileData>>('/teachers/me/profile', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  submitTeacherCorrectionRequest: async (data: {
+    fieldName: string;
+    proposedValue: string;
+    reason: string;
+    evidenceUrl?: string;
+  }): Promise<ApiResponse<TeacherCorrectionRequest>> => {
+    return apiFetch<ApiResponse<TeacherCorrectionRequest>>('/teachers/me/correction-requests', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  getMyTeacherCorrectionRequests: async (): Promise<ApiResponse<TeacherCorrectionRequest[]>> => {
+    return apiFetch<ApiResponse<TeacherCorrectionRequest[]>>('/teachers/me/correction-requests');
+  },
+
+  listTeacherCorrectionRequests: async (status?: string, schoolId?: string): Promise<ApiResponse<TeacherCorrectionRequest[]>> => {
+    const q = new URLSearchParams();
+    if (status) q.append('status', status);
+    if (schoolId) q.append('schoolId', schoolId);
+    const qs = q.toString() ? `?${q.toString()}` : '';
+    return apiFetch<ApiResponse<TeacherCorrectionRequest[]>>(`/teachers/correction-requests${qs}`);
+  },
+
+  reviewTeacherCorrectionRequest: async (
+    id: string,
+    action: 'APPROVE' | 'REJECT',
+    remarks?: string
+  ): Promise<ApiResponse<TeacherCorrectionRequest>> => {
+    return apiFetch<ApiResponse<TeacherCorrectionRequest>>(`/teachers/correction-requests/${id}/review`, {
+      method: 'POST',
+      body: JSON.stringify({ action, remarks }),
+    });
+  },
+
+  getTeacherAuditHistory: async (teacherId: string): Promise<ApiResponse<any[]>> => {
+    return apiFetch<ApiResponse<any[]>>(`/teachers/${teacherId}/audit-history`);
+  },
+
+  adminUpdateTeacherProfile: async (id: string, data: any): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/teachers/${id}/admin-profile`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
   },
 
   getTeachers: async (): Promise<ApiResponse<any[]>> => {
@@ -717,22 +778,6 @@ const coreApiService = {
     });
   },
 
-  updateMyTeacherProfile: async (data: {
-    firstName?: string;
-    lastName?: string;
-    phone?: string;
-    email?: string;
-    role?: string;
-    tscNumber?: string;
-    employeeNumber?: string;
-    specialization?: string[];
-    qualification?: string;
-  }): Promise<ApiResponse<any>> => {
-    return apiFetch<ApiResponse<any>>('/teachers/me/profile', {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
-  },
 
   sendOnboardingEmail: async (data: {
     to: string;
@@ -1312,6 +1357,51 @@ const coreApiService = {
     });
   },
 
+  createIndividualInvoice: async (data: {
+    schoolId?: string;
+    studentId: string;
+    academicYearId: string;
+    termId: string;
+    dueDate: string;
+    issueDate?: string;
+    title?: string;
+    description?: string;
+    feeStructureId?: string;
+    items: Array<{
+      name: string;
+      amount?: number;
+      unitAmount?: number;
+      quantity?: number;
+      category?: string;
+      isOptional?: boolean;
+    }>;
+    discountAmount?: number;
+    includeArrears?: boolean;
+    status?: 'DRAFT' | 'UNPAID';
+  }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/finance/invoices/individual', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  issueInvoice: async (id: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/finance/invoices/${encodeURIComponent(id)}/issue`, {
+      method: 'POST',
+    });
+  },
+
+  cancelInvoice: async (id: string, reason?: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/finance/invoices/${encodeURIComponent(id)}/cancel`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  },
+
+  getInvoiceById: async (id: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/finance/invoices/${encodeURIComponent(id)}`);
+  },
+
   syncFeeBalances: async (data?: {
     schoolId?: string;
     academicYearId?: string;
@@ -1615,11 +1705,23 @@ const coreApiService = {
     );
   },
 
-  getInvoices: async (params?: { schoolId?: string; studentId?: string; status?: string }): Promise<ApiResponse<StudentInvoice[]>> => {
+  getInvoices: async (params?: {
+    schoolId?: string;
+    studentId?: string;
+    status?: string;
+    search?: string;
+    academicYearId?: string;
+    termId?: string;
+    gradeLevel?: string;
+  }): Promise<ApiResponse<StudentInvoice[]>> => {
     const q = new URLSearchParams();
     if (params?.schoolId) q.append('schoolId', params.schoolId);
     if (params?.studentId) q.append('studentId', params.studentId);
     if (params?.status) q.append('status', params.status);
+    if (params?.search) q.append('search', params.search);
+    if (params?.academicYearId) q.append('academicYearId', params.academicYearId);
+    if (params?.termId) q.append('termId', params.termId);
+    if (params?.gradeLevel) q.append('gradeLevel', params.gradeLevel);
     const qs = q.toString();
     return apiFetch<ApiResponse<StudentInvoice[]>>(`/finance/invoices${qs ? `?${qs}` : ''}`);
   },
@@ -1944,8 +2046,21 @@ const coreApiService = {
   },
 
   // 13. Dashboard & Analytics Endpoints
-  getDashboardAnalytics: async (schoolId?: string): Promise<ApiResponse<DashboardSummary>> => {
-    return apiFetch<ApiResponse<DashboardSummary>>(`/analytics/dashboard${schoolId ? `?schoolId=${schoolId}` : ''}`);
+  getDashboardAnalytics: async (
+    optionsOrSchoolId?: string | { schoolId?: string; yearId?: string; termId?: string }
+  ): Promise<ApiResponse<DashboardSummary>> => {
+    let query = '';
+    if (typeof optionsOrSchoolId === 'string') {
+      query = `?schoolId=${encodeURIComponent(optionsOrSchoolId)}`;
+    } else if (optionsOrSchoolId) {
+      const params = new URLSearchParams();
+      if (optionsOrSchoolId.schoolId) params.append('schoolId', optionsOrSchoolId.schoolId);
+      if (optionsOrSchoolId.yearId) params.append('academicYearId', optionsOrSchoolId.yearId);
+      if (optionsOrSchoolId.termId) params.append('termId', optionsOrSchoolId.termId);
+      const qStr = params.toString();
+      if (qStr) query = `?${qStr}`;
+    }
+    return apiFetch<ApiResponse<DashboardSummary>>(`/analytics/dashboard${query}`);
   },
 
   getGuardianPortalData: async (): Promise<ApiResponse<any>> => {
@@ -3327,6 +3442,117 @@ export const signatureApi = {
       method: 'POST',
       body: JSON.stringify(payload),
     });
+  },
+
+  // Document Signing Policies & Archive
+  getSigningPolicies: async (): Promise<ApiResponse<any[]>> => {
+    return apiFetch<ApiResponse<any[]>>('/signatures/policies');
+  },
+
+  getSigningPolicy: async (documentType: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/signatures/policies/${encodeURIComponent(documentType)}`);
+  },
+
+  updateSigningPolicy: async (payload: any): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/signatures/policies', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  getSignatureRecords: async (params?: {
+    limit?: number;
+    offset?: number;
+    documentType?: string;
+    documentId?: string;
+    signerId?: string;
+  }): Promise<ApiResponse<any[]>> => {
+    const q = new URLSearchParams();
+    if (params?.limit) q.set('limit', params.limit.toString());
+    if (params?.offset) q.set('offset', params.offset.toString());
+    if (params?.documentType) q.set('documentType', params.documentType);
+    if (params?.documentId) q.set('documentId', params.documentId);
+    if (params?.signerId) q.set('signerId', params.signerId);
+    const queryString = q.toString() ? `?${q.toString()}` : '';
+    return apiFetch<ApiResponse<any[]>>(`/signatures/records${queryString}`);
+  },
+
+  // Bulk Signing Operations
+  prepareBulkSigning: async (payload: {
+    documentType: string;
+    scopeDescription: string;
+    items: Array<{
+      documentId: string;
+      documentTitle: string;
+      studentId?: string;
+      studentName?: string;
+      documentVersion?: string;
+      documentContent: string;
+    }>;
+  }): Promise<ApiResponse<{
+    batch: any;
+    items: any[];
+    summary: { total: number; ready: number; blocked: number };
+  }>> => {
+    return apiFetch<ApiResponse<any>>('/signatures/bulk/prepare', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  initiateBulkChallenge: async (payload: {
+    batchId: string;
+    batchDigest: string;
+  }): Promise<ApiResponse<{
+    challengeId: string;
+    batchId: string;
+    expiresAt: string;
+    resendAvailableInSeconds: number;
+    maskedEmail: string;
+    debugOtp?: string;
+  }>> => {
+    return apiFetch<ApiResponse<any>>('/signatures/bulk/challenge', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  executeBulkSigning: async (payload: {
+    batchId: string;
+    challengeId: string;
+    otpCode: string;
+  }): Promise<ApiResponse<{
+    batch: any;
+    items: any[];
+    summary: { totalCount: number; signedCount: number; failedCount: number; status: string };
+  }>> => {
+    return apiFetch<ApiResponse<any>>('/signatures/bulk/execute', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  retryBulkSigning: async (payload: {
+    batchId: string;
+    challengeId: string;
+    otpCode: string;
+  }): Promise<ApiResponse<{
+    batch: any;
+    items: any[];
+    summary: { totalCount: number; signedCount: number; failedCount: number; status: string };
+  }>> => {
+    return apiFetch<ApiResponse<any>>('/signatures/bulk/retry', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  getBatchDetails: async (batchId: string): Promise<ApiResponse<{ batch: any; items: any[] }>> => {
+    return apiFetch<ApiResponse<any>>(`/signatures/bulk/batches/${encodeURIComponent(batchId)}`);
+  },
+
+  getMyBatches: async (): Promise<ApiResponse<any[]>> => {
+    return apiFetch<ApiResponse<any[]>>('/signatures/bulk/batches');
   },
 };
 

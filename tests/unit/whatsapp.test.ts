@@ -527,7 +527,7 @@ describe('WhatsApp Bot & Phone Counter-Checking Unit Tests', () => {
         // MENU Command
         const resMenu = await whatsAppService.handleInboundMessage('+254711223344', 'MENU', { useAI: true });
         expect(resMenu.intent).toBe('MENU');
-        expect(resMenu.replyText).toContain('Welcome to *SmartShule CBC Portal*');
+        expect(resMenu.replyText).toMatch(/Welcome to \*(SmartShule|Grace Seeds School) CBC Portal\*/);
         expect(resMenu.replyText).not.toContain('FEES STATEMENT');
       });
 

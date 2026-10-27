@@ -55,6 +55,8 @@ import { InMemoryStudentSponsorshipRepository } from './database/in-memory/InMem
 import { ISignatureRepository } from '../core/ports/repositories/ISignatureRepository';
 import { InMemorySignatureRepository } from './database/in-memory/InMemorySignatureRepository';
 import { SignatureUseCases } from '../application/signature/SignatureUseCases';
+import { ITeacherCorrectionRequestRepository } from '../core/ports/repositories/ITeacherCorrectionRequestRepository';
+import { InMemoryTeacherCorrectionRequestRepository } from './database/in-memory/InMemoryTeacherCorrectionRequestRepository';
 
 import {
   InMemoryUserRepository,
@@ -131,6 +133,7 @@ export class AppContainer {
   public curriculumTrackerRepository: ICurriculumTrackerRepository;
   public studentSponsorshipRepository: IStudentSponsorshipRepository;
   public signatureRepository: ISignatureRepository;
+  public teacherCorrectionRequestRepository: ITeacherCorrectionRequestRepository;
 
   // Services
   public readonly tokenService = new JwtAuthTokenService();
@@ -218,6 +221,8 @@ export class AppContainer {
       customRepositories?.studentSponsorshipRepository || new InMemoryStudentSponsorshipRepository();
     this.signatureRepository =
       customRepositories?.signatureRepository || new InMemorySignatureRepository();
+    this.teacherCorrectionRequestRepository =
+      customRepositories?.teacherCorrectionRequestRepository || new InMemoryTeacherCorrectionRequestRepository();
 
     this.initUseCases();
   }
@@ -252,7 +257,15 @@ export class AppContainer {
       this.mediaRepository,
       this.studentSponsorshipRepository
     );
-    this.teacherUseCases = new TeacherUseCases(this.teacherRepository, this.userRepository, this.passwordHasher);
+    this.teacherUseCases = new TeacherUseCases(
+      this.teacherRepository,
+      this.userRepository,
+      this.passwordHasher,
+      this.teacherCorrectionRequestRepository,
+      this.systemLogRepository,
+      this.academicRepository,
+      this.timetableRepository
+    );
     this.academicUseCases = new AcademicUseCases(this.academicRepository);
     this.CBCUseCases = new CBCAssessmentUseCases(
       this.CBCAssessmentRepository,
@@ -324,7 +337,10 @@ export class AppContainer {
       this.CBCAssessmentRepository,
       this.attendanceRepository,
       this.feeRepository,
-      this.userRepository
+      this.userRepository,
+      this.signatureRepository,
+      this.teacherCorrectionRequestRepository,
+      this.systemLogRepository
     );
     this.visualMediaUseCases = new VisualMediaUseCases(
       this.mediaRepository,

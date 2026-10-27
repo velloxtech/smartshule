@@ -48,7 +48,8 @@ export type TabType =
   | 'curriculum-tracker'
   | 'fee-deadline-banner'
   | 'sponsored-students'
-  | 'digital-signature';
+  | 'digital-signature'
+  | 'teacher-profile';
 
 export interface FeeBannerConfig {
   id: string;
@@ -388,6 +389,104 @@ export interface DeletedStudentRecord {
   reason?: string;
 }
 
+export interface TeacherEmergencyContact {
+  name: string;
+  phone: string;
+  relationship: string;
+}
+
+export interface TeacherDocument {
+  id: string;
+  title: string;
+  type: string;
+  url: string;
+  uploadedAt: string;
+}
+
+export interface TeacherCorrectionRequest {
+  id: string;
+  teacherId: string;
+  userId: string;
+  schoolId: string;
+  fieldName: string;
+  fieldLabel: string;
+  currentValue?: string;
+  proposedValue: string;
+  reason: string;
+  evidenceUrl?: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  reviewedByUserId?: string;
+  reviewedByName?: string;
+  reviewRemarks?: string;
+  reviewedAt?: string;
+  createdAt: string;
+  updatedAt?: string;
+  teacher?: {
+    teacherId: string;
+    employeeNumber?: string;
+    tscNumber?: string;
+    name: string;
+    email?: string;
+    phone?: string;
+  };
+}
+
+export interface TeacherProfileData {
+  id: string;
+  userId: string;
+  tscNumber?: string;
+  employeeNumber?: string;
+  specialization?: string[];
+  assignedClassStreamIds?: string[];
+  qualification?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  nationalId?: string;
+  residentialAddress?: string;
+  profilePhotoUrl?: string;
+  employmentDate?: string;
+  employmentType?: string;
+  employmentStatus?: string;
+  department?: string;
+  emergencyContact?: TeacherEmergencyContact;
+  documents?: TeacherDocument[];
+  user?: {
+    id: string;
+    email?: string;
+    firstName: string;
+    lastName: string;
+    fullName: string;
+    role: string;
+    phone?: string;
+    status: string;
+    schoolId?: string;
+    schoolName?: string;
+    mustChangePassword?: boolean;
+    createdAt?: string;
+  };
+  assignedStreamInfo?: {
+    streamId: string;
+    streamName: string;
+    classRoomId: string;
+    className: string;
+  } | null;
+  teachingAssignments?: {
+    id?: string;
+    classRoomId?: string;
+    streamId?: string;
+    dayOfWeek: string;
+    periodNumber: number;
+    learningAreaName?: string;
+    roomName?: string;
+    startTime: string;
+    endTime: string;
+    label?: string;
+  }[];
+  pendingCorrectionRequests?: TeacherCorrectionRequest[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface Teacher {
   id: string;
   userId?: string;
@@ -403,6 +502,17 @@ export interface Teacher {
   employeeNumber?: string;
   status: 'Clocked In' | 'Absent (Permit)' | 'Absent' | 'On Leave';
   clockInTime?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  nationalId?: string;
+  residentialAddress?: string;
+  profilePhotoUrl?: string;
+  employmentDate?: string;
+  employmentType?: string;
+  employmentStatus?: string;
+  department?: string;
+  emergencyContact?: TeacherEmergencyContact;
+  documents?: TeacherDocument[];
 }
 
 export interface ClassStream {
@@ -921,8 +1031,10 @@ export interface FeeItemTermBreakdown {
 export interface FeeItem {
   id?: string;
   name: string;
-  amount: number; // Total annual amount (sum of term divisions)
-  category: 'TUITION' | 'ASSESSMENT' | 'ACTIVITY' | 'BOARDING' | 'MEALS' | 'TRANSPORT' | 'ADMISSION' | 'OTHER';
+  amount: number; // Total annual or line total amount
+  quantity?: number;
+  unitAmount?: number;
+  category: 'TUITION' | 'ASSESSMENT' | 'ACTIVITY' | 'BOARDING' | 'MEALS' | 'TRANSPORT' | 'ADMISSION' | 'OTHER' | string;
   isOptional: boolean;
   termBreakdown?: FeeItemTermBreakdown;
   termDivisions?: FeeItemTermDivision[];
@@ -961,22 +1073,33 @@ export interface FeeStructure {
   updatedAt?: string;
 }
 
+export type InvoiceStatus = 'DRAFT' | 'UNPAID' | 'PARTIALLY_PAID' | 'PAID' | 'CANCELLED' | 'VOIDED' | 'CARRIED_FORWARD' | 'OVERDUE' | 'PENDING';
+
 export interface StudentInvoice {
   id: string;
   schoolId: string;
   studentId: string;
-  feeStructureId: string;
+  feeStructureId?: string;
   academicYearId: string;
   termId: string;
   invoiceNumber: string;
+  title?: string;
+  description?: string;
+  issueDate?: string;
   items: FeeItem[];
   amountBilled: number;
   discountAmount: number;
   amountPayable: number;
   amountPaid: number;
   balance: number;
-  status: 'PENDING' | 'UNPAID' | 'PARTIALLY_PAID' | 'PAID' | 'CANCELLED' | 'CARRIED_FORWARD' | 'OVERDUE';
+  status: InvoiceStatus | string;
   dueDate: string;
+  studentName?: string;
+  admissionNumber?: string;
+  gradeLevel?: string;
+  classroomName?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface DefaulterItem {
@@ -1006,6 +1129,8 @@ export interface DashboardSummary {
   academicPeriod: {
     year: string;
     term: string;
+    academicYearId?: string;
+    termId?: string;
   };
   totalStudents?: number;
   totalTeachers?: number;
@@ -1013,7 +1138,11 @@ export interface DashboardSummary {
   counts: {
     totalStudents: number;
     activeStudents: number;
+    inactiveStudents?: number;
+    boysCount?: number;
+    girlsCount?: number;
     totalTeachers: number;
+    activeTeachers?: number;
     totalNonTeachingStaff?: number;
   };
   finance: {
@@ -1021,6 +1150,18 @@ export interface DashboardSummary {
     totalCollected: number;
     totalArrears: number;
     collectionRatePercentage: number;
+    totalExpenses?: number;
+    netOperatingCash?: number;
+    pendingExpensesCount?: number;
+    defaultersCount?: number;
+    paymentMethods?: {
+      mpesa: number;
+      bank: number;
+      cash: number;
+      other: number;
+    };
+    unverifiedPaymentsCount?: number;
+    unverifiedPaymentsAmount?: number;
   };
   CBCProficiency: {
     exceeding: number;
@@ -1028,6 +1169,99 @@ export interface DashboardSummary {
     approaching: number;
     below: number;
     totalAssessments: number;
+    proficiencyRate?: number;
+  };
+  academicOverview?: {
+    formativeCount: number;
+    summativeCount: number;
+    reportCardsCount: number;
+    gradeAverages: Array<{
+      gradeLevel: string;
+      averagePercentage: number;
+      totalAssessments: number;
+    }>;
+    learningAreaPerformance: Array<{
+      learningAreaId: string;
+      name: string;
+      averagePercentage: number;
+      totalAssessments: number;
+    }>;
+    termComparison: {
+      comparisonAvailable: boolean;
+      currentTermMean: number | null;
+      previousTermName?: string;
+      previousTermMean: number | null;
+      growthDelta: number | null;
+    };
+    attentionAreas: Array<{
+      name: string;
+      type: 'GRADE' | 'LEARNING_AREA';
+      belowPercentage: number;
+      reason: string;
+    }>;
+  };
+  attendanceSummary?: {
+    hasData: boolean;
+    isToday: boolean;
+    date: string;
+    totalMarked: number;
+    present: number;
+    absent: number;
+    late: number;
+    excused: number;
+    presentPercentage: number | null;
+  };
+  enrolmentOverview?: {
+    totalEnrolled: number;
+    activeCount: number;
+    inactiveCount: number;
+    boysCount: number;
+    girlsCount: number;
+    classes: Array<{
+      id: string;
+      name: string;
+      streamCount: number;
+      boys: number;
+      girls: number;
+      total: number;
+      teacherName?: string;
+    }>;
+  };
+  pendingApprovals?: {
+    totalActionable: number;
+    pendingSignaturesCount: number;
+    pendingCorrectionRequestsCount: number;
+    unverifiedPaymentsCount: number;
+    correctionRequests?: Array<{
+      id: string;
+      teacherName: string;
+      fieldName: string;
+      requestedValue: string;
+      submittedAt: string;
+    }>;
+    unverifiedPayments?: Array<{
+      id: string;
+      receiptNumber: string;
+      studentName?: string;
+      amount: number;
+      reference: string;
+      paymentDate: string;
+    }>;
+  };
+  recentActivities?: Array<{
+    id: string;
+    timestamp: string;
+    level: string;
+    category: string;
+    action: string;
+    actorEmail?: string;
+    actorRole?: string;
+    status: string;
+    details: string;
+  }>;
+  availablePeriods?: {
+    years: Array<{ id: string; name: string; isCurrent: boolean }>;
+    terms: Array<{ id: string; name: string; isCurrent: boolean; academicYearId: string }>;
   };
 }
 

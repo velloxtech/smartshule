@@ -31,7 +31,10 @@ import {
   TeacherController,
   RegisterTeacherSchema,
   UpdateTeacherProfileSchema,
-  AssignStreamSchema
+  AssignStreamSchema,
+  SelfServiceUpdateSchema,
+  SubmitCorrectionRequestSchema,
+  ReviewCorrectionRequestSchema
 } from '../controllers/TeacherController';
 
 import {
@@ -87,6 +90,8 @@ import {
   UpdateFeeStructureSchema,
   ReversePaymentSchema,
   GenerateInvoicesSchema,
+  CreateIndividualInvoiceSchema,
+  CancelInvoiceSchema,
   SyncFeesSchema,
   AddManualArrearSchema,
   BatchAddManualArrearsSchema,
@@ -361,9 +366,21 @@ export function createApiRouter(container: AppContainer): Router {
   // ==========================================
   const teacherRouter = Router();
   teacherRouter.post('/', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.ADMISSIONS), validateBody(RegisterTeacherSchema), teacherController.registerTeacher);
+  
+  // Teacher Self-Service
   teacherRouter.get('/me/profile', authMiddleware, teacherController.getMyTeacherProfile);
-  teacherRouter.put('/me/profile', authMiddleware, validateBody(UpdateTeacherProfileSchema), teacherController.updateMyTeacherProfile);
+  teacherRouter.put('/me/profile', authMiddleware, validateBody(SelfServiceUpdateSchema), teacherController.updateMyTeacherProfile);
+  teacherRouter.post('/me/correction-requests', authMiddleware, validateBody(SubmitCorrectionRequestSchema), teacherController.submitCorrectionRequest);
+  teacherRouter.get('/me/correction-requests', authMiddleware, teacherController.getMyCorrectionRequests);
+
+  // Admin Review of Correction Requests
+  teacherRouter.get('/correction-requests', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), teacherController.listCorrectionRequests);
+  teacherRouter.post('/correction-requests/:id/review', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), validateBody(ReviewCorrectionRequestSchema), teacherController.reviewCorrectionRequest);
+
+  // Admin Teacher Management & Audit
   teacherRouter.get('/', authMiddleware, teacherController.listTeachers);
+  teacherRouter.get('/:id/audit-history', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), teacherController.getTeacherAuditHistory);
+  teacherRouter.put('/:id/admin-profile', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), validateBody(UpdateTeacherProfileSchema), teacherController.adminUpdateTeacherProfile);
   teacherRouter.get('/:id', authMiddleware, teacherController.getTeacherById);
   teacherRouter.put('/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), validateBody(UpdateTeacherProfileSchema), teacherController.updateTeacherProfile);
   teacherRouter.post('/assign-stream', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN), validateBody(AssignStreamSchema), teacherController.assignStream);
@@ -519,8 +536,12 @@ export function createApiRouter(container: AppContainer): Router {
   financeRouter.get('/structures', authMiddleware, financeController.listFeeStructures);
   financeRouter.delete('/structures/:id', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), financeController.deleteFeeStructure);
   financeRouter.post('/invoices/generate', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), validateBody(GenerateInvoicesSchema), financeController.generateInvoices);
+  financeRouter.post('/invoices/individual', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), validateBody(CreateIndividualInvoiceSchema), financeController.createIndividualInvoice);
+  financeRouter.post('/invoices/:id/issue', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), financeController.issueDraftInvoice);
+  financeRouter.post('/invoices/:id/cancel', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), validateBody(CancelInvoiceSchema), financeController.cancelInvoice);
   financeRouter.post('/sync-fees', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), validateBody(SyncFeesSchema), financeController.syncFees);
   financeRouter.get('/invoices', authMiddleware, financeController.listInvoices); // Parent isolated
+  financeRouter.get('/invoices/:id', authMiddleware, financeController.getInvoiceDetails); // Parent isolated
   financeRouter.delete('/invoices/:id', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), financeController.deleteInvoice);
   financeRouter.get('/summary', authMiddleware, financeController.getFinanceSummary); // Parent vs Admin summary
   financeRouter.post('/payments', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), validateBody(RecordPaymentSchema), financeController.recordPayment);
@@ -1296,8 +1317,22 @@ export function createApiRouter(container: AppContainer): Router {
   signatureRouter.delete('/me', signatureController.deactivateMySignature);
   signatureRouter.post('/challenge', signatureController.initiateChallenge);
   signatureRouter.post('/verify-and-sign', signatureController.verifyAndSign);
+  signatureRouter.get('/records', signatureController.listRecords);
   signatureRouter.get('/records/:documentId', signatureController.getDocumentSignatures);
   signatureRouter.post('/verify-document', signatureController.verifyDocumentIntegrity);
+
+  // Policies
+  signatureRouter.get('/policies', signatureController.getPolicies);
+  signatureRouter.get('/policies/:documentType', signatureController.getPolicyByType);
+  signatureRouter.post('/policies', signatureController.configurePolicy);
+
+  // Bulk Signing Workflows
+  signatureRouter.post('/bulk/prepare', signatureController.prepareBulkSigning);
+  signatureRouter.post('/bulk/challenge', signatureController.initiateBulkChallenge);
+  signatureRouter.post('/bulk/execute', signatureController.executeBulkSigning);
+  signatureRouter.post('/bulk/retry', signatureController.retryBulkSigning);
+  signatureRouter.get('/bulk/batches', signatureController.getMyBatches);
+  signatureRouter.get('/bulk/batches/:batchId', signatureController.getBatchDetails);
 
   router.use('/signatures', signatureRouter);
 

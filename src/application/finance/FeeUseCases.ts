@@ -152,6 +152,30 @@ export interface GenerateInvoicesDTO {
   studentId?: string;
 }
 
+export interface CreateIndividualInvoiceDTO {
+  schoolId?: string;
+  studentId: string;
+  academicYearId: string;
+  termId: string;
+  dueDate: string;
+  issueDate?: string;
+  title?: string;
+  description?: string;
+  feeStructureId?: string;
+  items: Array<{
+    id?: string;
+    name: string;
+    amount?: number;
+    unitAmount?: number;
+    quantity?: number;
+    category?: string;
+    isOptional?: boolean;
+  }>;
+  discountAmount?: number;
+  includeArrears?: boolean;
+  status?: InvoiceStatus | 'DRAFT' | 'UNPAID';
+}
+
 export interface RecordPaymentDTO {
   schoolId: string;
   invoiceId: string;
@@ -1043,6 +1067,328 @@ export class FeeUseCases {
       success: true,
       message: `Hanging invoice #${invoice.invoiceNumber} deleted successfully.`,
       deletedInvoiceId: invoiceId
+    };
+  }
+
+  // 2c. Create Individual Learner Invoice (Draft or Issued)
+  public async createIndividualInvoice(dto: CreateIndividualInvoiceDTO, requestingUser?: UserContext) {
+    this.verifyBillingAuthorization(requestingUser);
+
+    if (!dto.studentId) {
+      throw new ValidationError('Student ID is required to create an individual invoice.');
+    }
+    if (!dto.academicYearId) {
+      throw new ValidationError('Academic Year ID is required.');
+    }
+    if (!dto.termId) {
+      throw new ValidationError('Term ID is required.');
+    }
+    if (!dto.dueDate) {
+      throw new ValidationError('Due Date is required.');
+    }
+    if (!dto.items || !Array.isArray(dto.items) || dto.items.length === 0) {
+      throw new ValidationError('At least one fee line item is required.');
+    }
+
+    const student = await this.studentRepository.findById(dto.studentId);
+    if (!student) {
+      throw new NotFoundError('Student', dto.studentId);
+    }
+
+    // Check institutional scholarship (100% waiver)
+    if (this.studentSponsorshipRepository) {
+      const activeSp = await this.studentSponsorshipRepository.findByStudentId(student.id);
+      if (activeSp && activeSp.sponsorshipStatus === 'ACTIVE') {
+        throw new ConflictError(
+          `Cannot generate fee invoice: Learner ${student.fullName} is enrolled under the Institutional Scholarship Program (100% Fee Waiver) and is exempt from fee charges.`
+        );
+      }
+    }
+
+    const schoolId = dto.schoolId || student.schoolId || requestingUser?.schoolId || 'school-001';
+
+    // Normalize and validate line items
+    const normalizedItems: FeeItem[] = [];
+    let itemsTotal = 0;
+
+    for (const rawItem of dto.items) {
+      if (!rawItem.name || !rawItem.name.trim()) {
+        throw new ValidationError('Line item name is required.');
+      }
+      const qty = Math.max(1, Number(rawItem.quantity) || 1);
+      let unitPrice = 0;
+      if (rawItem.unitAmount !== undefined) {
+        unitPrice = Number(rawItem.unitAmount);
+      } else if (rawItem.amount !== undefined) {
+        unitPrice = Number(rawItem.amount) / qty;
+      }
+
+      if (isNaN(unitPrice) || unitPrice < 0) {
+        throw new ValidationError(`Invalid amount for item "${rawItem.name}". Amount cannot be negative.`);
+      }
+
+      const lineTotal = Math.round(qty * unitPrice * 100) / 100;
+      itemsTotal += lineTotal;
+
+      normalizedItems.push({
+        id: rawItem.id || IdGenerator.generate(),
+        name: rawItem.name.trim(),
+        amount: lineTotal,
+        unitAmount: unitPrice,
+        quantity: qty,
+        category: (rawItem.category as any) || 'OTHER',
+        isOptional: Boolean(rawItem.isOptional)
+      });
+    }
+
+    // Arrears Handling: Check for previous unpaid balances if explicitly requested
+    let carriedForwardBalance = 0;
+    let unpaidPriorInvoices: StudentInvoice[] = [];
+
+    if (dto.includeArrears) {
+      const priorInvoices = await this.feeRepository.findInvoices({ studentId: student.id });
+      unpaidPriorInvoices = priorInvoices.filter(
+        inv => inv.status !== InvoiceStatus.CARRIED_FORWARD &&
+               inv.status !== InvoiceStatus.DRAFT &&
+               inv.status !== InvoiceStatus.CANCELLED &&
+               inv.status !== InvoiceStatus.VOIDED &&
+               inv.balance > 0 &&
+               (inv.termId !== dto.termId || inv.academicYearId !== dto.academicYearId || inv.items.some(it => it.name.toLowerCase().includes('arrear')))
+      );
+      carriedForwardBalance = unpaidPriorInvoices.reduce((sum, inv) => sum + (Number(inv.balance) || 0), 0);
+      carriedForwardBalance = Math.round(carriedForwardBalance * 100) / 100;
+
+      if (carriedForwardBalance > 0) {
+        normalizedItems.push({
+          id: IdGenerator.generate(),
+          name: 'Previous Outstanding Arrears / Prior Balance',
+          amount: carriedForwardBalance,
+          unitAmount: carriedForwardBalance,
+          quantity: 1,
+          category: 'OTHER',
+          isOptional: false
+        });
+      }
+    }
+
+    const totalAmountBilled = Math.round((itemsTotal + carriedForwardBalance) * 100) / 100;
+
+    // Discount validation
+    const discountAmount = Math.max(0, Number(dto.discountAmount) || 0);
+    if (isNaN(discountAmount) || discountAmount < 0) {
+      throw new ValidationError('Discount amount cannot be negative.');
+    }
+    if (discountAmount > totalAmountBilled) {
+      throw new ValidationError(
+        `Discount amount (KES ${discountAmount.toLocaleString()}) cannot exceed total billed amount (KES ${totalAmountBilled.toLocaleString()}).`
+      );
+    }
+
+    const amountPayable = Math.round((totalAmountBilled - discountAmount) * 100) / 100;
+    const isDraft = (dto.status as string) === 'DRAFT' || dto.status === InvoiceStatus.DRAFT;
+
+    // Unique collision-resistant invoice number
+    const yearStr = new Date().getFullYear().toString();
+    let invoiceNumber = '';
+    let attempts = 0;
+    do {
+      attempts++;
+      const rand = Math.floor(100000 + Math.random() * 900000);
+      invoiceNumber = `INV-${yearStr}-${rand}`;
+      const existing = await this.feeRepository.findInvoiceByNumber(invoiceNumber);
+      if (!existing) break;
+    } while (attempts < 10);
+
+    const issueDate = dto.issueDate || new Date().toISOString().split('T')[0];
+
+    const invoice = StudentInvoice.create(
+      {
+        schoolId,
+        studentId: student.id,
+        feeStructureId: dto.feeStructureId || 'INDIVIDUAL_INVOICE',
+        academicYearId: dto.academicYearId,
+        termId: dto.termId,
+        invoiceNumber,
+        items: normalizedItems,
+        amountBilled: totalAmountBilled,
+        discountAmount,
+        amountPayable,
+        amountPaid: 0,
+        balance: amountPayable,
+        status: isDraft ? InvoiceStatus.DRAFT : InvoiceStatus.UNPAID,
+        dueDate: dto.dueDate,
+        title: dto.title || `Invoice for ${student.fullName}`,
+        description: dto.description,
+        issueDate
+      },
+      IdGenerator.generate()
+    );
+
+    await this.feeRepository.saveInvoice(invoice);
+
+    // If issuing now (not draft) and carried forward arrears were included, mark prior invoices as CARRIED_FORWARD
+    if (!isDraft && carriedForwardBalance > 0 && unpaidPriorInvoices.length > 0) {
+      for (const prevInv of unpaidPriorInvoices) {
+        prevInv.markCarriedForward();
+        await this.feeRepository.updateInvoice(prevInv);
+      }
+    }
+
+    const auditDetails = isDraft
+      ? `Saved draft invoice #${invoiceNumber} for learner ${student.fullName} (Adm: ${student.admissionNumber}) amounting to KES ${amountPayable.toLocaleString()}.`
+      : `Issued individual invoice #${invoiceNumber} for learner ${student.fullName} (Adm: ${student.admissionNumber}) amounting to KES ${amountPayable.toLocaleString()}.`;
+
+    return {
+      message: auditDetails,
+      invoice: {
+        ...invoice.toJSON(),
+        studentName: student.fullName,
+        admissionNumber: student.admissionNumber,
+        gradeLevel: student.gradeLevel
+      }
+    };
+  }
+
+  // 2d. Issue a Previously Saved Draft Invoice
+  public async issueDraftInvoice(invoiceId: string, requestingUser?: UserContext) {
+    this.verifyBillingAuthorization(requestingUser);
+
+    const invoice = await this.feeRepository.findInvoiceById(invoiceId);
+    if (!invoice) {
+      throw new NotFoundError('Invoice', invoiceId);
+    }
+
+    if (invoice.status !== InvoiceStatus.DRAFT && (invoice.status as any) !== 'DRAFT') {
+      throw new ConflictError(
+        `Invoice #${invoice.invoiceNumber} cannot be issued because it is in '${invoice.status}' status (must be DRAFT).`
+      );
+    }
+
+    const student = await this.studentRepository.findById(invoice.studentId);
+
+    // Promote status to issued
+    invoice.issue();
+    await this.feeRepository.updateInvoice(invoice);
+
+    // If invoice had carried-forward arrears item, mark prior invoices as CARRIED_FORWARD now
+    const arrearItem = (invoice.items || []).find(
+      it => (it.name || '').toLowerCase().includes('carried forward') || (it.name || '').toLowerCase().includes('arrear')
+    );
+    if (arrearItem && student) {
+      const priorInvoices = await this.feeRepository.findInvoices({ studentId: student.id });
+      const unpaidPrior = priorInvoices.filter(
+        i => i.id !== invoice.id &&
+             i.status !== InvoiceStatus.CARRIED_FORWARD &&
+             i.status !== InvoiceStatus.DRAFT &&
+             i.status !== InvoiceStatus.CANCELLED &&
+             i.status !== InvoiceStatus.VOIDED &&
+             i.balance > 0
+      );
+      for (const prevInv of unpaidPrior) {
+        prevInv.markCarriedForward();
+        await this.feeRepository.updateInvoice(prevInv);
+      }
+    }
+
+    return {
+      message: `Invoice #${invoice.invoiceNumber} has been officially issued to ${student ? student.fullName : 'learner'}.`,
+      invoice: {
+        ...invoice.toJSON(),
+        studentName: student ? student.fullName : 'Learner',
+        admissionNumber: student ? student.admissionNumber : 'N/A'
+      }
+    };
+  }
+
+  // 2e. Cancel / Void an Invoice (Only allowed when amountPaid === 0)
+  public async cancelInvoice(invoiceId: string, reason?: string, requestingUser?: UserContext) {
+    this.verifyBillingAuthorization(requestingUser);
+
+    const invoice = await this.feeRepository.findInvoiceById(invoiceId);
+    if (!invoice) {
+      throw new NotFoundError('Invoice', invoiceId);
+    }
+
+    if (invoice.status === InvoiceStatus.CANCELLED || invoice.status === InvoiceStatus.VOIDED) {
+      throw new ConflictError(`Invoice #${invoice.invoiceNumber} is already cancelled.`);
+    }
+
+    if (invoice.amountPaid > 0) {
+      throw new ConflictError(
+        `Cannot cancel invoice #${invoice.invoiceNumber}: payments totaling KES ${invoice.amountPaid.toLocaleString()} have already been allocated to this invoice. Please reverse or reallocate payments first.`
+      );
+    }
+
+    invoice.cancel(reason);
+    await this.feeRepository.updateInvoice(invoice);
+
+    return {
+      success: true,
+      message: `Invoice #${invoice.invoiceNumber} has been cancelled successfully.`,
+      invoice: invoice.toJSON()
+    };
+  }
+
+  // 2f. Retrieve Complete Invoice Details with Allocated Payments
+  public async getInvoiceDetails(invoiceId: string, requestingUser?: UserContext) {
+    const invoice = await this.feeRepository.findInvoiceById(invoiceId);
+    if (!invoice) {
+      throw new NotFoundError('Invoice', invoiceId);
+    }
+
+    // Strict Parent Data Isolation
+    if (requestingUser?.role === UserRole.GUARDIAN || requestingUser?.role === UserRole.PARENT) {
+      const childIds = await this.getLinkedStudentIdsForUser(requestingUser.userId);
+      if (!childIds.includes(invoice.studentId)) {
+        throw new ForbiddenError('Access denied: You are only permitted to view invoices for your linked children.');
+      }
+    }
+
+    const student = await this.studentRepository.findById(invoice.studentId);
+    const payments = await this.feeRepository.findPayments({ invoiceId: invoice.id });
+    const allocatedPayments = payments.filter(
+      p => p.status === PaymentStatus.COMPLETED || (!p.status && (p.amount || 0) > 0)
+    );
+
+    let academicYearName = new Date().getFullYear().toString();
+    let termName = invoice.termId;
+
+    if (this.academicRepository) {
+      if (invoice.academicYearId) {
+        try {
+          const yr = await this.academicRepository.findYearById(invoice.academicYearId);
+          if (yr) academicYearName = yr.name;
+        } catch {}
+      }
+      if (invoice.termId && invoice.termId !== 'ALL' && invoice.termId !== 'ANNUAL') {
+        try {
+          const tm = await this.academicRepository.findTermById(invoice.termId);
+          if (tm) termName = tm.name;
+        } catch {}
+      }
+    }
+
+    return {
+      invoice: invoice.toJSON(),
+      student: student ? {
+        id: student.id,
+        fullName: student.fullName,
+        admissionNumber: student.admissionNumber,
+        gradeLevel: student.gradeLevel,
+        classroomId: student.classroomId
+      } : null,
+      allocatedPayments: allocatedPayments.map(p => ({
+        id: p.id,
+        receiptNumber: p.receiptNumber,
+        amount: p.amount,
+        paymentMethod: p.paymentMethod,
+        transactionReference: p.transactionReference,
+        paymentDate: p.paymentDate
+      })),
+      academicPeriod: {
+        year: academicYearName,
+        term: termName
+      }
     };
   }
 
@@ -2148,11 +2494,14 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
     return guardian;
   }
 
-  // 6. Invoices Query with Parent Isolation
+  // 6. Invoices Query with Parent Isolation & Rich Filtering
   public async listInvoices(filters: {
     schoolId?: string;
     studentId?: string;
     termId?: string;
+    academicYearId?: string;
+    gradeLevel?: string;
+    search?: string;
     status?: InvoiceStatus;
     requestingUser?: UserContext;
   }) {
@@ -2182,10 +2531,11 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
       studentId: studentIdsToQuery?.length === 1 ? studentIdsToQuery[0] : undefined,
       studentIds: studentIdsToQuery && studentIdsToQuery.length > 1 ? studentIdsToQuery : undefined,
       termId: filters.termId,
+      academicYearId: filters.academicYearId,
       status: filters.status
     });
 
-    const result = [];
+    let result = [];
     const yearCache = new Map<string, any>();
     const termCache = new Map<string, any>();
 
@@ -2252,6 +2602,22 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
         academicYear: academicYearName || new Date().getFullYear().toString(),
         termName: termName || (inv.termId === 'ALL' ? 'Annual' : undefined)
       });
+    }
+
+    // Filter by gradeLevel if specified
+    if (filters.gradeLevel && filters.gradeLevel !== 'ALL') {
+      result = result.filter(inv => (inv.gradeLevel || '').toLowerCase() === filters.gradeLevel!.toLowerCase());
+    }
+
+    // Filter by search query if specified
+    if (filters.search && filters.search.trim()) {
+      const q = filters.search.toLowerCase().trim();
+      result = result.filter(inv =>
+        (inv.studentName && inv.studentName.toLowerCase().includes(q)) ||
+        (inv.admissionNumber && inv.admissionNumber.toLowerCase().includes(q)) ||
+        (inv.invoiceNumber && inv.invoiceNumber.toLowerCase().includes(q)) ||
+        (inv.title && inv.title.toLowerCase().includes(q))
+      );
     }
 
     return result;

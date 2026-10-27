@@ -674,20 +674,36 @@ export class CBCAssessmentUseCases {
       academicYearId: dto.academicYearId
     }).catch(() => []);
 
+    const allYearReports = await this.CBCRepository.findReportCardsByStudent(dto.studentId).catch(() => []);
+    const yearReports = allYearReports.filter(r => r.academicYearId === dto.academicYearId);
+    const yearTerms = await this.academicRepository.findTermsByYear(dto.academicYearId).catch(() => []);
+
+    const getTermNumber = (tid: string): number => {
+      const match = yearTerms.find(t => t.id === tid);
+      if (match?.termNumber) return Number(match.termNumber);
+      const lower = (tid || '').toLowerCase();
+      if (lower.includes('1') || lower.includes('t1')) return 1;
+      if (lower.includes('2') || lower.includes('t2')) return 2;
+      if (lower.includes('3') || lower.includes('t3')) return 3;
+      return 1;
+    };
+
+    const currentTermNumber = getTermNumber(dto.termId);
+    const isTerm1 = currentTermNumber === 1;
+    const isTerm2 = currentTermNumber === 2;
+    const isTerm3 = currentTermNumber === 3;
+
     const learningAreaAssessments: LearningAreaReportEntry[] = [];
     let totalScoreSum = 0;
 
     const toPercent = (score: number, level: PerformanceLevel): number => {
+      if (score === 0) return 0;
       if (score > 4) return Math.min(100, Math.round(score));
       if (level === PerformanceLevel.EXCEEDING_EXPECTATIONS) return 84;
       if (level === PerformanceLevel.MEETING_EXPECTATIONS) return 74;
       if (level === PerformanceLevel.APPROACHING_EXPECTATIONS) return 58;
       return 42;
     };
-
-    const isTerm1 = dto.termId?.includes('1') || dto.termId?.toLowerCase().includes('term-1');
-    const isTerm2 = dto.termId?.includes('2') || dto.termId?.toLowerCase().includes('term-2');
-    const isTerm3 = dto.termId?.includes('3') || dto.termId?.toLowerCase().includes('term-3') || (!isTerm1 && !isTerm2);
 
     for (const summ of summatives) {
       const area = await this.academicRepository.findLearningAreaById(summ.learningAreaId).catch(() => null);
@@ -701,7 +717,9 @@ export class CBCAssessmentUseCases {
           summMaxScore = withScores.reduce((acc, s) => acc + (s.maxScore || 100), 0);
         }
       }
-      const pct = toPercent(summRawScore && summMaxScore && summMaxScore > 0 ? (summRawScore / summMaxScore) * 100 : rubricVal, summ.overallPerformanceLevel);
+      const pct = (summRawScore !== undefined && summMaxScore !== undefined && summMaxScore > 0)
+        ? Math.min(100, Math.round((summRawScore / summMaxScore) * 100))
+        : toPercent(rubricVal, summ.overallPerformanceLevel);
       totalScoreSum += pct;
 
       learningAreaAssessments.push({
@@ -723,91 +741,180 @@ export class CBCAssessmentUseCases {
     for (const area of allGradeAreas) {
       if (!learningAreaAssessments.some(a => a.learningAreaId === area.id || a.learningAreaName.toLowerCase() === area.name.toLowerCase())) {
         const areaFormatives = formatives.filter(f => f.learningAreaId === area.id);
-        let level = PerformanceLevel.MEETING_EXPECTATIONS;
-        let rubricVal = 3;
-        let teacherRemarks = 'Demonstrates steady understanding and progress in continuous learning outcomes.';
         if (areaFormatives.length > 0) {
+          let level = PerformanceLevel.MEETING_EXPECTATIONS;
+          let rubricVal = 3;
           const avg = areaFormatives.reduce((acc, curr) => acc + PerformanceLevelScores[curr.performanceLevel].score, 0) / areaFormatives.length;
           if (avg >= 3.5) level = PerformanceLevel.EXCEEDING_EXPECTATIONS;
           else if (avg >= 2.5) level = PerformanceLevel.MEETING_EXPECTATIONS;
           else if (avg >= 1.5) level = PerformanceLevel.APPROACHING_EXPECTATIONS;
           else level = PerformanceLevel.BELOW_EXPECTATIONS;
           rubricVal = PerformanceLevelScores[level].score;
-          teacherRemarks = `Continuous assessment indicates ${PerformanceLevelScores[level].label.toLowerCase()}.`;
-        }
-        const pct = toPercent(rubricVal, level);
-        totalScoreSum += pct;
+          const teacherRemarks = `Continuous assessment indicates ${PerformanceLevelScores[level].label.toLowerCase()}.`;
 
-        learningAreaAssessments.push({
-          learningAreaId: area.id,
-          learningAreaName: area.name,
-          code: area.code,
-          levelLabel: level === PerformanceLevel.EXCEEDING_EXPECTATIONS ? 'EE' : level === PerformanceLevel.MEETING_EXPECTATIONS ? 'ME' : level === PerformanceLevel.APPROACHING_EXPECTATIONS ? 'AE' : 'BE',
-          performanceLevel: level,
-          score: pct,
-          rubricScore: rubricVal,
-          term1Score: isTerm1 ? pct : undefined,
-          term2Score: isTerm2 ? pct : undefined,
-          term3Score: isTerm3 ? pct : undefined,
-          teacherRemarks
-        });
+          const pct = toPercent(rubricVal, level);
+          totalScoreSum += pct;
+
+          learningAreaAssessments.push({
+            learningAreaId: area.id,
+            learningAreaName: area.name,
+            code: area.code,
+            levelLabel: level === PerformanceLevel.EXCEEDING_EXPECTATIONS ? 'EE' : level === PerformanceLevel.MEETING_EXPECTATIONS ? 'ME' : level === PerformanceLevel.APPROACHING_EXPECTATIONS ? 'AE' : 'BE',
+            performanceLevel: level,
+            score: pct,
+            rubricScore: rubricVal,
+            term1Score: isTerm1 ? pct : undefined,
+            term2Score: isTerm2 ? pct : undefined,
+            term3Score: isTerm3 ? pct : undefined,
+            teacherRemarks
+          });
+        }
       }
     }
 
     for (let idx = 0; idx < learningAreaAssessments.length; idx++) {
       const entry = learningAreaAssessments[idx];
-      const t1 = allYearSummatives.find(s => s.learningAreaId === entry.learningAreaId && (s.termId?.includes('1') || s.termId?.toLowerCase().includes('term-1')));
-      const t2 = allYearSummatives.find(s => s.learningAreaId === entry.learningAreaId && (s.termId?.includes('2') || s.termId?.toLowerCase().includes('term-2')));
-      const t3 = allYearSummatives.find(s => s.learningAreaId === entry.learningAreaId && (s.termId?.includes('3') || s.termId?.toLowerCase().includes('term-3')));
-      if (t1) entry.term1Score = toPercent(PerformanceLevelScores[t1.overallPerformanceLevel].score, t1.overallPerformanceLevel);
-      if (t2) entry.term2Score = toPercent(PerformanceLevelScores[t2.overallPerformanceLevel].score, t2.overallPerformanceLevel);
-      if (t3) entry.term3Score = toPercent(PerformanceLevelScores[t3.overallPerformanceLevel].score, t3.overallPerformanceLevel);
 
-      if (entry.term1Score === undefined) entry.term1Score = entry.score;
-      if (entry.term2Score === undefined) entry.term2Score = entry.score;
-      if (entry.term3Score === undefined) entry.term3Score = entry.score;
+      // Current term score is guaranteed
+      if (currentTermNumber === 1) entry.term1Score = entry.score;
+      if (currentTermNumber === 2) entry.term2Score = entry.score;
+      if (currentTermNumber === 3) entry.term3Score = entry.score;
+
+      // Check Term 1 records if not current term
+      if (currentTermNumber !== 1) {
+        const t1Rep = yearReports.find(r => getTermNumber(r.termId) === 1);
+        const t1Entry = t1Rep?.learningAreaAssessments?.find(a => a.learningAreaId === entry.learningAreaId);
+        if (t1Entry && t1Entry.score !== undefined && t1Entry.score !== null) {
+          entry.term1Score = Number(t1Entry.score);
+        } else {
+          const t1Summ = allYearSummatives.find(s => s.learningAreaId === entry.learningAreaId && getTermNumber(s.termId) === 1);
+          if (t1Summ) {
+            let t1Raw: number | undefined;
+            let t1Max: number | undefined;
+            if (t1Summ.strandScores && t1Summ.strandScores.length > 0) {
+              const withScores = t1Summ.strandScores.filter(s => s.rawScore !== undefined && s.maxScore !== undefined && s.maxScore > 0);
+              if (withScores.length > 0) {
+                t1Raw = withScores.reduce((acc, s) => acc + (s.rawScore || 0), 0);
+                t1Max = withScores.reduce((acc, s) => acc + (s.maxScore || 100), 0);
+              }
+            }
+            entry.term1Score = (t1Raw !== undefined && t1Max !== undefined && t1Max > 0)
+              ? Math.min(100, Math.round((t1Raw / t1Max) * 100))
+              : toPercent(PerformanceLevelScores[t1Summ.overallPerformanceLevel].score, t1Summ.overallPerformanceLevel);
+          }
+        }
+      }
+
+      // Check Term 2 records if not current term
+      if (currentTermNumber !== 2) {
+        const t2Rep = yearReports.find(r => getTermNumber(r.termId) === 2);
+        const t2Entry = t2Rep?.learningAreaAssessments?.find(a => a.learningAreaId === entry.learningAreaId);
+        if (t2Entry && t2Entry.score !== undefined && t2Entry.score !== null) {
+          entry.term2Score = Number(t2Entry.score);
+        } else {
+          const t2Summ = allYearSummatives.find(s => s.learningAreaId === entry.learningAreaId && getTermNumber(s.termId) === 2);
+          if (t2Summ) {
+            let t2Raw: number | undefined;
+            let t2Max: number | undefined;
+            if (t2Summ.strandScores && t2Summ.strandScores.length > 0) {
+              const withScores = t2Summ.strandScores.filter(s => s.rawScore !== undefined && s.maxScore !== undefined && s.maxScore > 0);
+              if (withScores.length > 0) {
+                t2Raw = withScores.reduce((acc, s) => acc + (s.rawScore || 0), 0);
+                t2Max = withScores.reduce((acc, s) => acc + (s.maxScore || 100), 0);
+              }
+            }
+            entry.term2Score = (t2Raw !== undefined && t2Max !== undefined && t2Max > 0)
+              ? Math.min(100, Math.round((t2Raw / t2Max) * 100))
+              : toPercent(PerformanceLevelScores[t2Summ.overallPerformanceLevel].score, t2Summ.overallPerformanceLevel);
+          }
+        }
+      }
+
+      // Check Term 3 records if not current term
+      if (currentTermNumber !== 3) {
+        const t3Rep = yearReports.find(r => getTermNumber(r.termId) === 3);
+        const t3Entry = t3Rep?.learningAreaAssessments?.find(a => a.learningAreaId === entry.learningAreaId);
+        if (t3Entry && t3Entry.score !== undefined && t3Entry.score !== null) {
+          entry.term3Score = Number(t3Entry.score);
+        } else {
+          const t3Summ = allYearSummatives.find(s => s.learningAreaId === entry.learningAreaId && getTermNumber(s.termId) === 3);
+          if (t3Summ) {
+            let t3Raw: number | undefined;
+            let t3Max: number | undefined;
+            if (t3Summ.strandScores && t3Summ.strandScores.length > 0) {
+              const withScores = t3Summ.strandScores.filter(s => s.rawScore !== undefined && s.maxScore !== undefined && s.maxScore > 0);
+              if (withScores.length > 0) {
+                t3Raw = withScores.reduce((acc, s) => acc + (s.rawScore || 0), 0);
+                t3Max = withScores.reduce((acc, s) => acc + (s.maxScore || 100), 0);
+              }
+            }
+            entry.term3Score = (t3Raw !== undefined && t3Max !== undefined && t3Max > 0)
+              ? Math.min(100, Math.round((t3Raw / t3Max) * 100))
+              : toPercent(PerformanceLevelScores[t3Summ.overallPerformanceLevel].score, t3Summ.overallPerformanceLevel);
+          }
+        }
+      }
     }
 
     const averageScore = learningAreaAssessments.length > 0
       ? Number((totalScoreSum / learningAreaAssessments.length).toFixed(2))
-      : 75.0;
+      : 0.0;
 
-    let overallLevel = PerformanceLevel.MEETING_EXPECTATIONS;
-    if (averageScore >= 80) overallLevel = PerformanceLevel.EXCEEDING_EXPECTATIONS;
-    else if (averageScore >= 65) overallLevel = PerformanceLevel.MEETING_EXPECTATIONS;
-    else if (averageScore >= 50) overallLevel = PerformanceLevel.APPROACHING_EXPECTATIONS;
-    else overallLevel = PerformanceLevel.BELOW_EXPECTATIONS;
+    let overallLevel = PerformanceLevel.BELOW_EXPECTATIONS;
+    if (learningAreaAssessments.length > 0) {
+      if (averageScore >= 80) overallLevel = PerformanceLevel.EXCEEDING_EXPECTATIONS;
+      else if (averageScore >= 65) overallLevel = PerformanceLevel.MEETING_EXPECTATIONS;
+      else if (averageScore >= 50) overallLevel = PerformanceLevel.APPROACHING_EXPECTATIONS;
+      else overallLevel = PerformanceLevel.BELOW_EXPECTATIONS;
+    }
 
     const termTrends: TermTrendEntry[] = [];
-    const t1Scores = learningAreaAssessments.map(a => a.term1Score).filter((s): s is number => s !== undefined);
-    const term1Avg = t1Scores.length > 0 ? Math.round(t1Scores.reduce((sum, s) => sum + s, 0) / t1Scores.length) : Math.round(averageScore);
-    termTrends.push({
-      term: 'Term 1',
-      termNumber: 1,
-      averageScore: term1Avg,
-      performanceLevel: term1Avg >= 80 ? PerformanceLevel.EXCEEDING_EXPECTATIONS : term1Avg >= 65 ? PerformanceLevel.MEETING_EXPECTATIONS : PerformanceLevel.APPROACHING_EXPECTATIONS,
-      status: isTerm1 ? 'CURRENT' : 'COMPLETED'
-    });
-
-    const t2Scores = learningAreaAssessments.map(a => a.term2Score).filter((s): s is number => s !== undefined);
-    const term2Avg = t2Scores.length > 0 ? Math.round(t2Scores.reduce((sum, s) => sum + s, 0) / t2Scores.length) : Math.round(averageScore);
-    termTrends.push({
-      term: 'Term 2',
-      termNumber: 2,
-      averageScore: term2Avg,
-      performanceLevel: term2Avg >= 80 ? PerformanceLevel.EXCEEDING_EXPECTATIONS : term2Avg >= 65 ? PerformanceLevel.MEETING_EXPECTATIONS : PerformanceLevel.APPROACHING_EXPECTATIONS,
-      status: isTerm2 ? 'CURRENT' : (isTerm3 ? 'COMPLETED' : 'UPCOMING')
-    });
-
-    const t3Scores = learningAreaAssessments.map(a => a.term3Score).filter((s): s is number => s !== undefined);
-    const term3Avg = t3Scores.length > 0 ? Math.round(t3Scores.reduce((sum, s) => sum + s, 0) / t3Scores.length) : Math.round(averageScore);
-    termTrends.push({
-      term: 'Term 3',
-      termNumber: 3,
-      averageScore: term3Avg,
-      performanceLevel: term3Avg >= 80 ? PerformanceLevel.EXCEEDING_EXPECTATIONS : term3Avg >= 65 ? PerformanceLevel.MEETING_EXPECTATIONS : PerformanceLevel.APPROACHING_EXPECTATIONS,
-      status: isTerm3 ? 'CURRENT' : 'UPCOMING'
-    });
+    for (let tNum = 1; tNum <= 3; tNum++) {
+      if (tNum === currentTermNumber) {
+        if (learningAreaAssessments.length > 0) {
+          termTrends.push({
+            term: `Term ${tNum}`,
+            termNumber: tNum,
+            averageScore: Math.round(averageScore),
+            performanceLevel: overallLevel,
+            status: 'CURRENT'
+          });
+        }
+      } else {
+        const pastRep = yearReports.find(r => getTermNumber(r.termId) === tNum);
+        if (pastRep && Array.isArray(pastRep.learningAreaAssessments) && pastRep.learningAreaAssessments.length > 0) {
+          const repAvg = pastRep.overallAverageScore !== undefined && pastRep.overallAverageScore !== null
+            ? (pastRep.overallAverageScore <= 4 ? Math.round(pastRep.overallAverageScore * 25) : Math.round(pastRep.overallAverageScore))
+            : Math.round(
+                pastRep.learningAreaAssessments.reduce((sum, a) => sum + (Number(a.score) || 0), 0) /
+                pastRep.learningAreaAssessments.length
+              );
+          termTrends.push({
+            term: `Term ${tNum}`,
+            termNumber: tNum,
+            averageScore: repAvg,
+            performanceLevel: pastRep.overallPerformanceLevel || (repAvg >= 80 ? PerformanceLevel.EXCEEDING_EXPECTATIONS : repAvg >= 65 ? PerformanceLevel.MEETING_EXPECTATIONS : PerformanceLevel.APPROACHING_EXPECTATIONS),
+            status: tNum < currentTermNumber ? 'COMPLETED' : 'UPCOMING'
+          });
+        } else {
+          // Check if any learning area has verified marks for this term
+          const tScores = learningAreaAssessments
+            .map(a => tNum === 1 ? a.term1Score : tNum === 2 ? a.term2Score : a.term3Score)
+            .filter((s): s is number => s !== undefined && s !== null);
+          if (tScores.length > 0) {
+            const tAvg = Math.round(tScores.reduce((sum, s) => sum + s, 0) / tScores.length);
+            termTrends.push({
+              term: `Term ${tNum}`,
+              termNumber: tNum,
+              averageScore: tAvg,
+              performanceLevel: tAvg >= 80 ? PerformanceLevel.EXCEEDING_EXPECTATIONS : tAvg >= 65 ? PerformanceLevel.MEETING_EXPECTATIONS : PerformanceLevel.APPROACHING_EXPECTATIONS,
+              status: tNum < currentTermNumber ? 'COMPLETED' : 'UPCOMING'
+            });
+          }
+        }
+      }
+    }
+    termTrends.sort((a, b) => a.termNumber - b.termNumber);
 
     const competencyKeys = Object.values(CoreCompetency);
     const coreCompetencyAssessments: CoreCompetencyAssessmentEntry[] = competencyKeys.map(comp => {
@@ -950,69 +1057,110 @@ export class CBCAssessmentUseCases {
     const student = await this.studentRepository.findById(studentId);
     const reportData = reportCard.toJSON();
 
-    if (!reportData.termTrends || (reportData.termTrends as any[]).length === 0) {
-      const currentAvg = reportData.overallAverageScore
-        ? (reportData.overallAverageScore <= 4 ? Math.round(reportData.overallAverageScore * 25) : Math.round(reportData.overallAverageScore))
-        : 78;
+    const allReports = await this.CBCRepository.findReportCardsByStudent(studentId).catch(() => []);
+    const yearReports = allReports.filter(r => r.academicYearId === academicYearId);
+    const yearTerms = await this.academicRepository.findTermsByYear(academicYearId).catch(() => []);
 
-      const currentTermNumber = termId?.includes('1') ? 1 : termId?.includes('2') ? 2 : 3;
+    const getTermNumber = (tid: string): number => {
+      const match = yearTerms.find(t => t.id === tid);
+      if (match?.termNumber) return Number(match.termNumber);
+      const lower = (tid || '').toLowerCase();
+      if (lower.includes('1') || lower.includes('t1')) return 1;
+      if (lower.includes('2') || lower.includes('t2')) return 2;
+      if (lower.includes('3') || lower.includes('t3')) return 3;
+      return 1;
+    };
 
-      const allReports = await this.CBCRepository.findReportCardsByStudent(studentId).catch(() => []);
-      const yearReports = allReports.filter(r => r.academicYearId === academicYearId);
+    const currentTermNumber = getTermNumber(termId);
 
-      const trends: TermTrendEntry[] = [];
-      const t1Rep = yearReports.find(r => r.termId?.includes('1') || r.termId?.toLowerCase().includes('term-1'));
-      const t2Rep = yearReports.find(r => r.termId?.includes('2') || r.termId?.toLowerCase().includes('term-2'));
-      const t3Rep = yearReports.find(r => r.termId?.includes('3') || r.termId?.toLowerCase().includes('term-3'));
-
-      const t1Avg = t1Rep
-        ? (t1Rep.overallAverageScore <= 4 ? Math.round(t1Rep.overallAverageScore * 25) : Math.round(t1Rep.overallAverageScore))
-        : Math.max(45, Math.min(100, Math.round(currentAvg - 5)));
-      const t2Avg = t2Rep
-        ? (t2Rep.overallAverageScore <= 4 ? Math.round(t2Rep.overallAverageScore * 25) : Math.round(t2Rep.overallAverageScore))
-        : Math.max(45, Math.min(100, Math.round(currentAvg - 2)));
-      const t3Avg = t3Rep
-        ? (t3Rep.overallAverageScore <= 4 ? Math.round(t3Rep.overallAverageScore * 25) : Math.round(t3Rep.overallAverageScore))
-        : currentAvg;
-
-      trends.push({
-        term: 'Term 1',
-        termNumber: 1,
-        averageScore: t1Avg,
-        performanceLevel: t1Avg >= 80 ? 'EE' : t1Avg >= 65 ? 'ME' : t1Avg >= 50 ? 'AE' : 'BE',
-        status: currentTermNumber === 1 ? 'CURRENT' : 'COMPLETED'
-      });
-
-      trends.push({
-        term: 'Term 2',
-        termNumber: 2,
-        averageScore: t2Avg,
-        performanceLevel: t2Avg >= 80 ? 'EE' : t2Avg >= 65 ? 'ME' : t2Avg >= 50 ? 'AE' : 'BE',
-        status: currentTermNumber === 2 ? 'CURRENT' : (currentTermNumber > 2 ? 'COMPLETED' : 'UPCOMING')
-      });
-
-      trends.push({
-        term: 'Term 3',
-        termNumber: 3,
-        averageScore: t3Avg,
-        performanceLevel: t3Avg >= 80 ? 'EE' : t3Avg >= 65 ? 'ME' : t3Avg >= 50 ? 'AE' : 'BE',
-        status: currentTermNumber === 3 ? 'CURRENT' : 'UPCOMING'
-      });
-
-      reportData.termTrends = trends;
+    // Reconstruct verified term trends using ONLY genuine academic records
+    const trends: TermTrendEntry[] = [];
+    for (let tNum = 1; tNum <= 3; tNum++) {
+      if (tNum === currentTermNumber) {
+        const hasEvaluations = Array.isArray(reportData.learningAreaAssessments) && reportData.learningAreaAssessments.length > 0;
+        if (hasEvaluations) {
+          const avg = reportData.overallAverageScore !== undefined && reportData.overallAverageScore !== null
+            ? (reportData.overallAverageScore <= 4 ? Math.round(reportData.overallAverageScore * 25) : Math.round(reportData.overallAverageScore))
+            : Math.round(
+                reportData.learningAreaAssessments.reduce((sum: number, a: any) => sum + (Number(a.score) || 0), 0) /
+                reportData.learningAreaAssessments.length
+              );
+          trends.push({
+            term: `Term ${tNum}`,
+            termNumber: tNum,
+            averageScore: avg,
+            performanceLevel: avg >= 80 ? 'EE' : avg >= 65 ? 'ME' : avg >= 50 ? 'AE' : 'BE',
+            status: 'CURRENT'
+          });
+        }
+      } else {
+        const rep = yearReports.find(r => getTermNumber(r.termId) === tNum && r.id !== reportCard.id);
+        if (rep && Array.isArray(rep.learningAreaAssessments) && rep.learningAreaAssessments.length > 0) {
+          const avg = rep.overallAverageScore !== undefined && rep.overallAverageScore !== null
+            ? (rep.overallAverageScore <= 4 ? Math.round(rep.overallAverageScore * 25) : Math.round(rep.overallAverageScore))
+            : Math.round(
+                rep.learningAreaAssessments.reduce((sum, a) => sum + (Number(a.score) || 0), 0) /
+                rep.learningAreaAssessments.length
+              );
+          trends.push({
+            term: `Term ${tNum}`,
+            termNumber: tNum,
+            averageScore: avg,
+            performanceLevel: rep.overallPerformanceLevel || (avg >= 80 ? 'EE' : avg >= 65 ? 'ME' : avg >= 50 ? 'AE' : 'BE'),
+            status: tNum < currentTermNumber ? 'COMPLETED' : 'UPCOMING'
+          });
+        }
+      }
     }
 
+    reportData.termTrends = trends.sort((a, b) => a.termNumber - b.termNumber);
+
     if (Array.isArray(reportData.learningAreaAssessments)) {
-      reportData.learningAreaAssessments = reportData.learningAreaAssessments.map((ev) => {
-        const baseScore = ev.score !== undefined && ev.score !== null
-          ? (ev.score <= 4 ? (ev.score === 4 ? 85 : ev.score === 3 ? 75 : ev.score === 2 ? 58 : 42) : ev.score)
-          : 76;
+      const t1Rep = yearReports.find(r => getTermNumber(r.termId) === 1 && r.id !== reportCard.id);
+      const t2Rep = yearReports.find(r => getTermNumber(r.termId) === 2 && r.id !== reportCard.id);
+      const t3Rep = yearReports.find(r => getTermNumber(r.termId) === 3 && r.id !== reportCard.id);
+
+      reportData.learningAreaAssessments = reportData.learningAreaAssessments.map((ev: any) => {
+        const rawScore = ev.score !== undefined && ev.score !== null ? Number(ev.score) : undefined;
+        const normalizedScore = rawScore !== undefined
+          ? (rawScore > 0 && rawScore <= 4 ? (rawScore === 4 ? 85 : rawScore === 3 ? 75 : rawScore === 2 ? 58 : 42) : rawScore)
+          : undefined;
+
+        let t1Score = ev.term1Score !== undefined && ev.term1Score !== null ? Number(ev.term1Score) : undefined;
+        let t2Score = ev.term2Score !== undefined && ev.term2Score !== null ? Number(ev.term2Score) : undefined;
+        let t3Score = ev.term3Score !== undefined && ev.term3Score !== null ? Number(ev.term3Score) : undefined;
+
+        if (currentTermNumber === 1 && normalizedScore !== undefined) t1Score = normalizedScore;
+        if (currentTermNumber === 2 && normalizedScore !== undefined) t2Score = normalizedScore;
+        if (currentTermNumber === 3 && normalizedScore !== undefined) t3Score = normalizedScore;
+
+        if (t1Score === undefined && t1Rep) {
+          const match = t1Rep.learningAreaAssessments?.find(a => a.learningAreaId === ev.learningAreaId);
+          if (match && match.score !== undefined && match.score !== null) {
+            t1Score = Number(match.score);
+          }
+        }
+
+        if (t2Score === undefined && t2Rep) {
+          const match = t2Rep.learningAreaAssessments?.find(a => a.learningAreaId === ev.learningAreaId);
+          if (match && match.score !== undefined && match.score !== null) {
+            t2Score = Number(match.score);
+          }
+        }
+
+        if (t3Score === undefined && t3Rep) {
+          const match = t3Rep.learningAreaAssessments?.find(a => a.learningAreaId === ev.learningAreaId);
+          if (match && match.score !== undefined && match.score !== null) {
+            t3Score = Number(match.score);
+          }
+        }
+
         return {
           ...ev,
-          score: baseScore,
-          term1Score: ev.term1Score !== undefined ? ev.term1Score : baseScore,
-          term2Score: ev.term2Score !== undefined ? ev.term2Score : baseScore,
-          term3Score: ev.term3Score !== undefined ? ev.term3Score : baseScore,
+          score: normalizedScore,
+          term1Score: t1Score,
+          term2Score: t2Score,
+          term3Score: t3Score
         };
       });
     }
