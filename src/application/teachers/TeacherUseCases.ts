@@ -247,13 +247,21 @@ export class TeacherUseCases {
 
       // Verify and preserve guardian linkage
       if (this.guardianRepository) {
-        let guardian = await this.guardianRepository.findByUserId(existingUser.id);
-        if (!guardian && cleanPhone) {
-          guardian = await this.guardianRepository.findByPhone(cleanPhone);
-        }
-        if (guardian && guardian.userId !== existingUser.id) {
-          guardian.setUserId(existingUser.id);
-          await this.guardianRepository.update(guardian);
+        let userGuardian = await this.guardianRepository.findByUserId(existingUser.id);
+        let phoneGuardian = cleanPhone ? await this.guardianRepository.findByPhone(cleanPhone) : null;
+
+        if (userGuardian && phoneGuardian && userGuardian.id !== phoneGuardian.id) {
+          for (const sid of (phoneGuardian.studentIds || [])) {
+            userGuardian.linkStudent(sid);
+          }
+          if (cleanPhone) {
+            userGuardian.updateDetails({ emergencyContact: cleanPhone });
+          }
+          await this.guardianRepository.update(userGuardian);
+          await this.guardianRepository.delete(phoneGuardian.id).catch(() => {});
+        } else if (!userGuardian && phoneGuardian) {
+          phoneGuardian.setUserId(existingUser.id);
+          await this.guardianRepository.update(phoneGuardian);
         }
       }
 

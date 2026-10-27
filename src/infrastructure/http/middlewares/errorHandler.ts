@@ -28,14 +28,48 @@ export function errorHandler(err: any, req: Request, res: Response, next: NextFu
     });
   }
 
+  // Database unique constraint violation (e.g. Postgres 23505)
+  if (err?.code === '23505') {
+    let msg = 'A record with these unique details already exists.';
+    if (err.detail) {
+      if (err.detail.includes('email')) msg = 'User with this email already exists.';
+      else if (err.detail.includes('phone')) msg = 'User with this phone number already exists.';
+      else if (err.detail.includes('employee_number')) msg = 'Teacher with this employee number already exists.';
+      else if (err.detail.includes('user_id')) msg = 'A profile for this user already exists.';
+      else msg = err.detail;
+    }
+    return res.status(409).json({
+      success: false,
+      message: msg,
+      error: {
+        code: 'CONFLICT_ERROR',
+        message: msg
+      }
+    });
+  }
+
+  // Database foreign key violation (e.g. Postgres 23503)
+  if (err?.code === '23503') {
+    const msg = err.detail || 'Referenced record does not exist or cannot be linked.';
+    return res.status(400).json({
+      success: false,
+      message: msg,
+      error: {
+        code: 'FOREIGN_KEY_VIOLATION',
+        message: msg
+      }
+    });
+  }
+
   console.error('[Unhandled Server Error]', err);
 
-  const message = process.env.NODE_ENV === 'production'
-    ? 'An unexpected server error occurred. Please contact support.'
-    : (err.message || 'An unexpected error occurred');
+  const message = (err.message && !err.message.includes('password') && !err.message.includes('token') && !err.message.includes('DATABASE_URL'))
+    ? err.message
+    : 'An unexpected server error occurred. Please contact support.';
 
   return res.status(500).json({
     success: false,
+    message,
     error: {
       code: 'INTERNAL_SERVER_ERROR',
       message

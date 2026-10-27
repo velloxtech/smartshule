@@ -1404,23 +1404,59 @@ export class PostgresUserRepository implements IUserRepository {
                  reset_password_attempts = EXCLUDED.reset_password_attempts,
                  updated_at = NOW()`;
     const cleanEmail = (user.email && user.email.trim() !== '') ? user.email.trim().toLowerCase() : null;
-    await this.pool.query(q, [
-      user.id,
-      cleanEmail,
-      user.passwordHash,
-      user.firstName,
-      user.lastName,
-      user.role,
-      user.phone || null,
-      user.status,
-      (user.schoolId && user.schoolId.trim() !== '') ? user.schoolId : null,
-      user.mustChangePassword,
-      user.resetPasswordToken || null,
-      user.resetPasswordExpires || null,
-      user.resetPasswordAttempts,
-      user.createdAt,
-      user.updatedAt
-    ]);
+    try {
+      await this.pool.query(q, [
+        user.id,
+        cleanEmail,
+        user.passwordHash,
+        user.firstName,
+        user.lastName,
+        user.role,
+        user.phone || null,
+        user.status,
+        (user.schoolId && user.schoolId.trim() !== '') ? user.schoolId : null,
+        user.mustChangePassword,
+        user.resetPasswordToken || null,
+        user.resetPasswordExpires || null,
+        user.resetPasswordAttempts,
+        user.createdAt,
+        user.updatedAt
+      ]);
+    } catch (err: any) {
+      if (err?.code === '42703' || String(err?.message).includes('does not exist')) {
+        // Resilient fallback for database schemas without password reset columns
+        const baseQ = `INSERT INTO users (
+                         id, email, password_hash, first_name, last_name, role, phone, status, school_id, 
+                         created_at, updated_at
+                       )
+                       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                       ON CONFLICT (id) DO UPDATE SET 
+                         email = EXCLUDED.email, 
+                         password_hash = EXCLUDED.password_hash, 
+                         first_name = EXCLUDED.first_name, 
+                         last_name = EXCLUDED.last_name, 
+                         role = EXCLUDED.role, 
+                         phone = EXCLUDED.phone, 
+                         status = EXCLUDED.status, 
+                         school_id = EXCLUDED.school_id, 
+                         updated_at = NOW()`;
+        await this.pool.query(baseQ, [
+          user.id,
+          cleanEmail,
+          user.passwordHash,
+          user.firstName,
+          user.lastName,
+          user.role,
+          user.phone || null,
+          user.status,
+          (user.schoolId && user.schoolId.trim() !== '') ? user.schoolId : null,
+          user.createdAt,
+          user.updatedAt
+        ]);
+      } else {
+        throw err;
+      }
+    }
   }
 
   public async update(user: User): Promise<void> { await this.save(user); }
