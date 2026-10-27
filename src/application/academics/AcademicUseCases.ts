@@ -851,10 +851,14 @@ export class AcademicUseCases {
 
     // Sync teacher.assignedClassStreamIds for backward compatibility
     if (this.teacherRepository && dto.streamId) {
-      const teacher = await this.teacherRepository.findById(dto.teacherId);
-      if (teacher) {
-        teacher.assignStream(dto.streamId);
-        await this.teacherRepository.update(teacher);
+      try {
+        const teacher = await this.teacherRepository.findById(dto.teacherId);
+        if (teacher) {
+          teacher.assignStream(dto.streamId);
+          await this.teacherRepository.update(teacher);
+        }
+      } catch (err: any) {
+        console.warn('[AcademicUseCases] Non-fatal teacher assignedClassStreamIds sync error:', err?.message || err);
       }
     }
 

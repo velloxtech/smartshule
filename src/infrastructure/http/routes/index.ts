@@ -324,11 +324,11 @@ export function createApiRouter(container: AppContainer): Router {
   academicRouter.delete('/learning-areas/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN, UserRole.HEAD_TEACHER), academicController.deleteLearningArea);
 
   // Teacher Assignments & Reassignments
-  academicRouter.post('/class-teacher', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN, UserRole.HEAD_TEACHER), validateBody(AssignClassTeacherSchema), academicController.assignClassTeacher);
+  academicRouter.post('/class-teacher', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER), validateBody(AssignClassTeacherSchema), academicController.assignClassTeacher);
   academicRouter.get('/class-teacher', authMiddleware, academicController.listClassTeacherAssignments);
-  academicRouter.post('/subject-assignments', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN, UserRole.HEAD_TEACHER), validateBody(AssignSubjectTeacherSchema), academicController.assignSubjectTeacher);
+  academicRouter.post('/subject-assignments', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER), validateBody(AssignSubjectTeacherSchema), academicController.assignSubjectTeacher);
   academicRouter.get('/subject-assignments', authMiddleware, academicController.listSubjectTeacherAssignments);
-  academicRouter.delete('/subject-assignments/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN, UserRole.HEAD_TEACHER), academicController.deactivateSubjectTeacherAssignment);
+  academicRouter.delete('/subject-assignments/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER), academicController.deactivateSubjectTeacherAssignment);
 
   router.use('/academics', academicRouter);
 

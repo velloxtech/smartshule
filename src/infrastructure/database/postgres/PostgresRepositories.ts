@@ -1559,53 +1559,84 @@ export class PostgresTeacherRepository implements ITeacherRepository {
     return res.rows.map(r => this.mapRow(r));
   }
   public async save(t: Teacher): Promise<void> {
-    const q = `INSERT INTO teachers (
-                 id, user_id, tsc_number, employee_number, specialization, assigned_class_stream_ids,
-                 qualification, date_of_birth, gender, national_id, residential_address, profile_photo_url,
-                 employment_date, employment_type, employment_status, department, emergency_contact, documents,
-                 created_at, updated_at
-               )
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
-               ON CONFLICT (id) DO UPDATE SET
-                 tsc_number = EXCLUDED.tsc_number,
-                 employee_number = EXCLUDED.employee_number,
-                 specialization = EXCLUDED.specialization,
-                 assigned_class_stream_ids = EXCLUDED.assigned_class_stream_ids,
-                 qualification = EXCLUDED.qualification,
-                 date_of_birth = EXCLUDED.date_of_birth,
-                 gender = EXCLUDED.gender,
-                 national_id = EXCLUDED.national_id,
-                 residential_address = EXCLUDED.residential_address,
-                 profile_photo_url = EXCLUDED.profile_photo_url,
-                 employment_date = EXCLUDED.employment_date,
-                 employment_type = EXCLUDED.employment_type,
-                 employment_status = EXCLUDED.employment_status,
-                 department = EXCLUDED.department,
-                 emergency_contact = EXCLUDED.emergency_contact,
-                 documents = EXCLUDED.documents,
-                 updated_at = NOW()`;
-    await this.pool.query(q, [
-      t.id,
-      t.userId,
-      t.tscNumber,
-      t.employeeNumber,
-      JSON.stringify(t.specialization),
-      JSON.stringify(t.assignedClassStreamIds),
-      t.qualification,
-      t.dateOfBirth,
-      t.gender,
-      t.nationalId,
-      t.residentialAddress,
-      t.profilePhotoUrl,
-      t.employmentDate,
-      t.employmentType,
-      t.employmentStatus,
-      t.department,
-      JSON.stringify(t.emergencyContact || {}),
-      JSON.stringify(t.documents || []),
-      t.createdAt,
-      t.updatedAt
-    ]);
+    try {
+      const q = `INSERT INTO teachers (
+                   id, user_id, tsc_number, employee_number, specialization, assigned_class_stream_ids,
+                   qualification, date_of_birth, gender, national_id, residential_address, profile_photo_url,
+                   employment_date, employment_type, employment_status, department, emergency_contact, documents,
+                   created_at, updated_at
+                 )
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+                 ON CONFLICT (id) DO UPDATE SET
+                   tsc_number = EXCLUDED.tsc_number,
+                   employee_number = EXCLUDED.employee_number,
+                   specialization = EXCLUDED.specialization,
+                   assigned_class_stream_ids = EXCLUDED.assigned_class_stream_ids,
+                   qualification = EXCLUDED.qualification,
+                   date_of_birth = EXCLUDED.date_of_birth,
+                   gender = EXCLUDED.gender,
+                   national_id = EXCLUDED.national_id,
+                   residential_address = EXCLUDED.residential_address,
+                   profile_photo_url = EXCLUDED.profile_photo_url,
+                   employment_date = EXCLUDED.employment_date,
+                   employment_type = EXCLUDED.employment_type,
+                   employment_status = EXCLUDED.employment_status,
+                   department = EXCLUDED.department,
+                   emergency_contact = EXCLUDED.emergency_contact,
+                   documents = EXCLUDED.documents,
+                   updated_at = NOW()`;
+      await this.pool.query(q, [
+        t.id,
+        t.userId,
+        t.tscNumber,
+        t.employeeNumber,
+        JSON.stringify(t.specialization),
+        JSON.stringify(t.assignedClassStreamIds),
+        t.qualification,
+        t.dateOfBirth,
+        t.gender,
+        t.nationalId,
+        t.residentialAddress,
+        t.profilePhotoUrl,
+        t.employmentDate,
+        t.employmentType,
+        t.employmentStatus,
+        t.department,
+        JSON.stringify(t.emergencyContact || {}),
+        JSON.stringify(t.documents || []),
+        t.createdAt,
+        t.updatedAt
+      ]);
+    } catch (err: any) {
+      if (err?.code === '42703' || String(err?.message).includes('does not exist')) {
+        // Resilient fallback for database schemas with standard teacher columns
+        const baseQ = `INSERT INTO teachers (
+                         id, user_id, tsc_number, employee_number, specialization, assigned_class_stream_ids,
+                         qualification, created_at, updated_at
+                       )
+                       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                       ON CONFLICT (id) DO UPDATE SET
+                         tsc_number = EXCLUDED.tsc_number,
+                         employee_number = EXCLUDED.employee_number,
+                         specialization = EXCLUDED.specialization,
+                         assigned_class_stream_ids = EXCLUDED.assigned_class_stream_ids,
+                         qualification = EXCLUDED.qualification,
+                         updated_at = NOW()`;
+        await this.pool.query(baseQ, [
+          t.id,
+          t.userId,
+          t.tscNumber,
+          t.employeeNumber,
+          JSON.stringify(t.specialization),
+          JSON.stringify(t.assignedClassStreamIds),
+          t.qualification,
+          t.createdAt,
+          t.updatedAt
+        ]);
+      } else {
+        throw err;
+      }
+    }
   }
   public async update(t: Teacher): Promise<void> { await this.save(t); }
   public async delete(id: string): Promise<void> { await this.pool.query('DELETE FROM teachers WHERE id = $1', [id]); }
