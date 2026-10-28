@@ -512,7 +512,7 @@ export class BroadsheetUseCases {
         learningAreaName: la.name,
         studentId: topStudentRow?.studentId || 'std-top',
         studentName: topStudentRow?.studentName || 'Top Learner',
-        admissionNumber: topStudentRow?.admissionNumber || 'ADM-001',
+        admissionNumber: topStudentRow?.admissionNumber || '0001',
         className: classRoom?.name || 'Class',
         streamName: topStreamName,
         gender: topStudentRow?.gender || 'M',

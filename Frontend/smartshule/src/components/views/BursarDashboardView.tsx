@@ -228,7 +228,7 @@ export const BursarDashboardView: React.FC<BursarDashboardViewProps> = ({
                   {safeDefaulters.slice(0, 6).map((item, idx) => (
                     <tr key={idx} className="hover:bg-surface-container-lowest transition-colors">
                       <td className="py-2.5 px-3 font-mono font-bold text-amber-900">
-                        {item.admissionNumber || item.student?.admissionNumber || '01'}
+                        {item.admissionNumber || item.student?.admissionNumber || '0001'}
                       </td>
                       <td className="py-2.5 px-3 font-semibold text-on-surface">
                         {item.studentName || `${item.student?.firstName || ''} ${item.student?.lastName || ''}`}

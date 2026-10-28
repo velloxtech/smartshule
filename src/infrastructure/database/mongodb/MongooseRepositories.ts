@@ -610,11 +610,18 @@ export class MongoStudentRepository implements IStudentRepository {
     if (filters?.streamId) query.streamId = filters.streamId;
     if (filters?.academicYearId) query.academicYearId = filters.academicYearId;
     if (filters?.search) {
-      query.$or = [
-        { firstName: { $regex: filters.search, $options: 'i' } },
-        { lastName: { $regex: filters.search, $options: 'i' } },
-        { admissionNumber: { $regex: filters.search, $options: 'i' } }
+      const searchRaw = filters.search.trim();
+      const searchDigits = searchRaw.replace(/\D/g, '');
+      const paddedAdm = searchDigits ? searchDigits.padStart(4, '0') : '';
+      const orClauses: any[] = [
+        { firstName: { $regex: searchRaw, $options: 'i' } },
+        { lastName: { $regex: searchRaw, $options: 'i' } },
+        { admissionNumber: { $regex: searchRaw, $options: 'i' } }
       ];
+      if (paddedAdm) {
+        orClauses.push({ admissionNumber: paddedAdm });
+      }
+      query.$or = orClauses;
     }
     const docs = await StudentModel.find(query).lean();
     return docs.map((d: any) => Student.create(d, d._id, d.createdAt, d.updatedAt));
@@ -1418,11 +1425,18 @@ export class MongoDeletedStudentRepository implements IDeletedStudentRepository 
     if (filters?.schoolId) query.schoolId = filters.schoolId;
     if (filters?.gradeLevel) query.gradeLevel = filters.gradeLevel;
     if (filters?.search) {
-      query.$or = [
-        { firstName: { $regex: filters.search, $options: 'i' } },
-        { lastName: { $regex: filters.search, $options: 'i' } },
-        { admissionNumber: { $regex: filters.search, $options: 'i' } }
+      const searchRaw = filters.search.trim();
+      const searchDigits = searchRaw.replace(/\D/g, '');
+      const paddedAdm = searchDigits ? searchDigits.padStart(4, '0') : '';
+      const orClauses: any[] = [
+        { firstName: { $regex: searchRaw, $options: 'i' } },
+        { lastName: { $regex: searchRaw, $options: 'i' } },
+        { admissionNumber: { $regex: searchRaw, $options: 'i' } }
       ];
+      if (paddedAdm) {
+        orClauses.push({ admissionNumber: paddedAdm });
+      }
+      query.$or = orClauses;
     }
     const docs = await DeletedStudentModel.find(query).sort({ deletedAt: -1 }).lean();
     return docs.map((d: any) => DeletedStudent.create(d, d._id, d.createdAt, d.updatedAt));

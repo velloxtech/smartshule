@@ -34,6 +34,55 @@ export class IdGenerator {
     const next = max + 1;
     return next < 10 ? `0${next}` : `${next}`;
   }
+
+  public static formatAdmissionNumber(input: string | number, strict: boolean = false): string {
+    const raw = typeof input === 'number' ? Math.floor(input).toString() : String(input).trim();
+    if (!raw) {
+      throw new ValidationError('Admission number is required.');
+    }
+    if (/^\d+$/.test(raw)) {
+      const val = parseInt(raw, 10);
+      if (isNaN(val) || val <= 0) {
+        throw new ValidationError('Admission number must be a positive number.');
+      }
+      // Pad to 4 digits for 1 to 9999. Numbers >= 10000 retain full digits without truncation.
+      return val < 10000 ? val.toString().padStart(4, '0') : val.toString();
+    }
+
+    if (strict) {
+      throw new ValidationError('Admission number must contain digits only. Prefixes, letters, dashes, and symbols are not permitted.');
+    }
+
+    // Gracefully normalizes legacy prefixed numbers (e.g. 'PP1-001' -> '0001', 'ADM-005' -> '0005')
+    const match = raw.match(/(\d+)$/);
+    if (!match) {
+      throw new ValidationError('Admission number must contain digits.');
+    }
+    const val = parseInt(match[1], 10);
+    if (isNaN(val) || val <= 0) {
+      throw new ValidationError('Admission number must be a positive number.');
+    }
+    return val < 10000 ? val.toString().padStart(4, '0') : val.toString();
+  }
+
+  public static generateNextAdmissionNumber(existingIds: (string | undefined | null)[]): string {
+    let max = 0;
+    for (const id of existingIds) {
+      if (!id || typeof id !== 'string') continue;
+      const trimmed = id.trim();
+      if (!trimmed) continue;
+      // Extract terminal digits or pure number
+      const match = trimmed.match(/(\d+)$/);
+      if (match) {
+        const val = parseInt(match[1], 10);
+        if (!isNaN(val) && val > max && val < 1000000) {
+          max = val;
+        }
+      }
+    }
+    const next = max + 1;
+    return next < 10000 ? next.toString().padStart(4, '0') : next.toString();
+  }
 }
 
 export abstract class DomainError extends Error {

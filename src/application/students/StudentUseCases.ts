@@ -103,6 +103,7 @@ export interface RegisterStudentDTO {
 }
 
 export interface UpdateStudentDTO {
+  admissionNumber?: string;
   firstName?: string;
   middleName?: string;
   lastName?: string;
@@ -174,10 +175,25 @@ export class StudentUseCases {
   }
 
   public async registerStudent(dto: RegisterStudentDTO, requestingUser?: UserContext) {
-    let admissionNumber = dto.admissionNumber?.trim();
-    if (!admissionNumber) {
+    let admissionNumber: string;
+    if (dto.admissionNumber && dto.admissionNumber.trim()) {
+      admissionNumber = IdGenerator.formatAdmissionNumber(dto.admissionNumber);
+    } else {
       const allStudents = await this.studentRepository.findAll({ schoolId: dto.schoolId });
-      admissionNumber = IdGenerator.generateNextSequentialNumber(allStudents.map(s => s.admissionNumber));
+      let deletedAdms: string[] = [];
+      try {
+        if (this.deletedStudentRepository) {
+          const deleted = await this.deletedStudentRepository.findAll({ schoolId: dto.schoolId });
+          deletedAdms = deleted.map(d => d.admissionNumber);
+        }
+      } catch {
+        // ignore if not configured
+      }
+      const allKnown = [
+        ...allStudents.map(s => s.admissionNumber),
+        ...deletedAdms
+      ];
+      admissionNumber = IdGenerator.generateNextAdmissionNumber(allKnown);
     }
 
     const existing = await this.studentRepository.findByAdmissionNumber(admissionNumber, dto.schoolId);
@@ -652,8 +668,36 @@ export class StudentUseCases {
       student.setProfilePhoto(dto.profilePhotoUrl);
     }
 
-    // 3. Administrative changes (Grade, Stream, Status - Admin roles only)
+    // 3. Administrative changes (Grade, Stream, Status, Admission Number - Admin roles only)
     if (!isParent) {
+      if (dto.admissionNumber !== undefined && dto.admissionNumber.trim() !== '') {
+        const formattedAdm = IdGenerator.formatAdmissionNumber(dto.admissionNumber);
+        if (formattedAdm !== student.admissionNumber) {
+          const existing = await this.studentRepository.findByAdmissionNumber(formattedAdm, student.schoolId);
+          if (existing && existing.id !== student.id) {
+            throw new ConflictError(`Student with admission number '${formattedAdm}' already exists.`);
+          }
+          student.setAdmissionNumber(formattedAdm);
+
+          if (this.studentSponsorshipRepository) {
+            try {
+              const sp = await this.studentSponsorshipRepository.findByStudentId(student.id);
+              if (sp) {
+                sp.updateDetails({
+                  admissionNumber: formattedAdm,
+                  studentName: student.fullName,
+                  gradeLevel: student.gradeLevel,
+                  gender: student.gender
+                });
+                await this.studentSponsorshipRepository.save(sp);
+              }
+            } catch {
+              // ignore if sponsorship not found
+            }
+          }
+        }
+      }
+
       if (dto.gradeLevel || dto.classroomId || dto.streamId || dto.academicYearId) {
         student.promoteOrTransfer(
           dto.gradeLevel || student.gradeLevel,

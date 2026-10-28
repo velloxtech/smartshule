@@ -194,6 +194,11 @@ export class Student extends Entity<StudentProps> {
     }
   }
 
+  public setAdmissionNumber(admNo: string): void {
+    this._props.admissionNumber = admNo;
+    this.touch();
+  }
+
   public setStatus(status: StudentStatus): void {
     this._props.status = status;
     this.touch();

@@ -149,10 +149,13 @@ export class InMemoryStudentRepository implements IStudentRepository {
     if (filters?.academicYearId) result = result.filter(s => s.academicYearId === filters.academicYearId);
     if (filters?.search) {
       const search = filters.search.toLowerCase();
+      const searchDigits = search.replace(/\D/g, '');
+      const paddedSearchAdm = searchDigits ? searchDigits.padStart(4, '0') : '';
       result = result.filter(
         s =>
           s.fullName.toLowerCase().includes(search) ||
           s.admissionNumber.toLowerCase().includes(search) ||
+          (paddedSearchAdm && s.admissionNumber === paddedSearchAdm) ||
           (s.upiNumber && s.upiNumber.toLowerCase().includes(search))
       );
     }

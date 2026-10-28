@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Student, ClassRoom, StreamItem, UserRole } from '../../types';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import { generateNextSequentialNumber } from '../../utils/sequenceGenerator';
+import { generateNextSequentialNumber, generateNextAdmissionNumber, formatAdmissionNumber } from '../../utils/sequenceGenerator';
 import {
   KENYAN_COUNTIES,
   SNE_ACCOMMODATIONS,
@@ -127,21 +127,21 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
       setValidationError(null);
       setIsSubmitting(false);
 
-      // Auto-generate student admission number from 01
+      // Auto-generate student admission number from 0001
       if (existingStudents && existingStudents.length > 0) {
-        const nextAdm = generateNextSequentialNumber(
+        const nextAdm = generateNextAdmissionNumber(
           existingStudents.map((s) => s.admNo || s.admissionNumber)
         );
         setAdmissionNumber(nextAdm);
       } else {
-        setAdmissionNumber('01');
+        setAdmissionNumber('0001');
       }
 
       apiService
         .getStudents()
         .then((res) => {
           if (res?.data && Array.isArray(res.data) && res.data.length > 0) {
-            const nextAdm = generateNextSequentialNumber(
+            const nextAdm = generateNextAdmissionNumber(
               res.data.map((s: any) => s.admissionNumber || s.admNo)
             );
             setAdmissionNumber(nextAdm);
@@ -259,8 +259,13 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
   const validateStep = (step: number): boolean => {
     setValidationError(null);
     if (step === 1) {
-      if (!admissionNumber.trim()) {
+      const trimmedAdm = admissionNumber.trim();
+      if (!trimmedAdm) {
         setValidationError('Admission Number is required. Please enter the official school admission number.');
+        return false;
+      }
+      if (!/^\d+$/.test(trimmedAdm)) {
+        setValidationError('Admission number must contain digits only (e.g. 0001). Prefixes, letters, and symbols are not permitted.');
         return false;
       }
       if (!firstName.trim() || !lastName.trim()) {
@@ -329,7 +334,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
     e.preventDefault();
     if (!validateStep(4)) return;
 
-    const admNo = admissionNumber.trim();
+    const admNo = formatAdmissionNumber(admissionNumber.trim());
     const upi = nemisUpi.trim() || undefined;
     const fullName = [firstName, middleName, lastName].filter(Boolean).join(' ').trim();
 
@@ -583,7 +588,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                       School Admission Number <span className="text-rose-600">*</span>
                     </label>
                     <span className="text-[10px] text-emerald-700 font-semibold bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">
-                      Auto from 01
+                      Standard 4-Digit Format
                     </span>
                   </div>
                   <input
@@ -591,10 +596,10 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                     required
                     value={admissionNumber}
                     onChange={(e) => setAdmissionNumber(e.target.value)}
-                    placeholder="e.g. 01"
+                    placeholder="e.g. 0001"
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white font-mono"
                   />
-                  <span className="text-[10px] text-slate-500">Auto-generated starting from 01 (editable if needed)</span>
+                  <span className="text-[10px] text-slate-500">Auto-generated 4-digit number (e.g. 0001, digits only)</span>
                 </div>
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">

@@ -1512,9 +1512,19 @@ export class PostgresStudentRepository implements IStudentRepository {
       q += ` AND (stream_id = $${params.length} OR classroom_id = $${params.length})`;
     }
     if (filters?.academicYearId) { params.push(filters.academicYearId); q += ` AND academic_year_id = $${params.length}`; }
-    if (filters?.search) {
-      params.push(`%${filters.search}%`);
-      q += ` AND (first_name ILIKE $${params.length} OR last_name ILIKE $${params.length} OR admission_number ILIKE $${params.length})`;
+    if (filters?.search && filters.search.trim()) {
+      const searchRaw = filters.search.trim();
+      params.push(`%${searchRaw}%`);
+      const textParamIdx = params.length;
+      const digits = searchRaw.replace(/\D/g, '');
+      if (digits) {
+        const paddedAdm = digits.padStart(4, '0');
+        params.push(paddedAdm);
+        const paddedIdx = params.length;
+        q += ` AND (first_name ILIKE $${textParamIdx} OR last_name ILIKE $${textParamIdx} OR admission_number ILIKE $${textParamIdx} OR admission_number = $${paddedIdx})`;
+      } else {
+        q += ` AND (first_name ILIKE $${textParamIdx} OR last_name ILIKE $${textParamIdx} OR admission_number ILIKE $${textParamIdx})`;
+      }
     }
     const res = await this.pool.query(q, params);
     return res.rows.map(r => this.mapRow(r));
@@ -1527,7 +1537,24 @@ export class PostgresStudentRepository implements IStudentRepository {
   public async save(s: Student): Promise<void> {
     const q = `INSERT INTO students (id, admission_number, upi_number, first_name, middle_name, last_name, date_of_birth, gender, grade_level, classroom_id, stream_id, school_id, academic_year_id, guardian_ids, medical_conditions, special_needs, status, profile_photo_url, created_at, updated_at)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
-               ON CONFLICT (id) DO UPDATE SET first_name = EXCLUDED.first_name, last_name = EXCLUDED.last_name, grade_level = EXCLUDED.grade_level, classroom_id = EXCLUDED.classroom_id, stream_id = EXCLUDED.stream_id, guardian_ids = EXCLUDED.guardian_ids, status = EXCLUDED.status, updated_at = NOW()`;
+               ON CONFLICT (id) DO UPDATE SET 
+                 admission_number = EXCLUDED.admission_number,
+                 upi_number = EXCLUDED.upi_number,
+                 first_name = EXCLUDED.first_name, 
+                 middle_name = EXCLUDED.middle_name,
+                 last_name = EXCLUDED.last_name, 
+                 date_of_birth = EXCLUDED.date_of_birth,
+                 gender = EXCLUDED.gender,
+                 grade_level = EXCLUDED.grade_level, 
+                 classroom_id = EXCLUDED.classroom_id, 
+                 stream_id = EXCLUDED.stream_id, 
+                 academic_year_id = EXCLUDED.academic_year_id,
+                 guardian_ids = EXCLUDED.guardian_ids, 
+                 medical_conditions = EXCLUDED.medical_conditions,
+                 special_needs = EXCLUDED.special_needs,
+                 status = EXCLUDED.status, 
+                 profile_photo_url = EXCLUDED.profile_photo_url,
+                 updated_at = NOW()`;
     await this.pool.query(q, [
       s.id,
       s.admissionNumber,

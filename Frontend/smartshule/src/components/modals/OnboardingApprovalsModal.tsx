@@ -4,7 +4,7 @@ import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { UserRole } from '../../types';
 import { formatKenyanPhone } from '../../utils/kenyanConstitution';
-import { generateNextSequentialNumber } from '../../utils/sequenceGenerator';
+import { generateNextSequentialNumber, generateNextAdmissionNumber, formatAdmissionNumber } from '../../utils/sequenceGenerator';
 
 export const normalizeToCBCGradeLevel = (gradeStr: string): string => {
   const g = (gradeStr || '').trim().toUpperCase();
@@ -80,13 +80,13 @@ export const OnboardingApprovalsModal: React.FC<OnboardingApprovalsModalProps> =
 
   const getNextPureAdmNo = (app?: AdmittedLearnerOnboarding | null) => {
     if (app?.assignedAdmNo && /^\d+$/.test(app.assignedAdmNo.trim())) {
-      return app.assignedAdmNo.trim();
+      return formatAdmissionNumber(app.assignedAdmNo.trim());
     }
     const allKnown = [
       ...existingStudentAdmNos,
       ...applications.map((a) => a.assignedAdmNo).filter((id): id is string => Boolean(id)),
     ];
-    return generateNextSequentialNumber(allKnown);
+    return generateNextAdmissionNumber(allKnown);
   };
 
   useEffect(() => {

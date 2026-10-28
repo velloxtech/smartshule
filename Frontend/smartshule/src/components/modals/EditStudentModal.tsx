@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Student } from '../../types';
 import { apiService } from '../../services/api';
+import { formatAdmissionNumber } from '../../utils/sequenceGenerator';
 
 interface EditStudentModalProps {
   isOpen: boolean;
@@ -19,6 +20,7 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
 }) => {
   // Learner fields
   const [studentName, setStudentName] = useState('');
+  const [admissionNumber, setAdmissionNumber] = useState('');
   const [gender, setGender] = useState<'MALE' | 'FEMALE' | 'OTHER'>('MALE');
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [gradeLevel, setGradeLevel] = useState('GRADE_7');
@@ -47,6 +49,7 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
   useEffect(() => {
     if (student) {
       setStudentName(student.name || '');
+      setAdmissionNumber(student.admNo || (student as any).admissionNumber || '');
       const rawGender = (student.gender || 'MALE').toUpperCase();
       setGender(rawGender === 'BOY' || rawGender === 'MALE' ? 'MALE' : (rawGender === 'GIRL' || rawGender === 'FEMALE' ? 'FEMALE' : 'OTHER'));
       setDateOfBirth(student.dateOfBirth || '');
@@ -159,6 +162,15 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
       const firstName = parts[0] || student.name;
       const lastName = parts.slice(1).join(' ') || parts[0];
 
+      if (!isParentView && admissionNumber.trim()) {
+        if (!/^\d+$/.test(admissionNumber.trim())) {
+          setError('Admission number must contain digits only (e.g. 0001). Letters and symbols are not permitted.');
+          setIsLoading(false);
+          return;
+        }
+      }
+      const formattedAdm = !isParentView && admissionNumber.trim() ? formatAdmissionNumber(admissionNumber.trim()) : undefined;
+
       const updateData: any = {
         name: trimmedName,
         firstName,
@@ -180,12 +192,17 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
         updateData.gradeLevel = gradeLevel;
         updateData.streamId = streamId || undefined;
         updateData.status = status;
+        if (formattedAdm) {
+          updateData.admissionNumber = formattedAdm;
+        }
       }
 
       await apiService.updateStudent(student.id, updateData);
 
       const updatedStudent: any = {
         ...student,
+        admNo: formattedAdm || student.admNo,
+        admissionNumber: formattedAdm || (student as any).admissionNumber,
         name: trimmedName,
         gender: gender === 'MALE' ? 'Boy' : (gender === 'FEMALE' ? 'Girl' : 'MALE'),
         dateOfBirth: dateOfBirth || student.dateOfBirth,
@@ -311,6 +328,22 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
                 className="w-full bg-surface-container-low border border-outline-variant/30 rounded-lg px-3 py-2 text-xs focus:outline-primary font-medium"
               />
             </div>
+
+            {!isParentView && (
+              <div>
+                <label className="block text-xs font-semibold text-on-surface mb-1">
+                  Admission Number (4-Digit Standard Format)
+                </label>
+                <input
+                  type="text"
+                  value={admissionNumber}
+                  onChange={(e) => setAdmissionNumber(e.target.value)}
+                  placeholder="e.g. 0001"
+                  className="w-full bg-surface-container-low border border-outline-variant/30 rounded-lg px-3 py-2 text-xs focus:outline-primary font-mono font-bold"
+                />
+                <span className="text-[10px] text-on-surface-variant">Digits only, zero-padded to at least 4 digits (e.g. 0001, 0168)</span>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-3">
               <div>

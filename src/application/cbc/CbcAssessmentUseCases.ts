@@ -1458,6 +1458,14 @@ export class CBCAssessmentUseCases {
     const studentMap = new Map<string, any>();
     for (const s of students) {
       studentMap.set(s.admissionNumber.trim().toUpperCase(), s);
+      const digitsOnly = s.admissionNumber.replace(/\D/g, '');
+      if (digitsOnly) {
+        const intVal = parseInt(digitsOnly, 10);
+        if (!isNaN(intVal)) {
+          studentMap.set(intVal.toString().padStart(4, '0'), s);
+          studentMap.set(intVal.toString(), s);
+        }
+      }
     }
 
     // Get existing summatives to detect create vs update
@@ -1528,8 +1536,17 @@ export class CBCAssessmentUseCases {
       }
       seenAdmissionsInFile.add(admKey);
 
-      // Match student in class
-      const student = studentMap.get(admKey);
+      // Match student in class (direct match or normalized numeric fallback)
+      let student = studentMap.get(admKey);
+      if (!student) {
+        const rowDigits = rawAdm.replace(/\D/g, '');
+        if (rowDigits) {
+          const rowInt = parseInt(rowDigits, 10);
+          if (!isNaN(rowInt)) {
+            student = studentMap.get(rowInt.toString().padStart(4, '0')) || studentMap.get(rowInt.toString());
+          }
+        }
+      }
       if (!student) {
         errors.push({
           rowNumber: rowNum,

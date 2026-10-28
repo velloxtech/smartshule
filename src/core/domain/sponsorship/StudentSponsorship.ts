@@ -169,6 +169,7 @@ export class StudentSponsorship extends Entity<StudentSponsorshipProps> {
   }
 
   public updateDetails(params: Partial<StudentSponsorshipProps>): void {
+    if (params.admissionNumber) this._props.admissionNumber = params.admissionNumber;
     if (params.studentName) this._props.studentName = params.studentName;
     if (params.gradeLevel) this._props.gradeLevel = params.gradeLevel;
     if (params.streamName !== undefined) this._props.streamName = params.streamName;
