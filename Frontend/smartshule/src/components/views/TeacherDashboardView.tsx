@@ -7,6 +7,7 @@ import { Student, TimetableSlot, SchemeOfWork, LessonPlan } from '../../types';
 import { EditTeacherProfileModal } from '../modals/EditTeacherProfileModal';
 import { resolveGradeName, resolveStreamName } from '../../utils/formatters';
 import { TeacherGeofenceClockInCard } from './TeacherGeofenceClockInCard';
+import { TeacherSalaryAcknowledgementCard } from './TeacherSalaryAcknowledgementCard';
 
 interface TeacherDashboardViewProps {
   onNavigateTab: (tabId: any) => void;
@@ -828,6 +829,9 @@ export const TeacherDashboardView: React.FC<TeacherDashboardViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Teacher Salary Payment & Digital Acknowledgement Section */}
+      <TeacherSalaryAcknowledgementCard />
 
       {/* Class Learners Table (Partial Details Only: No Fees, No Financial Invoices) */}
       <div className="bg-surface-container-lowest rounded-xl shadow-xs border border-outline-variant/30 p-6 space-y-4">

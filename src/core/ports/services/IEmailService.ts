@@ -133,6 +133,31 @@ export interface SigningOtpEmailOptions {
   expiryMinutes: number;
 }
 
+export interface FinancialApprovalOtpEmailOptions {
+  to: string;
+  approverName: string;
+  actionType: string;
+  targetRecordType: string;
+  targetRecordId: string;
+  reason: string;
+  requesterName: string;
+  otpCode: string;
+  expiryMinutes: number;
+}
+
+export interface SalaryPayslipEmailOptions {
+  to: string;
+  teacherName: string;
+  payrollPeriod: string;
+  netSalary: number;
+  grossSalary: number;
+  deductions: number;
+  paymentMethod: string;
+  referenceNumber: string;
+  paymentDate: string;
+  portalUrl?: string;
+}
+
 export interface IEmailService {
   /** Low-level generic message dispatch */
   send(payload: EmailPayload): Promise<EmailSendResult>;
@@ -147,4 +172,6 @@ export interface IEmailService {
   sendDocumentDecision(options: DocumentDecisionEmailOptions): Promise<EmailSendResult>;
   sendAnnouncement(options: AnnouncementEmailOptions): Promise<EmailSendResult>;
   sendSigningOtp(options: SigningOtpEmailOptions): Promise<EmailSendResult>;
+  sendFinancialApprovalOtp(options: FinancialApprovalOtpEmailOptions): Promise<EmailSendResult>;
+  sendSalaryPayslip(options: SalaryPayslipEmailOptions): Promise<EmailSendResult>;
 }

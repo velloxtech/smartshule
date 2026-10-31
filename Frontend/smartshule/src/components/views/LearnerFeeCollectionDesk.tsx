@@ -784,7 +784,7 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
                   </strong>
                 </span>
               </div>
-              {financials.overpaymentCredit > 0 && (
+              {financials.outstandingBalance === 0 && financials.overpaymentCredit > 0 && (
                 <div className="font-bold text-teal-800">
                   Prepayment Credit Available: KSh {financials.overpaymentCredit.toLocaleString()}
                 </div>

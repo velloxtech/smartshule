@@ -44,7 +44,18 @@ export const AdminUpdateUserSchema = z.object({
   firstName: z.string().min(1).optional(),
   lastName: z.string().min(1).optional(),
   phone: z.string().optional(),
-  role: z.nativeEnum(UserRole).optional()
+  role: z.nativeEnum(UserRole).optional(),
+  status: z.nativeEnum(UserStatus).optional(),
+  schoolId: z.string().optional(),
+  teacherProfile: z.object({
+    employeeNumber: z.string().optional(),
+    tscNumber: z.string().optional(),
+    qualification: z.string().optional(),
+    specialization: z.union([z.array(z.string()), z.string()]).optional(),
+    department: z.string().optional(),
+    employmentType: z.string().optional(),
+    employmentStatus: z.string().optional()
+  }).optional()
 });
 
 export const AdminSetStatusSchema = z.object({
@@ -273,6 +284,18 @@ export class AuthController {
         success: true,
         count: users.length,
         data: users
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public getUserById = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const user = await this.authUseCases.getUserById(req.params.id as string, req.user);
+      return res.status(200).json({
+        success: true,
+        data: user
       });
     } catch (err) {
       next(err);

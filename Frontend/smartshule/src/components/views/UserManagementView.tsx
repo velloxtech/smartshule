@@ -37,6 +37,16 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
   const [editEmail, setEditEmail] = useState('');
   const [editPhone, setEditPhone] = useState('');
   const [editRole, setEditRole] = useState<UserRole>(UserRole.TEACHER);
+  const [editStatus, setEditStatus] = useState<'ACTIVE' | 'INACTIVE' | 'SUSPENDED'>('ACTIVE');
+  const [editSchoolId, setEditSchoolId] = useState('');
+  const [editEmployeeNumber, setEditEmployeeNumber] = useState('');
+  const [editTscNumber, setEditTscNumber] = useState('');
+  const [editQualification, setEditQualification] = useState('');
+  const [editDepartment, setEditDepartment] = useState('');
+  const [editEmploymentType, setEditEmploymentType] = useState('FULL_TIME');
+  const [editEmploymentStatus, setEditEmploymentStatus] = useState('ACTIVE');
+  const [editSpecialization, setEditSpecialization] = useState('');
+  const [editError, setEditError] = useState<string | null>(null);
   const [submittingEdit, setSubmittingEdit] = useState(false);
 
   // Reset password form state
@@ -86,9 +96,23 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
     setSelectedUser(u);
     setEditFirstName(u.firstName);
     setEditLastName(u.lastName);
-    setEditEmail(u.email);
+    setEditEmail(u.email || '');
     setEditPhone(u.phone || '');
     setEditRole(u.role);
+    setEditStatus(u.status || 'ACTIVE');
+    setEditSchoolId(u.schoolId || 'school-001');
+    setEditEmployeeNumber(u.teacherProfile?.employeeNumber || '');
+    setEditTscNumber(u.teacherProfile?.tscNumber || '');
+    setEditQualification(u.teacherProfile?.qualification || '');
+    setEditDepartment(u.teacherProfile?.department || '');
+    setEditEmploymentType(u.teacherProfile?.employmentType || 'FULL_TIME');
+    setEditEmploymentStatus(u.teacherProfile?.employmentStatus || 'ACTIVE');
+    setEditSpecialization(
+      Array.isArray(u.teacherProfile?.specialization)
+        ? u.teacherProfile.specialization.join(', ')
+        : (u.teacherProfile?.specialization || '')
+    );
+    setEditError(null);
     setIsEditOpen(true);
   };
 
@@ -140,13 +164,35 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
     e.preventDefault();
     if (!selectedUser) return;
     setSubmittingEdit(true);
+    setEditError(null);
     try {
+      const isTeacherRole = [
+        UserRole.TEACHER,
+        UserRole.HEAD_TEACHER,
+        UserRole.DEPUTY_HEAD_TEACHER,
+      ].includes(editRole) || !!selectedUser.teacherProfile;
+
+      const teacherProfilePayload = isTeacherRole ? {
+        employeeNumber: editEmployeeNumber.trim() || undefined,
+        tscNumber: editTscNumber.trim() || undefined,
+        qualification: editQualification.trim() || undefined,
+        department: editDepartment.trim() || undefined,
+        employmentType: editEmploymentType || undefined,
+        employmentStatus: editEmploymentStatus || undefined,
+        specialization: editSpecialization.trim()
+          ? editSpecialization.split(',').map((s) => s.trim()).filter(Boolean)
+          : undefined,
+      } : undefined;
+
       const res = await apiService.updateUser(selectedUser.id, {
         firstName: editFirstName.trim(),
         lastName: editLastName.trim(),
         email: editEmail.trim() ? editEmail.trim().toLowerCase() : undefined,
         phone: editPhone.trim() || undefined,
         role: editRole,
+        status: editStatus,
+        schoolId: (currentUser?.role === UserRole.SUPER_ADMIN && editSchoolId.trim()) ? editSchoolId.trim() : undefined,
+        teacherProfile: teacherProfilePayload,
       });
       if (res.success && res.data) {
         setUsers((prev) => prev.map((u) => (u.id === selectedUser.id ? res.data : u)));
@@ -154,7 +200,9 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
         setIsEditOpen(false);
       }
     } catch (err: any) {
-      showToast('error', err.message || 'Failed to update user');
+      const msg = err.message || 'Failed to update user';
+      setEditError(msg);
+      showToast('error', msg);
     } finally {
       setSubmittingEdit(false);
     }
@@ -822,16 +870,18 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
       {/* EDIT USER MODAL */}
       {isEditOpen && selectedUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-150">
-          <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-outline-variant/30 my-auto">
-            <div className="bg-[#7a1228] text-white p-4 flex items-center justify-between">
+          <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-2xl w-full max-h-[92vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
+            {/* Header */}
+            <div className="bg-[#7a1228] text-white p-4 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-[20px] text-rose-200">manage_accounts</span>
                 <div>
                   <h3 className="font-bold text-sm">Edit User Profile</h3>
-                  <p className="text-[10px] text-rose-200">{selectedUser.fullName}</p>
+                  <p className="text-[10px] text-rose-200">{selectedUser.fullName} • {selectedUser.email || selectedUser.phone || selectedUser.id}</p>
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setIsEditOpen(false)}
                 className="text-rose-100 hover:text-white cursor-pointer p-1 rounded-lg"
               >
@@ -839,82 +889,267 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
               </button>
             </div>
 
-            <form onSubmit={handleEditSubmit} className="p-5 space-y-3.5 text-xs">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold text-on-surface-variant mb-1 uppercase text-[10px]">
-                    First Name <span className="text-error">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={editFirstName}
-                    onChange={(e) => setEditFirstName(e.target.value)}
-                    className="w-full bg-surface-container-low border border-outline-variant/50 rounded-lg p-2 text-xs focus:outline-primary"
-                  />
+            {/* Scrollable Form Body */}
+            <form onSubmit={handleEditSubmit} className="p-5 overflow-y-auto space-y-4 text-xs">
+              {/* Validation / Backend Error Alert */}
+              {editError && (
+                <div className="p-3 bg-red-50 border border-red-200 text-red-800 rounded-xl flex items-start gap-2">
+                  <span className="material-symbols-outlined text-[18px] text-red-600 shrink-0 mt-0.5">error</span>
+                  <div className="text-xs">
+                    <p className="font-bold">Update Failed</p>
+                    <p className="text-[11px] mt-0.5">{editError}</p>
+                  </div>
                 </div>
-                <div>
-                  <label className="block font-bold text-on-surface-variant mb-1 uppercase text-[10px]">
-                    Last Name <span className="text-error">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={editLastName}
-                    onChange={(e) => setEditLastName(e.target.value)}
-                    className="w-full bg-surface-container-low border border-outline-variant/50 rounded-lg p-2 text-xs focus:outline-primary"
-                  />
+              )}
+
+              {/* SECTION: Identity & Contact Details */}
+              <div className="bg-surface-container-low/50 border border-outline-variant/30 rounded-xl p-3.5 space-y-3">
+                <div className="flex items-center gap-1.5 font-bold text-on-surface text-[11px] uppercase tracking-wider text-primary">
+                  <span className="material-symbols-outlined text-[16px]">person</span>
+                  <span>Basic Account Details</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-bold text-on-surface-variant mb-1 uppercase text-[10px]">
+                      First Name <span className="text-error">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={editFirstName}
+                      onChange={(e) => setEditFirstName(e.target.value)}
+                      className="w-full bg-surface-container-lowest border border-outline-variant/50 rounded-lg p-2 text-xs focus:outline-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-on-surface-variant mb-1 uppercase text-[10px]">
+                      Last Name <span className="text-error">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={editLastName}
+                      onChange={(e) => setEditLastName(e.target.value)}
+                      className="w-full bg-surface-container-lowest border border-outline-variant/50 rounded-lg p-2 text-xs focus:outline-primary"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-bold text-on-surface-variant mb-1 uppercase text-[10px]">
+                      Email Address <span className="text-on-surface-variant font-normal normal-case">(Optional if Phone set)</span>
+                    </label>
+                    <input
+                      type="email"
+                      value={editEmail}
+                      onChange={(e) => setEditEmail(e.target.value)}
+                      placeholder="name@school.ac.ke"
+                      className="w-full bg-surface-container-lowest border border-outline-variant/50 rounded-lg p-2 text-xs focus:outline-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-bold text-on-surface-variant mb-1 uppercase text-[10px]">
+                      Phone Number <span className="text-on-surface-variant font-normal normal-case">(e.g. 0712345678)</span>
+                    </label>
+                    <input
+                      type="tel"
+                      value={editPhone}
+                      onChange={(e) => setEditPhone(e.target.value)}
+                      placeholder="e.g. 0712345678"
+                      className="w-full bg-surface-container-lowest border border-outline-variant/50 rounded-lg p-2 text-xs focus:outline-primary"
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div>
-                <label className="block font-bold text-on-surface-variant mb-1 uppercase text-[10px]">
-                  Email Address <span className="text-on-surface-variant font-normal normal-case">(Optional if Phone provided)</span>
-                </label>
-                <input
-                  type="email"
-                  value={editEmail}
-                  onChange={(e) => setEditEmail(e.target.value)}
-                  className="w-full bg-surface-container-low border border-outline-variant/50 rounded-lg p-2 text-xs focus:outline-primary"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-bold text-on-surface-variant mb-1 uppercase text-[10px]">
-                    Phone Number
-                  </label>
-                  <input
-                    type="tel"
-                    value={editPhone}
-                    onChange={(e) => setEditPhone(e.target.value)}
-                    placeholder="e.g. 0712345678"
-                    className="w-full bg-surface-container-low border border-outline-variant/50 rounded-lg p-2 text-xs focus:outline-primary"
-                  />
+              {/* SECTION: Role, Status, School Scope */}
+              <div className="bg-surface-container-low/50 border border-outline-variant/30 rounded-xl p-3.5 space-y-3">
+                <div className="flex items-center gap-1.5 font-bold text-on-surface text-[11px] uppercase tracking-wider text-primary">
+                  <span className="material-symbols-outlined text-[16px]">security</span>
+                  <span>Role & Access Control</span>
                 </div>
 
-                <div>
-                  <label className="block font-bold text-on-surface-variant mb-1 uppercase text-[10px]">
-                    System Role <span className="text-error">*</span>
-                  </label>
-                  <select
-                    value={editRole}
-                    onChange={(e) => setEditRole(e.target.value as UserRole)}
-                    className="w-full bg-surface-container-low border border-outline-variant/50 rounded-lg p-2 text-xs font-semibold focus:outline-primary cursor-pointer"
-                  >
-                    <option value={UserRole.TEACHER}>Teacher</option>
-                    <option value={UserRole.ADMIN}>Admin</option>
-                    <option value={UserRole.SCHOOL_ADMIN}>School Admin</option>
-                    <option value={UserRole.HEAD_TEACHER}>Head Teacher</option>
-                    <option value={UserRole.DEPUTY_HEAD_TEACHER}>Deputy Head</option>
-                    <option value={UserRole.BURSAR}>Bursar</option>
-                    <option value={UserRole.ACCOUNTANT}>Accountant</option>
-                    <option value={UserRole.ADMISSIONS}>Admissions</option>
-                    <option value={UserRole.PARENT}>Parent / Guardian</option>
-                    <option value={UserRole.SUPER_ADMIN}>Super Admin</option>
-                  </select>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block font-bold text-on-surface-variant mb-1 uppercase text-[10px]">
+                      System Role <span className="text-error">*</span>
+                    </label>
+                    <select
+                      value={editRole}
+                      disabled={selectedUser.id === currentUser?.id}
+                      onChange={(e) => setEditRole(e.target.value as UserRole)}
+                      className="w-full bg-surface-container-lowest border border-outline-variant/50 rounded-lg p-2 text-xs font-semibold focus:outline-primary cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      <option value={UserRole.TEACHER}>Teacher</option>
+                      <option value={UserRole.ADMIN}>Admin</option>
+                      <option value={UserRole.SCHOOL_ADMIN}>School Admin</option>
+                      <option value={UserRole.HEAD_TEACHER}>Head Teacher</option>
+                      <option value={UserRole.DEPUTY_HEAD_TEACHER}>Deputy Head</option>
+                      <option value={UserRole.BURSAR}>Bursar</option>
+                      <option value={UserRole.ACCOUNTANT}>Accountant</option>
+                      <option value={UserRole.ADMISSIONS}>Admissions</option>
+                      <option value={UserRole.PARENT}>Parent / Guardian</option>
+                      {currentUser?.role === UserRole.SUPER_ADMIN && (
+                        <option value={UserRole.SUPER_ADMIN}>Super Admin</option>
+                      )}
+                    </select>
+                    {selectedUser.id === currentUser?.id && (
+                      <p className="text-[10px] text-amber-700 mt-1">Cannot change your own role</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-on-surface-variant mb-1 uppercase text-[10px]">
+                      Account Status <span className="text-error">*</span>
+                    </label>
+                    <select
+                      value={editStatus}
+                      disabled={selectedUser.id === currentUser?.id}
+                      onChange={(e) => setEditStatus(e.target.value as any)}
+                      className="w-full bg-surface-container-lowest border border-outline-variant/50 rounded-lg p-2 text-xs font-semibold focus:outline-primary cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      <option value="ACTIVE">Active</option>
+                      <option value="SUSPENDED">Suspended</option>
+                      <option value="INACTIVE">Inactive</option>
+                    </select>
+                    {selectedUser.id === currentUser?.id && (
+                      <p className="text-[10px] text-amber-700 mt-1">Cannot suspend or deactivate self</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block font-bold text-on-surface-variant mb-1 uppercase text-[10px]">
+                      School Association
+                    </label>
+                    <input
+                      type="text"
+                      value={editSchoolId}
+                      disabled={currentUser?.role !== UserRole.SUPER_ADMIN}
+                      onChange={(e) => setEditSchoolId(e.target.value)}
+                      placeholder="School ID"
+                      className="w-full bg-surface-container-lowest border border-outline-variant/50 rounded-lg p-2 text-xs focus:outline-primary disabled:opacity-60 disabled:cursor-not-allowed"
+                    />
+                    {currentUser?.role !== UserRole.SUPER_ADMIN && (
+                      <p className="text-[10px] text-on-surface-variant mt-1">Managed by Super Admin</p>
+                    )}
+                  </div>
                 </div>
               </div>
+
+              {/* SECTION: Teacher Profile (if role requires or profile exists) */}
+              {([UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER].includes(editRole) || !!selectedUser.teacherProfile) && (
+                <div className="bg-surface-container-low/50 border border-outline-variant/30 rounded-xl p-3.5 space-y-3">
+                  <div className="flex items-center gap-1.5 font-bold text-on-surface text-[11px] uppercase tracking-wider text-primary">
+                    <span className="material-symbols-outlined text-[16px]">badge</span>
+                    <span>Teacher Profile Details</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-bold text-on-surface-variant mb-1 uppercase text-[10px]">
+                        Employee Number
+                      </label>
+                      <input
+                        type="text"
+                        value={editEmployeeNumber}
+                        onChange={(e) => setEditEmployeeNumber(e.target.value)}
+                        placeholder="e.g. EMP-2024-001"
+                        className="w-full bg-surface-container-lowest border border-outline-variant/50 rounded-lg p-2 text-xs focus:outline-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-on-surface-variant mb-1 uppercase text-[10px]">
+                        TSC Number
+                      </label>
+                      <input
+                        type="text"
+                        value={editTscNumber}
+                        onChange={(e) => setEditTscNumber(e.target.value)}
+                        placeholder="e.g. TSC/123456"
+                        className="w-full bg-surface-container-lowest border border-outline-variant/50 rounded-lg p-2 text-xs focus:outline-primary"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-bold text-on-surface-variant mb-1 uppercase text-[10px]">
+                        Department
+                      </label>
+                      <input
+                        type="text"
+                        value={editDepartment}
+                        onChange={(e) => setEditDepartment(e.target.value)}
+                        placeholder="e.g. Science / Mathematics"
+                        className="w-full bg-surface-container-lowest border border-outline-variant/50 rounded-lg p-2 text-xs focus:outline-primary"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-bold text-on-surface-variant mb-1 uppercase text-[10px]">
+                        Qualification
+                      </label>
+                      <input
+                        type="text"
+                        value={editQualification}
+                        onChange={(e) => setEditQualification(e.target.value)}
+                        placeholder="e.g. B.Ed Science"
+                        className="w-full bg-surface-container-lowest border border-outline-variant/50 rounded-lg p-2 text-xs focus:outline-primary"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block font-bold text-on-surface-variant mb-1 uppercase text-[10px]">
+                        Employment Type
+                      </label>
+                      <select
+                        value={editEmploymentType}
+                        onChange={(e) => setEditEmploymentType(e.target.value)}
+                        className="w-full bg-surface-container-lowest border border-outline-variant/50 rounded-lg p-2 text-xs font-semibold focus:outline-primary cursor-pointer"
+                      >
+                        <option value="FULL_TIME">Full Time</option>
+                        <option value="PART_TIME">Part Time</option>
+                        <option value="CONTRACT">Contract</option>
+                        <option value="INTERN">Intern</option>
+                        <option value="CASUAL">Casual</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-on-surface-variant mb-1 uppercase text-[10px]">
+                        Employment Status
+                      </label>
+                      <select
+                        value={editEmploymentStatus}
+                        onChange={(e) => setEditEmploymentStatus(e.target.value)}
+                        className="w-full bg-surface-container-lowest border border-outline-variant/50 rounded-lg p-2 text-xs font-semibold focus:outline-primary cursor-pointer"
+                      >
+                        <option value="ACTIVE">Active</option>
+                        <option value="ON_LEAVE">On Leave</option>
+                        <option value="SUSPENDED">Suspended</option>
+                        <option value="TERMINATED">Terminated</option>
+                        <option value="RESIGNED">Resigned</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-on-surface-variant mb-1 uppercase text-[10px]">
+                        Specialization (comma separated)
+                      </label>
+                      <input
+                        type="text"
+                        value={editSpecialization}
+                        onChange={(e) => setEditSpecialization(e.target.value)}
+                        placeholder="Mathematics, Physics"
+                        className="w-full bg-surface-container-lowest border border-outline-variant/50 rounded-lg p-2 text-xs focus:outline-primary"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Password Action Card */}
               <div className="pt-1">
@@ -943,7 +1178,8 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
                 </div>
               </div>
 
-              <div className="pt-3 flex items-center justify-end gap-2 border-t border-outline-variant/20">
+              {/* Action Buttons */}
+              <div className="pt-3 flex items-center justify-end gap-2 border-t border-outline-variant/20 shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsEditOpen(false)}

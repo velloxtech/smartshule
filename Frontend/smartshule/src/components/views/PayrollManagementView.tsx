@@ -1364,6 +1364,17 @@ export const PayrollManagementView: React.FC = () => {
                                   Ref: {p.paymentReference}
                                 </span>
                               )}
+                              {p.acknowledgementStatus === 'ACKNOWLEDGED' ? (
+                                <span className="inline-flex items-center gap-1 text-[9.5px] text-teal-800 font-bold">
+                                  <span className="material-symbols-outlined text-[11px]">verified</span>
+                                  <span>Teacher Acknowledged</span>
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 text-[9.5px] text-slate-400 font-medium">
+                                  <span className="material-symbols-outlined text-[11px]">pending</span>
+                                  <span>Unacknowledged</span>
+                                </span>
+                              )}
                             </div>
                           ) : p.status === 'PARTIALLY_PAID' ? (
                             <div className="flex flex-col gap-0.5">

@@ -33,6 +33,13 @@ export interface PayrollProps {
   reversedAt?: Date;
   reversalReason?: string;
   notes?: string;
+  acknowledgedAt?: Date;
+  acknowledgedByUserId?: string;
+  acknowledgementStatement?: string;
+  acknowledgementMethod?: 'PORTAL_AUTH' | 'DIGITAL_SIGNATURE' | 'SMS_OTP';
+  acknowledgementSignature?: string;
+  acknowledgementIp?: string;
+  acknowledgementStatus?: 'UNACKNOWLEDGED' | 'ACKNOWLEDGED';
 }
 
 export class PayrollRecord extends Entity<PayrollProps> {
@@ -127,6 +134,39 @@ export class PayrollRecord extends Entity<PayrollProps> {
   public get reversedByUserId(): string | undefined { return this._props.reversedByUserId; }
   public get reversedAt(): Date | undefined { return this._props.reversedAt; }
   public get reversalReason(): string | undefined { return this._props.reversalReason; }
+  public get acknowledgedAt(): Date | undefined { return this._props.acknowledgedAt; }
+  public get acknowledgedByUserId(): string | undefined { return this._props.acknowledgedByUserId; }
+  public get acknowledgementStatement(): string | undefined { return this._props.acknowledgementStatement; }
+  public get acknowledgementMethod(): string | undefined { return this._props.acknowledgementMethod; }
+  public get acknowledgementSignature(): string | undefined { return this._props.acknowledgementSignature; }
+  public get acknowledgementIp(): string | undefined { return this._props.acknowledgementIp; }
+  public get acknowledgementStatus(): 'UNACKNOWLEDGED' | 'ACKNOWLEDGED' {
+    return this._props.acknowledgementStatus || (this._props.acknowledgedAt ? 'ACKNOWLEDGED' : 'UNACKNOWLEDGED');
+  }
+
+  public acknowledgeSalary(
+    userId: string,
+    statement: string,
+    method: 'PORTAL_AUTH' | 'DIGITAL_SIGNATURE' | 'SMS_OTP' = 'PORTAL_AUTH',
+    signature?: string,
+    ipAddress?: string
+  ): void {
+    if (this._props.status !== 'PAID' && this._props.status !== 'PARTIALLY_PAID') {
+      throw new Error('Cannot acknowledge an unpaid or draft salary record. Only paid records may be acknowledged.');
+    }
+    if (this.acknowledgementStatus === 'ACKNOWLEDGED') {
+      throw new Error(`This salary payment record for ${this.month} has already been acknowledged.`);
+    }
+
+    this._props.acknowledgedAt = new Date();
+    this._props.acknowledgedByUserId = userId;
+    this._props.acknowledgementStatement = statement;
+    this._props.acknowledgementMethod = method;
+    this._props.acknowledgementSignature = signature;
+    this._props.acknowledgementIp = ipAddress;
+    this._props.acknowledgementStatus = 'ACKNOWLEDGED';
+    this.touch();
+  }
 
   public approve(approvedByUserId?: string): void {
     this._props.status = 'APPROVED';

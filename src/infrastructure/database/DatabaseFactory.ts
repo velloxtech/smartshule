@@ -103,6 +103,9 @@ import { PostgresInventoryRepository } from './postgres/PostgresInventoryReposit
 import { InMemoryInventoryRepository } from './in-memory/InMemoryInventoryRepository';
 import { ISignatureRepository } from '../../core/ports/repositories/ISignatureRepository';
 import { InMemorySignatureRepository } from './in-memory/InMemorySignatureRepository';
+import { IFinancialApprovalRepository } from '../../core/ports/repositories/IFinancialApprovalRepository';
+import { PostgresFinancialApprovalRepository } from './postgres/PostgresRepositories';
+import { InMemoryFinancialApprovalRepository } from './in-memory/InMemoryRepositories';
 import { ITeacherCorrectionRequestRepository } from '../../core/ports/repositories/ITeacherCorrectionRequestRepository';
 import { InMemoryTeacherCorrectionRequestRepository } from './in-memory/InMemoryTeacherCorrectionRequestRepository';
 import { PostgresTeacherCorrectionRequestRepository } from './postgres/PostgresTeacherCorrectionRequestRepository';
@@ -136,6 +139,7 @@ export interface RepositoryBundle {
   payrollRepository?: IPayrollRepository;
   inventoryRepository?: IInventoryRepository;
   signatureRepository?: ISignatureRepository;
+  financialApprovalRepository?: IFinancialApprovalRepository;
 }
 
 export class DatabaseFactory {
@@ -268,6 +272,7 @@ export class DatabaseFactory {
         inventoryRepository: new PostgresInventoryRepository(pool),
         signatureRepository: new PostgresSignatureRepository(pool),
         teacherCorrectionRequestRepository: new PostgresTeacherCorrectionRequestRepository(pool),
+        financialApprovalRepository: new PostgresFinancialApprovalRepository(pool),
       };
     }
 
@@ -302,6 +307,7 @@ export class DatabaseFactory {
       payrollRepository: new InMemoryPayrollRepository(),
       inventoryRepository: new InMemoryInventoryRepository(),
       signatureRepository: new InMemorySignatureRepository(),
+      financialApprovalRepository: new InMemoryFinancialApprovalRepository(),
     };
   }
 }

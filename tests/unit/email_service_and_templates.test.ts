@@ -188,6 +188,70 @@ describe('Phase A: Email Infrastructure & Design System Unit Tests', () => {
       expect(emailService.getSentEmails().length).toBe(0);
     });
 
+    it('automatically wraps plain-text payloads in Grace Seeds School styled master layout if HTML is omitted', async () => {
+      const res = await emailService.send({
+        to: 'staff@graceseeds.ac.ke',
+        subject: 'General Staff Briefing',
+        text: 'Please review the updated term dates and lesson plans.'
+      });
+
+      expect(res.success).toBe(true);
+      const last = emailService.getLastSentEmail();
+      expect(last?.html).toBeDefined();
+      expect(last?.html).toContain('Grace Seeds School');
+      expect(last?.html).toContain('General Staff Briefing');
+      expect(last?.html).toContain('Please review the updated term dates and lesson plans.');
+      expect(last?.html).toContain('Official Communication');
+    });
+
+    it('dispatches styled Financial Approval OTP email with full audit metadata', async () => {
+      const res = await emailService.sendFinancialApprovalOtp({
+        to: 'director@smartshule.ac.ke',
+        approverName: 'Director Otieno',
+        actionType: 'PAYMENT_REVERSAL',
+        targetRecordType: 'PAYMENT',
+        targetRecordId: 'REC-2026-0045',
+        reason: 'Duplicate transaction correction',
+        requesterName: 'Bursar Alice',
+        otpCode: '918273',
+        expiryMinutes: 5
+      });
+
+      expect(res.success).toBe(true);
+      const last = emailService.getLastSentEmail();
+      expect(last?.subject).toContain('PAYMENT REVERSAL');
+      expect(last?.subject).toContain('918273');
+      expect(last?.html).toContain('Director Otieno');
+      expect(last?.html).toContain('REC-2026-0045');
+      expect(last?.html).toContain('918273');
+      expect(last?.html).toContain('Valid for 5 minutes');
+      expect(last?.text).toContain('Duplicate transaction correction');
+    });
+
+    it('dispatches styled Teacher Salary Advice email with net calculations and acknowledgement prompt', async () => {
+      const res = await emailService.sendSalaryPayslip({
+        to: 'teacher@graceseeds.ac.ke',
+        teacherName: 'Tr. David Okello',
+        payrollPeriod: 'October 2026',
+        netSalary: 52000,
+        grossSalary: 60000,
+        deductions: 8000,
+        paymentMethod: 'BANK_TRANSFER',
+        referenceNumber: 'TX-SAL-202610-8812',
+        paymentDate: '2026-10-29'
+      });
+
+      expect(res.success).toBe(true);
+      const last = emailService.getLastSentEmail();
+      expect(last?.subject).toContain('Official Salary Payment Advice');
+      expect(last?.subject).toContain('October 2026');
+      expect(last?.html).toContain('Tr. David Okello');
+      expect(last?.html).toContain('KES 52,000');
+      expect(last?.html).toContain('KES 60,000');
+      expect(last?.html).toContain('TX-SAL-202610-8812');
+      expect(last?.html).toContain('Acknowledge Salary Receipt in Portal');
+    });
+
     it('correctly validates email formats using isValidEmail helper', () => {
       expect(EmailService.isValidEmail('valid@example.com')).toBe(true);
       expect(EmailService.isValidEmail('admin.user+tag@domain.co.ke')).toBe(true);

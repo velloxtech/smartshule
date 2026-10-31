@@ -243,7 +243,7 @@ export function createApiRouter(container: AppContainer): Router {
   const recordOfWorkController = new RecordOfWorkController(container.recordOfWorkUseCases);
   const timetableController = new TimetableController(container.timetableUseCases);
   const attendanceController = new AttendanceController(container.attendanceUseCases);
-  const financeController = new FinanceController(container.feeUseCases, container.systemLogUseCases);
+  const financeController = new FinanceController(container.feeUseCases, container.systemLogUseCases, container.financialApprovalUseCases);
   const lunchFeeController = new LunchFeeController(container.lunchFeeUseCases, container.systemLogUseCases);
   const analyticsController = new AnalyticsController(container.analyticsUseCases);
   const mediaController = new MediaController(container.visualMediaUseCases);
@@ -290,6 +290,7 @@ export function createApiRouter(container: AppContainer): Router {
   );
 
   userRouter.get('/', authMiddleware, allowedUserManagementRoles, authController.listUsers);
+  userRouter.get('/:id', authMiddleware, allowedUserManagementRoles, authController.getUserById);
   userRouter.post('/', authMiddleware, allowedUserManagementRoles, validateBody(AdminCreateUserSchema), authController.adminCreateUser);
   userRouter.put('/:id', authMiddleware, allowedUserManagementRoles, validateBody(AdminUpdateUserSchema), authController.adminUpdateUser);
   userRouter.patch('/:id/status', authMiddleware, allowedUserManagementRoles, validateBody(AdminSetStatusSchema), authController.adminSetStatus);
@@ -574,6 +575,13 @@ export function createApiRouter(container: AppContainer): Router {
   financeRouter.get('/credits/:studentId', authMiddleware, financeController.getStudentCredits);
   financeRouter.post('/credits/apply', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), financeController.applyCreditToInvoice);
   financeRouter.get('/defaulters', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT), financeController.getDefaulters);
+
+  // Financial Approvals Workflow (OTP-authorized sensitive corrections/reversals)
+  financeRouter.post('/approvals/request', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), financeController.requestFinancialApproval);
+  financeRouter.post('/approvals/verify-and-execute', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN), financeController.verifyAndExecuteFinancialApproval);
+  financeRouter.post('/approvals/reject', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN), financeController.rejectFinancialApproval);
+  financeRouter.get('/approvals/pending', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), financeController.getPendingFinancialApprovals);
+
   // Manual Fee Arrears Management
   financeRouter.post('/arrears', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), validateBody(AddManualArrearSchema), financeController.addManualArrear);
   financeRouter.post('/arrears/batch', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), validateBody(BatchAddManualArrearsSchema), financeController.batchAddManualArrears);
@@ -976,6 +984,9 @@ export function createApiRouter(container: AppContainer): Router {
 
   payrollRouter.get('/stats', authMiddleware, allowedPayrollViewRoles, payrollController.getStats);
   payrollRouter.get('/reconciliation', authMiddleware, allowedPayrollViewRoles, payrollController.getReconciliation);
+  payrollRouter.get('/acknowledgements-report', authMiddleware, allowedPayrollViewRoles, payrollController.getSalaryAcknowledgementsReport);
+  payrollRouter.get('/my-salary', authMiddleware, payrollController.getMySalary);
+  payrollRouter.post('/:id/acknowledge', authMiddleware, payrollController.acknowledgeSalary);
   payrollRouter.get('/', authMiddleware, allowedPayrollViewRoles, payrollController.listPayrolls);
   payrollRouter.get('/:id', authMiddleware, allowedPayrollViewRoles, payrollController.getPayroll);
   payrollRouter.post('/generate', authMiddleware, allowedPayrollAdminRoles, validateBody(GeneratePayrollSchema), payrollController.generateMonthly);

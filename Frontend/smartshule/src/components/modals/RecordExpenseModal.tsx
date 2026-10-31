@@ -107,24 +107,24 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
       <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-lg w-full max-h-[94vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
         {/* Modal Header */}
-        <div className="bg-gradient-to-r from-rose-900 via-rose-800 to-rose-700 text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/15 text-white flex items-center justify-center font-bold shrink-0 shadow-inner">
+        <div className="bg-[#7a1228] text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="w-10 h-10 rounded-xl bg-primary-fixed text-on-primary-fixed flex items-center justify-center font-bold shrink-0">
               <span className="material-symbols-outlined text-[24px]">payments</span>
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-bold text-base leading-tight">Record School Expense</h3>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-950/70 text-rose-200 border border-rose-300/30">
+                <h3 className="font-semibold text-base leading-tight">Record School Expense</h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary-fixed/20 text-rose-100 border border-rose-300/30">
                   Money Out
                 </span>
               </div>
-              <p className="text-xs text-rose-100/90 mt-0.5">Private School Operational Ledger &amp; Payment Voucher (PV)</p>
+              <p className="text-xs text-rose-100">Private School Operational Ledger &amp; Payment Voucher (PV)</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-rose-100 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+            className="p-1 rounded-lg text-rose-100 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
             title="Close modal"
           >
             <span className="material-symbols-outlined text-[20px]">close</span>
@@ -132,15 +132,15 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
         </div>
 
         {/* Audit Trail Banner */}
-        <div className="bg-rose-50 dark:bg-rose-950/30 px-5 py-2.5 border-b border-rose-200/50 dark:border-rose-900/40 flex items-center gap-2 text-xs text-rose-900 dark:text-rose-200">
-          <span className="material-symbols-outlined text-[18px] text-rose-600 shrink-0">verified_user</span>
+        <div className="bg-surface-container-low px-5 py-2.5 border-b border-outline-variant/20 flex items-center gap-2 text-xs text-on-surface-variant">
+          <span className="material-symbols-outlined text-[18px] text-primary shrink-0">verified_user</span>
           <span>Verified disbursement recorded into the double-entry school expense ledger with full staff audit trail.</span>
         </div>
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1 overscroll-contain">
           {error && (
-            <div className="p-3 rounded-xl bg-error/10 border border-error/20 text-error text-xs font-semibold flex items-center gap-2">
+            <div className="p-3 rounded-lg bg-error/10 border border-error/20 text-error text-xs font-semibold flex items-center gap-2">
               <span className="material-symbols-outlined text-[18px]">error</span>
               <span>{error}</span>
             </div>
@@ -148,15 +148,15 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
 
           {/* Title */}
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
-              Expense Title / Narration <span className="text-rose-500">*</span>
+            <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1.5">
+              Expense Title / Narration <span className="text-primary">*</span>
             </label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. KPLC Electricity Bill - January 2026"
-              className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-3.5 py-2.5 text-sm text-on-surface focus:outline-rose-600 focus:ring-1 focus:ring-rose-600 transition-all"
+              className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg px-3.5 py-2.5 text-sm text-on-surface focus:outline-primary transition-all"
               required
             />
           </div>
@@ -164,13 +164,13 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
           {/* Category & Amount in Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
-                Vote Head / Category <span className="text-rose-500">*</span>
+              <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1.5">
+                Vote Head / Category <span className="text-primary">*</span>
               </label>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value as ExpenseCategoryType)}
-                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-on-surface focus:outline-rose-600 focus:ring-1 focus:ring-rose-600 transition-all"
+                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg px-3.5 py-2.5 text-xs sm:text-sm text-on-surface focus:outline-primary transition-all"
               >
                 {CATEGORY_OPTIONS.map((cat) => (
                   <option key={cat.value} value={cat.value}>
@@ -181,8 +181,8 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
-                Amount (KES) <span className="text-rose-500">*</span>
+              <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1.5">
+                Amount (KES) <span className="text-primary">*</span>
               </label>
               <div className="relative">
                 <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-on-surface-variant">
@@ -195,7 +195,7 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
                   placeholder="25,000"
                   min="1"
                   step="0.01"
-                  className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl pl-12 pr-3.5 py-2.5 text-sm font-semibold text-on-surface focus:outline-rose-600 focus:ring-1 focus:ring-rose-600 transition-all"
+                  className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg pl-12 pr-3.5 py-2.5 text-sm font-semibold text-on-surface focus:outline-primary transition-all"
                   required
                 />
               </div>
@@ -205,28 +205,28 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
           {/* Payee & Date */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
-                Payee / Vendor / Supplier <span className="text-rose-500">*</span>
+              <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1.5">
+                Payee / Vendor / Supplier <span className="text-primary">*</span>
               </label>
               <input
                 type="text"
                 value={payee}
                 onChange={(e) => setPayee(e.target.value)}
                 placeholder="e.g. Kenya Power, TotalEnergies, Fundi James"
-                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-3.5 py-2.5 text-sm text-on-surface focus:outline-rose-600 focus:ring-1 focus:ring-rose-600 transition-all"
+                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg px-3.5 py-2.5 text-sm text-on-surface focus:outline-primary transition-all"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
-                Expense Date <span className="text-rose-500">*</span>
+              <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1.5">
+                Expense Date <span className="text-primary">*</span>
               </label>
               <input
                 type="date"
                 value={expenseDate}
                 onChange={(e) => setExpenseDate(e.target.value)}
-                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-3.5 py-2.5 text-sm text-on-surface focus:outline-rose-600 focus:ring-1 focus:ring-rose-600 transition-all"
+                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg px-3.5 py-2.5 text-sm text-on-surface focus:outline-primary transition-all"
                 required
               />
             </div>
@@ -235,13 +235,13 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
           {/* Payment Method & Reference */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
-                Disbursement Channel <span className="text-rose-500">*</span>
+              <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1.5">
+                Disbursement Channel <span className="text-primary">*</span>
               </label>
               <select
                 value={paymentMethod}
                 onChange={(e) => setPaymentMethod(e.target.value as any)}
-                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-3.5 py-2.5 text-sm text-on-surface focus:outline-rose-600 focus:ring-1 focus:ring-rose-600 transition-all"
+                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg px-3.5 py-2.5 text-sm text-on-surface focus:outline-primary transition-all"
               >
                 <option value="MPESA">M-Pesa (Till / Paybill)</option>
                 <option value="BANK_TRANSFER">Bank EFT / Wire Transfer</option>
@@ -253,15 +253,15 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
-                Ref / Voucher # / Slip <span className="text-rose-500">*</span>
+              <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1.5">
+                Ref / Voucher # / Slip <span className="text-primary">*</span>
               </label>
               <input
                 type="text"
                 value={paymentReference}
                 onChange={(e) => setPaymentReference(e.target.value)}
                 placeholder="e.g. QHJ89012AA, CHQ-0021, PCV-05"
-                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-3.5 py-2.5 text-sm font-mono text-on-surface focus:outline-rose-600 focus:ring-1 focus:ring-rose-600 transition-all"
+                className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg px-3.5 py-2.5 text-sm font-mono text-on-surface focus:outline-primary transition-all"
                 required
               />
             </div>
@@ -269,21 +269,23 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
 
           {/* Status Selection */}
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
+            <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1.5">
               Voucher Status
             </label>
             <div className="grid grid-cols-3 gap-2.5">
               {[
-                { id: 'PAID', label: 'Paid / Disbursed', color: 'border-emerald-500 bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300' },
-                { id: 'APPROVED', label: 'Approved (Pending Disb.)', color: 'border-amber-500 bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300' },
-                { id: 'PENDING', label: 'Draft / Under Review', color: 'border-blue-500 bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300' },
+                { id: 'PAID', label: 'Paid / Disbursed' },
+                { id: 'APPROVED', label: 'Approved (Pending)' },
+                { id: 'PENDING', label: 'Draft / Under Review' },
               ].map((s) => (
                 <button
                   key={s.id}
                   type="button"
                   onClick={() => setStatus(s.id as ExpenseStatusType)}
-                  className={`px-3 py-2 rounded-xl text-xs font-semibold border-2 transition-all cursor-pointer text-center ${
-                    status === s.id ? s.color : 'border-outline-variant/30 text-on-surface-variant bg-surface-container-low hover:bg-surface-container'
+                  className={`p-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-center border ${
+                    status === s.id
+                      ? 'border-primary bg-primary-fixed/30 text-primary'
+                      : 'border-outline-variant/40 bg-surface-container-low text-on-surface-variant hover:bg-surface-container'
                   }`}
                 >
                   {s.label}
@@ -294,7 +296,7 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
 
           {/* Notes */}
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-1.5">
+            <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1.5">
               Auditor Notes / Purpose Description (Optional)
             </label>
             <textarea
@@ -302,7 +304,7 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
               onChange={(e) => setNotes(e.target.value)}
               placeholder="e.g. Authorized by Principal for Junior Secondary practical science project materials."
               rows={2}
-              className="w-full bg-surface-container-low border border-outline-variant/40 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-on-surface focus:outline-rose-600 focus:ring-1 focus:ring-rose-600 transition-all"
+              className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg px-3.5 py-2.5 text-xs sm:text-sm text-on-surface focus:outline-primary transition-all"
             />
           </div>
 
@@ -311,14 +313,14 @@ export const RecordExpenseModal: React.FC<RecordExpenseModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold text-on-surface-variant hover:bg-surface-container transition-colors cursor-pointer"
+              className="px-4 py-2.5 rounded-lg text-xs sm:text-sm font-semibold text-on-surface-variant hover:bg-surface-container transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isLoading}
-              className="px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-rose-700 hover:bg-rose-800 text-white shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              className="px-5 py-2.5 rounded-lg text-xs sm:text-sm font-semibold bg-primary text-white hover:bg-primary-container shadow-md transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
             >
               {isLoading ? (
                 <>

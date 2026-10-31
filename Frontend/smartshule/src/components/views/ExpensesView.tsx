@@ -7,17 +7,72 @@ const VOTE_HEAD_CONFIG: Record<
   ExpenseCategoryType,
   { label: string; icon: string; bg: string; text: string }
 > = {
-  SALARIES_WAGES: { label: 'Salaries & Staff Wages', icon: 'badge', bg: 'bg-blue-50 dark:bg-blue-950/40', text: 'text-blue-700 dark:text-blue-300' },
-  CBC_LEARNING_MATERIALS: { label: 'CBE Materials & Lab Kits', icon: 'science', bg: 'bg-purple-50 dark:bg-purple-950/40', text: 'text-purple-700 dark:text-purple-300' },
-  UTILITIES_BILLS: { label: 'Utilities (Power, Water, Net)', icon: 'bolt', bg: 'bg-amber-50 dark:bg-amber-950/40', text: 'text-amber-700 dark:text-amber-300' },
-  MEALS_FEEDING: { label: 'Meals & Foodstock', icon: 'restaurant', bg: 'bg-orange-50 dark:bg-orange-950/40', text: 'text-orange-700 dark:text-orange-300' },
-  REPAIRS_MAINTENANCE: { label: 'Repairs & Maintenance', icon: 'handyman', bg: 'bg-teal-50 dark:bg-teal-950/40', text: 'text-teal-700 dark:text-teal-300' },
-  TRANSPORT_FUEL: { label: 'Transport & Bus Fuel', icon: 'directions_bus', bg: 'bg-indigo-50 dark:bg-indigo-950/40', text: 'text-indigo-700 dark:text-indigo-300' },
-  ADMIN_OFFICE: { label: 'Admin & Office Printing', icon: 'description', bg: 'bg-slate-50 dark:bg-slate-900/50', text: 'text-slate-700 dark:text-slate-300' },
-  KNEC_EXAMS: { label: 'KNEC & Exam Logistics', icon: 'assignment_turned_in', bg: 'bg-emerald-50 dark:bg-emerald-950/40', text: 'text-emerald-700 dark:text-emerald-300' },
-  CO_CURRICULAR: { label: 'Co-Curricular & Sports', icon: 'sports_soccer', bg: 'bg-lime-50 dark:bg-lime-950/40', text: 'text-lime-800 dark:text-lime-300' },
-  CAPITAL_DEVELOPMENT: { label: 'Capital & Infrastructure', icon: 'domain', bg: 'bg-cyan-50 dark:bg-cyan-950/40', text: 'text-cyan-800 dark:text-cyan-300' },
-  OTHER_EXPENSES: { label: 'Other Miscellaneous', icon: 'more_horiz', bg: 'bg-gray-50 dark:bg-gray-900/50', text: 'text-gray-700 dark:text-gray-300' },
+  SALARIES_WAGES: { 
+    label: 'Salaries & Staff Wages', 
+    icon: 'badge', 
+    bg: 'bg-blue-100 dark:bg-blue-950/80 border border-blue-300 dark:border-blue-700', 
+    text: 'text-blue-950 dark:text-blue-100 font-bold' 
+  },
+  CBC_LEARNING_MATERIALS: { 
+    label: 'CBE Materials & Lab Kits', 
+    icon: 'science', 
+    bg: 'bg-purple-100 dark:bg-purple-950/80 border border-purple-300 dark:border-purple-700', 
+    text: 'text-purple-950 dark:text-purple-100 font-bold' 
+  },
+  UTILITIES_BILLS: { 
+    label: 'Utilities (Power, Water, Net)', 
+    icon: 'bolt', 
+    bg: 'bg-amber-100 dark:bg-amber-950/80 border border-amber-300 dark:border-amber-700', 
+    text: 'text-amber-950 dark:text-amber-100 font-bold' 
+  },
+  MEALS_FEEDING: { 
+    label: 'Meals & Foodstock', 
+    icon: 'restaurant', 
+    bg: 'bg-orange-100 dark:bg-orange-950/80 border border-orange-300 dark:border-orange-700', 
+    text: 'text-orange-950 dark:text-orange-100 font-bold' 
+  },
+  REPAIRS_MAINTENANCE: { 
+    label: 'Repairs & Maintenance', 
+    icon: 'handyman', 
+    bg: 'bg-teal-100 dark:bg-teal-950/80 border border-teal-300 dark:border-teal-700', 
+    text: 'text-teal-950 dark:text-teal-100 font-bold' 
+  },
+  TRANSPORT_FUEL: { 
+    label: 'Transport & Bus Fuel', 
+    icon: 'directions_bus', 
+    bg: 'bg-indigo-100 dark:bg-indigo-950/80 border border-indigo-300 dark:border-indigo-700', 
+    text: 'text-indigo-950 dark:text-indigo-100 font-bold' 
+  },
+  ADMIN_OFFICE: { 
+    label: 'Admin & Office Printing', 
+    icon: 'description', 
+    bg: 'bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-600', 
+    text: 'text-slate-900 dark:text-slate-100 font-bold' 
+  },
+  KNEC_EXAMS: { 
+    label: 'KNEC & Exam Logistics', 
+    icon: 'assignment_turned_in', 
+    bg: 'bg-emerald-100 dark:bg-emerald-950/80 border border-emerald-300 dark:border-emerald-700', 
+    text: 'text-emerald-950 dark:text-emerald-100 font-bold' 
+  },
+  CO_CURRICULAR: { 
+    label: 'Co-Curricular & Sports', 
+    icon: 'sports_soccer', 
+    bg: 'bg-lime-100 dark:bg-lime-950/80 border border-lime-300 dark:border-lime-700', 
+    text: 'text-lime-950 dark:text-lime-100 font-bold' 
+  },
+  CAPITAL_DEVELOPMENT: { 
+    label: 'Capital & Infrastructure', 
+    icon: 'domain', 
+    bg: 'bg-cyan-100 dark:bg-cyan-950/80 border border-cyan-300 dark:border-cyan-700', 
+    text: 'text-cyan-950 dark:text-cyan-100 font-bold' 
+  },
+  OTHER_EXPENSES: { 
+    label: 'Other Miscellaneous', 
+    icon: 'more_horiz', 
+    bg: 'bg-gray-200 dark:bg-gray-800 border border-gray-300 dark:border-gray-600', 
+    text: 'text-gray-900 dark:text-gray-100 font-bold' 
+  },
 };
 
 export const ExpensesView: React.FC = () => {
@@ -176,7 +231,7 @@ export const ExpensesView: React.FC = () => {
     <div className="space-y-6 pb-14">
       {/* Toast Notification */}
       {notification && (
-        <div className="fixed top-20 right-6 z-50 bg-rose-700 text-white px-4 py-3 rounded-xl shadow-xl flex items-center gap-2 text-sm font-semibold animate-fade-in">
+        <div className="fixed top-20 right-6 z-50 bg-[#7a1228] text-white px-4 py-3 rounded-xl shadow-xl flex items-center gap-2 text-sm font-semibold animate-fade-in">
           <span className="material-symbols-outlined text-[20px]">check_circle</span>
           <span>{notification}</span>
         </div>
@@ -190,11 +245,11 @@ export const ExpensesView: React.FC = () => {
             <span>/</span>
             <span>Finance & Billing</span>
             <span>/</span>
-            <span className="text-primary font-semibold">Operating Expenses</span>
+            <span className="text-[#7a1228] font-semibold">Operating Expenses</span>
           </div>
           <h1 className="font-headline-lg text-headline-lg text-on-surface mt-1 flex items-center gap-2.5">
             Operating Expenses & MoE Vote Heads
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-200 border border-rose-300/40">
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#fdf2f4] text-[#7a1228] dark:bg-rose-950 dark:text-rose-200 border border-[#fecdd3]">
               Money Out
             </span>
           </h1>
@@ -207,7 +262,7 @@ export const ExpensesView: React.FC = () => {
         <div className="flex flex-wrap items-center gap-2.5 self-start lg:self-auto">
           <button
             onClick={() => setIsRecordModalOpen(true)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-rose-700 hover:bg-rose-800 text-white rounded-xl text-xs font-bold shadow-sm hover:shadow transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#7a1228] hover:bg-[#630d1f] text-white rounded-xl text-xs font-bold shadow-sm hover:shadow transition-all cursor-pointer"
           >
             <span className="material-symbols-outlined text-[18px]">add_circle</span>
             <span>New Payment Voucher</span>
@@ -225,17 +280,17 @@ export const ExpensesView: React.FC = () => {
 
       {/* Executive Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-surface-container-lowest border border-rose-500/20 rounded-2xl p-5 shadow-xs relative overflow-hidden">
+        <div className="bg-surface-container-lowest border border-[#7a1228]/20 rounded-2xl p-5 shadow-xs relative overflow-hidden">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-rose-700 dark:text-rose-400">
+              <p className="text-xs font-bold uppercase tracking-wider text-[#7a1228]">
                 Disbursed Expenses (Paid)
               </p>
               <h3 className="text-2xl font-black text-on-surface mt-1">
                 KES {totalPaid.toLocaleString()}
               </h3>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-primary-fixed text-on-primary-fixed flex items-center justify-center">
               <span className="material-symbols-outlined text-[24px]">verified</span>
             </div>
           </div>
@@ -243,7 +298,7 @@ export const ExpensesView: React.FC = () => {
             <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
             <span>Reconciled with Bank/M-Pesa</span>
           </div>
-          <div className="absolute top-0 left-0 right-0 h-1 bg-rose-600"></div>
+          <div className="absolute top-0 left-0 right-0 h-1 bg-[#7a1228]"></div>
         </div>
 
         <div className="bg-surface-container-lowest border border-amber-500/20 rounded-2xl p-5 shadow-xs relative overflow-hidden">
@@ -303,7 +358,7 @@ export const ExpensesView: React.FC = () => {
             </div>
           </div>
           <div className="mt-3 text-xs text-on-surface-variant flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-primary"></span>
+            <span className="w-2 h-2 rounded-full bg-[#7a1228]"></span>
             <span>PFMA Audit Compliant</span>
           </div>
           <div className="absolute top-0 left-0 right-0 h-1 bg-outline-variant"></div>
@@ -319,7 +374,7 @@ export const ExpensesView: React.FC = () => {
           {selectedCategory !== 'ALL' && (
             <button
               onClick={() => setSelectedCategory('ALL')}
-              className="text-xs font-semibold text-rose-700 hover:underline cursor-pointer"
+              className="text-xs font-semibold text-[#7a1228] hover:underline cursor-pointer"
             >
               Clear Vote Head Filter
             </button>
@@ -331,7 +386,7 @@ export const ExpensesView: React.FC = () => {
             onClick={() => setSelectedCategory('ALL')}
             className={`px-3.5 py-2 rounded-xl text-xs font-bold shrink-0 transition-all cursor-pointer border ${
               selectedCategory === 'ALL'
-                ? 'bg-rose-700 text-white border-rose-700 shadow-xs'
+                ? 'bg-[#7a1228] text-white border-[#7a1228] shadow-xs'
                 : 'bg-surface-container-lowest text-on-surface-variant border-outline-variant/30 hover:bg-surface-container'
             }`}
           >
@@ -348,7 +403,7 @@ export const ExpensesView: React.FC = () => {
                 onClick={() => setSelectedCategory(isSelected ? 'ALL' : cat)}
                 className={`px-3.5 py-2 rounded-xl text-xs font-semibold shrink-0 transition-all cursor-pointer border flex items-center gap-2 ${
                   isSelected
-                    ? 'bg-rose-700 text-white border-rose-700 shadow-xs font-bold'
+                    ? 'bg-[#7a1228] text-white border-[#7a1228] shadow-xs font-bold'
                     : 'bg-surface-container-lowest text-on-surface border-outline-variant/30 hover:bg-surface-container'
                 }`}
               >
@@ -396,7 +451,7 @@ export const ExpensesView: React.FC = () => {
               <select
                 value={selectedChannel}
                 onChange={(e) => setSelectedChannel(e.target.value)}
-                className="bg-surface-container border border-outline-variant/30 rounded-xl px-3 py-1.5 text-xs text-on-surface focus:outline-rose-600"
+                className="bg-surface-container border border-outline-variant/30 rounded-xl px-3 py-1.5 text-xs text-on-surface focus:outline-[#7a1228]"
               >
                 <option value="ALL">All Payment Channels</option>
                 <option value="MPESA">M-Pesa</option>
@@ -437,7 +492,7 @@ export const ExpensesView: React.FC = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search expenses by voucher # (e.g. PV-2026-001), payee, narration, or transaction reference..."
-              className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl pl-10 pr-4 py-2 text-xs sm:text-sm text-on-surface focus:outline-rose-600"
+              className="w-full bg-surface-container-low border border-outline-variant/30 rounded-xl pl-10 pr-4 py-2 text-xs sm:text-sm text-on-surface focus:outline-[#7a1228]"
             />
           </div>
         </div>
@@ -446,7 +501,7 @@ export const ExpensesView: React.FC = () => {
         <div className="overflow-x-auto">
           {loading ? (
             <div className="p-12 text-center text-on-surface-variant text-sm flex items-center justify-center gap-2">
-              <span className="material-symbols-outlined animate-spin text-rose-600">progress_activity</span>
+              <span className="material-symbols-outlined animate-spin text-[#7a1228]">progress_activity</span>
               <span>Loading payment vouchers from database...</span>
             </div>
           ) : error ? (
@@ -459,7 +514,7 @@ export const ExpensesView: React.FC = () => {
               <p className="font-semibold">No payment vouchers found matching your filters.</p>
               <button
                 onClick={() => setIsRecordModalOpen(true)}
-                className="mt-2 px-3.5 py-1.5 rounded-lg bg-rose-700 text-white text-xs font-bold cursor-pointer"
+                className="mt-2 px-3.5 py-1.5 rounded-lg bg-[#7a1228] text-white text-xs font-bold cursor-pointer"
               >
                 Create New Voucher
               </button>
@@ -484,7 +539,7 @@ export const ExpensesView: React.FC = () => {
                   const cfg = VOTE_HEAD_CONFIG[exp.category] || VOTE_HEAD_CONFIG.OTHER_EXPENSES;
                   return (
                     <tr key={exp.id} className="hover:bg-surface-container-low/50 transition-colors">
-                      <td className="py-3 px-4 font-mono font-bold text-rose-800 dark:text-rose-300 whitespace-nowrap">
+                      <td className="py-3 px-4 font-mono font-bold text-[#7a1228] whitespace-nowrap">
                         {exp.voucherNumber}
                       </td>
 
@@ -493,8 +548,8 @@ export const ExpensesView: React.FC = () => {
                       </td>
 
                       <td className="py-3 px-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold ${cfg.bg} ${cfg.text}`}>
-                          <span className="material-symbols-outlined text-[14px]">{cfg.icon}</span>
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] shadow-2xs ${cfg.bg} ${cfg.text}`}>
+                          <span className="material-symbols-outlined text-[15px] shrink-0">{cfg.icon}</span>
                           <span>{cfg.label}</span>
                         </span>
                       </td>
@@ -517,7 +572,7 @@ export const ExpensesView: React.FC = () => {
                         <div className="text-[10px] font-mono text-on-surface-variant">{exp.paymentReference}</div>
                       </td>
 
-                      <td className="py-3 px-4 text-right font-black font-mono text-rose-700 dark:text-rose-400 whitespace-nowrap">
+                      <td className="py-3 px-4 text-right font-black font-mono text-[#7a1228] whitespace-nowrap">
                         KES {exp.amount.toLocaleString()}
                       </td>
 
@@ -561,7 +616,7 @@ export const ExpensesView: React.FC = () => {
 
                           <button
                             onClick={() => setSelectedVoucherForView(exp)}
-                            className="p-1 text-on-surface-variant hover:text-primary transition-colors cursor-pointer"
+                            className="p-1 text-on-surface-variant hover:text-[#7a1228] transition-colors cursor-pointer"
                             title="View Payment Voucher Details"
                           >
                             <span className="material-symbols-outlined text-[18px]">visibility</span>
@@ -569,7 +624,7 @@ export const ExpensesView: React.FC = () => {
 
                           <button
                             onClick={() => handleDeleteExpense(exp.id, exp.voucherNumber)}
-                            className="p-1 text-on-surface-variant hover:text-rose-600 transition-colors cursor-pointer"
+                            className="p-1 text-on-surface-variant hover:text-[#7a1228] transition-colors cursor-pointer"
                             title="Delete Voucher"
                           >
                             <span className="material-symbols-outlined text-[18px]">delete</span>
@@ -598,7 +653,7 @@ export const ExpensesView: React.FC = () => {
           <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4 border border-outline-variant/30">
             <div className="flex items-center justify-between border-b border-outline-variant/30 pb-3">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-rose-700 text-[24px]">receipt_long</span>
+                <span className="material-symbols-outlined text-[#7a1228] text-[24px]">receipt_long</span>
                 <h3 className="font-bold text-base text-on-surface">Payment Voucher (PV) Document</h3>
               </div>
               <button
@@ -612,7 +667,7 @@ export const ExpensesView: React.FC = () => {
             <div className="p-4 bg-surface-container-low rounded-xl border border-outline-variant/20 space-y-3 text-xs">
               <div className="flex justify-between border-b border-outline-variant/20 pb-2">
                 <span className="text-on-surface-variant">Voucher Number:</span>
-                <span className="font-mono font-bold text-rose-700">{selectedVoucherForView.voucherNumber}</span>
+                <span className="font-mono font-bold text-[#7a1228]">{selectedVoucherForView.voucherNumber}</span>
               </div>
               <div className="flex justify-between border-b border-outline-variant/20 pb-2">
                 <span className="text-on-surface-variant">Issue Date:</span>
@@ -636,7 +691,7 @@ export const ExpensesView: React.FC = () => {
               </div>
               <div className="flex justify-between border-b border-outline-variant/20 pb-2">
                 <span className="text-on-surface-variant">Amount:</span>
-                <span className="font-mono font-black text-base text-rose-700">
+                <span className="font-mono font-black text-base text-[#7a1228]">
                   KES {selectedVoucherForView.amount.toLocaleString()}
                 </span>
               </div>
@@ -656,7 +711,7 @@ export const ExpensesView: React.FC = () => {
             <div className="flex items-center justify-end gap-2 pt-2">
               <button
                 onClick={() => window.print()}
-                className="px-4 py-2 rounded-xl text-xs font-bold bg-primary text-white hover:bg-primary/90 cursor-pointer flex items-center gap-1.5"
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-[#7a1228] text-white hover:bg-[#630d1f] cursor-pointer flex items-center gap-1.5"
               >
                 <span className="material-symbols-outlined text-[16px]">print</span>
                 <span>Print Voucher</span>

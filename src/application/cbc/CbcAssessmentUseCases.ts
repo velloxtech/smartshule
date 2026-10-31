@@ -27,7 +27,7 @@ import {
   ValueAssessmentEntry,
   TermTrendEntry
 } from '../../core/domain/cbc/CbcAssessment';
-import { CBCGradeLevel, StudentStatus } from '../../core/domain/user/Student';
+import { Student, CBCGradeLevel, StudentStatus } from '../../core/domain/user/Student';
 import { EducationLevel, LearningArea } from '../../core/domain/academic/ClassRoom';
 import { IdGenerator, NotFoundError, ValidationError, ForbiddenError, ConflictError } from '../../core/domain/shared/Errors';
 
@@ -449,14 +449,13 @@ export class CBCAssessmentUseCases {
     return EducationLevel.JUNIOR_SCHOOL;
   }
 
-  // 3. Summative Assessment (with robust Learning Area ID resolution scoped to student grade level)
+  // 3. Summative Assessment
   private async resolveValidLearningAreaId(incomingIdOrCode: string, studentGradeLevel?: string, schoolId?: string): Promise<string> {
     if (!incomingIdOrCode) {
       throw new ValidationError('Learning area ID is required.');
     }
 
     try {
-      // 1. Try finding directly by ID
       const area = await this.academicRepository.findLearningAreaById(incomingIdOrCode);
       if (area) return area.id;
     } catch {
@@ -467,7 +466,6 @@ export class CBCAssessmentUseCases {
     const targetKey = this.getCanonicalSubjectKey(incomingIdOrCode);
     const targetName = this.getCanonicalSubjectName(targetKey).toLowerCase();
 
-    // 2. Try finding within the student's grade level
     const gradeClean = studentGradeLevel ? String(studentGradeLevel).toUpperCase().replace(/[\s-]/g, '_') : '';
     if (gradeClean && allAreas.length > 0) {
       const gradeAreas = allAreas.filter(a => a.gradeLevel && a.gradeLevel.toUpperCase().replace(/[\s-]/g, '_') === gradeClean);
@@ -481,7 +479,6 @@ export class CBCAssessmentUseCases {
       if (matchInGrade) return matchInGrade.id;
     }
 
-    // 3. Try finding across all learning areas by matching canonical subject key
     const matchAny = allAreas.find(a =>
       a.id.toLowerCase() === incomingIdOrCode.toLowerCase() ||
       a.code?.toUpperCase() === incomingIdOrCode.toUpperCase() ||
@@ -490,14 +487,12 @@ export class CBCAssessmentUseCases {
     );
     if (matchAny) return matchAny.id;
 
-    // 4. Try matching by name substring
     const matchName = allAreas.find(a =>
       a.name?.toLowerCase().includes(targetName) ||
       targetName.includes(a.name?.toLowerCase() || '')
     );
     if (matchName) return matchName.id;
 
-    // 5. Automatically create the missing learning area for this grade level with safe unique ID
     const finalGrade = (studentGradeLevel as CBCGradeLevel) || CBCGradeLevel.GRADE_4;
     const cleanPfx = String(finalGrade).toLowerCase().replace(/grade_/, 'g').replace(/_/g, '');
     const newId = `la-${cleanPfx}-${targetKey.toLowerCase()}`;
@@ -527,7 +522,6 @@ export class CBCAssessmentUseCases {
     }
     if (!student) throw new NotFoundError('Student', dto.studentId);
 
-    // Enforce marks validation
     if (dto.strandScores && Array.isArray(dto.strandScores)) {
       for (const item of dto.strandScores) {
         if (item && item.rawScore !== undefined) {
@@ -542,7 +536,6 @@ export class CBCAssessmentUseCases {
       }
     }
 
-    // Resolve robust learning area ID scoped to the student's grade level
     const validLearningAreaId = await this.resolveValidLearningAreaId(
       dto.learningAreaId,
       student.gradeLevel,
@@ -645,6 +638,215 @@ export class CBCAssessmentUseCases {
 
     const records = await this.CBCRepository.findSummatives(filters);
     return records.map(r => r.toJSON());
+  }
+
+  public async computeStudentRankings(
+    student: Student,
+    termId: string,
+    academicYearId: string,
+    studentTotalScore: number,
+    studentAvgScore: number,
+    studentTotalPoints: number
+  ): Promise<{
+    streamPosition: number;
+    streamPopulation: number;
+    classPosition: number;
+    classPopulation: number;
+    overallPosition: number;
+    overallPopulation: number;
+  }> {
+    // 1. Fetch only active students in the school
+    const allSchoolStudents = await this.studentRepository.findAll({
+      schoolId: student.schoolId
+    }).catch(() => []);
+
+    const activeSchoolStudents = allSchoolStudents.filter(s => (s as any).status !== 'INACTIVE');
+
+    const normalizeGrade = (g?: string) =>
+      (g || '').toUpperCase().replace(/[\s_-]/g, '');
+
+    const targetGradeNorm = normalizeGrade(student.gradeLevel);
+
+    // 2. Grade Cohort: All students enrolled in the same grade level across streams
+    const gradeStudents = activeSchoolStudents.filter(s => {
+      if (student.classroomId && s.classroomId && s.classroomId === student.classroomId) {
+        return true;
+      }
+      return normalizeGrade(s.gradeLevel) === targetGradeNorm;
+    });
+
+    const overallPopulation = gradeStudents.length > 0 ? gradeStudents.length : 1;
+
+    // 3. Stream Cohort: Filter students enrolled specifically in this student's stream
+    const streamStudents = student.streamId
+      ? gradeStudents.filter(s => s.streamId === student.streamId)
+      : gradeStudents;
+
+    // STRICT FIX: The population is the count of STUDENTS, never the count of streams!
+    const streamPopulation = streamStudents.length > 0 ? streamStudents.length : overallPopulation;
+    const classPopulation = streamPopulation;
+
+    const termSummatives = await this.CBCRepository.findSummatives({
+      termId,
+      academicYearId
+    }).catch(() => []);
+
+    const termReports = await this.CBCRepository.findReportCardsByTerm(termId).catch(() => []);
+
+    const summMap = new Map<string, SummativeAssessment[]>();
+    for (const sm of termSummatives) {
+      const list = summMap.get(sm.studentId) || [];
+      list.push(sm);
+      summMap.set(sm.studentId, list);
+    }
+
+    const reportMap = new Map<string, CBCReportCard>();
+    for (const rep of termReports) {
+      reportMap.set(rep.studentId, rep);
+    }
+
+    const pointsFromLevel = (level: string): number => {
+      switch (level) {
+        case 'EXCEEDING_EXPECTATIONS':
+        case 'EE':
+        case '4': return 4;
+        case 'MEETING_EXPECTATIONS':
+        case 'ME':
+        case '3': return 3;
+        case 'APPROACHING_EXPECTATIONS':
+        case 'AE':
+        case '2': return 2;
+        default: return 1;
+      }
+    };
+
+    const toPercent = (level: PerformanceLevel | string): number => {
+      if (level === PerformanceLevel.EXCEEDING_EXPECTATIONS || level === 'EE') return 84;
+      if (level === PerformanceLevel.MEETING_EXPECTATIONS || level === 'ME') return 74;
+      if (level === PerformanceLevel.APPROACHING_EXPECTATIONS || level === 'AE') return 58;
+      return 42;
+    };
+
+    interface PeerScore {
+      studentId: string;
+      admissionNumber: string;
+      streamId?: string;
+      classroomId?: string;
+      gradeLevel: string;
+      totalScore: number;
+      avgScore: number;
+      totalPoints: number;
+      hasMarks: boolean;
+    }
+
+    const peerScores: PeerScore[] = [];
+
+    for (const st of gradeStudents) {
+      if (st.id === student.id) {
+        peerScores.push({
+          studentId: st.id,
+          admissionNumber: st.admissionNumber,
+          streamId: st.streamId,
+          classroomId: st.classroomId,
+          gradeLevel: st.gradeLevel,
+          totalScore: studentTotalScore,
+          avgScore: studentAvgScore,
+          totalPoints: studentTotalPoints,
+          hasMarks: true
+        });
+        continue;
+      }
+
+      const stSumms = summMap.get(st.id) || [];
+      const stRep = reportMap.get(st.id);
+
+      let totScore = 0;
+      let totPoints = 0;
+      let subCount = 0;
+
+      if (stSumms.length > 0) {
+        for (const sm of stSumms) {
+          let rawScore: number | undefined;
+          let maxScore: number | undefined;
+          if (sm.strandScores && sm.strandScores.length > 0) {
+            const valid = sm.strandScores.filter(x => x.rawScore !== undefined && x.maxScore !== undefined && x.maxScore > 0);
+            if (valid.length > 0) {
+              rawScore = valid.reduce((acc, x) => acc + (x.rawScore || 0), 0);
+              maxScore = valid.reduce((acc, x) => acc + (x.maxScore || 100), 0);
+            }
+          }
+          const pct = (rawScore !== undefined && maxScore !== undefined && maxScore > 0)
+            ? Math.min(100, Math.round((rawScore / maxScore) * 100))
+            : toPercent(sm.overallPerformanceLevel);
+          totScore += pct;
+          totPoints += pointsFromLevel(sm.overallPerformanceLevel);
+          subCount++;
+        }
+      } else if (stRep && Array.isArray(stRep.learningAreaAssessments) && stRep.learningAreaAssessments.length > 0) {
+        for (const la of stRep.learningAreaAssessments) {
+          totScore += Number(la.score || 0);
+          totPoints += pointsFromLevel(la.performanceLevel);
+          subCount++;
+        }
+      } else if (stRep && stRep.overallAverageScore) {
+        totScore = Number(stRep.overallAverageScore);
+        totPoints = Math.round(totScore / 25);
+        subCount = 1;
+      }
+
+      const avg = subCount > 0 ? Number((totScore / subCount).toFixed(2)) : 0;
+      peerScores.push({
+        studentId: st.id,
+        admissionNumber: st.admissionNumber,
+        streamId: st.streamId,
+        classroomId: st.classroomId,
+        gradeLevel: st.gradeLevel,
+        totalScore: totScore,
+        avgScore: avg,
+        totalPoints: totPoints,
+        hasMarks: subCount > 0
+      });
+    }
+
+    const assignRanks = (pool: PeerScore[]): Map<string, number> => {
+      const eligible = pool.filter(p => p.hasMarks);
+      eligible.sort((a, b) => {
+        if (b.totalScore !== a.totalScore) return b.totalScore - a.totalScore;
+        if (b.avgScore !== a.avgScore) return b.avgScore - a.avgScore;
+        if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
+        return (a.admissionNumber || '').localeCompare(b.admissionNumber || '');
+      });
+
+      const rankMap = new Map<string, number>();
+      let curRank = 1;
+      for (let i = 0; i < eligible.length; i++) {
+        if (i > 0 && eligible[i].totalScore === eligible[i - 1].totalScore) {
+          rankMap.set(eligible[i].studentId, curRank);
+        } else {
+          curRank = i + 1;
+          rankMap.set(eligible[i].studentId, curRank);
+        }
+      }
+      return rankMap;
+    };
+
+    const streamCohort = peerScores.filter(p =>
+      student.streamId ? p.streamId === student.streamId : true
+    );
+    const streamRanks = assignRanks(streamCohort);
+    const streamPosition = streamRanks.get(student.id) || 1;
+
+    const overallRanks = assignRanks(peerScores);
+    const overallPosition = overallRanks.get(student.id) || 1;
+
+    return {
+      streamPosition,
+      streamPopulation,
+      classPosition: streamPosition,
+      classPopulation: streamPopulation,
+      overallPosition,
+      overallPopulation
+    };
   }
 
   // 4. CBC Comprehensive Report Card Generation
@@ -775,12 +977,10 @@ export class CBCAssessmentUseCases {
     for (let idx = 0; idx < learningAreaAssessments.length; idx++) {
       const entry = learningAreaAssessments[idx];
 
-      // Current term score is guaranteed
       if (currentTermNumber === 1) entry.term1Score = entry.score;
       if (currentTermNumber === 2) entry.term2Score = entry.score;
       if (currentTermNumber === 3) entry.term3Score = entry.score;
 
-      // Check Term 1 records if not current term
       if (currentTermNumber !== 1) {
         const t1Rep = yearReports.find(r => getTermNumber(r.termId) === 1);
         const t1Entry = t1Rep?.learningAreaAssessments?.find(a => a.learningAreaId === entry.learningAreaId);
@@ -805,7 +1005,6 @@ export class CBCAssessmentUseCases {
         }
       }
 
-      // Check Term 2 records if not current term
       if (currentTermNumber !== 2) {
         const t2Rep = yearReports.find(r => getTermNumber(r.termId) === 2);
         const t2Entry = t2Rep?.learningAreaAssessments?.find(a => a.learningAreaId === entry.learningAreaId);
@@ -830,7 +1029,6 @@ export class CBCAssessmentUseCases {
         }
       }
 
-      // Check Term 3 records if not current term
       if (currentTermNumber !== 3) {
         const t3Rep = yearReports.find(r => getTermNumber(r.termId) === 3);
         const t3Entry = t3Rep?.learningAreaAssessments?.find(a => a.learningAreaId === entry.learningAreaId);
@@ -897,7 +1095,6 @@ export class CBCAssessmentUseCases {
             status: tNum < currentTermNumber ? 'COMPLETED' : 'UPCOMING'
           });
         } else {
-          // Check if any learning area has verified marks for this term
           const tScores = learningAreaAssessments
             .map(a => tNum === 1 ? a.term1Score : tNum === 2 ? a.term2Score : a.term3Score)
             .filter((s): s is number => s !== undefined && s !== null);
@@ -974,6 +1171,28 @@ export class CBCAssessmentUseCases {
       daysPresent = 58;
     }
 
+    const ptsFromLevel = (level: string) => {
+      if (level === 'EE' || level === 'EXCEEDING_EXPECTATIONS' || level === '4') return 4;
+      if (level === 'ME' || level === 'MEETING_EXPECTATIONS' || level === '3') return 3;
+      if (level === 'AE' || level === 'APPROACHING_EXPECTATIONS' || level === '2') return 2;
+      return 1;
+    };
+    const totalPoints = learningAreaAssessments.reduce((sum, a) => sum + ptsFromLevel(a.performanceLevel || a.levelLabel || ''), 0);
+    const meanPoints = learningAreaAssessments.length > 0
+      ? Number((totalPoints / learningAreaAssessments.length).toFixed(2))
+      : 0;
+    const meanGrade = meanPoints >= 3.5 || averageScore >= 80 ? 'EE' : meanPoints >= 2.5 || averageScore >= 65 ? 'ME' : meanPoints >= 1.5 || averageScore >= 50 ? 'AE' : 'BE';
+    const totalMarks = Math.round(totalScoreSum);
+
+    const rankings = await this.computeStudentRankings(
+      student,
+      dto.termId,
+      dto.academicYearId,
+      totalScoreSum,
+      averageScore,
+      totalPoints
+    );
+
     let reportCard = await this.CBCRepository.findReportCard(dto.studentId, dto.termId, dto.academicYearId);
     if (reportCard) {
       reportCard = CBCReportCard.create(
@@ -994,7 +1213,16 @@ export class CBCAssessmentUseCases {
           overallPerformanceLevel: overallLevel,
           termTrends,
           closingDate: dto.closingDate,
-          nextTermOpeningDate: dto.nextTermOpeningDate
+          nextTermOpeningDate: dto.nextTermOpeningDate,
+          classPosition: rankings.classPosition,
+          classPopulation: rankings.classPopulation,
+          streamPosition: rankings.streamPosition,
+          streamPopulation: rankings.streamPopulation,
+          overallPosition: rankings.overallPosition,
+          overallPopulation: rankings.overallPopulation,
+          totalMarks,
+          meanPoints,
+          meanGrade
         },
         reportCard.id
       );
@@ -1018,7 +1246,16 @@ export class CBCAssessmentUseCases {
           overallPerformanceLevel: overallLevel,
           termTrends,
           closingDate: dto.closingDate,
-          nextTermOpeningDate: dto.nextTermOpeningDate
+          nextTermOpeningDate: dto.nextTermOpeningDate,
+          classPosition: rankings.classPosition,
+          classPopulation: rankings.classPopulation,
+          streamPosition: rankings.streamPosition,
+          streamPopulation: rankings.streamPopulation,
+          overallPosition: rankings.overallPosition,
+          overallPopulation: rankings.overallPopulation,
+          totalMarks,
+          meanPoints,
+          meanGrade
         },
         IdGenerator.generate()
       );
@@ -1073,7 +1310,6 @@ export class CBCAssessmentUseCases {
 
     const currentTermNumber = getTermNumber(termId);
 
-    // Reconstruct verified term trends using ONLY genuine academic records
     const trends: TermTrendEntry[] = [];
     for (let tNum = 1; tNum <= 3; tNum++) {
       if (tNum === currentTermNumber) {
@@ -1164,6 +1400,79 @@ export class CBCAssessmentUseCases {
         };
       });
     }
+
+    let streamPos = reportCard.streamPosition;
+    let streamPop = reportCard.streamPopulation;
+    let classPos = reportCard.classPosition;
+    let classPop = reportCard.classPopulation;
+    let overallPos = reportCard.overallPosition;
+    let overallPop = reportCard.overallPopulation;
+    let totalMarks = reportCard.totalMarks;
+    let meanPoints = reportCard.meanPoints;
+    let meanGrade = reportCard.meanGrade;
+
+    if (student && (!classPos || !classPop || !overallPos || !overallPop || classPop <= 3)) {
+      const studentTotalScore = Array.isArray(reportData.learningAreaAssessments)
+        ? reportData.learningAreaAssessments.reduce((sum: number, a: any) => sum + (Number(a.score) || 0), 0)
+        : (reportCard.overallAverageScore || 0);
+      const studentAvgScore = Array.isArray(reportData.learningAreaAssessments) && reportData.learningAreaAssessments.length > 0
+        ? Number((studentTotalScore / reportData.learningAreaAssessments.length).toFixed(2))
+        : (reportCard.overallAverageScore || 0);
+      const ptsFromLevel = (level: string) => {
+        if (level === 'EE' || level === 'EXCEEDING_EXPECTATIONS' || level === '4') return 4;
+        if (level === 'ME' || level === 'MEETING_EXPECTATIONS' || level === '3') return 3;
+        if (level === 'AE' || level === 'APPROACHING_EXPECTATIONS' || level === '2') return 2;
+        return 1;
+      };
+      const studentTotalPoints = Array.isArray(reportData.learningAreaAssessments)
+        ? reportData.learningAreaAssessments.reduce((sum: number, a: any) => sum + ptsFromLevel(a.performanceLevel || a.levelLabel || ''), 0)
+        : Math.round(studentAvgScore / 25);
+
+      const rankings = await this.computeStudentRankings(
+        student,
+        termId,
+        academicYearId,
+        studentTotalScore,
+        studentAvgScore,
+        studentTotalPoints
+      );
+
+      streamPos = rankings.streamPosition;
+      streamPop = rankings.streamPopulation;
+      classPos = rankings.classPosition;
+      classPop = rankings.classPopulation;
+      overallPos = rankings.overallPosition;
+      overallPop = rankings.overallPopulation;
+      totalMarks = Math.round(studentTotalScore);
+      meanPoints = Array.isArray(reportData.learningAreaAssessments) && reportData.learningAreaAssessments.length > 0
+        ? Number((studentTotalPoints / reportData.learningAreaAssessments.length).toFixed(2))
+        : Math.round(studentAvgScore / 25);
+      meanGrade = meanPoints >= 3.5 || studentAvgScore >= 80 ? 'EE' : meanPoints >= 2.5 || studentAvgScore >= 65 ? 'ME' : meanPoints >= 1.5 || studentAvgScore >= 50 ? 'AE' : 'BE';
+
+      const updatedRC = CBCReportCard.create({
+        ...reportCard.props,
+        streamPosition: streamPos,
+        streamPopulation: streamPop,
+        classPosition: classPos,
+        classPopulation: classPop,
+        overallPosition: overallPos,
+        overallPopulation: overallPop,
+        totalMarks,
+        meanPoints,
+        meanGrade
+      }, reportCard.id, reportCard.createdAt, new Date());
+      await this.CBCRepository.updateReportCard(updatedRC).catch(() => {});
+    }
+
+    reportData.streamPosition = streamPos;
+    reportData.streamPopulation = streamPop;
+    reportData.classPosition = classPos;
+    reportData.classPopulation = classPop;
+    reportData.overallPosition = overallPos;
+    reportData.overallPopulation = overallPop;
+    reportData.totalMarks = totalMarks;
+    reportData.meanPoints = meanPoints;
+    reportData.meanGrade = meanGrade;
 
     return {
       ...reportData,
@@ -1301,7 +1610,6 @@ export class CBCAssessmentUseCases {
         throw new ForbiddenError('No teacher profile associated with your account.');
       }
 
-      // 1. Check if class teacher for this class/stream
       const classTeacherAssignments = await this.academicRepository.findClassTeacherAssignments({
         teacherId: teacher.id,
         classRoomId,
@@ -1313,12 +1621,10 @@ export class CBCAssessmentUseCases {
         return { teacherId: teacher.id };
       }
 
-      // 2. Check legacy stream assignment
       if (streamId && teacher.assignedClassStreamIds.includes(streamId)) {
         return { teacherId: teacher.id };
       }
 
-      // 3. Check if subject teacher / lead for this learning area
       const subjectAssignments = await this.academicRepository.findSubjectTeacherAssignments({
         teacherId: teacher.id,
         learningAreaId,
@@ -1371,7 +1677,6 @@ export class CBCAssessmentUseCases {
       if (stream) streamName = stream.name;
     }
 
-    // Retrieve active students enrolled in class/stream
     const allStudents = await this.studentRepository.findAll({
       classroomId: query.classRoomId,
       streamId: query.streamId,
@@ -1379,7 +1684,6 @@ export class CBCAssessmentUseCases {
     });
     const students = allStudents.filter(s => s.status === StudentStatus.ACTIVE);
 
-    // Sort alphabetically by name
     students.sort((a, b) => {
       const nameA = `${a.lastName} ${a.firstName}`.toLowerCase();
       const nameB = `${b.lastName} ${b.firstName}`.toLowerCase();
@@ -1388,7 +1692,6 @@ export class CBCAssessmentUseCases {
 
     const maxScore = query.maxScore || 100;
 
-    // Build CSV
     const headers = ['Admission Number', 'Learner Name', 'Score', 'Max Score', 'Performance Level', 'Teacher Remarks'];
     const rows = [headers.join(',')];
 
@@ -1447,7 +1750,6 @@ export class CBCAssessmentUseCases {
     const learningArea = await this.academicRepository.findLearningAreaById(dto.learningAreaId);
     if (!learningArea) throw new NotFoundError('Learning Area', dto.learningAreaId);
 
-    // Get active students for matching
     const allStudents = await this.studentRepository.findAll({
       classroomId: dto.classRoomId,
       streamId: dto.streamId,
@@ -1468,7 +1770,6 @@ export class CBCAssessmentUseCases {
       }
     }
 
-    // Get existing summatives to detect create vs update
     const existingSummatives = await this.CBCRepository.findSummatives({
       learningAreaId: dto.learningAreaId,
       termId: dto.termId,
@@ -1513,7 +1814,6 @@ export class CBCAssessmentUseCases {
 
       const admKey = rawAdm.toUpperCase();
 
-      // Check duplicates in file
       if (seenAdmissionsInFile.has(admKey)) {
         duplicatesCount++;
         errors.push({
@@ -1536,7 +1836,6 @@ export class CBCAssessmentUseCases {
       }
       seenAdmissionsInFile.add(admKey);
 
-      // Match student in class (direct match or normalized numeric fallback)
       let student = studentMap.get(admKey);
       if (!student) {
         const rowDigits = rawAdm.replace(/\D/g, '');
@@ -1573,7 +1872,6 @@ export class CBCAssessmentUseCases {
         ? Number(row.maxScore)
         : defaultMaxScore;
 
-      // Handle missing marks: preserve as missing, NEVER convert to 0!
       if (rawScoreStr === '') {
         missingRows++;
         previewRows.push({
@@ -1592,7 +1890,6 @@ export class CBCAssessmentUseCases {
         continue;
       }
 
-      // Validate numeric score
       const scoreNum = Number(rawScoreStr);
       if (isNaN(scoreNum) || scoreNum < 0 || scoreNum > rowMaxScore) {
         errors.push({
@@ -1614,7 +1911,6 @@ export class CBCAssessmentUseCases {
         continue;
       }
 
-      // Derive or validate performance level
       let perfLevel: PerformanceLevel;
       const rawPerf = (row.performanceLevel || '').trim().toUpperCase();
       if (rawPerf && Object.values(PerformanceLevel).includes(rawPerf as PerformanceLevel)) {

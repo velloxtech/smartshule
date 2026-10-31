@@ -4,6 +4,8 @@ import { IUserRepository } from '../../core/ports/repositories/IUserRepository';
 import { ITeacherClockInRepository } from '../../core/ports/repositories/ITeacherClockInRepository';
 import { IFeeRepository } from '../../core/ports/repositories/IFeeRepository';
 import { ISystemLogRepository } from '../../core/ports/repositories/ISystemLogRepository';
+import { INotificationService } from '../../core/ports/services/IExternalServices';
+import { EmailTemplateEngine } from '../../infrastructure/services/email/EmailTemplateEngine';
 import { PayrollRecord, StaffLeave, StaffLeaveProps } from '../../core/domain/payroll/PayrollRecord';
 import { Expense, ExpenseCategory, ExpenseStatus, PaymentMethod } from '../../core/domain/finance/Fee';
 import { SystemLog } from '../../core/domain/system-log/SystemLog';
@@ -89,7 +91,8 @@ export class PayrollUseCases {
     private readonly userRepository: IUserRepository,
     private readonly teacherClockInRepository: ITeacherClockInRepository,
     private readonly feeRepository?: IFeeRepository,
-    private readonly systemLogRepository?: ISystemLogRepository
+    private readonly systemLogRepository?: ISystemLogRepository,
+    private readonly notificationService?: INotificationService
   ) {}
 
   public async generateMonthlyPayroll(dto: GeneratePayrollDTO): Promise<PayrollRecord[]> {
@@ -422,6 +425,42 @@ export class PayrollUseCases {
           )
         );
       } catch {}
+    }
+
+    // Dispatch styled Salary Remuneration Advice Email & SMS to Teacher
+    const notif = this.notificationService;
+    if (notif) {
+      (async () => {
+        try {
+          const teacher = await this.teacherRepository.findById(p.teacherId);
+          if (teacher) {
+            const user = await this.userRepository.findById(teacher.userId);
+            if (user?.email) {
+              const rendered = EmailTemplateEngine.renderSalaryPayslipEmail({
+                to: user.email,
+                teacherName: p.teacherName,
+                payrollPeriod: p.month,
+                netSalary: p.netSalary,
+                grossSalary: p.grossSalary,
+                deductions: Math.max(0, p.grossSalary - p.netSalary),
+                paymentMethod: dto.paymentMethod,
+                referenceNumber: ref,
+                paymentDate,
+                portalUrl: `${(process.env.FRONTEND_URL || 'https://smartshule.ac.ke').replace(/\/+$/, '')}/?view=teacher-dashboard`
+              });
+              await notif.sendEmail(user.email, rendered.subject, rendered.text, rendered.html);
+            }
+            if (user?.phone) {
+              await notif.sendSms(
+                user.phone,
+                `Grace Seeds School: Salary of KES ${amountToPay.toLocaleString()} for ${p.month} has been disbursed via ${dto.paymentMethod} (Ref: ${ref}). Please sign in to acknowledge receipt.`
+              );
+            }
+          }
+        } catch (notifErr: any) {
+          console.warn(`[Payroll] Failed to deliver payslip notification: ${notifErr.message}`);
+        }
+      })().catch(() => null);
     }
 
     return {
@@ -769,6 +808,199 @@ export class PayrollUseCases {
       approvedCount,
       draftCount,
       pendingCount
+    };
+  }
+
+  /**
+   * Teachers view their own salary payment records
+   */
+  public async getMySalaryRecords(user: UserContext) {
+    if (!user || !user.userId) {
+      throw new ForbiddenError('Authentication required to access salary records.');
+    }
+
+    // Resolve teacher record linked to user
+    const teacher = await this.teacherRepository.findByUserId(user.userId);
+    const teacherId = teacher ? teacher.id : user.userId;
+
+    const allPayrolls = await this.payrollRepository.findPayrollsByTeacher(teacherId);
+    // Sort newest month first
+    allPayrolls.sort((a, b) => b.month.localeCompare(a.month));
+
+    return allPayrolls.map(p => ({
+      id: p.id,
+      schoolId: p.schoolId,
+      month: p.month,
+      teacherId: p.teacherId,
+      teacherName: p.teacherName,
+      basicSalary: p.basicSalary,
+      houseAllowance: p.houseAllowance,
+      commuterAllowance: p.commuterAllowance,
+      responsibilityAllowance: p.responsibilityAllowance,
+      grossSalary: p.grossSalary,
+      nssf: p.nssf,
+      shif: p.shif,
+      housingLevy: p.housingLevy,
+      paye: p.paye,
+      otherDeductions: p.otherDeductions,
+      totalDeductions: p.totalDeductions,
+      netSalary: p.netSalary,
+      status: p.status,
+      amountPaid: p.amountPaid,
+      balance: p.balance,
+      paymentMethod: p.paymentMethod,
+      paymentReference: p.paymentReference,
+      paidAt: p.paidAt,
+      voucherNumber: p.voucherNumber,
+      acknowledgedAt: p.acknowledgedAt,
+      acknowledgedByUserId: p.acknowledgedByUserId,
+      acknowledgementStatement: p.acknowledgementStatement,
+      acknowledgementMethod: p.acknowledgementMethod,
+      acknowledgementSignature: p.acknowledgementSignature,
+      acknowledgementStatus: p.acknowledgementStatus,
+      isPaid: p.status === 'PAID' || p.status === 'PARTIALLY_PAID',
+      canAcknowledge: (p.status === 'PAID' || p.status === 'PARTIALLY_PAID') && p.acknowledgementStatus !== 'ACKNOWLEDGED'
+    }));
+  }
+
+  /**
+   * Teacher digital salary receipt acknowledgement
+   */
+  public async acknowledgeSalaryReceipt(
+    payrollId: string,
+    user: UserContext,
+    dto: {
+      statement?: string;
+      method?: 'PORTAL_AUTH' | 'DIGITAL_SIGNATURE' | 'SMS_OTP';
+      signature?: string;
+      ipAddress?: string;
+      userAgent?: string;
+    }
+  ) {
+    if (!user || !user.userId) {
+      throw new ForbiddenError('Authentication required to acknowledge salary.');
+    }
+
+    const payroll = await this.payrollRepository.findPayrollById(payrollId);
+    if (!payroll) {
+      throw new NotFoundError('Payroll Record', payrollId);
+    }
+
+    // Strict ownership verification: teacher can only acknowledge their own record
+    const teacher = await this.teacherRepository.findByUserId(user.userId);
+    const authorizedTeacherId = teacher ? teacher.id : null;
+
+    if (payroll.teacherId !== authorizedTeacherId && payroll.teacherId !== user.userId) {
+      throw new ForbiddenError(
+        'Access denied: You are not authorized to view or acknowledge salary records belonging to another staff member.'
+      );
+    }
+
+    // State rule: do not allow acknowledgement of unpaid or pending records
+    if (payroll.status !== 'PAID' && payroll.status !== 'PARTIALLY_PAID') {
+      throw new ValidationError(
+        `Cannot acknowledge salary for ${payroll.month}: Payment has not been recorded by the school (Current status: ${payroll.status}). Only paid records can be acknowledged.`
+      );
+    }
+
+    // Prevent duplicate acknowledgement
+    if (payroll.acknowledgementStatus === 'ACKNOWLEDGED') {
+      throw new ConflictError(
+        `This salary payment record for ${payroll.month} has already been acknowledged on ${payroll.acknowledgedAt ? new Date(payroll.acknowledgedAt).toLocaleString() : 'a previous session'}.`
+      );
+    }
+
+    const amountPaid = payroll.amountPaid > 0 ? payroll.amountPaid : payroll.netSalary;
+    const defaultStatement = `I, ${payroll.teacherName}, hereby confirm receipt of salary payment of KES ${amountPaid.toLocaleString()} for the ${payroll.month} payroll period (Payment Ref: ${payroll.paymentReference || 'N/A'}).`;
+    const finalStatement = dto.statement && dto.statement.trim().length >= 10 ? dto.statement.trim() : defaultStatement;
+
+    payroll.acknowledgeSalary(
+      user.userId,
+      finalStatement,
+      dto.method || 'PORTAL_AUTH',
+      dto.signature,
+      dto.ipAddress
+    );
+
+    await this.payrollRepository.updatePayroll(payroll);
+
+    // Audit log
+    if (this.systemLogRepository) {
+      try {
+        await this.systemLogRepository.create(
+          SystemLog.create({
+            schoolId: payroll.schoolId,
+            level: 'INFO',
+            category: 'STAFF',
+            action: 'SALARY_RECEIPT_ACKNOWLEDGED',
+            actorUserId: user.userId,
+            actorEmail: user.email,
+            actorRole: user.role,
+            status: 'SUCCESS',
+            details: `Teacher ${payroll.teacherName} acknowledged salary payment of KES ${amountPaid.toLocaleString()} for ${payroll.month}.`,
+            metadata: {
+              payrollId: payroll.id,
+              teacherId: payroll.teacherId,
+              month: payroll.month,
+              amountPaid,
+              ipAddress: dto.ipAddress,
+              method: dto.method || 'PORTAL_AUTH'
+            }
+          }, IdGenerator.generate())
+        );
+      } catch (err: any) {
+        console.error('[PayrollUseCases] Failed to log acknowledgement audit:', err.message);
+      }
+    }
+
+    return {
+      success: true,
+      message: `Salary receipt for ${payroll.month} has been successfully acknowledged.`,
+      acknowledgement: {
+        payrollId: payroll.id,
+        month: payroll.month,
+        amountAcknowledged: amountPaid,
+        acknowledgedAt: payroll.acknowledgedAt,
+        acknowledgedByUserId: payroll.acknowledgedByUserId,
+        acknowledgementStatus: payroll.acknowledgementStatus,
+        statement: finalStatement,
+        method: payroll.acknowledgementMethod
+      }
+    };
+  }
+
+  /**
+   * Administrative report of teacher salary acknowledgements
+   */
+  public async getSalaryAcknowledgementsReport(month?: string, schoolId?: string) {
+    const targetMonth = month || new Date().toISOString().substring(0, 7);
+    const payrolls = await this.payrollRepository.findPayrollsByMonth(targetMonth, schoolId);
+
+    const acknowledged = payrolls.filter(p => p.acknowledgementStatus === 'ACKNOWLEDGED');
+    const unacknowledged = payrolls.filter(p => p.acknowledgementStatus !== 'ACKNOWLEDGED');
+
+    return {
+      month: targetMonth,
+      totalRecords: payrolls.length,
+      acknowledgedCount: acknowledged.length,
+      unacknowledgedCount: unacknowledged.length,
+      acknowledgementRate: payrolls.length > 0 ? Math.round((acknowledged.length / payrolls.length) * 100) : 0,
+      records: payrolls.map(p => ({
+        id: p.id,
+        teacherId: p.teacherId,
+        teacherName: p.teacherName,
+        month: p.month,
+        netSalary: p.netSalary,
+        amountPaid: p.amountPaid,
+        paymentStatus: p.status,
+        paymentReference: p.paymentReference,
+        paidAt: p.paidAt,
+        acknowledgementStatus: p.acknowledgementStatus,
+        acknowledgedAt: p.acknowledgedAt,
+        acknowledgedByUserId: p.acknowledgedByUserId,
+        acknowledgementStatement: p.acknowledgementStatement,
+        acknowledgementMethod: p.acknowledgementMethod
+      }))
     };
   }
 }

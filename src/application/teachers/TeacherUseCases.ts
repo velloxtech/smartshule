@@ -6,6 +6,7 @@ import { ISystemLogRepository } from '../../core/ports/repositories/ISystemLogRe
 import { IAcademicRepository } from '../../core/ports/repositories/IAcademicRepository';
 import { ITimetableRepository } from '../../core/ports/repositories/ITimetableRepository';
 import { Teacher, TeacherEmergencyContact, TeacherDocument } from '../../core/domain/user/Teacher';
+import { ClassTeacherAssignment } from '../../core/domain/academic/TeacherAssignment';
 import { User, UserRole, UserStatus, roleRequiresTeacherProfile } from '../../core/domain/user/User';
 import { TeacherCorrectionRequest, CorrectionRequestStatus } from '../../core/domain/user/TeacherCorrectionRequest';
 import { SystemLog } from '../../core/domain/system-log/SystemLog';
@@ -711,15 +712,62 @@ export class TeacherUseCases {
     const teacher = await this.teacherRepository.findById(dto.teacherId);
     if (!teacher) throw new NotFoundError('Teacher', dto.teacherId);
 
+    teacher.assignStream(dto.streamId);
+    await this.teacherRepository.update(teacher);
+
     if (this.academicRepository) {
       const stream = await this.academicRepository.findStreamById(dto.streamId);
-      if (!stream) {
-        throw new ValidationError(`Stream with ID '${dto.streamId}' does not exist.`);
+      if (stream) {
+        stream.setClassTeacher(dto.teacherId);
+        await this.academicRepository.updateStream(stream);
+
+        // Synchronize formal class_teacher_assignments record
+        try {
+          const classRoom = await this.academicRepository.findClassById(stream.classRoomId);
+          const teacherUser = await this.userRepository.findById(teacher.userId);
+          const schoolId = teacherUser?.schoolId || classRoom?.schoolId || 'school-001';
+          const currentYear = await this.academicRepository.findCurrentYear(schoolId);
+          const academicYearId = currentYear ? currentYear.id : 'year-2026';
+          const effectiveFrom = new Date().toISOString().split('T')[0];
+
+          // Deactivate any other teacher's active assignment for this specific stream
+          const activeStreamAssignments = await this.academicRepository.findClassTeacherAssignments({
+            schoolId,
+            academicYearId,
+            classRoomId: stream.classRoomId,
+            streamId: stream.id,
+            isActive: true
+          });
+
+          for (const old of activeStreamAssignments) {
+            if (old.teacherId !== dto.teacherId) {
+              old.deactivate(effectiveFrom);
+              await this.academicRepository.saveClassTeacherAssignment(old);
+            }
+          }
+
+          const alreadyActive = activeStreamAssignments.some(a => a.teacherId === dto.teacherId && a.isActive);
+          if (!alreadyActive) {
+            const assignment = ClassTeacherAssignment.create(
+              {
+                schoolId,
+                academicYearId,
+                classRoomId: stream.classRoomId,
+                streamId: stream.id,
+                teacherId: dto.teacherId,
+                effectiveFrom,
+                isActive: true
+              },
+              IdGenerator.generate()
+            );
+            await this.academicRepository.saveClassTeacherAssignment(assignment);
+          }
+        } catch (err: any) {
+          console.warn('[TeacherUseCases] Non-fatal class_teacher_assignments sync error:', err?.message || err);
+        }
       }
     }
 
-    teacher.assignStream(dto.streamId);
-    await this.teacherRepository.update(teacher);
     return teacher.toJSON();
   }
 

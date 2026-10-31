@@ -102,6 +102,9 @@ export interface IFeeRepository {
   saveCredit(credit: StudentFeeCredit): Promise<void>;
   updateCredit(credit: StudentFeeCredit): Promise<void>;
 
+  // Concurrency Locking
+  withLock?<T>(key: string, operation: () => Promise<T>): Promise<T>;
+
   // Credit Applications (Audit Trail of Credits Applied to Invoices)
   saveCreditApplication(application: FeeCreditApplication): Promise<void>;
   findCreditApplications(filters: { studentId?: string; invoiceId?: string; creditId?: string }): Promise<FeeCreditApplication[]>;

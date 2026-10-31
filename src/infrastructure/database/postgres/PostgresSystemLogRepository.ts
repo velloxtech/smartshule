@@ -47,39 +47,112 @@ export class PostgresSystemLogRepository implements ISystemLogRepository {
   constructor(private readonly pool: Pool) {}
 
   async create(log: SystemLog): Promise<SystemLog> {
-    const query = `
-      INSERT INTO system_logs (
-        id, school_id, timestamp, level, category, action,
-        actor_user_id, actor_email, actor_role, ip_address,
-        mac_address, status, details, metadata, created_at, updated_at
-      ) VALUES (
-        $1, $2, $3, $4, $5, $6,
-        $7, $8, $9, $10,
-        $11, $12, $13, $14, $15, $16
-      ) RETURNING *;
-    `;
+    try {
+      const query = `
+        INSERT INTO system_logs (
+          id, school_id, timestamp, level, category, action,
+          actor_user_id, actor_email, actor_role, ip_address,
+          mac_address, status, details, metadata, created_at, updated_at
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6,
+          $7, $8, $9, $10,
+          $11, $12, $13, $14, $15, $16
+        ) RETURNING *;
+      `;
 
-    const values = [
-      log.id,
-      log.schoolId,
-      log.timestamp,
-      log.level,
-      log.category,
-      log.action,
-      log.actorUserId || null,
-      log.actorEmail || null,
-      log.actorRole || null,
-      log.ipAddress || null,
-      log.macAddress || null,
-      log.status,
-      log.details,
-      JSON.stringify(log.metadata || {}),
-      log.createdAt,
-      log.updatedAt
-    ];
+      const values = [
+        log.id,
+        log.schoolId,
+        log.timestamp,
+        log.level,
+        log.category,
+        log.action,
+        log.actorUserId || null,
+        log.actorEmail || null,
+        log.actorRole || null,
+        log.ipAddress || null,
+        log.macAddress || null,
+        log.status,
+        log.details,
+        JSON.stringify(log.metadata || {}),
+        log.createdAt,
+        log.updatedAt
+      ];
 
-    const res = await this.pool.query(query, values);
-    return mapRowToSystemLog(res.rows[0]);
+      const res = await this.pool.query(query, values);
+      return mapRowToSystemLog(res.rows[0]);
+    } catch (err: any) {
+      if (err?.message && err.message.includes('mac_address')) {
+        try {
+          await this.pool.query('ALTER TABLE system_logs ADD COLUMN IF NOT EXISTS mac_address VARCHAR(150);');
+          const retryQuery = `
+            INSERT INTO system_logs (
+              id, school_id, timestamp, level, category, action,
+              actor_user_id, actor_email, actor_role, ip_address,
+              mac_address, status, details, metadata, created_at, updated_at
+            ) VALUES (
+              $1, $2, $3, $4, $5, $6,
+              $7, $8, $9, $10,
+              $11, $12, $13, $14, $15, $16
+            ) RETURNING *;
+          `;
+          const values = [
+            log.id,
+            log.schoolId,
+            log.timestamp,
+            log.level,
+            log.category,
+            log.action,
+            log.actorUserId || null,
+            log.actorEmail || null,
+            log.actorRole || null,
+            log.ipAddress || null,
+            log.macAddress || null,
+            log.status,
+            log.details,
+            JSON.stringify(log.metadata || {}),
+            log.createdAt,
+            log.updatedAt
+          ];
+          const res = await this.pool.query(retryQuery, values);
+          return mapRowToSystemLog(res.rows[0]);
+        } catch {
+          // Fallback to inserting without mac_address column if table cannot be altered
+          const fallbackQuery = `
+            INSERT INTO system_logs (
+              id, school_id, timestamp, level, category, action,
+              actor_user_id, actor_email, actor_role, ip_address,
+              status, details, metadata, created_at, updated_at
+            ) VALUES (
+              $1, $2, $3, $4, $5, $6,
+              $7, $8, $9, $10,
+              $11, $12, $13, $14, $15
+            ) RETURNING *;
+          `;
+          const fallbackMetadata = { ...(log.metadata || {}), macAddress: log.macAddress || undefined };
+          const fallbackValues = [
+            log.id,
+            log.schoolId,
+            log.timestamp,
+            log.level,
+            log.category,
+            log.action,
+            log.actorUserId || null,
+            log.actorEmail || null,
+            log.actorRole || null,
+            log.ipAddress || null,
+            log.status,
+            log.details,
+            JSON.stringify(fallbackMetadata),
+            log.createdAt,
+            log.updatedAt
+          ];
+          const res = await this.pool.query(fallbackQuery, fallbackValues);
+          return mapRowToSystemLog(res.rows[0]);
+        }
+      }
+      throw err;
+    }
   }
 
   async findById(id: string): Promise<SystemLog | null> {

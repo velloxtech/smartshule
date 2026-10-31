@@ -246,11 +246,13 @@ export const RecordOtherIncomeSchema = z.object({
 }).passthrough();
 
 import { SystemLogUseCases } from '../../../application/system-logs/SystemLogUseCases';
+import { FinancialApprovalUseCases } from '../../../application/finance/FinancialApprovalUseCases';
 
 export class FinanceController {
   constructor(
     private readonly feeUseCases: FeeUseCases,
-    private readonly systemLogUseCases?: SystemLogUseCases
+    private readonly systemLogUseCases?: SystemLogUseCases,
+    private readonly financialApprovalUseCases?: FinancialApprovalUseCases
   ) {}
 
   public createFeeStructure = async (req: Request, res: Response, next: NextFunction) => {
@@ -1094,6 +1096,83 @@ export class FinanceController {
     try {
       const result = await this.feeUseCases.applyCreditToInvoice(req.body, req.user);
       return res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public requestFinancialApproval = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      if (!this.financialApprovalUseCases) {
+        return res.status(500).json({ success: false, message: 'Financial approval service not initialized' });
+      }
+      const user = req.user as any;
+      const result = await this.financialApprovalUseCases.requestApproval(req.body, {
+        userId: user.id || user.userId,
+        role: user.role,
+        email: user.email,
+        name: user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+        schoolId: user.schoolId
+      });
+      return res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public verifyAndExecuteFinancialApproval = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      if (!this.financialApprovalUseCases) {
+        return res.status(500).json({ success: false, message: 'Financial approval service not initialized' });
+      }
+      const user = req.user as any;
+      const result = await this.financialApprovalUseCases.verifyAndExecute(req.body, {
+        userId: user.id || user.userId,
+        role: user.role,
+        email: user.email,
+        name: user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+        schoolId: user.schoolId
+      });
+      return res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public rejectFinancialApproval = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      if (!this.financialApprovalUseCases) {
+        return res.status(500).json({ success: false, message: 'Financial approval service not initialized' });
+      }
+      const user = req.user as any;
+      const result = await this.financialApprovalUseCases.rejectApproval(req.body, {
+        userId: user.id || user.userId,
+        role: user.role,
+        email: user.email,
+        name: user.name,
+        schoolId: user.schoolId
+      });
+      return res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public getPendingFinancialApprovals = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      if (!this.financialApprovalUseCases) {
+        return res.status(200).json({ success: true, data: [] });
+      }
+      const user = req.user as any;
+      const schoolId = (req.query.schoolId as string) || user.schoolId;
+      const result = await this.financialApprovalUseCases.getPendingApprovals(schoolId, {
+        userId: user.id || user.userId,
+        role: user.role,
+        email: user.email,
+        name: user.name,
+        schoolId: user.schoolId
+      });
+      return res.status(200).json({ success: true, data: result });
     } catch (err) {
       next(err);
     }

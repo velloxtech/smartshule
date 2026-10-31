@@ -4,7 +4,7 @@ import { BackendLearningArea, BackendStrand, BackendSubStrand } from '../../type
 
 export const StrandsView: React.FC = () => {
   const [learningAreas, setLearningAreas] = useState<BackendLearningArea[]>([]);
-  const [selectedGrade, setSelectedGrade] = useState<string>('GRADE_7');
+  const [selectedGrade, setSelectedGrade] = useState<string>('GRADE_4');
   const [selectedAreaId, setSelectedAreaId] = useState<string>('');
   
   const [strands, setStrands] = useState<BackendStrand[]>([]);
@@ -17,7 +17,7 @@ export const StrandsView: React.FC = () => {
   const [strandCode, setStrandCode] = useState('');
   const [strandTitle, setStrandTitle] = useState('');
   const [strandDesc, setStrandDesc] = useState('');
-  const [strandGradeLevel, setStrandGradeLevel] = useState('GRADE_1');
+  const [strandGradeLevel, setStrandGradeLevel] = useState('GRADE_4');
 
   // Edit Strand Modal
   const [isEditStrandOpen, setIsEditStrandOpen] = useState(false);
@@ -46,6 +46,9 @@ export const StrandsView: React.FC = () => {
         const res = await apiService.getLearningAreas();
         if (res.success && res.data?.length) {
           setLearningAreas(res.data);
+          if (res.data.length > 0) {
+            setSelectedAreaId(res.data[0].id);
+          }
         }
       } catch {
         setLearningAreas([]);
@@ -54,12 +57,12 @@ export const StrandsView: React.FC = () => {
     loadAreas();
   }, []);
 
-  // Filter learning areas by current selected grade
+  // GLOBAL SUBJECTS FIX: Make all global database subjects available for selection
   const availableAreas = useMemo(() => {
-    return learningAreas.filter(la => la.gradeLevel === selectedGrade);
-  }, [learningAreas, selectedGrade]);
+    return learningAreas;
+  }, [learningAreas]);
 
-  // Keep selectedAreaId valid for selected grade
+  // Keep selectedAreaId valid
   useEffect(() => {
     if (availableAreas.length > 0) {
       if (!availableAreas.some(a => a.id === selectedAreaId)) {
@@ -80,10 +83,10 @@ export const StrandsView: React.FC = () => {
     }
     setLoading(true);
     try {
-      // STRICT FILTERING: Only fetch strands for the currently selected grade
       const res = await apiService.getStrandsByLearningArea(areaId, grade);
       if (res.success && res.data) {
-        const filteredStrands = res.data.filter(s => s.gradeLevel === grade);
+        // Filter strands by grade level if specified, or show all if universal
+        const filteredStrands = res.data.filter(s => !s.gradeLevel || s.gradeLevel === grade);
         setStrands(filteredStrands);
         
         const subMap: Record<string, BackendSubStrand[]> = {};
@@ -200,9 +203,7 @@ export const StrandsView: React.FC = () => {
       });
       if (res.success) {
         setIsAddStrandOpen(false);
-        if (strandGradeLevel === selectedGrade) {
-          loadStrands(selectedAreaId, selectedGrade);
-        }
+        loadStrands(selectedAreaId, selectedGrade);
       }
     } catch (err: any) {
       alert(err.message || 'Failed to create strand');
@@ -321,7 +322,7 @@ export const StrandsView: React.FC = () => {
 
       {/* Grade Selector */}
       <div className="flex items-center gap-3 bg-surface-container-low p-3 rounded-xl border border-outline-variant/30">
-        <label className="text-xs font-bold text-on-surface-variant uppercase">Select Grade:</label>
+        <label className="text-xs font-bold text-on-surface-variant uppercase">Filter Scope Grade:</label>
         <select
           value={selectedGrade}
           onChange={(e) => setSelectedGrade(e.target.value)}
@@ -341,11 +342,11 @@ export const StrandsView: React.FC = () => {
           <option value="GRADE_9">Grade 9</option>
         </select>
         <span className="text-[11px] text-on-surface-variant font-medium">
-          {availableAreas.length} Learning Area{availableAreas.length === 1 ? '' : 's'} registered for {selectedGrade.replace('_', ' ')}
+          Showing all {availableAreas.length} verified global school subjects
         </span>
       </div>
 
-      {/* Scoped Learning Areas */}
+      {/* Global Learning Areas Chips */}
       {availableAreas.length > 0 ? (
         <div className="flex flex-wrap items-center gap-2 border-b border-outline-variant/30 pb-3">
           {availableAreas.map((la) => (
@@ -365,7 +366,7 @@ export const StrandsView: React.FC = () => {
         </div>
       ) : (
         <div className="text-xs text-error font-medium p-3 bg-error/10 rounded-lg">
-          No learning areas defined for {selectedGrade.replace('_', ' ')}.
+          No learning areas defined in the global database dictionary.
         </div>
       )}
 
@@ -465,7 +466,7 @@ export const StrandsView: React.FC = () => {
       ) : (
         <div className="bg-surface-container-lowest p-8 rounded-xl border border-outline-variant/30 text-center space-y-2">
           <span className="material-symbols-outlined text-outline text-[32px]">folder_open</span>
-          <div className="font-bold text-sm text-on-surface">No Strands Found For {currentArea?.name || 'Selected Subject'} ({selectedGrade.replace('_', ' ')})</div>
+          <div className="font-bold text-sm text-on-surface">No Strands Found For {currentArea?.name || 'Selected Subject'}</div>
           <p className="text-xs text-on-surface-variant">Click &quot;Add New Strand&quot; to populate curriculum content for this learning area.</p>
         </div>
       )}
@@ -499,7 +500,6 @@ export const StrandsView: React.FC = () => {
                   <option value="GRADE_8">Grade 8</option>
                   <option value="GRADE_9">Grade 9</option>
                 </select>
-                <p className="text-[10px] text-on-surface-variant mt-1">This ensures the strand only appears for students in this specific grade.</p>
               </div>
 
               <div className="grid grid-cols-2 gap-3">

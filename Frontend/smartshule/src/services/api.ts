@@ -422,12 +422,33 @@ const coreApiService = {
 
   updateUser: async (
     id: string,
-    data: { firstName?: string; lastName?: string; phone?: string; role?: string; email?: string }
+    data: {
+      firstName?: string;
+      lastName?: string;
+      phone?: string;
+      role?: string;
+      email?: string;
+      status?: string;
+      schoolId?: string;
+      teacherProfile?: {
+        employeeNumber?: string;
+        tscNumber?: string;
+        qualification?: string;
+        specialization?: string[] | string;
+        department?: string;
+        employmentType?: string;
+        employmentStatus?: string;
+      };
+    }
   ): Promise<ApiResponse<ManageableUser>> => {
     return apiFetch<ApiResponse<ManageableUser>>(`/users/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     });
+  },
+
+  getUserById: async (id: string): Promise<ApiResponse<ManageableUser>> => {
+    return apiFetch<ApiResponse<ManageableUser>>(`/users/${id}`);
   },
 
   setUserStatus: async (
@@ -3040,6 +3061,45 @@ export const libraryApi = {
       method: 'PATCH',
       body: JSON.stringify({ action, remarks }),
     });
+  },
+
+  getMySalary: async (): Promise<ApiResponse<any[]>> => {
+    return apiFetch<ApiResponse<any[]>>('/payroll/my-salary');
+  },
+
+  acknowledgeSalary: async (
+    id: string,
+    data: { statement?: string; method?: string; signature?: string }
+  ): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/payroll/${id}/acknowledge`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  getSalaryAcknowledgementsReport: async (month?: string): Promise<ApiResponse<any>> => {
+    const params = month ? `?month=${month}` : '';
+    return apiFetch<ApiResponse<any>>(`/payroll/acknowledgements-report${params}`);
+  },
+
+  // Financial Approvals
+  requestFinancialApproval: async (data: any): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/finance/approvals/request', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  verifyAndExecuteFinancialApproval: async (data: { requestId: string; code: string }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/finance/approvals/verify-and-execute', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  getPendingFinancialApprovals: async (schoolId?: string): Promise<ApiResponse<any[]>> => {
+    const params = schoolId ? `?schoolId=${schoolId}` : '';
+    return apiFetch<ApiResponse<any[]>>(`/finance/approvals/pending${params}`);
   },
 
   // ==========================================

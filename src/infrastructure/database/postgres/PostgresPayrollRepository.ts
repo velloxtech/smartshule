@@ -39,7 +39,14 @@ export class PostgresPayrollRepository implements IPayrollRepository {
         reversedByUserId: r.reversed_by_user_id,
         reversedAt: r.reversed_at ? new Date(r.reversed_at) : undefined,
         reversalReason: r.reversal_reason,
-        notes: r.notes
+        notes: r.notes,
+        acknowledgedAt: r.acknowledged_at ? new Date(r.acknowledged_at) : undefined,
+        acknowledgedByUserId: r.acknowledged_by_user_id || undefined,
+        acknowledgementStatement: r.acknowledgement_statement || undefined,
+        acknowledgementMethod: r.acknowledgement_method || undefined,
+        acknowledgementSignature: r.acknowledgement_signature || undefined,
+        acknowledgementIp: r.acknowledgement_ip || undefined,
+        acknowledgementStatus: r.acknowledgement_status || (r.acknowledged_at ? 'ACKNOWLEDGED' : 'UNACKNOWLEDGED')
       },
       r.id,
       r.created_at ? new Date(r.created_at) : undefined,
@@ -105,6 +112,8 @@ export class PostgresPayrollRepository implements IPayrollRepository {
         status, amount_paid, balance, payment_method, payment_reference, funding_account,
         expense_id, voucher_number, paid_at, approved_by_user_id, approved_at,
         paid_by_user_id, reversed_by_user_id, reversed_at, reversal_reason, notes,
+        acknowledged_at, acknowledged_by_user_id, acknowledgement_statement, acknowledgement_method,
+        acknowledgement_signature, acknowledgement_ip, acknowledgement_status,
         created_at, updated_at
       ) VALUES (
         $1, $2, $3, $4, $5,
@@ -113,7 +122,9 @@ export class PostgresPayrollRepository implements IPayrollRepository {
         $18, $19, $20, $21, $22, $23,
         $24, $25, $26, $27, $28,
         $29, $30, $31, $32, $33,
-        $34, $35
+        $34, $35, $36, $37,
+        $38, $39, $40,
+        $41, $42
       )
       ON CONFLICT (id) DO UPDATE SET
         basic_salary = EXCLUDED.basic_salary,
@@ -144,6 +155,13 @@ export class PostgresPayrollRepository implements IPayrollRepository {
         reversed_at = EXCLUDED.reversed_at,
         reversal_reason = EXCLUDED.reversal_reason,
         notes = EXCLUDED.notes,
+        acknowledged_at = EXCLUDED.acknowledged_at,
+        acknowledged_by_user_id = EXCLUDED.acknowledged_by_user_id,
+        acknowledgement_statement = EXCLUDED.acknowledgement_statement,
+        acknowledgement_method = EXCLUDED.acknowledgement_method,
+        acknowledgement_signature = EXCLUDED.acknowledgement_signature,
+        acknowledgement_ip = EXCLUDED.acknowledgement_ip,
+        acknowledgement_status = EXCLUDED.acknowledgement_status,
         updated_at = EXCLUDED.updated_at
     `;
     const p = (record as any)._props;
@@ -154,6 +172,8 @@ export class PostgresPayrollRepository implements IPayrollRepository {
       p.status, p.amountPaid ?? 0, p.balance ?? p.netSalary, p.paymentMethod || null, p.paymentReference || null, p.fundingAccount || null,
       p.expenseId || null, p.voucherNumber || null, p.paidAt || null, p.approvedByUserId || null, p.approvedAt || null,
       p.paidByUserId || null, p.reversedByUserId || null, p.reversedAt || null, p.reversalReason || null, p.notes || null,
+      p.acknowledgedAt || null, p.acknowledgedByUserId || null, p.acknowledgementStatement || null, p.acknowledgementMethod || null,
+      p.acknowledgementSignature || null, p.acknowledgementIp || null, p.acknowledgementStatus || 'UNACKNOWLEDGED',
       record.createdAt || new Date(), record.updatedAt || new Date()
     ]);
   }

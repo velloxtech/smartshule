@@ -14,6 +14,7 @@ export interface SchoolProps {
   longitude?: number | null;
   geofenceRadius?: number; // In meters, default 250
   geofenceEnabled?: boolean; // Default true
+  schoolType?: string; // e.g. 'DAY', 'BOARDING', 'DAY_AND_BOARDING'
 }
 
 export class School extends Entity<SchoolProps> {
@@ -73,6 +74,10 @@ export class School extends Entity<SchoolProps> {
     return this._props.geofenceEnabled ?? true;
   }
 
+  public get schoolType(): string {
+    return this._props.schoolType || 'DAY';
+  }
+
   public updateDetails(updates: Partial<SchoolProps>): void {
     Object.assign(this._props, updates);
     this.touch();
@@ -94,6 +99,7 @@ export class School extends Entity<SchoolProps> {
       longitude: this.longitude,
       geofenceRadius: this.geofenceRadius,
       geofenceEnabled: this.geofenceEnabled,
+      schoolType: this.schoolType,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt
     };

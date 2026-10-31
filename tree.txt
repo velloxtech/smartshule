@@ -1,4 +1,9 @@
 /home/don/Documents/VELLOX TECH PROJECTS/SmartShule
+├── backups
+│   ├── admission_numbers_backup_20261028_104417.json
+│   ├── smartshule_backup_20261024_210210.sql
+│   ├── smartshule_backup_2026-10-24T18_03_56_104Z.sql
+│   └── smartshule_backup_2026-10-24T18_04_06_180Z.sql
 ├── .cursor
 ├── data
 │   ├── uploads
@@ -627,7 +632,108 @@
 │   │   ├── img-1792567597767-bx4do9m.jpg
 │   │   ├── img-1792567597775-ov303ur.jpg
 │   │   ├── img-1792567597779-p95x0po.png
-│   │   └── img-1792567597784-54yfl51.png
+│   │   ├── img-1792567597784-54yfl51.png
+│   │   ├── img-1792865119170-uy33r43.png
+│   │   ├── img-1792865119175-tgd9aut.jpg
+│   │   ├── img-1792865119182-r7ogzhl.jpg
+│   │   ├── img-1792865119191-5ic4k3h.png
+│   │   ├── img-1792865119195-eqe5svs.png
+│   │   ├── img-1792867974233-tzpicd9.png
+│   │   ├── img-1792867974239-arptosg.jpg
+│   │   ├── img-1792867974246-ztpcoef.jpg
+│   │   ├── img-1792867974250-jvwrwz5.png
+│   │   ├── img-1792867974254-559ra86.png
+│   │   ├── img-1792868393291-xidtbgd.png
+│   │   ├── img-1792868393297-pfsbe3a.jpg
+│   │   ├── img-1792868393303-kkdulj3.jpg
+│   │   ├── img-1792868393306-aom4vyj.png
+│   │   ├── img-1792868393310-2hf0gk5.png
+│   │   ├── img-1792869895567-xwfxxav.png
+│   │   ├── img-1792869895572-ffo0b2c.jpg
+│   │   ├── img-1792869895578-0xb4eqa.jpg
+│   │   ├── img-1792869895583-t27n0a1.png
+│   │   ├── img-1792869895587-6v1k3rn.png
+│   │   ├── img-1792871171322-pdj2fim.png
+│   │   ├── img-1792871171327-izr9qrr.jpg
+│   │   ├── img-1792871171333-0415j87.jpg
+│   │   ├── img-1792871171336-3b4jucu.png
+│   │   ├── img-1792871171339-nlhnv1r.png
+│   │   ├── img-1792873941835-rnno01h.png
+│   │   ├── img-1792873941840-xuts759.jpg
+│   │   ├── img-1792873941847-9dwzmup.jpg
+│   │   ├── img-1792873941857-wbj7fs9.png
+│   │   ├── img-1792873941861-fa9vwt1.png
+│   │   ├── img-1792876169138-z71130y.png
+│   │   ├── img-1792876169146-wx5nl92.jpg
+│   │   ├── img-1792876169155-3wi3zid.jpg
+│   │   ├── img-1792876169161-1g22hnl.png
+│   │   ├── img-1792876169166-16v1h1d.png
+│   │   ├── img-1792877092838-3qdhrd7.png
+│   │   ├── img-1792877092844-8va0ny4.jpg
+│   │   ├── img-1792877092850-xu83a39.jpg
+│   │   ├── img-1792877092854-9604vxx.png
+│   │   ├── img-1792877092858-kx36n1c.png
+│   │   ├── img-1793000418153-l2uxsqg.png
+│   │   ├── img-1793000418159-mrpn5sc.jpg
+│   │   ├── img-1793000418175-hih58p9.jpg
+│   │   ├── img-1793000418183-uneka4l.png
+│   │   ├── img-1793000418192-kzzlvzc.png
+│   │   ├── img-1793005593343-6fkntf6.png
+│   │   ├── img-1793005593351-kyptn7c.jpg
+│   │   ├── img-1793005593361-oj4jpif.jpg
+│   │   ├── img-1793005593366-87yv0xz.png
+│   │   ├── img-1793005593370-pwheveo.png
+│   │   ├── img-1793007038698-pwch7ob.png
+│   │   ├── img-1793007038705-4ti3ikb.jpg
+│   │   ├── img-1793007038715-445bno7.jpg
+│   │   ├── img-1793007038720-nj57tby.png
+│   │   ├── img-1793007038725-vgd4ae5.png
+│   │   ├── img-1793010516607-xt9u30d.png
+│   │   ├── img-1793010516615-o5w4bft.jpg
+│   │   ├── img-1793010516622-ment2ne.jpg
+│   │   ├── img-1793010516628-d5unxag.png
+│   │   ├── img-1793010516633-s7noto8.png
+│   │   ├── img-1793090929574-1gvzq4b.png
+│   │   ├── img-1793090929587-2e86f2w.jpg
+│   │   ├── img-1793090929598-tfcmfvf.jpg
+│   │   ├── img-1793090929602-i69u7yg.png
+│   │   ├── img-1793090929607-wbt0pkk.png
+│   │   ├── img-1793095661753-58p6ffq.png
+│   │   ├── img-1793095661763-pcmvwdw.jpg
+│   │   ├── img-1793095661774-7fko90m.jpg
+│   │   ├── img-1793095661784-z1879mv.png
+│   │   ├── img-1793095661794-c55yqlv.png
+│   │   ├── img-1793101231764-z9i71lb.png
+│   │   ├── img-1793101231770-2n97hok.jpg
+│   │   ├── img-1793101231781-egz1msx.jpg
+│   │   ├── img-1793101231785-rzthp4i.png
+│   │   ├── img-1793101231791-p3o3j8m.png
+│   │   ├── img-1793101626449-6g41ixv.jpg
+│   │   ├── img-1793104304919-3wqxegp.png
+│   │   ├── img-1793104304926-13ygqp6.jpg
+│   │   ├── img-1793104304933-ugy2lab.jpg
+│   │   ├── img-1793104304938-necjz9q.png
+│   │   ├── img-1793104304942-wif5cvh.png
+│   │   ├── img-1793115779241-g26w7t2.png
+│   │   ├── img-1793115779246-jztxb4c.jpg
+│   │   ├── img-1793115779254-oxiy77g.jpg
+│   │   ├── img-1793115779258-iu4zeeb.png
+│   │   ├── img-1793115779262-hl7a86p.png
+│   │   ├── img-1793170936325-rd5qs62.png
+│   │   ├── img-1793170936331-snn2agj.jpg
+│   │   ├── img-1793170936338-6e3h60d.jpg
+│   │   ├── img-1793170936342-aisk0zn.png
+│   │   ├── img-1793170936345-ul8sgv4.png
+│   │   ├── img-1793172872663-fmbvlkk.png
+│   │   ├── img-1793172872669-b1qn0bo.jpg
+│   │   ├── img-1793172872675-kb3sm71.jpg
+│   │   ├── img-1793172872679-6rpa7ob.png
+│   │   ├── img-1793172872683-1gdx3vv.png
+│   │   ├── img-1793257014439-7zic22m.png
+│   │   ├── img-1793257014444-hrruvrn.jpg
+│   │   ├── img-1793257014451-15uaf7e.jpg
+│   │   ├── img-1793257014455-f1rrqu2.png
+│   │   └── img-1793257014458-2thwgd7.png
 │   ├── whatsapp_meta_config.json
 │   └── whatsapp_session
 ├── dist
@@ -659,6 +765,7 @@
 │   │   │   └── EDiaryUseCases.js
 │   │   ├── finance
 │   │   │   ├── FeeUseCases.js
+│   │   │   ├── FinancialApprovalUseCases.js
 │   │   │   └── LunchFeeUseCases.js
 │   │   ├── health
 │   │   │   └── ClinicUseCases.js
@@ -672,6 +779,8 @@
 │   │   │   └── OccurrenceUseCases.js
 │   │   ├── payroll
 │   │   │   └── PayrollUseCases.js
+│   │   ├── signature
+│   │   │   └── SignatureUseCases.js
 │   │   ├── sponsorship
 │   │   │   └── StudentSponsorshipUseCases.js
 │   │   ├── students
@@ -687,7 +796,8 @@
 │   │   │   ├── academic
 │   │   │   │   ├── AcademicYear.js
 │   │   │   │   ├── ClassRoom.js
-│   │   │   │   └── School.js
+│   │   │   │   ├── School.js
+│   │   │   │   └── TeacherAssignment.js
 │   │   │   ├── announcement
 │   │   │   │   └── Announcement.js
 │   │   │   ├── attendance
@@ -711,6 +821,7 @@
 │   │   │   ├── finance
 │   │   │   │   ├── FeeBannerConfig.js
 │   │   │   │   ├── Fee.js
+│   │   │   │   ├── FinancialApprovalRequest.js
 │   │   │   │   ├── LunchEnrollment.js
 │   │   │   │   └── LunchExpense.js
 │   │   │   ├── health
@@ -730,6 +841,13 @@
 │   │   │   ├── shared
 │   │   │   │   ├── Entity.js
 │   │   │   │   └── Errors.js
+│   │   │   ├── signature
+│   │   │   │   ├── DigitalSignatureProfile.js
+│   │   │   │   ├── DocumentSignatureRecord.js
+│   │   │   │   ├── DocumentSigningBatchItem.js
+│   │   │   │   ├── DocumentSigningBatch.js
+│   │   │   │   ├── DocumentSigningChallenge.js
+│   │   │   │   └── SigningPolicy.js
 │   │   │   ├── sponsorship
 │   │   │   │   └── StudentSponsorship.js
 │   │   │   ├── system-log
@@ -740,6 +858,7 @@
 │   │   │       ├── DeletedStudent.js
 │   │   │       ├── Guardian.js
 │   │   │       ├── Student.js
+│   │   │       ├── TeacherCorrectionRequest.js
 │   │   │       ├── Teacher.js
 │   │   │       └── User.js
 │   │   └── ports
@@ -754,6 +873,7 @@
 │   │       │   ├── IDisciplineRepository.js
 │   │       │   ├── IEDiaryRepository.js
 │   │       │   ├── IFeeRepository.js
+│   │       │   ├── IFinancialApprovalRepository.js
 │   │       │   ├── IInventoryRepository.js
 │   │       │   ├── ILibraryRepository.js
 │   │       │   ├── ILunchFeeRepository.js
@@ -762,14 +882,17 @@
 │   │       │   ├── IPayrollRepository.js
 │   │       │   ├── IRecordOfWorkRepository.js
 │   │       │   ├── ISchemeOfWorkRepository.js
+│   │       │   ├── ISignatureRepository.js
 │   │       │   ├── IStudentRepository.js
 │   │       │   ├── IStudentSponsorshipRepository.js
 │   │       │   ├── ISystemLogRepository.js
 │   │       │   ├── ITeacherClockInRepository.js
+│   │       │   ├── ITeacherCorrectionRequestRepository.js
 │   │       │   ├── ITeacherRepository.js
 │   │       │   ├── ITimetableRepository.js
 │   │       │   └── IUserRepository.js
 │   │       └── services
+│   │           ├── IEmailService.js
 │   │           └── IExternalServices.js
 │   ├── index.js
 │   └── infrastructure
@@ -791,21 +914,26 @@
 │       │   │   ├── InMemoryOccurrenceRepository.js
 │       │   │   ├── InMemoryPayrollRepository.js
 │       │   │   ├── InMemoryRepositories.js
+│       │   │   ├── InMemorySignatureRepository.js
 │       │   │   ├── InMemoryStudentSponsorshipRepository.js
 │       │   │   ├── InMemorySystemLogRepository.js
-│       │   │   └── InMemoryTeacherClockInRepository.js
+│       │   │   ├── InMemoryTeacherClockInRepository.js
+│       │   │   └── InMemoryTeacherCorrectionRequestRepository.js
 │       │   ├── mongodb
 │       │   │   └── MongooseRepositories.js
 │       │   └── postgres
 │       │       ├── PostgresComplaintRepository.js
 │       │       ├── PostgresCurriculumTrackerRepository.js
+│       │       ├── PostgresInventoryRepository.js
 │       │       ├── PostgresLibraryRepository.js
 │       │       ├── PostgresLunchFeeRepository.js
 │       │       ├── PostgresOccurrenceRepository.js
+│       │       ├── PostgresPayrollRepository.js
 │       │       ├── PostgresRecordOfWorkRepository.js
 │       │       ├── PostgresRepositories.js
 │       │       ├── PostgresSystemLogRepository.js
-│       │       └── PostgresTeacherClockInRepository.js
+│       │       ├── PostgresTeacherClockInRepository.js
+│       │       └── PostgresTeacherCorrectionRequestRepository.js
 │       ├── http
 │       │   ├── app.js
 │       │   ├── controllers
@@ -831,6 +959,7 @@
 │       │   │   ├── OccurrenceController.js
 │       │   │   ├── PayrollController.js
 │       │   │   ├── RecordOfWorkController.js
+│       │   │   ├── SignatureController.js
 │       │   │   ├── StudentController.js
 │       │   │   ├── StudentSponsorshipController.js
 │       │   │   ├── SystemLogController.js
@@ -846,6 +975,9 @@
 │       │       └── index.js
 │       ├── services
 │       │   ├── BcryptPasswordHasher.js
+│       │   ├── email
+│       │   │   ├── EmailService.js
+│       │   │   └── EmailTemplateEngine.js
 │       │   ├── GeminiService.js
 │       │   ├── ImageProcessingService.js
 │       │   ├── JwtAuthTokenService.js
@@ -875,9 +1007,9 @@
 │   │   ├── dist
 │   │   │   ├── assets
 │   │   │   │   ├── html2canvas.esm-QH1iLAAe.js
-│   │   │   │   ├── index-BU4CrD3C.css
-│   │   │   │   ├── index-CpIbDaPP.js
-│   │   │   │   ├── index.es-DKB0IEBS.js
+│   │   │   │   ├── index-CTk8ySCg.css
+│   │   │   │   ├── index-DU5E9tg5.js
+│   │   │   │   ├── index.es-BPy961q8.js
 │   │   │   │   └── purify.es-DBIK8olT.js
 │   │   │   ├── graduation banner.jpeg
 │   │   │   ├── graduation-banner.jpeg
@@ -916,6 +1048,8 @@
 │   │   │   ├── components
 │   │   │   │   ├── auth
 │   │   │   │   │   └── LoginPage.tsx
+│   │   │   │   ├── common
+│   │   │   │   │   └── DocumentSigningModal.tsx
 │   │   │   │   ├── Header.tsx
 │   │   │   │   ├── landing
 │   │   │   │   │   ├── AdmissionsPage.tsx
@@ -947,6 +1081,7 @@
 │   │   │   │   │   ├── FeeStatementModal.tsx
 │   │   │   │   │   ├── ForwardPaymentModal.tsx
 │   │   │   │   │   ├── GenerateInvoicesModal.tsx
+│   │   │   │   │   ├── InvoiceDetailsModal.tsx
 │   │   │   │   │   ├── IssueBookModal.tsx
 │   │   │   │   │   ├── KnecSyncModal.tsx
 │   │   │   │   │   ├── LearnerProfileModal.tsx
@@ -971,7 +1106,6 @@
 │   │   │   │       ├── AssessmentsView.tsx
 │   │   │   │       ├── AttendanceRegisterView.tsx
 │   │   │   │       ├── BursarDashboardView.tsx
-│   │   │   │       ├── CapitationIncomeView.tsx
 │   │   │   │       ├── CashFlowLedgerView.tsx
 │   │   │   │       ├── ClassesView.tsx
 │   │   │   │       ├── ClinicManagementView.tsx
@@ -980,9 +1114,9 @@
 │   │   │   │       ├── ConcernsView.tsx
 │   │   │   │       ├── CurriculumTrackerView.tsx
 │   │   │   │       ├── DashboardView.tsx
-│   │   │   │       ├── DefaultersView.tsx
 │   │   │   │       ├── DeputyDashboardView.tsx
 │   │   │   │       ├── DisciplineClubsView.tsx
+│   │   │   │       ├── DocumentSigningCenterView.tsx
 │   │   │   │       ├── EDiaryView.tsx
 │   │   │   │       ├── ExpensesView.tsx
 │   │   │   │       ├── FacultyAttendanceRosterCard.tsx
@@ -990,15 +1124,18 @@
 │   │   │   │       ├── FeeStructureView.tsx
 │   │   │   │       ├── FinancialReportsView.tsx
 │   │   │   │       ├── FormativeAssessmentsView.tsx
+│   │   │   │       ├── ForwardedPaymentsView.tsx
 │   │   │   │       ├── GeofenceManagementSection.tsx
 │   │   │   │       ├── GeofenceView.tsx
 │   │   │   │       ├── HeadTeacherDashboardView.tsx
 │   │   │   │       ├── InventoryManagementView.tsx
 │   │   │   │       ├── InvoicesMpesaView.tsx
+│   │   │   │       ├── LearnerFeeCollectionDesk.tsx
 │   │   │   │       ├── LearningAreasView.tsx
 │   │   │   │       ├── LibraryView.tsx
 │   │   │   │       ├── LunchFeeManagementView.tsx
 │   │   │   │       ├── MasterBroadsheetView.tsx
+│   │   │   │       ├── MyDigitalSignatureView.tsx
 │   │   │   │       ├── OccurrenceBookView.tsx
 │   │   │   │       ├── OnboardQueueView.tsx
 │   │   │   │       ├── ParentDashboardView.tsx
@@ -1018,6 +1155,8 @@
 │   │   │   │       ├── SystemLogsView.tsx
 │   │   │   │       ├── TeacherDashboardView.tsx
 │   │   │   │       ├── TeacherGeofenceClockInCard.tsx
+│   │   │   │       ├── TeacherProfileView.tsx
+│   │   │   │       ├── TeacherSalaryAcknowledgementCard.tsx
 │   │   │   │       ├── TeachersView.tsx
 │   │   │   │       ├── TimetableView.tsx
 │   │   │   │       ├── UserManagementView.tsx
@@ -3119,10 +3258,14 @@
 ├── RENDER_DEPLOYMENT.md
 ├── render.yaml
 ├── scripts
+│   ├── correct_pp1_class_stream_assignment.sql
 │   ├── db-switch.ts
 │   ├── docker-entrypoint.sh
+│   ├── imports
+│   │   └── pp1_term3_2026_marks.sql
 │   ├── prisma-cli.ts
-│   └── seed-broadsheet-data.ts
+│   ├── rollback_admission_standardization.py
+│   └── standardize_admission_numbers.py
 ├── src
 │   ├── application
 │   │   ├── academics
@@ -3152,6 +3295,7 @@
 │   │   │   └── EDiaryUseCases.ts
 │   │   ├── finance
 │   │   │   ├── FeeUseCases.ts
+│   │   │   ├── FinancialApprovalUseCases.ts
 │   │   │   └── LunchFeeUseCases.ts
 │   │   ├── health
 │   │   │   └── ClinicUseCases.ts
@@ -3165,6 +3309,8 @@
 │   │   │   └── OccurrenceUseCases.ts
 │   │   ├── payroll
 │   │   │   └── PayrollUseCases.ts
+│   │   ├── signature
+│   │   │   └── SignatureUseCases.ts
 │   │   ├── sponsorship
 │   │   │   └── StudentSponsorshipUseCases.ts
 │   │   ├── students
@@ -3180,7 +3326,8 @@
 │   │   │   ├── academic
 │   │   │   │   ├── AcademicYear.ts
 │   │   │   │   ├── ClassRoom.ts
-│   │   │   │   └── School.ts
+│   │   │   │   ├── School.ts
+│   │   │   │   └── TeacherAssignment.ts
 │   │   │   ├── announcement
 │   │   │   │   └── Announcement.ts
 │   │   │   ├── attendance
@@ -3204,6 +3351,7 @@
 │   │   │   ├── finance
 │   │   │   │   ├── FeeBannerConfig.ts
 │   │   │   │   ├── Fee.ts
+│   │   │   │   ├── FinancialApprovalRequest.ts
 │   │   │   │   ├── LunchEnrollment.ts
 │   │   │   │   └── LunchExpense.ts
 │   │   │   ├── health
@@ -3223,6 +3371,13 @@
 │   │   │   ├── shared
 │   │   │   │   ├── Entity.ts
 │   │   │   │   └── Errors.ts
+│   │   │   ├── signature
+│   │   │   │   ├── DigitalSignatureProfile.ts
+│   │   │   │   ├── DocumentSignatureRecord.ts
+│   │   │   │   ├── DocumentSigningBatchItem.ts
+│   │   │   │   ├── DocumentSigningBatch.ts
+│   │   │   │   ├── DocumentSigningChallenge.ts
+│   │   │   │   └── SigningPolicy.ts
 │   │   │   ├── sponsorship
 │   │   │   │   └── StudentSponsorship.ts
 │   │   │   ├── system-log
@@ -3233,6 +3388,7 @@
 │   │   │       ├── DeletedStudent.ts
 │   │   │       ├── Guardian.ts
 │   │   │       ├── Student.ts
+│   │   │       ├── TeacherCorrectionRequest.ts
 │   │   │       ├── Teacher.ts
 │   │   │       └── User.ts
 │   │   └── ports
@@ -3247,6 +3403,7 @@
 │   │       │   ├── IDisciplineRepository.ts
 │   │       │   ├── IEDiaryRepository.ts
 │   │       │   ├── IFeeRepository.ts
+│   │       │   ├── IFinancialApprovalRepository.ts
 │   │       │   ├── IInventoryRepository.ts
 │   │       │   ├── ILibraryRepository.ts
 │   │       │   ├── ILunchFeeRepository.ts
@@ -3255,14 +3412,17 @@
 │   │       │   ├── IPayrollRepository.ts
 │   │       │   ├── IRecordOfWorkRepository.ts
 │   │       │   ├── ISchemeOfWorkRepository.ts
+│   │       │   ├── ISignatureRepository.ts
 │   │       │   ├── IStudentRepository.ts
 │   │       │   ├── IStudentSponsorshipRepository.ts
 │   │       │   ├── ISystemLogRepository.ts
 │   │       │   ├── ITeacherClockInRepository.ts
+│   │       │   ├── ITeacherCorrectionRequestRepository.ts
 │   │       │   ├── ITeacherRepository.ts
 │   │       │   ├── ITimetableRepository.ts
 │   │       │   └── IUserRepository.ts
 │   │       └── services
+│   │           ├── IEmailService.ts
 │   │           └── IExternalServices.ts
 │   ├── index.ts
 │   └── infrastructure
@@ -3284,21 +3444,26 @@
 │       │   │   ├── InMemoryOccurrenceRepository.ts
 │       │   │   ├── InMemoryPayrollRepository.ts
 │       │   │   ├── InMemoryRepositories.ts
+│       │   │   ├── InMemorySignatureRepository.ts
 │       │   │   ├── InMemoryStudentSponsorshipRepository.ts
 │       │   │   ├── InMemorySystemLogRepository.ts
-│       │   │   └── InMemoryTeacherClockInRepository.ts
+│       │   │   ├── InMemoryTeacherClockInRepository.ts
+│       │   │   └── InMemoryTeacherCorrectionRequestRepository.ts
 │       │   ├── mongodb
 │       │   │   └── MongooseRepositories.ts
 │       │   └── postgres
 │       │       ├── PostgresComplaintRepository.ts
 │       │       ├── PostgresCurriculumTrackerRepository.ts
+│       │       ├── PostgresInventoryRepository.ts
 │       │       ├── PostgresLibraryRepository.ts
 │       │       ├── PostgresLunchFeeRepository.ts
 │       │       ├── PostgresOccurrenceRepository.ts
+│       │       ├── PostgresPayrollRepository.ts
 │       │       ├── PostgresRecordOfWorkRepository.ts
 │       │       ├── PostgresRepositories.ts
 │       │       ├── PostgresSystemLogRepository.ts
-│       │       └── PostgresTeacherClockInRepository.ts
+│       │       ├── PostgresTeacherClockInRepository.ts
+│       │       └── PostgresTeacherCorrectionRequestRepository.ts
 │       ├── http
 │       │   ├── app.ts
 │       │   ├── controllers
@@ -3324,6 +3489,7 @@
 │       │   │   ├── OccurrenceController.ts
 │       │   │   ├── PayrollController.ts
 │       │   │   ├── RecordOfWorkController.ts
+│       │   │   ├── SignatureController.ts
 │       │   │   ├── StudentController.ts
 │       │   │   ├── StudentSponsorshipController.ts
 │       │   │   ├── SystemLogController.ts
@@ -3339,6 +3505,9 @@
 │       │       └── index.ts
 │       ├── services
 │       │   ├── BcryptPasswordHasher.ts
+│       │   ├── email
+│       │   │   ├── EmailService.ts
+│       │   │   └── EmailTemplateEngine.ts
 │       │   ├── GeminiService.ts
 │       │   ├── ImageProcessingService.ts
 │       │   ├── JwtAuthTokenService.ts
@@ -3357,27 +3526,41 @@
 │   ├── integration
 │   │   ├── access_controls_and_roles.test.ts
 │   │   ├── api.test.ts
+│   │   ├── cbc_strands_and_finance_audit.test.ts
 │   │   ├── complaint_system.test.ts
 │   │   ├── curriculum_tracker_api.test.ts
 │   │   ├── deleted_students_api.test.ts
 │   │   ├── delete_hanging_invoice.test.ts
+│   │   ├── director_executive_dashboard.test.ts
+│   │   ├── examination_persistence_and_finance.test.ts
+│   │   ├── forgot_password_pipeline.test.ts
 │   │   ├── geofence_api.test.ts
+│   │   ├── individual_invoicing_pipeline.test.ts
+│   │   ├── inventory_audit_and_control.test.ts
 │   │   ├── kcb_buni_payments.test.ts
 │   │   ├── library_system.test.ts
 │   │   ├── lunch_fee_management.test.ts
 │   │   ├── new_features.test.ts
 │   │   ├── occurrence_record_api.test.ts
 │   │   ├── parent_data_isolation.test.ts
+│   │   ├── payroll_finance_integration.test.ts
 │   │   ├── phone_only_authentication.test.ts
 │   │   ├── playgroup_class.test.ts
 │   │   ├── promotion_and_balance_carry_forward.test.ts
 │   │   ├── security_hardening.test.ts
 │   │   ├── sequential_ids.test.ts
+│   │   ├── signature_vault_pipeline.test.ts
+│   │   ├── staff_and_teacher_onboarding_pipeline.test.ts
+│   │   ├── student_fee_accounts_and_credits.test.ts
 │   │   ├── student_profile_editing.test.ts
 │   │   ├── system_logs.test.ts
 │   │   ├── teacher_profile_and_role.test.ts
-│   │   └── timetable_persistence.test.ts
+│   │   ├── teacher_profile_management.test.ts
+│   │   ├── term_initialization_rbac.test.ts
+│   │   ├── timetable_persistence.test.ts
+│   │   └── universal_document_signing_pipeline.test.ts
 │   └── unit
+│       ├── admission_standardization.test.ts
 │       ├── announcements.test.ts
 │       ├── annual_fee_structure.test.ts
 │       ├── auth_setup_status.test.ts
@@ -3386,17 +3569,29 @@
 │       ├── complaint.test.ts
 │       ├── database_switcher.test.ts
 │       ├── deleted_student.test.ts
+│       ├── director_fee_collection_simplified.test.ts
 │       ├── domain.test.ts
+│       ├── email_service_and_templates.test.ts
 │       ├── exact_payment_and_arrears_precision.test.ts
+│       ├── fee_ledger_harmonisation_and_manual_arrears.test.ts
 │       ├── forwarded_payments_and_arrears_balance.test.ts
 │       ├── geofence.test.ts
 │       ├── lunch_expense.test.ts
 │       ├── lunch_fee.test.ts
 │       ├── network_accountability.test.ts
+│       ├── payment_full_ledger_persistence_sync.test.ts
 │       ├── payroll.test.ts
+│       ├── pp1_grade_assignment_regression.test.ts
+│       ├── report_card_comparisons.test.ts
+│       ├── school_rankings_and_type.test.ts
+│       ├── signature_vault_and_otp.test.ts
+│       ├── system_wide_data_integrity_fixes.test.ts
+│       ├── teacher_assignments_promotion_and_marks_upload.test.ts
+│       ├── universal_signing_and_bulk.test.ts
+│       ├── user_management_edit_users.test.ts
 │       └── whatsapp.test.ts
 ├── tsconfig.json
 └── .vscode
     └── settings.json
 
-940 directories, 2460 files
+949 directories, 2646 files

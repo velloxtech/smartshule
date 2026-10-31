@@ -171,6 +171,17 @@ export interface SystemLogStats {
   recentFailures: number;
 }
 
+export interface TeacherProfileSummary {
+  id?: string;
+  employeeNumber?: string;
+  tscNumber?: string;
+  qualification?: string;
+  specialization?: string[];
+  department?: string;
+  employmentType?: string;
+  employmentStatus?: string;
+}
+
 export interface ManageableUser {
   id: string;
   email?: string;
@@ -184,6 +195,7 @@ export interface ManageableUser {
   schoolName?: string;
   createdAt?: string;
   updatedAt?: string;
+  teacherProfile?: TeacherProfileSummary;
 }
 
 export type CBCRubric = 'EE' | 'ME' | 'AE' | 'BE';
@@ -621,6 +633,7 @@ export interface SchoolInfo {
   longitude?: number | null;
   geofenceRadius?: number;
   geofenceEnabled?: boolean;
+  schoolType?: string;
 }
 
 export type School = SchoolInfo;
@@ -854,6 +867,15 @@ export interface CBCReportCardData {
   headTeacherRemarks: string;
   closingDate?: string;
   nextTermOpeningDate?: string;
+  classPosition?: number;
+  classPopulation?: number;
+  streamPosition?: number;
+  streamPopulation?: number;
+  overallPosition?: number;
+  overallPopulation?: number;
+  totalMarks?: number;
+  meanPoints?: number;
+  meanGrade?: string;
   generatedDate: string;
 }
 
@@ -2663,7 +2685,3 @@ export interface UpdateDailyLogDTO {
 export interface EndorseDailyLogDTO {
   remarks: string;
 }
-
-
-
-

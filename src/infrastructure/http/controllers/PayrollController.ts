@@ -368,4 +368,64 @@ export class PayrollController {
       next(err);
     }
   };
+
+  public getMySalary = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const user = req.user as any;
+      const records = await this.payrollUseCases.getMySalaryRecords({
+        userId: user.id || user.userId,
+        role: user.role,
+        schoolId: user.schoolId,
+        email: user.email
+      });
+      return res.status(200).json({
+        success: true,
+        count: records.length,
+        data: records
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public acknowledgeSalary = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const user = req.user as any;
+      const payrollId = req.params.id as string;
+      const ipAddress = (req.headers['x-forwarded-for'] as string) || req.socket?.remoteAddress;
+      const userAgent = req.headers['user-agent'];
+
+      const result = await this.payrollUseCases.acknowledgeSalaryReceipt(
+        payrollId,
+        {
+          userId: user.id || user.userId,
+          role: user.role,
+          schoolId: user.schoolId,
+          email: user.email
+        },
+        {
+          ...req.body,
+          ipAddress,
+          userAgent
+        }
+      );
+      return res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public getSalaryAcknowledgementsReport = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const month = req.query.month as string | undefined;
+      const schoolId = req.user?.schoolId;
+      const report = await this.payrollUseCases.getSalaryAcknowledgementsReport(month, schoolId);
+      return res.status(200).json({
+        success: true,
+        data: report
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
 }

@@ -1,15 +1,17 @@
 import crypto from 'crypto';
 import { IUserRepository } from '../../core/ports/repositories/IUserRepository';
-import { IGuardianRepository } from '../../core/ports/repositories/ITeacherRepository';
+import { IGuardianRepository, ITeacherRepository } from '../../core/ports/repositories/ITeacherRepository';
 import { IStudentRepository } from '../../core/ports/repositories/IStudentRepository';
 import { ISystemLogRepository } from '../../core/ports/repositories/ISystemLogRepository';
 import { SystemLog } from '../../core/domain/system-log/SystemLog';
 import { StudentStatus } from '../../core/domain/user/Student';
+import { Teacher } from '../../core/domain/user/Teacher';
 import { IAuthTokenService, IPasswordHasher, INotificationService } from '../../core/ports/services/IExternalServices';
-import { User, UserRole, UserStatus } from '../../core/domain/user/User';
+import { User, UserRole, UserStatus, roleRequiresTeacherProfile } from '../../core/domain/user/User';
 import { IdGenerator, ConflictError, UnauthorizedError, NotFoundError, ForbiddenError, ValidationError } from '../../core/domain/shared/Errors';
 import { PhoneUtils } from '../../infrastructure/utils/PhoneUtils';
 import { EmailTemplateEngine } from '../../infrastructure/services/email/EmailTemplateEngine';
+import { EmailService } from '../../infrastructure/services/email/EmailService';
 import { env } from '../../infrastructure/config/env';
 
 export interface RegisterUserDTO {
@@ -50,6 +52,25 @@ export interface AuthResponseDTO {
   };
 }
 
+export interface AdminUpdateUserDTO {
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  role?: UserRole;
+  email?: string;
+  status?: UserStatus;
+  schoolId?: string;
+  teacherProfile?: {
+    employeeNumber?: string;
+    tscNumber?: string;
+    qualification?: string;
+    specialization?: string[] | string;
+    department?: string;
+    employmentType?: string;
+    employmentStatus?: string;
+  };
+}
+
 export class AuthUseCases {
   private readonly resetCodeAttempts: Map<string, number> = new Map();
 
@@ -60,7 +81,8 @@ export class AuthUseCases {
     private readonly notificationService?: INotificationService,
     private readonly guardianRepository?: IGuardianRepository,
     private readonly studentRepository?: IStudentRepository,
-    private readonly systemLogRepository?: ISystemLogRepository
+    private readonly systemLogRepository?: ISystemLogRepository,
+    private readonly teacherRepository?: ITeacherRepository
   ) {}
 
   public async register(dto: RegisterUserDTO): Promise<AuthResponseDTO> {
@@ -686,20 +708,72 @@ export class AuthUseCases {
     };
   }
 
+  public async getUserById(
+    userId: string,
+    requestingUser?: { userId: string; role: UserRole; schoolId?: string }
+  ) {
+    if (requestingUser) {
+      const allowedRoles = [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN];
+      if (!allowedRoles.includes(requestingUser.role)) {
+        throw new ForbiddenError('Insufficient permissions: viewing user details requires administrator privileges.');
+      }
+    }
+
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new NotFoundError('User', userId);
+    }
+
+    if (requestingUser?.schoolId && user.schoolId && user.schoolId !== requestingUser.schoolId && requestingUser.role !== UserRole.SUPER_ADMIN) {
+      throw new ForbiddenError('You are not authorized to view users from a different school.');
+    }
+
+    let teacherProfile: any = undefined;
+    if (this.teacherRepository) {
+      try {
+        const teacher = await this.teacherRepository.findByUserId(user.id);
+        if (teacher) {
+          teacherProfile = teacher.toJSON();
+        }
+      } catch {}
+    }
+
+    return {
+      ...user.toJSON(),
+      teacherProfile
+    };
+  }
+
   public async listUsers(filters?: { schoolId?: string; role?: string; search?: string }) {
     const users = await this.userRepository.findAll({
       schoolId: filters?.schoolId,
       role: filters?.role
     });
 
-    let result = users.map(u => u.toJSON());
+    const teacherMap = new Map<string, any>();
+    if (this.teacherRepository) {
+      try {
+        const teachers = await this.teacherRepository.findAll();
+        for (const t of teachers) {
+          teacherMap.set(t.userId, t.toJSON());
+        }
+      } catch {}
+    }
+
+    let result = users.map(u => ({
+      ...u.toJSON(),
+      teacherProfile: teacherMap.get(u.id) || undefined
+    }));
+
     if (filters?.search && filters.search.trim() !== '') {
       const q = filters.search.toLowerCase().trim();
       result = result.filter(u =>
         u.fullName.toLowerCase().includes(q) ||
         (u.email && u.email.toLowerCase().includes(q)) ||
         (u.phone && u.phone.includes(q)) ||
-        u.role.toLowerCase().includes(q)
+        u.role.toLowerCase().includes(q) ||
+        (u.teacherProfile?.employeeNumber && u.teacherProfile.employeeNumber.toLowerCase().includes(q)) ||
+        (u.teacherProfile?.tscNumber && u.teacherProfile.tscNumber.toLowerCase().includes(q))
       );
     }
 
@@ -767,14 +841,27 @@ export class AuthUseCases {
 
   public async adminUpdateUser(
     userId: string,
-    dto: { firstName?: string; lastName?: string; phone?: string; role?: UserRole; email?: string },
+    dto: AdminUpdateUserDTO,
     requestingUser?: { userId: string; role: UserRole; schoolId?: string }
   ) {
+    if (requestingUser) {
+      const allowedRoles = [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN];
+      if (!allowedRoles.includes(requestingUser.role)) {
+        throw new ForbiddenError('Insufficient permissions: user management requires administrator privileges.');
+      }
+    }
+
     const user = await this.userRepository.findById(userId);
     if (!user) {
       throw new NotFoundError('User', userId);
     }
 
+    const previousUser = user.toJSON();
+    let previousTeacher: any = null;
+    let updatedTeacher: any = null;
+    const fieldsChanged: string[] = [];
+
+    // 1. School Scope Authorization
     if (user.role === UserRole.SUPER_ADMIN && requestingUser?.role !== UserRole.SUPER_ADMIN) {
       throw new ForbiddenError('Only Super Administrators can modify Super Admin accounts.');
     }
@@ -787,21 +874,56 @@ export class AuthUseCases {
       throw new ForbiddenError('You are not authorized to modify users from a different school.');
     }
 
+    if (dto.schoolId && dto.schoolId !== user.schoolId && requestingUser?.role !== UserRole.SUPER_ADMIN) {
+      throw new ForbiddenError('Only Super Administrators can reassign users to a different school.');
+    }
+
+    // 2. Self-Modification & Self-Lockout Restrictions
+    if (requestingUser?.userId === userId) {
+      if (dto.role && dto.role !== user.role) {
+        throw new ForbiddenError('Administrators cannot modify their own system role.');
+      }
+      if (dto.status && dto.status !== UserStatus.ACTIVE) {
+        throw new ForbiddenError('You cannot deactivate or suspend your own active administrator account.');
+      }
+    }
+
+    // 3. Last Active Super Admin Protection
+    if (user.role === UserRole.SUPER_ADMIN) {
+      const willDemote = dto.role && dto.role !== UserRole.SUPER_ADMIN;
+      const willDeactivate = dto.status && dto.status !== UserStatus.ACTIVE;
+      if (willDemote || willDeactivate) {
+        const allSuperAdmins = await this.userRepository.findAll({ role: UserRole.SUPER_ADMIN });
+        const activeSuperAdmins = allSuperAdmins.filter(u => u.status === UserStatus.ACTIVE && u.id !== user.id);
+        if (activeSuperAdmins.length === 0) {
+          throw new ConflictError('Cannot demote or deactivate the last remaining active Super Administrator account.');
+        }
+      }
+    }
+
+    // 4. Email Update & Uniqueness Validation
     if (dto.email !== undefined) {
       const cleanEmail = dto.email.toLowerCase().trim();
       if (cleanEmail && cleanEmail !== user.email?.toLowerCase()) {
+        if (!EmailService.isValidEmail(cleanEmail)) {
+          throw new ValidationError('Invalid email address format.');
+        }
         const existing = await this.userRepository.findByEmail(cleanEmail);
         if (existing && existing.id !== userId) {
           throw new ConflictError(`Email '${dto.email}' is already in use by another user.`);
         }
         user.updateEmail(cleanEmail);
-      } else if (!cleanEmail) {
+        fieldsChanged.push('email');
+      } else if (!cleanEmail && user.email) {
+        if (!user.phone && !dto.phone) {
+          throw new ValidationError('Either an email address or a phone number is required.');
+        }
         user.updateEmail(undefined);
+        fieldsChanged.push('email');
       }
     }
 
-    const previousUser = user.toJSON();
-
+    // 5. Phone Update & Uniqueness Validation
     if (dto.phone !== undefined) {
       const cleanPhone = dto.phone.trim();
       if (cleanPhone && cleanPhone !== user.phone?.trim()) {
@@ -809,40 +931,168 @@ export class AuthUseCases {
         if (existingPhone && existingPhone.id !== userId) {
           throw new ConflictError(`Phone '${dto.phone}' is already in use by another user.`);
         }
+        user.updateProfile(undefined, undefined, cleanPhone);
+        fieldsChanged.push('phone');
+      } else if (!cleanPhone && user.phone) {
+        if (!user.email && !dto.email) {
+          throw new ValidationError('Either an email address or a phone number is required.');
+        }
+        user.updateProfile(undefined, undefined, '');
+        fieldsChanged.push('phone');
       }
     }
 
-    user.updateProfile(dto.firstName?.trim(), dto.lastName?.trim(), dto.phone?.trim());
-
-    if (dto.role) {
-      user.updateRole(dto.role);
+    // 6. Name Validation & Updates
+    if (dto.firstName !== undefined && dto.firstName.trim() !== user.firstName) {
+      if (!dto.firstName.trim()) {
+        throw new ValidationError('First name cannot be empty.');
+      }
+      user.updateProfile(dto.firstName.trim(), undefined, undefined);
+      fieldsChanged.push('firstName');
     }
 
+    if (dto.lastName !== undefined && dto.lastName.trim() !== user.lastName) {
+      if (!dto.lastName.trim()) {
+        throw new ValidationError('Last name cannot be empty.');
+      }
+      user.updateProfile(undefined, dto.lastName.trim(), undefined);
+      fieldsChanged.push('lastName');
+    }
+
+    // 7. Role Update
+    if (dto.role && dto.role !== user.role) {
+      user.updateRole(dto.role);
+      fieldsChanged.push('role');
+    }
+
+    // 8. Account Status Update
+    if (dto.status && dto.status !== user.status) {
+      user.setStatus(dto.status);
+      fieldsChanged.push('status');
+    }
+
+    // 9. School Association Update
+    if (dto.schoolId && dto.schoolId !== user.schoolId && requestingUser?.role === UserRole.SUPER_ADMIN) {
+      user.setSchoolId(dto.schoolId);
+      fieldsChanged.push('schoolId');
+    }
+
+    // Save updated User record
     await this.userRepository.update(user);
 
-    if (this.systemLogRepository) {
-      await this.systemLogRepository.create(
-        SystemLog.create(
-          {
-            schoolId: user.schoolId || requestingUser?.schoolId || 'school-001',
-            category: 'STAFF',
-            action: 'USER_PROFILE_UPDATED_BY_ADMIN',
-            actorUserId: requestingUser?.userId || 'system',
-            actorRole: requestingUser?.role || 'ADMIN',
-            status: 'SUCCESS',
-            details: `Administrator updated profile for ${user.role} ${user.fullName}.`,
-            metadata: {
-              userId: user.id,
-              previous: previousUser,
-              updated: user.toJSON()
+    // 10. Linked Teacher Profile Updates
+    if (this.teacherRepository) {
+      let teacher = await this.teacherRepository.findByUserId(user.id);
+      if (teacher) {
+        previousTeacher = teacher.toJSON();
+        if (dto.teacherProfile) {
+          const tp = dto.teacherProfile;
+          if (tp.employeeNumber && tp.employeeNumber.trim() !== teacher.employeeNumber) {
+            const cleanEmp = tp.employeeNumber.trim();
+            const existingEmp = await this.teacherRepository.findByEmployeeNumber(cleanEmp);
+            if (existingEmp && existingEmp.id !== teacher.id) {
+              throw new ConflictError(`Employee number '${cleanEmp}' is already in use by another teacher.`);
             }
-          },
-          IdGenerator.generate()
-        )
-      );
+            fieldsChanged.push('teacherProfile.employeeNumber');
+          }
+
+          let specArray = teacher.specialization;
+          if (tp.specialization !== undefined) {
+            specArray = Array.isArray(tp.specialization)
+              ? tp.specialization.map(s => String(s).trim()).filter(Boolean)
+              : String(tp.specialization).split(',').map(s => s.trim()).filter(Boolean);
+            fieldsChanged.push('teacherProfile.specialization');
+          }
+
+          if (tp.tscNumber !== undefined && tp.tscNumber.trim() !== (teacher.tscNumber || '')) {
+            fieldsChanged.push('teacherProfile.tscNumber');
+          }
+          if (tp.qualification !== undefined && tp.qualification.trim() !== (teacher.qualification || '')) {
+            fieldsChanged.push('teacherProfile.qualification');
+          }
+          if (tp.department !== undefined && tp.department.trim() !== (teacher.department || '')) {
+            fieldsChanged.push('teacherProfile.department');
+          }
+          if (tp.employmentType !== undefined && tp.employmentType !== teacher.employmentType) {
+            fieldsChanged.push('teacherProfile.employmentType');
+          }
+          if (tp.employmentStatus !== undefined && tp.employmentStatus !== teacher.employmentStatus) {
+            fieldsChanged.push('teacherProfile.employmentStatus');
+          }
+
+          teacher.updateDetails({
+            employeeNumber: tp.employeeNumber?.trim(),
+            tscNumber: tp.tscNumber?.trim(),
+            qualification: tp.qualification?.trim(),
+            department: tp.department?.trim(),
+            employmentType: tp.employmentType,
+            employmentStatus: tp.employmentStatus,
+            specialization: specArray
+          });
+          await this.teacherRepository.update(teacher);
+        }
+        updatedTeacher = teacher.toJSON();
+      } else if (roleRequiresTeacherProfile(user.role) || dto.teacherProfile) {
+        const tp = dto.teacherProfile || {};
+        const empNumber = tp.employeeNumber?.trim() || `EMP-${Date.now().toString().slice(-6)}`;
+        const existingEmp = await this.teacherRepository.findByEmployeeNumber(empNumber);
+        if (existingEmp) {
+          throw new ConflictError(`Employee number '${empNumber}' is already in use by another teacher.`);
+        }
+        const specArray = Array.isArray(tp.specialization)
+          ? tp.specialization.map(s => String(s).trim()).filter(Boolean)
+          : tp.specialization ? String(tp.specialization).split(',').map(s => s.trim()).filter(Boolean) : [];
+        teacher = Teacher.create({
+          userId: user.id,
+          employeeNumber: empNumber,
+          tscNumber: tp.tscNumber?.trim(),
+          qualification: tp.qualification?.trim(),
+          department: tp.department?.trim(),
+          employmentType: tp.employmentType || 'FULL_TIME',
+          employmentStatus: tp.employmentStatus || 'ACTIVE',
+          specialization: specArray,
+          assignedClassStreamIds: []
+        }, IdGenerator.generate());
+        await this.teacherRepository.save(teacher);
+        fieldsChanged.push('teacherProfile.created');
+        updatedTeacher = teacher.toJSON();
+      }
     }
 
-    return user.toJSON();
+    // 11. Immutable Audit Logging
+    if (this.systemLogRepository && fieldsChanged.length > 0) {
+      try {
+        await this.systemLogRepository.create(
+          SystemLog.create(
+            {
+              schoolId: user.schoolId || requestingUser?.schoolId || 'school-001',
+              category: 'STAFF',
+              action: 'USER_PROFILE_UPDATED_BY_ADMIN',
+              actorUserId: requestingUser?.userId || 'system',
+              actorRole: requestingUser?.role || 'ADMIN',
+              status: 'SUCCESS',
+              details: `Administrator updated profile for ${user.role} ${user.fullName}. Changed fields: ${fieldsChanged.join(', ')}`,
+              metadata: {
+                userId: user.id,
+                fieldsChanged,
+                previous: previousUser,
+                updated: user.toJSON(),
+                previousTeacher,
+                updatedTeacher
+              }
+            },
+            IdGenerator.generate()
+          )
+        );
+      } catch (logErr: any) {
+        console.error('[AuthUseCases] Non-fatal: Failed to write audit log for user update:', logErr);
+      }
+    }
+
+    return {
+      ...user.toJSON(),
+      teacherProfile: updatedTeacher || previousTeacher || undefined
+    };
   }
 
   public async adminSetStatus(

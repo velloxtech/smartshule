@@ -18,10 +18,10 @@ export interface StudentSubjectScore {
   learningAreaId: string;
   learningAreaName: string;
   performanceLevel: PerformanceLevel;
-  numericScore: number; // 0 - 100
-  levelLabel: string; // "EE", "ME", "AE", "BE"
-  points: number; // 4, 3, 2, 1
-  subjectRank: number; // Rank in this subject
+  numericScore: number;
+  levelLabel: string;
+  points: number;
+  subjectRank: number;
 }
 
 export interface BroadsheetRow {
@@ -31,7 +31,8 @@ export interface BroadsheetRow {
   gender: string;
   streamId?: string;
   streamName?: string;
-  subjects: Record<string, StudentSubjectScore>; // keyed by learningAreaId
+  className?: string;
+  subjects: Record<string, StudentSubjectScore>;
   totalScore: number;
   averageScore: number;
   totalPoints: number;
@@ -40,6 +41,7 @@ export interface BroadsheetRow {
   rank: number;
   streamRank: number;
   classRank: number;
+  schoolRank?: number;
   remarks: string;
 }
 
@@ -51,7 +53,7 @@ export interface BroadsheetSubjectSummary {
   highestScore: number;
   lowestScore: number;
   highestScorerName?: string;
-  passRate: number; // percentage of students with EE or ME
+  passRate: number;
   counts: {
     EE: number;
     ME: number;
@@ -86,7 +88,7 @@ export interface ClassRankingItem {
   rank: number;
   classId: string;
   className: string;
-  streamId: string;
+  streamId?: string;
   streamName: string;
   totalStudents: number;
   meanScore: number;
@@ -94,7 +96,7 @@ export interface ClassRankingItem {
   topStudentName: string;
   topStudentScore: number;
   topStudentAdmissionNumber?: string;
-  qualityPassRate: number; // percentage of students with EE or ME
+  qualityPassRate: number;
   counts: {
     EE: number;
     ME: number;
@@ -127,6 +129,7 @@ export interface BestStudentPerSubjectItem {
   gender: string;
   score: number;
   performanceLevel: string;
+  scope?: 'SCHOOL' | 'CLASS';
 }
 
 export interface StreamSection {
@@ -158,9 +161,17 @@ export interface BroadsheetResult {
   totalStudents: number;
   totalClassStudents: number;
   genderStats: GenderStats;
+
+  // Class & Stream Level Analytics
   classRankings: ClassRankingItem[];
   bestClassesPerSubject: BestClassPerSubjectItem[];
   bestStudentsPerSubject: BestStudentPerSubjectItem[];
+
+  // School-Wide Analytics
+  schoolClassRankings: ClassRankingItem[];
+  schoolTopStudents: BroadsheetRow[];
+  schoolSubjectSummaries: BroadsheetSubjectSummary[];
+  schoolBestStudentsPerSubject: BestStudentPerSubjectItem[];
 }
 
 export class BroadsheetUseCases {
@@ -180,6 +191,10 @@ export class BroadsheetUseCases {
       query.streamId.toLowerCase().startsWith('all_') ||
       query.streamId.toLowerCase().startsWith('all-');
 
+    const allClasses = typeof this.academicRepository.findAllClasses === 'function'
+      ? await this.academicRepository.findAllClasses()
+      : [];
+
     let stream: any = null;
     let classRoom: any = null;
 
@@ -194,9 +209,6 @@ export class BroadsheetUseCases {
       if (targetClassId) {
         classRoom = await this.academicRepository.findClassById(targetClassId);
         if (!classRoom) {
-          const allClasses = typeof this.academicRepository.findAllClasses === 'function'
-            ? await this.academicRepository.findAllClasses()
-            : [];
           classRoom = allClasses.find(
             c => c.name.toLowerCase() === targetClassId!.toLowerCase() ||
                  c.gradeLevel.toLowerCase() === targetClassId!.toLowerCase()
@@ -204,10 +216,6 @@ export class BroadsheetUseCases {
         }
       }
       if (!classRoom) {
-        const allClasses = typeof this.academicRepository.findAllClasses === 'function'
-          ? await this.academicRepository.findAllClasses()
-          : [];
-        // Prefer a class that has configured streams (like Grade 4)
         for (const cls of allClasses) {
           const clsStreams = await this.academicRepository.findStreamsByClass(cls.id);
           if (clsStreams.length > 0) {
@@ -222,7 +230,6 @@ export class BroadsheetUseCases {
     } else {
       stream = await this.academicRepository.findStreamById(query.streamId);
       if (!stream) {
-        // Maybe a classId was passed directly as streamId
         const cls = await this.academicRepository.findClassById(query.streamId);
         if (cls) {
           classRoom = cls;
@@ -234,19 +241,14 @@ export class BroadsheetUseCases {
       }
     }
 
-    if (!classRoom) {
-      const allClasses = typeof this.academicRepository.findAllClasses === 'function'
-        ? await this.academicRepository.findAllClasses()
-        : [];
-      if (allClasses.length > 0) {
-        classRoom = allClasses[0];
-      }
+    if (!classRoom && allClasses.length > 0) {
+      classRoom = allClasses[0];
     }
 
     const gradeLevel = classRoom?.gradeLevel || CBCGradeLevel.GRADE_4;
     const examType = query.examType || 'End of Term';
 
-    // 1. Robust Academic Year Resolution (by ID, by name e.g. '2026', or current)
+    // 1. Resolve Academic Year
     const allYears = typeof this.academicRepository.findAllYears === 'function'
       ? await this.academicRepository.findAllYears()
       : [];
@@ -276,7 +278,7 @@ export class BroadsheetUseCases {
     const academicYearId = year?.id || `year-${curCalYear}`;
     const yearName = year?.name || curCalYear;
 
-    // 2. Robust Academic Term Resolution (by ID, by name e.g. 'Term 3', by termNumber e.g. 3, or current)
+    // 2. Resolve Academic Term
     let term: any = null;
     let allTermsForYear: any[] = [];
     if (year && typeof this.academicRepository.findTermsByYear === 'function') {
@@ -289,10 +291,8 @@ export class BroadsheetUseCases {
 
     if (query.termId) {
       const qTerm = query.termId.trim().toLowerCase();
-      // Match by exact ID in terms for this year
       term = allTermsForYear.find(t => t.id.toLowerCase() === qTerm) || null;
 
-      // Match by term number (e.g. 'Term 3', '3', 'term-3', 'term-2026-t3')
       if (!term) {
         const tMatch = qTerm.match(/t(?:erm)?[_-]?([1-3])\b/i) || qTerm.match(/[-_t]([1-3])$/i) || qTerm.match(/\b([1-3])\b/);
         const termNum = tMatch ? parseInt(tMatch[1], 10) : null;
@@ -301,7 +301,6 @@ export class BroadsheetUseCases {
         }
       }
 
-      // Match by term name
       if (!term) {
         term = allTermsForYear.find(
           t => t.name.toLowerCase() === qTerm ||
@@ -310,7 +309,6 @@ export class BroadsheetUseCases {
         ) || null;
       }
 
-      // Try global findTermById
       if (!term) {
         term = await this.academicRepository.findTermById(query.termId);
       }
@@ -328,11 +326,12 @@ export class BroadsheetUseCases {
     const termId = term?.id || `term-${academicYearId}-t1`;
     const termName = term?.name || 'Term 1';
 
-    // Fetch learning areas strictly from database for this specific gradeLevel
-    const allLearningAreas = await this.academicRepository.findAllLearningAreas({ gradeLevel });
-    const learningAreas = allLearningAreas.map(la => ({ id: la.id, name: la.name }));
+    // 3. Learning areas for active selected grade
+    // AFTER (Fetching all global learning areas for the school)
+const allLearningAreas = await this.academicRepository.findAllLearningAreas();
+const learningAreas = allLearningAreas.map(la => ({ id: la.id, name: la.name }));
 
-    // Fetch ONLY streams belonging strictly to this classRoom - NEVER bleed across different classes!
+    // 4. Streams for selected class
     let streamsToCompare = classRoom ? await this.academicRepository.findStreamsByClass(classRoom.id) : [];
     streamsToCompare = streamsToCompare.filter(s => s.classRoomId === classRoom?.id);
 
@@ -340,55 +339,51 @@ export class BroadsheetUseCases {
       if (stream && stream.classRoomId === classRoom?.id) {
         streamsToCompare = [stream];
       } else if (classRoom) {
-        // Class has no discrete streams; treat the class itself as the sole cohort
         streamsToCompare = [
           Stream.create({ classRoomId: classRoom.id, name: classRoom.name, capacity: 50 }, classRoom.id)
         ];
       }
     }
 
-    // Evaluate each stream
-    const allStreamResults: Array<{
-      streamId: string;
-      streamName: string;
-      className: string;
-      rows: BroadsheetRow[];
-      subjectSummaries: BroadsheetSubjectSummary[];
-      streamMeanScore: number;
-      streamMeanPoints: number;
-      totalStudents: number;
-    }> = [];
-
+    // Evaluate target class streams
+    const allStreamResults: StreamSection[] = [];
     for (const s of streamsToCompare) {
       const evaluated = await this.evaluateSingleStream(s, classRoom, termId, academicYearId, learningAreas);
       allStreamResults.push(evaluated);
     }
 
-    // Pool all class rows together to calculate overall Class/Grade ranks
     const allClassRows: BroadsheetRow[] = [];
     allStreamResults.forEach(sr => {
       allClassRows.push(...sr.rows);
     });
 
-    // Sort all class rows by totalScore descending (with tie-breakers)
-    allClassRows.sort((a, b) => b.totalScore - a.totalScore || b.averageScore - a.averageScore || b.totalPoints - a.totalPoints);
-    allClassRows.forEach((r, idx) => {
-      r.classRank = idx + 1;
+    allClassRows.sort((a, b) => this.compareBroadsheetRows(a, b));
+    this.assignCompetitionRanks(allClassRows, r => r.totalScore, (r, rank) => {
+      r.classRank = rank;
+      r.rank = rank;
     });
 
-    // Compute subject rank across the entire class for each subject
+    // Compute subject rank inside the class
     learningAreas.forEach(la => {
-      const sortedBySubject = [...allClassRows].sort(
-        (a, b) => (b.subjects[la.id]?.numericScore || 0) - (a.subjects[la.id]?.numericScore || 0)
-      );
-      sortedBySubject.forEach((row, idx) => {
-        if (row.subjects[la.id]) {
-          row.subjects[la.id].subjectRank = idx + 1;
-        }
+      const sortedBySubject = [...allClassRows].sort((a, b) => {
+        const scoreA = a.subjects[la.id]?.numericScore || 0;
+        const scoreB = b.subjects[la.id]?.numericScore || 0;
+        if (scoreB !== scoreA) return scoreB - scoreA;
+        return (a.admissionNumber || '').localeCompare(b.admissionNumber || '');
       });
+      let curRank = 1;
+      for (let i = 0; i < sortedBySubject.length; i++) {
+        if (sortedBySubject[i].subjects[la.id]) {
+          if (i > 0 && (sortedBySubject[i].subjects[la.id].numericScore || 0) === (sortedBySubject[i - 1].subjects[la.id]?.numericScore || 0)) {
+            sortedBySubject[i].subjects[la.id].subjectRank = curRank;
+          } else {
+            curRank = i + 1;
+            sortedBySubject[i].subjects[la.id].subjectRank = curRank;
+          }
+        }
+      }
     });
 
-    // Determine target rows and subject summaries
     let targetRows: BroadsheetRow[] = [];
     let targetSubjectSummaries: BroadsheetSubjectSummary[] = [];
     let streamIdToReturn = stream ? stream.id : 'all';
@@ -399,16 +394,13 @@ export class BroadsheetUseCases {
     if (isAllStreams || !stream) {
       targetRows = allClassRows;
       targetRows.forEach((r, idx) => {
-        r.rank = idx + 1; // In All Streams view, rank is the grade rank
+        r.rank = r.classRank || idx + 1;
       });
 
-      // Recalculate subject summaries across the whole class
       targetSubjectSummaries = this.calculateSubjectSummaries(targetRows, learningAreas);
-
       streamMeanScore = targetRows.length > 0
         ? Math.round(targetRows.reduce((sum, r) => sum + r.averageScore, 0) / targetRows.length)
         : 0;
-
       streamMeanPoints = targetRows.length > 0
         ? Number((targetRows.reduce((sum, r) => sum + r.meanPoints, 0) / targetRows.length).toFixed(2))
         : 0;
@@ -420,10 +412,84 @@ export class BroadsheetUseCases {
       streamMeanPoints = currentStreamEvaluated ? currentStreamEvaluated.streamMeanPoints : 0;
     }
 
-    // Gender disaggregated statistics
     const genderStats = this.computeGenderStats(targetRows);
 
-    // 1. Compute Class / Stream Rankings
+    // ==========================================
+    // 5. SCHOOL-WIDE ANALYTICS COMPUTATION
+    // ==========================================
+    const allSchoolLearningAreas = typeof this.academicRepository.findAllLearningAreas === 'function'
+      ? await this.academicRepository.findAllLearningAreas()
+      : [];
+    const schoolAllLearningAreasMap = new Map<string, { id: string; name: string }>();
+    allSchoolLearningAreas.forEach(la => {
+      schoolAllLearningAreasMap.set(la.id, { id: la.id, name: la.name });
+    });
+
+    const schoolSections: StreamSection[] = [];
+    const allSchoolStudentsRows: BroadsheetRow[] = [];
+
+    for (const cls of allClasses) {
+      let clsStreams = await this.academicRepository.findStreamsByClass(cls.id);
+      if (!clsStreams || clsStreams.length === 0) {
+        clsStreams = [Stream.create({ classRoomId: cls.id, name: cls.name, capacity: 50 }, cls.id)];
+      }
+
+      const clsLearningAreas = allSchoolLearningAreas
+        .filter(la => la.gradeLevel === cls.gradeLevel)
+        .map(la => ({ id: la.id, name: la.name }));
+
+      for (const stm of clsStreams) {
+        const sec = await this.evaluateSingleStream(stm, cls, termId, academicYearId, clsLearningAreas);
+        schoolSections.push(sec);
+        allSchoolStudentsRows.push(...sec.rows);
+      }
+    }
+
+    // Assign school-wide rank to all learners in the entire institution
+    allSchoolStudentsRows.sort((a, b) => this.compareBroadsheetRows(a, b));
+    this.assignCompetitionRanks(allSchoolStudentsRows, r => r.totalScore, (r, rank) => {
+      r.schoolRank = rank;
+    });
+
+    // A. School-Wide Class Rankings (Ranks every class/grade across the institution)
+    const schoolClassRankings: ClassRankingItem[] = allClasses
+      .map(cls => {
+        const matchingRows = allSchoolStudentsRows.filter(r => r.className === cls.name);
+        const meanScore = matchingRows.length > 0
+          ? Math.round(matchingRows.reduce((sum, r) => sum + r.averageScore, 0) / matchingRows.length)
+          : 0;
+
+        const eeCount = matchingRows.filter(r => r.overallPerformanceLevel === PerformanceLevel.EXCEEDING_EXPECTATIONS || r.averageScore >= 80).length;
+        const meCount = matchingRows.filter(r => r.overallPerformanceLevel === PerformanceLevel.MEETING_EXPECTATIONS || (r.averageScore >= 65 && r.averageScore < 80)).length;
+        const aeCount = matchingRows.filter(r => r.overallPerformanceLevel === PerformanceLevel.APPROACHING_EXPECTATIONS || (r.averageScore >= 50 && r.averageScore < 65)).length;
+        const beCount = matchingRows.filter(r => r.overallPerformanceLevel === PerformanceLevel.BELOW_EXPECTATIONS || r.averageScore < 50).length;
+
+        const qualityPassRate = matchingRows.length > 0
+          ? Math.round(((eeCount + meCount) / matchingRows.length) * 100)
+          : 0;
+
+        const topRow = matchingRows.length > 0 ? [...matchingRows].sort((a, b) => b.totalScore - a.totalScore)[0] : null;
+
+        return {
+          rank: 0,
+          classId: cls.id,
+          className: cls.name,
+          streamName: 'Whole Grade',
+          totalStudents: matchingRows.length,
+          meanScore,
+          overallPerformanceLevel: this.shortLevelLabel(this.levelFromScore(meanScore)),
+          topStudentName: topRow ? topRow.studentName : 'N/A',
+          topStudentScore: topRow ? topRow.averageScore : 0,
+          topStudentAdmissionNumber: topRow ? topRow.admissionNumber : 'N/A',
+          qualityPassRate,
+          counts: { EE: eeCount, ME: meCount, AE: aeCount, BE: beCount }
+        };
+      })
+      .filter(item => item.totalStudents > 0)
+      .sort((a, b) => b.meanScore - a.meanScore)
+      .map((item, idx) => ({ ...item, rank: idx + 1 }));
+
+    // B. Stream Rankings within Selected Grade
     const classRankings: ClassRankingItem[] = allStreamResults
       .map(sr => {
         const eeCount = sr.rows.filter(r => r.overallPerformanceLevel === PerformanceLevel.EXCEEDING_EXPECTATIONS || r.averageScore >= 80).length;
@@ -449,18 +515,13 @@ export class BroadsheetUseCases {
           topStudentScore: topRow ? topRow.averageScore : 0,
           topStudentAdmissionNumber: topRow ? topRow.admissionNumber : 'N/A',
           qualityPassRate,
-          counts: {
-            EE: eeCount,
-            ME: meCount,
-            AE: aeCount,
-            BE: beCount
-          }
+          counts: { EE: eeCount, ME: meCount, AE: aeCount, BE: beCount }
         };
       })
       .sort((a, b) => b.meanScore - a.meanScore)
       .map((item, idx) => ({ ...item, rank: idx + 1 }));
 
-    // 2. Compute Best Performing Class Per Subject
+    // C. Best Performing Stream Per Subject in Current Grade
     const bestClassesPerSubject: BestClassPerSubjectItem[] = learningAreas.map(la => {
       const sortedBySubject = [...allStreamResults].sort((a, b) => {
         const aScore = a.subjectSummaries.find(s => s.learningAreaId === la.id)?.averageScore || 0;
@@ -487,7 +548,7 @@ export class BroadsheetUseCases {
       };
     });
 
-    // 3. Compute Best Student Per Subject (Subject Champions)
+    // D. Best Student Per Subject in Class
     const bestStudentsPerSubject: BestStudentPerSubjectItem[] = learningAreas.map(la => {
       let topStudentRow: BroadsheetRow | null = null;
       let topStreamName = streamNameToReturn;
@@ -504,7 +565,7 @@ export class BroadsheetUseCases {
         }
       }
 
-      const score = topScore >= 0 ? topScore : 75;
+      const score = topScore >= 0 ? topScore : 0;
       const level = topStudentRow?.subjects[la.id]?.levelLabel || this.shortLevelLabel(this.levelFromScore(score));
 
       return {
@@ -512,14 +573,57 @@ export class BroadsheetUseCases {
         learningAreaName: la.name,
         studentId: topStudentRow?.studentId || 'std-top',
         studentName: topStudentRow?.studentName || 'Top Learner',
-        admissionNumber: topStudentRow?.admissionNumber || '0001',
+        admissionNumber: topStudentRow?.admissionNumber || '',
         className: classRoom?.name || 'Class',
         streamName: topStreamName,
         gender: topStudentRow?.gender || 'M',
         score,
-        performanceLevel: level
+        performanceLevel: level,
+        scope: 'CLASS'
       };
     });
+
+    // E. Best Student Per Subject in the Entire School (School Champions)
+    const schoolBestStudentsPerSubject: BestStudentPerSubjectItem[] = Array.from(schoolAllLearningAreasMap.values()).map(la => {
+      let topStudentRow: BroadsheetRow | null = null;
+      let topScore = -1;
+
+      for (const r of allSchoolStudentsRows) {
+        const score = r.subjects[la.id]?.numericScore || 0;
+        if (score > topScore) {
+          topScore = score;
+          topStudentRow = r;
+        }
+      }
+
+      const score = topScore >= 0 ? topScore : 0;
+      const level = topStudentRow?.subjects[la.id]?.levelLabel || this.shortLevelLabel(this.levelFromScore(score));
+
+      return {
+        learningAreaId: la.id,
+        learningAreaName: la.name,
+        studentId: topStudentRow?.studentId || 'std-school-top',
+        studentName: topStudentRow?.studentName || 'School Champion',
+        admissionNumber: topStudentRow?.admissionNumber || '',
+        className: topStudentRow?.className || 'Grade',
+        streamName: topStudentRow?.streamName || 'Main',
+        gender: topStudentRow?.gender || 'M',
+        score,
+        performanceLevel: level,
+        scope: 'SCHOOL'
+      };
+    }).filter(s => s.score > 0);
+
+    // F. Top Students Across the Whole School
+    const schoolTopStudents = [...allSchoolStudentsRows]
+      .sort((a, b) => b.totalScore - a.totalScore)
+      .slice(0, 10);
+
+    // G. School-Wide Subject Summaries
+    const schoolSubjectSummaries = this.calculateSubjectSummaries(
+      allSchoolStudentsRows,
+      Array.from(schoolAllLearningAreasMap.values())
+    );
 
     return {
       streamId: streamIdToReturn,
@@ -541,35 +645,11 @@ export class BroadsheetUseCases {
       genderStats,
       classRankings,
       bestClassesPerSubject,
-      bestStudentsPerSubject
-    };
-  }
-
-  public async getClassAnalytics(classId: string, termId?: string, academicYearId?: string): Promise<{
-    classId: string;
-    className: string;
-    classRankings: ClassRankingItem[];
-    bestClassesPerSubject: BestClassPerSubjectItem[];
-    bestStudentsPerSubject: BestStudentPerSubjectItem[];
-  }> {
-    const classRoom = await this.academicRepository.findClassById(classId);
-    let streams = await this.academicRepository.findStreamsByClass(classId);
-    if (!streams || streams.length === 0) {
-      const allStreams = await this.academicRepository.findAllStreams();
-      streams = allStreams;
-    }
-    const firstStreamId = streams[0]?.id || classId;
-    const broadsheet = await this.getStreamBroadsheet({
-      streamId: firstStreamId,
-      termId,
-      academicYearId
-    });
-    return {
-      classId: classRoom?.id || classId,
-      className: classRoom?.name || broadsheet.className,
-      classRankings: broadsheet.classRankings,
-      bestClassesPerSubject: broadsheet.bestClassesPerSubject,
-      bestStudentsPerSubject: broadsheet.bestStudentsPerSubject
+      bestStudentsPerSubject,
+      schoolClassRankings,
+      schoolTopStudents,
+      schoolSubjectSummaries,
+      schoolBestStudentsPerSubject
     };
   }
 
@@ -579,16 +659,7 @@ export class BroadsheetUseCases {
     termId: string,
     academicYearId: string,
     learningAreas: Array<{ id: string; name: string }>
-  ): Promise<{
-    streamId: string;
-    streamName: string;
-    className: string;
-    rows: BroadsheetRow[];
-    subjectSummaries: BroadsheetSubjectSummary[];
-    streamMeanScore: number;
-    streamMeanPoints: number;
-    totalStudents: number;
-  }> {
+  ): Promise<StreamSection> {
     let students = await this.studentRepository.findAll({ streamId: stream.id });
     if (!students || students.length === 0) {
       students = await this.studentRepository.findAll({ classroomId: classRoom?.id, streamId: stream.id });
@@ -654,11 +725,13 @@ export class BroadsheetUseCases {
 
         if (rcScore) {
           level = rcScore.performanceLevel;
-          score = rcScore.rawScore || rcScore.score || this.scoreFromLevel(level);
+          score = rcScore.rawScore !== undefined && rcScore.rawScore !== null
+            ? rcScore.rawScore
+            : (rcScore.score !== undefined ? rcScore.score : this.scoreFromLevel(level));
           hasEvaluation = true;
         } else if (s) {
           level = s.overallPerformanceLevel;
-          const rawSum = s.strandScores?.reduce((acc: number, cur: any) => acc + (cur.rawScore || 0), 0) || 0;
+          const rawSum = s.strandScores?.reduce((acc: number, cur: any) => acc + (cur.rawScore ?? cur.score ?? 0), 0) || 0;
           const count = s.strandScores?.length || 1;
           score = Math.round(rawSum / count) || this.scoreFromLevel(level);
           hasEvaluation = true;
@@ -683,9 +756,10 @@ export class BroadsheetUseCases {
         };
       }
 
-      const averageScore = evaluatedCount > 0 ? Math.round(totalScore / evaluatedCount) : 0;
-      const meanPoints = evaluatedCount > 0 ? Number((totalPoints / evaluatedCount).toFixed(2)) : 0;
-      const overallLevel = evaluatedCount > 0 ? this.levelFromScore(averageScore) : PerformanceLevel.BELOW_EXPECTATIONS;
+      const subjectDivisor = learningAreas.length > 0 ? learningAreas.length : (evaluatedCount || 1);
+      const averageScore = Math.round(totalScore / subjectDivisor);
+      const meanPoints = Number((totalPoints / subjectDivisor).toFixed(2));
+      const overallLevel = this.levelFromScore(averageScore);
       const remarks = this.generateRemark(overallLevel, averageScore);
 
       rows.push({
@@ -695,6 +769,7 @@ export class BroadsheetUseCases {
         gender: String(student.gender || 'M'),
         streamId: stream.id,
         streamName: stream.name,
+        className: classRoom?.name || 'Class',
         subjects: subjectScores,
         totalScore,
         averageScore,
@@ -708,31 +783,37 @@ export class BroadsheetUseCases {
       });
     }
 
-    rows.sort((a, b) => b.totalScore - a.totalScore || b.averageScore - a.averageScore);
-    rows.forEach((r, idx) => {
-      r.rank = idx + 1;
-      r.streamRank = idx + 1;
-      r.classRank = idx + 1;
+    rows.sort((a, b) => this.compareBroadsheetRows(a, b));
+    this.assignCompetitionRanks(rows, r => r.totalScore, (r, rank) => {
+      r.rank = rank;
+      r.streamRank = rank;
+      r.classRank = rank;
     });
 
-    // Compute subject rank inside the stream
     learningAreas.forEach(la => {
-      const sorted = [...rows].sort(
-        (a, b) => (b.subjects[la.id]?.numericScore || 0) - (a.subjects[la.id]?.numericScore || 0)
-      );
-      sorted.forEach((row, idx) => {
-        if (row.subjects[la.id]) {
-          row.subjects[la.id].subjectRank = idx + 1;
-        }
+      const sorted = [...rows].sort((a, b) => {
+        const scoreA = a.subjects[la.id]?.numericScore || 0;
+        const scoreB = b.subjects[la.id]?.numericScore || 0;
+        if (scoreB !== scoreA) return scoreB - scoreA;
+        return (a.admissionNumber || '').localeCompare(b.admissionNumber || '');
       });
+      let curRank = 1;
+      for (let i = 0; i < sorted.length; i++) {
+        if (sorted[i].subjects[la.id]) {
+          if (i > 0 && (sorted[i].subjects[la.id].numericScore || 0) === (sorted[i - 1].subjects[la.id]?.numericScore || 0)) {
+            sorted[i].subjects[la.id].subjectRank = curRank;
+          } else {
+            curRank = i + 1;
+            sorted[i].subjects[la.id].subjectRank = curRank;
+          }
+        }
+      }
     });
 
     const subjectSummaries = this.calculateSubjectSummaries(rows, learningAreas);
-
     const streamMeanScore = rows.length > 0
       ? Math.round(rows.reduce((sum, r) => sum + r.averageScore, 0) / rows.length)
       : 0;
-
     const streamMeanPoints = rows.length > 0
       ? Number((rows.reduce((sum, r) => sum + r.meanPoints, 0) / rows.length).toFixed(2))
       : 0;
@@ -861,7 +942,7 @@ export class BroadsheetUseCases {
       case PerformanceLevel.MEETING_EXPECTATIONS: return 3;
       case PerformanceLevel.APPROACHING_EXPECTATIONS: return 2;
       case PerformanceLevel.BELOW_EXPECTATIONS: return 1;
-      default: return 3;
+      default: return 1;
     }
   }
 
@@ -906,7 +987,34 @@ export class BroadsheetUseCases {
       case PerformanceLevel.MEETING_EXPECTATIONS: return 'ME';
       case PerformanceLevel.APPROACHING_EXPECTATIONS: return 'AE';
       case PerformanceLevel.BELOW_EXPECTATIONS: return 'BE';
-      default: return 'ME';
+      default: return 'BE';
+    }
+  }
+
+  private compareBroadsheetRows(a: BroadsheetRow, b: BroadsheetRow): number {
+    if (b.totalScore !== a.totalScore) return b.totalScore - a.totalScore;
+    if (b.averageScore !== a.averageScore) return b.averageScore - a.averageScore;
+    if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
+    const admComp = (a.admissionNumber || '').localeCompare(b.admissionNumber || '');
+    if (admComp !== 0) return admComp;
+    return (a.studentId || '').localeCompare(b.studentId || '');
+  }
+
+  private assignCompetitionRanks(
+    rows: BroadsheetRow[],
+    scoreFn: (r: BroadsheetRow) => number,
+    assignFn: (r: BroadsheetRow, rank: number) => void
+  ): void {
+    let currentRank = 1;
+    for (let i = 0; i < rows.length; i++) {
+      if (i > 0 && scoreFn(rows[i]) === scoreFn(rows[i - 1])) {
+        assignFn(rows[i], currentRank);
+      } else {
+        currentRank = i + 1;
+        assignFn(rows[i], currentRank);
+      }
     }
   }
 }
+
+export default BroadsheetUseCases;

@@ -66,7 +66,8 @@ export class AcademicUseCases {
           latitude: -0.061234,
           longitude: 34.721234,
           geofenceRadius: 250,
-          geofenceEnabled: true
+          geofenceEnabled: true,
+          schoolType: 'DAY'
         },
         id || 'school-001'
       );
@@ -79,7 +80,8 @@ export class AcademicUseCases {
       !school.motto ||
       school.motto !== 'The future Begins Here' ||
       school.email !== 'schoolgraceseeds@gmail.com' ||
-      school.phone !== '0745436312'
+      school.phone !== '0745436312' ||
+      school.schoolType !== 'DAY'
     ) {
       school = School.create(
         {
@@ -95,7 +97,8 @@ export class AcademicUseCases {
           latitude: school.latitude ?? -0.061234,
           longitude: school.longitude ?? 34.721234,
           geofenceRadius: school.geofenceRadius ?? 250,
-          geofenceEnabled: school.geofenceEnabled ?? true
+          geofenceEnabled: school.geofenceEnabled ?? true,
+          schoolType: 'DAY'
         },
         school.id
       );
@@ -808,16 +811,19 @@ export class AcademicUseCases {
 
     const effectiveFrom = dto.effectiveFrom || new Date().toISOString().split('T')[0];
 
-    // Find any existing active assignments for this class/stream & academic year
-    const existingAssignments = await this.academicRepository.findClassTeacherAssignments({
+    // Find existing active assignments strictly for this exact stream (or class-wide if streamId is null)
+    const allClassAssignments = await this.academicRepository.findClassTeacherAssignments({
       schoolId: dto.schoolId,
       academicYearId: dto.academicYearId,
       classRoomId: dto.classRoomId,
-      streamId: dto.streamId,
       isActive: true
     });
 
-    for (const oldAssignment of existingAssignments) {
+    const relevantAssignments = allClassAssignments.filter(a =>
+      dto.streamId ? a.streamId === dto.streamId : (!a.streamId || a.streamId === null)
+    );
+
+    for (const oldAssignment of relevantAssignments) {
       if (oldAssignment.teacherId === dto.teacherId) {
         return oldAssignment.toJSON();
       }

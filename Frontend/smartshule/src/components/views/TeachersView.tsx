@@ -154,12 +154,16 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
 
   const allClassOptions = [...classes, ...missingStandards];
 
-  const resolveAssignedClassName = (assignedClass: string | undefined): string => {
-    if (!assignedClass || assignedClass === 'Unassigned') return 'Unassigned';
-    const parts = assignedClass.split(',').map((p) => p.trim());
+  const resolveAssignedClassName = (assignedClass: string | undefined, assignedStreamIds?: string[]): string => {
+    const raw = assignedClass && assignedClass !== 'Unassigned'
+      ? assignedClass
+      : (assignedStreamIds && assignedStreamIds.length > 0 ? assignedStreamIds.join(', ') : 'Unassigned');
+
+    if (!raw || raw === 'Unassigned') return 'Unassigned';
+    const parts = raw.split(',').map((p) => p.trim());
     const resolvedParts = parts.map((part) => {
       for (const [classId, sList] of Object.entries(streamsMap)) {
-        const foundStream = (sList as any[])?.find((s) => s.id === part);
+        const foundStream = (sList as any[])?.find((s) => s.id === part || (s.name && s.name.toLowerCase() === part.toLowerCase()));
         if (foundStream) {
           const foundClass = classes.find((c) => c.id === classId);
           return foundClass ? `${foundClass.name} - ${foundStream.name}` : `${foundStream.name} Stream`;
@@ -316,6 +320,18 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
       }
 
       await apiService.assignStreamToTeacher(selectedTeacher.id, targetStreamId);
+      try {
+        await apiService.assignClassTeacher({
+          schoolId: selectedTeacher.schoolId || 'school-001',
+          academicYearId: 'year-2026',
+          classRoomId: activeClassId,
+          streamId: targetStreamId,
+          teacherId: selectedTeacher.id,
+          effectiveFrom: new Date().toISOString().split('T')[0],
+        });
+      } catch {
+        // formal assignment fallback sync
+      }
 
       const assignedLabel = `${activeClassName} - ${targetStreamName}`;
       if (onAssignTeacher) {
@@ -712,9 +728,9 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
                           <span className="text-on-surface-variant">Assigned Class:</span>
                           <span
                             className="font-bold text-primary truncate max-w-[170px]"
-                            title={resolveAssignedClassName(t.assignedClass)}
+                            title={resolveAssignedClassName(t.assignedClass, t.assignedClassStreamIds)}
                           >
-                            {resolveAssignedClassName(t.assignedClass)}
+                            {resolveAssignedClassName(t.assignedClass, t.assignedClassStreamIds)}
                           </span>
                         </div>
                         <div className="flex justify-between">

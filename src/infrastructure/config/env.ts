@@ -90,7 +90,9 @@ export const env = {
     port: parseInt(process.env.SMTP_PORT || (process.env.SMTP_HOST?.includes('zoho') ? '465' : '587'), 10),
     user: process.env.SMTP_USER || '',
     pass: process.env.SMTP_PASS || '',
-    secure: process.env.SMTP_SECURE !== undefined ? process.env.SMTP_SECURE === 'true' : (parseInt(process.env.SMTP_PORT || '587', 10) === 465),
+    secure: process.env.SMTP_SECURE !== undefined
+      ? (process.env.SMTP_SECURE === 'true' || parseInt(process.env.SMTP_PORT || '587', 10) === 465)
+      : (parseInt(process.env.SMTP_PORT || '587', 10) === 465),
     from: process.env.EMAIL_FROM || (process.env.SMTP_USER ? `"Grace Seeds School" <${process.env.SMTP_USER}>` : 'Grace Seeds School <admissions@smartshule.ac.ke>'),
     replyTo: process.env.EMAIL_REPLY_TO || 'schoolgraceseeds@gmail.com',
     testMode: process.env.EMAIL_TEST_MODE === 'true' || process.env.NODE_ENV === 'test',

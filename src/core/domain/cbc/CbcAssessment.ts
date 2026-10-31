@@ -399,6 +399,15 @@ export interface CBCReportCardProps {
   termTrends?: TermTrendEntry[];
   closingDate?: string;
   nextTermOpeningDate?: string;
+  classPosition?: number;
+  classPopulation?: number;
+  streamPosition?: number;
+  streamPopulation?: number;
+  overallPosition?: number;
+  overallPopulation?: number;
+  totalMarks?: number;
+  meanPoints?: number;
+  meanGrade?: string;
 }
 
 export class CBCReportCard extends Entity<CBCReportCardProps> {
@@ -466,6 +475,50 @@ export class CBCReportCard extends Entity<CBCReportCardProps> {
     return this._props.termTrends;
   }
 
+  public get closingDate(): string | undefined {
+    return this._props.closingDate;
+  }
+
+  public get nextTermOpeningDate(): string | undefined {
+    return this._props.nextTermOpeningDate;
+  }
+
+  public get classPosition(): number | undefined {
+    return this._props.classPosition;
+  }
+
+  public get classPopulation(): number | undefined {
+    return this._props.classPopulation;
+  }
+
+  public get streamPosition(): number | undefined {
+    return this._props.streamPosition;
+  }
+
+  public get streamPopulation(): number | undefined {
+    return this._props.streamPopulation;
+  }
+
+  public get overallPosition(): number | undefined {
+    return this._props.overallPosition;
+  }
+
+  public get overallPopulation(): number | undefined {
+    return this._props.overallPopulation;
+  }
+
+  public get totalMarks(): number | undefined {
+    return this._props.totalMarks;
+  }
+
+  public get meanPoints(): number | undefined {
+    return this._props.meanPoints;
+  }
+
+  public get meanGrade(): string | undefined {
+    return this._props.meanGrade;
+  }
+
   public toJSON() {
     return {
       id: this.id,
@@ -492,6 +545,15 @@ export class CBCReportCard extends Entity<CBCReportCardProps> {
       termTrends: this._props.termTrends || [],
       closingDate: this._props.closingDate,
       nextTermOpeningDate: this._props.nextTermOpeningDate,
+      classPosition: this.classPosition,
+      classPopulation: this.classPopulation,
+      streamPosition: this.streamPosition,
+      streamPopulation: this.streamPopulation,
+      overallPosition: this.overallPosition,
+      overallPopulation: this.overallPopulation,
+      totalMarks: this.totalMarks,
+      meanPoints: this.meanPoints,
+      meanGrade: this.meanGrade,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt
     };

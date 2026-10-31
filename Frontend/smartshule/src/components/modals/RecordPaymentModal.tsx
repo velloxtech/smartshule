@@ -665,6 +665,22 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
       return;
     }
 
+    const maxPayable = effectiveBalance > 0 ? effectiveBalance : (invBalance > 0 ? invBalance : 0);
+    if (maxPayable <= 0) {
+      setFeedback({
+        type: 'error',
+        message: 'This learner has zero outstanding balance. No fee payment is required.'
+      });
+      return;
+    }
+    if (numAmount > maxPayable) {
+      setFeedback({
+        type: 'error',
+        message: `Payment exceeds the outstanding balance of KES ${maxPayable.toLocaleString()}. Please enter an amount equal to or less than the outstanding balance.`
+      });
+      return;
+    }
+
     if (paymentChannel === 'BANK_DEPOSIT') {
       if (!bankName) {
         setFeedback({ type: 'error', message: 'Please select the Bank deposited into.' });
@@ -1791,14 +1807,14 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
                       KES {projectedInvoiceBalance.toLocaleString()} {projectedInvoiceBalance === 0 && '(Cleared)'}
                     </span>
                   </div>
-                  {numAmount > invBalance && (
-                    <div className="w-full pt-2 mt-1 border-t border-slate-200 flex items-center justify-between font-sans">
-                      <span className="text-teal-800 font-bold flex items-center gap-1 text-[11px]">
-                        <span className="material-symbols-outlined text-[15px]">savings</span>
-                        Advance Overpayment / Credit:
+                  {numAmount > (invBalance || effectiveBalance) && (
+                    <div className="w-full pt-2 mt-1 border-t border-rose-200 flex items-center justify-between font-sans">
+                      <span className="text-rose-800 font-bold flex items-center gap-1 text-[11px]">
+                        <span className="material-symbols-outlined text-[15px]">error</span>
+                        Exceeds Outstanding Balance:
                       </span>
-                      <span className="font-mono font-extrabold text-xs px-2 py-0.5 rounded bg-teal-100 text-teal-900 border border-teal-200">
-                        +KES {(numAmount - invBalance).toLocaleString()} (Credited)
+                      <span className="font-mono font-extrabold text-xs px-2 py-0.5 rounded bg-rose-100 text-rose-900 border border-rose-200">
+                        Payment will be rejected
                       </span>
                     </div>
                   )}

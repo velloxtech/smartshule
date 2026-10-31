@@ -12,7 +12,9 @@ import {
   DocumentApprovalRequestEmailOptions,
   DocumentDecisionEmailOptions,
   AnnouncementEmailOptions,
-  SigningOtpEmailOptions
+  SigningOtpEmailOptions,
+  FinancialApprovalOtpEmailOptions,
+  SalaryPayslipEmailOptions
 } from '../../../core/ports/services/IEmailService';
 
 export interface RenderedEmail {
@@ -764,6 +766,186 @@ This code expires in ${options.expiryMinutes} minutes and can only be used once.
 Security Notice: Do not share this authorization code with anyone. If you did not request this signature verification, contact school administration immediately.
 
 Grace Seeds School · ${this.SCHOOL_LOCATION}
+    `.trim();
+
+    return { subject, html, text };
+  }
+
+  // ===========================================================================
+  // 10. Financial Action 6-Digit Approval OTP Email
+  // ===========================================================================
+  public static renderFinancialApprovalOtpEmail(options: FinancialApprovalOtpEmailOptions): RenderedEmail {
+    const actionLabel = options.actionType.replace(/_/g, ' ');
+    const subject = `[ACTION REQUIRED] Financial ${actionLabel} Approval Code: ${options.otpCode} - ${this.SCHOOL_NAME}`;
+
+    const contentHtml = `
+      <p style="margin: 0 0 16px;">Dear <strong>${this.escapeHtml(options.approverName)}</strong>,</p>
+      <p style="margin: 0 0 16px;">
+        A sensitive financial transaction modification has been requested at <strong>Grace Seeds School</strong> and requires your verified authorization code to proceed.
+      </p>
+
+      <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 20px 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="font-size: 13px; color: #475569;">
+          <tr>
+            <td style="padding: 4px 0; font-weight: 600; width: 140px;">Requested Action:</td>
+            <td style="padding: 4px 0; color: #991b1b; font-weight: 700; text-transform: uppercase;">${this.escapeHtml(actionLabel)}</td>
+          </tr>
+          <tr>
+            <td style="padding: 4px 0; font-weight: 600;">Target Record:</td>
+            <td style="padding: 4px 0; color: #0f172a; font-family: monospace; font-weight: 600;">${this.escapeHtml(options.targetRecordType)} #${this.escapeHtml(options.targetRecordId)}</td>
+          </tr>
+          <tr>
+            <td style="padding: 4px 0; font-weight: 600;">Requested By:</td>
+            <td style="padding: 4px 0; color: #0f172a;">${this.escapeHtml(options.requesterName)}</td>
+          </tr>
+          <tr>
+            <td style="padding: 4px 0; font-weight: 600;">Reason Provided:</td>
+            <td style="padding: 4px 0; color: #334155; font-style: italic;">&ldquo;${this.escapeHtml(options.reason)}&rdquo;</td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- Prominent 6-Digit Approval Code -->
+      <div style="background: linear-gradient(135deg, #7a1228, #9f1239); border-radius: 12px; padding: 24px; text-align: center; margin: 24px 0; box-shadow: 0 4px 12px rgba(122, 18, 40, 0.25);">
+        <div style="color: #fecdd3; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;">
+          Financial Authorization Code
+        </div>
+        <div style="font-family: 'Courier New', Courier, monospace; font-size: 40px; font-weight: 900; color: #ffffff; letter-spacing: 10px; line-height: 1.2;">
+          ${this.escapeHtml(options.otpCode)}
+        </div>
+        <div style="color: #ffe4e6; font-size: 12px; margin-top: 8px;">
+          Valid for ${options.expiryMinutes} minutes · Maximum 3 attempts · Single use only
+        </div>
+      </div>
+
+      <div style="background-color: #fef2f2; border-left: 4px solid #dc2626; border-radius: 4px; padding: 12px 16px; margin: 20px 0; font-size: 13px; color: #991b1b;">
+        <strong>Strict Security Notice:</strong> Never share this code with anyone, including school staff. If you did not authorize or expect this financial modification, decline the request immediately and report to administration.
+      </div>
+    `;
+
+    const html = this.renderMasterLayout({
+      title: 'Financial Authorization Request',
+      categoryBadge: 'Financial Controls & Governance',
+      contentHtml
+    });
+
+    const text = `
+${this.SCHOOL_NAME} - Financial Modification Authorization
+${this.SCHOOL_TAGLINE}
+
+Dear ${options.approverName},
+
+A sensitive financial transaction modification has been requested and requires your authorization.
+
+Action Requested: ${actionLabel}
+Target Record: ${options.targetRecordType} #${options.targetRecordId}
+Requested By: ${options.requesterName}
+Reason: ${options.reason}
+
+YOUR 6-DIGIT APPROVAL CODE IS: ${options.otpCode}
+
+This code expires in ${options.expiryMinutes} minutes (maximum 3 attempts) and can only be used once.
+
+Security Notice: Never share this authorization code with anyone. If you did not initiate or approve this action, alert school administration immediately.
+
+Grace Seeds School · ${this.SCHOOL_LOCATION} · Tel: ${this.SCHOOL_PHONE}
+    `.trim();
+
+    return { subject, html, text };
+  }
+
+  // ===========================================================================
+  // 11. Salary Payment Advice & Digital Acknowledgement Notice
+  // ===========================================================================
+  public static renderSalaryPayslipEmail(options: SalaryPayslipEmailOptions): RenderedEmail {
+    const formattedNet = Number(options.netSalary || 0).toLocaleString();
+    const formattedGross = Number(options.grossSalary || 0).toLocaleString();
+    const formattedDeductions = Number(options.deductions || 0).toLocaleString();
+    const subject = `Official Salary Payment Advice: ${options.payrollPeriod} - ${this.SCHOOL_NAME}`;
+
+    const portalUrl = options.portalUrl || 'https://smartshule.ac.ke/?view=teacher-dashboard';
+
+    const contentHtml = `
+      <p style="margin: 0 0 16px;">Dear <strong>${this.escapeHtml(options.teacherName)}</strong>,</p>
+      <p style="margin: 0 0 16px;">
+        We are pleased to inform you that your salary remuneration for <strong>${this.escapeHtml(options.payrollPeriod)}</strong> has been processed and disbursed by Grace Seeds School Accounts Office.
+      </p>
+
+      <!-- Amount Banner -->
+      <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 20px; text-align: center; margin: 20px 0;">
+        <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #166534; letter-spacing: 1px;">
+          Net Remuneration Disbursed
+        </div>
+        <div style="font-size: 32px; font-weight: 800; color: #15803d; font-family: monospace; margin-top: 4px;">
+          KES ${formattedNet}
+        </div>
+        <div style="font-size: 12px; color: #4ade80; color: #15803d; margin-top: 4px;">
+          Period: ${this.escapeHtml(options.payrollPeriod)} · Disbursed on: ${this.escapeHtml(options.paymentDate)}
+        </div>
+      </div>
+
+      <div style="background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin: 20px 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="font-size: 13px; color: #4b5563;">
+          <tr style="border-bottom: 1px solid #f3f4f6;">
+            <td style="padding: 8px 0; font-weight: 500;">Staff Member:</td>
+            <td style="padding: 8px 0; color: #111827; font-weight: 700; text-align: right;">${this.escapeHtml(options.teacherName)}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #f3f4f6;">
+            <td style="padding: 8px 0; font-weight: 500;">Gross Remuneration:</td>
+            <td style="padding: 8px 0; color: #111827; font-weight: 600; text-align: right;">KES ${formattedGross}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #f3f4f6;">
+            <td style="padding: 8px 0; font-weight: 500;">Total Deductions:</td>
+            <td style="padding: 8px 0; color: #dc2626; font-weight: 600; text-align: right;">- KES ${formattedDeductions}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #f3f4f6;">
+            <td style="padding: 8px 0; font-weight: 700; color: #111827;">Net Amount Paid:</td>
+            <td style="padding: 8px 0; color: #15803d; font-weight: 800; font-size: 15px; text-align: right;">KES ${formattedNet}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid #f3f4f6;">
+            <td style="padding: 8px 0; font-weight: 500;">Payment Method:</td>
+            <td style="padding: 8px 0; color: #111827; text-align: right;">${this.escapeHtml(options.paymentMethod)}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; font-weight: 500;">Transaction Reference:</td>
+            <td style="padding: 8px 0; color: #111827; font-family: monospace; text-align: right;">${this.escapeHtml(options.referenceNumber)}</td>
+          </tr>
+        </table>
+      </div>
+
+      <div style="background-color: #eff6ff; border-left: 4px solid #2563eb; border-radius: 4px; padding: 12px 16px; margin: 20px 0; font-size: 13px; color: #1e40af;">
+        <strong>Action Required:</strong> In accordance with school policy, please log into your Teacher Portal to confirm and digitally acknowledge receipt of this salary payment.
+      </div>
+    `;
+
+    const html = this.renderMasterLayout({
+      title: 'Salary Remuneration Advice',
+      categoryBadge: 'Payroll & Remuneration',
+      contentHtml,
+      actionButton: {
+        label: 'Acknowledge Salary Receipt in Portal',
+        url: portalUrl
+      }
+    });
+
+    const text = `
+${this.SCHOOL_NAME} - Salary Remuneration Advice
+${this.SCHOOL_TAGLINE}
+
+Dear ${options.teacherName},
+
+Your salary for ${options.payrollPeriod} has been disbursed.
+
+Gross Salary: KES ${formattedGross}
+Total Deductions: KES ${formattedDeductions}
+Net Amount Paid: KES ${formattedNet}
+Payment Method: ${options.paymentMethod}
+Reference: ${options.referenceNumber}
+Payment Date: ${options.paymentDate}
+
+Action Required: Please log in to your Teacher Portal at ${portalUrl} to review and digitally acknowledge receipt of your salary.
+
+Grace Seeds School Accounts Office · ${this.SCHOOL_LOCATION} · Tel: ${this.SCHOOL_PHONE}
     `.trim();
 
     return { subject, html, text };

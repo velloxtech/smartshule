@@ -642,10 +642,23 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
       };
     });
 
-    rows.sort((a, b) => b.totalMarks - a.totalMarks);
-    rows.forEach((r, idx) => {
-      r.rank = idx + 1;
+    rows.sort((a, b) => {
+      if (b.totalMarks !== a.totalMarks) return b.totalMarks - a.totalMarks;
+      if (b.meanScore !== a.meanScore) return b.meanScore - a.meanScore;
+      const admComp = (a.admNo || '').localeCompare(b.admNo || '');
+      if (admComp !== 0) return admComp;
+      return (a.studentId || '').localeCompare(b.studentId || '');
     });
+
+    let currentRank = 1;
+    for (let i = 0; i < rows.length; i++) {
+      if (i > 0 && rows[i].totalMarks === rows[i - 1].totalMarks) {
+        rows[i].rank = currentRank;
+      } else {
+        currentRank = i + 1;
+        rows[i].rank = currentRank;
+      }
+    }
 
     return rows;
   }, [summatives, internalStudents, effectiveSubjects, classes, selectedClassId, selectedStream, searchQuery]);

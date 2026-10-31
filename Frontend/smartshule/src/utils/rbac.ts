@@ -360,7 +360,6 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
           UserRole.BURSAR,
           UserRole.ACCOUNTANT,
           UserRole.ADMISSIONS,
-          UserRole.TEACHER,
         ],
       },
       {

@@ -1,4 +1,6 @@
 import { IUserRepository } from '../../../core/ports/repositories/IUserRepository';
+import { IFinancialApprovalRepository } from '../../../core/ports/repositories/IFinancialApprovalRepository';
+import { FinancialApprovalRequest } from '../../../core/domain/finance/FinancialApprovalRequest';
 import { IStudentRepository, StudentFilterCriteria } from '../../../core/ports/repositories/IStudentRepository';
 import { ITeacherRepository, IGuardianRepository } from '../../../core/ports/repositories/ITeacherRepository';
 import { IAcademicRepository } from '../../../core/ports/repositories/IAcademicRepository';
@@ -835,6 +837,24 @@ export class InMemoryFeeRepository implements IFeeRepository {
   private payments: Map<string, Payment> = new Map();
   private expenses: Map<string, Expense> = new Map();
   private otherIncomes: Map<string, OtherIncome> = new Map();
+  private lockQueues: Map<string, Promise<any>> = new Map();
+
+  public async withLock<T>(key: string, operation: () => Promise<T>): Promise<T> {
+    const currentLock = this.lockQueues.get(key) || Promise.resolve();
+    let releaseLock: () => void;
+    const newLock = new Promise<void>(resolve => { releaseLock = resolve; });
+    this.lockQueues.set(key, currentLock.then(() => newLock));
+
+    try {
+      await currentLock;
+      return await operation();
+    } finally {
+      releaseLock!();
+      if (this.lockQueues.get(key) === newLock) {
+        this.lockQueues.delete(key);
+      }
+    }
+  }
 
   // Structures
   public async findFeeStructureById(id: string): Promise<FeeStructure | null> {
@@ -1243,5 +1263,33 @@ export class InMemoryDeletedStudentRepository implements IDeletedStudentReposito
 
   public async delete(id: string): Promise<void> {
     this.deletedStudents.delete(id);
+  }
+}
+
+export class InMemoryFinancialApprovalRepository implements IFinancialApprovalRepository {
+  private requests: Map<string, FinancialApprovalRequest> = new Map();
+
+  public async save(request: FinancialApprovalRequest): Promise<void> {
+    this.requests.set(request.id, request);
+  }
+
+  public async findById(id: string): Promise<FinancialApprovalRequest | null> {
+    return this.requests.get(id) || null;
+  }
+
+  public async update(request: FinancialApprovalRequest): Promise<void> {
+    this.requests.set(request.id, request);
+  }
+
+  public async findPending(schoolId?: string): Promise<FinancialApprovalRequest[]> {
+    return Array.from(this.requests.values())
+      .filter(r => r.status === 'PENDING' && (!schoolId || r.schoolId === schoolId))
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+
+  public async findByTargetRecord(targetRecordId: string): Promise<FinancialApprovalRequest[]> {
+    return Array.from(this.requests.values())
+      .filter(r => r.targetRecordId === targetRecordId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }
 }

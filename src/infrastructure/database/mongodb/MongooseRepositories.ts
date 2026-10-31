@@ -153,6 +153,7 @@ const SchoolSchema = new Schema({
   address: { type: String, required: true },
   logoUrl: String,
   currency: { type: String, default: 'KES' },
+  schoolType: { type: String, default: 'DAY' },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
@@ -319,6 +320,15 @@ const CBCReportCardSchema = new Schema({
   overallPerformanceLevel: { type: String, required: true },
   closingDate: String,
   nextTermOpeningDate: String,
+  classPosition: Number,
+  classPopulation: Number,
+  streamPosition: Number,
+  streamPopulation: Number,
+  overallPosition: Number,
+  overallPopulation: Number,
+  totalMarks: Number,
+  meanPoints: Number,
+  meanGrade: String,
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });

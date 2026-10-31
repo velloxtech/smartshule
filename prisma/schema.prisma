@@ -129,13 +129,15 @@ model Stream {
 model LearningArea {
   id             String   @id @default(uuid())
   name           String
-  code           String
-  gradeLevel     String
-  educationLevel String
+  code           String   // e.g. 'MATH', 'ENG', 'KISW', 'CRE', 'SCI'
+  educationLevel String   @default("GENERAL")
   isElective     Boolean  @default(false)
   schoolId       String
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+
+  @@unique([schoolId, code])
+  @@map("learning_areas")
 }
 
 model Strand {

@@ -16,7 +16,9 @@ import {
   DocumentApprovalRequestEmailOptions,
   DocumentDecisionEmailOptions,
   AnnouncementEmailOptions,
-  SigningOtpEmailOptions
+  SigningOtpEmailOptions,
+  FinancialApprovalOtpEmailOptions,
+  SalaryPayslipEmailOptions
 } from '../../../core/ports/services/IEmailService';
 import { EmailTemplateEngine } from './EmailTemplateEngine';
 import { env } from '../../config/env';
@@ -62,17 +64,20 @@ export class EmailService implements IEmailService {
 
   private initializeTransporter(): void {
     try {
+      const port = Number(env.email.port) || 587;
+      const isPort465 = port === 465;
+      const isSecure = env.email.secure || isPort465;
       this.transporter = nodemailer.createTransport({
         host: env.email.host,
-        port: env.email.port,
-        secure: env.email.secure,
+        port: port,
+        secure: isSecure,
         auth: {
           user: env.email.user,
           pass: env.email.pass,
         },
-        connectionTimeout: 10000,
-        greetingTimeout: 10000,
-        socketTimeout: 15000,
+        connectionTimeout: 15000,
+        greetingTimeout: 15000,
+        socketTimeout: 20000,
       });
     } catch (err: any) {
       console.warn(`[EmailService] Failed to initialize SMTP transporter: ${err.message}`);
@@ -128,15 +133,28 @@ export class EmailService implements IEmailService {
       };
     }
 
-    const fromAddress = payload.from || this.defaultFrom;
+    let fromAddress = payload.from || this.defaultFrom;
+    // On strict SMTP providers (such as Zoho Mail), attempting to send using an unverified domain
+    // or arbitrary from address results in "550 5.7.1 Sender is not allowed to relay emails".
+    // When SMTP credentials are provided, ensure the fromAddress uses the authenticated user mailbox.
+    if (this.transporter && env.email.user && (fromAddress.includes('@smartshule.ac.ke') || !fromAddress.includes('@'))) {
+      fromAddress = `"Grace Seeds School" <${env.email.user}>`;
+    }
     const replyToAddress = payload.replyTo || this.defaultReplyTo;
+
+    // Automatic layout styling guarantee: wrap in responsive master layout if HTML not provided
+    const styledHtml = payload.html || EmailTemplateEngine.renderMasterLayout({
+      title: payload.subject,
+      categoryBadge: 'Official Communication',
+      contentHtml: `<div style="font-size: 15px; line-height: 1.6; color: #374151; white-space: pre-wrap;">${EmailTemplateEngine.escapeHtml(payload.text)}</div>`
+    });
 
     // Record email in test / audit ledger
     const recorded: RecordedEmail = {
       to: recipients.length === 1 ? recipients[0] : recipients,
       subject: payload.subject,
       text: payload.text,
-      html: payload.html,
+      html: styledHtml,
       from: fromAddress,
       replyTo: replyToAddress,
       sentAt: new Date()
@@ -168,7 +186,7 @@ export class EmailService implements IEmailService {
           to: recipients.join(', '),
           subject: payload.subject,
           text: payload.text,
-          html: payload.html || payload.text.replace(/\n/g, '<br/>'),
+          html: styledHtml,
           replyTo: replyToAddress,
           cc: payload.cc,
           bcc: payload.bcc,
@@ -189,6 +207,13 @@ export class EmailService implements IEmailService {
         };
       } catch (err: any) {
         lastError = err;
+        // Auto-recover if sender relay is disallowed by switching to authenticated mailbox
+        if ((err.message?.includes('not allowed to relay') || err.message?.includes('Relaying disallowed')) && env.email.user && fromAddress !== `"Grace Seeds School" <${env.email.user}>`) {
+          console.warn(`[EmailService] SMTP relay disallowed for "${fromAddress}". Retrying with authenticated user "${env.email.user}"...`);
+          fromAddress = `"Grace Seeds School" <${env.email.user}>`;
+          continue;
+        }
+
         const isTransient = err.code === 'ECONNRESET' ||
           err.code === 'ETIMEDOUT' ||
           err.code === 'ESOCKET' ||
@@ -300,6 +325,26 @@ export class EmailService implements IEmailService {
 
   public async sendSigningOtp(options: SigningOtpEmailOptions): Promise<EmailSendResult> {
     const rendered = EmailTemplateEngine.renderSigningOtpEmail(options);
+    return this.send({
+      to: options.to,
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text
+    });
+  }
+
+  public async sendFinancialApprovalOtp(options: FinancialApprovalOtpEmailOptions): Promise<EmailSendResult> {
+    const rendered = EmailTemplateEngine.renderFinancialApprovalOtpEmail(options);
+    return this.send({
+      to: options.to,
+      subject: rendered.subject,
+      html: rendered.html,
+      text: rendered.text
+    });
+  }
+
+  public async sendSalaryPayslip(options: SalaryPayslipEmailOptions): Promise<EmailSendResult> {
+    const rendered = EmailTemplateEngine.renderSalaryPayslipEmail(options);
     return this.send({
       to: options.to,
       subject: rendered.subject,

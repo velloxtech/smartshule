@@ -102,16 +102,54 @@ export const ClassesView: React.FC = () => {
   }, []);
 
   const getActiveAssignment = (classId: string, streamId?: string) => {
-    return assignments.find((a) => {
+    // 1. Primary: Active record in assignments state
+    const found = assignments.find((a) => {
       if (!a.isActive || a.classRoomId !== classId) return false;
       if (streamId) {
         if (a.streamId !== streamId) return false;
       } else {
         if (a.streamId) return false;
       }
-      if (selectedYearId && a.academicYearId !== selectedYearId) return false;
+      if (selectedYearId && a.academicYearId && a.academicYearId !== selectedYearId) return false;
       return true;
     });
+
+    if (found) return found;
+
+    // 2. Resilient fallback: check stream.classTeacherId
+    if (streamId) {
+      const streamsList = streamsMap[classId] || [];
+      const st = streamsList.find((s) => s.id === streamId);
+      if (st && (st as any).classTeacherId) {
+        return {
+          id: `fallback-${st.id}`,
+          classRoomId: classId,
+          streamId: st.id,
+          teacherId: (st as any).classTeacherId,
+          isActive: true,
+          effectiveFrom: '',
+        } as ClassTeacherAssignmentItem;
+      }
+    }
+
+    // 3. Resilient fallback: check teachers' assignedClassStreamIds
+    if (streamId) {
+      const assignedTeacher = teachers.find(
+        (t) => Array.isArray(t.assignedClassStreamIds) && t.assignedClassStreamIds.includes(streamId)
+      );
+      if (assignedTeacher) {
+        return {
+          id: `sync-${streamId}`,
+          classRoomId: classId,
+          streamId: streamId,
+          teacherId: assignedTeacher.id,
+          isActive: true,
+          effectiveFrom: '',
+        } as ClassTeacherAssignmentItem;
+      }
+    }
+
+    return undefined;
   };
 
   const getAssignmentHistory = (classId: string, streamId?: string) => {

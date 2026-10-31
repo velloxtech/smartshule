@@ -1562,8 +1562,249 @@ export class FeeUseCases {
     };
   }
 
+  private async executeWithLock<T>(key: string, fn: () => Promise<T>): Promise<T> {
+    if (typeof (this.feeRepository as any).withLock === 'function') {
+      return (this.feeRepository as any).withLock(key, fn);
+    }
+    return fn();
+  }
+
+  /**
+   * Authoritative Single Source of Truth for Student Fee Balance Calculations:
+   *
+   * Outstanding = Total valid charges - Total valid payments - Approved applicable credits
+   * Maximum accepted payment = max(0, Outstanding)
+   *
+   * Business Policy:
+   * - No simultaneous positive credit and positive outstanding balance.
+   * - Unapplied approved credits are netted against outstanding charges.
+   * - Negative or zero amounts are rejected for payments.
+   * - Overpayments beyond outstanding balance are strictly rejected.
+   */
+  public async calculateAuthoritativeFeePosition(
+    studentId: string,
+    targetTermId?: string,
+    targetYearId?: string
+  ): Promise<{
+    billedFees: number;
+    priorArrears: number;
+    totalDue: number;
+    totalPaid: number;
+    totalAvailableCredit: number;
+    approvedApplicableCredit: number;
+    outstandingBalance: number;
+    netCreditBalance: number;
+    maxAcceptedPayment: number;
+    isSponsored: boolean;
+    activeInvoices: StudentInvoice[];
+    completedPayments: Payment[];
+    availableCredits: StudentFeeCredit[];
+    status: 'SPONSORED' | 'OVERPAID' | 'CLEARED' | 'PARTIAL' | 'ARREARS' | 'UNBILLED';
+    statusLabel: string;
+    formula: string;
+  }> {
+    const student = await this.studentRepository.findById(studentId);
+    let isSponsored = false;
+    if (this.studentSponsorshipRepository) {
+      try {
+        const sp = await this.studentSponsorshipRepository.findByStudentId(studentId);
+        if (sp && sp.sponsorshipStatus === 'ACTIVE') {
+          isSponsored = true;
+        }
+      } catch {}
+    }
+
+    if (isSponsored) {
+      return {
+        billedFees: 0,
+        priorArrears: 0,
+        totalDue: 0,
+        totalPaid: 0,
+        totalAvailableCredit: 0,
+        approvedApplicableCredit: 0,
+        outstandingBalance: 0,
+        netCreditBalance: 0,
+        maxAcceptedPayment: 0,
+        isSponsored: true,
+        activeInvoices: [],
+        completedPayments: [],
+        availableCredits: [],
+        status: 'SPONSORED',
+        statusLabel: '100% Scholarship (Exempt)',
+        formula: 'KSh 0 + KSh 0 - KSh 0 = KSh 0'
+      };
+    }
+
+    // 1. Fetch Invoices, Payments, Credits
+    const invoices = await this.feeRepository.findInvoices({ studentId });
+    const payments = await this.feeRepository.findPayments({ studentId });
+    const credits = await this.feeRepository.findCredits({ studentId });
+
+    const activeInvoices = invoices.filter(
+      i => (i.status as any) !== 'CARRIED_FORWARD' && (i.status as any) !== InvoiceStatus.CARRIED_FORWARD
+    );
+    const completedPayments = payments.filter(
+      p => p.status === PaymentStatus.COMPLETED || (p.status as any) === 'COMPLETED'
+    );
+    const availableCredits = credits.filter(
+      c => c.status === 'AVAILABLE' || c.status === 'PARTIALLY_USED'
+    );
+
+    // 2. Separate Billed Fees (Current Term) and Prior Arrears
+    let billedFees = 0;
+    let priorArrears = 0;
+
+    const termMatches = (termIdToCheck?: string): boolean => {
+      if (!termIdToCheck) return false;
+      if (!targetTermId || targetTermId === 'ALL') return true;
+      if (termIdToCheck === targetTermId) return true;
+      const lowerToCheck = termIdToCheck.toLowerCase();
+      const lowerTarget = String(targetTermId).toLowerCase();
+      const checkYear = lowerToCheck.match(/20\d\d/)?.[0];
+      const targetYear = lowerTarget.match(/20\d\d/)?.[0];
+      if (checkYear && targetYear && checkYear !== targetYear) return false;
+      const targetMatch = lowerTarget.match(/t(?:erm)?[_-]?([1-3])\b/i) || lowerTarget.match(/[-_t]([1-3])$/i) || lowerTarget.match(/\b([1-3])\b/);
+      if (targetMatch) {
+        const num = targetMatch[1];
+        const numPattern = new RegExp(`(?:^|[^0-9])(?:term[_\s-]?|t)${num}(?:[^0-9]|$)`, 'i');
+        return numPattern.test(lowerToCheck) || lowerToCheck.endsWith(`-${num}`) || lowerToCheck.endsWith(`_${num}`) || lowerToCheck === num;
+      }
+      return false;
+    };
+
+    if (targetTermId && targetTermId !== 'ALL') {
+      for (const inv of activeInvoices) {
+        const isCurrent = termMatches(inv.termId);
+        const isManualArrear = inv.feeStructureId === 'MANUAL_ARREARS' || inv.invoiceNumber.includes('ARR');
+        if (isCurrent && !isManualArrear) {
+          if (Array.isArray(inv.items) && inv.items.length > 0) {
+            for (const it of inv.items) {
+              const amt = Number(it.amount) || 0;
+              const itName = (it.name || '').toLowerCase();
+              if (itName.includes('arrear') || itName.includes('carried forward') || itName.includes('previous balance')) {
+                priorArrears += amt;
+              } else {
+                billedFees += amt;
+              }
+            }
+          } else {
+            billedFees += Number(inv.amountPayable) || Number(inv.amountBilled) || 0;
+          }
+        } else {
+          priorArrears += Number(inv.balance) || 0;
+        }
+      }
+    } else {
+      for (const inv of activeInvoices) {
+        const isManualArrear = inv.feeStructureId === 'MANUAL_ARREARS' || inv.invoiceNumber.includes('ARR');
+        if (isManualArrear) {
+          priorArrears += Number(inv.balance) || 0;
+        } else if (Array.isArray(inv.items)) {
+          for (const it of inv.items) {
+            const amt = Number(it.amount) || 0;
+            const itName = (it.name || '').toLowerCase();
+            if (itName.includes('arrear') || itName.includes('carried forward') || itName.includes('previous balance')) {
+              priorArrears += amt;
+            } else {
+              billedFees += amt;
+            }
+          }
+        } else {
+          billedFees += Number(inv.amountPayable) || Number(inv.amountBilled) || 0;
+        }
+      }
+    }
+
+    billedFees = Math.round(billedFees * 100) / 100;
+    priorArrears = Math.round(priorArrears * 100) / 100;
+    const totalDue = Math.round((billedFees + priorArrears) * 100) / 100;
+
+    // 3. Total Paid & Total Credit
+    let totalPaid = 0;
+    if (targetTermId && targetTermId !== 'ALL') {
+      const currentTermInvoices = activeInvoices.filter(i => termMatches(i.termId) && i.feeStructureId !== 'MANUAL_ARREARS' && !i.invoiceNumber.includes('ARR'));
+      if (currentTermInvoices.length > 0) {
+        totalPaid = currentTermInvoices.reduce((sum, inv) => sum + (Number(inv.amountPaid) || 0), 0);
+      } else {
+        totalPaid = completedPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+      }
+    } else {
+      totalPaid = completedPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+    }
+    totalPaid = Math.round(totalPaid * 100) / 100;
+
+    const totalAvailableCredit = Math.round(
+      availableCredits.reduce((sum, c) => sum + (Number(c.balance) || 0), 0) * 100
+    ) / 100;
+
+    // 4. Authoritative Calculation:
+    // Outstanding = Total valid charges - Total valid payments - Approved applicable credits
+    // Maximum accepted payment = max(0, Outstanding)
+    const sumActiveInvoiceBalances = Math.round(
+      activeInvoices.reduce((sum, i) => sum + (Number(i.balance) || 0), 0) * 100
+    ) / 100;
+
+    const grossDue = (!targetTermId || targetTermId === 'ALL')
+      ? sumActiveInvoiceBalances
+      : Math.max(0, Math.round((totalDue - totalPaid) * 100) / 100);
+
+    const approvedApplicableCredit = Math.min(grossDue, totalAvailableCredit);
+    const outstandingBalance = Math.max(0, Math.round((grossDue - approvedApplicableCredit) * 100) / 100);
+    const netCreditBalance = Math.max(0, Math.round((totalAvailableCredit - grossDue) * 100) / 100);
+    const maxAcceptedPayment = Math.max(0, outstandingBalance);
+
+    // 5. Status Determination
+    let status: 'SPONSORED' | 'OVERPAID' | 'CLEARED' | 'PARTIAL' | 'ARREARS' | 'UNBILLED' = 'ARREARS';
+    let statusLabel = 'Arrears Outstanding';
+
+    if (netCreditBalance > 0 && outstandingBalance === 0) {
+      status = 'OVERPAID';
+      statusLabel = `Advance Credit (+KES ${netCreditBalance.toLocaleString()})`;
+    } else if (outstandingBalance === 0 && (totalPaid > 0 || totalDue > 0 || completedPayments.length > 0)) {
+      status = 'CLEARED';
+      statusLabel = 'Fees Cleared';
+    } else if (billedFees === 0 && priorArrears === 0 && outstandingBalance === 0) {
+      status = 'UNBILLED';
+      statusLabel = 'Not Billed';
+    } else if (totalPaid > 0 && outstandingBalance > 0) {
+      status = 'PARTIAL';
+      statusLabel = priorArrears > 0 && totalPaid >= billedFees ? 'Current Term Cleared, Arrears Remain' : 'Partially Paid';
+    } else {
+      status = 'ARREARS';
+      statusLabel = 'Arrears Outstanding';
+    }
+
+    const creditSnippet = approvedApplicableCredit > 0 ? ` − Credit Offset (KSh ${approvedApplicableCredit.toLocaleString()})` : '';
+    const formula = `KSh ${billedFees.toLocaleString()} + KSh ${priorArrears.toLocaleString()} − KSh ${totalPaid.toLocaleString()}${creditSnippet} = KSh ${outstandingBalance.toLocaleString()}`;
+
+    return {
+      billedFees,
+      priorArrears,
+      totalDue,
+      totalPaid,
+      totalAvailableCredit,
+      approvedApplicableCredit,
+      outstandingBalance,
+      netCreditBalance,
+      maxAcceptedPayment,
+      isSponsored: false,
+      activeInvoices,
+      completedPayments,
+      availableCredits,
+      status,
+      statusLabel,
+      formula
+    };
+  }
+
   // 3. Payment Processing
   public async recordPayment(dto: RecordPaymentDTO) {
+    const rawAmount = Number(dto.amount);
+    if (isNaN(rawAmount) || rawAmount <= 0) {
+      throw new ValidationError('Payment amount must be greater than zero.');
+    }
+    const paymentAmount = Math.round(rawAmount * 100) / 100;
+
     let invoice: StudentInvoice | null = null;
     if (dto.invoiceId) {
       invoice = await this.feeRepository.findInvoiceById(dto.invoiceId);
@@ -1605,177 +1846,161 @@ export class FeeUseCases {
 
     if (!invoice) throw new NotFoundError('Invoice', dto.invoiceId || dto.studentId || 'unknown');
 
-    const student = await this.studentRepository.findById(invoice.studentId);
+    const studentId = invoice.studentId;
+    const lockKey = `fee_payment_${studentId}`;
 
-    // Sponsored learners are charge exempt and have no fee liability
-    if (this.studentSponsorshipRepository) {
-      const activeSp = await this.studentSponsorshipRepository.findByStudentId(invoice.studentId);
-      if (activeSp && activeSp.sponsorshipStatus === 'ACTIVE') {
-        throw new ConflictError(
-          `Cannot record payment: Learner ${student?.fullName || invoice.studentId} is enrolled under the Institutional Scholarship Program (100% Fee Waiver) and has zero fee liability.`
-        );
+    const executePayment = async () => {
+      // Re-fetch invoice inside lock to guard against concurrent changes
+      let currentInvoice = await this.feeRepository.findInvoiceById(invoice!.id);
+      if (!currentInvoice) {
+        currentInvoice = invoice!;
       }
-    }
 
-    const receiptNumber = `REC-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
+      const student = await this.studentRepository.findById(currentInvoice.studentId);
 
-    // Resolve or auto-generate transaction reference for Cash / Manual Bank Deposit
-    let txRef = dto.transactionReference?.trim();
-    if (!txRef) {
-      if (dto.paymentMethod === PaymentMethod.CASH) {
-        txRef = `CSH-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`;
-      } else if (dto.paymentMethod === PaymentMethod.BANK_DEPOSIT) {
-        txRef = dto.slipNumber?.trim() ? `DEP-${dto.slipNumber.trim()}` : `DEP-${Date.now().toString().slice(-6)}`;
-      } else if (dto.paymentMethod === PaymentMethod.CHEQUE) {
-        txRef = `CHQ-${Date.now().toString().slice(-6)}`;
-      } else if (dto.paymentMethod === PaymentMethod.MPESA) {
-        throw new ValidationError('M-Pesa transaction reference (e.g. QHJ8921KL) is required for M-Pesa payments.');
-      } else {
-        txRef = `PAY-${Date.now().toString().slice(-6)}`;
-      }
-    } else {
-      // Validate duplicate reference before proceeding
-      const existingPayment = await this.feeRepository.findPaymentByReference(txRef);
-      if (existingPayment) {
-        if (existingPayment.status === PaymentStatus.COMPLETED) {
+      // Sponsored learners are charge exempt and have no fee liability
+      if (this.studentSponsorshipRepository) {
+        const activeSp = await this.studentSponsorshipRepository.findByStudentId(currentInvoice.studentId);
+        if (activeSp && activeSp.sponsorshipStatus === 'ACTIVE') {
           throw new ConflictError(
-            `A payment record with transaction reference '${txRef}' has already been registered (Receipt #${existingPayment.receiptNumber}, Amount: KES ${existingPayment.amount.toLocaleString()}).`
-          );
-        } else if (existingPayment.status === PaymentStatus.PENDING) {
-          throw new ConflictError(
-            `A forwarded payment notice with reference '${txRef}' is currently pending verification in the Forwarded Payments queue. Please review and approve it from the verification queue.`
+            `Cannot record payment: Learner ${student?.fullName || currentInvoice.studentId} is enrolled under the Institutional Scholarship Program (100% Fee Waiver) and has zero fee liability.`
           );
         }
       }
-    }
 
-    // Build rich notes combining bank or cash details
-    const noteItems: string[] = [];
-    if (dto.bankName) noteItems.push(`Bank: ${dto.bankName}`);
-    if (dto.bankBranch) noteItems.push(`Branch: ${dto.bankBranch}`);
-    if (dto.slipNumber) noteItems.push(`Slip #: ${dto.slipNumber}`);
-    if (dto.depositorName) noteItems.push(`Depositor: ${dto.depositorName}`);
-    if (dto.receivedFrom) noteItems.push(`Received From: ${dto.receivedFrom}`);
-    if (dto.notes) noteItems.push(dto.notes);
-    const combinedNotes = noteItems.length > 0 ? noteItems.join(' | ') : dto.notes;
+      // Authoritative balance validation immediately before saving
+      const feePosition = await this.calculateAuthoritativeFeePosition(currentInvoice.studentId);
+      const maxPayable = feePosition.outstandingBalance;
 
-    const payment = Payment.create(
-      {
-        schoolId: dto.schoolId,
-        invoiceId: invoice.id,
-        studentId: invoice.studentId,
-        receiptNumber,
-        amount: dto.amount,
-        paymentMethod: dto.paymentMethod,
-        transactionReference: txRef,
-        mpesaPhoneNumber: dto.mpesaPhoneNumber,
-        paymentDate: dto.paymentDate || new Date().toISOString().split('T')[0],
-        recordedByUserId: dto.recordedByUserId,
-        status: PaymentStatus.COMPLETED,
-        notes: combinedNotes
-      },
-      IdGenerator.generate()
-    );
-
-    // Update target invoice balance and status
-    const paymentAmount = Math.round((Number(dto.amount) || 0) * 100) / 100;
-    let remainingToAllocate = paymentAmount;
-
-    // Apply to target invoice first (up to its balance, or whatever portion fits)
-    const payableOnTarget = Math.min(remainingToAllocate, invoice.balance);
-    const targetAllocation = invoice.balance > 0 ? payableOnTarget : 0;
-    if (targetAllocation > 0) {
-      invoice.recordPayment(targetAllocation);
-      await this.feeRepository.updateInvoice(invoice);
-      remainingToAllocate = Math.round((remainingToAllocate - targetAllocation) * 100) / 100;
-    }
-
-    // Cascade excess to any other unpaid active invoices
-    if (remainingToAllocate > 0) {
-      const allStudentInvoices = await this.feeRepository.findInvoices({ studentId: invoice.studentId });
-      const otherUnpaidInvoices = allStudentInvoices.filter(
-        i => i.id !== invoice.id && (i.status as any) !== 'CARRIED_FORWARD' && (i.status as any) !== InvoiceStatus.CARRIED_FORWARD && i.balance > 0
-      );
-      for (const otherInv of otherUnpaidInvoices) {
-        const portion = Math.min(remainingToAllocate, otherInv.balance);
-        otherInv.recordPayment(portion);
-        await this.feeRepository.updateInvoice(otherInv);
-        remainingToAllocate = Math.round((remainingToAllocate - portion) * 100) / 100;
-        if (remainingToAllocate <= 0) break;
+      if (paymentAmount > maxPayable) {
+        throw new ValidationError(
+          `Payment exceeds the outstanding balance of KES ${maxPayable.toLocaleString()}. Please enter an amount equal to or less than the outstanding balance.`
+        );
       }
-    }
 
-    await this.feeRepository.savePayment(payment);
+      const receiptNumber = `REC-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
 
-    // If remainingToAllocate is still > 0 (advance overpayment beyond all invoices),
-    // record as StudentFeeCredit in traceable credit ledger
-    let feeCredit: StudentFeeCredit | null = null;
-    if (remainingToAllocate > 0) {
-      feeCredit = StudentFeeCredit.create(
+      // Resolve or auto-generate transaction reference for Cash / Manual Bank Deposit
+      let txRef = dto.transactionReference?.trim();
+      if (!txRef) {
+        if (dto.paymentMethod === PaymentMethod.CASH) {
+          txRef = `CSH-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`;
+        } else if (dto.paymentMethod === PaymentMethod.BANK_DEPOSIT) {
+          txRef = dto.slipNumber?.trim() ? `DEP-${dto.slipNumber.trim()}` : `DEP-${Date.now().toString().slice(-6)}`;
+        } else if (dto.paymentMethod === PaymentMethod.CHEQUE) {
+          txRef = `CHQ-${Date.now().toString().slice(-6)}`;
+        } else if (dto.paymentMethod === PaymentMethod.MPESA) {
+          throw new ValidationError('M-Pesa transaction reference (e.g. QHJ8921KL) is required for M-Pesa payments.');
+        } else {
+          txRef = `PAY-${Date.now().toString().slice(-6)}`;
+        }
+      } else {
+        // Validate duplicate reference before proceeding
+        const existingPayment = await this.feeRepository.findPaymentByReference(txRef);
+        if (existingPayment) {
+          if (existingPayment.status === PaymentStatus.COMPLETED) {
+            throw new ConflictError(
+              `A payment record with transaction reference '${txRef}' has already been registered (Receipt #${existingPayment.receiptNumber}, Amount: KES ${existingPayment.amount.toLocaleString()}).`
+            );
+          } else if (existingPayment.status === PaymentStatus.PENDING) {
+            throw new ConflictError(
+              `A forwarded payment notice with reference '${txRef}' is currently pending verification in the Forwarded Payments queue. Please review and approve it from the verification queue.`
+            );
+          }
+        }
+      }
+
+      // Build rich notes combining bank or cash details
+      const noteItems: string[] = [];
+      if (dto.bankName) noteItems.push(`Bank: ${dto.bankName}`);
+      if (dto.bankBranch) noteItems.push(`Branch: ${dto.bankBranch}`);
+      if (dto.slipNumber) noteItems.push(`Slip #: ${dto.slipNumber}`);
+      if (dto.depositorName) noteItems.push(`Depositor: ${dto.depositorName}`);
+      if (dto.receivedFrom) noteItems.push(`Received From: ${dto.receivedFrom}`);
+      if (dto.notes) noteItems.push(dto.notes);
+      const combinedNotes = noteItems.length > 0 ? noteItems.join(' | ') : dto.notes;
+
+      const payment = Payment.create(
         {
-          schoolId: invoice.schoolId,
-          studentId: invoice.studentId,
-          originatingPaymentId: payment.id,
-          originatingReceiptNumber: payment.receiptNumber,
-          academicYearId: invoice.academicYearId,
-          termId: invoice.termId,
-          amount: remainingToAllocate,
-          amountUsed: 0,
-          balance: remainingToAllocate,
-          status: 'AVAILABLE',
-          notes: `Advance overpayment of KES ${remainingToAllocate.toLocaleString()} on receipt #${receiptNumber} (Payment Ref: ${txRef})`
+          schoolId: dto.schoolId,
+          invoiceId: currentInvoice.id,
+          studentId: currentInvoice.studentId,
+          receiptNumber,
+          amount: paymentAmount,
+          paymentMethod: dto.paymentMethod,
+          transactionReference: txRef,
+          mpesaPhoneNumber: dto.mpesaPhoneNumber,
+          paymentDate: dto.paymentDate || new Date().toISOString().split('T')[0],
+          recordedByUserId: dto.recordedByUserId,
+          status: PaymentStatus.COMPLETED,
+          notes: combinedNotes
         },
         IdGenerator.generate()
       );
-      await this.feeRepository.saveCredit(feeCredit);
-    }
 
-    // Compute student's true overall remaining balance across all active invoices
-    const allStudentInvoices = await this.feeRepository.findInvoices({ studentId: invoice.studentId });
-    const activeStudentInvoices = allStudentInvoices.filter(
-      i => (i.status as any) !== 'CARRIED_FORWARD' && (i.status as any) !== InvoiceStatus.CARRIED_FORWARD
-    );
-    const totalRemainingBalance = Math.round(
-      activeStudentInvoices.reduce((sum, i) => sum + (Number(i.balance) || 0), 0) * 100
-    ) / 100;
+      // Apply to current invoice first (up to its balance)
+      let remainingToAllocate = paymentAmount;
+      const payableOnTarget = Math.min(remainingToAllocate, currentInvoice.balance);
+      const targetAllocation = currentInvoice.balance > 0 ? payableOnTarget : 0;
+      if (targetAllocation > 0) {
+        currentInvoice.recordPayment(targetAllocation);
+        await this.feeRepository.updateInvoice(currentInvoice);
+        remainingToAllocate = Math.round((remainingToAllocate - targetAllocation) * 100) / 100;
+      }
 
-    // Retrieve active available credits
-    const studentCredits = await this.feeRepository.findCredits({ studentId: invoice.studentId });
-    const totalAvailableCredit = Math.round(
-      studentCredits
-        .filter(c => c.status === 'AVAILABLE' || c.status === 'PARTIALLY_USED')
-        .reduce((sum, c) => sum + (Number(c.balance) || 0), 0) * 100
-    ) / 100;
+      // Cascade excess to any other unpaid active invoices of this learner
+      if (remainingToAllocate > 0) {
+        const allStudentInvoices = await this.feeRepository.findInvoices({ studentId: currentInvoice.studentId });
+        const otherUnpaidInvoices = allStudentInvoices.filter(
+          i => i.id !== currentInvoice!.id && (i.status as any) !== 'CARRIED_FORWARD' && (i.status as any) !== InvoiceStatus.CARRIED_FORWARD && i.balance > 0
+        );
+        for (const otherInv of otherUnpaidInvoices) {
+          const portion = Math.min(remainingToAllocate, otherInv.balance);
+          otherInv.recordPayment(portion);
+          await this.feeRepository.updateInvoice(otherInv);
+          remainingToAllocate = Math.round((remainingToAllocate - portion) * 100) / 100;
+          if (remainingToAllocate <= 0) break;
+        }
+      }
 
-    const studentTotalBalance = totalRemainingBalance > 0
-      ? totalRemainingBalance
-      : (totalAvailableCredit > 0 ? -totalAvailableCredit : 0);
+      // Persist payment record
+      await this.feeRepository.savePayment(payment);
 
-    // Generate official receipt and issue to guardian via Email, WhatsApp, and SMS
-    let receiptResult: any = null;
-    if (student) {
-      receiptResult = await this.issuePaymentReceipt({
-        payment,
-        student,
-        remainingBalance: studentTotalBalance,
-        invoice,
-        previousBalance: invoice.balance + paymentAmount,
-        servedBy: dto.recordedByUserId,
-        bankName: dto.bankName,
-        slipNumber: dto.slipNumber
-      });
-    }
+      // Recompute learner's authoritative position post-payment
+      const postPaymentPosition = await this.calculateAuthoritativeFeePosition(currentInvoice.studentId);
 
-    return {
-      payment: payment.toJSON(),
-      updatedInvoice: invoice.toJSON(),
-      studentTotalBalance,
-      overpaymentAmount: totalAvailableCredit,
-      creditBalance: totalAvailableCredit,
-      hasArrears: studentTotalBalance > 0,
-      receipt: receiptResult?.receipt,
-      delivery: receiptResult?.delivery
+      // Generate official receipt and issue to guardian via Email, WhatsApp, and SMS
+      let receiptResult: any = null;
+      if (student) {
+        receiptResult = await this.issuePaymentReceipt({
+          payment,
+          student,
+          remainingBalance: postPaymentPosition.outstandingBalance,
+          invoice: currentInvoice,
+          previousBalance: currentInvoice.balance + paymentAmount,
+          servedBy: dto.recordedByUserId,
+          bankName: dto.bankName,
+          slipNumber: dto.slipNumber
+        });
+      }
+
+      return {
+        payment: payment.toJSON(),
+        updatedInvoice: currentInvoice.toJSON(),
+        studentTotalBalance: postPaymentPosition.outstandingBalance,
+        overpaymentAmount: postPaymentPosition.netCreditBalance,
+        creditBalance: postPaymentPosition.netCreditBalance,
+        hasArrears: postPaymentPosition.outstandingBalance > 0,
+        authoritativePosition: postPaymentPosition,
+        receipt: receiptResult?.receipt,
+        delivery: receiptResult?.delivery
+      };
     };
+
+    if (this.feeRepository.withLock) {
+      return await this.feeRepository.withLock(lockKey, executePayment);
+    }
+    return await executePayment();
   }
 
   public generateReceiptHtml(receipt: PaymentReceiptPayload): string {
@@ -3178,21 +3403,14 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
     paidFees = isSponsored ? 0 : Math.round(paidFees * 100) / 100;
 
     // Outstanding Balance & Overpayment
-    let balance = 0;
-    let overpaymentCredit = availableCredit;
-
-    if (paidFees > totalDue && totalDue > 0) {
-      const excess = Math.round((paidFees - totalDue) * 100) / 100;
-      overpaymentCredit = Math.round((overpaymentCredit + excess) * 100) / 100;
-      balance = 0;
-    } else {
-      balance = Math.max(0, Math.round((totalDue - paidFees) * 100) / 100);
-    }
-
-    if (isSponsored) {
-      balance = 0;
-      overpaymentCredit = 0;
-    }
+    // Authoritative Rule:
+    // Outstanding = Total valid charges - Total valid payments - Approved applicable credits
+    // Available payment amount: Maximum accepted payment = max(0, Outstanding)
+    // No contradictory displays: A student cannot simultaneously owe balance and have positive credit.
+    const grossDue = Math.max(0, Math.round((totalDue - paidFees) * 100) / 100);
+    const applicableCredit = Math.min(grossDue, availableCredit);
+    const balance = isSponsored ? 0 : Math.max(0, Math.round((grossDue - applicableCredit) * 100) / 100);
+    const overpaymentCredit = isSponsored ? 0 : Math.max(0, Math.round((availableCredit - grossDue) * 100) / 100);
 
     // Status
     const hasCompletedPayments = payments.some(
@@ -3380,7 +3598,9 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
         overpaymentCredit,
         status,
         statusLabel,
-        formula: `KSh ${billedFees.toLocaleString()} + KSh ${priorArrears.toLocaleString()} - KSh ${paidFees.toLocaleString()} = KSh ${balance.toLocaleString()}`
+        formula: applicableCredit > 0
+          ? `KSh ${billedFees.toLocaleString()} + KSh ${priorArrears.toLocaleString()} − KSh ${paidFees.toLocaleString()} − Credit Offset (KSh ${applicableCredit.toLocaleString()}) = KSh ${balance.toLocaleString()}`
+          : `KSh ${billedFees.toLocaleString()} + KSh ${priorArrears.toLocaleString()} − KSh ${paidFees.toLocaleString()} = KSh ${balance.toLocaleString()}`
       },
       activeInvoice: currentTermInv ? currentTermInv.toJSON() : (priorInvoices[0] ? priorInvoices[0].toJSON() : null),
       invoices: invoices.map(i => i.toJSON()),
@@ -3777,16 +3997,13 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
       paidFees = Math.round(paidFees * 100) / 100;
 
       // 5. Balance and Overpayment / Credit
-      let balance = 0;
-      let overpaymentCredit = availableCredits;
-
-      if (paidFees > totalDue && totalDue > 0) {
-        const excess = Math.round((paidFees - totalDue) * 100) / 100;
-        overpaymentCredit = Math.round((overpaymentCredit + excess) * 100) / 100;
-        balance = 0;
-      } else {
-        balance = Math.max(0, Math.round((totalDue - paidFees) * 100) / 100);
-      }
+      // Authoritative Rule:
+      // Outstanding = Total valid charges - Total valid payments - Approved applicable credits
+      // No contradictory displays: positive credit and positive balance cannot coexist for the same learner scope.
+      const grossDue = Math.max(0, Math.round((totalDue - paidFees) * 100) / 100);
+      const applicableCredit = Math.min(grossDue, availableCredits);
+      const balance = Math.max(0, Math.round((grossDue - applicableCredit) * 100) / 100);
+      const overpaymentCredit = Math.max(0, Math.round((availableCredits - grossDue) * 100) / 100);
 
       // Status determination
       let status: 'SPONSORED' | 'OVERPAID' | 'CLEARED' | 'PARTIAL' | 'ARREARS' | 'UNBILLED' = 'ARREARS';

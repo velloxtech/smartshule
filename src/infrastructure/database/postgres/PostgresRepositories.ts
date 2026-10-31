@@ -48,6 +48,8 @@ import { DocumentSignatureRecord } from '../../../core/domain/signature/Document
 import { SigningPolicy, getDefaultSigningPolicies } from '../../../core/domain/signature/SigningPolicy';
 import { DocumentSigningBatch } from '../../../core/domain/signature/DocumentSigningBatch';
 import { DocumentSigningBatchItem } from '../../../core/domain/signature/DocumentSigningBatchItem';
+import { IFinancialApprovalRepository } from '../../../core/ports/repositories/IFinancialApprovalRepository';
+import { FinancialApprovalRequest } from '../../../core/domain/finance/FinancialApprovalRequest';
 
 import { User, UserRole, UserStatus } from '../../../core/domain/user/User';
 import { Student, StudentGender, CBCGradeLevel, StudentStatus } from '../../../core/domain/user/Student';
@@ -165,6 +167,7 @@ export class PostgresDatabaseInitializer {
         longitude DOUBLE PRECISION,
         geofence_radius DOUBLE PRECISION DEFAULT 250,
         geofence_enabled BOOLEAN DEFAULT true,
+        school_type VARCHAR(50) DEFAULT 'DAY',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
@@ -271,12 +274,12 @@ export class PostgresDatabaseInitializer {
         id VARCHAR(100) PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
         code VARCHAR(100) NOT NULL,
-        grade_level VARCHAR(50) NOT NULL,
-        education_level VARCHAR(50) NOT NULL,
+        education_level VARCHAR(50) DEFAULT 'GENERAL',
         is_elective BOOLEAN DEFAULT false,
         school_id VARCHAR(100) NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT uq_school_learning_area_code UNIQUE (school_id, code)
       );
 
       CREATE TABLE IF NOT EXISTS strands (
@@ -354,6 +357,15 @@ export class PostgresDatabaseInitializer {
         overall_performance_level VARCHAR(10) NOT NULL,
         closing_date VARCHAR(50),
         next_term_opening_date VARCHAR(50),
+        class_position INT,
+        class_population INT,
+        stream_position INT,
+        stream_population INT,
+        overall_position INT,
+        overall_population INT,
+        total_marks NUMERIC,
+        mean_points NUMERIC,
+        mean_grade VARCHAR(10),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
@@ -1242,6 +1254,33 @@ export class PostgresDatabaseInitializer {
       );
       CREATE INDEX IF NOT EXISTS idx_tcr_teacher ON teacher_correction_requests(teacher_id);
       CREATE INDEX IF NOT EXISTS idx_tcr_school_status ON teacher_correction_requests(school_id, status);
+
+      CREATE TABLE IF NOT EXISTS financial_approval_requests (
+        id VARCHAR(100) PRIMARY KEY,
+        school_id VARCHAR(100) NOT NULL,
+        action_type VARCHAR(50) NOT NULL,
+        target_record_type VARCHAR(50) NOT NULL,
+        target_record_id VARCHAR(100) NOT NULL,
+        requesting_user_id VARCHAR(100) NOT NULL,
+        requesting_user_name VARCHAR(255),
+        approver_user_id VARCHAR(100),
+        approver_destination VARCHAR(255) NOT NULL,
+        channel VARCHAR(20) NOT NULL,
+        code_hash VARCHAR(255) NOT NULL,
+        original_data JSONB DEFAULT '{}',
+        proposed_data JSONB DEFAULT '{}',
+        reason TEXT NOT NULL,
+        status VARCHAR(50) DEFAULT 'PENDING',
+        attempts INT DEFAULT 0,
+        expires_at TIMESTAMP NOT NULL,
+        approved_at TIMESTAMP,
+        rejected_at TIMESTAMP,
+        rejection_reason TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS idx_far_school_status ON financial_approval_requests(school_id, status);
+      CREATE INDEX IF NOT EXISTS idx_far_target ON financial_approval_requests(target_record_id);
     `;
 
     await pool.query(ddl);
@@ -1317,6 +1356,19 @@ export class PostgresDatabaseInitializer {
       ALTER TABLE teachers ADD COLUMN IF NOT EXISTS department VARCHAR(100);
       ALTER TABLE teachers ADD COLUMN IF NOT EXISTS emergency_contact JSONB DEFAULT '{}';
       ALTER TABLE teachers ADD COLUMN IF NOT EXISTS documents JSONB DEFAULT '[]';
+
+      ALTER TABLE system_logs ADD COLUMN IF NOT EXISTS mac_address VARCHAR(150);
+
+      ALTER TABLE schools ADD COLUMN IF NOT EXISTS school_type VARCHAR(50) DEFAULT 'DAY';
+      ALTER TABLE CBC_report_cards ADD COLUMN IF NOT EXISTS class_position INT;
+      ALTER TABLE CBC_report_cards ADD COLUMN IF NOT EXISTS class_population INT;
+      ALTER TABLE CBC_report_cards ADD COLUMN IF NOT EXISTS stream_position INT;
+      ALTER TABLE CBC_report_cards ADD COLUMN IF NOT EXISTS stream_population INT;
+      ALTER TABLE CBC_report_cards ADD COLUMN IF NOT EXISTS overall_position INT;
+      ALTER TABLE CBC_report_cards ADD COLUMN IF NOT EXISTS overall_population INT;
+      ALTER TABLE CBC_report_cards ADD COLUMN IF NOT EXISTS total_marks NUMERIC;
+      ALTER TABLE CBC_report_cards ADD COLUMN IF NOT EXISTS mean_points NUMERIC;
+      ALTER TABLE CBC_report_cards ADD COLUMN IF NOT EXISTS mean_grade VARCHAR(10);
     `).catch(() => {});
 
     console.log('[PostgreSQL] Database tables initialized successfully.');
@@ -1882,12 +1934,13 @@ export class PostgresAcademicRepository implements IAcademicRepository {
       latitude: r.latitude != null ? parseFloat(r.latitude) : null,
       longitude: r.longitude != null ? parseFloat(r.longitude) : null,
       geofenceRadius: r.geofence_radius != null ? parseFloat(r.geofence_radius) : 250,
-      geofenceEnabled: r.geofence_enabled !== false
+      geofenceEnabled: r.geofence_enabled !== false,
+      schoolType: r.school_type || 'DAY'
     }, r.id, r.created_at, r.updated_at);
   }
   public async saveSchool(s: School): Promise<void> {
-    const q = `INSERT INTO schools (id, name, code, center_code, motto, email, phone, address, logo_url, currency, latitude, longitude, geofence_radius, geofence_enabled, created_at, updated_at)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+    const q = `INSERT INTO schools (id, name, code, center_code, motto, email, phone, address, logo_url, currency, latitude, longitude, geofence_radius, geofence_enabled, school_type, created_at, updated_at)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
                ON CONFLICT (id) DO UPDATE SET
                  name = EXCLUDED.name,
                  motto = EXCLUDED.motto,
@@ -1901,8 +1954,9 @@ export class PostgresAcademicRepository implements IAcademicRepository {
                  longitude = EXCLUDED.longitude,
                  geofence_radius = EXCLUDED.geofence_radius,
                  geofence_enabled = EXCLUDED.geofence_enabled,
+                 school_type = EXCLUDED.school_type,
                  updated_at = NOW()`;
-    await this.pool.query(q, [s.id, s.name, s.code, s.centerCode, s.motto, s.email, s.phone, s.address, s.logoUrl, s.currency, s.latitude, s.longitude, s.geofenceRadius, s.geofenceEnabled, s.createdAt, s.updatedAt]);
+    await this.pool.query(q, [s.id, s.name, s.code, s.centerCode, s.motto, s.email, s.phone, s.address, s.logoUrl, s.currency, s.latitude, s.longitude, s.geofenceRadius, s.geofenceEnabled, s.schoolType || 'DAY', s.createdAt, s.updatedAt]);
   }
   public async updateSchool(s: School): Promise<void> { await this.saveSchool(s); }
   public async findYearById(id: string): Promise<AcademicYear | null> {
@@ -2004,31 +2058,62 @@ export class PostgresAcademicRepository implements IAcademicRepository {
     const res = await this.pool.query('SELECT * FROM learning_areas WHERE id = $1', [id]);
     if (!res.rows.length) return null;
     const r = res.rows[0];
-    return LearningArea.create({ name: r.name, code: r.code, gradeLevel: r.grade_level, educationLevel: r.education_level, isElective: r.is_elective, schoolId: r.school_id }, r.id, r.created_at, r.updated_at);
+    return LearningArea.create({ 
+      name: r.name, 
+      code: r.code, 
+      gradeLevel: r.grade_level || CBCGradeLevel.GRADE_4, 
+      educationLevel: r.education_level || EducationLevel.UPPER_PRIMARY, 
+      isElective: r.is_elective, 
+      schoolId: r.school_id 
+    }, r.id, r.created_at, r.updated_at);
   }
+
   public async findAllLearningAreas(filters?: { gradeLevel?: CBCGradeLevel; schoolId?: string }): Promise<LearningArea[]> {
-    let q = 'SELECT * FROM learning_areas';
+    let q = 'SELECT * FROM learning_areas WHERE 1=1';
     const params: any[] = [];
-    const conditions: string[] = [];
-    if (filters?.gradeLevel) {
-      params.push(filters.gradeLevel);
-      conditions.push(`grade_level = $${params.length}`);
-    }
+    
     if (filters?.schoolId) {
       params.push(filters.schoolId);
-      conditions.push(`school_id = $${params.length}`);
+      q += ` AND school_id = $${params.length}`;
     }
-    if (conditions.length > 0) {
-      q += ' WHERE ' + conditions.join(' AND ');
+    // Note: gradeLevel filtering is optional/bypassed for global subjects, 
+    // but if requested, we can filter or return all global school subjects.
+    if (filters?.gradeLevel) {
+      params.push(filters.gradeLevel);
+      q += ` AND (grade_level = $${params.length} OR grade_level IS NULL)`;
     }
+
+    q += ' ORDER BY name ASC';
     const res = await this.pool.query(q, params);
-    return res.rows.map(r => LearningArea.create({ name: r.name, code: r.code, gradeLevel: r.grade_level, educationLevel: r.education_level, isElective: r.is_elective, schoolId: r.school_id }, r.id, r.created_at, r.updated_at));
+    return res.rows.map(r => LearningArea.create({ 
+      name: r.name, 
+      code: r.code, 
+      gradeLevel: r.grade_level || CBCGradeLevel.GRADE_4, 
+      educationLevel: r.education_level || EducationLevel.UPPER_PRIMARY, 
+      isElective: r.is_elective, 
+      schoolId: r.school_id 
+    }, r.id, r.created_at, r.updated_at));
   }
+
   public async saveLearningArea(la: LearningArea): Promise<void> {
     const q = `INSERT INTO learning_areas (id, name, code, grade_level, education_level, is_elective, school_id, created_at, updated_at)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-               ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, updated_at = NOW()`;
-    await this.pool.query(q, [la.id, la.name, la.code, la.gradeLevel, la.educationLevel, la.isElective, la.schoolId, la.createdAt, la.updatedAt]);
+               ON CONFLICT (school_id, code) DO UPDATE SET 
+                 name = EXCLUDED.name, 
+                 education_level = EXCLUDED.education_level,
+                 is_elective = EXCLUDED.is_elective,
+                 updated_at = NOW()`;
+    await this.pool.query(q, [
+      la.id, 
+      la.name, 
+      la.code, 
+      la.gradeLevel || CBCGradeLevel.GRADE_4, 
+      la.educationLevel || EducationLevel.UPPER_PRIMARY, 
+      la.isElective, 
+      la.schoolId, 
+      la.createdAt, 
+      la.updatedAt
+    ]);
   }
   public async saveClassTeacherAssignment(a: ClassTeacherAssignment): Promise<void> {
     const q = `INSERT INTO class_teacher_assignments (
@@ -2329,6 +2414,7 @@ export class PostgresCBCAssessmentRepository implements ICBCAssessmentRepository
     if (filters.learningAreaId) { params.push(filters.learningAreaId); q += ` AND learning_area_id = $${params.length}`; }
     if (filters.termId) { params.push(filters.termId); q += ` AND term_id = $${params.length}`; }
     if (filters.academicYearId) { params.push(filters.academicYearId); q += ` AND academic_year_id = $${params.length}`; }
+    q += ' ORDER BY student_id ASC, learning_area_id ASC, updated_at DESC, created_at DESC';
     const res = await this.pool.query(q, params);
     return res.rows.map(r => FormativeAssessment.create({
       studentId: r.student_id,
@@ -2397,6 +2483,7 @@ export class PostgresCBCAssessmentRepository implements ICBCAssessmentRepository
       q += ` AND (term_id = $${params.length - 1} OR term_id = $${params.length})`;
     }
     if (filters.academicYearId) { params.push(filters.academicYearId); q += ` AND academic_year_id = $${params.length}`; }
+    q += ' ORDER BY student_id ASC, learning_area_id ASC, updated_at DESC, created_at DESC';
     const res = await this.pool.query(q, params);
     return res.rows.map(r => SummativeAssessment.create({ studentId: r.student_id, teacherId: r.teacher_id, learningAreaId: r.learning_area_id, termId: r.term_id, academicYearId: r.academic_year_id, strandScores: typeof r.strand_scores === 'string' ? JSON.parse(r.strand_scores) : r.strand_scores, overallPerformanceLevel: r.overall_performance_level, teacherRemarks: r.teacher_remarks, evaluationDate: r.evaluation_date }, r.id, r.created_at, r.updated_at));
   }
@@ -2469,11 +2556,39 @@ export class PostgresCBCAssessmentRepository implements ICBCAssessmentRepository
   public async deleteSummativesByStudent(studentId: string): Promise<void> {
     await this.pool.query('DELETE FROM summative_assessments WHERE student_id = $1', [studentId]);
   }
+  private mapReportCardRow(r: any): CBCReportCard {
+    return CBCReportCard.create({
+      studentId: r.student_id,
+      termId: r.term_id,
+      academicYearId: r.academic_year_id,
+      gradeLevel: r.grade_level,
+      streamId: r.stream_id,
+      learningAreaAssessments: typeof r.learning_area_assessments === 'string' ? JSON.parse(r.learning_area_assessments) : r.learning_area_assessments,
+      coreCompetencyAssessments: typeof r.core_competency_assessments === 'string' ? JSON.parse(r.core_competency_assessments) : r.core_competency_assessments,
+      valueAssessments: typeof r.value_assessments === 'string' ? JSON.parse(r.value_assessments) : r.value_assessments,
+      attendanceDaysPresent: Number(r.attendance_days_present),
+      attendanceDaysTotal: Number(r.attendance_days_total),
+      classTeacherRemarks: r.class_teacher_remarks,
+      headTeacherRemarks: r.head_teacher_remarks,
+      overallAverageScore: Number(r.overall_average_score),
+      overallPerformanceLevel: r.overall_performance_level,
+      closingDate: r.closing_date,
+      nextTermOpeningDate: r.next_term_opening_date,
+      classPosition: r.class_position != null ? Number(r.class_position) : undefined,
+      classPopulation: r.class_population != null ? Number(r.class_population) : undefined,
+      streamPosition: r.stream_position != null ? Number(r.stream_position) : undefined,
+      streamPopulation: r.stream_population != null ? Number(r.stream_population) : undefined,
+      overallPosition: r.overall_position != null ? Number(r.overall_position) : undefined,
+      overallPopulation: r.overall_population != null ? Number(r.overall_population) : undefined,
+      totalMarks: r.total_marks != null ? Number(r.total_marks) : undefined,
+      meanPoints: r.mean_points != null ? Number(r.mean_points) : undefined,
+      meanGrade: r.mean_grade || undefined
+    }, r.id, r.created_at, r.updated_at);
+  }
   public async findReportCardById(id: string): Promise<CBCReportCard | null> {
     const res = await this.pool.query('SELECT * FROM CBC_report_cards WHERE id = $1', [id]);
     if (!res.rows.length) return null;
-    const r = res.rows[0];
-    return CBCReportCard.create({ studentId: r.student_id, termId: r.term_id, academicYearId: r.academic_year_id, gradeLevel: r.grade_level, streamId: r.stream_id, learningAreaAssessments: typeof r.learning_area_assessments === 'string' ? JSON.parse(r.learning_area_assessments) : r.learning_area_assessments, coreCompetencyAssessments: typeof r.core_competency_assessments === 'string' ? JSON.parse(r.core_competency_assessments) : r.core_competency_assessments, valueAssessments: typeof r.value_assessments === 'string' ? JSON.parse(r.value_assessments) : r.value_assessments, attendanceDaysPresent: Number(r.attendance_days_present), attendanceDaysTotal: Number(r.attendance_days_total), classTeacherRemarks: r.class_teacher_remarks, headTeacherRemarks: r.head_teacher_remarks, overallAverageScore: Number(r.overall_average_score), overallPerformanceLevel: r.overall_performance_level }, r.id, r.created_at, r.updated_at);
+    return this.mapReportCardRow(res.rows[0]);
   }
   public async findReportCard(studentId: string, termId: string, academicYearId: string): Promise<CBCReportCard | null> {
     const termCandidates = [termId];
@@ -2499,15 +2614,13 @@ export class PostgresCBCAssessmentRepository implements ICBCAssessmentRepository
         [studentId, Array.from(new Set(termCandidates))]
       );
       if (!fallbackRes.rows.length) return null;
-      const r = fallbackRes.rows[0];
-      return CBCReportCard.create({ studentId: r.student_id, termId: r.term_id, academicYearId: r.academic_year_id, gradeLevel: r.grade_level, streamId: r.stream_id, learningAreaAssessments: typeof r.learning_area_assessments === 'string' ? JSON.parse(r.learning_area_assessments) : r.learning_area_assessments, coreCompetencyAssessments: typeof r.core_competency_assessments === 'string' ? JSON.parse(r.core_competency_assessments) : r.core_competency_assessments, valueAssessments: typeof r.value_assessments === 'string' ? JSON.parse(r.value_assessments) : r.value_assessments, attendanceDaysPresent: Number(r.attendance_days_present), attendanceDaysTotal: Number(r.attendance_days_total), classTeacherRemarks: r.class_teacher_remarks, headTeacherRemarks: r.head_teacher_remarks, overallAverageScore: Number(r.overall_average_score), overallPerformanceLevel: r.overall_performance_level }, r.id, r.created_at, r.updated_at);
+      return this.mapReportCardRow(fallbackRes.rows[0]);
     }
-    const r = res.rows[0];
-    return CBCReportCard.create({ studentId: r.student_id, termId: r.term_id, academicYearId: r.academic_year_id, gradeLevel: r.grade_level, streamId: r.stream_id, learningAreaAssessments: typeof r.learning_area_assessments === 'string' ? JSON.parse(r.learning_area_assessments) : r.learning_area_assessments, coreCompetencyAssessments: typeof r.core_competency_assessments === 'string' ? JSON.parse(r.core_competency_assessments) : r.core_competency_assessments, valueAssessments: typeof r.value_assessments === 'string' ? JSON.parse(r.value_assessments) : r.value_assessments, attendanceDaysPresent: Number(r.attendance_days_present), attendanceDaysTotal: Number(r.attendance_days_total), classTeacherRemarks: r.class_teacher_remarks, headTeacherRemarks: r.head_teacher_remarks, overallAverageScore: Number(r.overall_average_score), overallPerformanceLevel: r.overall_performance_level }, r.id, r.created_at, r.updated_at);
+    return this.mapReportCardRow(res.rows[0]);
   }
   public async findReportCardsByStudent(studentId: string): Promise<CBCReportCard[]> {
     const res = await this.pool.query('SELECT * FROM CBC_report_cards WHERE student_id = $1', [studentId]);
-    return res.rows.map(r => CBCReportCard.create({ studentId: r.student_id, termId: r.term_id, academicYearId: r.academic_year_id, gradeLevel: r.grade_level, streamId: r.stream_id, learningAreaAssessments: typeof r.learning_area_assessments === 'string' ? JSON.parse(r.learning_area_assessments) : r.learning_area_assessments, coreCompetencyAssessments: typeof r.core_competency_assessments === 'string' ? JSON.parse(r.core_competency_assessments) : r.core_competency_assessments, valueAssessments: typeof r.value_assessments === 'string' ? JSON.parse(r.value_assessments) : r.value_assessments, attendanceDaysPresent: Number(r.attendance_days_present), attendanceDaysTotal: Number(r.attendance_days_total), classTeacherRemarks: r.class_teacher_remarks, headTeacherRemarks: r.head_teacher_remarks, overallAverageScore: Number(r.overall_average_score), overallPerformanceLevel: r.overall_performance_level }, r.id, r.created_at, r.updated_at));
+    return res.rows.map(r => this.mapReportCardRow(r));
   }
   public async findReportCardsByTerm(termId: string, streamId?: string): Promise<CBCReportCard[]> {
     const termCandidates = [termId];
@@ -2526,12 +2639,39 @@ export class PostgresCBCAssessmentRepository implements ICBCAssessmentRepository
       params.push(streamId);
     }
     const res = await this.pool.query(q, params);
-    return res.rows.map(r => CBCReportCard.create({ studentId: r.student_id, termId: r.term_id, academicYearId: r.academic_year_id, gradeLevel: r.grade_level, streamId: r.stream_id, learningAreaAssessments: typeof r.learning_area_assessments === 'string' ? JSON.parse(r.learning_area_assessments) : r.learning_area_assessments, coreCompetencyAssessments: typeof r.core_competency_assessments === 'string' ? JSON.parse(r.core_competency_assessments) : r.core_competency_assessments, valueAssessments: typeof r.value_assessments === 'string' ? JSON.parse(r.value_assessments) : r.value_assessments, attendanceDaysPresent: Number(r.attendance_days_present), attendanceDaysTotal: Number(r.attendance_days_total), classTeacherRemarks: r.class_teacher_remarks, headTeacherRemarks: r.head_teacher_remarks, overallAverageScore: Number(r.overall_average_score), overallPerformanceLevel: r.overall_performance_level }, r.id, r.created_at, r.updated_at));
+    return res.rows.map(r => this.mapReportCardRow(r));
   }
   public async saveReportCard(rc: CBCReportCard): Promise<void> {
-    const q = `INSERT INTO CBC_report_cards (id, student_id, term_id, academic_year_id, grade_level, stream_id, learning_area_assessments, core_competency_assessments, value_assessments, attendance_days_present, attendance_days_total, class_teacher_remarks, head_teacher_remarks, overall_average_score, overall_performance_level, created_at, updated_at)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
-               ON CONFLICT (id) DO UPDATE SET overall_average_score = EXCLUDED.overall_average_score, updated_at = NOW()`;
+    const q = `INSERT INTO CBC_report_cards (
+                 id, student_id, term_id, academic_year_id, grade_level, stream_id,
+                 learning_area_assessments, core_competency_assessments, value_assessments,
+                 attendance_days_present, attendance_days_total, class_teacher_remarks, head_teacher_remarks,
+                 overall_average_score, overall_performance_level, closing_date, next_term_opening_date,
+                 class_position, class_population, stream_position, stream_population,
+                 overall_position, overall_population, total_marks, mean_points, mean_grade,
+                 created_at, updated_at
+               )
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28)
+               ON CONFLICT (id) DO UPDATE SET
+                 overall_average_score = EXCLUDED.overall_average_score,
+                 overall_performance_level = EXCLUDED.overall_performance_level,
+                 learning_area_assessments = EXCLUDED.learning_area_assessments,
+                 class_teacher_remarks = EXCLUDED.class_teacher_remarks,
+                 head_teacher_remarks = EXCLUDED.head_teacher_remarks,
+                 attendance_days_present = EXCLUDED.attendance_days_present,
+                 attendance_days_total = EXCLUDED.attendance_days_total,
+                 closing_date = EXCLUDED.closing_date,
+                 next_term_opening_date = EXCLUDED.next_term_opening_date,
+                 class_position = EXCLUDED.class_position,
+                 class_population = EXCLUDED.class_population,
+                 stream_position = EXCLUDED.stream_position,
+                 stream_population = EXCLUDED.stream_population,
+                 overall_position = EXCLUDED.overall_position,
+                 overall_population = EXCLUDED.overall_population,
+                 total_marks = EXCLUDED.total_marks,
+                 mean_points = EXCLUDED.mean_points,
+                 mean_grade = EXCLUDED.mean_grade,
+                 updated_at = NOW()`;
     await this.pool.query(q, [
       rc.id,
       rc.studentId,
@@ -2548,6 +2688,17 @@ export class PostgresCBCAssessmentRepository implements ICBCAssessmentRepository
       rc.headTeacherRemarks,
       rc.overallAverageScore,
       rc.overallPerformanceLevel,
+      rc.closingDate || null,
+      rc.nextTermOpeningDate || null,
+      rc.classPosition ?? null,
+      rc.classPopulation ?? null,
+      rc.streamPosition ?? null,
+      rc.streamPopulation ?? null,
+      rc.overallPosition ?? null,
+      rc.overallPopulation ?? null,
+      rc.totalMarks ?? null,
+      rc.meanPoints ?? null,
+      rc.meanGrade ?? null,
       rc.createdAt,
       rc.updatedAt
     ]);
@@ -2954,6 +3105,21 @@ export class PostgresAttendanceRepository implements IAttendanceRepository {
 
 export class PostgresFeeRepository implements IFeeRepository {
   constructor(private pool: Pool) {}
+  public async withLock<T>(key: string, operation: () => Promise<T>): Promise<T> {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query('SELECT pg_advisory_xact_lock(hashtext($1))', [key]);
+      const result = await operation();
+      await client.query('COMMIT');
+      return result;
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
   public async findFeeStructureById(id: string): Promise<FeeStructure | null> {
     const res = await this.pool.query('SELECT * FROM fee_structures WHERE id = $1', [id]);
     if (!res.rows.length) return null;
@@ -4230,5 +4396,123 @@ export class PostgresSignatureRepository implements ISignatureRepository {
     });
   }
 }
+
+export class PostgresFinancialApprovalRepository implements IFinancialApprovalRepository {
+  constructor(private pool: Pool) {}
+
+  public async save(request: FinancialApprovalRequest): Promise<void> {
+    const query = `
+      INSERT INTO financial_approval_requests (
+        id, school_id, action_type, target_record_type, target_record_id,
+        requesting_user_id, requesting_user_name, approver_user_id, approver_destination,
+        channel, code_hash, original_data, proposed_data, reason, status,
+        attempts, expires_at, approved_at, rejected_at, rejection_reason,
+        created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
+    `;
+    await this.pool.query(query, [
+      request.id,
+      request.schoolId,
+      request.actionType,
+      request.targetRecordType,
+      request.targetRecordId,
+      request.requestingUserId,
+      request.requestingUserName || null,
+      request.approverUserId || null,
+      request.approverDestination,
+      request.channel,
+      request.codeHash,
+      JSON.stringify(request.originalData || {}),
+      JSON.stringify(request.proposedData || {}),
+      request.reason,
+      request.status,
+      request.attempts,
+      request.expiresAt,
+      request.approvedAt || null,
+      request.rejectedAt || null,
+      request.rejectionReason || null,
+      request.createdAt,
+      request.updatedAt
+    ]);
+  }
+
+  public async findById(id: string): Promise<FinancialApprovalRequest | null> {
+    const res = await this.pool.query('SELECT * FROM financial_approval_requests WHERE id = $1', [id]);
+    if (res.rows.length === 0) return null;
+    return this.mapToDomain(res.rows[0]);
+  }
+
+  public async update(request: FinancialApprovalRequest): Promise<void> {
+    const query = `
+      UPDATE financial_approval_requests SET
+        status = $1,
+        attempts = $2,
+        approver_user_id = $3,
+        approved_at = $4,
+        rejected_at = $5,
+        rejection_reason = $6,
+        updated_at = $7
+      WHERE id = $8
+    `;
+    await this.pool.query(query, [
+      request.status,
+      request.attempts,
+      request.approverUserId || null,
+      request.approvedAt || null,
+      request.rejectedAt || null,
+      request.rejectionReason || null,
+      request.updatedAt,
+      request.id
+    ]);
+  }
+
+  public async findPending(schoolId?: string): Promise<FinancialApprovalRequest[]> {
+    let query = `SELECT * FROM financial_approval_requests WHERE status = 'PENDING'`;
+    const params: any[] = [];
+    if (schoolId) {
+      query += ` AND school_id = $1`;
+      params.push(schoolId);
+    }
+    query += ` ORDER BY created_at DESC`;
+    const res = await this.pool.query(query, params);
+    return res.rows.map(r => this.mapToDomain(r));
+  }
+
+  public async findByTargetRecord(targetRecordId: string): Promise<FinancialApprovalRequest[]> {
+    const res = await this.pool.query(
+      `SELECT * FROM financial_approval_requests WHERE target_record_id = $1 ORDER BY created_at DESC`,
+      [targetRecordId]
+    );
+    return res.rows.map(r => this.mapToDomain(r));
+  }
+
+  private mapToDomain(row: any): FinancialApprovalRequest {
+    return new FinancialApprovalRequest({
+      id: row.id,
+      schoolId: row.school_id,
+      actionType: row.action_type,
+      targetRecordType: row.target_record_type,
+      targetRecordId: row.target_record_id,
+      requestingUserId: row.requesting_user_id,
+      requestingUserName: row.requesting_user_name || undefined,
+      approverUserId: row.approver_user_id || undefined,
+      approverDestination: row.approver_destination,
+      channel: row.channel,
+      codeHash: row.code_hash,
+      originalData: typeof row.original_data === 'string' ? JSON.parse(row.original_data) : (row.original_data || {}),
+      proposedData: typeof row.proposed_data === 'string' ? JSON.parse(row.proposed_data) : (row.proposed_data || {}),
+      reason: row.reason,
+      status: row.status,
+      attempts: row.attempts,
+      expiresAt: new Date(row.expires_at),
+      approvedAt: row.approved_at ? new Date(row.approved_at) : undefined,
+      rejectedAt: row.rejected_at ? new Date(row.rejected_at) : undefined,
+      rejectionReason: row.rejection_reason || undefined,
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at)
+    });
+  }
+}
+
 
 

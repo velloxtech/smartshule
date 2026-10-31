@@ -57,6 +57,9 @@ import { InMemorySignatureRepository } from './database/in-memory/InMemorySignat
 import { SignatureUseCases } from '../application/signature/SignatureUseCases';
 import { ITeacherCorrectionRequestRepository } from '../core/ports/repositories/ITeacherCorrectionRequestRepository';
 import { InMemoryTeacherCorrectionRequestRepository } from './database/in-memory/InMemoryTeacherCorrectionRequestRepository';
+import { IFinancialApprovalRepository } from '../core/ports/repositories/IFinancialApprovalRepository';
+import { InMemoryFinancialApprovalRepository } from './database/in-memory/InMemoryRepositories';
+import { FinancialApprovalUseCases } from '../application/finance/FinancialApprovalUseCases';
 
 import {
   InMemoryUserRepository,
@@ -134,6 +137,7 @@ export class AppContainer {
   public studentSponsorshipRepository: IStudentSponsorshipRepository;
   public signatureRepository: ISignatureRepository;
   public teacherCorrectionRequestRepository: ITeacherCorrectionRequestRepository;
+  public financialApprovalRepository: IFinancialApprovalRepository;
 
   // Services
   public readonly tokenService = new JwtAuthTokenService();
@@ -175,6 +179,7 @@ export class AppContainer {
   public curriculumTrackerUseCases!: CurriculumTrackerUseCases;
   public studentSponsorshipUseCases!: StudentSponsorshipUseCases;
   public signatureUseCases!: SignatureUseCases;
+  public financialApprovalUseCases!: FinancialApprovalUseCases;
 
   constructor(customRepositories?: Partial<RepositoryBundle>) {
     this.userRepository = customRepositories?.userRepository || new InMemoryUserRepository();
@@ -223,6 +228,8 @@ export class AppContainer {
       customRepositories?.signatureRepository || new InMemorySignatureRepository();
     this.teacherCorrectionRequestRepository =
       customRepositories?.teacherCorrectionRequestRepository || new InMemoryTeacherCorrectionRequestRepository();
+    this.financialApprovalRepository =
+      customRepositories?.financialApprovalRepository || new InMemoryFinancialApprovalRepository();
 
     this.initUseCases();
   }
@@ -240,7 +247,8 @@ export class AppContainer {
       this.notificationService,
       this.guardianRepository,
       this.studentRepository,
-      this.systemLogRepository
+      this.systemLogRepository,
+      this.teacherRepository
     );
     this.studentUseCases = new StudentUseCases(
       this.studentRepository,
@@ -386,7 +394,8 @@ export class AppContainer {
       this.userRepository,
       this.teacherClockInRepository,
       this.feeRepository,
-      this.systemLogRepository
+      this.systemLogRepository,
+      this.notificationService
     );
     this.clinicUseCases = new ClinicUseCases(
       this.clinicRepository,
@@ -429,6 +438,14 @@ export class AppContainer {
       this.signatureRepository,
       this.userRepository,
       this.emailService
+    );
+    this.financialApprovalUseCases = new FinancialApprovalUseCases(
+      this.financialApprovalRepository,
+      this.userRepository,
+      this.feeRepository,
+      this.notificationService,
+      this.payrollRepository,
+      this.systemLogRepository
     );
   }
 
