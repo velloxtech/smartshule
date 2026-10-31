@@ -130,7 +130,7 @@ export const FinancialReportsView: React.FC = () => {
         }
         if (ctxRes.success && ctxRes.data?.currentTerm?.name) {
           const yName = resolveAcademicYearName(
-            ctxRes.data.currentYear?.name || ctxRes.data.currentYear?.year || ctxRes.data.currentYear?.id
+            ctxRes.data.currentYear?.name || ctxRes.data.currentYear?.id
           );
           setSelectedPeriod(`${ctxRes.data.currentTerm.name} ${yName}`.trim());
         }
