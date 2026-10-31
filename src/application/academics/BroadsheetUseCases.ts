@@ -181,6 +181,21 @@ export class BroadsheetUseCases {
     private readonly CBCAssessmentRepository: ICBCAssessmentRepository
   ) {}
 
+  public async getClassAnalytics(classId: string, termId?: string, academicYearId?: string) {
+    const allClasses = await this.academicRepository.findAllClasses();
+    const classRoom = allClasses.find(c => c.id === classId) || null;
+    return {
+      classId,
+      className: classRoom?.name || 'Class',
+      termId: termId || 'term-default',
+      academicYearId: academicYearId || 'year-default',
+      analyticsSummary: {
+        totalLearners: 0,
+        meanScore: 0,
+      }
+    };
+  }
+
   public async getStreamBroadsheet(query: BroadsheetQueryDTO): Promise<BroadsheetResult> {
     if (!query.streamId) {
       throw new ValidationError('Stream ID is required to generate broadsheet.');
@@ -326,10 +341,9 @@ export class BroadsheetUseCases {
     const termId = term?.id || `term-${academicYearId}-t1`;
     const termName = term?.name || 'Term 1';
 
-    // 3. Learning areas for active selected grade
-    // AFTER (Fetching all global learning areas for the school)
-const allLearningAreas = await this.academicRepository.findAllLearningAreas();
-const learningAreas = allLearningAreas.map(la => ({ id: la.id, name: la.name }));
+    // 3. Global Learning areas for the school
+    const allLearningAreas = await this.academicRepository.findAllLearningAreas();
+    const learningAreas = allLearningAreas.map(la => ({ id: la.id, name: la.name }));
 
     // 4. Streams for selected class
     let streamsToCompare = classRoom ? await this.academicRepository.findStreamsByClass(classRoom.id) : [];
@@ -435,7 +449,6 @@ const learningAreas = allLearningAreas.map(la => ({ id: la.id, name: la.name }))
       }
 
       const clsLearningAreas = allSchoolLearningAreas
-        .filter(la => la.gradeLevel === cls.gradeLevel)
         .map(la => ({ id: la.id, name: la.name }));
 
       for (const stm of clsStreams) {
@@ -451,7 +464,7 @@ const learningAreas = allLearningAreas.map(la => ({ id: la.id, name: la.name }))
       r.schoolRank = rank;
     });
 
-    // A. School-Wide Class Rankings (Ranks every class/grade across the institution)
+    // A. School-Wide Class Rankings
     const schoolClassRankings: ClassRankingItem[] = allClasses
       .map(cls => {
         const matchingRows = allSchoolStudentsRows.filter(r => r.className === cls.name);
@@ -521,7 +534,7 @@ const learningAreas = allLearningAreas.map(la => ({ id: la.id, name: la.name }))
       .sort((a, b) => b.meanScore - a.meanScore)
       .map((item, idx) => ({ ...item, rank: idx + 1 }));
 
-    // C. Best Performing Stream Per Subject in Current Grade
+    // C. Best Performing Stream Per Subject
     const bestClassesPerSubject: BestClassPerSubjectItem[] = learningAreas.map(la => {
       const sortedBySubject = [...allStreamResults].sort((a, b) => {
         const aScore = a.subjectSummaries.find(s => s.learningAreaId === la.id)?.averageScore || 0;
@@ -579,7 +592,7 @@ const learningAreas = allLearningAreas.map(la => ({ id: la.id, name: la.name }))
         gender: topStudentRow?.gender || 'M',
         score,
         performanceLevel: level,
-        scope: 'CLASS'
+        scope: 'CLASS' as const
       };
     });
 
@@ -610,7 +623,7 @@ const learningAreas = allLearningAreas.map(la => ({ id: la.id, name: la.name }))
         gender: topStudentRow?.gender || 'M',
         score,
         performanceLevel: level,
-        scope: 'SCHOOL'
+        scope: 'SCHOOL' as const
       };
     }).filter(s => s.score > 0);
 
