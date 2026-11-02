@@ -506,9 +506,18 @@ export class PostgresDatabaseInitializer {
         recorded_by_user_id VARCHAR(100) NOT NULL,
         status VARCHAR(50) DEFAULT 'COMPLETED',
         notes TEXT,
+        arrears_paid NUMERIC(12,2) DEFAULT 0,
+        current_fees_paid NUMERIC(12,2) DEFAULT 0,
+        overpayment_amount NUMERIC(12,2) DEFAULT 0,
+        allocation_breakdown JSONB DEFAULT '[]'::jsonb,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+
+      ALTER TABLE payments ADD COLUMN IF NOT EXISTS arrears_paid NUMERIC(12,2) DEFAULT 0;
+      ALTER TABLE payments ADD COLUMN IF NOT EXISTS current_fees_paid NUMERIC(12,2) DEFAULT 0;
+      ALTER TABLE payments ADD COLUMN IF NOT EXISTS overpayment_amount NUMERIC(12,2) DEFAULT 0;
+      ALTER TABLE payments ADD COLUMN IF NOT EXISTS allocation_breakdown JSONB DEFAULT '[]'::jsonb;
 
       CREATE TABLE IF NOT EXISTS expenses (
         id VARCHAR(100) PRIMARY KEY,
@@ -1345,6 +1354,35 @@ export class PostgresDatabaseInitializer {
       );
       CREATE INDEX IF NOT EXISTS idx_far_school_status ON financial_approval_requests(school_id, status);
       CREATE INDEX IF NOT EXISTS idx_far_target ON financial_approval_requests(target_record_id);
+
+      CREATE TABLE IF NOT EXISTS ediary_entries (
+        id VARCHAR(100) PRIMARY KEY,
+        school_id VARCHAR(100) NOT NULL,
+        classroom_id VARCHAR(100),
+        stream_id VARCHAR(100) NOT NULL,
+        student_id VARCHAR(100),
+        teacher_id VARCHAR(100) NOT NULL,
+        teacher_name VARCHAR(255),
+        academic_year_id VARCHAR(100),
+        term_id VARCHAR(100),
+        date VARCHAR(50) NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        homework TEXT,
+        homework_tasks JSONB DEFAULT '[]'::jsonb,
+        teacher_remarks TEXT,
+        requirements_tomorrow TEXT,
+        tomorrow_requirements JSONB DEFAULT '[]'::jsonb,
+        acknowledgements JSONB DEFAULT '[]'::jsonb,
+        status VARCHAR(50) DEFAULT 'PUBLISHED',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS idx_ediary_school ON ediary_entries(school_id);
+      CREATE INDEX IF NOT EXISTS idx_ediary_stream_date ON ediary_entries(stream_id, date);
+      CREATE INDEX IF NOT EXISTS idx_ediary_student ON ediary_entries(student_id);
+      CREATE INDEX IF NOT EXISTS idx_ediary_teacher ON ediary_entries(teacher_id);
+      CREATE INDEX IF NOT EXISTS idx_ediary_date ON ediary_entries(date);
+      CREATE INDEX IF NOT EXISTS idx_ediary_status ON ediary_entries(status);
     `;
 
     await pool.query(ddl);
@@ -3441,23 +3479,49 @@ export class PostgresFeeRepository implements IFeeRepository {
   public async deleteInvoicesByStudentId(studentId: string): Promise<void> {
     await this.pool.query('DELETE FROM student_invoices WHERE student_id = $1', [studentId]);
   }
+  private mapPaymentRow(r: any): Payment {
+    let breakdown: any[] = [];
+    if (r.allocation_breakdown) {
+      if (Array.isArray(r.allocation_breakdown)) {
+        breakdown = r.allocation_breakdown;
+      } else if (typeof r.allocation_breakdown === 'string') {
+        try { breakdown = JSON.parse(r.allocation_breakdown); } catch {}
+      }
+    }
+    return Payment.create({
+      schoolId: r.school_id,
+      invoiceId: r.invoice_id,
+      studentId: r.student_id,
+      receiptNumber: r.receipt_number,
+      amount: Number(r.amount),
+      paymentMethod: r.payment_method,
+      transactionReference: r.transaction_reference,
+      mpesaPhoneNumber: r.mpesa_phone_number,
+      paymentDate: r.payment_date,
+      recordedByUserId: r.recorded_by_user_id,
+      status: r.status as PaymentStatus,
+      notes: r.notes,
+      arrearsPaid: r.arrears_paid != null ? Number(r.arrears_paid) : 0,
+      currentFeesPaid: r.current_fees_paid != null ? Number(r.current_fees_paid) : 0,
+      overpaymentAmount: r.overpayment_amount != null ? Number(r.overpayment_amount) : 0,
+      allocationBreakdown: breakdown
+    }, r.id, r.created_at, r.updated_at);
+  }
+
   public async findPaymentById(id: string): Promise<Payment | null> {
     const res = await this.pool.query('SELECT * FROM payments WHERE id = $1', [id]);
     if (!res.rows.length) return null;
-    const r = res.rows[0];
-    return Payment.create({ schoolId: r.school_id, invoiceId: r.invoice_id, studentId: r.student_id, receiptNumber: r.receipt_number, amount: Number(r.amount), paymentMethod: r.payment_method, transactionReference: r.transaction_reference, mpesaPhoneNumber: r.mpesa_phone_number, paymentDate: r.payment_date, recordedByUserId: r.recorded_by_user_id, status: r.status as PaymentStatus, notes: r.notes }, r.id, r.created_at, r.updated_at);
+    return this.mapPaymentRow(res.rows[0]);
   }
   public async findPaymentByReceiptNumber(receiptNumber: string): Promise<Payment | null> {
     const res = await this.pool.query('SELECT * FROM payments WHERE receipt_number = $1', [receiptNumber]);
     if (!res.rows.length) return null;
-    const r = res.rows[0];
-    return Payment.create({ schoolId: r.school_id, invoiceId: r.invoice_id, studentId: r.student_id, receiptNumber: r.receipt_number, amount: Number(r.amount), paymentMethod: r.payment_method, transactionReference: r.transaction_reference, mpesaPhoneNumber: r.mpesa_phone_number, paymentDate: r.payment_date, recordedByUserId: r.recorded_by_user_id, status: r.status as PaymentStatus, notes: r.notes }, r.id, r.created_at, r.updated_at);
+    return this.mapPaymentRow(res.rows[0]);
   }
   public async findPaymentByReference(reference: string): Promise<Payment | null> {
     const res = await this.pool.query('SELECT * FROM payments WHERE transaction_reference = $1', [reference]);
     if (!res.rows.length) return null;
-    const r = res.rows[0];
-    return Payment.create({ schoolId: r.school_id, invoiceId: r.invoice_id, studentId: r.student_id, receiptNumber: r.receipt_number, amount: Number(r.amount), paymentMethod: r.payment_method, transactionReference: r.transaction_reference, mpesaPhoneNumber: r.mpesa_phone_number, paymentDate: r.payment_date, recordedByUserId: r.recorded_by_user_id, status: r.status as PaymentStatus, notes: r.notes }, r.id, r.created_at, r.updated_at);
+    return this.mapPaymentRow(res.rows[0]);
   }
   public async findPayments(filters: PaymentFilterCriteria): Promise<Payment[]> {
     let q = 'SELECT * FROM payments WHERE 1=1';
@@ -3469,14 +3533,14 @@ export class PostgresFeeRepository implements IFeeRepository {
     if (filters.endDate) { params.push(filters.endDate); q += ` AND payment_date <= $${params.length}`; }
     q += ' ORDER BY payment_date DESC';
     const res = await this.pool.query(q, params);
-    return res.rows.map(r => Payment.create({ schoolId: r.school_id, invoiceId: r.invoice_id, studentId: r.student_id, receiptNumber: r.receipt_number, amount: Number(r.amount), paymentMethod: r.payment_method, transactionReference: r.transaction_reference, mpesaPhoneNumber: r.mpesa_phone_number, paymentDate: r.payment_date, recordedByUserId: r.recorded_by_user_id, status: r.status as PaymentStatus, notes: r.notes }, r.id, r.created_at, r.updated_at));
+    return res.rows.map(r => this.mapPaymentRow(r));
   }
   public async deletePaymentsByStudentId(studentId: string): Promise<void> {
     await this.pool.query('DELETE FROM payments WHERE student_id = $1', [studentId]);
   }
   public async savePayment(p: Payment): Promise<void> {
-    const q = `INSERT INTO payments (id, school_id, invoice_id, student_id, receipt_number, amount, payment_method, transaction_reference, mpesa_phone_number, payment_date, recorded_by_user_id, status, notes, created_at, updated_at)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+    const q = `INSERT INTO payments (id, school_id, invoice_id, student_id, receipt_number, amount, payment_method, transaction_reference, mpesa_phone_number, payment_date, recorded_by_user_id, status, notes, arrears_paid, current_fees_paid, overpayment_amount, allocation_breakdown, created_at, updated_at)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
                ON CONFLICT (id) DO NOTHING`;
     await this.pool.query(q, [
       p.id,
@@ -3492,6 +3556,10 @@ export class PostgresFeeRepository implements IFeeRepository {
       (p.recordedByUserId && p.recordedByUserId.trim() !== '') ? p.recordedByUserId : null,
       p.status,
       p.notes || null,
+      p.arrearsPaid,
+      p.currentFeesPaid,
+      p.overpaymentAmount,
+      JSON.stringify(p.allocationBreakdown),
       p.createdAt,
       p.updatedAt
     ]);
@@ -3500,8 +3568,10 @@ export class PostgresFeeRepository implements IFeeRepository {
     const q = `UPDATE payments
                SET invoice_id = $1, student_id = $2, receipt_number = $3, amount = $4,
                    payment_method = $5, transaction_reference = $6, mpesa_phone_number = $7,
-                   payment_date = $8, status = $9, notes = $10, updated_at = NOW()
-               WHERE id = $11`;
+                   payment_date = $8, status = $9, notes = $10,
+                   arrears_paid = $11, current_fees_paid = $12, overpayment_amount = $13, allocation_breakdown = $14,
+                   updated_at = NOW()
+               WHERE id = $15`;
     await this.pool.query(q, [
       (p.invoiceId && p.invoiceId.trim() !== '') ? p.invoiceId : null,
       p.studentId,
@@ -3513,6 +3583,10 @@ export class PostgresFeeRepository implements IFeeRepository {
       p.paymentDate,
       p.status,
       p.notes || null,
+      p.arrearsPaid,
+      p.currentFeesPaid,
+      p.overpaymentAmount,
+      JSON.stringify(p.allocationBreakdown),
       p.id
     ]);
   }

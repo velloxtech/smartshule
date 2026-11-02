@@ -1790,9 +1790,23 @@ const coreApiService = {
     });
   },
 
+  previewPaymentAllocation: async (data: {
+    studentId: string;
+    amount: number;
+    schoolId?: string;
+    termId?: string;
+    academicYearId?: string;
+  }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/finance/payments/preview-allocation', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
   recordPayment: async (data: {
     schoolId: string;
-    invoiceId: string;
+    invoiceId?: string;
+    studentId?: string;
     amount: number;
     paymentMethod: 'MPESA' | 'BANK_TRANSFER' | 'BANK_DEPOSIT' | 'CHEQUE' | 'CASH' | 'CARD' | 'KCB_BUNI';
     transactionReference?: string;
@@ -2202,6 +2216,27 @@ const coreApiService = {
 
 
   // 10. Digital eDiary Endpoints
+  getParentEDiaryFeed: async (params?: {
+    studentId?: string;
+    academicYearId?: string;
+    termId?: string;
+    startDate?: string;
+    endDate?: string;
+    date?: string;
+    limit?: number;
+  }): Promise<ApiResponse<EDiaryEntry[]>> => {
+    const q = new URLSearchParams();
+    if (params?.studentId) q.append('studentId', params.studentId);
+    if (params?.academicYearId) q.append('academicYearId', params.academicYearId);
+    if (params?.termId) q.append('termId', params.termId);
+    if (params?.startDate) q.append('startDate', params.startDate);
+    if (params?.endDate) q.append('endDate', params.endDate);
+    if (params?.date) q.append('date', params.date);
+    if (params?.limit) q.append('limit', String(params.limit));
+    const qs = q.toString() ? `?${q.toString()}` : '';
+    return apiFetch<ApiResponse<EDiaryEntry[]>>(`/ediary/parent-feed${qs}`);
+  },
+
   getStudentEDiary: async (studentId: string): Promise<ApiResponse<EDiaryEntry[]>> => {
     return apiFetch<ApiResponse<EDiaryEntry[]>>(`/ediary/student/${studentId}`);
   },
@@ -2212,11 +2247,13 @@ const coreApiService = {
   },
 
   createEDiaryEntry: async (data: {
+    id?: string;
     schoolId: string;
     classRoomId: string;
     streamId: string;
     studentId?: string;
     date: string;
+    title?: string;
     homeworkTasks: Array<{
       learningArea: string;
       description: string;
@@ -2224,6 +2261,7 @@ const coreApiService = {
     }>;
     teacherRemarks?: string;
     tomorrowRequirements?: string[];
+    status?: 'DRAFT' | 'PUBLISHED';
   }): Promise<ApiResponse<EDiaryEntry>> => {
     return apiFetch<ApiResponse<EDiaryEntry>>('/ediary', {
       method: 'POST',
@@ -2231,7 +2269,7 @@ const coreApiService = {
     });
   },
 
-  acknowledgeEDiary: async (entryId: string, data?: { guardianName?: string; parentNote?: string }): Promise<ApiResponse<EDiaryEntry>> => {
+  acknowledgeEDiary: async (entryId: string, data?: { studentId?: string; guardianName?: string; parentNote?: string }): Promise<ApiResponse<EDiaryEntry>> => {
     return apiFetch<ApiResponse<EDiaryEntry>>(`/ediary/${entryId}/acknowledge`, {
       method: 'POST',
       body: JSON.stringify(data || {}),

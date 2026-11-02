@@ -109,6 +109,7 @@ import { InMemoryFinancialApprovalRepository } from './in-memory/InMemoryReposit
 import { ITeacherCorrectionRequestRepository } from '../../core/ports/repositories/ITeacherCorrectionRequestRepository';
 import { InMemoryTeacherCorrectionRequestRepository } from './in-memory/InMemoryTeacherCorrectionRequestRepository';
 import { PostgresTeacherCorrectionRequestRepository } from './postgres/PostgresTeacherCorrectionRequestRepository';
+import { PostgresEDiaryRepository } from './postgres/PostgresEDiaryRepository';
 
 export interface RepositoryBundle {
   userRepository: IUserRepository;
@@ -273,6 +274,7 @@ export class DatabaseFactory {
         signatureRepository: new PostgresSignatureRepository(pool),
         teacherCorrectionRequestRepository: new PostgresTeacherCorrectionRequestRepository(pool),
         financialApprovalRepository: new PostgresFinancialApprovalRepository(pool),
+        ediaryRepository: new PostgresEDiaryRepository(pool),
       };
     }
 

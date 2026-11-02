@@ -667,6 +667,8 @@ export function createApiRouter(container: AppContainer): Router {
   financeRouter.get('/invoices/:id', authMiddleware, financeController.getInvoiceDetails); // Parent isolated
   financeRouter.delete('/invoices/:id', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), financeController.deleteInvoice);
   financeRouter.get('/summary', authMiddleware, financeController.getFinanceSummary); // Parent vs Admin summary
+  financeRouter.post('/payments/preview-allocation', authMiddleware, financeController.previewPaymentAllocation);
+  financeRouter.get('/students/:studentId/payment-preview', authMiddleware, financeController.previewPaymentAllocation);
   financeRouter.post('/payments', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), validateBody(RecordPaymentSchema), financeController.recordPayment);
   financeRouter.post('/payments/:id/reverse', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), validateBody(ReversePaymentSchema), financeController.reversePayment);
   financeRouter.get('/payments', authMiddleware, financeController.listPayments); // Parent isolated
@@ -747,6 +749,7 @@ export function createApiRouter(container: AppContainer): Router {
   // 11. DIGITAL eDIARY & PARENT ACKNOWLEDGEMENT ROUTES
   // ==========================================
   const ediaryRouter = Router();
+  ediaryRouter.get('/parent-feed', authMiddleware, ediaryController.getParentFeed);
   ediaryRouter.post('/', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN), validateBody(CreateEDiarySchema), ediaryController.createEntry);
   ediaryRouter.get('/student/:studentId', authMiddleware, ediaryController.listStudentEntries);
   ediaryRouter.get('/stream/:streamId', authMiddleware, ediaryController.listStreamEntries);

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import { FeeBannerConfig } from '../../types';
+import { FeeBannerConfig, EDiaryEntry } from '../../types';
 import { EditStudentModal } from '../modals/EditStudentModal';
 import { ForwardPaymentModal } from '../modals/ForwardPaymentModal';
 import { ReceiptViewModal } from '../modals/ReceiptViewModal';
@@ -34,6 +34,14 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
   const [selectedFormativeRating, setSelectedFormativeRating] = useState<string>('All');
   const [selectedFormativeSubject, setSelectedFormativeSubject] = useState<string>('All');
   const [reopenAnnouncement, setReopenAnnouncement] = useState<any | null>(null);
+
+  // Digital eDiary & Homework state for selected child
+  const [ediaryEntries, setEdiaryEntries] = useState<EDiaryEntry[]>([]);
+  const [loadingEdiary, setLoadingEdiary] = useState<boolean>(false);
+  const [ediaryError, setEdiaryError] = useState<string | null>(null);
+  const [acknowledgingEdiaryId, setAcknowledgingEdiaryId] = useState<string | null>(null);
+  const [parentEdiaryNote, setParentEdiaryNote] = useState<string>('');
+  const [isSubmittingEdiaryAck, setIsSubmittingEdiaryAck] = useState<boolean>(false);
 
   const loadPortalData = async () => {
     setLoading(true);
@@ -72,6 +80,65 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
 
   const children = portalData?.children || [];
   const currentChild = children[selectedChildIndex] || null;
+
+  const loadChildEdiary = async (studentId: string) => {
+    if (!studentId) {
+      setEdiaryEntries([]);
+      return;
+    }
+    setLoadingEdiary(true);
+    setEdiaryError(null);
+    try {
+      const res = await apiService.getParentEDiaryFeed({ studentId });
+      if (res.success && res.data) {
+        setEdiaryEntries(res.data);
+      } else {
+        setEdiaryError(res.message || 'Unable to load eDiary entries for this learner.');
+        setEdiaryEntries([]);
+      }
+    } catch (err: any) {
+      console.error('Failed to load learner eDiary feed:', err);
+      setEdiaryError(err.message || 'Failed to load eDiary entries.');
+      setEdiaryEntries([]);
+    } finally {
+      setLoadingEdiary(false);
+    }
+  };
+
+  useEffect(() => {
+    if (currentChild?.id) {
+      loadChildEdiary(currentChild.id);
+    } else {
+      setEdiaryEntries([]);
+    }
+  }, [currentChild?.id]);
+
+  const handleAcknowledgeEdiary = async (entryId: string) => {
+    if (!currentChild) return;
+    setIsSubmittingEdiaryAck(true);
+    try {
+      const res = await apiService.acknowledgeEDiary(entryId, {
+        studentId: currentChild.id,
+        guardianName: user ? `${user.firstName} ${user.lastName}` : 'Guardian',
+        parentNote: parentEdiaryNote.trim() || undefined,
+      });
+      if (res.success && (res.data || (res as any).entry)) {
+        const updatedEntry = res.data || (res as any).entry;
+        setEdiaryEntries((prev) =>
+          prev.map((item) => (item.id === entryId ? updatedEntry : item))
+        );
+        setAcknowledgingEdiaryId(null);
+        setParentEdiaryNote('');
+      } else {
+        alert(res.message || 'Failed to sign eDiary entry');
+      }
+    } catch (err: any) {
+      alert('Failed to sign eDiary entry: ' + (err.message || 'Error occurred'));
+    } finally {
+      setIsSubmittingEdiaryAck(false);
+    }
+  };
+
   const currentChildLunch =
     lunchEnrollments.find((l: any) => l.studentId === currentChild?.id) ||
     currentChild?.lunch ||
@@ -622,6 +689,204 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                 Official Paybill: 522533 · Acc: 8048859#{currentChild.firstName} {currentChild.lastName} · {resolveGradeName(currentChild.gradeLevel)} (Name &amp; Grade)
               </span>
             </div>
+          </div>
+
+          {/* Active Digital eDiary & Homework Board for Selected Learner */}
+          <div className="bg-surface-container-lowest rounded-2xl p-5 shadow-xs border border-outline-variant/30 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-outline-variant/20 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold">
+                  <span className="material-symbols-outlined text-2xl">menu_book</span>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider">
+                      Digital School eDiary &amp; Homework Board
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold">
+                      {resolveGradeName(currentChild.gradeLevel)}
+                    </span>
+                  </div>
+                  <p className="text-xs text-on-surface-variant">
+                    Daily learning tasks, teacher instructions, and next-day preparations for <strong className="text-on-surface">{currentChild.firstName}</strong>
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => loadChildEdiary(currentChild.id)}
+                  title="Refresh eDiary feed"
+                  className="p-1.5 rounded-lg bg-surface-container text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[18px]">refresh</span>
+                </button>
+                {onNavigateTab && (
+                  <button
+                    onClick={() => onNavigateTab('ediary')}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl text-xs font-bold transition-all cursor-pointer"
+                  >
+                    <span>Full eDiary Portal</span>
+                    <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {loadingEdiary ? (
+              <div className="py-8 text-center flex flex-col items-center justify-center gap-2">
+                <div className="w-7 h-7 border-3 border-primary border-t-transparent rounded-full animate-spin"></div>
+                <span className="text-xs text-on-surface-variant font-medium">Checking today's assignments...</span>
+              </div>
+            ) : ediaryError ? (
+              <div className="p-4 rounded-xl bg-error/10 border border-error/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-error">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-lg">error</span>
+                  <span className="text-xs font-semibold">{ediaryError}</span>
+                </div>
+                <button
+                  onClick={() => loadChildEdiary(currentChild.id)}
+                  className="px-2.5 py-1 bg-error text-white text-xs font-bold rounded-lg hover:bg-error/90 cursor-pointer self-start sm:self-auto"
+                >
+                  Retry
+                </button>
+              </div>
+            ) : ediaryEntries.length === 0 ? (
+              <div className="py-8 px-4 text-center rounded-xl bg-surface-container-low border border-outline-variant/20 space-y-2">
+                <div className="w-10 h-10 rounded-full bg-outline-variant/20 flex items-center justify-center mx-auto text-outline">
+                  <span className="material-symbols-outlined text-xl">event_available</span>
+                </div>
+                <h4 className="font-bold text-xs text-on-surface">No eDiary Entries for Today</h4>
+                <p className="text-xs text-on-surface-variant max-w-md mx-auto">
+                  Educators have not yet published daily assignments for {currentChild.firstName}’s class. Check back later or open the Full eDiary Portal.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {ediaryEntries.map((entry) => {
+                  const hasSigned = Boolean(
+                    entry.isAcknowledgedByParent ||
+                    (entry.parentAcknowledgements && entry.parentAcknowledgements.length > 0) ||
+                    ((entry as any).acknowledgements && (entry as any).acknowledgements.length > 0)
+                  );
+                  const myAck =
+                    entry.parentAcknowledgement ||
+                    entry.parentAcknowledgements?.find((a) => a.guardianUserId === user?.id) ||
+                    entry.parentAcknowledgements?.[0] ||
+                    (entry as any).acknowledgements?.[0];
+
+                  return (
+                    <div
+                      key={entry.id}
+                      className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30 space-y-3"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-outline-variant/20 pb-2.5">
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-bold text-xs text-on-surface">
+                              {entry.title ? `${entry.title} — ` : ''}Date: {new Date(entry.date).toLocaleDateString('en-KE', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+                            </span>
+                            <span className="text-[10px] text-outline font-data-mono">
+                              Ref: #{entry.id.slice(0, 8)}
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-on-surface-variant mt-0.5">
+                            Recorded by: <strong className="text-primary">{entry.teacherName || 'Class Educator'}</strong>
+                          </div>
+                        </div>
+
+                        <div>
+                          {hasSigned ? (
+                            <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">
+                              <span className="material-symbols-outlined text-sm text-emerald-600">verified</span>
+                              <span>Signed by {myAck?.guardianName || 'Parent'}</span>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setAcknowledgingEdiaryId(entry.id)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-primary to-[#500b1a] text-white rounded-lg text-xs font-bold hover:shadow-xs transition-all cursor-pointer"
+                            >
+                              <span className="material-symbols-outlined text-[14px]">draw</span>
+                              <span>Sign Off Homework</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Homework Tasks */}
+                      <div>
+                        <div className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[14px] text-primary">assignment</span>
+                          <span>Assigned Tasks</span>
+                        </div>
+                        {entry.homeworkTasks && entry.homeworkTasks.length > 0 ? (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {entry.homeworkTasks.map((task, idx) => (
+                              <div
+                                key={idx}
+                                className="p-2.5 rounded-lg bg-surface-container-lowest border border-outline-variant/30 space-y-1"
+                              >
+                                <div className="flex justify-between items-center text-xs">
+                                  <strong className="text-primary">{task.learningArea || 'Learning Area'}</strong>
+                                  <span className="text-[10px] text-outline font-data-mono">Due: {task.dueDate || entry.date}</span>
+                                </div>
+                                <p className="text-xs text-on-surface font-medium leading-relaxed">{task.description}</p>
+                              </div>
+                            ))}
+                          </div>
+                        ) : entry.homework ? (
+                          <div className="p-2.5 rounded-lg bg-surface-container-lowest border border-outline-variant/30 text-xs text-on-surface">
+                            {entry.homework}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-on-surface-variant italic">No specific homework tasks assigned for today.</p>
+                        )}
+                      </div>
+
+                      {/* Tomorrow's Requirements and Remarks */}
+                      {((entry.tomorrowRequirements && entry.tomorrowRequirements.length > 0) || entry.teacherRemarks) && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 text-xs">
+                          {entry.tomorrowRequirements && entry.tomorrowRequirements.length > 0 && (
+                            <div className="p-2.5 rounded-lg bg-amber-50/70 border border-amber-200/60 text-amber-950">
+                              <span className="font-bold flex items-center gap-1 mb-1 text-amber-900 text-[11px] uppercase tracking-wider">
+                                <span className="material-symbols-outlined text-sm">backpack</span>
+                                <span>Bring Tomorrow:</span>
+                              </span>
+                              <ul className="list-disc list-inside space-y-0.5 text-xs">
+                                {entry.tomorrowRequirements.map((r, i) => (
+                                  <li key={i}>{r}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {entry.teacherRemarks && (
+                            <div className="p-2.5 rounded-lg bg-surface-container-lowest border border-outline-variant/30 text-on-surface">
+                              <span className="font-bold flex items-center gap-1 mb-1 text-primary text-[11px] uppercase tracking-wider">
+                                <span className="material-symbols-outlined text-sm">chat</span>
+                                <span>Teacher Notes:</span>
+                              </span>
+                              <p className="italic text-xs">"{entry.teacherRemarks}"</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Guardian Sign Note if signed */}
+                      {myAck && (myAck.parentNote || (myAck as any).note) && (
+                        <div className="p-2 rounded-lg bg-emerald-50/60 border border-emerald-200/60 text-xs text-emerald-950 flex items-start gap-1.5">
+                          <span className="material-symbols-outlined text-sm text-emerald-700 mt-0.5">rate_review</span>
+                          <div>
+                            <span className="font-bold">Parent Note: </span>
+                            <span className="italic">"{myAck.parentNote || (myAck as any).note}"</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Two-Column Section: Fee Statement & Continuous Assessments */}
@@ -1399,6 +1664,62 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                 className="px-4 py-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface text-xs font-bold border border-outline-variant/30 cursor-pointer transition-colors"
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Parent Digital Sign & Acknowledge Modal for eDiary */}
+      {acknowledgingEdiaryId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="bg-surface-container-lowest max-w-md w-full rounded-2xl shadow-xl border border-outline-variant/30 p-5 space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-outline-variant/20">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-xl text-primary">draw</span>
+                <h3 className="font-bold text-sm text-on-surface">Digital Parent Signature &amp; Acknowledgement</h3>
+              </div>
+              <button
+                onClick={() => setAcknowledgingEdiaryId(null)}
+                className="text-on-surface-variant hover:text-on-surface cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-lg">close</span>
+              </button>
+            </div>
+
+            <p className="text-xs text-on-surface-variant leading-relaxed">
+              By acknowledging, you confirm you have reviewed <strong>{currentChild?.firstName}</strong>'s homework assignments and organized the items required for tomorrow.
+            </p>
+
+            <div>
+              <label className="block text-xs font-bold text-on-surface mb-1">
+                Parent Feedback or Note to Educator (Optional):
+              </label>
+              <textarea
+                rows={3}
+                value={parentEdiaryNote}
+                onChange={(e) => setParentEdiaryNote(e.target.value)}
+                placeholder="e.g. All math exercises completed. Manila paper packed in school bag."
+                className="w-full p-2.5 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs text-on-surface focus:outline-hidden focus:border-primary"
+              ></textarea>
+            </div>
+
+            <div className="flex items-center gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setAcknowledgingEdiaryId(null)}
+                className="flex-1 py-2.5 bg-surface-container rounded-xl text-xs font-bold text-on-surface-variant cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isSubmittingEdiaryAck}
+                onClick={() => handleAcknowledgeEdiary(acknowledgingEdiaryId)}
+                className="flex-1 py-2.5 bg-gradient-to-r from-primary to-[#500b1a] text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                <span className="material-symbols-outlined text-sm">check_circle</span>
+                <span>{isSubmittingEdiaryAck ? 'Signing...' : 'Sign & Submit'}</span>
               </button>
             </div>
           </div>

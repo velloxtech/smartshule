@@ -4,14 +4,16 @@ import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
 export const EDiaryView: React.FC = () => {
-  const { user } = useAuth();
-  const isGuardian = user?.role === UserRole.GUARDIAN || user?.role === UserRole.PARENT;
-  const isTeacher = user?.role === UserRole.TEACHER || user?.role === UserRole.HEAD_TEACHER || user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.SCHOOL_ADMIN;
+  const { user, activeViewMode } = useAuth();
+  const isGuardian = user?.role === UserRole.GUARDIAN || user?.role === UserRole.PARENT || activeViewMode === 'PARENT';
+  const isTeacher = !isGuardian && (user?.role === UserRole.TEACHER || user?.role === UserRole.HEAD_TEACHER || user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.SCHOOL_ADMIN);
 
   const [entries, setEntries] = useState<EDiaryEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [selectedStreamId, setSelectedStreamId] = useState('');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
+  const [filterDate, setFilterDate] = useState<string>('');
 
   // Dynamic context
   const [schoolInfo, setSchoolInfo] = useState<any>(null);
@@ -21,11 +23,16 @@ export const EDiaryView: React.FC = () => {
   const [linkedStudents, setLinkedStudents] = useState<Student[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState<string>('');
 
-  // Teacher Create Entry Modal
+  // Teacher Create/Edit Entry Modal
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
+  const [entryTitle, setEntryTitle] = useState('');
+  const [entryStatus, setEntryStatus] = useState<'DRAFT' | 'PUBLISHED'>('PUBLISHED');
   const [newTasks, setNewTasks] = useState<Array<{ learningArea: string; description: string; dueDate: string }>>([]);
   const [teacherRemarks, setTeacherRemarks] = useState('');
   const [tomorrowRequirements, setTomorrowRequirements] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   // Guardian Acknowledge Modal
   const [acknowledgingEntryId, setAcknowledgingEntryId] = useState<string | null>(null);
@@ -67,12 +74,15 @@ export const EDiaryView: React.FC = () => {
     loadStreams();
   }, []);
 
-  const loadData = async () => {
+  const loadData = async (studentIdToFilter?: string, dateToFilter?: string) => {
     setLoading(true);
+    setFetchError(null);
     try {
       if (isGuardian) {
         // Load parent's children
-        const pRes = await apiService.getGuardianPortalData().catch(() => null);
+        const pRes = await apiService.getGuardianPortalData().catch((err: any) => {
+          throw new Error(err?.message || 'Failed to authenticate parent profile');
+        });
         if (pRes?.data?.children && Array.isArray(pRes.data.children) && pRes.data.children.length > 0) {
           const mappedChildren: Student[] = pRes.data.children.map((st: any) => ({
             ...st,
@@ -86,12 +96,21 @@ export const EDiaryView: React.FC = () => {
             stream: st.stream || st.streamName || '',
             profilePhotoUrl: st.profilePhotoUrl,
           }));
-          const firstChild = mappedChildren[0];
           setLinkedStudents(mappedChildren);
-          setSelectedStudentId(firstChild.id);
-          const diaryRes = await apiService.getStudentEDiary(firstChild.id);
-          if (diaryRes.success && diaryRes.data) {
-            setEntries(diaryRes.data);
+
+          const effectiveStudentId = studentIdToFilter !== undefined ? studentIdToFilter : selectedStudentId;
+          const effectiveDate = dateToFilter !== undefined ? dateToFilter : filterDate;
+
+          const feedRes = await apiService.getParentEDiaryFeed({
+            studentId: effectiveStudentId || undefined,
+            date: effectiveDate || undefined,
+          });
+
+          if (feedRes.success && feedRes.data) {
+            setEntries(feedRes.data);
+          } else {
+            setFetchError(feedRes.message || 'Unable to load published eDiary entries.');
+            setEntries([]);
           }
         } else {
           setLinkedStudents([]);
@@ -102,15 +121,19 @@ export const EDiaryView: React.FC = () => {
           setEntries([]);
           return;
         }
-        const diaryRes = await apiService.getStreamEDiary(selectedStreamId);
+        const effectiveDate = dateToFilter !== undefined ? dateToFilter : filterDate;
+        const diaryRes = await apiService.getStreamEDiary(selectedStreamId, effectiveDate || undefined);
         if (diaryRes.success && diaryRes.data) {
           setEntries(diaryRes.data);
         } else {
+          setFetchError(diaryRes.message || 'Unable to load stream eDiary entries.');
           setEntries([]);
         }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error loading eDiary entries:', err);
+      setFetchError(err.message || 'Network connection failed while fetching eDiary entries.');
+      setEntries([]);
     } finally {
       setLoading(false);
     }
@@ -131,50 +154,122 @@ export const EDiaryView: React.FC = () => {
 
   useEffect(() => {
     loadData();
-  }, [user, selectedStreamId, isGuardian]);
+  }, [user, activeViewMode, selectedStreamId, isGuardian]);
 
   const handleChildChange = async (stId: string) => {
     setSelectedStudentId(stId);
-    setLoading(true);
-    try {
-      const diaryRes = await apiService.getStudentEDiary(stId);
-      if (diaryRes.success && diaryRes.data) {
-        setEntries(diaryRes.data);
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+    await loadData(stId, filterDate);
   };
 
-  const handleCreateEntry = async (e: React.FormEvent) => {
+  const handleDateFilterChange = async (d: string) => {
+    setFilterDate(d);
+    await loadData(selectedStudentId, d);
+  };
+
+  const handleOpenCreateModal = (entryToEdit?: EDiaryEntry) => {
+    setFormError(null);
+    if (entryToEdit) {
+      setEditingEntryId(entryToEdit.id);
+      setEntryTitle(entryToEdit.title || '');
+      setSelectedDate(entryToEdit.date);
+      setTeacherRemarks(entryToEdit.teacherRemarks || '');
+      setTomorrowRequirements(
+        entryToEdit.tomorrowRequirements ? entryToEdit.tomorrowRequirements.join(', ') : ''
+      );
+      if (entryToEdit.homeworkTasks && entryToEdit.homeworkTasks.length > 0) {
+        setNewTasks(entryToEdit.homeworkTasks.map((t) => ({ ...t })));
+      } else if (entryToEdit.homework) {
+        setNewTasks([
+          {
+            learningArea: 'General Homework',
+            description: entryToEdit.homework,
+            dueDate: entryToEdit.date,
+          },
+        ]);
+      } else {
+        setNewTasks([
+          {
+            learningArea: '',
+            description: '',
+            dueDate: new Date(Date.now() + 86400000).toISOString().slice(0, 10),
+          },
+        ]);
+      }
+      setEntryStatus(entryToEdit.status || 'PUBLISHED');
+    } else {
+      setEditingEntryId(null);
+      setEntryTitle('');
+      setSelectedDate(new Date().toISOString().slice(0, 10));
+      setTeacherRemarks('');
+      setTomorrowRequirements('');
+      setNewTasks([
+        {
+          learningArea: '',
+          description: '',
+          dueDate: new Date(Date.now() + 86400000).toISOString().slice(0, 10),
+        },
+      ]);
+      setEntryStatus('PUBLISHED');
+    }
+    setIsCreateOpen(true);
+  };
+
+  const handleCreateEntry = async (e: React.FormEvent, targetStatus: 'DRAFT' | 'PUBLISHED' = 'PUBLISHED') => {
     e.preventDefault();
+    setIsSubmitting(true);
+    setFormError(null);
     try {
       const reqList = tomorrowRequirements
         .split(',')
         .map((r) => r.trim())
         .filter(Boolean);
 
+      const validTasks = newTasks.filter((t) => t.learningArea.trim() || t.description.trim());
+      if (validTasks.length === 0 && !teacherRemarks.trim()) {
+        const msg = 'Please provide at least one homework task or teacher remark before saving.';
+        setFormError(msg);
+        setIsSubmitting(false);
+        return;
+      }
+
       const matchedStream = availableStreams.find((s) => s.id === selectedStreamId);
       const targetClassId = matchedStream ? matchedStream.classRoomId : 'general-class';
 
       const res = await apiService.createEDiaryEntry({
+        id: editingEntryId || undefined,
         schoolId: user?.schoolId || schoolInfo?.id || '',
         classRoomId: targetClassId,
         streamId: selectedStreamId,
         date: selectedDate,
-        homeworkTasks: newTasks,
-        teacherRemarks,
+        title: entryTitle.trim() || undefined,
+        homeworkTasks: validTasks,
+        teacherRemarks: teacherRemarks.trim() || undefined,
         tomorrowRequirements: reqList,
+        status: targetStatus,
       });
 
       if (res.success && res.data) {
-        setEntries([res.data, ...entries]);
+        setEntries((prev) => {
+          const exists = prev.some((item) => item.id === res.data.id);
+          if (exists) {
+            return prev.map((item) => (item.id === res.data.id ? res.data : item));
+          }
+          return [res.data, ...prev];
+        });
         setIsCreateOpen(false);
+        setEditingEntryId(null);
+        setEntryTitle('');
+      } else {
+        const errorMsg = res.message || 'Failed to save eDiary entry';
+        setFormError(errorMsg);
+        alert(errorMsg);
       }
     } catch (err: any) {
-      alert('Failed to publish eDiary entry: ' + err.message);
+      const errorMsg = err.message || 'Failed to publish eDiary entry';
+      setFormError(errorMsg);
+      alert('Failed to publish eDiary entry: ' + errorMsg);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -182,17 +277,21 @@ export const EDiaryView: React.FC = () => {
     setIsSubmittingAck(true);
     try {
       const res = await apiService.acknowledgeEDiary(entryId, {
+        studentId: selectedStudentId || undefined,
         guardianName: user ? `${user.firstName} ${user.lastName}` : 'Guardian',
         parentNote: parentNote.trim() || undefined,
       });
 
-      if (res.success && res.data) {
-        setEntries(entries.map((item) => (item.id === entryId ? res.data : item)));
+      if (res.success && (res.data || (res as any).entry)) {
+        const updatedEntry = res.data || (res as any).entry;
+        setEntries(entries.map((item) => (item.id === entryId ? updatedEntry : item)));
         setAcknowledgingEntryId(null);
         setParentNote('');
+      } else {
+        alert(res.message || 'Failed to sign diary entry');
       }
     } catch (err: any) {
-      alert('Failed to sign diary entry: ' + err.message);
+      alert('Failed to sign diary entry: ' + (err.message || 'Sign-off failed'));
     } finally {
       setIsSubmittingAck(false);
     }
@@ -206,6 +305,10 @@ export const EDiaryView: React.FC = () => {
   };
 
   const removeTaskRow = (idx: number) => {
+    if (newTasks.length <= 1) {
+      setNewTasks([{ learningArea: '', description: '', dueDate: new Date(Date.now() + 86400000).toISOString().slice(0, 10) }]);
+      return;
+    }
     setNewTasks(newTasks.filter((_, i) => i !== idx));
   };
 
@@ -232,26 +335,50 @@ export const EDiaryView: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {isGuardian && linkedStudents.length > 1 && (
-            <div className="flex items-center gap-2 bg-surface-container-lowest border border-outline-variant/30 p-1.5 rounded-xl">
-              <span className="text-xs font-bold text-on-surface-variant">Learner:</span>
-              <select
-                value={selectedStudentId}
-                onChange={(e) => handleChildChange(e.target.value)}
-                className="bg-transparent text-xs font-bold text-primary focus:outline-hidden"
-              >
-                {linkedStudents.map((st) => (
-                  <option key={st.id} value={st.id}>
-                    {st.name} ({st.grade})
-                  </option>
-                ))}
-              </select>
-            </div>
+          {isGuardian && (
+            <>
+              {linkedStudents.length > 0 && (
+                <div className="flex items-center gap-2 bg-surface-container-lowest border border-outline-variant/30 px-2.5 py-1.5 rounded-xl shadow-2xs">
+                  <span className="material-symbols-outlined text-[18px] text-primary">family_restroom</span>
+                  <span className="text-xs font-bold text-on-surface-variant">Child:</span>
+                  <select
+                    value={selectedStudentId}
+                    onChange={(e) => handleChildChange(e.target.value)}
+                    className="bg-transparent text-xs font-bold text-primary focus:outline-hidden cursor-pointer"
+                  >
+                    <option value="">All Children (Combined Feed)</option>
+                    {linkedStudents.map((st) => (
+                      <option key={st.id} value={st.id}>
+                        {st.name} ({st.grade}{st.stream ? ` - ${st.stream}` : ''})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div className="flex items-center gap-1.5 bg-surface-container-lowest border border-outline-variant/30 px-2.5 py-1.5 rounded-xl shadow-2xs">
+                <span className="material-symbols-outlined text-[16px] text-outline">calendar_today</span>
+                <input
+                  type="date"
+                  value={filterDate}
+                  onChange={(e) => handleDateFilterChange(e.target.value)}
+                  className="bg-transparent text-xs font-medium text-on-surface focus:outline-hidden"
+                />
+                {filterDate && (
+                  <button
+                    onClick={() => handleDateFilterChange('')}
+                    className="text-[11px] text-primary hover:underline font-bold cursor-pointer ml-1"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+            </>
           )}
 
           {isTeacher && (
             <button
-              onClick={() => setIsCreateOpen(true)}
+              onClick={() => handleOpenCreateModal()}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 text-xs font-bold shadow-xs transition-all cursor-pointer"
             >
               <span className="material-symbols-outlined text-[16px]">edit_note</span>
@@ -288,52 +415,141 @@ export const EDiaryView: React.FC = () => {
         </div>
       )}
 
+      {/* Network / Fetch Error Alert */}
+      {fetchError && (
+        <div className="p-4 rounded-xl bg-error/10 border border-error/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-error">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-xl">error</span>
+            <div>
+              <p className="text-xs font-bold">Failed to load eDiary entries</p>
+              <p className="text-xs text-error/80">{fetchError}</p>
+            </div>
+          </div>
+          <button
+            onClick={() => loadData()}
+            className="px-3 py-1.5 bg-error text-white text-xs font-bold rounded-lg hover:bg-error/90 self-start sm:self-auto cursor-pointer"
+          >
+            Retry Loading
+          </button>
+        </div>
+      )}
+
       {/* Entries Timeline */}
       {loading ? (
         <div className="flex flex-col items-center justify-center py-16 gap-3">
           <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
           <p className="text-xs font-semibold text-primary">Loading eDiary entries from database...</p>
         </div>
+      ) : isGuardian && linkedStudents.length === 0 ? (
+        <div className="p-12 text-center rounded-2xl bg-surface-container-lowest border border-outline-variant/30 max-w-md mx-auto my-8 space-y-3 shadow-xs">
+          <div className="w-12 h-12 rounded-full bg-outline-variant/20 flex items-center justify-center mx-auto text-outline">
+            <span className="material-symbols-outlined text-2xl">no_accounts</span>
+          </div>
+          <h3 className="font-bold text-base text-on-surface">No Linked Children Found</h3>
+          <p className="text-xs text-on-surface-variant leading-relaxed">
+            Your parent account is not currently linked to any active learners. Please contact the school administration to link your student profile.
+          </p>
+        </div>
       ) : entries.length === 0 ? (
-        <div className="p-12 text-center rounded-2xl bg-surface-container-lowest border border-outline-variant/30 max-w-md mx-auto my-8 space-y-3">
-          <span className="material-symbols-outlined text-4xl text-outline">menu_book</span>
+        <div className="p-12 text-center rounded-2xl bg-surface-container-lowest border border-outline-variant/30 max-w-md mx-auto my-8 space-y-3 shadow-xs">
+          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto text-primary">
+            <span className="material-symbols-outlined text-2xl">menu_book</span>
+          </div>
           <h3 className="font-bold text-base text-on-surface">No eDiary Entries Found</h3>
-          <p className="text-xs text-on-surface-variant">
+          <p className="text-xs text-on-surface-variant leading-relaxed">
             {isGuardian
-              ? 'Your child’s teacher has not yet posted any homework or diary entries for this period.'
+              ? selectedStudentId
+                ? 'No published diary entries found for this child’s class in this period.'
+                : 'Your children’s educators have not yet published homework or diary entries for this period.'
               : 'No entries recorded for this stream yet. Click "Record Daily eDiary" to publish today\'s tasks.'}
           </p>
         </div>
       ) : (
         <div className="space-y-4">
           {entries.map((entry) => {
-            const hasSigned = entry.parentAcknowledgements && entry.parentAcknowledgements.length > 0;
-            const myAck = entry.parentAcknowledgements?.find((a) => a.guardianUserId === user?.id) || entry.parentAcknowledgements?.[0];
+            const hasSigned = Boolean(
+              entry.isAcknowledgedByParent ||
+              (entry.parentAcknowledgements && entry.parentAcknowledgements.length > 0) ||
+              ((entry as any).acknowledgements && (entry as any).acknowledgements.length > 0)
+            );
+            const myAck = entry.parentAcknowledgement ||
+                          entry.parentAcknowledgements?.find((a) => a.guardianUserId === user?.id) ||
+                          entry.parentAcknowledgements?.[0] ||
+                          (entry as any).acknowledgements?.[0];
+            const isDraft = entry.status === 'DRAFT';
 
             return (
               <div
                 key={entry.id}
-                className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 shadow-xs overflow-hidden"
+                className={`bg-surface-container-lowest rounded-2xl border ${isDraft ? 'border-amber-300 bg-amber-50/20' : 'border-outline-variant/30'} shadow-xs overflow-hidden`}
               >
                 {/* Entry Date & Header */}
                 <div className="p-4 bg-surface-container-low border-b border-outline-variant/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold">
-                      <span className="material-symbols-outlined text-lg">event_available</span>
+                    <div className={`w-9 h-9 rounded-xl ${isDraft ? 'bg-amber-100 text-amber-800' : 'bg-primary/10 text-primary'} flex items-center justify-center font-bold`}>
+                      <span className="material-symbols-outlined text-lg">{isDraft ? 'draft' : 'event_available'}</span>
                     </div>
                     <div>
-                      <div className="font-bold text-sm text-on-surface">
-                        Diary for {new Date(entry.date).toLocaleDateString('en-KE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                      <div className="flex flex-wrap items-center gap-2 font-bold text-sm text-on-surface">
+                        <span>{entry.title ? `${entry.title} — ` : ''}Diary for {new Date(entry.date).toLocaleDateString('en-KE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                        {isDraft ? (
+                          <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-bold uppercase tracking-wider">
+                            Draft
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-900 border border-emerald-300 text-[10px] font-bold uppercase tracking-wider">
+                            Published
+                          </span>
+                        )}
+                        <span className="text-[10px] text-outline font-data-mono font-normal">
+                          Ref: #{entry.id.slice(0, 8)}
+                        </span>
                       </div>
-                      <div className="text-[11px] text-on-surface-variant">
+                      <div className="text-[11px] text-on-surface-variant mt-0.5">
                         Recorded by: <span className="font-semibold text-primary">{entry.teacherName || 'CBC Class Educator'}</span>
                       </div>
+                      {/* Learner Badges for Parent Portal */}
+                      {isGuardian && entry.applicableStudents && entry.applicableStudents.length > 0 && (
+                        <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                          <span className="text-[11px] font-bold text-on-surface-variant">For:</span>
+                          {entry.applicableStudents.map((st) => (
+                            <span
+                              key={st.id}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20 text-[11px] font-bold"
+                            >
+                              <span className="material-symbols-outlined text-[13px]">school</span>
+                              <span>{st.name}</span>
+                              <span className="text-[10px] text-primary/70">({st.grade})</span>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {isGuardian && (!entry.applicableStudents || entry.applicableStudents.length === 0) && entry.studentName && (
+                        <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                          <span className="text-[11px] font-bold text-on-surface-variant">For:</span>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20 text-[11px] font-bold">
+                            <span className="material-symbols-outlined text-[13px]">school</span>
+                            <span>{entry.studentName}</span>
+                            {entry.grade && <span className="text-[10px] text-primary/70">({entry.grade})</span>}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  {/* Digital Acknowledgement Stamp */}
+                  {/* Digital Acknowledgement Stamp & Actions */}
                   <div className="flex items-center gap-2">
-                    {hasSigned ? (
+                    {isDraft ? (
+                      isTeacher && (
+                        <button
+                          onClick={() => handleOpenCreateModal(entry)}
+                          className="inline-flex items-center gap-1 px-3 py-1 bg-amber-600 text-white rounded-lg text-xs font-bold hover:bg-amber-700 transition-all cursor-pointer shadow-xs"
+                        >
+                          <span className="material-symbols-outlined text-[14px]">edit</span>
+                          <span>Edit & Publish</span>
+                        </button>
+                      )
+                    ) : hasSigned ? (
                       <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">
                         <span className="material-symbols-outlined text-base text-emerald-600">verified</span>
                         <span>Digitally Signed by {myAck?.guardianName || 'Parent'}</span>
@@ -351,6 +567,18 @@ export const EDiaryView: React.FC = () => {
                         Awaiting Parent Sign-off
                       </span>
                     )}
+
+                    {isTeacher && !isDraft && (
+                      <button
+                        onClick={() => handleOpenCreateModal(entry)}
+                        title="Edit this eDiary entry"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-surface-container border border-outline-variant/40 rounded-lg text-xs font-bold text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-[14px]">edit</span>
+                        <span>Edit</span>
+                      </button>
+                    )}
+
                     {isTeacher && (
                       <button
                         onClick={() => handleDeleteEntry(entry.id)}
@@ -371,28 +599,39 @@ export const EDiaryView: React.FC = () => {
                       <span className="material-symbols-outlined text-[16px] text-primary">assignment</span>
                       <span>Daily Homework Assignments</span>
                     </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {entry.homeworkTasks.map((task, idx) => (
-                        <div
-                          key={idx}
-                          className="p-3 rounded-xl bg-surface-container-low border border-outline-variant/30 space-y-1"
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="font-bold text-xs text-primary">{task.learningArea}</span>
-                            <span className="text-[10px] font-data-mono text-outline">Due: {task.dueDate}</span>
+                    {entry.homeworkTasks && entry.homeworkTasks.length > 0 ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {entry.homeworkTasks.map((task, idx) => (
+                          <div
+                            key={idx}
+                            className="p-3 rounded-xl bg-surface-container-low border border-outline-variant/30 space-y-1"
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-xs text-primary">{task.learningArea || 'General'}</span>
+                              <span className="text-[10px] font-data-mono text-outline">Due: {task.dueDate || entry.date}</span>
+                            </div>
+                            <p className="text-xs text-on-surface font-medium leading-relaxed">
+                              {task.description}
+                            </p>
                           </div>
-                          <p className="text-xs text-on-surface font-medium leading-relaxed">
-                            {task.description}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    ) : entry.homework ? (
+                      <div className="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant/30 space-y-1">
+                        <span className="font-bold text-xs text-primary">{entry.title || 'Daily Assigned Tasks'}</span>
+                        <p className="text-xs text-on-surface font-medium leading-relaxed">
+                          {entry.homework}
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-on-surface-variant italic">No specific homework tasks assigned for today.</p>
+                    )}
                   </div>
 
                   {/* Requirements for Tomorrow & Teacher Remarks in Two Columns */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
                     {/* Tomorrow's Requirements */}
-                    {entry.tomorrowRequirements && entry.tomorrowRequirements.length > 0 && (
+                    {entry.tomorrowRequirements && entry.tomorrowRequirements.length > 0 ? (
                       <div className="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200/60 space-y-2">
                         <div className="flex items-center gap-1.5 text-amber-900 font-bold text-xs uppercase tracking-wider">
                           <span className="material-symbols-outlined text-[16px] text-amber-700">backpack</span>
@@ -407,7 +646,7 @@ export const EDiaryView: React.FC = () => {
                           ))}
                         </ul>
                       </div>
-                    )}
+                    ) : null}
 
                     {/* Teacher Remarks */}
                     {entry.teacherRemarks && (
@@ -424,12 +663,12 @@ export const EDiaryView: React.FC = () => {
                   </div>
 
                   {/* Guardian Feedback Note if Signed */}
-                  {myAck && myAck.parentNote && (
+                  {myAck && (myAck.parentNote || (myAck as any).note) && (
                     <div className="p-3 rounded-xl bg-emerald-50/60 border border-emerald-200/60 text-xs flex items-start gap-2">
                       <span className="material-symbols-outlined text-sm text-emerald-700 mt-0.5">rate_review</span>
                       <div>
                         <span className="font-bold text-emerald-950">Parent Note ({myAck.guardianName}): </span>
-                        <span className="text-emerald-900 italic">"{myAck.parentNote}"</span>
+                        <span className="text-emerald-900 italic">"{myAck.parentNote || (myAck as any).note}"</span>
                         <span className="text-[10px] text-emerald-700 block mt-0.5 font-data-mono">
                           Signed on {new Date(myAck.signedAt).toLocaleString()}
                         </span>
@@ -499,14 +738,16 @@ export const EDiaryView: React.FC = () => {
         </div>
       )}
 
-      {/* Teacher Create eDiary Modal */}
+      {/* Teacher Create/Edit eDiary Modal */}
       {isCreateOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
           <div className="bg-surface-container-lowest max-w-lg w-full rounded-2xl shadow-xl border border-outline-variant/30 p-6 space-y-4 max-h-[92vh] flex flex-col">
             <div className="flex items-center justify-between pb-2 border-b border-outline-variant/20 shrink-0">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-xl text-primary">edit_note</span>
-                <h3 className="font-bold text-sm text-on-surface">Publish Class eDiary Entry</h3>
+                <h3 className="font-bold text-sm text-on-surface">
+                  {editingEntryId ? 'Edit Class eDiary Entry' : 'Publish Class eDiary Entry'}
+                </h3>
               </div>
               <button
                 onClick={() => setIsCreateOpen(false)}
@@ -516,7 +757,14 @@ export const EDiaryView: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleCreateEntry} className="space-y-4 overflow-y-auto flex-1 pr-1">
+            {formError && (
+              <div className="p-3 rounded-xl bg-error/10 border border-error/20 text-error text-xs flex items-center gap-2">
+                <span className="material-symbols-outlined text-sm">error</span>
+                <span>{formError}</span>
+              </div>
+            )}
+
+            <form onSubmit={(e) => handleCreateEntry(e, entryStatus)} className="space-y-4 overflow-y-auto flex-1 pr-1">
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-on-surface mb-1">Class Stream:</label>
@@ -548,6 +796,20 @@ export const EDiaryView: React.FC = () => {
                 </div>
               </div>
 
+              {/* Lesson Focus / Subject Title */}
+              <div>
+                <label className="block text-xs font-bold text-on-surface mb-1">
+                  Lesson Focus / Subject Title (Optional):
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Science - Solar System, English - Creative Writing, Mathematics"
+                  value={entryTitle}
+                  onChange={(e) => setEntryTitle(e.target.value)}
+                  className="w-full p-2 bg-surface-container-low border border-outline-variant/40 rounded-lg text-xs text-on-surface"
+                />
+              </div>
+
               {/* Homework Tasks Section */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -567,7 +829,6 @@ export const EDiaryView: React.FC = () => {
                     <div className="flex items-center justify-between gap-2">
                       <input
                         type="text"
-                        required
                         placeholder="Learning Area (e.g. Science, Mathematics)"
                         value={t.learningArea}
                         onChange={(e) => {
@@ -587,18 +848,16 @@ export const EDiaryView: React.FC = () => {
                         }}
                         className="p-1.5 bg-surface-container-lowest border border-outline-variant/40 rounded-lg text-xs font-data-mono text-on-surface"
                       />
-                      {newTasks.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => removeTaskRow(idx)}
-                          className="text-outline hover:text-error cursor-pointer p-1"
-                        >
-                          <span className="material-symbols-outlined text-sm">delete</span>
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => removeTaskRow(idx)}
+                        className="text-outline hover:text-error cursor-pointer p-1"
+                        title="Remove Task"
+                      >
+                        <span className="material-symbols-outlined text-sm">delete</span>
+                      </button>
                     </div>
                     <textarea
-                      required
                       rows={2}
                       placeholder="Task description and questions..."
                       value={t.description}
@@ -641,7 +900,7 @@ export const EDiaryView: React.FC = () => {
                 ></textarea>
               </div>
 
-              <div className="pt-2 flex items-center gap-2">
+              <div className="pt-2 flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setIsCreateOpen(false)}
@@ -650,11 +909,25 @@ export const EDiaryView: React.FC = () => {
                   Cancel
                 </button>
                 <button
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={(e) => {
+                    setEntryStatus('DRAFT');
+                    handleCreateEntry(e, 'DRAFT');
+                  }}
+                  className="flex-1 py-2.5 bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold hover:bg-amber-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <span className="material-symbols-outlined text-sm">save</span>
+                  <span>Save Draft</span>
+                </button>
+                <button
                   type="submit"
-                  className="flex-1 py-2.5 bg-primary text-white rounded-xl text-xs font-bold shadow-md hover:bg-primary/90 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  disabled={isSubmitting}
+                  onClick={() => setEntryStatus('PUBLISHED')}
+                  className="flex-1 py-2.5 bg-primary text-white rounded-xl text-xs font-bold shadow-md hover:bg-primary/90 transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
                 >
                   <span className="material-symbols-outlined text-sm">send</span>
-                  <span>Publish to Class Stream</span>
+                  <span>{isSubmitting ? 'Publishing...' : 'Publish to Stream'}</span>
                 </button>
               </div>
             </form>

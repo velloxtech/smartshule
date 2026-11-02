@@ -381,7 +381,8 @@ export class AppContainer {
       this.ediaryRepository,
       this.studentRepository,
       this.guardianRepository,
-      this.userRepository
+      this.userRepository,
+      this.academicRepository
     );
     this.whatsAppService = new WhatsAppService(
       this.userRepository,

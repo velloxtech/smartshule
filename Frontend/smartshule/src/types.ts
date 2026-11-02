@@ -1656,6 +1656,9 @@ export interface EDiaryEntry {
   teacherUserId: string;
   teacherName?: string;
   date: string;
+  title?: string;
+  homework?: string;
+  status?: 'DRAFT' | 'PUBLISHED';
   homeworkTasks: Array<{
     learningArea: string;
     description: string;
@@ -1663,9 +1666,22 @@ export interface EDiaryEntry {
   }>;
   teacherRemarks?: string;
   tomorrowRequirements?: string[];
+  applicableStudents?: Array<{
+    id: string;
+    name: string;
+    admissionNumber: string;
+    grade: string;
+    streamId?: string;
+  }>;
+  studentName?: string;
+  admissionNumber?: string;
+  grade?: string;
+  isAcknowledgedByParent?: boolean;
+  parentAcknowledgement?: any;
   parentAcknowledgements?: Array<{
     guardianUserId: string;
     guardianName: string;
+    studentId?: string;
     signedAt: string;
     parentNote?: string;
   }>;

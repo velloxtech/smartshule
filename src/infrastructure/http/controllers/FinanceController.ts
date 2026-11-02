@@ -474,6 +474,36 @@ export class FinanceController {
     }
   };
 
+  public previewPaymentAllocation = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const studentId = (req.params.studentId || req.body.studentId || req.query.studentId) as string;
+      const rawAmount = req.body.amount !== undefined ? req.body.amount : req.query.amount;
+      const amount = Number(rawAmount) || 0;
+      const termId = (req.body.termId || req.query.termId) as string | undefined;
+      const academicYearId = (req.body.academicYearId || req.query.academicYearId) as string | undefined;
+      const schoolId = (req.body.schoolId || req.query.schoolId || req.user?.schoolId) as string | undefined;
+
+      if (!studentId) {
+        return res.status(400).json({ success: false, message: 'studentId is required for allocation preview' });
+      }
+
+      const preview = await this.feeUseCases.previewPaymentAllocation({
+        studentId,
+        amount,
+        schoolId,
+        termId,
+        academicYearId
+      });
+
+      return res.status(200).json({
+        success: true,
+        data: preview
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
   public recordPayment = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const recordedByUserId = req.body.recordedByUserId || (req as any).user?.userId || 'SYSTEM';

@@ -1246,12 +1246,16 @@ export class InMemoryEDiaryRepository implements IEDiaryRepository {
   public async findEntries(filters: EDiaryFilterCriteria): Promise<EDiaryEntry[]> {
     let list = Array.from(this.entries.values());
     if (filters.schoolId) list = list.filter(e => e.schoolId === filters.schoolId);
+    if (filters.classRoomId) list = list.filter(e => e.classRoomId === filters.classRoomId);
     if (filters.streamId) list = list.filter(e => e.streamId === filters.streamId);
     if (filters.studentId) list = list.filter(e => !e.studentId || e.studentId === filters.studentId);
     if (filters.teacherId) list = list.filter(e => e.teacherId === filters.teacherId);
+    if (filters.academicYearId) list = list.filter(e => e.academicYearId === filters.academicYearId);
+    if (filters.termId) list = list.filter(e => e.termId === filters.termId);
     if (filters.date) list = list.filter(e => e.date === filters.date);
     if (filters.startDate) list = list.filter(e => e.date >= filters.startDate!);
     if (filters.endDate) list = list.filter(e => e.date <= filters.endDate!);
+    if (filters.status) list = list.filter(e => e.status === filters.status);
     return list.sort((a, b) => b.date.localeCompare(a.date));
   }
 
@@ -1263,10 +1267,64 @@ export class InMemoryEDiaryRepository implements IEDiaryRepository {
     return list.slice(0, limit);
   }
 
-  public async findByStream(streamId: string, date?: string): Promise<EDiaryEntry[]> {
+  public async findByStream(streamId: string, date?: string, status?: 'DRAFT' | 'PUBLISHED'): Promise<EDiaryEntry[]> {
     let list = Array.from(this.entries.values()).filter(e => e.streamId === streamId);
     if (date) list = list.filter(e => e.date === date);
+    if (status) list = list.filter(e => e.status === status);
     return list.sort((a, b) => b.date.localeCompare(a.date));
+  }
+
+  public async findByStreams(
+    streamIds: string[],
+    studentIds: string[] = [],
+    options?: {
+      classRoomIds?: string[];
+      academicYearId?: string;
+      termId?: string;
+      startDate?: string;
+      endDate?: string;
+      date?: string;
+      status?: 'DRAFT' | 'PUBLISHED';
+      limit?: number;
+    }
+  ): Promise<EDiaryEntry[]> {
+    const hasStreams = Boolean(streamIds && streamIds.length > 0);
+    const hasClassrooms = Boolean(options?.classRoomIds && options.classRoomIds.length > 0);
+    const hasStudents = Boolean(studentIds && studentIds.length > 0);
+
+    if (!hasStreams && !hasClassrooms && !hasStudents) {
+      return [];
+    }
+
+    let list = Array.from(this.entries.values()).filter(e => {
+      const matchesStream = Boolean(hasStreams && streamIds.includes(e.streamId) && (!e.studentId || (hasStudents && studentIds.includes(e.studentId))));
+      const matchesClass = Boolean(hasClassrooms && e.classRoomId && options!.classRoomIds!.includes(e.classRoomId) && (!e.studentId || (hasStudents && studentIds.includes(e.studentId))));
+      const matchesStudent = Boolean(hasStudents && e.studentId && studentIds.includes(e.studentId));
+      return matchesStream || matchesClass || matchesStudent;
+    });
+
+    if (options?.academicYearId) list = list.filter(e => e.academicYearId === options.academicYearId);
+    if (options?.termId) list = list.filter(e => e.termId === options.termId);
+    if (options?.date) list = list.filter(e => e.date === options.date);
+    if (options?.startDate) list = list.filter(e => e.date >= options.startDate!);
+    if (options?.endDate) list = list.filter(e => e.date <= options.endDate!);
+    if (options?.status) list = list.filter(e => e.status === options.status);
+
+    list.sort((a, b) => b.date.localeCompare(a.date));
+    if (options?.limit) {
+      list = list.slice(0, options.limit);
+    }
+    return list;
+  }
+
+  public async findByStreamAndDate(streamId: string, date: string, studentId?: string): Promise<EDiaryEntry | null> {
+    const list = Array.from(this.entries.values()).filter(e => {
+      const streamMatch = e.streamId === streamId;
+      const dateMatch = e.date === date;
+      const studentMatch = studentId ? e.studentId === studentId : !e.studentId;
+      return streamMatch && dateMatch && studentMatch;
+    });
+    return list.length ? list[0] : null;
   }
 
   public async delete(id: string): Promise<void> {
