@@ -13,6 +13,7 @@ import { PhoneUtils } from '../../infrastructure/utils/PhoneUtils';
 import { EmailTemplateEngine } from '../../infrastructure/services/email/EmailTemplateEngine';
 import { EmailService } from '../../infrastructure/services/email/EmailService';
 import { env } from '../../infrastructure/config/env';
+import { GuardianIdentityResolver } from '../shared/GuardianIdentityResolver';
 
 export interface RegisterUserDTO {
   email?: string;
@@ -365,69 +366,31 @@ export class AuthUseCases {
     enrolledChildIds: string[];
     guardianId?: string;
   }> {
-    if (!this.guardianRepository) {
+    if (!this.guardianRepository || !this.studentRepository) {
       if (userEmail === 'parent@smartshule.ac.ke' || userId === 'usr-parent-01') {
         return { hasEnrolledChildren: true, enrolledChildIds: ['student-001'], guardianId: 'grd-default-01' };
       }
       return { hasEnrolledChildren: false, enrolledChildIds: [] };
     }
+
     try {
-      let guardian = await this.guardianRepository.findByUserId(userId);
-      if (!guardian && userPhone) {
-        guardian = await this.guardianRepository.findByPhone(userPhone);
-      }
-      if (!guardian) {
-        const allGuardians = await this.guardianRepository.findAll();
-        guardian = allGuardians.find(g => (userPhone && PhoneUtils.areMatches(g.emergencyContact, userPhone)) || g.userId === userId) || null;
-      }
-      if (guardian) {
-        if (guardian.userId !== userId) {
-          guardian.setUserId(userId);
-          await this.guardianRepository.update(guardian);
-        }
-        const studentIdsSet = new Set<string>(guardian.studentIds || []);
-        if (this.studentRepository) {
-          const allStudents = await this.studentRepository.findAll();
-          for (const s of allStudents) {
-            if (s.guardianIds && s.guardianIds.includes(guardian.id)) {
-              if (s.status === StudentStatus.ACTIVE || !s.status) {
-                studentIdsSet.add(s.id);
-              }
-            }
-          }
-          const validStudentIds: string[] = [];
-          for (const sid of Array.from(studentIdsSet)) {
-            const st = await this.studentRepository.findById(sid);
-            if (st && (st.status === StudentStatus.ACTIVE || !st.status)) {
-              validStudentIds.push(sid);
-            }
-          }
-          return {
-            hasEnrolledChildren: validStudentIds.length > 0,
-            enrolledChildIds: validStudentIds,
-            guardianId: guardian.id
-          };
-        }
+      const res = await GuardianIdentityResolver.resolveLinkedStudentIdsForUser({
+        userId,
+        userPhone,
+        userEmail,
+        guardianRepository: this.guardianRepository,
+        studentRepository: this.studentRepository,
+        userRepository: this.userRepository
+      });
 
-        const studentIds = Array.from(studentIdsSet);
-        return {
-          hasEnrolledChildren: studentIds.length > 0,
-          enrolledChildIds: studentIds,
-          guardianId: guardian.id
-        };
-      }
-
-      if (userEmail === 'parent@smartshule.ac.ke' || userId === 'usr-parent-01') {
-        return {
-          hasEnrolledChildren: true,
-          enrolledChildIds: ['student-001'],
-          guardianId: 'grd-default-01'
-        };
-      }
+      return {
+        hasEnrolledChildren: res.hasEnrolledChildren,
+        enrolledChildIds: res.studentIds,
+        guardianId: res.guardian?.id
+      };
     } catch {
-      // Ignore lookup errors
+      return { hasEnrolledChildren: false, enrolledChildIds: [] };
     }
-    return { hasEnrolledChildren: false, enrolledChildIds: [] };
   }
 
   public async getProfile(userId: string) {

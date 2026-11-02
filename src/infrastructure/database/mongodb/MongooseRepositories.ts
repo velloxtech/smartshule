@@ -613,12 +613,17 @@ export class MongoStudentRepository implements IStudentRepository {
     if (!doc) return null;
     return Student.create(doc as any, doc._id, doc.createdAt, doc.updatedAt);
   }
+  public async findByGuardianId(guardianId: string): Promise<Student[]> {
+    const docs = await StudentModel.find({ guardianIds: guardianId }).lean();
+    return docs.map((doc: any) => Student.create(doc as any, doc._id, doc.createdAt, doc.updatedAt));
+  }
   public async findAll(filters?: StudentFilterCriteria): Promise<Student[]> {
     const query: any = {};
     if (filters?.schoolId) query.schoolId = filters.schoolId;
     if (filters?.gradeLevel) query.gradeLevel = filters.gradeLevel;
     if (filters?.streamId) query.streamId = filters.streamId;
     if (filters?.academicYearId) query.academicYearId = filters.academicYearId;
+    if (filters?.guardianId) query.guardianIds = filters.guardianId;
     if (filters?.search) {
       const searchRaw = filters.search.trim();
       const searchDigits = searchRaw.replace(/\D/g, '');

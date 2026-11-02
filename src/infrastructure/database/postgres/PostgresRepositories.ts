@@ -1550,6 +1550,15 @@ export class PostgresStudentRepository implements IStudentRepository {
     const res = await this.pool.query('SELECT * FROM students WHERE upi_number = $1', [upiNumber]);
     return res.rows.length ? this.mapRow(res.rows[0]) : null;
   }
+  public async findByGuardianId(guardianId: string): Promise<Student[]> {
+    const res = await this.pool.query(
+      `SELECT * FROM students 
+       WHERE (guardian_ids @> $1::jsonb OR guardian_ids::text LIKE $2)
+       ORDER BY created_at ASC`,
+      [JSON.stringify([guardianId]), `%"${guardianId}"%`]
+    );
+    return res.rows.map(r => this.mapRow(r));
+  }
   public async findAll(filters?: StudentFilterCriteria): Promise<Student[]> {
     let q = 'SELECT * FROM students WHERE 1=1';
     const params: any[] = [];
@@ -1564,6 +1573,13 @@ export class PostgresStudentRepository implements IStudentRepository {
       q += ` AND (stream_id = $${params.length} OR classroom_id = $${params.length})`;
     }
     if (filters?.academicYearId) { params.push(filters.academicYearId); q += ` AND academic_year_id = $${params.length}`; }
+    if (filters?.guardianId) {
+      params.push(JSON.stringify([filters.guardianId]));
+      const jsonParamIdx = params.length;
+      params.push(`%"${filters.guardianId}"%`);
+      const textParamIdx = params.length;
+      q += ` AND (guardian_ids @> $${jsonParamIdx}::jsonb OR guardian_ids::text LIKE $${textParamIdx})`;
+    }
     if (filters?.search && filters.search.trim()) {
       const searchRaw = filters.search.trim();
       params.push(`%${searchRaw}%`);

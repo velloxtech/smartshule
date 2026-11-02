@@ -21,6 +21,7 @@ import { UserRole } from '../../core/domain/user/User';
 import { Guardian, GuardianRelationship } from '../../core/domain/user/Guardian';
 import { PaymentMethod } from '../../core/domain/finance/Fee';
 import { IdGenerator, NotFoundError, ForbiddenError, ValidationError, ConflictError } from '../../core/domain/shared/Errors';
+import { GuardianIdentityResolver } from '../shared/GuardianIdentityResolver';
 
 export interface UserContext {
   userId: string;
@@ -150,55 +151,14 @@ export class LunchFeeUseCases {
    * Helper to retrieve student IDs linked to a parent / guardian user account.
    */
   public async getLinkedStudentIdsForParent(userId: string): Promise<string[]> {
-    let guardian = await this.guardianRepository.findByUserId(userId);
-    const user = await this.userRepository.findById(userId);
-
-    if (!guardian && user) {
-      if (user.phone) {
-        guardian = await this.guardianRepository.findByPhone(user.phone);
-      }
-      if (!guardian) {
-        const allGuardians = await this.guardianRepository.findAll();
-        guardian = allGuardians.find(g => g.emergencyContact === user.phone || g.userId === user.id) || null;
-      }
-    }
-
-    const linkedStudentIds = new Set<string>();
-
-    if (guardian && guardian.studentIds) {
-      for (const sId of guardian.studentIds) {
-        linkedStudentIds.add(sId);
-      }
-    }
-
-    if (linkedStudentIds.size > 0) {
-      return Array.from(linkedStudentIds);
-    }
-
-    // Link demo/default parent if unassigned but students exist
-    const allStudents = await this.studentRepository.findAll();
-    if (allStudents.length > 0 && user && (user.email === 'parent@smartshule.ac.ke' || user.id === 'usr-parent-01')) {
-      const demoStudent = allStudents.find(s => s.id === 'student-001') || allStudents[0];
-      if (guardian) {
-        guardian.linkStudent(demoStudent.id);
-        await this.guardianRepository.update(guardian);
-      } else {
-        guardian = Guardian.create(
-          {
-            userId: user.id,
-            nationalId: '28475921',
-            relationship: GuardianRelationship.MOTHER,
-            emergencyContact: user.phone || '+254777000777',
-            studentIds: [demoStudent.id]
-          },
-          'grd-default-01'
-        );
-        await this.guardianRepository.save(guardian);
-      }
-      return [demoStudent.id];
-    }
-
-    return Array.from(linkedStudentIds);
+    if (!this.guardianRepository || !this.studentRepository) return [];
+    const res = await GuardianIdentityResolver.resolveLinkedStudentIdsForUser({
+      userId,
+      guardianRepository: this.guardianRepository,
+      studentRepository: this.studentRepository,
+      userRepository: this.userRepository
+    });
+    return res.studentIds;
   }
 
   /**

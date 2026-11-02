@@ -12,6 +12,7 @@ import { IAcademicRepository } from '../../core/ports/repositories/IAcademicRepo
 import { AcademicYear, AcademicTerm } from '../../core/domain/academic/AcademicYear';
 import { Guardian } from '../../core/domain/user/Guardian';
 import { Student } from '../../core/domain/user/Student';
+import { GuardianIdentityResolver } from '../shared/GuardianIdentityResolver';
 import {
   IPaymentGateway,
   INotificationService,
@@ -2876,25 +2877,14 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
 
   // 6. Fee Statement & Reports
   public async getLinkedStudentIdsForUser(userId: string): Promise<string[]> {
-    const guardian = await this.getGuardianForUser(userId);
-    if (!guardian) return [];
-
-    const linkedStudentIds = new Set<string>(guardian.studentIds || []);
-    const allStudents = await this.studentRepository.findAll();
-    let updated = false;
-    for (const s of allStudents) {
-      if (s.guardianIds && s.guardianIds.includes(guardian.id)) {
-        linkedStudentIds.add(s.id);
-        if (!guardian.studentIds.includes(s.id)) {
-          guardian.linkStudent(s.id);
-          updated = true;
-        }
-      }
-    }
-    if (updated) {
-      await this.guardianRepository.update(guardian);
-    }
-    return Array.from(linkedStudentIds);
+    if (!this.guardianRepository || !this.studentRepository) return [];
+    const res = await GuardianIdentityResolver.resolveLinkedStudentIdsForUser({
+      userId,
+      guardianRepository: this.guardianRepository,
+      studentRepository: this.studentRepository,
+      userRepository: this.userRepository
+    });
+    return res.studentIds;
   }
 
   private async getGuardianForUser(userId: string): Promise<Guardian | null> {

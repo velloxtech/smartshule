@@ -143,6 +143,12 @@ export class InMemoryStudentRepository implements IStudentRepository {
     return null;
   }
 
+  public async findByGuardianId(guardianId: string): Promise<Student[]> {
+    return Array.from(this.students.values()).filter(
+      s => s.guardianIds && Array.isArray(s.guardianIds) && s.guardianIds.includes(guardianId)
+    );
+  }
+
   public async findAll(filters?: StudentFilterCriteria): Promise<Student[]> {
     let result = Array.from(this.students.values());
     if (filters?.schoolId) result = result.filter(s => s.schoolId === filters.schoolId);
@@ -150,6 +156,9 @@ export class InMemoryStudentRepository implements IStudentRepository {
     if (filters?.classroomId) result = result.filter(s => s.classroomId === filters.classroomId);
     if (filters?.streamId) result = result.filter(s => s.streamId === filters.streamId);
     if (filters?.academicYearId) result = result.filter(s => s.academicYearId === filters.academicYearId);
+    if (filters?.guardianId) {
+      result = result.filter(s => s.guardianIds && Array.isArray(s.guardianIds) && s.guardianIds.includes(filters.guardianId!));
+    }
     if (filters?.search) {
       const search = filters.search.toLowerCase();
       const searchDigits = search.replace(/\D/g, '');

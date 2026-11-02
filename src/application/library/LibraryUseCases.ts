@@ -11,6 +11,7 @@ import { IGuardianRepository } from '../../core/ports/repositories/ITeacherRepos
 import { IUserRepository } from '../../core/ports/repositories/IUserRepository';
 import { UserRole } from '../../core/domain/user/User';
 import { IdGenerator, NotFoundError, ValidationError, ForbiddenError } from '../../core/domain/shared/Errors';
+import { GuardianIdentityResolver } from '../shared/GuardianIdentityResolver';
 
 export interface UserContext {
   userId: string;
@@ -88,45 +89,13 @@ export class LibraryUseCases {
 
   public async getLinkedStudentIdsForUser(userId: string): Promise<string[]> {
     if (!this.guardianRepository || !this.studentRepository) return [];
-    let guardian = await this.guardianRepository.findByUserId(userId);
-    let user = this.userRepository ? await this.userRepository.findById(userId) : null;
-
-    if (!guardian && user) {
-      if (user.phone) {
-        guardian = await this.guardianRepository.findByPhone(user.phone);
-      }
-      if (!guardian) {
-        const allG = await this.guardianRepository.findAll();
-        guardian = allG.find((g: any) => g.emergencyContact === user?.phone || g.userId === user?.id) || null;
-      }
-      if (guardian) {
-        guardian.setUserId(user.id);
-        await this.guardianRepository.update(guardian);
-      }
-    }
-
-    if (guardian && (!guardian.studentIds || guardian.studentIds.length === 0) && user) {
-      if (user.email === 'parent@smartshule.ac.ke' || user.id === 'usr-parent-01') {
-        const allS = await this.studentRepository.findAll();
-        if (allS.length > 0) {
-          const targetS = allS.find(s => s.id === 'student-001') || allS[0];
-          guardian.linkStudent(targetS.id);
-          await this.guardianRepository.update(guardian);
-        }
-      }
-    }
-
-    const linkedStudentIds = new Set<string>(guardian?.studentIds || []);
-    if (guardian) {
-      const allStudents = await this.studentRepository.findAll();
-      for (const s of allStudents) {
-        if (s.guardianIds && s.guardianIds.includes(guardian.id)) {
-          linkedStudentIds.add(s.id);
-        }
-      }
-    }
-
-    return Array.from(linkedStudentIds);
+    const res = await GuardianIdentityResolver.resolveLinkedStudentIdsForUser({
+      userId,
+      guardianRepository: this.guardianRepository,
+      studentRepository: this.studentRepository,
+      userRepository: this.userRepository
+    });
+    return res.studentIds;
   }
 
   // ==========================================

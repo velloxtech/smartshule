@@ -14,6 +14,7 @@ import {
 } from '../../core/domain/attendance/Attendance';
 import { IdGenerator, NotFoundError, ForbiddenError } from '../../core/domain/shared/Errors';
 import { UserRole } from '../../core/domain/user/User';
+import { GuardianIdentityResolver } from '../shared/GuardianIdentityResolver';
 
 export interface MarkAttendanceDTO {
   schoolId: string;
@@ -215,38 +216,17 @@ export class AttendanceUseCases {
     return register.toJSON();
   }
 
-  public async getStudentAttendanceSummary(studentId: string, termId: string, academicYearId: string, requestingUser?: { userId: string; role: UserRole }) {
-    if (requestingUser?.role === UserRole.PARENT || requestingUser?.role === UserRole.GUARDIAN) {
-      let guardian = await this.guardianRepository.findByUserId(requestingUser.userId);
-      if (!guardian) {
-        const user = await this.userRepository.findById(requestingUser.userId);
-        if (user && user.phone) {
-          guardian = await this.guardianRepository.findByPhone(user.phone);
-        }
-      }
-      if (guardian && (!guardian.studentIds || guardian.studentIds.length === 0)) {
-        const user = await this.userRepository.findById(requestingUser.userId);
-        if (user && (user.email === 'parent@smartshule.ac.ke' || user.id === 'usr-parent-01')) {
-          const allS = await this.studentRepository.findAll();
-          if (allS.length > 0) {
-            const targetS = allS.find(s => s.id === 'student-001') || allS[0];
-            guardian.linkStudent(targetS.id);
-            await this.guardianRepository.update(guardian);
-          }
-        }
-      }
+  public async getStudentAttendanceSummary(studentId: string, termId: string, academicYearId: string, requestingUser?: { userId: string; role: UserRole; isGuardianRoute?: boolean }) {
+    const isParent = requestingUser?.role === UserRole.PARENT || requestingUser?.role === UserRole.GUARDIAN || Boolean((requestingUser as any)?.isGuardianRoute);
+    if (isParent && requestingUser) {
+      const res = await GuardianIdentityResolver.resolveLinkedStudentIdsForUser({
+        userId: requestingUser.userId,
+        guardianRepository: this.guardianRepository,
+        studentRepository: this.studentRepository,
+        userRepository: this.userRepository
+      });
 
-      const linkedChildIds = new Set<string>(guardian?.studentIds || []);
-      if (guardian) {
-        const allS = await this.studentRepository.findAll();
-        for (const s of allS) {
-          if (s.guardianIds && s.guardianIds.includes(guardian.id)) {
-            linkedChildIds.add(s.id);
-          }
-        }
-      }
-
-      if (!guardian || !linkedChildIds.has(studentId)) {
+      if (!res.studentIds.includes(studentId)) {
         throw new ForbiddenError('Access denied: You are only permitted to view attendance for your registered children.');
       }
     }

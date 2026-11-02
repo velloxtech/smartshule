@@ -20,6 +20,7 @@ import { IPasswordHasher } from '../../core/ports/services/IExternalServices';
 import { StudentInvoice, InvoiceStatus, FeeStructure, FeeItem, Payment, PaymentStatus } from '../../core/domain/finance/Fee';
 import { ClassRoom, EducationLevel } from '../../core/domain/academic/ClassRoom';
 import { ClassTeacherAssignment } from '../../core/domain/academic/TeacherAssignment';
+import { GuardianIdentityResolver } from '../shared/GuardianIdentityResolver';
 
 export const CBC_GRADE_PROGRESSION: Record<CBCGradeLevel, CBCGradeLevel | 'GRADUATED'> = {
   [CBCGradeLevel.PLAYGROUP]: CBCGradeLevel.PP1,
@@ -621,8 +622,8 @@ export class StudentUseCases {
     };
   }
 
-  public async updateStudent(studentId: string, dto: UpdateStudentDTO, requestingUser?: UserContext) {
-    const isParent = requestingUser?.role === UserRole.PARENT || requestingUser?.role === UserRole.GUARDIAN;
+  public async updateStudent(studentId: string, dto: UpdateStudentDTO, requestingUser?: UserContext & { isGuardianRoute?: boolean }) {
+    const isParent = requestingUser?.role === UserRole.PARENT || requestingUser?.role === UserRole.GUARDIAN || Boolean(requestingUser?.isGuardianRoute);
     if (isParent && requestingUser) {
       const childIds = await this.getLinkedStudentIdsForUser(requestingUser.userId);
       if (!childIds.includes(studentId)) {
@@ -825,84 +826,13 @@ export class StudentUseCases {
   }
 
   public async getLinkedStudentIdsForUser(userId: string): Promise<string[]> {
-    let guardian = await this.guardianRepository.findByUserId(userId);
-    const user = await this.userRepository.findById(userId);
-
-    if (!guardian && user) {
-      if (user.phone) {
-        guardian = await this.guardianRepository.findByPhone(user.phone);
-      }
-      if (!guardian) {
-        const allG = await this.guardianRepository.findAll();
-        guardian = allG.find(g => g.emergencyContact === user.phone || g.userId === user.id) || null;
-      }
-      if (guardian) {
-        guardian.setUserId(user.id);
-        await this.guardianRepository.update(guardian);
-      }
-    }
-
-    const linkedStudentIds = new Set<string>();
-
-    if (guardian && guardian.studentIds) {
-      for (const id of guardian.studentIds) {
-        linkedStudentIds.add(id);
-      }
-    }
-
-    if (guardian) {
-      const allStudents = await this.studentRepository.findAll();
-      for (const s of allStudents) {
-        if (s.guardianIds && s.guardianIds.includes(guardian.id)) {
-          if (s.status === StudentStatus.ACTIVE || !s.status) {
-            linkedStudentIds.add(s.id);
-          }
-        }
-      }
-    }
-
-    const validStudentIds: string[] = [];
-    for (const sid of Array.from(linkedStudentIds)) {
-      const st = await this.studentRepository.findById(sid);
-      if (st && (st.status === StudentStatus.ACTIVE || !st.status)) {
-        validStudentIds.push(sid);
-      }
-    }
-
-    if (validStudentIds.length > 0) {
-      return validStudentIds;
-    }
-
-    // Link demo/default parent or staff member with child if unassigned but students exist
-    const allStudents = await this.studentRepository.findAll();
-    if (allStudents.length > 0 && user) {
-      if (user.email === 'parent@smartshule.ac.ke' || user.id === 'usr-parent-01') {
-        const demoStudent = allStudents.find(s => s.id === 'student-001') || allStudents[0];
-        if (guardian) {
-          guardian.linkStudent(demoStudent.id);
-          await this.guardianRepository.update(guardian);
-        } else {
-          guardian = Guardian.create(
-            {
-              userId: user.id,
-              nationalId: '28475921',
-              relationship: GuardianRelationship.MOTHER,
-              emergencyContact: user.phone || '+254777000777',
-              studentIds: [demoStudent.id]
-            },
-            'grd-default-01'
-          );
-          await this.guardianRepository.save(guardian);
-        }
-        if (!demoStudent.guardianIds.includes(guardian.id)) {
-          demoStudent.addGuardian(guardian.id);
-          await this.studentRepository.update(demoStudent);
-        }
-        return [demoStudent.id];
-      }
-    }
-
-    return [];
+    const res = await GuardianIdentityResolver.resolveLinkedStudentIdsForUser({
+      userId,
+      guardianRepository: this.guardianRepository,
+      studentRepository: this.studentRepository,
+      userRepository: this.userRepository
+    });
+    return res.studentIds;
   }
 
   private async hydrateStudentAcademicMetadata(
@@ -1141,8 +1071,8 @@ export class StudentUseCases {
     };
   }
 
-  public async getStudentById(studentId: string, requestingUser?: UserContext) {
-    const isParent = requestingUser?.role === UserRole.PARENT || requestingUser?.role === UserRole.GUARDIAN;
+  public async getStudentById(studentId: string, requestingUser?: UserContext & { isGuardianRoute?: boolean }) {
+    const isParent = requestingUser?.role === UserRole.PARENT || requestingUser?.role === UserRole.GUARDIAN || Boolean(requestingUser?.isGuardianRoute);
     if (isParent && requestingUser) {
       const childIds = await this.getLinkedStudentIdsForUser(requestingUser.userId);
       if (!childIds.includes(studentId)) {
@@ -1611,8 +1541,14 @@ export class StudentUseCases {
   }
 
   public async getGuardianPortalData(userId: string) {
-    const childIds = await this.getLinkedStudentIdsForUser(userId);
-    let guardian = await this.guardianRepository.findByUserId(userId);
+    const res = await GuardianIdentityResolver.resolveLinkedStudentIdsForUser({
+      userId,
+      guardianRepository: this.guardianRepository,
+      studentRepository: this.studentRepository,
+      userRepository: this.userRepository
+    });
+    const childIds = res.studentIds;
+    let guardian = res.guardian;
     const user = await this.userRepository.findById(userId);
 
     if (!guardian) {
@@ -1629,7 +1565,7 @@ export class StudentUseCases {
       await this.guardianRepository.save(guardian);
     }
 
-    const students = await this.studentRepository.findByIds(childIds);
+    const students = res.students.length > 0 ? res.students : await this.studentRepository.findByIds(childIds);
 
     const childrenDetails = await Promise.all(
       students.map(async s => {

@@ -142,7 +142,9 @@ export class StudentController {
 
   public updateStudent = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const student = await this.studentUseCases.updateStudent(req.params.id as string, req.body, (req as any).user);
+      const isGuardianRoute = Boolean(req.originalUrl && req.originalUrl.includes('/guardian/'));
+      const userContext = (req as any).user ? { ...(req as any).user, isGuardianRoute } : undefined;
+      const student = await this.studentUseCases.updateStudent(req.params.id as string, req.body, userContext);
 
       this.systemLogUseCases?.log({
         schoolId: (student as any).schoolId || (req as any).user?.schoolId,
@@ -170,7 +172,9 @@ export class StudentController {
 
   public getStudentById = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const student = await this.studentUseCases.getStudentById(req.params.id as string, (req as any).user);
+      const isGuardianRoute = Boolean(req.originalUrl && req.originalUrl.includes('/guardian/'));
+      const userContext = (req as any).user ? { ...(req as any).user, isGuardianRoute } : undefined;
+      const student = await this.studentUseCases.getStudentById(req.params.id as string, userContext);
       return res.status(200).json({
         success: true,
         data: student

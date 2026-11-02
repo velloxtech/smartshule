@@ -5,6 +5,7 @@ import { IUserRepository } from '../../core/ports/repositories/IUserRepository';
 import { EDiaryEntry } from '../../core/domain/ediary/EDiaryEntry';
 import { UserRole } from '../../core/domain/user/User';
 import { IdGenerator, NotFoundError, ForbiddenError, ValidationError } from '../../core/domain/shared/Errors';
+import { GuardianIdentityResolver } from '../shared/GuardianIdentityResolver';
 
 export interface CreateEDiaryEntryDTO {
   schoolId: string;
@@ -99,25 +100,14 @@ export class EDiaryUseCases {
   }
 
   public async getLinkedStudentIdsForUser(userId: string): Promise<string[]> {
-    const guardian = await this.getGuardianForUser(userId);
-    if (!guardian) return [];
-
-    const linkedStudentIds = new Set<string>(guardian.studentIds || []);
-    const allStudents = await this.studentRepository.findAll();
-    let updated = false;
-    for (const s of allStudents) {
-      if (s.guardianIds && s.guardianIds.includes(guardian.id)) {
-        linkedStudentIds.add(s.id);
-        if (!guardian.studentIds.includes(s.id)) {
-          guardian.linkStudent(s.id);
-          updated = true;
-        }
-      }
-    }
-    if (updated) {
-      await this.guardianRepository.update(guardian);
-    }
-    return Array.from(linkedStudentIds);
+    if (!this.guardianRepository || !this.studentRepository) return [];
+    const res = await GuardianIdentityResolver.resolveLinkedStudentIdsForUser({
+      userId,
+      guardianRepository: this.guardianRepository,
+      studentRepository: this.studentRepository,
+      userRepository: this.userRepository
+    });
+    return res.studentIds;
   }
 
   public async listEntriesForStudent(

@@ -194,6 +194,11 @@ export class Student extends Entity<StudentProps> {
     }
   }
 
+  public removeGuardian(guardianId: string): void {
+    this._props.guardianIds = this._props.guardianIds.filter(id => id !== guardianId);
+    this.touch();
+  }
+
   public setAdmissionNumber(admNo: string): void {
     this._props.admissionNumber = admNo;
     this.touch();
