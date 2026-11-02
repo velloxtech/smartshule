@@ -74,7 +74,14 @@ import {
   ReviewLessonPlanSchema
 } from '../controllers/CurriculumPlanController';
 
-import { RecordOfWorkController } from '../controllers/RecordOfWorkController';
+import {
+  RecordOfWorkController,
+  CreateRecordOfWorkSchema,
+  UpdateRecordOfWorkSchema,
+  ApproveRecordOfWorkSchema,
+  ReturnRecordOfWorkSchema,
+  OverrideProgressionSchema
+} from '../controllers/RecordOfWorkController';
 
 import {
   TimetableController,
@@ -462,11 +469,103 @@ export function createApiRouter(container: AppContainer): Router {
   curriculumRouter.get('/lesson-plans/:id', authMiddleware, curriculumController.getLessonPlanById);
   curriculumRouter.delete('/lesson-plans/:id', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN), curriculumController.deleteLessonPlan);
   
-  // RECORDS OF WORK ROUTES
-  curriculumRouter.post('/records-of-work', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.SUPER_ADMIN), recordOfWorkController.create);
+  // RECORDS OF WORK (TEACHER DIARY) ROUTES
+  curriculumRouter.get('/records-of-work/summary', authMiddleware, recordOfWorkController.getSummary);
+  curriculumRouter.post(
+    '/records-of-work',
+    authMiddleware,
+    requireRoles(
+      UserRole.TEACHER,
+      UserRole.HEAD_TEACHER,
+      UserRole.DEPUTY_HEAD_TEACHER,
+      UserRole.ADMIN,
+      UserRole.SCHOOL_ADMIN,
+      UserRole.SUPER_ADMIN
+    ),
+    validateBody(CreateRecordOfWorkSchema),
+    recordOfWorkController.create
+  );
   curriculumRouter.get('/records-of-work', authMiddleware, recordOfWorkController.getAll);
-  curriculumRouter.put('/records-of-work/:id', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.SUPER_ADMIN), recordOfWorkController.update);
-  curriculumRouter.delete('/records-of-work/:id', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.SUPER_ADMIN), recordOfWorkController.delete);
+  curriculumRouter.get('/records-of-work/:id', authMiddleware, recordOfWorkController.getById);
+  curriculumRouter.put(
+    '/records-of-work/:id',
+    authMiddleware,
+    requireRoles(
+      UserRole.TEACHER,
+      UserRole.HEAD_TEACHER,
+      UserRole.DEPUTY_HEAD_TEACHER,
+      UserRole.ADMIN,
+      UserRole.SCHOOL_ADMIN,
+      UserRole.SUPER_ADMIN
+    ),
+    validateBody(UpdateRecordOfWorkSchema),
+    recordOfWorkController.update
+  );
+  curriculumRouter.post(
+    '/records-of-work/:id/submit',
+    authMiddleware,
+    requireRoles(
+      UserRole.TEACHER,
+      UserRole.HEAD_TEACHER,
+      UserRole.DEPUTY_HEAD_TEACHER,
+      UserRole.ADMIN,
+      UserRole.SCHOOL_ADMIN,
+      UserRole.SUPER_ADMIN
+    ),
+    recordOfWorkController.submit
+  );
+  curriculumRouter.post(
+    '/records-of-work/:id/approve',
+    authMiddleware,
+    requireRoles(
+      UserRole.HEAD_TEACHER,
+      UserRole.DEPUTY_HEAD_TEACHER,
+      UserRole.ADMIN,
+      UserRole.SCHOOL_ADMIN,
+      UserRole.SUPER_ADMIN
+    ),
+    validateBody(ApproveRecordOfWorkSchema),
+    recordOfWorkController.approve
+  );
+  curriculumRouter.post(
+    '/records-of-work/:id/return',
+    authMiddleware,
+    requireRoles(
+      UserRole.HEAD_TEACHER,
+      UserRole.DEPUTY_HEAD_TEACHER,
+      UserRole.ADMIN,
+      UserRole.SCHOOL_ADMIN,
+      UserRole.SUPER_ADMIN
+    ),
+    validateBody(ReturnRecordOfWorkSchema),
+    recordOfWorkController.returnEntry
+  );
+  curriculumRouter.post(
+    '/records-of-work/:id/override',
+    authMiddleware,
+    requireRoles(
+      UserRole.HEAD_TEACHER,
+      UserRole.DEPUTY_HEAD_TEACHER,
+      UserRole.ADMIN,
+      UserRole.SCHOOL_ADMIN,
+      UserRole.SUPER_ADMIN
+    ),
+    validateBody(OverrideProgressionSchema),
+    recordOfWorkController.overrideProgression
+  );
+  curriculumRouter.delete(
+    '/records-of-work/:id',
+    authMiddleware,
+    requireRoles(
+      UserRole.TEACHER,
+      UserRole.HEAD_TEACHER,
+      UserRole.DEPUTY_HEAD_TEACHER,
+      UserRole.ADMIN,
+      UserRole.SCHOOL_ADMIN,
+      UserRole.SUPER_ADMIN
+    ),
+    recordOfWorkController.delete
+  );
 
   router.use('/curriculum', curriculumRouter);
 

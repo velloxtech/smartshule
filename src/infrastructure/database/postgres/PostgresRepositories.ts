@@ -549,20 +549,83 @@ export class PostgresDatabaseInitializer {
 
       CREATE TABLE IF NOT EXISTS records_of_work (
         id VARCHAR(100) PRIMARY KEY,
+        school_id VARCHAR(100) DEFAULT 'school-001',
         teacher_id VARCHAR(100) NOT NULL,
+        teacher_name VARCHAR(255),
         academic_year_id VARCHAR(100),
+        academic_year VARCHAR(50),
         term_id VARCHAR(100),
-        week INT NOT NULL,
-        day VARCHAR(50) NOT NULL,
+        term VARCHAR(50),
+        classroom_id VARCHAR(100),
+        class_name VARCHAR(150),
+        stream_id VARCHAR(100),
+        stream_name VARCHAR(150),
+        learning_area_id VARCHAR(100),
+        subject_name VARCHAR(255),
+        strand_id VARCHAR(100),
+        strand VARCHAR(255),
+        sub_strand_id VARCHAR(100),
+        sub_strand VARCHAR(255),
+        week INT NOT NULL DEFAULT 1,
+        week_number INT DEFAULT 1,
+        day VARCHAR(50) NOT NULL DEFAULT 'Mon',
         period VARCHAR(50),
+        lesson_period VARCHAR(50),
+        lesson_date DATE,
         subject_and_grade VARCHAR(255) NOT NULL,
         strand_and_work_covered TEXT NOT NULL,
+        lesson_topic TEXT,
+        learning_objectives TEXT,
+        learning_activities TEXT,
+        resources TEXT,
         reference TEXT NOT NULL,
+        status VARCHAR(50) DEFAULT 'DRAFT',
+        reflection_data JSONB DEFAULT '{}'::jsonb,
         comments TEXT,
         reflection TEXT,
+        submitted_at TIMESTAMP,
+        reviewed_by_user_id VARCHAR(100),
+        reviewed_by_name VARCHAR(255),
+        reviewed_at TIMESTAMP,
+        review_remarks TEXT,
+        return_reason TEXT,
+        tracker_id VARCHAR(100),
+        is_official_coverage BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS school_id VARCHAR(100) DEFAULT 'school-001';
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS teacher_name VARCHAR(255);
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS academic_year VARCHAR(50);
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS term VARCHAR(50);
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS classroom_id VARCHAR(100);
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS class_name VARCHAR(150);
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS stream_id VARCHAR(100);
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS stream_name VARCHAR(150);
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS learning_area_id VARCHAR(100);
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS subject_name VARCHAR(255);
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS strand_id VARCHAR(100);
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS strand VARCHAR(255);
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS sub_strand_id VARCHAR(100);
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS sub_strand VARCHAR(255);
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS week_number INT DEFAULT 1;
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS lesson_period VARCHAR(50);
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS lesson_date DATE;
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS lesson_topic TEXT;
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS learning_objectives TEXT;
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS learning_activities TEXT;
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS resources TEXT;
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'DRAFT';
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS reflection_data JSONB DEFAULT '{}'::jsonb;
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS submitted_at TIMESTAMP;
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS reviewed_by_user_id VARCHAR(100);
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS reviewed_by_name VARCHAR(255);
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMP;
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS review_remarks TEXT;
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS return_reason TEXT;
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS tracker_id VARCHAR(100);
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS is_official_coverage BOOLEAN DEFAULT FALSE;
 
       CREATE TABLE IF NOT EXISTS complaints (
         id VARCHAR(100) PRIMARY KEY,

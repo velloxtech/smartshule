@@ -25,6 +25,7 @@ import {
   SchemeEntry,
   LessonPlan,
   RecordOfWork,
+  RecordOfWorkSummary,
   TimetableData,
   AttendanceRegister,
   FeeStructure,
@@ -1454,9 +1455,26 @@ const coreApiService = {
     });
   },
 
-  // Records of Work
-  getRecordsOfWork: async (): Promise<ApiResponse<RecordOfWork[]>> => {
-    return apiFetch<ApiResponse<RecordOfWork[]>>('/curriculum/records-of-work');
+  // Records of Work (Teacher Diary)
+  getRecordsOfWork: async (params?: Record<string, any>): Promise<ApiResponse<RecordOfWork[]>> => {
+    let url = '/curriculum/records-of-work';
+    if (params) {
+      const searchParams = new URLSearchParams();
+      Object.entries(params).forEach(([key, val]) => {
+        if (val !== undefined && val !== null && val !== '' && val !== 'ALL') {
+          searchParams.append(key, String(val));
+        }
+      });
+      const queryStr = searchParams.toString();
+      if (queryStr) {
+        url += `?${queryStr}`;
+      }
+    }
+    return apiFetch<ApiResponse<RecordOfWork[]>>(url);
+  },
+
+  getRecordOfWorkById: async (id: string): Promise<ApiResponse<RecordOfWork>> => {
+    return apiFetch<ApiResponse<RecordOfWork>>(`/curriculum/records-of-work/${id}`);
   },
 
   createRecordOfWork: async (data: Partial<RecordOfWork>): Promise<ApiResponse<RecordOfWork>> => {
@@ -1473,10 +1491,50 @@ const coreApiService = {
     });
   },
 
+  submitRecordOfWork: async (id: string): Promise<ApiResponse<RecordOfWork>> => {
+    return apiFetch<ApiResponse<RecordOfWork>>(`/curriculum/records-of-work/${id}/submit`, {
+      method: 'POST',
+    });
+  },
+
+  approveRecordOfWork: async (id: string, data?: { remarks?: string }): Promise<ApiResponse<RecordOfWork>> => {
+    return apiFetch<ApiResponse<RecordOfWork>>(`/curriculum/records-of-work/${id}/approve`, {
+      method: 'POST',
+      body: JSON.stringify(data || {}),
+    });
+  },
+
+  returnRecordOfWork: async (id: string, data: { reason: string }): Promise<ApiResponse<RecordOfWork>> => {
+    return apiFetch<ApiResponse<RecordOfWork>>(`/curriculum/records-of-work/${id}/return`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  overrideRecordOfWork: async (id: string, data: { reason: string; status?: string }): Promise<ApiResponse<RecordOfWork>> => {
+    return apiFetch<ApiResponse<RecordOfWork>>(`/curriculum/records-of-work/${id}/override`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
   deleteRecordOfWork: async (id: string): Promise<ApiResponse<any>> => {
     return apiFetch<ApiResponse<any>>(`/curriculum/records-of-work/${id}`, {
       method: 'DELETE',
     });
+  },
+
+  getRecordOfWorkSummary: async (params?: { schoolId?: string; term?: string; academicYear?: string }): Promise<ApiResponse<RecordOfWorkSummary>> => {
+    let url = '/curriculum/records-of-work/summary';
+    if (params) {
+      const searchParams = new URLSearchParams();
+      Object.entries(params).forEach(([key, val]) => {
+        if (val) searchParams.append(key, String(val));
+      });
+      const queryStr = searchParams.toString();
+      if (queryStr) url += `?${queryStr}`;
+    }
+    return apiFetch<ApiResponse<RecordOfWorkSummary>>(url);
   },
 
   // 7. Timetable Endpoints

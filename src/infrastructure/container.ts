@@ -299,7 +299,14 @@ export class AppContainer {
       this.teacherRepository
     );
     
-    this.recordOfWorkUseCases = new RecordOfWorkUseCases(this.recordOfWorkRepository); 
+    this.recordOfWorkUseCases = new RecordOfWorkUseCases(
+      this.recordOfWorkRepository,
+      this.curriculumTrackerRepository,
+      this.academicRepository,
+      this.teacherRepository,
+      this.userRepository,
+      this.systemLogRepository
+    ); 
     this.complaintUseCases = new ComplaintUseCases(this.complaintRepository, this.userRepository);
     this.libraryUseCases = new LibraryUseCases(
       this.libraryRepository,

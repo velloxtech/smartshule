@@ -954,22 +954,78 @@ export interface LessonPlan {
   createdAt?: string;
 }
 
+export type RecordOfWorkStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'RETURNED';
+
+export type LearnerComprehension = 'EXCELLENT' | 'GOOD' | 'AVERAGE' | 'BELOW_AVERAGE' | 'POOR';
+
+export interface RecordOfWorkReflection {
+  comprehensionLevel?: LearnerComprehension;
+  whatWentWell?: string;
+  challengesFaced?: string;
+  remedialPlan?: string;
+  nextSteps?: string;
+  generalRemarks?: string;
+  homeworkGiven?: string;
+  absentLearnersCount?: number;
+  totalLearnersPresent?: number;
+}
+
 export interface RecordOfWork {
   id: string;
+  schoolId?: string;
   teacherId?: string;
+  teacherName?: string;
+  academicYear?: string;
+  academicYearId?: string;
   term?: string;
   termId?: string;
-  academicYearId?: string;
+  classRoomId?: string;
+  className?: string;
+  streamId?: string;
+  streamName?: string;
+  learningAreaId?: string;
+  subjectName?: string;
+  strandId?: string;
+  strand?: string;
+  subStrandId?: string;
+  subStrand?: string;
   week: number;
+  weekNumber?: number;
   day: string;
   period?: string;
+  lessonPeriod?: string;
+  lessonDate?: string;
+  lessonTopic?: string;
+  learningObjectives?: string;
+  learningActivities?: string;
+  resources?: string;
   subjectAndGrade: string;
   strandAndWorkCovered: string;
   reference: string;
+  status: RecordOfWorkStatus;
   reflection?: string;
+  reflectionData?: RecordOfWorkReflection;
   comments?: string;
+  submittedAt?: string;
+  reviewedByUserId?: string;
+  reviewedByName?: string;
+  reviewedAt?: string;
+  reviewRemarks?: string;
+  returnReason?: string;
+  trackerId?: string;
+  isOfficialCoverage?: boolean;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface RecordOfWorkSummary {
+  totalLessons: number;
+  draftsCount: number;
+  submittedCount: number;
+  approvedCount: number;
+  returnedCount: number;
+  reflectionsCount: number;
+  officialCoveragePercentage: number;
 }
 
 export interface PeriodDefinition {
