@@ -408,35 +408,89 @@ export class AuthUseCases {
     };
   }
 
-  public async changePassword(userId: string, dto: { currentPassword: string; newPassword: string }) {
+  public async changePassword(
+    userId: string,
+    dto: { currentPassword?: string; newPassword: string; confirmPassword?: string }
+  ) {
     const user = await this.userRepository.findById(userId);
     if (!user) {
       throw new NotFoundError('User', userId);
     }
 
-    let isMatch = await this.passwordHasher.compare(dto.currentPassword, user.passwordHash);
-    if (!isMatch && user.phone && PhoneUtils.areMatches(user.phone, dto.currentPassword)) {
-      isMatch = true;
-    }
-    if (!isMatch && this.guardianRepository && (user.role === UserRole.PARENT || user.role === UserRole.GUARDIAN)) {
-      const g = await this.guardianRepository.findByUserId(user.id);
-      if (g) {
-        if (g.emergencyContact && PhoneUtils.areMatches(g.emergencyContact, dto.currentPassword)) {
-          isMatch = true;
-        } else if (g.nationalId && g.nationalId.trim() === dto.currentPassword.trim()) {
-          isMatch = true;
-        }
-      }
+    if (!dto.newPassword || dto.newPassword.trim().length < 6) {
+      throw new ValidationError('New password must be at least 6 characters long.');
     }
 
-    if (!isMatch) {
-      throw new UnauthorizedError('Current password is incorrect.');
+    if (dto.confirmPassword && dto.newPassword !== dto.confirmPassword) {
+      throw new ValidationError('New password and confirmation do not match.');
+    }
+
+    // If user has mustChangePassword = true (Forced Change screen with 2 fields only)
+    if (user.mustChangePassword) {
+      const isSameAsCurrent = await this.passwordHasher.compare(dto.newPassword, user.passwordHash);
+      if (isSameAsCurrent) {
+        throw new ValidationError('New password must be different from your temporary password.');
+      }
+      // Allowed to change password without entering current password!
+    } else {
+      // Voluntary change: verify current password
+      if (!dto.currentPassword || dto.currentPassword.trim() === '') {
+        throw new ValidationError('Please enter your current password.');
+      }
+
+      let isMatch = await this.passwordHasher.compare(dto.currentPassword, user.passwordHash);
+      if (!isMatch && user.phone && PhoneUtils.areMatches(user.phone, dto.currentPassword)) {
+        isMatch = true;
+      }
+      if (!isMatch && this.guardianRepository && (user.role === UserRole.PARENT || user.role === UserRole.GUARDIAN)) {
+        const g = await this.guardianRepository.findByUserId(user.id);
+        if (g) {
+          if (g.emergencyContact && PhoneUtils.areMatches(g.emergencyContact, dto.currentPassword)) {
+            isMatch = true;
+          } else if (g.nationalId && g.nationalId.trim() === dto.currentPassword.trim()) {
+            isMatch = true;
+          }
+        }
+      }
+
+      if (!isMatch) {
+        throw new UnauthorizedError('Current password is incorrect.');
+      }
+
+      if (dto.currentPassword === dto.newPassword) {
+        throw new ValidationError('New password must be different from your current password.');
+      }
     }
 
     const newHash = await this.passwordHasher.hash(dto.newPassword);
     user.updatePassword(newHash);
     user.setMustChangePassword(false);
     await this.userRepository.update(user);
+
+    if (this.systemLogRepository) {
+      try {
+        await this.systemLogRepository.create(
+          SystemLog.create(
+            {
+              schoolId: user.schoolId || 'school-001',
+              timestamp: new Date(),
+              level: 'INFO',
+              category: 'AUTH',
+              action: 'PASSWORD_CHANGED',
+              actorUserId: user.id,
+              actorEmail: user.email,
+              actorRole: user.role,
+              details: `User ${user.email} successfully updated their password. Forced flag cleared.`,
+              metadata: { userId: user.id }
+            },
+            IdGenerator.generate()
+          )
+        );
+      } catch (logErr) {
+        // Non-fatal
+      }
+    }
+
     return { success: true, message: 'Password changed successfully.', user: user.toJSON() };
   }
 
@@ -1079,7 +1133,7 @@ export class AuthUseCases {
 
   public async adminResetPassword(
     userId: string,
-    newPassword: string,
+    newPassword?: string,
     requestingUser?: { userId: string; role: UserRole }
   ) {
     const user = await this.userRepository.findById(userId);
@@ -1091,10 +1145,46 @@ export class AuthUseCases {
       throw new ForbiddenError('Only Super Administrators can reset Super Admin passwords.');
     }
 
-    const newPasswordHash = await this.passwordHasher.hash(newPassword);
+    // Generate secure temporary password if not provided
+    const tempPassword = (newPassword && newPassword.trim() !== '')
+      ? newPassword.trim()
+      : `Temp${Math.random().toString(36).substring(2, 6).toUpperCase()}!${Math.floor(1000 + Math.random() * 9000)}`;
+
+    const newPasswordHash = await this.passwordHasher.hash(tempPassword);
     user.updatePassword(newPasswordHash);
+    user.setMustChangePassword(true);
     await this.userRepository.update(user);
-    return { id: user.id, email: user.email, message: 'Password reset successfully' };
+
+    if (this.systemLogRepository) {
+      try {
+        await this.systemLogRepository.create(
+          SystemLog.create(
+            {
+              schoolId: user.schoolId || 'school-001',
+              timestamp: new Date(),
+              level: 'WARN',
+              category: 'AUTH',
+              action: 'ADMIN_PASSWORD_RESET',
+              actorUserId: requestingUser?.userId,
+              actorRole: requestingUser?.role,
+              details: `Administrator ${requestingUser?.userId || 'system'} reset password for user ${user.email} (${user.id}). Forced password change required at next login.`,
+              metadata: { targetUserId: user.id, targetEmail: user.email }
+            },
+            IdGenerator.generate()
+          )
+        );
+      } catch (logErr) {
+        // Non-fatal
+      }
+    }
+
+    return {
+      id: user.id,
+      email: user.email,
+      temporaryPassword: tempPassword,
+      mustChangePassword: true,
+      message: 'Password reset successfully. The user must set a new password on their next login.'
+    };
   }
 
   public async adminDeleteUser(

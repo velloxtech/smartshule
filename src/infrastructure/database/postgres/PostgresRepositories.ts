@@ -87,6 +87,7 @@ import {
   CreditStatus
 } from '../../../core/domain/finance/Fee';
 import { FeeBannerConfig } from '../../../core/domain/finance/FeeBannerConfig';
+import { IdGenerator } from '../../../core/domain/shared/Errors';
 
 export class PostgresDatabaseInitializer {
   public static async initializeSchema(pool: Pool): Promise<void> {
@@ -1535,7 +1536,12 @@ export class PostgresStudentRepository implements IStudentRepository {
       medicalConditions: r.medical_conditions,
       specialNeeds: r.special_needs,
       status: r.status,
-      profilePhotoUrl: r.profile_photo_url
+      profilePhotoUrl: r.profile_photo_url,
+      withdrawalDate: r.withdrawal_date || undefined,
+      withdrawalReason: r.withdrawal_reason || undefined,
+      destinationSchool: r.destination_school || undefined,
+      withdrawnByUserId: r.withdrawn_by_user_id || undefined,
+      withdrawalNotes: r.withdrawal_notes || undefined
     }, r.id, r.created_at, r.updated_at);
   }
   public async findById(id: string): Promise<Student | null> {
@@ -1543,7 +1549,14 @@ export class PostgresStudentRepository implements IStudentRepository {
     return res.rows.length ? this.mapRow(res.rows[0]) : null;
   }
   public async findByAdmissionNumber(admissionNumber: string, schoolId?: string): Promise<Student | null> {
-    const res = await this.pool.query('SELECT * FROM students WHERE admission_number = $1', [admissionNumber]);
+    let formatted: string | null = null;
+    try {
+      formatted = IdGenerator.formatAdmissionNumber(admissionNumber);
+    } catch {}
+    const res = await this.pool.query(
+      'SELECT * FROM students WHERE (admission_number = $1 OR ($2::text IS NOT NULL AND admission_number = $2))',
+      [admissionNumber, formatted]
+    );
     return res.rows.length ? this.mapRow(res.rows[0]) : null;
   }
   public async findByUpiNumber(upiNumber: string): Promise<Student | null> {
@@ -1603,8 +1616,14 @@ export class PostgresStudentRepository implements IStudentRepository {
     return res.rows.map(r => this.mapRow(r));
   }
   public async save(s: Student): Promise<void> {
-    const q = `INSERT INTO students (id, admission_number, upi_number, first_name, middle_name, last_name, date_of_birth, gender, grade_level, classroom_id, stream_id, school_id, academic_year_id, guardian_ids, medical_conditions, special_needs, status, profile_photo_url, created_at, updated_at)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+    const q = `INSERT INTO students (
+                 id, admission_number, upi_number, first_name, middle_name, last_name,
+                 date_of_birth, gender, grade_level, classroom_id, stream_id, school_id,
+                 academic_year_id, guardian_ids, medical_conditions, special_needs, status,
+                 profile_photo_url, withdrawal_date, withdrawal_reason, destination_school,
+                 withdrawn_by_user_id, withdrawal_notes, created_at, updated_at
+               )
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
                ON CONFLICT (id) DO UPDATE SET 
                  admission_number = EXCLUDED.admission_number,
                  upi_number = EXCLUDED.upi_number,
@@ -1622,6 +1641,11 @@ export class PostgresStudentRepository implements IStudentRepository {
                  special_needs = EXCLUDED.special_needs,
                  status = EXCLUDED.status, 
                  profile_photo_url = EXCLUDED.profile_photo_url,
+                 withdrawal_date = EXCLUDED.withdrawal_date,
+                 withdrawal_reason = EXCLUDED.withdrawal_reason,
+                 destination_school = EXCLUDED.destination_school,
+                 withdrawn_by_user_id = EXCLUDED.withdrawn_by_user_id,
+                 withdrawal_notes = EXCLUDED.withdrawal_notes,
                  updated_at = NOW()`;
     await this.pool.query(q, [
       s.id,
@@ -1642,6 +1666,11 @@ export class PostgresStudentRepository implements IStudentRepository {
       s.specialNeeds || null,
       s.status,
       s.profilePhotoUrl || null,
+      s.withdrawalDate || null,
+      s.withdrawalReason || null,
+      s.destinationSchool || null,
+      s.withdrawnByUserId || null,
+      s.withdrawalNotes || null,
       s.createdAt,
       s.updatedAt
     ]);
@@ -3755,7 +3784,10 @@ export class PostgresDeletedStudentRepository implements IDeletedStudentReposito
       pendingWorkCleared: typeof r.pending_work_cleared === 'string' ? JSON.parse(r.pending_work_cleared) : (r.pending_work_cleared || {}),
       deletedAt: r.deleted_at ? new Date(r.deleted_at) : new Date(),
       deletedByUserId: r.deleted_by_user_id || undefined,
-      reason: r.reason || undefined
+      reason: r.reason || undefined,
+      retentionPolicyYears: r.retention_policy_years ? Number(r.retention_policy_years) : 7,
+      retentionExpiresAt: r.retention_expires_at ? new Date(r.retention_expires_at) : undefined,
+      archivedAt: r.archived_at ? new Date(r.archived_at) : new Date(r.deleted_at || Date.now())
     }, r.id);
   }
 
@@ -3764,13 +3796,17 @@ export class PostgresDeletedStudentRepository implements IDeletedStudentReposito
       id, student_id, admission_number, first_name, middle_name, last_name,
       upi_number, school_id, grade_level, classroom_id, stream_id,
       academic_year_id, student_data, linked_data, pending_work_cleared,
-      deleted_at, deleted_by_user_id, reason
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+      deleted_at, deleted_by_user_id, reason, retention_policy_years,
+      retention_expires_at, archived_at
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
     ON CONFLICT (id) DO UPDATE SET
       student_data = EXCLUDED.student_data,
       linked_data = EXCLUDED.linked_data,
       pending_work_cleared = EXCLUDED.pending_work_cleared,
-      reason = EXCLUDED.reason`;
+      reason = EXCLUDED.reason,
+      retention_policy_years = EXCLUDED.retention_policy_years,
+      retention_expires_at = EXCLUDED.retention_expires_at,
+      archived_at = EXCLUDED.archived_at`;
 
     await this.pool.query(q, [
       d.id,
@@ -3790,7 +3826,10 @@ export class PostgresDeletedStudentRepository implements IDeletedStudentReposito
       JSON.stringify(d.pendingWorkCleared),
       d.deletedAt,
       d.deletedByUserId || null,
-      d.reason || null
+      d.reason || null,
+      d.retentionPolicyYears,
+      d.retentionExpiresAt || null,
+      d.archivedAt
     ]);
   }
 

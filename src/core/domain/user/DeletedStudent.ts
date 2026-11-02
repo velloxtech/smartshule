@@ -49,6 +49,9 @@ export interface DeletedStudentProps {
   deletedAt: Date;
   deletedByUserId?: string;
   reason?: string;
+  retentionPolicyYears?: number;
+  retentionExpiresAt?: Date;
+  archivedAt?: Date;
 }
 
 export class DeletedStudent extends Entity<DeletedStudentProps> {
@@ -135,6 +138,18 @@ export class DeletedStudent extends Entity<DeletedStudentProps> {
     return this._props.reason;
   }
 
+  public get retentionPolicyYears(): number {
+    return this._props.retentionPolicyYears ?? 7;
+  }
+
+  public get retentionExpiresAt(): Date | undefined {
+    return this._props.retentionExpiresAt;
+  }
+
+  public get archivedAt(): Date {
+    return this._props.archivedAt || this._props.deletedAt || new Date();
+  }
+
   public toJSON() {
     return {
       id: this.id,
@@ -156,6 +171,9 @@ export class DeletedStudent extends Entity<DeletedStudentProps> {
       deletedAt: this.deletedAt,
       deletedByUserId: this.deletedByUserId,
       reason: this.reason,
+      retentionPolicyYears: this.retentionPolicyYears,
+      retentionExpiresAt: this.retentionExpiresAt,
+      archivedAt: this.archivedAt,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt
     };

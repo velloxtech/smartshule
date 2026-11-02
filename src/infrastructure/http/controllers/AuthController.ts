@@ -63,12 +63,13 @@ export const AdminSetStatusSchema = z.object({
 });
 
 export const AdminResetPasswordSchema = z.object({
-  newPassword: z.string().min(6)
+  newPassword: z.string().min(6).optional()
 });
 
 export const ChangePasswordSchema = z.object({
-  currentPassword: z.string().min(1, 'Current password is required'),
-  newPassword: z.string().min(6, 'New password must be at least 6 characters long')
+  currentPassword: z.string().optional(),
+  newPassword: z.string().min(6, 'New password must be at least 6 characters long'),
+  confirmPassword: z.string().optional()
 });
 
 export const ForgotPasswordSchema = z.object({
@@ -359,6 +360,8 @@ export class AuthController {
       return res.status(200).json({
         success: true,
         message: 'User password reset successfully',
+        temporaryPassword: result.temporaryPassword,
+        mustChangePassword: result.mustChangePassword,
         data: result
       });
     } catch (err) {

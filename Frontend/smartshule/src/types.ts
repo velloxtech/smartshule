@@ -399,6 +399,9 @@ export interface DeletedStudentRecord {
   deletedByUserId?: string;
   deletedBy?: string;
   reason?: string;
+  retentionPolicyYears?: number;
+  retentionExpiresAt?: string;
+  archivedAt?: string;
 }
 
 export interface TeacherEmergencyContact {
@@ -1748,6 +1751,11 @@ export interface LunchPaymentItem {
   transactionReference: string;
   paymentDate: string;
   notes?: string;
+  isReversed?: boolean;
+  reversedAt?: string;
+  reversedByUserId?: string;
+  reversalReason?: string;
+  idempotencyKey?: string;
   createdAt: string;
 }
 
@@ -1764,6 +1772,8 @@ export interface LunchEnrollmentItem {
   academicYearId?: string;
   termId?: string;
   planName: string;
+  paymentFrequency?: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'TERMLY';
+  dailyRate?: number;
   amount: number;
   amountPaid: number;
   balance: number;
@@ -1776,6 +1786,60 @@ export interface LunchEnrollmentItem {
   payments?: LunchPaymentItem[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface LunchWeeklyReportDay {
+  date: string;
+  dayOfWeek: string;
+  totalCollected: number;
+  learnersPaidCount: number;
+  transactionCount: number;
+  methods: Record<string, number>;
+  transactions: any[];
+}
+
+export interface LunchWeeklyCollectionReport {
+  startDate: string;
+  endDate: string;
+  totalLearnersEnrolled: number;
+  uniqueLearnersPaid: number;
+  totalCollected: number;
+  unpaidLearnersCount: number;
+  byPaymentMethod: Record<string, number>;
+  dailyBreakdown: LunchWeeklyReportDay[];
+}
+
+export interface LunchMonthlyCollectionReport {
+  year: number;
+  month: number;
+  monthName: string;
+  startDate: string;
+  endDate: string;
+  totalEnrolled: number;
+  uniqueLearnersPaid: number;
+  unpaidLearnersCount: number;
+  totalCollected: number;
+  totalReversed: number;
+  netCollected: number;
+  byPaymentMethod: Record<string, number>;
+  dailyTotals: Record<string, number>;
+  weeklyBreakdown: Array<{
+    weekLabel: string;
+    startDate: string;
+    endDate: string;
+    totalCollected: number;
+    transactionCount: number;
+  }>;
+}
+
+export interface LunchDashboardMetrics {
+  todayCollected: number;
+  todayLearnersPaid: number;
+  thisWeekCollected: number;
+  thisMonthCollected: number;
+  totalEnrolled: number;
+  totalOutstandingBalance: number;
+  frequencyBreakdown: Record<string, number>;
 }
 
 export interface LunchSummaryStats {

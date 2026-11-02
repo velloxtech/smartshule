@@ -75,6 +75,7 @@ import { ParentHelpRequest } from '../../../core/domain/media/ParentHelpRequest'
 import { StudentProgressPhoto } from '../../../core/domain/media/StudentProgressPhoto';
 import { EDiaryEntry } from '../../../core/domain/ediary/EDiaryEntry';
 import { PhoneUtils } from '../../utils/PhoneUtils';
+import { IdGenerator } from '../../../core/domain/shared/Errors';
 
 export class InMemoryUserRepository implements IUserRepository {
   private users: Map<string, User> = new Map();
@@ -128,8 +129,12 @@ export class InMemoryStudentRepository implements IStudentRepository {
   }
 
   public async findByAdmissionNumber(admissionNumber: string, schoolId?: string): Promise<Student | null> {
+    let formatted: string | null = null;
+    try {
+      formatted = IdGenerator.formatAdmissionNumber(admissionNumber);
+    } catch {}
     for (const s of this.students.values()) {
-      if (s.admissionNumber === admissionNumber) {
+      if (s.admissionNumber === admissionNumber || (formatted && s.admissionNumber === formatted)) {
         if (!schoolId || s.schoolId === schoolId) return s;
       }
     }

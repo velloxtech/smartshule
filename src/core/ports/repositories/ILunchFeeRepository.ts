@@ -41,7 +41,11 @@ export interface ILunchFeeRepository {
 
   // Payments
   savePayment(payment: LunchPayment): Promise<LunchPayment>;
-  findPayments(enrollmentId?: string, studentId?: string): Promise<LunchPayment[]>;
+  updatePayment(payment: LunchPayment): Promise<LunchPayment>;
+  findPaymentById(id: string): Promise<LunchPayment | null>;
+  findByIdempotencyKey(key: string): Promise<LunchPayment | null>;
+  findByTransactionReference(schoolId: string, reference: string): Promise<LunchPayment | null>;
+  findPayments(enrollmentId?: string, studentId?: string, filters?: { startDate?: string; endDate?: string; includeReversed?: boolean }): Promise<LunchPayment[]>;
   deletePaymentsByStudentId(studentId: string): Promise<void>;
 
   // Expenses (Money Out / Outflows)

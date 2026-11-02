@@ -98,9 +98,50 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
     }
   };
 
+  const [exitActionType, setExitActionType] = useState<'withdraw' | 'delete'>('withdraw');
+  const [withdrawalDate, setWithdrawalDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [destinationSchool, setDestinationSchool] = useState<string>('');
+  const [withdrawalNotes, setWithdrawalNotes] = useState<string>('');
+
   const handleOpenDeleteModal = (s: Student) => {
     setStudentToDelete(s);
+    setExitActionType('withdraw');
+    setWithdrawalDate(new Date().toISOString().split('T')[0]);
+    setDestinationSchool('');
+    setWithdrawalNotes('');
     setDeleteReason('Transferred to another institution');
+  };
+
+  const confirmWithdrawStudent = async () => {
+    if (!studentToDelete) return;
+    setIsDeleting(true);
+    try {
+      const res = await apiService.withdrawStudent(studentToDelete.id, {
+        withdrawalDate,
+        reason: deleteReason,
+        destinationSchool: destinationSchool.trim() || undefined,
+        notes: withdrawalNotes.trim() || undefined,
+      });
+      if (res.success) {
+        const outFees = res.data?.outstandingTuitionBalance || 0;
+        const outLunch = res.data?.outstandingLunchBalance || 0;
+        setDeletionFeedback({
+          studentName: studentToDelete.name,
+          admNo: studentToDelete.admNo,
+          summaryText: `Learner formally withdrawn. Parent access safely updated without deleting user accounts. Outstanding Fee Balance: KES ${outFees.toLocaleString()} | Lunch Balance: KES ${outLunch.toLocaleString()}`,
+          clearedDebt: outFees + outLunch,
+        });
+        onDeleteStudent?.(studentToDelete.id);
+        await onRefreshStudents?.();
+        setStudentToDelete(null);
+      } else {
+        alert(res.message || 'Failed to process learner withdrawal');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Error occurred while processing learner withdrawal');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const confirmDeleteStudent = async () => {
@@ -633,14 +674,18 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
         }}
       />
 
-      {/* Delete Student & Move to Archive Table Confirmation Modal */}
+      {/* Learner Withdrawal or Archive & Delete Modal */}
       {studentToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-outline-variant/30 animate-in fade-in zoom-in-95 duration-150">
             <div className="bg-[#7a1228] text-white p-4 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <span className="material-symbols-outlined text-[24px]">archive</span>
-                <h3 className="font-bold text-base">Archive & Delete Learner</h3>
+                <span className="material-symbols-outlined text-[24px]">
+                  {exitActionType === 'withdraw' ? 'person_remove' : 'archive'}
+                </span>
+                <h3 className="font-bold text-base">
+                  {exitActionType === 'withdraw' ? 'Withdraw Learner' : 'Archive & Delete Learner'}
+                </h3>
               </div>
               <button
                 type="button"
@@ -652,6 +697,32 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
             </div>
 
             <div className="p-5 space-y-4 text-xs sm:text-sm">
+              {/* Action Type Toggle */}
+              <div className="flex rounded-xl bg-surface-container-low p-1 border border-outline-variant/30">
+                <button
+                  type="button"
+                  onClick={() => setExitActionType('withdraw')}
+                  className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    exitActionType === 'withdraw'
+                      ? 'bg-primary text-white shadow-xs'
+                      : 'text-on-surface-variant hover:text-on-surface'
+                  }`}
+                >
+                  Formal Withdrawal
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setExitActionType('delete')}
+                  className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    exitActionType === 'delete'
+                      ? 'bg-primary text-white shadow-xs'
+                      : 'text-on-surface-variant hover:text-on-surface'
+                  }`}
+                >
+                  Full Archive & Delete
+                </button>
+              </div>
+
               <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-950">
                 <p className="font-semibold text-sm">
                   {studentToDelete.name} (Adm #{studentToDelete.admNo})
@@ -661,30 +732,102 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                 </p>
               </div>
 
-              <div className="text-on-surface-variant space-y-2 text-xs">
-                <p className="font-medium text-on-surface">When this learner is deleted:</p>
-                <ul className="space-y-1 list-disc list-inside">
-                  <li>Record will be placed in the dedicated <strong className="text-on-surface">deleted_students</strong> table.</li>
-                  <li>Everything linked (invoices, payments, CBE assessments, attendance, e-diary, photos) will be preserved in the archive.</li>
-                  <li>All pending work (unpaid fee balances, lunch arrears, open concerns) will be cleared.</li>
-                  <li>Guardians will be safely unlinked from this student.</li>
-                </ul>
-              </div>
+              {exitActionType === 'withdraw' ? (
+                <div className="space-y-3">
+                  <div className="text-on-surface-variant space-y-1 text-xs">
+                    <p className="font-semibold text-on-surface">Formal Learner Withdrawal Workflow:</p>
+                    <ul className="space-y-0.5 list-disc list-inside text-[11px]">
+                      <li>Status will be updated to <strong className="text-on-surface">WITHDRAWN</strong>.</li>
+                      <li>Parent access safely unlinked; staff accounts (e.g. teachers/headteachers) and other active children remain 100% active.</li>
+                      <li>Outstanding fee and lunch balances computed and preserved on record.</li>
+                    </ul>
+                  </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-on-surface mb-1">
-                  Reason for Deletion (Recorded in Archive Table):
-                </label>
-                <input
-                  type="text"
-                  value={deleteReason}
-                  onChange={(e) => setDeleteReason(e.target.value)}
-                  placeholder="e.g. Transferred to another school, Relocated, Graduated..."
-                  className="w-full px-3 py-2 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs sm:text-sm text-on-surface focus:outline-hidden focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
-                />
-              </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-on-surface mb-1">
+                        Withdrawal Date <span className="text-rose-600">*</span>
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        value={withdrawalDate}
+                        onChange={(e) => setWithdrawalDate(e.target.value)}
+                        className="w-full px-2.5 py-1.5 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs font-data-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-on-surface mb-1">
+                        Destination School
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Nairobi Primary"
+                        value={destinationSchool}
+                        onChange={(e) => setDestinationSchool(e.target.value)}
+                        className="w-full px-2.5 py-1.5 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs"
+                      />
+                    </div>
+                  </div>
 
-              <div className="flex items-center justify-end gap-2.5 pt-2">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-on-surface mb-1">
+                      Reason for Withdrawal <span className="text-rose-600">*</span>
+                    </label>
+                    <select
+                      value={deleteReason}
+                      onChange={(e) => setDeleteReason(e.target.value)}
+                      className="w-full px-2.5 py-1.5 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs"
+                    >
+                      <option value="Transferred to another institution">Transferred to another institution</option>
+                      <option value="Family relocation">Family relocation</option>
+                      <option value="Financial / Fee challenges">Financial / Fee challenges</option>
+                      <option value="Graduated / Course completed">Graduated / Course completed</option>
+                      <option value="Medical reasons">Medical reasons</option>
+                      <option value="Other">Other reason</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-on-surface mb-1">
+                      Additional Remarks / Notes
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Optional notes..."
+                      value={withdrawalNotes}
+                      onChange={(e) => setWithdrawalNotes(e.target.value)}
+                      className="w-full px-2.5 py-1.5 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="text-on-surface-variant space-y-1 text-xs">
+                    <p className="font-medium text-on-surface">When this learner is deleted:</p>
+                    <ul className="space-y-0.5 list-disc list-inside text-[11px]">
+                      <li>Record will be placed in the dedicated <strong className="text-on-surface">deleted_students</strong> table.</li>
+                      <li>Everything linked (invoices, payments, CBE assessments, attendance) preserved in archive.</li>
+                      <li>Guardians safely unlinked without deleting dual-role accounts.</li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-on-surface mb-1">
+                      Reason for Deletion (Archive Table):
+                    </label>
+                    <input
+                      type="text"
+                      value={deleteReason}
+                      onChange={(e) => setDeleteReason(e.target.value)}
+                      placeholder="e.g. Transferred to another school, Relocated..."
+                      className="w-full px-3 py-2 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-outline-variant/20">
                 <button
                   type="button"
                   onClick={() => setStudentToDelete(null)}
@@ -695,14 +838,20 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={confirmDeleteStudent}
+                  onClick={exitActionType === 'withdraw' ? confirmWithdrawStudent : confirmDeleteStudent}
                   disabled={isDeleting}
                   className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#7a1228] hover:bg-[#600e1f] text-white rounded-xl text-xs font-semibold shadow-xs cursor-pointer disabled:opacity-50"
                 >
                   <span className={`material-symbols-outlined text-[16px] ${isDeleting ? 'animate-spin' : ''}`}>
-                    {isDeleting ? 'progress_activity' : 'archive'}
+                    {isDeleting ? 'progress_activity' : exitActionType === 'withdraw' ? 'person_remove' : 'archive'}
                   </span>
-                  <span>{isDeleting ? 'Archiving & Deleting...' : 'Archive & Delete'}</span>
+                  <span>
+                    {isDeleting
+                      ? 'Processing...'
+                      : exitActionType === 'withdraw'
+                      ? 'Confirm Formal Withdrawal'
+                      : 'Archive & Delete'}
+                  </span>
                 </button>
               </div>
             </div>

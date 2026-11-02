@@ -345,7 +345,12 @@ export function createApiRouter(container: AppContainer): Router {
   studentRouter.put('/guardian/me', authMiddleware, validateBody(UpdateGuardianProfileSchema), studentController.updateGuardianProfile);
   studentRouter.get('/deleted', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN), studentController.getDeletedStudents);
   studentRouter.get('/deleted/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN), studentController.getDeletedStudentById);
+  studentRouter.get('/deleted/:id/completeness', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN), studentController.getArchiveCompletenessReport);
   studentRouter.post('/deleted/:id/restore', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN), studentController.restoreStudent);
+  studentRouter.post('/deleted/:id/permanent-delete', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN), studentController.permanentDeleteStudent);
+  studentRouter.post('/:id/withdraw', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), studentController.withdrawStudent);
+  studentRouter.post('/:id/suspend', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), studentController.suspendStudent);
+  studentRouter.post('/:id/reactivate', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), studentController.reactivateStudent);
   studentRouter.get('/', authMiddleware, studentController.listStudents);
   studentRouter.get('/:id', authMiddleware, studentController.getStudentById);
   studentRouter.put(
@@ -840,6 +845,46 @@ export function createApiRouter(container: AppContainer): Router {
     authMiddleware,
     requireRoles(UserRole.ADMIN, UserRole.HEAD_TEACHER, UserRole.BURSAR),
     lunchFeeController.recordPayment
+  );
+
+  // Record daily lunch payment against individual learner
+  lunchRouter.post(
+    '/payments/daily',
+    authMiddleware,
+    requireRoles(UserRole.ADMIN, UserRole.HEAD_TEACHER, UserRole.BURSAR),
+    lunchFeeController.recordDailyPayment
+  );
+
+  // Reverse lunch payment
+  lunchRouter.post(
+    '/payments/:id/reverse',
+    authMiddleware,
+    requireRoles(UserRole.ADMIN, UserRole.HEAD_TEACHER, UserRole.BURSAR),
+    lunchFeeController.reversePayment
+  );
+
+  // Weekly collection report
+  lunchRouter.get(
+    '/reports/weekly',
+    authMiddleware,
+    requireRoles(UserRole.ADMIN, UserRole.HEAD_TEACHER, UserRole.BURSAR),
+    lunchFeeController.getWeeklyCollectionReport
+  );
+
+  // Monthly collection report
+  lunchRouter.get(
+    '/reports/monthly',
+    authMiddleware,
+    requireRoles(UserRole.ADMIN, UserRole.HEAD_TEACHER, UserRole.BURSAR),
+    lunchFeeController.getMonthlyCollectionReport
+  );
+
+  // Lunch dashboard metrics
+  lunchRouter.get(
+    '/dashboard-metrics',
+    authMiddleware,
+    requireRoles(UserRole.ADMIN, UserRole.HEAD_TEACHER, UserRole.BURSAR),
+    lunchFeeController.getLunchDashboardMetrics
   );
 
   // --- Lunch Expense & Catering Fund Accountability (Admins & Head Teacher only) ---

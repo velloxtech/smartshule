@@ -100,12 +100,48 @@ export class InMemoryLunchFeeRepository implements ILunchFeeRepository {
     return payment;
   }
 
-  async findPayments(enrollmentId?: string, studentId?: string): Promise<LunchPayment[]> {
+  async updatePayment(payment: LunchPayment): Promise<LunchPayment> {
+    this.payments.set(payment.id, payment);
+    return payment;
+  }
+
+  async findPaymentById(id: string): Promise<LunchPayment | null> {
+    return this.payments.get(id) || null;
+  }
+
+  async findByIdempotencyKey(key: string): Promise<LunchPayment | null> {
+    for (const p of this.payments.values()) {
+      if (p.idempotencyKey === key && !p.isReversed) {
+        return p;
+      }
+    }
+    return null;
+  }
+
+  async findByTransactionReference(schoolId: string, reference: string): Promise<LunchPayment | null> {
+    if (!reference || reference.trim() === '') return null;
+    const ref = reference.trim();
+    for (const p of this.payments.values()) {
+      if (p.schoolId === schoolId && p.transactionReference === ref && !p.isReversed) {
+        return p;
+      }
+    }
+    return null;
+  }
+
+  async findPayments(
+    enrollmentId?: string,
+    studentId?: string,
+    filters?: { startDate?: string; endDate?: string; includeReversed?: boolean }
+  ): Promise<LunchPayment[]> {
     return Array.from(this.payments.values()).filter(p => {
       if (enrollmentId && p.lunchEnrollmentId !== enrollmentId) return false;
       if (studentId && p.studentId !== studentId) return false;
+      if (filters?.startDate && p.paymentDate < filters.startDate) return false;
+      if (filters?.endDate && p.paymentDate > filters.endDate) return false;
+      if (!filters?.includeReversed && p.isReversed) return false;
       return true;
-    });
+    }).sort((a, b) => (b.paymentDate || '').localeCompare(a.paymentDate || ''));
   }
 
   // --- Expenses (Money Out) ---

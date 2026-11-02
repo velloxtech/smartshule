@@ -65,7 +65,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
     setError(null);
     setSuccess(null);
 
-    if (!currentPassword.trim()) {
+    if (!isForced && !currentPassword.trim()) {
       setError('Please enter your current password.');
       return;
     }
@@ -80,17 +80,22 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
       return;
     }
 
-    if (currentPassword === newPassword) {
+    if (!isForced && currentPassword === newPassword) {
       setError('New password must be different from your current password.');
       return;
     }
 
     setLoading(true);
     try {
-      const res = await apiService.changePassword({
-        currentPassword: currentPassword.trim(),
+      const payload: any = {
         newPassword: newPassword.trim(),
-      });
+        confirmPassword: confirmPassword.trim()
+      };
+      if (!isForced && currentPassword.trim()) {
+        payload.currentPassword = currentPassword.trim();
+      }
+
+      const res = await apiService.changePassword(payload);
 
       if (res.success) {
         setSuccess('Your password has been changed successfully!');
@@ -170,34 +175,36 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
             </div>
           )}
 
-          {/* Current Password */}
-          <div>
-            <label className="block font-bold text-on-surface-variant mb-1 uppercase text-[10px] tracking-wider">
-              {isForced ? 'Default ID Password' : 'Current Password'} <span className="text-error">*</span>
-            </label>
-            <div className="relative">
-              <input
-                type={showCurrent ? 'text' : 'password'}
-                required
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder={user?.role === 'PARENT' || user?.role === 'GUARDIAN' ? 'Enter default National ID (e.g. 28475921)...' : 'Enter current password...'}
-                className="w-full bg-surface-container-low border border-outline-variant/60 rounded-lg p-2.5 text-xs text-on-surface focus:outline-primary pr-9"
-              />
-              <button
-                type="button"
-                onClick={() => setShowCurrent(!showCurrent)}
-                className="absolute right-2.5 top-2.5 text-outline hover:text-on-surface cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[16px]">
-                  {showCurrent ? 'visibility_off' : 'visibility'}
-                </span>
-              </button>
+          {/* Current Password - Strictly omitted during forced password change */}
+          {!isForced && (
+            <div>
+              <label className="block font-bold text-on-surface-variant mb-1 uppercase text-[10px] tracking-wider">
+                Current Password <span className="text-error">*</span>
+              </label>
+              <div className="relative">
+                <input
+                  type={showCurrent ? 'text' : 'password'}
+                  required
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Enter current password..."
+                  className="w-full bg-surface-container-low border border-outline-variant/60 rounded-lg p-2.5 text-xs text-on-surface focus:outline-primary pr-9"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCurrent(!showCurrent)}
+                  className="absolute right-2.5 top-2.5 text-outline hover:text-on-surface cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[16px]">
+                    {showCurrent ? 'visibility_off' : 'visibility'}
+                  </span>
+                </button>
+              </div>
+              <p className="text-[10px] text-outline mt-1">
+                Required to verify account ownership.
+              </p>
             </div>
-            <p className="text-[10px] text-outline mt-1">
-              {isForced ? 'Enter the National ID or default password you just used to log in.' : 'Required to verify account ownership.'}
-            </p>
-          </div>
+          )}
 
           {/* New Password */}
           <div>

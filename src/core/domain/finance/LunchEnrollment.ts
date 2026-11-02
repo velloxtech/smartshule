@@ -13,6 +13,8 @@ export enum LunchPaymentStatus {
   UNPAID = 'UNPAID'
 }
 
+export type LunchPaymentFrequency = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'TERMLY';
+
 export interface LunchPayment {
   id: string;
   lunchEnrollmentId: string;
@@ -26,6 +28,11 @@ export interface LunchPayment {
   recordedByUserId?: string;
   notes?: string;
   createdAt: Date;
+  isReversed?: boolean;
+  reversedAt?: Date | string;
+  reversedByUserId?: string;
+  reversalReason?: string;
+  idempotencyKey?: string;
 }
 
 export interface LunchEnrollmentProps {
@@ -34,6 +41,8 @@ export interface LunchEnrollmentProps {
   academicYearId?: string;
   termId?: string;
   planName: string; // e.g. "Standard Hot Lunch", "Special Diet", "Vegetarian"
+  paymentFrequency?: LunchPaymentFrequency;
+  dailyRate?: number;
   amount: number;
   amountPaid: number;
   balance: number;
@@ -106,6 +115,14 @@ export class LunchEnrollment extends Entity<LunchEnrollmentProps> {
     return this._props.planName;
   }
 
+  public get paymentFrequency(): LunchPaymentFrequency {
+    return this._props.paymentFrequency || 'TERMLY';
+  }
+
+  public get dailyRate(): number {
+    return this._props.dailyRate || 0;
+  }
+
   public get amount(): number {
     return this._props.amount;
   }
@@ -167,8 +184,41 @@ export class LunchEnrollment extends Entity<LunchEnrollmentProps> {
     this.touch();
   }
 
+  public reversePayment(paymentId: string, reversedByUserId: string, reason: string): LunchPayment | null {
+    if (!this._props.payments) {
+      this._props.payments = [];
+    }
+    const payment = this._props.payments.find(p => p.id === paymentId);
+    if (!payment) return null;
+    if (payment.isReversed) return payment;
+
+    payment.isReversed = true;
+    payment.reversedAt = new Date();
+    payment.reversedByUserId = reversedByUserId;
+    payment.reversalReason = reason;
+
+    // Deduct reversed payment from amountPaid
+    const cleanPay = Math.round((Number(payment.amount) || 0) * 100) / 100;
+    this._props.amountPaid = Math.max(0, Math.round((this._props.amountPaid - cleanPay) * 100) / 100);
+    const rawBalance = this._props.amount - this._props.amountPaid;
+    this._props.balance = rawBalance <= 0.001 ? 0 : Math.round(rawBalance * 100) / 100;
+
+    if (this._props.balance === 0 && this._props.amount > 0) {
+      this._props.paymentStatus = LunchPaymentStatus.PAID;
+    } else if (this._props.amountPaid > 0) {
+      this._props.paymentStatus = LunchPaymentStatus.PARTIAL;
+    } else {
+      this._props.paymentStatus = LunchPaymentStatus.UNPAID;
+    }
+
+    this.touch();
+    return payment;
+  }
+
   public updateDetails(updates: {
     planName?: string;
+    paymentFrequency?: LunchPaymentFrequency;
+    dailyRate?: number;
     amount?: number;
     dietaryNotes?: string;
     status?: LunchEnrollmentStatus;
@@ -176,6 +226,12 @@ export class LunchEnrollment extends Entity<LunchEnrollmentProps> {
   }): void {
     if (updates.planName !== undefined) {
       this._props.planName = updates.planName;
+    }
+    if (updates.paymentFrequency !== undefined) {
+      this._props.paymentFrequency = updates.paymentFrequency;
+    }
+    if (updates.dailyRate !== undefined) {
+      this._props.dailyRate = updates.dailyRate;
     }
     if (updates.dietaryNotes !== undefined) {
       this._props.dietaryNotes = updates.dietaryNotes;
@@ -208,6 +264,8 @@ export class LunchEnrollment extends Entity<LunchEnrollmentProps> {
       academicYearId: this.academicYearId,
       termId: this.termId,
       planName: this.planName,
+      paymentFrequency: this.paymentFrequency,
+      dailyRate: this.dailyRate,
       amount: this.amount,
       amountPaid: this.amountPaid,
       balance: this.balance,

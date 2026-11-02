@@ -290,6 +290,7 @@ export class StudentController {
         message: 'Student deleted successfully and archived with all linked records. All pending work was cleared.',
         data: {
           deletedStudent: result.deletedStudent.toJSON(),
+          deletedStudentId: result.deletedStudent.id,
           pendingWorkCleared: result.pendingWorkCleared
         }
       });
@@ -339,6 +340,83 @@ export class StudentController {
         success: true,
         message: `Student '${restored.fullName}' restored successfully.`,
         data: restored.toJSON()
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public withdrawStudent = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const user = (req as any).user;
+      const result = await this.studentUseCases.withdrawStudent(
+        req.params.id as string,
+        {
+          withdrawalDate: req.body.withdrawalDate,
+          reason: req.body.reason,
+          destinationSchool: req.body.destinationSchool,
+          notes: req.body.notes
+        },
+        user
+      );
+      return res.status(200).json({
+        success: true,
+        message: result.message,
+        data: result
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public suspendStudent = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const user = (req as any).user;
+      const result = await this.studentUseCases.suspendStudent(req.params.id as string, req.body.reason, user);
+      return res.status(200).json({
+        success: true,
+        message: result.message,
+        data: result
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public reactivateStudent = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const user = (req as any).user;
+      const result = await this.studentUseCases.reactivateStudent(req.params.id as string, user);
+      return res.status(200).json({
+        success: true,
+        message: result.message,
+        data: result
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public permanentDeleteStudent = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const user = (req as any).user;
+      const result = await this.studentUseCases.permanentDeleteStudent(req.params.id as string, user);
+      return res.status(200).json({
+        success: true,
+        message: result.message,
+        data: result
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public getArchiveCompletenessReport = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const report = await this.studentUseCases.getArchiveCompletenessReport(req.params.id as string);
+      return res.status(200).json({
+        success: true,
+        data: report
       });
     } catch (err) {
       next(err);

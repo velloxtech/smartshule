@@ -26,6 +26,9 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
   const [selectedRecord, setSelectedRecord] = useState<DeletedStudentRecord | null>(null);
   const [restoringId, setRestoringId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [completenessData, setCompletenessData] = useState<any | null>(null);
+  const [checkingCompleteness, setCheckingCompleteness] = useState(false);
+  const [isPermanentDeleting, setIsPermanentDeleting] = useState(false);
 
   const roleBadge = getRoleBadgeStyle(currentUser?.role);
 
@@ -90,6 +93,48 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
       showToast('error', err.message || 'Error occurred during account restoration');
     } finally {
       setRestoringId(null);
+    }
+  };
+
+  const handleVerifyCompleteness = async (record: DeletedStudentRecord) => {
+    setCheckingCompleteness(true);
+    try {
+      const res = await apiService.getArchiveCompletenessReport(record.id);
+      if (res.success && res.data) {
+        setCompletenessData(res.data);
+      } else {
+        showToast('error', res.message || 'Failed to verify archive completeness');
+      }
+    } catch (err: any) {
+      showToast('error', err.message || 'Error checking archive completeness');
+    } finally {
+      setCheckingCompleteness(false);
+    }
+  };
+
+  const handlePermanentDelete = async (record: DeletedStudentRecord) => {
+    if (
+      !window.confirm(
+        `PERMANENT PURGE WARNING: You are attempting to permanently delete ${record.fullName} (Adm: ${record.admissionNumber}). This action cannot be undone. System retention rules require data to be kept for at least ${record.retentionPolicyYears || 7} years. Proceed with check?`
+      )
+    ) {
+      return;
+    }
+
+    setIsPermanentDeleting(true);
+    try {
+      const res = await apiService.permanentDeleteStudent(record.id);
+      if (res.success) {
+        showToast('success', res.message || 'Record permanently deleted.');
+        if (selectedRecord?.id === record.id) setSelectedRecord(null);
+        await fetchArchivedRecords();
+      } else {
+        showToast('error', res.message || 'Failed to permanently delete record');
+      }
+    } catch (err: any) {
+      showToast('error', err.message || 'Deletion blocked: Retention period has not expired');
+    } finally {
+      setIsPermanentDeleting(false);
     }
   };
 
@@ -1181,12 +1226,55 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
                       {selectedRecord.deletedBy || 'System Admin'}
                     </span>
                   </div>
+                  <div>
+                    <span className="text-[10px] text-slate-500 block uppercase">Retention Policy</span>
+                    <span className="font-bold text-slate-900">
+                      {selectedRecord.retentionPolicyYears || 7} Years (Legal Archive)
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-500 block uppercase">Retention Expiration</span>
+                    <span className="font-mono text-slate-900 font-semibold">
+                      {selectedRecord.retentionExpiresAt
+                        ? new Date(selectedRecord.retentionExpiresAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                        : 'Active Retention Gate'}
+                    </span>
+                  </div>
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-500 block uppercase">Deletion Reason</span>
                   <p className="text-slate-800 italic mt-0.5">{selectedRecord.reason || 'None specified'}</p>
                 </div>
               </div>
+
+              {/* 12-Domain Completeness Report Card if generated */}
+              {completenessData && (
+                <div className="p-4 rounded-xl bg-indigo-50 border border-indigo-200 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-bold text-indigo-950 uppercase text-[11px] tracking-wider flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[16px] text-indigo-700">verified</span>
+                      <span>12-Domain Archive Completeness: {completenessData.completenessScore}%</span>
+                    </h4>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      completenessData.isComplete
+                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                        : 'bg-amber-100 text-amber-800 border border-amber-300'
+                    }`}>
+                      {completenessData.isComplete ? '100% Verified' : 'Partial Snapshot'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {completenessData.domainChecks?.map((dc: any, idx: number) => (
+                      <div key={idx} className="p-2 rounded-lg bg-white/80 border border-indigo-100 flex items-center justify-between">
+                        <span className="text-[11px] font-semibold text-slate-800 truncate mr-1">{dc.domain}</span>
+                        <span className={`material-symbols-outlined text-[15px] ${dc.captured ? 'text-emerald-600' : 'text-slate-400'}`}>
+                          {dc.captured ? 'check_circle' : 'remove_circle_outline'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Linked Guardians */}
               <div className="space-y-3">
@@ -1266,14 +1354,41 @@ export const StandaloneArchivedRecordsPage: React.FC<StandaloneArchivedRecordsPa
             </div>
 
             {/* Drawer Footer Actions */}
-            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3 shrink-0">
-              <button
-                type="button"
-                onClick={() => setSelectedRecord(null)}
-                className="px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-bold transition-all cursor-pointer"
-              >
-                Close Drawer
-              </button>
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2 shrink-0">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedRecord(null)}
+                  className="px-3.5 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-bold transition-all cursor-pointer"
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleVerifyCompleteness(selectedRecord)}
+                  disabled={checkingCompleteness}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
+                  title="Verify 12-domain preservation completeness"
+                >
+                  <span className={`material-symbols-outlined text-[16px] ${checkingCompleteness ? 'animate-spin' : ''}`}>
+                    {checkingCompleteness ? 'sync' : 'verified'}
+                  </span>
+                  <span>Verify 12 Domains</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePermanentDelete(selectedRecord)}
+                  disabled={isPermanentDeleting}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
+                  title="Permanently purge record (Subject to retention verification)"
+                >
+                  <span className={`material-symbols-outlined text-[16px] ${isPermanentDeleting ? 'animate-spin' : ''}`}>
+                    {isPermanentDeleting ? 'progress_activity' : 'delete_forever'}
+                  </span>
+                  <span>Permanent Purge</span>
+                </button>
+              </div>
+
               <button
                 type="button"
                 onClick={() => handleRestore(selectedRecord)}

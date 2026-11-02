@@ -386,7 +386,7 @@ const coreApiService = {
     return apiFetch<ApiResponse<AuthUser>>('/auth/profile');
   },
 
-  changePassword: async (data: { currentPassword: string; newPassword: string }): Promise<ApiResponse<any>> => {
+  changePassword: async (data: { currentPassword?: string; newPassword: string; confirmPassword?: string }): Promise<ApiResponse<any>> => {
     return apiFetch<ApiResponse<any>>('/auth/change-password', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -862,6 +862,44 @@ const coreApiService = {
     return apiFetch<ApiResponse<any>>(`/students/deleted/${id}/restore`, {
       method: 'POST',
     });
+  },
+
+  withdrawStudent: async (
+    id: string,
+    data: {
+      withdrawalDate?: string;
+      reason?: string;
+      destinationSchool?: string;
+      notes?: string;
+    }
+  ): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/students/${id}/withdraw`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  suspendStudent: async (id: string, reason?: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/students/${id}/suspend`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  },
+
+  reactivateStudent: async (id: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/students/${id}/reactivate`, {
+      method: 'POST',
+    });
+  },
+
+  permanentDeleteStudent: async (id: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/students/deleted/${id}/permanent-delete`, {
+      method: 'POST',
+    });
+  },
+
+  getArchiveCompletenessReport: async (id: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/students/deleted/${id}/completeness`);
   },
 
   promoteStudent: async (
@@ -2711,6 +2749,61 @@ const coreApiService = {
       method: 'POST',
       body: JSON.stringify(data),
     });
+  },
+
+  recordDailyLunchPayment: async (data: {
+    studentId: string;
+    schoolId?: string;
+    academicYearId?: string;
+    termId?: string;
+    amount: number;
+    paymentDate: string;
+    paymentMethod: string;
+    transactionReference?: string;
+    idempotencyKey?: string;
+    notes?: string;
+    recordedByStaffName?: string;
+  }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/lunch/payments/daily', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  reverseLunchPayment: async (
+    paymentId: string,
+    data: { reason: string }
+  ): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/lunch/payments/${paymentId}/reverse`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  getWeeklyLunchReport: async (params?: {
+    startDate?: string;
+    endDate?: string;
+  }): Promise<ApiResponse<LunchWeeklyCollectionReport>> => {
+    const query = new URLSearchParams();
+    if (params?.startDate) query.append('startDate', params.startDate);
+    if (params?.endDate) query.append('endDate', params.endDate);
+    const qs = query.toString() ? `?${query.toString()}` : '';
+    return apiFetch<ApiResponse<LunchWeeklyCollectionReport>>(`/lunch/reports/weekly${qs}`);
+  },
+
+  getMonthlyLunchReport: async (params?: {
+    year?: number;
+    month?: number;
+  }): Promise<ApiResponse<LunchMonthlyCollectionReport>> => {
+    const query = new URLSearchParams();
+    if (params?.year) query.append('year', String(params.year));
+    if (params?.month) query.append('month', String(params.month));
+    const qs = query.toString() ? `?${query.toString()}` : '';
+    return apiFetch<ApiResponse<LunchMonthlyCollectionReport>>(`/lunch/reports/monthly${qs}`);
+  },
+
+  getLunchDashboardMetrics: async (): Promise<ApiResponse<LunchDashboardMetrics>> => {
+    return apiFetch<ApiResponse<LunchDashboardMetrics>>('/lunch/dashboard-metrics');
   },
 
   getLunchSummary: async (params?: {
