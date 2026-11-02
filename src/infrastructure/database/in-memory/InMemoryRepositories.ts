@@ -147,6 +147,7 @@ export class InMemoryStudentRepository implements IStudentRepository {
     let result = Array.from(this.students.values());
     if (filters?.schoolId) result = result.filter(s => s.schoolId === filters.schoolId);
     if (filters?.gradeLevel) result = result.filter(s => s.gradeLevel === filters.gradeLevel);
+    if (filters?.classroomId) result = result.filter(s => s.classroomId === filters.classroomId);
     if (filters?.streamId) result = result.filter(s => s.streamId === filters.streamId);
     if (filters?.academicYearId) result = result.filter(s => s.academicYearId === filters.academicYearId);
     if (filters?.search) {
@@ -483,13 +484,46 @@ export class InMemoryCBCAssessmentRepository implements ICBCAssessmentRepository
 
   // Strands
   public async findStrandById(id: string): Promise<Strand | null> {
-    return this.strands.get(id) || null;
+    const direct = this.strands.get(id);
+    if (direct) return direct;
+    return Array.from(this.strands.values()).find(s => s.code === id) || null;
   }
 
   public async findStrandsByLearningArea(learningAreaId: string, gradeLevel?: CBCGradeLevel): Promise<Strand[]> {
-    return Array.from(this.strands.values()).filter(
-      s => s.learningAreaId === learningAreaId && (!gradeLevel || s.gradeLevel === gradeLevel)
+    const normGrade = gradeLevel 
+      ? gradeLevel.toString().trim().toUpperCase().replace(/[\s-]+/g, '_').replace(/^GRADE_/, '')
+      : null;
+
+    const allStrands = Array.from(this.strands.values());
+    const areaStrands = allStrands.filter(s => 
+      s.learningAreaId === learningAreaId || 
+      s.code.startsWith(learningAreaId) ||
+      (learningAreaId.includes('math') && s.code.startsWith('MAT')) ||
+      (learningAreaId.includes('mat') && s.code.startsWith('MAT'))
     );
+
+    let candidates = areaStrands.length > 0 ? areaStrands : allStrands;
+
+    if (normGrade) {
+      const gradeFiltered = candidates.filter(s => {
+        if (!s.gradeLevel) return true;
+        const sg = s.gradeLevel.toString().trim().toUpperCase().replace(/[\s-]+/g, '_').replace(/^GRADE_/, '');
+        return sg === normGrade;
+      });
+      if (gradeFiltered.length > 0) {
+        candidates = gradeFiltered;
+      }
+    }
+
+    const seen = new Set<string>();
+    const result: Strand[] = [];
+    for (const s of candidates) {
+      const k = (s.title || '').trim().toLowerCase();
+      if (!k || seen.has(k)) continue;
+      seen.add(k);
+      result.push(s);
+    }
+    return result;
   }
 
   public async saveStrand(strand: Strand): Promise<void> {
@@ -505,11 +539,21 @@ export class InMemoryCBCAssessmentRepository implements ICBCAssessmentRepository
 
   // SubStrands
   public async findSubStrandById(id: string): Promise<SubStrand | null> {
-    return this.subStrands.get(id) || null;
+    const direct = this.subStrands.get(id);
+    if (direct) return direct;
+    return Array.from(this.subStrands.values()).find(s => s.code === id) || null;
   }
 
   public async findSubStrandsByStrand(strandId: string): Promise<SubStrand[]> {
-    return Array.from(this.subStrands.values()).filter(s => s.strandId === strandId);
+    const allSubs = Array.from(this.subStrands.values());
+    const directSubs = allSubs.filter(s => s.strandId === strandId);
+    if (directSubs.length > 0) return directSubs;
+
+    const strand = await this.findStrandById(strandId);
+    if (strand) {
+      return allSubs.filter(s => s.strandId === strand.id);
+    }
+    return [];
   }
 
   public async saveSubStrand(subStrand: SubStrand): Promise<void> {
@@ -802,6 +846,7 @@ export class InMemoryAttendanceRepository implements IAttendanceRepository {
     if (filters.streamId) result = result.filter(r => r.streamId === filters.streamId);
     if (filters.termId) result = result.filter(r => r.termId === filters.termId);
     if (filters.academicYearId) result = result.filter(r => r.academicYearId === filters.academicYearId);
+    if (filters.date) result = result.filter(r => r.date === filters.date);
     if (filters.type) result = result.filter(r => r.type === filters.type);
     if (filters.startDate) result = result.filter(r => r.date >= filters.startDate!);
     if (filters.endDate) result = result.filter(r => r.date <= filters.endDate!);

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Student, CBCRubric, LearningArea, AssessmentRecord, BackendStrand, BackendSubStrand } from '../../types';
 import { apiService } from '../../services/api';
+import { matchGradeLevels } from '../../utils/formatters';
 
 interface CBCFormativeModalProps {
   isOpen: boolean;
@@ -35,10 +36,14 @@ export const CBCFormativeModal: React.FC<CBCFormativeModalProps> = ({
   const [strands, setStrands] = useState<BackendStrand[]>([]);
   const [strandId, setStrandId] = useState('');
   const [strandTitle, setStrandTitle] = useState('');
+  const [isCustomStrand, setIsCustomStrand] = useState(false);
+  const [customStrandTitle, setCustomStrandTitle] = useState('');
   
   const [subStrands, setSubStrands] = useState<BackendSubStrand[]>([]);
   const [subStrandId, setSubStrandId] = useState('');
   const [subStrandTitle, setSubStrandTitle] = useState('');
+  const [isCustomSubStrand, setIsCustomSubStrand] = useState(false);
+  const [customSubStrandTitle, setCustomSubStrandTitle] = useState('');
   
   const [loadingStrands, setLoadingStrands] = useState(false);
   const [rating, setRating] = useState<CBCRubric>('ME');
@@ -59,7 +64,7 @@ export const CBCFormativeModal: React.FC<CBCFormativeModalProps> = ({
     }
   }, [availableLearningAreas, learningAreaId]);
 
-  // SMART DB FETCHING: Fetch only Strands belonging to the Global Subject AND the Learner's Grade
+  // SMART DB FETCHING: Fetch and match Strands by Grade and Learning Area
   useEffect(() => {
     if (!isOpen || !learningAreaId) {
       setStrands([]);
@@ -69,53 +74,87 @@ export const CBCFormativeModal: React.FC<CBCFormativeModalProps> = ({
     }
 
     setLoadingStrands(true);
-    // Notice we are passing the studentGradeFormat as the second parameter here!
     apiService.getStrandsByLearningArea(learningAreaId, studentGradeFormat)
       .then(res => {
         if (res.success && res.data && res.data.length > 0) {
-          setStrands(res.data);
-          setStrandId(res.data[0].id);
-          setStrandTitle(res.data[0].title);
+          const matchingStrands = res.data.filter(s => !s.gradeLevel || matchGradeLevels(s.gradeLevel, studentGradeFormat));
+          const effectiveStrands = matchingStrands.length > 0 ? matchingStrands : res.data;
+
+          const seen = new Set<string>();
+          const uniqueStrands: BackendStrand[] = [];
+          for (const s of effectiveStrands) {
+            const k = (s.title || '').trim().toLowerCase();
+            if (!k || seen.has(k)) continue;
+            seen.add(k);
+            uniqueStrands.push(s);
+          }
+          setStrands(uniqueStrands);
+          
+          if (uniqueStrands.length > 0) {
+            setStrandId(uniqueStrands[0].id);
+            setStrandTitle(uniqueStrands[0].title);
+            setIsCustomStrand(false);
+          } else {
+            setIsCustomStrand(true);
+          }
         } else {
           setStrands([]);
           setStrandId('');
           setStrandTitle('');
+          setIsCustomStrand(true);
         }
       })
       .catch(() => {
         setStrands([]);
         setStrandId('');
         setStrandTitle('');
+        setIsCustomStrand(true);
       })
       .finally(() => setLoadingStrands(false));
   }, [learningAreaId, studentGradeFormat, isOpen]);
 
   useEffect(() => {
-    if (!strandId || !isOpen) {
+    if (!strandId || !isOpen || isCustomStrand) {
       setSubStrands([]);
       setSubStrandId('');
       setSubStrandTitle('');
+      if (isCustomStrand) setIsCustomSubStrand(true);
       return;
     }
 
     apiService.getSubStrandsByStrand(strandId)
       .then(res => {
         if (res.success && res.data && res.data.length > 0) {
-          setSubStrands(res.data);
-          setSubStrandId(res.data[0].id);
-          setSubStrandTitle(res.data[0].title);
+          const seen = new Set<string>();
+          const uniqueSubs: BackendSubStrand[] = [];
+          for (const sub of res.data) {
+            const sk = (sub.title || '').trim().toLowerCase();
+            if (!sk || seen.has(sk)) continue;
+            seen.add(sk);
+            uniqueSubs.push(sub);
+          }
+          setSubStrands(uniqueSubs);
+          if (uniqueSubs.length > 0) {
+            setSubStrandId(uniqueSubs[0].id);
+            setSubStrandTitle(uniqueSubs[0].title);
+            setIsCustomSubStrand(false);
+          } else {
+            setIsCustomSubStrand(true);
+          }
         } else {
           setSubStrands([]);
           setSubStrandId('');
           setSubStrandTitle('');
+          setIsCustomSubStrand(true);
         }
       })
       .catch(() => {
         setSubStrands([]);
         setSubStrandId('');
         setSubStrandTitle('');
+        setIsCustomSubStrand(true);
       });
-  }, [strandId, isOpen]);
+  }, [strandId, isOpen, isCustomStrand]);
 
   if (!isOpen) return null;
 
@@ -124,6 +163,28 @@ export const CBCFormativeModal: React.FC<CBCFormativeModalProps> = ({
     if (!currentStudent) return;
 
     const selectedLa = availableLearningAreas.find(la => la.id === learningAreaId);
+    const finalStrand = (isCustomStrand || strands.length === 0 ? customStrandTitle : strandTitle) || strands.find(s => s.id === strandId)?.title || customStrandTitle;
+    const finalSubStrand = (isCustomSubStrand || isCustomStrand || subStrands.length === 0 ? customSubStrandTitle : subStrandTitle) || subStrands.find(s => s.id === subStrandId)?.title || customSubStrandTitle;
+
+    // Auto-persist custom strand/sub-strand to database if entered on the fly
+    if (isCustomStrand || strands.length === 0) {
+      const grade = studentGradeFormat || 'GRADE_7';
+      apiService.createStrand({
+        learningAreaId: learningAreaId,
+        gradeLevel: grade as any,
+        code: `STR-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
+        title: finalStrand.trim(),
+      }).then(res => {
+        if (res.success && res.data && finalSubStrand) {
+          apiService.createSubStrand({
+            strandId: res.data.id,
+            code: `${res.data.code}.1`,
+            title: finalSubStrand.trim(),
+            specificLearningOutcomes: ['Demonstrates expected competency level']
+          }).catch(() => {});
+        }
+      }).catch(() => {});
+    }
 
     const recordPayload = {
       studentId: currentStudent.id,
@@ -132,16 +193,16 @@ export const CBCFormativeModal: React.FC<CBCFormativeModalProps> = ({
       grade: currentStudent.grade,
       learningAreaId: learningAreaId,
       learningArea: selectedLa?.name || 'Subject',
-      strandId: strandId,
-      strand: strandTitle || strandId,
-      subStrandId: subStrandId,
-      subStrand: subStrandTitle || subStrandId,
+      strandId: isCustomStrand ? undefined : strandId,
+      strand: finalStrand.trim(),
+      subStrandId: isCustomSubStrand ? undefined : subStrandId,
+      subStrand: finalSubStrand.trim(),
       rating,
       evidence: evidence || 'Demonstrated expected competency level.',
     };
 
-    if (onSave) onSave(recordPayload);
-    if (onSaveAssessment) onSaveAssessment(recordPayload);
+    if (onSave) onSave(recordPayload as any);
+    if (onSaveAssessment) onSaveAssessment(recordPayload as any);
 
     setSaved(true);
     setTimeout(() => {
@@ -198,25 +259,107 @@ export const CBCFormativeModal: React.FC<CBCFormativeModalProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">Grade-Specific Strand</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold uppercase text-on-surface-variant">Grade-Specific Strand *</label>
+                  {strands.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCustomStrand(!isCustomStrand);
+                        if (!isCustomStrand) {
+                          setCustomStrandTitle(strandTitle || '');
+                        }
+                      }}
+                      className="text-[10px] text-primary hover:underline font-bold"
+                    >
+                      {isCustomStrand ? 'Select From List' : '+ Enter Custom'}
+                    </button>
+                  )}
+                </div>
                 {loadingStrands ? (
                   <div className="p-2.5 text-xs text-on-surface-variant">Loading DB strands...</div>
-                ) : strands.length > 0 ? (
-                  <select value={strandId} onChange={(e) => { setStrandId(e.target.value); setStrandTitle(strands.find(s => s.id === e.target.value)?.title || ''); }} required className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-sm text-on-surface focus:outline-primary cursor-pointer truncate">
-                    {strands.map(st => <option key={st.id} value={st.id}>{st.title}</option>)}
-                  </select>
+                ) : isCustomStrand || strands.length === 0 ? (
+                  <input
+                    type="text"
+                    required
+                    placeholder="Enter strand title..."
+                    value={customStrandTitle}
+                    onChange={(e) => {
+                      setCustomStrandTitle(e.target.value);
+                      setStrandTitle(e.target.value);
+                    }}
+                    className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-sm text-on-surface focus:outline-primary"
+                  />
                 ) : (
-                  <div className="p-2.5 text-xs text-error font-medium bg-error/10 rounded-lg">No Strands for {currentStudent?.grade}</div>
+                  <select
+                    value={strandId}
+                    onChange={(e) => {
+                      if (e.target.value === '__custom__') {
+                        setIsCustomStrand(true);
+                        setCustomStrandTitle('');
+                        setStrandTitle('');
+                      } else {
+                        setStrandId(e.target.value);
+                        setStrandTitle(strands.find(s => s.id === e.target.value)?.title || '');
+                      }
+                    }}
+                    required
+                    className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-sm text-on-surface focus:outline-primary cursor-pointer truncate"
+                  >
+                    {strands.map(st => <option key={st.id} value={st.id}>{st.title}</option>)}
+                    <option value="__custom__">+ Enter Custom Strand...</option>
+                  </select>
                 )}
               </div>
               <div>
-                <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">Sub-Strand</label>
-                {subStrands.length > 0 ? (
-                  <select value={subStrandId} onChange={(e) => { setSubStrandId(e.target.value); setSubStrandTitle(subStrands.find(s => s.id === e.target.value)?.title || ''); }} required className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-sm text-on-surface focus:outline-primary cursor-pointer truncate">
-                    {subStrands.map(sub => <option key={sub.id} value={sub.id}>{sub.title}</option>)}
-                  </select>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold uppercase text-on-surface-variant">Sub-Strand *</label>
+                  {subStrands.length > 0 && !isCustomStrand && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCustomSubStrand(!isCustomSubStrand);
+                        if (!isCustomSubStrand) {
+                          setCustomSubStrandTitle(subStrandTitle || '');
+                        }
+                      }}
+                      className="text-[10px] text-primary hover:underline font-bold"
+                    >
+                      {isCustomSubStrand ? 'Select From List' : '+ Enter Custom'}
+                    </button>
+                  )}
+                </div>
+                {isCustomSubStrand || isCustomStrand || subStrands.length === 0 ? (
+                  <input
+                    type="text"
+                    required
+                    placeholder="Enter sub-strand title..."
+                    value={customSubStrandTitle}
+                    onChange={(e) => {
+                      setCustomSubStrandTitle(e.target.value);
+                      setSubStrandTitle(e.target.value);
+                    }}
+                    className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-sm text-on-surface focus:outline-primary"
+                  />
                 ) : (
-                  <div className="p-2.5 text-xs text-on-surface-variant bg-surface-container-low rounded-lg">-</div>
+                  <select
+                    value={subStrandId}
+                    onChange={(e) => {
+                      if (e.target.value === '__custom__') {
+                        setIsCustomSubStrand(true);
+                        setCustomSubStrandTitle('');
+                        setSubStrandTitle('');
+                      } else {
+                        setSubStrandId(e.target.value);
+                        setSubStrandTitle(subStrands.find(s => s.id === e.target.value)?.title || '');
+                      }
+                    }}
+                    required
+                    className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-sm text-on-surface focus:outline-primary cursor-pointer truncate"
+                  >
+                    {subStrands.map(sub => <option key={sub.id} value={sub.id}>{sub.title}</option>)}
+                    <option value="__custom__">+ Enter Custom Sub-strand...</option>
+                  </select>
                 )}
               </div>
             </div>
@@ -251,7 +394,7 @@ export const CBCFormativeModal: React.FC<CBCFormativeModalProps> = ({
 
             <div className="pt-3 flex items-center justify-end gap-2 shrink-0 border-t border-outline-variant/20 mt-2">
               <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium hover:bg-surface-container rounded-lg cursor-pointer">Cancel</button>
-              <button type="submit" disabled={strands.length === 0} className="px-5 py-2.5 bg-[#7a1228] text-white text-sm font-semibold rounded-lg hover:bg-[#5e0d1e] shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50">
+              <button type="submit" disabled={!learningAreaId} className="px-5 py-2.5 bg-[#7a1228] text-white text-sm font-semibold rounded-lg hover:bg-[#5e0d1e] shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50">
                 <span className="material-symbols-outlined text-[18px]">save</span>
                 <span>Save CBE Assessment</span>
               </button>

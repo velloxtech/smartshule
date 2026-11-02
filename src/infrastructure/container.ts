@@ -264,7 +264,8 @@ export class AppContainer {
       this.complaintRepository,
       this.ediaryRepository,
       this.mediaRepository,
-      this.studentSponsorshipRepository
+      this.studentSponsorshipRepository,
+      this.teacherRepository
     );
     this.teacherUseCases = new TeacherUseCases(
       this.teacherRepository,
@@ -319,7 +320,9 @@ export class AppContainer {
       this.studentRepository,
       this.guardianRepository,
       this.userRepository,
-      this.notificationService
+      this.notificationService,
+      this.teacherRepository,
+      this.academicRepository
     );
     this.geofenceUseCases = new GeofenceUseCases(
       this.academicRepository,
@@ -355,7 +358,9 @@ export class AppContainer {
       this.userRepository,
       this.signatureRepository,
       this.teacherCorrectionRequestRepository,
-      this.systemLogRepository
+      this.systemLogRepository,
+      this.curriculumTrackerRepository,
+      this.occurrenceRepository
     );
     this.visualMediaUseCases = new VisualMediaUseCases(
       this.mediaRepository,
@@ -417,7 +422,8 @@ export class AppContainer {
     this.broadsheetUseCases = new BroadsheetUseCases(
       this.academicRepository,
       this.studentRepository,
-      this.CBCAssessmentRepository
+      this.CBCAssessmentRepository,
+      this.teacherRepository
     );
     this.occurrenceUseCases = new OccurrenceUseCases(
       this.occurrenceRepository,

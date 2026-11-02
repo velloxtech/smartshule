@@ -31,6 +31,11 @@ export const getSubjectCanonicalKey = (nameOrCodeOrId: string): string => {
   if (!nameOrCodeOrId) return 'OTHER';
   const clean = nameOrCodeOrId.trim().toUpperCase();
 
+  // If already a canonical key
+  if (['LAN', 'ENG', 'MATH', 'KISW', 'ENVI', 'CRE', 'CREA', 'SCI', 'SST', 'AGRI', 'ARTS', 'PRETECH', 'HLTH', 'BUS', 'COMP', 'FRE', 'GER', 'ARA', 'IND', 'REA', 'KUSO'].includes(clean)) {
+    return clean;
+  }
+
   if (
     clean.includes('CREATIVE') ||
     clean.includes('CREA') ||
@@ -67,8 +72,20 @@ export const getSubjectCanonicalKey = (nameOrCodeOrId: string): string => {
 
   if (clean.includes('ENG') || clean.includes('ENGLISH')) return 'ENG';
   if (clean.includes('KISW') || clean.includes('SWAHILI') || clean.includes('KIS')) return 'KISW';
+  if (clean.includes('INDIGENOUS') || clean.includes('IND')) return 'IND';
   if (clean.includes('MATH') || clean.includes('MAT')) return 'MATH';
-  if (clean.includes('RELIGIOUS') || clean.includes('CRE') || clean.includes('IRE') || clean.includes('HRE')) return 'CRE';
+  if (clean.includes('RELIGIOUS') || clean.includes('SPIRITUAL') || clean.includes('CRE') || clean.includes('IRE') || clean.includes('HRE') || clean.includes('SRE')) return 'CRE';
+
+  if (
+    clean.includes('LANGUAGE ACTIVITIES') ||
+    clean.includes('LAN_ACT') ||
+    clean.includes('LANG_ACT') ||
+    /(^|[-_ \b])LAN([-_ \b]|$)/i.test(clean) ||
+    clean.startsWith('LA-PLAYGROUP-LAN') ||
+    (clean.includes('LANGUAGE') && !clean.includes('INDIGENOUS') && !clean.includes('KISWAHILI') && !clean.includes('SWAHILI'))
+  ) {
+    return 'LAN';
+  }
 
   if (clean.includes('INTEGRATED SCIENCE') || clean.includes('INTSCI') || clean.includes('SCI_TECH') || clean.includes('SCIENCE') || clean.includes('SCI')) return 'SCI';
   if (clean.includes('HEALTH') || clean.includes('HLTH')) return 'HLTH';
@@ -80,13 +97,13 @@ export const getSubjectCanonicalKey = (nameOrCodeOrId: string): string => {
   if (clean.includes('FRENCH') || clean.includes('FRE')) return 'FRE';
   if (clean.includes('GERMAN') || clean.includes('GER')) return 'GER';
   if (clean.includes('ARABIC') || clean.includes('ARA')) return 'ARA';
-  if (clean.includes('INDIGENOUS') || clean.includes('IND')) return 'IND';
 
   return clean;
 };
 
 export const getCanonicalInitial = (canonicalKey: string): string => {
   switch (canonicalKey) {
+    case 'LAN': return 'LAN';
     case 'ENG': return 'ENG';
     case 'REA': return 'REA';
     case 'MATH': return 'MAT';
@@ -106,12 +123,17 @@ export const getCanonicalInitial = (canonicalKey: string): string => {
     case 'FRE': return 'FRE';
     case 'GER': return 'GER';
     case 'ARA': return 'ARA';
-    default: return canonicalKey.slice(0, 4);
+    case 'IND': return 'IND';
+    default: {
+      if (/^[0-9a-f]{8}-/i.test(canonicalKey)) return 'SUB';
+      return canonicalKey.slice(0, 4);
+    }
   }
 };
 
 export const getCanonicalName = (canonicalKey: string, fallbackName?: string): string => {
   switch (canonicalKey) {
+    case 'LAN': return 'Language Activities';
     case 'ENG': return 'English Language Activities';
     case 'REA': return 'English Reading Activities';
     case 'MATH': return 'Mathematical Activities';
@@ -131,16 +153,24 @@ export const getCanonicalName = (canonicalKey: string, fallbackName?: string): s
     case 'FRE': return 'French';
     case 'GER': return 'German';
     case 'ARA': return 'Arabic';
-    default: return fallbackName || canonicalKey;
+    case 'IND': return 'Indigenous Language Activities';
+    default: {
+      if (fallbackName && !/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(fallbackName)) {
+        return fallbackName;
+      }
+      return canonicalKey;
+    }
   }
 };
 
 export const getSubjectInitials = (nameOrCode: string): string => {
+  if (!nameOrCode) return 'SUB';
   const key = getSubjectCanonicalKey(nameOrCode);
   return getCanonicalInitial(key);
 };
 
 export const CANONICAL_ORDER = [
+  'LAN',
   'ENG',
   'REA',
   'MATH',
@@ -164,6 +194,7 @@ export const CANONICAL_ORDER = [
 ];
 
 const DEFAULT_CBC_SUBJECTS: BackendLearningArea[] = [
+  { id: 'la-playgroup-lan', code: 'LAN', name: 'Language Activities', gradeLevel: 'PLAYGROUP' } as any,
   { id: 'la-g3-eng', code: 'ENG', name: 'English Language Activities', gradeLevel: 'GRADE_3' } as any,
   { id: 'la-g3-rea', code: 'REA', name: 'English Reading Activities', gradeLevel: 'GRADE_3' } as any,
   { id: 'la-g3-mat', code: 'MAT', name: 'Mathematical Activities', gradeLevel: 'GRADE_3' } as any,
@@ -384,7 +415,7 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
         }
       }
       if (sourceList.length === 0) {
-        sourceList = allLearningAreas.length > 0 ? allLearningAreas : DEFAULT_CBC_SUBJECTS;
+        sourceList = allLearningAreas.length > 0 ? allLearningAreas : [];
       }
     }
 
@@ -427,18 +458,43 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
     });
 
     summatives.forEach((s) => {
-      const key = getSubjectCanonicalKey(s.learningAreaId);
-      if (canonicalMap.has(key)) {
-        canonicalMap.get(key)!.aliasSet.add(s.learningAreaId);
-      } else if (selectedClassId === 'All') {
-        canonicalMap.set(key, {
-          id: key,
-          key,
-          code: getCanonicalInitial(key),
-          name: getCanonicalName(key, s.learningAreaId),
-          initial: getCanonicalInitial(key),
-          aliasSet: new Set([s.learningAreaId, key]),
-        });
+      // 1. Look up learning area in allLearningAreas or sourceList to resolve its actual code/name
+      const laMatch = allLearningAreas.find(
+        (la) => la.id.toLowerCase() === s.learningAreaId.toLowerCase() || (la.code && la.code.toLowerCase() === s.learningAreaId.toLowerCase())
+      ) || sourceList.find(
+        (la) => la.id.toLowerCase() === s.learningAreaId.toLowerCase() || (la.code && la.code.toLowerCase() === s.learningAreaId.toLowerCase())
+      );
+
+      const resolvedKey = laMatch
+        ? getSubjectCanonicalKey(`${laMatch.code || ''} ${laMatch.name || ''} ${laMatch.id || ''}`)
+        : getSubjectCanonicalKey(s.learningAreaId);
+
+      // 2. Check if canonicalMap already has this key OR if any canonical item has this id in its aliasSet
+      let matchedItem = canonicalMap.get(resolvedKey);
+      if (!matchedItem) {
+        matchedItem = Array.from(canonicalMap.values()).find(
+          (c) => c.aliasSet.has(s.learningAreaId) || (laMatch && c.aliasSet.has(laMatch.id))
+        );
+      }
+
+      if (matchedItem) {
+        matchedItem.aliasSet.add(s.learningAreaId);
+        if (laMatch?.id) matchedItem.aliasSet.add(laMatch.id);
+        if (laMatch?.code) matchedItem.aliasSet.add(laMatch.code);
+        if (laMatch?.name) matchedItem.aliasSet.add(laMatch.name);
+      } else {
+        const isRawUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(resolvedKey.trim());
+        // NEVER add a raw unmapped UUID as a subject column!
+        if (!isRawUuid && resolvedKey !== 'OTHER' && !/^[0-9a-f]{8}-/i.test(resolvedKey)) {
+          canonicalMap.set(resolvedKey, {
+            id: laMatch?.id || resolvedKey,
+            key: resolvedKey,
+            code: getCanonicalInitial(resolvedKey),
+            name: getCanonicalName(resolvedKey, laMatch?.name || s.learningAreaId),
+            initial: getCanonicalInitial(resolvedKey),
+            aliasSet: new Set([s.learningAreaId, resolvedKey, laMatch?.id, laMatch?.code, laMatch?.name].filter(Boolean) as string[]),
+          });
+        }
       }
     });
 
@@ -451,7 +507,32 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
       aliasIds: Array.from(c.aliasSet),
     }));
 
-    list.sort((a, b) => {
+    const hasAnyMarks = list.some((item) =>
+      summatives.some(
+        (s) =>
+          item.aliasIds.some((alias) => alias.toLowerCase() === s.learningAreaId.toLowerCase()) &&
+          s.overallPerformanceLevel
+      )
+    );
+
+    const filteredList = hasAnyMarks
+      ? list.filter((item) =>
+          summatives.some(
+            (s) =>
+              item.aliasIds.some((alias) => alias.toLowerCase() === s.learningAreaId.toLowerCase()) &&
+              s.overallPerformanceLevel
+          )
+        )
+      : list;
+
+    filteredList.sort((a, b) => {
+      // Prioritize subjects with marks in summatives!
+      const countA = summatives.filter(s => a.aliasIds.some(alias => alias.toLowerCase() === s.learningAreaId.toLowerCase()) && s.overallPerformanceLevel).length;
+      const countB = summatives.filter(s => b.aliasIds.some(alias => alias.toLowerCase() === s.learningAreaId.toLowerCase()) && s.overallPerformanceLevel).length;
+      if (countA > 0 && countB === 0) return -1;
+      if (countA === 0 && countB > 0) return 1;
+      if (countB !== countA) return countB - countA;
+
       const idxA = CANONICAL_ORDER.indexOf(a.key);
       const idxB = CANONICAL_ORDER.indexOf(b.key);
       const rankA = idxA === -1 ? 999 : idxA;
@@ -459,7 +540,7 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
       return rankA - rankB;
     });
 
-    return list;
+    return filteredList;
   }, [allLearningAreas, selectedClassId, classes, summatives]);
 
   const availableStreams = useMemo(() => {
@@ -518,6 +599,21 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
       const sMap = studentSummativeMap.get(s.studentId)!;
       sMap.set(s.learningAreaId, s);
       sMap.set(s.learningAreaId.toLowerCase(), s);
+
+      const laMatch = allLearningAreas.find(
+        (la) => la.id.toLowerCase() === s.learningAreaId.toLowerCase() || (la.code && la.code.toLowerCase() === s.learningAreaId.toLowerCase())
+      );
+      if (laMatch) {
+        if (laMatch.code) {
+          sMap.set(laMatch.code, s);
+          sMap.set(laMatch.code.toLowerCase(), s);
+        }
+        if (laMatch.name) {
+          sMap.set(laMatch.name.toLowerCase(), s);
+        }
+        const canonKey = getSubjectCanonicalKey(`${laMatch.code || ''} ${laMatch.name || ''} ${laMatch.id || ''}`);
+        sMap.set(canonKey, s);
+      }
 
       const canon = getSubjectCanonicalKey(s.learningAreaId);
       if (!sMap.has(canon)) {
@@ -904,12 +1000,12 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
             <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider block">
               Subjects Tracked
             </span>
-            <div className="text-2xl font-black text-indigo-700 font-data-mono mt-1">
+            <div className="text-2xl font-black text-[#7a1228] font-data-mono mt-1">
               {effectiveSubjects.length}
             </div>
             <span className="text-[10px] text-gray-400">CBE Learning Areas</span>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center justify-center font-bold">
+          <div className="w-10 h-10 rounded-xl bg-rose-50 text-[#7a1228] border border-rose-200 flex items-center justify-center font-bold">
             <span className="material-symbols-outlined text-xl">menu_book</span>
           </div>
         </div>
@@ -1080,8 +1176,8 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
 
                   <th className="py-3 px-2 border text-center w-16 bg-gray-200/60">Total</th>
                   <th className="py-3 px-2 border text-center w-16 bg-gray-200/60">Mean %</th>
-                  <th className="py-3 px-2 border text-center w-14 bg-indigo-50/70 text-indigo-950">GPA</th>
-                  <th className="py-3 px-2 border text-center w-14 bg-indigo-50/70 text-indigo-950">Level</th>
+                  <th className="py-3 px-2 border text-center w-14 bg-rose-50/70 text-[#7a1228] font-black">GPA</th>
+                  <th className="py-3 px-2 border text-center w-14 bg-rose-50/70 text-[#7a1228] font-black">Level</th>
                   <th className="py-3 px-3 border min-w-[170px]">Progress Remarks</th>
                   <th className="py-3 px-2 border text-right w-16 print:hidden">Actions</th>
                 </tr>
@@ -1141,11 +1237,11 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
                       </span>
                     </td>
 
-                    <td className="py-2 px-2 border text-center font-black font-mono text-xs text-indigo-950 bg-indigo-50/20">
+                    <td className="py-2 px-2 border text-center font-black font-mono text-xs text-slate-900 bg-rose-50/20">
                       {row.meanGpa}
                     </td>
 
-                    <td className="py-2 px-2 border text-center bg-indigo-50/20">
+                    <td className="py-2 px-2 border text-center bg-rose-50/20">
                       {getLevelPill(row.overallLevel)}
                     </td>
 

@@ -443,8 +443,8 @@ export const FormativeAssessmentsView: React.FC<FormativeAssessmentsViewProps> =
                     </button>
                   )}
                 </div>
-                <span className="text-[11px] text-secondary font-medium flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[14px]">cloud_done</span> KNEC CBA Ready
+                <span className="text-[11px] text-emerald-800 font-semibold flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[14px]">verified</span> Verified Assessment
                 </span>
               </div>
             </div>

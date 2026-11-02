@@ -59,6 +59,24 @@ export function getMeanGradeFromPoints(meanPoints: number): string {
   return 'BE';
 }
 
+const CANONICAL_ORDER = [
+  'MAT',
+  'ENG',
+  'LIT',
+  'KIS',
+  'SCI',
+  'SOC',
+  'CRE',
+  'CREA',
+  'AGR',
+  'ENV',
+  'PTECH',
+  'HLTH',
+  'BUS',
+  'COMP',
+  'FRE'
+];
+
 const normalizeSubjectCode = (rawCode?: string, rawName?: string): string => {
   const clean = (rawName || rawCode || '').toUpperCase();
   if (clean.includes('CREATIVE') || clean.includes('CREA') || clean.includes('PSYCHOMOTOR') || clean.includes('MUSIC')) return 'CREA';
@@ -228,7 +246,9 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
           (student as any)?.streamId || 'all',
           tId,
           yId,
-          (student as any)?.classroomId || undefined
+          (student as any)?.classroomId || undefined,
+          undefined,
+          (student as any)?.gradeLevel || (student as any)?.grade || undefined
         ).catch(() => null)
       ]);
 
@@ -489,10 +509,11 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
   const daysTotal = (reportCardData as any)?.attendanceDaysTotal ?? reportCardData?.attendanceStats?.totalDays ?? 60;
   const attendanceRate = daysTotal > 0 ? Math.round((daysPresent / daysTotal) * 100) : 100;
 
-  // Resolve subjects with valid codes and peer positions
+  // Resolve subjects with valid codes, peer positions, STRICT deduplication, and priority for subjects with marks
   const resolvedSubjects = useMemo(() => {
+    let rawList: any[] = [];
     if (broadsheetStudentRow && broadsheetStudentRow.subjects && Object.keys(broadsheetStudentRow.subjects).length > 0) {
-      return Object.values(broadsheetStudentRow.subjects).map((sub: any) => {
+      rawList = Object.values(broadsheetStudentRow.subjects).map((sub: any) => {
         const score = typeof sub.numericScore === 'number' ? sub.numericScore : 0;
         const gp = getGradeAndPoints(score, sub.levelLabel || sub.performanceLevel);
         const name = sub.learningAreaName || 'Subject';
@@ -511,43 +532,79 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
           teacherRemarks: gp.remark,
           position: sub.subjectRank ? String(sub.subjectRank) : '--',
           st: code.slice(0, 2).toUpperCase(),
-          isAssessed: sub.levelLabel !== '--',
+          isAssessed: sub.levelLabel !== '--' && score > 0,
         };
       });
+    } else {
+      const rawEvals = reportCardData?.learningAreaAssessments || [];
+      if (rawEvals && rawEvals.length > 0) {
+        rawList = rawEvals.map((ev: any, index: number) => {
+          const rawScore = ev.score !== undefined && ev.score !== null ? Number(ev.score) : null;
+          const score = rawScore !== null
+            ? (rawScore > 0 && rawScore <= 4 ? (rawScore === 4 ? 86 : rawScore === 3 ? 76 : rawScore === 2 ? 58 : 44) : rawScore)
+            : null;
+
+          const gp = getGradeAndPoints(score !== null ? score : 0, ev.levelLabel || ev.performanceLevel);
+          const rawName = ev.learningAreaName || ev.name || '';
+          const name = resolveLearningAreaName(ev.learningAreaId || rawName, rawName) || `Subject ${index + 1}`;
+          const code = normalizeSubjectCode(ev.code || ev.learningAreaId, name);
+
+          return {
+            id: ev.learningAreaId || ev.id || `subj-${index}`,
+            name,
+            short: code,
+            code,
+            score: score !== null ? score : 0,
+            rawScore: score,
+            rubricScore: ev.rubricScore ?? gp.points,
+            rubricCode: gp.grade as any,
+            performanceLevel: ev.performanceLevel || gp.remark,
+            teacherRemarks: ev.teacherRemarks || gp.remark,
+            position: '--',
+            st: code.slice(0, 2).toUpperCase(),
+            isAssessed: score !== null && score > 0,
+          };
+        });
+      }
     }
 
-    const rawEvals = reportCardData?.learningAreaAssessments || [];
-    if (rawEvals && rawEvals.length > 0) {
-      return rawEvals.map((ev: any, index: number) => {
-        const rawScore = ev.score !== undefined && ev.score !== null ? Number(ev.score) : null;
-        const score = rawScore !== null
-          ? (rawScore > 0 && rawScore <= 4 ? (rawScore === 4 ? 86 : rawScore === 3 ? 76 : rawScore === 2 ? 58 : 44) : rawScore)
-          : null;
-
-        const gp = getGradeAndPoints(score !== null ? score : 0, ev.levelLabel || ev.performanceLevel);
-        const rawName = ev.learningAreaName || ev.name || '';
-        const name = resolveLearningAreaName(ev.learningAreaId || rawName, rawName) || `Subject ${index + 1}`;
-        const code = normalizeSubjectCode(ev.code || ev.learningAreaId, name);
-
-        return {
-          id: ev.learningAreaId || ev.id || `subj-${index}`,
-          name,
-          short: code,
-          code,
-          score: score !== null ? score : 0,
-          rawScore: score,
-          rubricScore: ev.rubricScore ?? gp.points,
-          rubricCode: gp.grade as any,
-          performanceLevel: ev.performanceLevel || gp.remark,
-          teacherRemarks: ev.teacherRemarks || gp.remark,
-          position: '--',
-          st: code.slice(0, 2).toUpperCase(),
-          isAssessed: score !== null,
-        };
-      });
+    // STRICT DEDUPLICATION: No duplicates at any cost!
+    const dedupedMap = new Map<string, any>();
+    for (const item of rawList) {
+      const key = item.code || normalizeSubjectCode(item.id, item.name);
+      if (!dedupedMap.has(key)) {
+        dedupedMap.set(key, item);
+      } else {
+        const existing = dedupedMap.get(key);
+        if (item.isAssessed && (!existing.isAssessed || item.score > existing.score)) {
+          dedupedMap.set(key, item);
+        }
+      }
     }
 
-    return [];
+    let dedupedList = Array.from(dedupedMap.values());
+
+    // When the learner has assessed subjects, display only assessed subjects without empty unassessed placeholders
+    const hasAnyAssessed = dedupedList.some((item) => item.isAssessed);
+    if (hasAnyAssessed) {
+      dedupedList = dedupedList.filter((item) => item.isAssessed);
+    }
+
+    // HIGHEST PRIORITY FOR SUBJECTS WITH MARKS
+    dedupedList.sort((a, b) => {
+      const aHas = a.isAssessed && a.score > 0;
+      const bHas = b.isAssessed && b.score > 0;
+      if (aHas && !bHas) return -1;
+      if (!aHas && bHas) return 1;
+      const idxA = CANONICAL_ORDER.indexOf(a.code);
+      const idxB = CANONICAL_ORDER.indexOf(b.code);
+      const rankA = idxA === -1 ? 999 : idxA;
+      const rankB = idxB === -1 ? 999 : idxB;
+      if (rankA !== rankB) return rankA - rankB;
+      return a.name.localeCompare(b.name);
+    });
+
+    return dedupedList;
   }, [broadsheetStudentRow, reportCardData?.learningAreaAssessments]);
 
   const activeTermNumber = useMemo(() => {
@@ -577,32 +634,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
       });
     }
 
-    const defaults = [
-      { code: 'MAT', name: 'Mathematics', score: 78, avg: 78, st: 'PK' },
-      { code: 'ENG', name: 'English Language', score: 74, avg: 74, st: 'GW' },
-      { code: 'KIS', name: 'Kiswahili Language', score: 72, avg: 72, st: 'MO' },
-      { code: 'SCI', name: 'Integrated Science', score: 80, avg: 80, st: 'JN' },
-      { code: 'SOC', name: 'Social Studies', score: 68, avg: 68, st: 'AO' },
-      { code: 'CRE', name: 'Christian Religious Education', score: 84, avg: 84, st: 'DK' },
-      { code: 'CREA', name: 'Creative Arts & Sports', score: 76, avg: 76, st: 'EM' },
-      { code: 'AGR', name: 'Agriculture & Nutrition', score: 70, avg: 70, st: 'RO' },
-      { code: 'ENV', name: 'Environmental Activities', score: 75, avg: 75, st: 'SM' },
-    ];
-
-    return defaults.map((d) => {
-      const gp = getGradeAndPoints(d.score);
-      return {
-        code: d.code,
-        name: d.name,
-        score: d.score,
-        avg: d.avg,
-        grade: gp.grade,
-        points: gp.points,
-        position: '--',
-        remarks: gp.remark,
-        st: d.st,
-      };
-    });
+    return [];
   }, [resolvedSubjects]);
 
   const totalSubjectMarks = useMemo(() => {
@@ -653,25 +685,40 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
       const streamLearners = broadsheetData.rows.filter(r => r.streamName === student.stream);
       if (streamLearners.length > 0) return streamLearners.length;
     }
-    // 3. Fallback to stream population from backend if greater than 3
+    // 3. Fallback to stream totalStudents from broadsheetData
+    if (broadsheetData?.totalStudents && broadsheetData.totalStudents > 0) {
+      return broadsheetData.totalStudents;
+    }
+    // 4. Fallback to stream population from backend report card data
     const repPop = Number((reportCardData as any)?.streamPopulation || (reportCardData as any)?.classPopulation);
-    if (repPop && repPop > 3) return repPop;
+    if (repPop && repPop > 0) return repPop;
 
-    return 11;
+    return 1;
   }, [broadsheetData, broadsheetStudentRow, student, reportCardData]);
 
-  // Exact Rank derived directly from Broadsheet
+  // Exact Rank derived directly from Broadsheet / ReportCard
   const classRankNum = useMemo(() => {
     if (broadsheetStudentRow) {
-      return broadsheetStudentRow.streamRank || broadsheetStudentRow.rank || 1;
+      const rank = broadsheetStudentRow.streamRank || broadsheetStudentRow.rank;
+      if (rank && rank > 0) return rank;
+      if (broadsheetStudentRow.totalScore === 0 && (broadsheetStudentRow as any).evaluatedCount === 0) {
+        return null;
+      }
     }
-    if ((reportCardData as any)?.streamPosition) return Number((reportCardData as any).streamPosition);
-    if ((reportCardData as any)?.classPosition) return Number((reportCardData as any).classPosition);
-    const avg = Number(meanSubjectMark) || 75;
-    return Math.min(Math.max(1, Math.round((100 - avg) / 2.5)), classTotal);
-  }, [broadsheetStudentRow, reportCardData, meanSubjectMark, classTotal]);
+    if ((reportCardData as any)?.streamPosition && Number((reportCardData as any).streamPosition) > 0) {
+      return Number((reportCardData as any).streamPosition);
+    }
+    if ((reportCardData as any)?.classPosition && Number((reportCardData as any).classPosition) > 0) {
+      return Number((reportCardData as any).classPosition);
+    }
+    return null;
+  }, [broadsheetStudentRow, reportCardData]);
 
-  const classPositionText = `${classRankNum} out of ${classTotal}`;
+  const hasEvaluatedMarks = evaluatedSubjectsList.length > 0 || (broadsheetStudentRow && broadsheetStudentRow.totalScore > 0);
+  const isRanked = hasEvaluatedMarks && classRankNum !== null && classRankNum > 0;
+  const classPositionText = isRanked
+    ? `${classRankNum} out of ${classTotal}`
+    : 'Not ranked';
 
   const isBoardingSchool = schoolInfo?.schoolType === 'BOARDING' || (schoolInfo as any)?.schoolType === 'BOARDING_SCHOOL';
   const studentHouse = (student as any)?.house || (student as any)?.dormitory || (isBoardingSchool ? 'Taifa' : '-');

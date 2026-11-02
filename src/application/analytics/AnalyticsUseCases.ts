@@ -8,16 +8,24 @@ import { IUserRepository } from '../../core/ports/repositories/IUserRepository';
 import { ISignatureRepository } from '../../core/ports/repositories/ISignatureRepository';
 import { ITeacherCorrectionRequestRepository } from '../../core/ports/repositories/ITeacherCorrectionRequestRepository';
 import { ISystemLogRepository } from '../../core/ports/repositories/ISystemLogRepository';
+import { ICurriculumTrackerRepository } from '../../core/ports/repositories/ICurriculumTrackerRepository';
+import { IOccurrenceRepository } from '../../core/ports/repositories/IOccurrenceRepository';
 import { PerformanceLevel, SummativeAssessment } from '../../core/domain/cbc/CbcAssessment';
-import { StudentStatus } from '../../core/domain/user/Student';
+import { StudentStatus, StudentGender } from '../../core/domain/user/Student';
 import { UserRole } from '../../core/domain/user/User';
 import { PaymentMethod, PaymentStatus, ExpenseStatus } from '../../core/domain/finance/Fee';
 import { AttendanceStatus } from '../../core/domain/attendance/Attendance';
+import { UserContext } from '../students/StudentUseCases';
 
 export interface DashboardFilterOptions {
   schoolId?: string;
   academicYearId?: string;
   termId?: string;
+  date?: string;
+  gradeLevel?: string;
+  classRoomId?: string;
+  streamId?: string;
+  teacherId?: string;
 }
 
 export class AnalyticsUseCases {
@@ -31,7 +39,9 @@ export class AnalyticsUseCases {
     private readonly userRepository?: IUserRepository,
     private readonly signatureRepository?: ISignatureRepository,
     private readonly teacherCorrectionRequestRepository?: ITeacherCorrectionRequestRepository,
-    private readonly systemLogRepository?: ISystemLogRepository
+    private readonly systemLogRepository?: ISystemLogRepository,
+    private readonly curriculumTrackerRepository?: ICurriculumTrackerRepository,
+    private readonly occurrenceRepository?: IOccurrenceRepository
   ) {}
 
   public async getSchoolDashboardSummary(
@@ -42,11 +52,21 @@ export class AnalyticsUseCases {
     let schoolId: string | undefined;
     let academicYearId: string | undefined;
     let termId: string | undefined;
+    let filterDate: string | undefined;
+    let filterGrade: string | undefined;
+    let filterClassId: string | undefined;
+    let filterStreamId: string | undefined;
+    let filterTeacherId: string | undefined;
 
     if (typeof schoolIdOrOptions === 'object' && schoolIdOrOptions !== null) {
       schoolId = schoolIdOrOptions.schoolId;
       academicYearId = schoolIdOrOptions.academicYearId;
       termId = schoolIdOrOptions.termId;
+      filterDate = schoolIdOrOptions.date;
+      filterGrade = schoolIdOrOptions.gradeLevel;
+      filterClassId = schoolIdOrOptions.classRoomId;
+      filterStreamId = schoolIdOrOptions.streamId;
+      filterTeacherId = schoolIdOrOptions.teacherId;
     } else {
       schoolId = schoolIdOrOptions;
       academicYearId = academicYearIdArg;
@@ -163,73 +183,173 @@ export class AnalyticsUseCases {
     const collectionRatePercentage =
       totalInvoiced > 0 ? Math.min(100, Math.round((totalCollected / totalInvoiced) * 100)) : 0;
 
-    // 4. Real Attendance Register Metrics
+    // 4. Real Attendance Register Metrics & Daily Executive Figures
     const todayIso = new Date().toISOString().split('T')[0];
-    let registers = await this.attendanceRepository.findRegisters({
-      schoolId,
-      startDate: todayIso,
-      endDate: todayIso
+    const targetDate = filterDate || todayIso;
+
+    // Fetch classes and streams to compute expected registers and labels
+    const allClasses = await this.academicRepository.findAllClasses(schoolId);
+    const allStreams = await this.academicRepository.findAllStreams();
+    const classNameMap = new Map<string, string>();
+    const classGradeMap = new Map<string, string>();
+    allClasses.forEach(c => {
+      classNameMap.set(c.id, c.name);
+      if (c.gradeLevel) classGradeMap.set(c.id, c.gradeLevel);
     });
 
-    // If today hasn't been marked yet, check recent registers for active term
-    let isTodayData = true;
-    if (registers.length === 0 && selectedTerm) {
-      registers = await this.attendanceRepository.findRegisters({
-        schoolId,
-        termId: selectedTerm.id
-      });
-      isTodayData = false;
+    const streamNameMap = new Map<string, string>();
+    allStreams.forEach(s => streamNameMap.set(s.id, s.name));
+
+    // Determine expected register units (by stream if class has streams, else by class)
+    interface RegisterUnit {
+      classRoomId: string;
+      streamId?: string;
+      name: string;
+      gradeLevel?: string;
     }
-
-    let attendanceSummary = {
-      hasData: false,
-      isToday: isTodayData,
-      date: todayIso,
-      totalMarked: 0,
-      present: 0,
-      absent: 0,
-      late: 0,
-      excused: 0,
-      presentPercentage: null as number | null
-    };
-
-    if (registers.length > 0) {
-      let totalEntries = 0;
-      let presentCount = 0;
-      let absentCount = 0;
-      let lateCount = 0;
-      let excusedCount = 0;
-
-      registers.forEach(reg => {
-        (reg.entries || []).forEach(entry => {
-          totalEntries += 1;
-          if (entry.status === AttendanceStatus.PRESENT) {
-            presentCount += 1;
-          } else if (entry.status === AttendanceStatus.LATE) {
-            presentCount += 1;
-            lateCount += 1;
-          } else if (entry.status === AttendanceStatus.ABSENT) {
-            absentCount += 1;
-          } else if (entry.status === AttendanceStatus.EXCUSED || entry.status === AttendanceStatus.SICK) {
-            excusedCount += 1;
-          }
+    const expectedRegisterUnits: RegisterUnit[] = [];
+    allClasses.forEach(c => {
+      const classStreams = allStreams.filter(s => s.classRoomId === c.id);
+      if (classStreams.length > 0) {
+        classStreams.forEach(st => {
+          expectedRegisterUnits.push({
+            classRoomId: c.id,
+            streamId: st.id,
+            name: `${c.name} - ${st.name}`,
+            gradeLevel: c.gradeLevel
+          });
         });
-      });
-
-      if (totalEntries > 0) {
-        attendanceSummary = {
-          hasData: true,
-          isToday: isTodayData,
-          date: registers[0].date || todayIso,
-          totalMarked: totalEntries,
-          present: presentCount,
-          absent: absentCount,
-          late: lateCount,
-          excused: excusedCount,
-          presentPercentage: Math.round((presentCount / totalEntries) * 100)
-        };
+      } else {
+        expectedRegisterUnits.push({
+          classRoomId: c.id,
+          name: c.name,
+          gradeLevel: c.gradeLevel
+        });
       }
+    });
+
+    // Apply filters to expected register units
+    let scopedRegisterUnits = expectedRegisterUnits;
+    if (filterClassId) {
+      scopedRegisterUnits = scopedRegisterUnits.filter(u => u.classRoomId === filterClassId);
     }
+    if (filterStreamId) {
+      scopedRegisterUnits = scopedRegisterUnits.filter(u => u.streamId === filterStreamId);
+    }
+    if (filterGrade) {
+      scopedRegisterUnits = scopedRegisterUnits.filter(u => u.gradeLevel === filterGrade);
+    }
+
+    // Filter active learners according to filters
+    let scopedStudents = activeStudents;
+    if (filterClassId) {
+      scopedStudents = scopedStudents.filter(s => s.classroomId === filterClassId);
+    }
+    if (filterStreamId) {
+      scopedStudents = scopedStudents.filter(s => s.streamId === filterStreamId);
+    }
+    if (filterGrade) {
+      scopedStudents = scopedStudents.filter(s => s.gradeLevel === filterGrade);
+    }
+    const expectedLearners = scopedStudents.length;
+
+    // Fetch daily registers for target date
+    const registers = await this.attendanceRepository.findRegisters({
+      schoolId,
+      date: targetDate,
+      classRoomId: filterClassId,
+      streamId: filterStreamId
+    });
+
+    // Calculate completed vs unmarked registers
+    let completedRegisters = 0;
+    const completedUnitKeys = new Set<string>();
+    registers.forEach(reg => {
+      const key = reg.streamId ? `${reg.classRoomId}-${reg.streamId}` : reg.classRoomId;
+      completedUnitKeys.add(key);
+    });
+    scopedRegisterUnits.forEach(u => {
+      const key = u.streamId ? `${u.classRoomId}-${u.streamId}` : u.classRoomId;
+      if (completedUnitKeys.has(key)) {
+        completedRegisters += 1;
+      }
+    });
+    const unmarkedRegisters = Math.max(0, scopedRegisterUnits.length - completedRegisters);
+
+    // Tally entries without double counting
+    let presentCount = 0;
+    let lateCount = 0;
+    let absentCount = 0;
+    let excusedCount = 0;
+    const absentLearnersList: any[] = [];
+    const studentMap = new Map(scopedStudents.map(s => [s.id, s]));
+
+    registers.forEach(reg => {
+      const entries = reg.entries || [];
+      entries.forEach(entry => {
+        if (scopedStudents.length > 0 && !studentMap.has(entry.studentId)) {
+          return;
+        }
+        const s = studentMap.get(entry.studentId);
+        if (entry.status === AttendanceStatus.PRESENT) {
+          presentCount += 1;
+        } else if (entry.status === AttendanceStatus.LATE) {
+          lateCount += 1; // Arrived late, but physically present
+        } else if (entry.status === AttendanceStatus.ABSENT) {
+          absentCount += 1;
+          absentLearnersList.push({
+            registerId: reg.id,
+            studentId: entry.studentId,
+            studentName: s?.fullName || entry.studentName || 'Learner',
+            admissionNumber: s?.admissionNumber || entry.admissionNumber || '',
+            className: classNameMap.get(reg.classRoomId) || 'Class',
+            streamName: streamNameMap.get(reg.streamId) || '',
+            date: reg.date,
+            status: AttendanceStatus.ABSENT,
+            remarks: entry.remarks || 'Unexcused Absence',
+            followUp: (entry as any).followUp || null
+          });
+        } else if (entry.status === AttendanceStatus.EXCUSED || entry.status === AttendanceStatus.SICK) {
+          excusedCount += 1;
+          absentLearnersList.push({
+            registerId: reg.id,
+            studentId: entry.studentId,
+            studentName: s?.fullName || entry.studentName || 'Learner',
+            admissionNumber: s?.admissionNumber || entry.admissionNumber || '',
+            className: classNameMap.get(reg.classRoomId) || 'Class',
+            streamName: streamNameMap.get(reg.streamId) || '',
+            date: reg.date,
+            status: entry.status,
+            remarks: entry.remarks || 'Excused / Medical Absence',
+            followUp: (entry as any).followUp || null
+          });
+        }
+      });
+    });
+
+    const totalMarked = presentCount + lateCount + absentCount + excusedCount;
+    const unmarkedLearners = Math.max(0, expectedLearners - totalMarked);
+    const presentPercentage = expectedLearners > 0
+      ? Math.round(((presentCount + lateCount) / expectedLearners) * 100)
+      : (totalMarked > 0 ? Math.round(((presentCount + lateCount) / totalMarked) * 100) : null);
+
+    const attendanceSummary = {
+      hasData: registers.length > 0,
+      isToday: targetDate === todayIso,
+      date: targetDate,
+      expectedLearners,
+      present: presentCount,
+      late: lateCount,
+      absent: absentCount,
+      excused: excusedCount,
+      totalMarked,
+      unmarkedLearners,
+      completedRegisters,
+      unmarkedRegisters,
+      totalExpectedRegisters: scopedRegisterUnits.length,
+      presentPercentage,
+      absentLearnersList
+    };
 
     // Helper for score percentage
     const getScorePercentage = (s: SummativeAssessment): number => {
@@ -584,6 +704,428 @@ export class AnalyticsUseCases {
           academicYearId: t.academicYearId
         }))
       }
+    };
+  }
+
+  public async getAttendanceTrends(
+    options: {
+      schoolId?: string;
+      academicYearId?: string;
+      termId?: string;
+      days?: number;
+    },
+    requestingUser?: UserContext
+  ) {
+    const days = options.days || 14;
+    const now = new Date();
+    const dateLimit = new Date();
+    dateLimit.setDate(now.getDate() - days);
+    const startDateStr = dateLimit.toISOString().split('T')[0];
+    const endDateStr = now.toISOString().split('T')[0];
+
+    const registers = await this.attendanceRepository.findRegisters({
+      schoolId: options.schoolId,
+      academicYearId: options.academicYearId,
+      termId: options.termId,
+      startDate: startDateStr,
+      endDate: endDateStr
+    });
+
+    const students = await this.studentRepository.findAll({ schoolId: options.schoolId });
+    const studentMap = new Map<string, any>();
+    students.forEach(s => studentMap.set(s.id, s));
+
+    const allClasses = await this.academicRepository.findAllClasses(options.schoolId);
+    const classNameMap = new Map<string, string>();
+    allClasses.forEach(c => classNameMap.set(c.id, c.name));
+
+    const dailyMap = new Map<string, {
+      date: string;
+      present: number;
+      absent: number;
+      late: number;
+      excused: number;
+      totalMarked: number;
+      attendanceRate: number;
+    }>();
+
+    const studentAbsenceMap = new Map<string, {
+      studentId: string;
+      studentName: string;
+      admissionNumber: string;
+      className: string;
+      absenceCount: number;
+      dates: string[];
+      latestRemarks?: string;
+      hasUnresolvedFollowUp: boolean;
+      latestFollowUp?: any;
+    }>();
+
+    const unresolvedFollowUps: Array<{
+      registerId: string;
+      studentId: string;
+      studentName: string;
+      admissionNumber: string;
+      className: string;
+      date: string;
+      remarks?: string;
+      followUp?: any;
+    }> = [];
+
+    for (const reg of registers) {
+      const d = reg.date;
+      if (!dailyMap.has(d)) {
+        dailyMap.set(d, {
+          date: d,
+          present: 0,
+          absent: 0,
+          late: 0,
+          excused: 0,
+          totalMarked: 0,
+          attendanceRate: 0
+        });
+      }
+      const dayData = dailyMap.get(d)!;
+      const clsName = classNameMap.get(reg.classRoomId) || 'Class';
+
+      for (const entry of reg.entries) {
+        dayData.totalMarked += 1;
+        if (entry.status === AttendanceStatus.PRESENT) {
+          dayData.present += 1;
+        } else if (entry.status === AttendanceStatus.LATE) {
+          dayData.late += 1;
+        } else if (entry.status === AttendanceStatus.EXCUSED || entry.status === AttendanceStatus.SICK) {
+          dayData.excused += 1;
+        } else if (entry.status === AttendanceStatus.ABSENT) {
+          dayData.absent += 1;
+
+          const st = studentMap.get(entry.studentId);
+          const stName = entry.studentName || st?.fullName || 'Student';
+          const admNo = entry.admissionNumber || st?.admissionNumber || '';
+
+          if (!studentAbsenceMap.has(entry.studentId)) {
+            studentAbsenceMap.set(entry.studentId, {
+              studentId: entry.studentId,
+              studentName: stName,
+              admissionNumber: admNo,
+              className: clsName,
+              absenceCount: 0,
+              dates: [],
+              latestRemarks: entry.remarks,
+              hasUnresolvedFollowUp: false,
+              latestFollowUp: entry.followUp
+            });
+          }
+          const rec = studentAbsenceMap.get(entry.studentId)!;
+          rec.absenceCount += 1;
+          rec.dates.push(d);
+          if (entry.remarks) rec.latestRemarks = entry.remarks;
+          if (entry.followUp) rec.latestFollowUp = entry.followUp;
+
+          const isUnresolved = !entry.followUp || entry.followUp.resolutionStatus === 'PENDING' || (entry.followUp.resolutionStatus as string) === 'ESCALATED' || entry.followUp.resolutionStatus === 'ESCALATED_TO_HEADTEACHER';
+          if (isUnresolved) {
+            rec.hasUnresolvedFollowUp = true;
+            unresolvedFollowUps.push({
+              registerId: reg.id,
+              studentId: entry.studentId,
+              studentName: stName,
+              admissionNumber: admNo,
+              className: clsName,
+              date: d,
+              remarks: entry.remarks,
+              followUp: entry.followUp
+            });
+          }
+        }
+      }
+
+      dayData.attendanceRate = dayData.totalMarked > 0
+        ? Math.round(((dayData.present + dayData.late) / dayData.totalMarked) * 1000) / 10
+        : 0;
+    }
+
+    const dailyTrends = Array.from(dailyMap.values()).sort((a, b) => a.date.localeCompare(b.date));
+
+    const chronicAbsentees = Array.from(studentAbsenceMap.values())
+      .filter(s => s.absenceCount >= 3)
+      .sort((a, b) => b.absenceCount - a.absenceCount);
+
+    const totalMarkedSessions = registers.length;
+    const avgRate = dailyTrends.length > 0
+      ? Math.round(dailyTrends.reduce((sum, d) => sum + d.attendanceRate, 0) / dailyTrends.length * 10) / 10
+      : 0;
+
+    return {
+      period: {
+        days,
+        startDate: startDateStr,
+        endDate: endDateStr
+      },
+      summaryMetrics: {
+        totalRegistersMarked: totalMarkedSessions,
+        averageDailyAttendanceRate: avgRate,
+        totalAbsenceIncidents: Array.from(studentAbsenceMap.values()).reduce((sum, s) => sum + s.absenceCount, 0),
+        chronicAbsenteeCount: chronicAbsentees.length,
+        unresolvedFollowUpsCount: unresolvedFollowUps.length
+      },
+      dailyTrends,
+      chronicAbsentees,
+      unresolvedFollowUps
+    };
+  }
+
+  public async getWholeTermReport(
+    options: {
+      academicYearId: string;
+      termId: string;
+      schoolId?: string;
+    },
+    requestingUser?: UserContext
+  ) {
+    const schoolId = options.schoolId || 'school-001';
+
+    // 1. Resolve Academic Year and Term metadata
+    let yearName = '2026';
+    let termName = 'Term 3';
+    try {
+      const year = await this.academicRepository.findYearById(options.academicYearId);
+      if (year) yearName = year.name;
+      const terms = await this.academicRepository.findTermsByYear(options.academicYearId);
+      const term = terms.find(t => t.id === options.termId);
+      if (term) termName = term.name;
+    } catch {}
+
+    // 2. Enrolment & Demographics
+    const students = await this.studentRepository.findAll({ schoolId });
+    const activeStudents = students.filter(s => s.status === StudentStatus.ACTIVE);
+    const boysCount = activeStudents.filter(s => s.gender === StudentGender.MALE || (s.gender as any) === 'M').length;
+    const girlsCount = activeStudents.filter(s => s.gender === StudentGender.FEMALE || (s.gender as any) === 'F').length;
+
+    const allClasses = await this.academicRepository.findAllClasses(schoolId);
+    const gradeEnrolment: Record<string, number> = {};
+    activeStudents.forEach(s => {
+      const g = s.gradeLevel || 'UNKNOWN';
+      gradeEnrolment[g] = (gradeEnrolment[g] || 0) + 1;
+    });
+
+    // 3. Attendance Statistics for the term
+    const registers = await this.attendanceRepository.findRegisters({
+      schoolId,
+      academicYearId: options.academicYearId,
+      termId: options.termId
+    });
+
+    let totalAttendanceEntries = 0;
+    let totalPresentEntries = 0;
+    let totalAbsentEntries = 0;
+    let totalLateEntries = 0;
+    let totalExcusedEntries = 0;
+    const studentAbsenceCounts = new Map<string, number>();
+
+    registers.forEach(reg => {
+      reg.entries.forEach(e => {
+        totalAttendanceEntries += 1;
+        if (e.status === AttendanceStatus.PRESENT) totalPresentEntries += 1;
+        else if (e.status === AttendanceStatus.LATE) totalLateEntries += 1;
+        else if (e.status === AttendanceStatus.EXCUSED || e.status === AttendanceStatus.SICK) totalExcusedEntries += 1;
+        else if (e.status === AttendanceStatus.ABSENT) {
+          totalAbsentEntries += 1;
+          studentAbsenceCounts.set(e.studentId, (studentAbsenceCounts.get(e.studentId) || 0) + 1);
+        }
+      });
+    });
+
+    const averageAttendanceRate = totalAttendanceEntries > 0
+      ? Math.round(((totalPresentEntries + totalLateEntries) / totalAttendanceEntries) * 1000) / 10
+      : 0;
+
+    let chronicAbsenteeCount = 0;
+    studentAbsenceCounts.forEach(c => {
+      if (c >= 3) chronicAbsenteeCount += 1;
+    });
+
+    // 4. CBC Academic Summative Proficiency
+    const summatives = await this.CBCRepository.findSummatives({
+      academicYearId: options.academicYearId,
+      termId: options.termId
+    });
+
+    let eeCount = 0;
+    let meCount = 0;
+    let aeCount = 0;
+    let beCount = 0;
+
+    summatives.forEach(s => {
+      const level = (s.overallPerformanceLevel || '').toUpperCase();
+      if (level === PerformanceLevel.EXCEEDING_EXPECTATIONS || level.startsWith('E')) eeCount += 1;
+      else if (level === PerformanceLevel.MEETING_EXPECTATIONS || level.startsWith('M')) meCount += 1;
+      else if (level === PerformanceLevel.APPROACHING_EXPECTATIONS || level.startsWith('A')) aeCount += 1;
+      else if (level === PerformanceLevel.BELOW_EXPECTATIONS || level.startsWith('B')) beCount += 1;
+    });
+
+    const totalEvaluations = summatives.length;
+    const proficiencyBreakdown = {
+      totalEvaluations,
+      EE: { count: eeCount, percentage: totalEvaluations > 0 ? Math.round((eeCount / totalEvaluations) * 1000) / 10 : 0 },
+      ME: { count: meCount, percentage: totalEvaluations > 0 ? Math.round((meCount / totalEvaluations) * 1000) / 10 : 0 },
+      AE: { count: aeCount, percentage: totalEvaluations > 0 ? Math.round((aeCount / totalEvaluations) * 1000) / 10 : 0 },
+      BE: { count: beCount, percentage: totalEvaluations > 0 ? Math.round((beCount / totalEvaluations) * 1000) / 10 : 0 }
+    };
+
+    // 5. Curriculum Tracker & Controlled Progression Stats
+    let totalPlannedLessons = 0;
+    let approvedLessons = 0;
+    let submittedPendingLessons = 0;
+    let trackersCount = 0;
+
+    if (this.curriculumTrackerRepository) {
+      try {
+        const trackers = await this.curriculumTrackerRepository.findTrackers({
+          schoolId,
+          academicYear: yearName,
+          term: termName
+        });
+        trackersCount = trackers.length;
+        trackers.forEach((t: any) => {
+          t.items?.forEach((item: any) => {
+            const planned = item.plannedLessons || 1;
+            totalPlannedLessons += planned;
+            if (item.coverageStatus === 'APPROVED' || item.isCovered) {
+              approvedLessons += planned;
+            } else if (item.coverageStatus === 'SUBMITTED') {
+              submittedPendingLessons += planned;
+            }
+          });
+        });
+      } catch {}
+    }
+
+    const approvedCoveragePercentage = totalPlannedLessons > 0
+      ? Math.round((approvedLessons / totalPlannedLessons) * 1000) / 10
+      : 0;
+
+    // 6. Staffing Summary
+    const teachers = await this.teacherRepository.findAll();
+    const activeTeachers = teachers.filter(t => (t as any).employmentStatus !== 'SUSPENDED');
+    let classTeacherAssignmentsCount = 0;
+    let subjectTeacherAssignmentsCount = 0;
+    try {
+      const ctas = await this.academicRepository.findClassTeacherAssignments({ academicYearId: options.academicYearId, isActive: true });
+      classTeacherAssignmentsCount = ctas.length;
+      const stas = await this.academicRepository.findSubjectTeacherAssignments({ academicYearId: options.academicYearId, isActive: true });
+      subjectTeacherAssignmentsCount = stas.length;
+    } catch {}
+
+    // 7. Verified Financial Position (Strictly based on invoices & payments, no fabricated figures)
+    const invoices = await this.feeRepository.findInvoices({
+      schoolId,
+      academicYearId: options.academicYearId,
+      termId: options.termId
+    });
+    const payments = await this.feeRepository.findPayments({ schoolId });
+    const verifiedPayments = payments.filter(
+      p => p.status === PaymentStatus.COMPLETED || (!p.status && (p.amount || 0) > 0)
+    );
+
+    const totalInvoiced = Math.round(invoices.reduce((sum, i) => sum + (Number(i.amountPayable) || 0), 0) * 100) / 100;
+    const totalCollected = Math.round(verifiedPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0) * 100) / 100;
+    const totalArrears = Math.round(invoices.reduce((sum, i) => sum + (Number(i.balance) || 0), 0) * 100) / 100;
+    const collectionRate = totalInvoiced > 0 ? Math.min(100, Math.round((totalCollected / totalInvoiced) * 1000) / 10) : 0;
+    const defaultersCount = invoices.filter(i => (Number(i.balance) || 0) > 0).length;
+
+    // 8. Operational & Occurrence Incident Summary
+    let totalOccurrences = 0;
+    let resolvedOccurrences = 0;
+    const occurrenceCategoryBreakdown: Record<string, number> = {};
+    if (this.occurrenceRepository) {
+      try {
+        const occurrences = await this.occurrenceRepository.findOccurrences({ schoolId });
+        totalOccurrences = occurrences.length;
+        occurrences.forEach((o: any) => {
+          if (o.status === 'RESOLVED' || o.status === 'CLOSED') resolvedOccurrences += 1;
+          const cat = o.category || 'OTHER';
+          occurrenceCategoryBreakdown[cat] = (occurrenceCategoryBreakdown[cat] || 0) + 1;
+        });
+      } catch {}
+    }
+
+    // 9. Automated, evidence-based recommendations
+    const recommendations: string[] = [];
+    if (averageAttendanceRate < 90) {
+      recommendations.push(`Daily attendance rate stands at ${averageAttendanceRate}%. Establish immediate morning register verification and enforce parent notifications.`);
+    } else {
+      recommendations.push(`Strong daily attendance rate maintained at ${averageAttendanceRate}%. Continue consistent roll-call management.`);
+    }
+
+    if (chronicAbsenteeCount > 0) {
+      recommendations.push(`Identified ${chronicAbsenteeCount} chronic absentee learner(s) requiring academic intervention and formal guardian consultation.`);
+    }
+
+    if (approvedCoveragePercentage < 80) {
+      recommendations.push(`Approved CBC curriculum coverage is currently ${approvedCoveragePercentage}%. Teachers should accelerate lesson coverage and submit pending units for administrative approval.`);
+    }
+
+    if (collectionRate < 75) {
+      recommendations.push(`Fee collection stands at ${collectionRate}%. Proactively issue fee reminder statements to clear outstanding arrears of KES ${totalArrears.toLocaleString()}.`);
+    }
+
+    return {
+      institution: {
+        name: 'Grace Seeds School',
+        motto: 'Excellence in Christian Values and Academic Diligence',
+        address: 'Nairobi, Kenya',
+        academicYear: yearName,
+        term: termName,
+        reportDate: new Date().toISOString().split('T')[0],
+        signatories: {
+          headTeacher: 'Headteacher / Academic Director',
+          executiveDirector: 'Executive Director'
+        }
+      },
+      enrolment: {
+        totalEnrolled: activeStudents.length,
+        boys: boysCount,
+        girls: girlsCount,
+        gradeBreakdown: gradeEnrolment
+      },
+      attendance: {
+        totalRegistersMarked: registers.length,
+        averageAttendanceRate,
+        totalAbsences: totalAbsentEntries,
+        chronicAbsenteeCount
+      },
+      academics: {
+        totalEvaluations,
+        proficiencyBreakdown
+      },
+      curriculum: {
+        activeTrackers: trackersCount,
+        totalPlannedLessons,
+        approvedLessons,
+        submittedPendingLessons,
+        approvedCoveragePercentage
+      },
+      staffing: {
+        totalTeachers: teachers.length,
+        activeTeachers: activeTeachers.length,
+        classTeacherAssignments: classTeacherAssignmentsCount,
+        subjectTeacherAssignments: subjectTeacherAssignmentsCount
+      },
+      finance: {
+        totalInvoiced,
+        totalCollected,
+        totalArrears,
+        collectionRate,
+        defaultersCount,
+        note: 'Finance metrics derived strictly from verified billing invoices and recorded receipts.'
+      },
+      operations: {
+        totalIncidents: totalOccurrences,
+        resolvedCount: resolvedOccurrences,
+        pendingCount: totalOccurrences - resolvedOccurrences,
+        categories: occurrenceCategoryBreakdown
+      },
+      recommendations
     };
   }
 }

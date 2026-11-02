@@ -3,6 +3,7 @@ import { Student, Teacher, SystemActivity, DashboardSummary, UserRole } from '..
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { FacultyAttendanceRosterCard } from './FacultyAttendanceRosterCard';
+import { DailyAttendanceOverviewCard } from '../common/DailyAttendanceOverviewCard';
 
 interface DashboardViewProps {
   students: Student[];
@@ -13,8 +14,9 @@ interface DashboardViewProps {
   onOpenCBCModal: () => void;
   onOpenAdmitModal: () => void;
   onOpenSmsModal: (target?: 'absentee' | 'fee' | 'all') => void;
-  onOpenKnecSync: () => void;
+  onOpenKnecSync?: () => void;
   onOpenExportReport: () => void;
+  onOpenUploadMarks?: () => void;
   onNavigateTab: (tabId: any) => void;
 }
 
@@ -29,6 +31,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenSmsModal,
   onOpenKnecSync,
   onOpenExportReport,
+  onOpenUploadMarks,
   onNavigateTab,
 }) => {
   const { user } = useAuth();
@@ -80,6 +83,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
       if (Array.isArray(rawRegisters)) {
         rawRegisters.forEach((reg: any) => {
+          // Strictly protect today's status: ignore historical registers for past dates
+          if (reg.date && reg.date !== todayIso) return;
           if (reg.entries && Array.isArray(reg.entries)) {
             reg.entries.forEach((e: any) => {
               if (e.studentId) {
@@ -266,11 +271,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   // Attendance by Grade Level
   const dynamicAttendanceGradeData = useMemo(() => {
     if (!students || students.length === 0) return [];
-    const map: Record<string, { present: number; total: number; late: number }> = {};
+    const map: Record<string, { present: number; total: number; late: number; absent: number; excused: number }> = {};
 
     students.forEach((s) => {
       const g = s.grade || 'Grade 7';
-      if (!map[g]) map[g] = { present: 0, total: 0, late: 0 };
+      if (!map[g]) map[g] = { present: 0, total: 0, late: 0, absent: 0, excused: 0 };
       map[g].total += 1;
 
       const statusToday = todayRegisterMap[s.id];
@@ -279,6 +284,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       } else if (statusToday === 'LATE') {
         map[g].present += 1;
         map[g].late += 1;
+      } else if (statusToday === 'ABSENT') {
+        map[g].absent += 1;
+      } else if (statusToday === 'EXCUSED') {
+        map[g].excused += 1;
       }
     });
 
@@ -288,6 +297,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       total: d.total,
       pct: d.total > 0 ? (d.present / d.total) * 100 : 0,
       late: d.late,
+      absent: d.absent,
+      excused: d.excused,
     }));
   }, [students, todayRegisterMap]);
 
@@ -431,6 +442,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <span className="hidden sm:inline">Export Report</span>
           </button>
 
+          {/* Upload Assessment Marks */}
+          {onOpenUploadMarks && (
+            <button
+              onClick={onOpenUploadMarks}
+              className="inline-flex items-center gap-xs px-md py-sm rounded-lg bg-[#7a1228] hover:bg-[#5e0d1e] text-white font-label-md text-label-md font-bold transition-all shadow-xs cursor-pointer"
+              type="button"
+              title="Upload and record learner assessment marks"
+            >
+              <span className="material-symbols-outlined text-[18px]">upload_file</span>
+              <span className="hidden sm:inline">Upload Marks</span>
+            </button>
+          )}
+
           {/* Quick Action Dropdown */}
           <div className="relative" ref={quickActionRef}>
             <button
@@ -445,6 +469,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
             {quickActionOpen && (
               <div className="absolute right-0 top-full mt-xs w-64 rounded-xl bg-surface-container-lowest shadow-lg border border-outline-variant/30 py-xs z-50 animate-in fade-in zoom-in-95 duration-100">
+                {onOpenUploadMarks && (
+                  <button
+                    onClick={() => {
+                      setQuickActionOpen(false);
+                      onOpenUploadMarks();
+                    }}
+                    className="w-full flex items-center gap-sm px-md py-sm text-left hover:bg-surface-container transition-colors text-on-surface font-body-md text-body-md font-semibold cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[#7a1228] text-[20px]">upload_file</span>
+                    <span>Upload Assessment Marks</span>
+                  </button>
+                )}
                 <button
                   onClick={() => {
                     setQuickActionOpen(false);
@@ -482,7 +518,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   }}
                   className="w-full flex items-center gap-sm px-md py-sm text-left hover:bg-surface-container transition-colors text-on-surface font-body-md text-body-md"
                 >
-                  <span className="material-symbols-outlined text-indigo-700 text-[20px]">draw</span>
+                  <span className="material-symbols-outlined text-[#7a1228] text-[20px]">draw</span>
                   <span>Digital Signature Vault</span>
                 </button>
                 <button
@@ -503,7 +539,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
       {/* 2. Director Pending Approvals & Operational Action Hub */}
       {pendingApprovals.totalActionable > 0 && (
-        <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-50 via-rose-50/40 to-indigo-50/40 border border-amber-200/80 shadow-xs">
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-50 via-rose-50/40 to-rose-100/30 border border-amber-200/80 shadow-xs">
           <div className="flex items-center justify-between pb-3 border-b border-amber-200/60">
             <div className="flex items-center gap-2">
               <span className="w-8 h-8 rounded-lg bg-amber-600 text-white flex items-center justify-center font-bold">
@@ -527,14 +563,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             {/* Signature Queue */}
             <div
               onClick={() => onNavigateTab('digital-signature')}
-              className="p-3 rounded-xl bg-white border border-amber-200 hover:border-indigo-400 hover:shadow-xs transition-all cursor-pointer flex flex-col justify-between"
+              className="p-3 rounded-xl bg-white border border-amber-200 hover:border-[#7a1228]/50 hover:shadow-xs transition-all cursor-pointer flex flex-col justify-between"
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1">
-                  <span className="material-symbols-outlined text-indigo-700 text-base">draw</span>
+                  <span className="material-symbols-outlined text-[#7a1228] text-base">draw</span>
                   Document Signing
                 </span>
-                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${pendingApprovals.pendingSignaturesCount > 0 ? 'bg-indigo-100 text-indigo-800' : 'bg-slate-100 text-slate-600'}`}>
+                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${pendingApprovals.pendingSignaturesCount > 0 ? 'bg-rose-50 text-[#7a1228]' : 'bg-slate-100 text-slate-600'}`}>
                   {pendingApprovals.pendingSignaturesCount} Batches
                 </span>
               </div>
@@ -543,7 +579,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   ? `${pendingApprovals.pendingSignaturesCount} document signing batch(es) awaiting Director OTP verification`
                   : 'All document batches verified & up to date'}
               </p>
-              <div className="flex items-center justify-between text-xs font-bold text-indigo-700 pt-1 border-t border-slate-100">
+              <div className="flex items-center justify-between text-xs font-bold text-[#7a1228] pt-1 border-t border-slate-100">
                 <span>Open Signing Centre</span>
                 <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
               </div>
@@ -635,28 +671,28 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* 2. Faculty & Staff */}
         <div
           onClick={() => onNavigateTab('teachers-staff')}
-          className="rounded-xl bg-surface-container-lowest p-3 flex flex-col justify-between shadow-xs relative overflow-hidden group hover:shadow-md transition-all cursor-pointer border border-outline-variant/30 hover:border-indigo-500/40"
+          className="rounded-xl bg-surface-container-lowest p-3 flex flex-col justify-between shadow-xs relative overflow-hidden group hover:shadow-md transition-all cursor-pointer border border-outline-variant/30 hover:border-[#7a1228]/40"
         >
           <div className="flex items-center justify-between">
             <span className="font-label-md text-[11px] text-on-surface-variant uppercase tracking-wider font-bold truncate">
               Staff & Faculty
             </span>
-            <span className="inline-flex items-center px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-800 font-semibold text-[10px]">
+            <span className="inline-flex items-center px-1.5 py-0.2 rounded bg-rose-50 text-[#7a1228] font-semibold text-[10px]">
               Team
             </span>
           </div>
           <div className="my-1.5">
             <div className="flex items-baseline gap-1">
-              <span className="font-display font-bold text-xl lg:text-2xl text-indigo-950 font-data-mono">
+              <span className="font-display font-bold text-xl lg:text-2xl text-slate-900 font-data-mono">
                 {totalTeachersCount + totalNonTeachingStaffCount}
               </span>
               <span className="text-[11px] text-on-surface-variant">personnel</span>
             </div>
           </div>
           <div className="pt-1.5 border-t border-surface-container flex items-center justify-between text-[11px] text-on-surface-variant">
-            <span className="text-[10px] text-indigo-700 font-bold">{totalTeachersCount} Teachers</span>
+            <span className="text-[10px] text-[#7a1228] font-bold">{totalTeachersCount} Teachers</span>
             <span>·</span>
-            <span className="text-[10px] text-purple-700 font-bold">{totalNonTeachingStaffCount} Ops</span>
+            <span className="text-[10px] text-slate-800 font-bold">{totalNonTeachingStaffCount} Ops</span>
           </div>
         </div>
 
@@ -830,6 +866,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
       {/* 5. Live Faculty Attendance & Compound Geofence Roster */}
       <FacultyAttendanceRosterCard onNavigateTab={onNavigateTab} />
+
+      {/* 5b. Director Executive Daily Attendance & Absentee Oversight */}
+      <DailyAttendanceOverviewCard
+        onNavigateTab={onNavigateTab}
+        title="Director Executive Daily Roll Call & Management Attendance Oversight"
+        theme="maroon"
+      />
 
       {/* 6. Primary Analytic Row: Attendance Breakdown & CBC Rubrics */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-md my-sm">
@@ -1312,14 +1355,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               All CBC assessments, attendance registers, and fee collection summaries reflect actual database records in accordance with Ministry of Education standards.
             </span>
           </div>
-        </div>
-        <div className="flex items-center gap-sm shrink-0 w-full md:w-auto">
-          <button
-            onClick={onOpenKnecSync}
-            className="px-md py-sm rounded-lg bg-on-primary text-primary font-label-md text-label-md font-semibold hover:bg-surface-container-lowest transition-colors text-center w-full md:w-auto cursor-pointer shadow-xs"
-          >
-            Verify KNEC Sync Status
-          </button>
         </div>
       </div>
     </div>

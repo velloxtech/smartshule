@@ -30,6 +30,7 @@ import {
 import { Student, CBCGradeLevel, StudentStatus } from '../../core/domain/user/Student';
 import { EducationLevel, LearningArea } from '../../core/domain/academic/ClassRoom';
 import { IdGenerator, NotFoundError, ValidationError, ForbiddenError, ConflictError } from '../../core/domain/shared/Errors';
+import { BroadsheetUseCases } from '../academics/BroadsheetUseCases';
 
 export interface UserContext {
   userId: string;
@@ -37,6 +38,30 @@ export interface UserContext {
   email?: string;
   schoolId?: string;
 }
+
+const CANONICAL_ORDER = [
+  'LAN',
+  'MATH',
+  'ENG',
+  'REA',
+  'KISW',
+  'KUSO',
+  'SCI',
+  'SST',
+  'CRE',
+  'CREA',
+  'AGRI',
+  'ARTS',
+  'PRETECH',
+  'HLTH',
+  'ENV',
+  'BUS',
+  'COMP',
+  'FRE',
+  'GER',
+  'ARA',
+  'IND'
+];
 
 export interface CreateStrandDTO {
   learningAreaId: string;
@@ -110,6 +135,8 @@ export interface GenerateReportCardDTO {
 }
 
 export class CBCAssessmentUseCases {
+  private broadsheetUseCases?: BroadsheetUseCases;
+
   constructor(
     private readonly CBCRepository: ICBCAssessmentRepository,
     private readonly studentRepository: IStudentRepository,
@@ -118,8 +145,23 @@ export class CBCAssessmentUseCases {
     private readonly guardianRepository?: IGuardianRepository,
     private readonly userRepository?: IUserRepository,
     private readonly teacherRepository?: ITeacherRepository,
-    private readonly feeRepository?: IFeeRepository
-  ) {}
+    private readonly feeRepository?: IFeeRepository,
+    broadsheetUseCases?: BroadsheetUseCases
+  ) {
+    this.broadsheetUseCases = broadsheetUseCases;
+  }
+
+  private getBroadsheetEngine(): BroadsheetUseCases {
+    if (!this.broadsheetUseCases) {
+      this.broadsheetUseCases = new BroadsheetUseCases(
+        this.academicRepository,
+        this.studentRepository,
+        this.CBCRepository,
+        this.teacherRepository
+      );
+    }
+    return this.broadsheetUseCases;
+  }
 
   public async getLinkedStudentIdsForUser(userId: string): Promise<string[]> {
     if (!this.guardianRepository) return [];
@@ -180,7 +222,7 @@ export class CBCAssessmentUseCases {
            s.title.trim().toLowerCase() === dto.title.trim().toLowerCase()
     );
     if (dup) {
-      throw new ConflictError(`Strand with code '${dto.code}' or title '${dto.title}' already exists for this learning area and grade.`);
+      return dup.toJSON();
     }
 
     const strand = Strand.create(dto, IdGenerator.generate());
@@ -225,7 +267,7 @@ export class CBCAssessmentUseCases {
              sub.title.trim().toLowerCase() === dto.title.trim().toLowerCase()
     );
     if (dup) {
-      throw new ConflictError(`Sub-strand with code '${dto.code}' or title '${dto.title}' already exists under this strand.`);
+      return dup.toJSON();
     }
 
     const subStrand = SubStrand.create(dto, IdGenerator.generate());
@@ -260,15 +302,67 @@ export class CBCAssessmentUseCases {
   }
 
   // 2. Formative Assessment
-  public async recordFormativeAssessment(dto: RecordFormativeDTO) {
+  public async recordFormativeAssessment(dto: RecordFormativeDTO, requestingUser?: UserContext) {
     let student = await this.studentRepository.findById(dto.studentId);
     if (!student) {
       student = await this.studentRepository.findByAdmissionNumber(dto.studentId);
     }
     if (!student) throw new NotFoundError('Student', dto.studentId);
 
-    const subStrand = await this.CBCRepository.findSubStrandById(dto.subStrandId);
-    if (!subStrand) throw new NotFoundError('SubStrand', dto.subStrandId);
+    const userToAssert = requestingUser || (dto as any).requestingUser;
+    if (userToAssert) {
+      await this.assertTeacherAuthorizedForMarks(
+        student.classroomId || '',
+        student.streamId,
+        dto.learningAreaId,
+        dto.academicYearId || '',
+        userToAssert,
+        student.gradeLevel
+      );
+    }
+
+    let subStrand = await this.CBCRepository.findSubStrandById(dto.subStrandId);
+    if (!subStrand) {
+      // Check if subStrandId is actually a code or title under this learning area
+      const strands = await this.CBCRepository.findStrandsByLearningArea(dto.learningAreaId);
+      for (const st of strands) {
+        const subs = await this.CBCRepository.findSubStrandsByStrand(st.id);
+        const match = subs.find(s => 
+          s.id === dto.subStrandId || 
+          s.code.trim().toUpperCase() === dto.subStrandId.trim().toUpperCase() ||
+          s.title.trim().toLowerCase() === dto.subStrandId.trim().toLowerCase()
+        );
+        if (match) {
+          subStrand = match;
+          break;
+        }
+      }
+    }
+
+    if (!subStrand) {
+      // Graceful auto-provision so formative assessment upload is never blocked
+      const strands = await this.CBCRepository.findStrandsByLearningArea(dto.learningAreaId);
+      let targetStrand = strands[0];
+      if (!targetStrand) {
+        const studentGrade = (student.gradeLevel || 'GRADE_7') as any;
+        targetStrand = Strand.create({
+          learningAreaId: dto.learningAreaId,
+          gradeLevel: studentGrade,
+          code: `STR-${IdGenerator.generate().slice(0, 4).toUpperCase()}`,
+          title: 'Core Curriculum Strand',
+          description: 'Auto-provisioned strand'
+        }, IdGenerator.generate());
+        await this.CBCRepository.saveStrand(targetStrand);
+      }
+
+      subStrand = SubStrand.create({
+        strandId: targetStrand.id,
+        code: `${targetStrand.code}.1`,
+        title: dto.specificOutcomeTested || 'Competency Outcome',
+        specificLearningOutcomes: [dto.specificOutcomeTested || 'Demonstrates expected competency'],
+      }, dto.subStrandId || IdGenerator.generate());
+      await this.CBCRepository.saveSubStrand(subStrand);
+    }
 
     let termId = dto.termId;
     let academicYearId = dto.academicYearId;
@@ -393,25 +487,28 @@ export class CBCAssessmentUseCases {
   private getCanonicalSubjectKey(str: string): string {
     if (!str) return 'OTHER';
     const clean = str.trim().toUpperCase();
-    if (clean.includes('CREATIVE') || clean.includes('CREA') || clean.includes('PSYCHOMOTOR') || clean.includes('CRA')) return 'CREA';
-    if (clean.includes('READING') || clean.includes('REA') || clean.includes('LITERACY') || clean.includes('LIT')) return 'REA';
-    if (clean.includes('KUSOMA') || clean.includes('KUSO') || clean.includes('WKU')) return 'KUSO';
-    if (clean.includes('ENVIRONMENT') || clean.includes('ENVI') || clean.includes('SENV') || clean === 'ENV') return 'ENV';
-    if (clean.includes('LANG') || clean === 'LAN') return 'LAN';
+    if (clean.includes('READING') || clean.includes('LITERACY') || /(^|[-_ \b])(REA|LIT)([-_ \b]|$)/i.test(clean)) return 'REA';
+    if (clean.includes('KUSOMA') || /(^|[-_ \b])(KUSO|WKU)([-_ \b]|$)/i.test(clean)) return 'KUSO';
+    if (clean.includes('ENVIRONMENT') || clean.includes('ENVI') || clean.includes('SENV') || /(^|[-_ \b])ENV([-_ \b]|$)/i.test(clean)) return 'ENV';
     if (clean.includes('ENG') || clean.includes('ENGLISH')) return 'ENG';
-    if (clean.includes('KISW') || clean.includes('SWAHILI') || clean === 'KIS') return 'KISW';
-    if (clean.includes('MATH') || clean === 'MAT') return 'MATH';
-    if (clean.includes('SPIRITUAL') || clean === 'SRE') return 'SRE';
-    if (clean.includes('RELIGIOUS') || clean.includes('CRE') || clean.includes('IRE') || clean.includes('HRE')) return 'CRE';
-    if (clean.includes('INTEGRATED SCIENCE') || clean.includes('INTSCI') || clean.includes('SCI_TECH') || clean.includes('SCIENCE') || clean.includes('SCI')) return 'SCI';
-    if (clean.includes('HEALTH') || clean.includes('HLTH')) return 'HLTH';
-    if (clean.includes('SOCIAL') || clean.includes('SST') || clean.includes('SOC')) return 'SST';
-    if (clean.includes('AGRI') || clean.includes('NUTRITION') || clean.includes('AGR')) return 'AGRI';
-    if (clean.includes('PRE-TECH') || clean.includes('PRETECH') || clean.includes('TECHNICAL') || clean.includes('PTECH') || clean.includes('PRET')) return 'PRETECH';
-    if (clean.includes('BUSINESS') || clean.includes('BUS')) return 'BUS';
-    if (clean.includes('COMPUTER') || clean.includes('COMP')) return 'COMP';
+    if (clean.includes('KISW') || clean.includes('SWAHILI') || /(^|[-_ \b])KIS([-_ \b]|$)/i.test(clean)) return 'KISW';
+    if (clean.includes('INDIGENOUS') || /(^|[-_ \b])IND([-_ \b]|$)/i.test(clean)) return 'IND';
+    if (clean.includes('FRENCH') || /(^|[-_ \b])FRE([-_ \b]|$)/i.test(clean)) return 'FRE';
+    if (clean.includes('GERMAN') || /(^|[-_ \b])GER([-_ \b]|$)/i.test(clean)) return 'GER';
+    if (clean.includes('ARABIC') || /(^|[-_ \b])ARA([-_ \b]|$)/i.test(clean)) return 'ARA';
+    if (clean.includes('MATH') || /(^|[-_ \b])MAT([-_ \b]|$)/i.test(clean)) return 'MATH';
+    if (clean.includes('SPIRITUAL') || /(^|[-_ \b])SRE([-_ \b]|$)/i.test(clean)) return 'SRE';
     if (clean.includes('ARTS') || clean.includes('SPORT') || clean.includes('MUSIC')) return 'ARTS';
-    if (clean.includes('INDIGENOUS') || clean.includes('IND')) return 'IND';
+    if (clean.includes('CREATIVE') || clean.includes('PSYCHOMOTOR') || /(^|[-_ \b])(CREA|CRA)([-_ \b]|$)/i.test(clean)) return 'CREA';
+    if (clean.includes('RELIGIOUS') || clean.includes('IRE') || clean.includes('HRE') || /(^|[-_ \b])CRE([-_ \b]|$)/i.test(clean)) return 'CRE';
+    if (clean.includes('INTEGRATED SCIENCE') || clean.includes('INTSCI') || clean.includes('SCI_TECH') || clean.includes('SCIENCE') || /(^|[-_ \b])SCI([-_ \b]|$)/i.test(clean)) return 'SCI';
+    if (clean.includes('HEALTH') || /(^|[-_ \b])HLTH([-_ \b]|$)/i.test(clean)) return 'HLTH';
+    if (clean.includes('SOCIAL') || clean.includes('SST') || /(^|[-_ \b])SOC([-_ \b]|$)/i.test(clean)) return 'SST';
+    if (clean.includes('AGRI') || clean.includes('NUTRITION') || /(^|[-_ \b])AGR([-_ \b]|$)/i.test(clean)) return 'AGRI';
+    if (clean.includes('PRE-TECH') || clean.includes('PRETECH') || clean.includes('TECHNICAL') || clean.includes('PTECH') || /(^|[-_ \b])PRET([-_ \b]|$)/i.test(clean)) return 'PRETECH';
+    if (clean.includes('BUSINESS') || /(^|[-_ \b])BUS([-_ \b]|$)/i.test(clean)) return 'BUS';
+    if (clean.includes('COMPUTER') || /(^|[-_ \b])COMP([-_ \b]|$)/i.test(clean)) return 'COMP';
+    if (clean.includes('LANGUAGE ACTIVITIES') || /(^|[-_ \b])LAN([-_ \b]|$)/i.test(clean)) return 'LAN';
     return clean;
   }
 
@@ -515,12 +612,24 @@ export class CBCAssessmentUseCases {
     }
   }
 
-  public async recordSummativeAssessment(dto: RecordSummativeDTO) {
+  public async recordSummativeAssessment(dto: RecordSummativeDTO, requestingUser?: UserContext) {
     let student = await this.studentRepository.findById(dto.studentId);
     if (!student) {
       student = await this.studentRepository.findByAdmissionNumber(dto.studentId);
     }
     if (!student) throw new NotFoundError('Student', dto.studentId);
+
+    const userToAssert = requestingUser || (dto as any).requestingUser;
+    if (userToAssert) {
+      await this.assertTeacherAuthorizedForMarks(
+        student.classroomId || '',
+        student.streamId,
+        dto.learningAreaId,
+        dto.academicYearId || '',
+        userToAssert,
+        student.gradeLevel
+      );
+    }
 
     if (dto.strandScores && Array.isArray(dto.strandScores)) {
       for (const item of dto.strandScores) {
@@ -605,10 +714,10 @@ export class CBCAssessmentUseCases {
     return assessment.toJSON();
   }
 
-  public async recordSummativeBatch(dtos: RecordSummativeDTO[]) {
+  public async recordSummativeBatch(dtos: RecordSummativeDTO[], requestingUser?: UserContext) {
     const results = [];
     for (const dto of dtos) {
-      const res = await this.recordSummativeAssessment(dto);
+      const res = await this.recordSummativeAssessment(dto, requestingUser);
       results.push(res);
     }
     return results;
@@ -637,7 +746,7 @@ export class CBCAssessmentUseCases {
     }
 
     const records = await this.CBCRepository.findSummatives(filters);
-    return records.map(r => r.toJSON());
+    return records.map(r => typeof r.toJSON === 'function' ? r.toJSON() : r);
   }
 
   public async computeStudentRankings(
@@ -648,48 +757,109 @@ export class CBCAssessmentUseCases {
     studentAvgScore: number,
     studentTotalPoints: number
   ): Promise<{
-    streamPosition: number;
+    streamPosition?: number;
     streamPopulation: number;
-    classPosition: number;
+    classPosition?: number;
     classPopulation: number;
-    overallPosition: number;
+    overallPosition?: number;
     overallPopulation: number;
+    isRanked: boolean;
   }> {
-    // 1. Fetch only active students in the school
+    try {
+      const broadsheet = await this.getBroadsheetEngine().getStreamBroadsheet({
+        streamId: student.streamId || 'all',
+        classId: student.classroomId,
+        gradeLevel: student.gradeLevel,
+        termId,
+        academicYearId
+      });
+
+      if (broadsheet && Array.isArray(broadsheet.rows) && broadsheet.rows.length > 0) {
+        const studentRow = broadsheet.rows.find(
+          r => r.studentId === student.id ||
+               (r.admissionNumber && r.admissionNumber.trim().toUpperCase() === student.admissionNumber?.trim().toUpperCase())
+        );
+
+        if (studentRow) {
+          const hasEvaluations = (studentRow as any).evaluatedCount !== undefined
+            ? (studentRow as any).evaluatedCount > 0
+            : studentRow.totalScore > 0;
+
+          // Stream ranking and population
+          const streamPos = hasEvaluations && studentRow.streamRank > 0 ? studentRow.streamRank : (hasEvaluations && studentRow.rank > 0 ? studentRow.rank : undefined);
+          const streamPop = broadsheet.streamSections?.find(s => s.streamId === student.streamId)?.totalStudents ||
+            (student.streamId ? broadsheet.rows.filter(r => r.streamId === student.streamId).length : broadsheet.totalStudents) ||
+            broadsheet.totalStudents || 1;
+
+          // Class ranking and population
+          const classPos = hasEvaluations && studentRow.classRank > 0 ? studentRow.classRank : (hasEvaluations && studentRow.rank > 0 ? studentRow.rank : undefined);
+          const classPop = broadsheet.totalClassStudents || broadsheet.totalStudents || streamPop || 1;
+
+          // School ranking and population
+          const overallPos = hasEvaluations && studentRow.schoolRank && studentRow.schoolRank > 0 ? studentRow.schoolRank : undefined;
+          const overallPop = broadsheet.schoolTopStudents?.length > 0
+            ? Math.max(broadsheet.schoolTopStudents.length, classPop)
+            : classPop;
+
+          return {
+            streamPosition: streamPos,
+            streamPopulation: streamPop,
+            classPosition: classPos,
+            classPopulation: classPop,
+            overallPosition: overallPos,
+            overallPopulation: overallPop,
+            isRanked: hasEvaluations && (streamPos !== undefined || classPos !== undefined)
+          };
+        }
+      }
+    } catch {
+      // Fall through to fallback cohort ranking
+    }
+
+    // Fallback: Consistent Cohort Evaluation
     const allSchoolStudents = await this.studentRepository.findAll({
       schoolId: student.schoolId
     }).catch(() => []);
 
-    const activeSchoolStudents = allSchoolStudents.filter(s => (s as any).status !== 'INACTIVE');
+    const activeSchoolStudents = allSchoolStudents.filter(s => {
+      const st = (s as any).status;
+      return st === StudentStatus.ACTIVE || st === 'ACTIVE' || st === 'Active' || !st;
+    });
 
     const normalizeGrade = (g?: string) =>
       (g || '').toUpperCase().replace(/[\s_-]/g, '');
 
     const targetGradeNorm = normalizeGrade(student.gradeLevel);
 
-    // 2. Grade Cohort: All students enrolled in the same grade level across streams
-    const gradeStudents = activeSchoolStudents.filter(s => {
-      if (student.classroomId && s.classroomId && s.classroomId === student.classroomId) {
-        return true;
+    // 2. Class Cohort: All students enrolled in this classroom or grade level
+    const classStudents = activeSchoolStudents.filter(s => {
+      if (student.classroomId && s.classroomId) {
+        return s.classroomId === student.classroomId;
       }
       return normalizeGrade(s.gradeLevel) === targetGradeNorm;
     });
-
-    const overallPopulation = gradeStudents.length > 0 ? gradeStudents.length : 1;
+    const classPopulation = classStudents.length > 0 ? classStudents.length : 1;
 
     // 3. Stream Cohort: Filter students enrolled specifically in this student's stream
     const streamStudents = student.streamId
-      ? gradeStudents.filter(s => s.streamId === student.streamId)
-      : gradeStudents;
+      ? classStudents.filter(s => s.streamId === student.streamId)
+      : classStudents;
+    const streamPopulation = streamStudents.length > 0 ? streamStudents.length : classPopulation;
 
-    // STRICT FIX: The population is the count of STUDENTS, never the count of streams!
-    const streamPopulation = streamStudents.length > 0 ? streamStudents.length : overallPopulation;
-    const classPopulation = streamPopulation;
+    // 4. Overall Population: All active students in the school
+    const overallPopulation = activeSchoolStudents.length > 0 ? activeSchoolStudents.length : classPopulation;
 
-    const termSummatives = await this.CBCRepository.findSummatives({
+    const altTermId = termId.includes('-t') ? termId.replace('-t', '-') : termId.replace(/-(\d)$/, '-t$1');
+    let termSummatives = await this.CBCRepository.findSummatives({
       termId,
       academicYearId
     }).catch(() => []);
+    if (!termSummatives || termSummatives.length === 0) {
+      termSummatives = await this.CBCRepository.findSummatives({ termId }).catch(() => []);
+    }
+    if (!termSummatives || termSummatives.length === 0) {
+      termSummatives = await this.CBCRepository.findSummatives({ termId: altTermId }).catch(() => []);
+    }
 
     const termReports = await this.CBCRepository.findReportCardsByTerm(termId).catch(() => []);
 
@@ -741,7 +911,7 @@ export class CBCAssessmentUseCases {
 
     const peerScores: PeerScore[] = [];
 
-    for (const st of gradeStudents) {
+    for (const st of activeSchoolStudents) {
       if (st.id === student.id) {
         peerScores.push({
           studentId: st.id,
@@ -752,7 +922,7 @@ export class CBCAssessmentUseCases {
           totalScore: studentTotalScore,
           avgScore: studentAvgScore,
           totalPoints: studentTotalPoints,
-          hasMarks: true
+          hasMarks: studentTotalScore > 0
         });
         continue;
       }
@@ -830,22 +1000,35 @@ export class CBCAssessmentUseCases {
       return rankMap;
     };
 
+    const studentScoreObj = peerScores.find(p => p.studentId === student.id);
+    const isRanked = Boolean(studentScoreObj?.hasMarks);
+
     const streamCohort = peerScores.filter(p =>
       student.streamId ? p.streamId === student.streamId : true
     );
     const streamRanks = assignRanks(streamCohort);
-    const streamPosition = streamRanks.get(student.id) || 1;
+    const streamPosition = isRanked ? streamRanks.get(student.id) : undefined;
+
+    const classCohort = peerScores.filter(p => {
+      if (student.classroomId && p.classroomId) {
+        return p.classroomId === student.classroomId;
+      }
+      return normalizeGrade(p.gradeLevel) === targetGradeNorm;
+    });
+    const classRanks = assignRanks(classCohort);
+    const classPosition = isRanked ? classRanks.get(student.id) : undefined;
 
     const overallRanks = assignRanks(peerScores);
-    const overallPosition = overallRanks.get(student.id) || 1;
+    const overallPosition = isRanked ? overallRanks.get(student.id) : undefined;
 
     return {
       streamPosition,
       streamPopulation,
-      classPosition: streamPosition,
-      classPopulation: streamPopulation,
+      classPosition,
+      classPopulation,
       overallPosition,
-      overallPopulation
+      overallPopulation,
+      isRanked
     };
   }
 
@@ -860,9 +1043,14 @@ export class CBCAssessmentUseCases {
       academicYearId: dto.academicYearId
     });
 
-    let allGradeAreas = student.gradeLevel ? await this.academicRepository.findAllLearningAreas({ gradeLevel: student.gradeLevel }) : [];
+    const allDbAreas = await this.academicRepository.findAllLearningAreas().catch(() => []);
+    const dbAreaMap = new Map<string, any>(allDbAreas.map(a => [a.id, a]));
+
+    let allGradeAreas = student.gradeLevel
+      ? allDbAreas.filter(a => (a.gradeLevel || '').toUpperCase().replace(/[\s-]/g, '_') === String(student.gradeLevel).toUpperCase().replace(/[\s-]/g, '_'))
+      : [];
     if (allGradeAreas.length === 0 && summatives.length === 0) {
-      allGradeAreas = await this.academicRepository.findAllLearningAreas();
+      allGradeAreas = allDbAreas;
     }
 
     const formatives = await this.CBCRepository.findFormatives({
@@ -895,7 +1083,6 @@ export class CBCAssessmentUseCases {
     const isTerm2 = currentTermNumber === 2;
     const isTerm3 = currentTermNumber === 3;
 
-    const learningAreaAssessments: LearningAreaReportEntry[] = [];
     let totalScoreSum = 0;
 
     const toPercent = (score: number, level: PerformanceLevel): number => {
@@ -907,8 +1094,16 @@ export class CBCAssessmentUseCases {
       return 42;
     };
 
+    const assessmentsMap = new Map<string, LearningAreaReportEntry>();
+
     for (const summ of summatives) {
-      const area = await this.academicRepository.findLearningAreaById(summ.learningAreaId).catch(() => null);
+      const area = dbAreaMap.get(summ.learningAreaId) || allDbAreas.find(a => a.id === summ.learningAreaId || a.code === summ.learningAreaId || a.name.toLowerCase() === summ.learningAreaId.toLowerCase());
+      if (!area) {
+        // Skip subjects that do not exist in the database
+        continue;
+      }
+
+      const canonKey = this.getCanonicalSubjectKey(area.code || area.name || area.id);
       const rubricVal = PerformanceLevelScores[summ.overallPerformanceLevel].score;
       let summRawScore: number | undefined;
       let summMaxScore: number | undefined;
@@ -922,12 +1117,11 @@ export class CBCAssessmentUseCases {
       const pct = (summRawScore !== undefined && summMaxScore !== undefined && summMaxScore > 0)
         ? Math.min(100, Math.round((summRawScore / summMaxScore) * 100))
         : toPercent(rubricVal, summ.overallPerformanceLevel);
-      totalScoreSum += pct;
 
-      learningAreaAssessments.push({
-        learningAreaId: summ.learningAreaId,
-        learningAreaName: area ? area.name : 'Learning Area',
-        code: area?.code,
+      const entry: LearningAreaReportEntry = {
+        learningAreaId: area.id,
+        learningAreaName: area.name,
+        code: area.code,
         levelLabel: summ.overallPerformanceLevel === PerformanceLevel.EXCEEDING_EXPECTATIONS ? 'EE' : summ.overallPerformanceLevel === PerformanceLevel.MEETING_EXPECTATIONS ? 'ME' : summ.overallPerformanceLevel === PerformanceLevel.APPROACHING_EXPECTATIONS ? 'AE' : 'BE',
         performanceLevel: summ.overallPerformanceLevel,
         score: pct,
@@ -937,11 +1131,21 @@ export class CBCAssessmentUseCases {
         term2Score: isTerm2 ? pct : undefined,
         term3Score: isTerm3 ? pct : undefined,
         teacherRemarks: summ.teacherRemarks || 'Demonstrates strong understanding and mastery of core strand learning outcomes.'
-      });
+      };
+
+      if (!assessmentsMap.has(canonKey)) {
+        assessmentsMap.set(canonKey, entry);
+      } else {
+        const existing = assessmentsMap.get(canonKey)!;
+        if (pct > (existing.score || 0)) {
+          assessmentsMap.set(canonKey, entry);
+        }
+      }
     }
 
     for (const area of allGradeAreas) {
-      if (!learningAreaAssessments.some(a => a.learningAreaId === area.id || a.learningAreaName.toLowerCase() === area.name.toLowerCase())) {
+      const canonKey = this.getCanonicalSubjectKey(area.code || area.name || area.id);
+      if (!assessmentsMap.has(canonKey)) {
         const areaFormatives = formatives.filter(f => f.learningAreaId === area.id);
         if (areaFormatives.length > 0) {
           let level = PerformanceLevel.MEETING_EXPECTATIONS;
@@ -955,9 +1159,8 @@ export class CBCAssessmentUseCases {
           const teacherRemarks = `Continuous assessment indicates ${PerformanceLevelScores[level].label.toLowerCase()}.`;
 
           const pct = toPercent(rubricVal, level);
-          totalScoreSum += pct;
 
-          learningAreaAssessments.push({
+          assessmentsMap.set(canonKey, {
             learningAreaId: area.id,
             learningAreaName: area.name,
             code: area.code,
@@ -973,6 +1176,8 @@ export class CBCAssessmentUseCases {
         }
       }
     }
+
+    const learningAreaAssessments: LearningAreaReportEntry[] = Array.from(assessmentsMap.values());
 
     for (let idx = 0; idx < learningAreaAssessments.length; idx++) {
       const entry = learningAreaAssessments[idx];
@@ -1054,9 +1259,27 @@ export class CBCAssessmentUseCases {
       }
     }
 
-    const averageScore = learningAreaAssessments.length > 0
-      ? Number((totalScoreSum / learningAreaAssessments.length).toFixed(2))
-      : 0.0;
+    // FACTOR IN: Subjects with marks have HIGHEST priority in display
+    learningAreaAssessments.sort((a, b) => {
+      const aScore = a.score !== undefined && a.score !== null ? Number(a.score) : 0;
+      const bScore = b.score !== undefined && b.score !== null ? Number(b.score) : 0;
+      const aHas = aScore > 0 && a.levelLabel !== '--';
+      const bHas = bScore > 0 && b.levelLabel !== '--';
+      if (aHas && !bHas) return -1;
+      if (!aHas && bHas) return 1;
+      const idxA = CANONICAL_ORDER.indexOf(this.getCanonicalSubjectKey(a.code || a.learningAreaName || a.learningAreaId));
+      const idxB = CANONICAL_ORDER.indexOf(this.getCanonicalSubjectKey(b.code || b.learningAreaName || b.learningAreaId));
+      const rankA = idxA === -1 ? 999 : idxA;
+      const rankB = idxB === -1 ? 999 : idxB;
+      if (rankA !== rankB) return rankA - rankB;
+      return (a.learningAreaName || '').localeCompare(b.learningAreaName || '');
+    });
+
+    const evaluatedAssessments = learningAreaAssessments.filter(a => a.score !== undefined && a.score !== null && a.score > 0);
+    totalScoreSum = evaluatedAssessments.reduce((sum, a) => sum + (Number(a.score) || 0), 0);
+    const averageScore = evaluatedAssessments.length > 0
+      ? Number((totalScoreSum / evaluatedAssessments.length).toFixed(2))
+      : (learningAreaAssessments.length > 0 ? Number((totalScoreSum / learningAreaAssessments.length).toFixed(2)) : 0.0);
 
     let overallLevel = PerformanceLevel.BELOW_EXPECTATIONS;
     if (learningAreaAssessments.length > 0) {
@@ -1177,9 +1400,10 @@ export class CBCAssessmentUseCases {
       if (level === 'AE' || level === 'APPROACHING_EXPECTATIONS' || level === '2') return 2;
       return 1;
     };
-    const totalPoints = learningAreaAssessments.reduce((sum, a) => sum + ptsFromLevel(a.performanceLevel || a.levelLabel || ''), 0);
-    const meanPoints = learningAreaAssessments.length > 0
-      ? Number((totalPoints / learningAreaAssessments.length).toFixed(2))
+    const pointAssessments = evaluatedAssessments.length > 0 ? evaluatedAssessments : learningAreaAssessments;
+    const totalPoints = pointAssessments.reduce((sum, a) => sum + ptsFromLevel(a.performanceLevel || a.levelLabel || ''), 0);
+    const meanPoints = pointAssessments.length > 0
+      ? Number((totalPoints / pointAssessments.length).toFixed(2))
       : 0;
     const meanGrade = meanPoints >= 3.5 || averageScore >= 80 ? 'EE' : meanPoints >= 2.5 || averageScore >= 65 ? 'ME' : meanPoints >= 1.5 || averageScore >= 50 ? 'AE' : 'BE';
     const totalMarks = Math.round(totalScoreSum);
@@ -1288,7 +1512,22 @@ export class CBCAssessmentUseCases {
       }
     }
 
-    const reportCard = await this.CBCRepository.findReportCard(studentId, termId, academicYearId);
+    let reportCard = await this.CBCRepository.findReportCard(studentId, termId, academicYearId);
+    if (!reportCard) {
+      try {
+        const student = await this.studentRepository.findById(studentId);
+        if (student) {
+          await this.generateStudentReportCard({
+            studentId,
+            termId,
+            academicYearId,
+            classTeacherRemarks: 'Recommended for steady academic development and holistic learning growth.',
+            headTeacherRemarks: 'Shows admirable effort and character progression.'
+          });
+          reportCard = await this.CBCRepository.findReportCard(studentId, termId, academicYearId);
+        }
+      } catch {}
+    }
     if (!reportCard) throw new NotFoundError('CBC Report Card for the given term');
 
     const student = await this.studentRepository.findById(studentId);
@@ -1399,6 +1638,40 @@ export class CBCAssessmentUseCases {
           term3Score: t3Score
         };
       });
+
+      // Deduplicate by canonical subject key to guarantee NO duplicates at any cost
+      const dedupedMap = new Map<string, any>();
+      for (const ev of reportData.learningAreaAssessments) {
+        const canonKey = this.getCanonicalSubjectKey(ev.code || ev.learningAreaName || ev.learningAreaId || '');
+        if (!dedupedMap.has(canonKey)) {
+          dedupedMap.set(canonKey, ev);
+        } else {
+          const existing = dedupedMap.get(canonKey);
+          const evScore = ev.score !== undefined && ev.score !== null ? Number(ev.score) : 0;
+          const existScore = existing.score !== undefined && existing.score !== null ? Number(existing.score) : 0;
+          if (evScore > existScore) {
+            dedupedMap.set(canonKey, ev);
+          }
+        }
+      }
+
+      // Sort with HIGHEST PRIORITY for subjects with marks
+      const sortedAssessments = Array.from(dedupedMap.values()).sort((a: any, b: any) => {
+        const aScore = a.score !== undefined && a.score !== null ? Number(a.score) : 0;
+        const bScore = b.score !== undefined && b.score !== null ? Number(b.score) : 0;
+        const aHas = aScore > 0 && a.levelLabel !== '--';
+        const bHas = bScore > 0 && b.levelLabel !== '--';
+        if (aHas && !bHas) return -1;
+        if (!aHas && bHas) return 1;
+        const idxA = CANONICAL_ORDER.indexOf(this.getCanonicalSubjectKey(a.code || a.learningAreaName || a.learningAreaId));
+        const idxB = CANONICAL_ORDER.indexOf(this.getCanonicalSubjectKey(b.code || b.learningAreaName || b.learningAreaId));
+        const rankA = idxA === -1 ? 999 : idxA;
+        const rankB = idxB === -1 ? 999 : idxB;
+        if (rankA !== rankB) return rankA - rankB;
+        return (a.learningAreaName || '').localeCompare(b.learningAreaName || '');
+      });
+
+      reportData.learningAreaAssessments = sortedAssessments;
     }
 
     let streamPos = reportCard.streamPosition;
@@ -1411,7 +1684,7 @@ export class CBCAssessmentUseCases {
     let meanPoints = reportCard.meanPoints;
     let meanGrade = reportCard.meanGrade;
 
-    if (student && (!classPos || !classPop || !overallPos || !overallPop || classPop <= 3)) {
+    if (student) {
       const studentTotalScore = Array.isArray(reportData.learningAreaAssessments)
         ? reportData.learningAreaAssessments.reduce((sum: number, a: any) => sum + (Number(a.score) || 0), 0)
         : (reportCard.overallAverageScore || 0);
@@ -1473,6 +1746,7 @@ export class CBCAssessmentUseCases {
     reportData.totalMarks = totalMarks;
     reportData.meanPoints = meanPoints;
     reportData.meanGrade = meanGrade;
+    (reportData as any).isRanked = streamPos !== undefined || classPos !== undefined;
 
     return {
       ...reportData,
@@ -1581,12 +1855,13 @@ export class CBCAssessmentUseCases {
   // MARKS UPLOAD & MARKSHEET PIPELINE
   // ==========================================
 
-  private async assertTeacherAuthorizedForMarks(
+  public async assertTeacherAuthorizedForMarks(
     classRoomId: string,
     streamId: string | undefined,
     learningAreaId: string,
     academicYearId: string,
-    requestingUser?: UserContext
+    requestingUser?: UserContext,
+    gradeLevel?: string
   ): Promise<{ teacherId?: string }> {
     if (!requestingUser) return {};
 
@@ -1610,30 +1885,79 @@ export class CBCAssessmentUseCases {
         throw new ForbiddenError('No teacher profile associated with your account.');
       }
 
+      // Check Lower Primary rule: PP1 to Grade 3 class teachers teach all learning areas
+      let effectiveClassRoomId = classRoomId;
+      if (!effectiveClassRoomId && streamId) {
+        try {
+          const stream = await this.academicRepository.findStreamById(streamId);
+          if (stream) effectiveClassRoomId = stream.classRoomId;
+        } catch {}
+      }
+
+      const lowerPrimaryGrades = ['PLAYGROUP', 'CRECHE', 'RECEPTION', 'PP1', 'PP2', 'GRADE_1', 'GRADE_2', 'GRADE_3'];
+      let isLowerPrimary = false;
+      if (gradeLevel) {
+        isLowerPrimary = lowerPrimaryGrades.includes(gradeLevel.toUpperCase().replace(/\s+/g, '_'));
+      } else if (effectiveClassRoomId) {
+        try {
+          const cls = await this.academicRepository.findClassById(effectiveClassRoomId);
+          if (cls && cls.gradeLevel) {
+            isLowerPrimary = lowerPrimaryGrades.includes(cls.gradeLevel.toUpperCase().replace(/\s+/g, '_'));
+          }
+        } catch {}
+      }
+
       const classTeacherAssignments = await this.academicRepository.findClassTeacherAssignments({
         teacherId: teacher.id,
-        classRoomId,
-        streamId,
-        academicYearId,
+        classRoomId: effectiveClassRoomId || undefined,
+        academicYearId: academicYearId || undefined,
         isActive: true
       });
-      if (classTeacherAssignments.length > 0) {
+      const isClassTeacher = classTeacherAssignments.some(a => !a.streamId || !streamId || a.streamId === streamId) ||
+        (streamId && teacher.assignedClassStreamIds.includes(streamId));
+
+      // Under the Class-Teacher model, an assigned class teacher is authorized to record marks for their class
+      if (isClassTeacher) {
         return { teacherId: teacher.id };
       }
 
-      if (streamId && teacher.assignedClassStreamIds.includes(streamId)) {
-        return { teacherId: teacher.id };
-      }
+      // Resolve learning area ID and Code for flexible matching
+      let targetLaId = learningAreaId;
+      let targetLaCode = '';
+      try {
+        const la = await this.academicRepository.findLearningAreaById(learningAreaId);
+        if (la) {
+          targetLaId = la.id;
+          targetLaCode = la.code || '';
+        } else {
+          const allLas = await this.academicRepository.findAllLearningAreas();
+          const match = allLas.find((l: any) => l.code?.toLowerCase() === learningAreaId.toLowerCase() || l.id.toLowerCase() === learningAreaId.toLowerCase());
+          if (match) {
+            targetLaId = match.id;
+            targetLaCode = match.code || '';
+          }
+        }
+      } catch {}
 
+      // Under the Subject-Teacher model, verify active subject assignment for this learning area in this class/stream
       const subjectAssignments = await this.academicRepository.findSubjectTeacherAssignments({
         teacherId: teacher.id,
-        learningAreaId,
-        academicYearId,
+        academicYearId: academicYearId || undefined,
         isActive: true
       });
-      const matchingSubj = subjectAssignments.find(
-        s => !s.classRoomId || s.classRoomId === classRoomId || (streamId && s.streamId === streamId)
-      );
+      const targetCanonicalKey = this.getCanonicalSubjectKey(learningAreaId);
+      const matchingSubj = subjectAssignments.find(s => {
+        const matchesClass = !s.classRoomId || s.classRoomId === effectiveClassRoomId || (streamId && s.streamId === streamId);
+        if (!matchesClass) return false;
+        const subjCanonicalKey = this.getCanonicalSubjectKey(s.learningAreaId);
+        return (
+          s.learningAreaId === targetLaId ||
+          (targetLaCode && s.learningAreaId === targetLaCode) ||
+          s.learningAreaId === learningAreaId ||
+          (targetCanonicalKey && subjCanonicalKey === targetCanonicalKey)
+        );
+      });
+
       if (matchingSubj) {
         return { teacherId: teacher.id };
       }
@@ -1668,7 +1992,11 @@ export class CBCAssessmentUseCases {
     const classRoom = await this.academicRepository.findClassById(query.classRoomId);
     if (!classRoom) throw new NotFoundError('Classroom', query.classRoomId);
 
-    const learningArea = await this.academicRepository.findLearningAreaById(query.learningAreaId);
+    let learningArea = await this.academicRepository.findLearningAreaById(query.learningAreaId).catch(() => null);
+    if (!learningArea) {
+      const resolvedId = await this.resolveValidLearningAreaId(query.learningAreaId, classRoom.gradeLevel, query.schoolId);
+      learningArea = await this.academicRepository.findLearningAreaById(resolvedId).catch(() => null);
+    }
     if (!learningArea) throw new NotFoundError('Learning Area', query.learningAreaId);
 
     let streamName = '';
@@ -1747,7 +2075,11 @@ export class CBCAssessmentUseCases {
     const classRoom = await this.academicRepository.findClassById(dto.classRoomId);
     if (!classRoom) throw new NotFoundError('Classroom', dto.classRoomId);
 
-    const learningArea = await this.academicRepository.findLearningAreaById(dto.learningAreaId);
+    let learningArea = await this.academicRepository.findLearningAreaById(dto.learningAreaId).catch(() => null);
+    if (!learningArea) {
+      const resolvedId = await this.resolveValidLearningAreaId(dto.learningAreaId, classRoom.gradeLevel, dto.schoolId);
+      learningArea = await this.academicRepository.findLearningAreaById(resolvedId).catch(() => null);
+    }
     if (!learningArea) throw new NotFoundError('Learning Area', dto.learningAreaId);
 
     const allStudents = await this.studentRepository.findAll({
@@ -1993,6 +2325,12 @@ export class CBCAssessmentUseCases {
       );
     }
 
+    const classRoom = await this.academicRepository.findClassById(dto.classRoomId).catch(() => null);
+    let commitLearningAreaId = dto.learningAreaId;
+    try {
+      commitLearningAreaId = await this.resolveValidLearningAreaId(dto.learningAreaId, classRoom?.gradeLevel, dto.schoolId);
+    } catch {}
+
     let assignedTeacherId = authInfo.teacherId;
     if (!assignedTeacherId && this.teacherRepository && requestingUser) {
       const t = await this.teacherRepository.findByUserId(requestingUser.userId).catch(() => null);
@@ -2011,12 +2349,12 @@ export class CBCAssessmentUseCases {
       await this.recordSummativeAssessment({
         studentId: preview.studentId,
         teacherId: finalTeacherId,
-        learningAreaId: dto.learningAreaId,
+        learningAreaId: commitLearningAreaId || dto.learningAreaId,
         termId: dto.termId,
         academicYearId: dto.academicYearId,
         strandScores: [
           {
-            strandId: dto.learningAreaId,
+            strandId: commitLearningAreaId || dto.learningAreaId,
             performanceLevel: preview.performanceLevel,
             rawScore: preview.score,
             maxScore: preview.maxScore

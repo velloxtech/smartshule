@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { apiService } from '../../services/api';
 import { BackendLearningArea, BackendStrand, BackendSubStrand } from '../../types';
+import { matchGradeLevels } from '../../utils/formatters';
 
 export const StrandsView: React.FC = () => {
   const [learningAreas, setLearningAreas] = useState<BackendLearningArea[]>([]);
@@ -85,15 +86,35 @@ export const StrandsView: React.FC = () => {
     try {
       const res = await apiService.getStrandsByLearningArea(areaId, grade);
       if (res.success && res.data) {
-        // Filter strands by grade level if specified, or show all if universal
-        const filteredStrands = res.data.filter(s => !s.gradeLevel || s.gradeLevel === grade);
-        setStrands(filteredStrands);
+        // Filter strands by grade level if specified, or show all if universal / fallback
+        const matchingStrands = res.data.filter(s => !s.gradeLevel || matchGradeLevels(s.gradeLevel, grade));
+        const effectiveStrands = matchingStrands.length > 0 ? matchingStrands : res.data;
+        
+        // Deduplicate strands by title so no duplicates are ever displayed
+        const seen = new Set<string>();
+        const uniqueStrands: BackendStrand[] = [];
+        for (const s of effectiveStrands) {
+          const k = (s.title || '').trim().toLowerCase();
+          if (!k || seen.has(k)) continue;
+          seen.add(k);
+          uniqueStrands.push(s);
+        }
+        setStrands(uniqueStrands);
         
         const subMap: Record<string, BackendSubStrand[]> = {};
-        for (const st of filteredStrands) {
+        for (const st of uniqueStrands) {
           const subRes = await apiService.getSubStrandsByStrand(st.id);
           if (subRes.success && subRes.data) {
-            subMap[st.id] = subRes.data;
+            // Deduplicate sub-strands as well
+            const seenSub = new Set<string>();
+            const uniqueSubs: BackendSubStrand[] = [];
+            for (const sub of subRes.data) {
+              const sk = (sub.title || '').trim().toLowerCase();
+              if (!sk || seenSub.has(sk)) continue;
+              seenSub.add(sk);
+              uniqueSubs.push(sub);
+            }
+            subMap[st.id] = uniqueSubs;
           }
         }
         setSubStrandsMap(subMap);
@@ -203,7 +224,8 @@ export const StrandsView: React.FC = () => {
       });
       if (res.success) {
         setIsAddStrandOpen(false);
-        loadStrands(selectedAreaId, selectedGrade);
+        setSelectedGrade(strandGradeLevel);
+        loadStrands(selectedAreaId, strandGradeLevel);
       }
     } catch (err: any) {
       alert(err.message || 'Failed to create strand');

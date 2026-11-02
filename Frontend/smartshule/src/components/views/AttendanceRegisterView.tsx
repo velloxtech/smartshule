@@ -19,6 +19,7 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
   const [registerDate, setRegisterDate] = useState(new Date().toISOString().split('T')[0]);
   const [students, setStudents] = useState<any[]>([]);
   const [attendanceEntries, setAttendanceEntries] = useState<Record<string, 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED'>>({});
+  const [attendanceRemarks, setAttendanceRemarks] = useState<Record<string, string>>({});
   const [notifyGuardians, setNotifyGuardians] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
@@ -180,9 +181,11 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
         setStudents(studentList);
 
         const initialStatusMap: Record<string, 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED'> = {};
+        const initialRemarksMap: Record<string, string> = {};
         if (regRes?.success && regRes.data?.entries?.length) {
           regRes.data.entries.forEach((e: AttendanceEntry) => {
             initialStatusMap[e.studentId] = e.status;
+            if (e.remarks) initialRemarksMap[e.studentId] = e.remarks;
           });
         } else {
           studentList.forEach((s: any) => {
@@ -190,6 +193,7 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
           });
         }
         setAttendanceEntries(initialStatusMap);
+        setAttendanceRemarks(initialRemarksMap);
       } catch (err) {
         console.error('Error loading attendance register:', err);
         setStudents([]);
@@ -222,13 +226,21 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
     const targetClassId = matchedStream ? matchedStream.classRoomId : streamId;
     const targetStreamId = matchedStream ? matchedStream.id : undefined;
 
-    const currentYearId = currentContext?.currentYear?.id || '';
-    const currentTermId = currentContext?.currentTerm?.id || '';
+    let currentYearId = currentContext?.currentYear?.id || '';
+    let currentTermId = currentContext?.currentTerm?.id || '';
+
+    if (!currentYearId || !currentTermId) {
+      try {
+        const ctx = await apiService.getCurrentContext();
+        if (ctx?.data?.currentYear?.id) currentYearId = ctx.data.currentYear.id;
+        if (ctx?.data?.currentTerm?.id) currentTermId = ctx.data.currentTerm.id;
+      } catch {}
+    }
 
     const entries = students.map((s) => ({
       studentId: s.id,
       status: attendanceEntries[s.id] || 'PRESENT',
-      remarks: 'Daily morning roll-call record',
+      remarks: attendanceRemarks[s.id] || (attendanceEntries[s.id] === 'ABSENT' ? 'Unexcused Absence' : (attendanceEntries[s.id] === 'EXCUSED' ? 'Excused / Medical Absence' : 'Daily morning roll-call record')),
     }));
 
     try {
@@ -246,6 +258,10 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
 
       if (res.success) {
         setSaveMessage('Daily register successfully saved and synced to database!');
+        // Dispatch custom event to instantly notify Executive and Headteacher dashboards
+        window.dispatchEvent(new CustomEvent('smartshule:attendance-updated', {
+          detail: { classRoomId: targetClassId, streamId: targetStreamId, date: registerDate }
+        }));
         setTimeout(() => setSaveMessage(null), 3500);
       }
     } catch (err: any) {
@@ -938,30 +954,41 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1.5 self-end sm:self-auto">
-                    {(['PRESENT', 'ABSENT', 'LATE', 'EXCUSED'] as const).map((status) => {
-                      const isSelected = currentStatus === status;
-                      return (
-                        <button
-                          key={status}
-                          type="button"
-                          onClick={() => handleStatusChange(st.id, status)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                            isSelected
-                              ? status === 'PRESENT'
-                                ? 'bg-secondary text-white shadow-xs'
-                                : status === 'ABSENT'
-                                ? 'bg-error text-white shadow-xs'
-                                : status === 'LATE'
-                                ? 'bg-amber-600 text-white shadow-xs'
-                                : 'bg-[#7a1228] text-white shadow-xs'
-                              : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'
-                          }`}
-                        >
-                          {status}
-                        </button>
-                      );
-                    })}
+                  <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2 self-end sm:self-auto">
+                    {(currentStatus === 'ABSENT' || currentStatus === 'EXCUSED') && (
+                      <input
+                        type="text"
+                        placeholder={currentStatus === 'ABSENT' ? 'Reason for absence (e.g. fever, travel)' : 'Excused reason / note'}
+                        value={attendanceRemarks[st.id] || ''}
+                        onChange={(e) => setAttendanceRemarks((prev) => ({ ...prev, [st.id]: e.target.value }))}
+                        className="px-2.5 py-1 text-xs border border-outline-variant/60 rounded-lg bg-surface-container-lowest text-on-surface w-48 focus:w-64 transition-all"
+                      />
+                    )}
+                    <div className="flex items-center gap-1.5">
+                      {(['PRESENT', 'ABSENT', 'LATE', 'EXCUSED'] as const).map((status) => {
+                        const isSelected = currentStatus === status;
+                        return (
+                          <button
+                            key={status}
+                            type="button"
+                            onClick={() => handleStatusChange(st.id, status)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                              isSelected
+                                ? status === 'PRESENT'
+                                  ? 'bg-secondary text-white shadow-xs'
+                                  : status === 'ABSENT'
+                                  ? 'bg-error text-white shadow-xs'
+                                  : status === 'LATE'
+                                  ? 'bg-amber-600 text-white shadow-xs'
+                                  : 'bg-[#7a1228] text-white shadow-xs'
+                                : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'
+                            }`}
+                          >
+                            {status}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               );

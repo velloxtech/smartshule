@@ -1,5 +1,5 @@
 import { IStudentRepository, StudentFilterCriteria } from '../../core/ports/repositories/IStudentRepository';
-import { IGuardianRepository } from '../../core/ports/repositories/ITeacherRepository';
+import { IGuardianRepository, ITeacherRepository } from '../../core/ports/repositories/ITeacherRepository';
 import { IUserRepository } from '../../core/ports/repositories/IUserRepository';
 import { IAcademicRepository } from '../../core/ports/repositories/IAcademicRepository';
 import { IFeeRepository } from '../../core/ports/repositories/IFeeRepository';
@@ -152,7 +152,8 @@ export class StudentUseCases {
     private readonly complaintRepository?: IComplaintRepository,
     private readonly ediaryRepository?: IEDiaryRepository,
     private readonly mediaRepository?: IMediaRepository,
-    private readonly studentSponsorshipRepository?: IStudentSponsorshipRepository
+    private readonly studentSponsorshipRepository?: IStudentSponsorshipRepository,
+    private readonly teacherRepository?: ITeacherRepository
   ) {}
 
   public async hasStudentBeenBilledAdmission(studentId: string): Promise<boolean> {
@@ -1044,6 +1045,102 @@ export class StudentUseCases {
     return idOrName.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   }
 
+  private async getTeacherAssignments(userId: string): Promise<{
+    teacherId: string;
+    isClassTeacherFor: (classRoomId?: string, streamId?: string) => boolean;
+    isSubjectTeacherFor: (classRoomId?: string, streamId?: string) => boolean;
+    assignedClassroomIds: Set<string>;
+    assignedStreamIds: Set<string>;
+    allAssignedIds: Set<string>;
+  }> {
+    const emptyResult = {
+      teacherId: '',
+      isClassTeacherFor: () => false,
+      isSubjectTeacherFor: () => false,
+      assignedClassroomIds: new Set<string>(),
+      assignedStreamIds: new Set<string>(),
+      allAssignedIds: new Set<string>()
+    };
+
+    if (!this.teacherRepository) return emptyResult;
+    let teacher = await this.teacherRepository.findByUserId(userId);
+    if (!teacher) {
+      teacher = await this.teacherRepository.findById(userId);
+    }
+    if (!teacher) return emptyResult;
+
+    const assignedClassroomIds = new Set<string>();
+    const assignedStreamIds = new Set<string>();
+    const classTeacherClassroomIds = new Set<string>();
+    const classTeacherStreamIds = new Set<string>();
+    const subjectTeacherClassroomIds = new Set<string>();
+    const subjectTeacherStreamIds = new Set<string>();
+
+    for (const sid of teacher.assignedClassStreamIds || []) {
+      assignedStreamIds.add(sid);
+      classTeacherStreamIds.add(sid);
+    }
+
+    if (this.academicRepository) {
+      try {
+        const ctas = await this.academicRepository.findClassTeacherAssignments({
+          teacherId: teacher.id,
+          isActive: true
+        });
+        for (const a of ctas) {
+          if (a.classRoomId) {
+            assignedClassroomIds.add(a.classRoomId);
+            classTeacherClassroomIds.add(a.classRoomId);
+          }
+          if (a.streamId) {
+            assignedStreamIds.add(a.streamId);
+            classTeacherStreamIds.add(a.streamId);
+          }
+        }
+      } catch {}
+
+      try {
+        const stas = await this.academicRepository.findSubjectTeacherAssignments({
+          teacherId: teacher.id,
+          isActive: true
+        });
+        for (const s of stas) {
+          if (s.classRoomId) {
+            assignedClassroomIds.add(s.classRoomId);
+            subjectTeacherClassroomIds.add(s.classRoomId);
+          }
+          if (s.streamId) {
+            assignedStreamIds.add(s.streamId);
+            subjectTeacherStreamIds.add(s.streamId);
+          }
+        }
+      } catch {}
+    }
+
+    const allAssignedIds = new Set<string>([...assignedClassroomIds, ...assignedStreamIds]);
+
+    const isClassTeacherFor = (classRoomId?: string, streamId?: string) => {
+      if (streamId && classTeacherStreamIds.has(streamId)) return true;
+      if (classRoomId && classTeacherClassroomIds.has(classRoomId)) return true;
+      return false;
+    };
+
+    const isSubjectTeacherFor = (classRoomId?: string, streamId?: string) => {
+      if (streamId && subjectTeacherStreamIds.has(streamId)) return true;
+      if (classRoomId && subjectTeacherClassroomIds.has(classRoomId)) return true;
+      return false;
+    };
+
+    return {
+      teacherId: teacher.id,
+      isClassTeacherFor,
+      isSubjectTeacherFor,
+      assignedClassroomIds,
+      assignedStreamIds,
+      allAssignedIds
+    };
+  }
+
   public async getStudentById(studentId: string, requestingUser?: UserContext) {
     const isParent = requestingUser?.role === UserRole.PARENT || requestingUser?.role === UserRole.GUARDIAN;
     if (isParent && requestingUser) {
@@ -1053,9 +1150,23 @@ export class StudentUseCases {
       }
     }
 
+    const isTeacher = requestingUser?.role === UserRole.TEACHER;
+    let teacherInfo: any = null;
+    if (isTeacher && requestingUser) {
+      teacherInfo = await this.getTeacherAssignments(requestingUser.userId);
+    }
+
     const student = await this.studentRepository.findById(studentId);
     if (!student) {
       throw new NotFoundError('Student', studentId);
+    }
+
+    if (isTeacher && teacherInfo) {
+      const streamMatch = student.streamId && (teacherInfo.assignedStreamIds.has(student.streamId) || teacherInfo.allAssignedIds.has(student.streamId));
+      const classMatch = student.classroomId && (teacherInfo.assignedClassroomIds.has(student.classroomId) || teacherInfo.allAssignedIds.has(student.classroomId));
+      if (!streamMatch && !classMatch) {
+        throw new ForbiddenError('Access denied: You are not assigned to this learner\'s class or subjects.');
+      }
     }
 
     const guardiansByStudentId = await this.guardianRepository.findByStudentId(studentId);
@@ -1093,11 +1204,21 @@ export class StudentUseCases {
       } catch {}
     }
 
+    const isClassTeacher = isTeacher && teacherInfo ? teacherInfo.isClassTeacherFor(student.classroomId, student.streamId) : true;
+    if (isTeacher && !isClassTeacher) {
+      if (primaryG) {
+        primaryG.nationalId = undefined;
+      }
+      for (const gd of guardianDetails) {
+        gd.nationalId = undefined;
+      }
+    }
+
     return {
       ...studentWithAcademics,
-      feeBalance: sponsorshipJson ? 0 : (studentWithAcademics.feeBalance ?? 0),
-      isSponsored: !!sponsorshipJson,
-      sponsorship: sponsorshipJson,
+      feeBalance: (isTeacher && !isClassTeacher) ? null : (sponsorshipJson ? 0 : (studentWithAcademics.feeBalance ?? 0)),
+      isSponsored: (isTeacher && !isClassTeacher) ? false : !!sponsorshipJson,
+      sponsorship: (isTeacher && !isClassTeacher) ? null : sponsorshipJson,
       guardian: primaryG ? {
         id: primaryG.id,
         firstName: primaryG.user?.firstName,
@@ -1106,7 +1227,7 @@ export class StudentUseCases {
         email: primaryG.user?.email,
         emergencyContact: primaryG.emergencyContact,
         relationship: primaryG.relationship,
-        nationalId: primaryG.nationalId
+        nationalId: (isTeacher && !isClassTeacher) ? undefined : primaryG.nationalId
       } : null,
       guardianName: gName,
       guardianPhone: gPhone,
@@ -1116,6 +1237,8 @@ export class StudentUseCases {
 
   public async listStudents(filters?: StudentFilterCriteria & { requestingUser?: UserContext }) {
     const isParent = filters?.requestingUser?.role === UserRole.PARENT || filters?.requestingUser?.role === UserRole.GUARDIAN;
+    const isTeacher = filters?.requestingUser?.role === UserRole.TEACHER;
+    let teacherInfo: any = null;
     let students: Student[];
 
     if (isParent && filters?.requestingUser) {
@@ -1124,6 +1247,15 @@ export class StudentUseCases {
         return [];
       }
       students = await this.studentRepository.findByIds(childIds);
+    } else if (isTeacher && filters?.requestingUser) {
+      teacherInfo = await this.getTeacherAssignments(filters.requestingUser.userId);
+      const allStudents = await this.studentRepository.findAll(filters);
+      // Restrict learner list to classes and streams assigned to this teacher
+      students = allStudents.filter(s => {
+        const streamMatch = s.streamId && (teacherInfo.assignedStreamIds.has(s.streamId) || teacherInfo.allAssignedIds.has(s.streamId));
+        const classMatch = s.classroomId && (teacherInfo.assignedClassroomIds.has(s.classroomId) || teacherInfo.allAssignedIds.has(s.classroomId));
+        return streamMatch || classMatch;
+      });
     } else {
       students = await this.studentRepository.findAll(filters);
     }
@@ -1383,6 +1515,35 @@ export class StudentUseCases {
         const overpayment = !sp && feeInfo.paid > totalDue ? Math.round((feeInfo.paid - totalDue) * 100) / 100 : 0;
         const arrearsDue = !sp && feeInfo.paid < totalDue ? Math.round((totalDue - feeInfo.paid) * 100) / 100 : 0;
         const balance = sp ? 0 : (overpayment > 0 ? -overpayment : arrearsDue);
+
+        const isClassTeacher = isTeacher && teacherInfo ? teacherInfo.isClassTeacherFor(s.classroomId, s.streamId) : true;
+        if (isTeacher && !isClassTeacher) {
+          if (guardianSummary) {
+            guardianSummary.nationalId = undefined;
+          }
+          for (const gd of guardianDetails) {
+            gd.nationalId = undefined;
+          }
+          return {
+            ...studentJson,
+            feeBalance: null,
+            totalFee: null,
+            totalPaid: null,
+            creditBalance: null,
+            priorArrears: null,
+            totalDue: null,
+            arrearsDue: null,
+            balance: null,
+            isSponsored: false,
+            sponsorship: null,
+            guardian: guardianSummary,
+            guardians: guardianDetails,
+            guardianName: gName,
+            guardianPhone: gPhone,
+            emergencyContactName: gName,
+            emergencyContactPhone: gPhone
+          };
+        }
 
         return {
           ...studentJson,

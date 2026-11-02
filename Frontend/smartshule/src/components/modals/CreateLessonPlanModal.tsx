@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { ClassRoom, StreamItem, BackendLearningArea, BackendStrand, BackendSubStrand } from '../../types';
+import { matchGradeLevels } from '../../utils/formatters';
 
 interface CreateLessonPlanModalProps {
   isOpen: boolean;
@@ -26,9 +27,15 @@ export const CreateLessonPlanModal: React.FC<CreateLessonPlanModalProps> = ({
   const [strands, setStrands] = useState<BackendStrand[]>([]);
   const [selectedStrandId, setSelectedStrandId] = useState('');
   const [strandTitle, setStrandTitle] = useState('');
+  const [isCustomStrand, setIsCustomStrand] = useState(false);
+  const [customStrandTitle, setCustomStrandTitle] = useState('');
+
   const [subStrands, setSubStrands] = useState<BackendSubStrand[]>([]);
   const [selectedSubStrandId, setSelectedSubStrandId] = useState('');
   const [subStrandTitle, setSubStrandTitle] = useState('');
+  const [isCustomSubStrand, setIsCustomSubStrand] = useState(false);
+  const [customSubStrandTitle, setCustomSubStrandTitle] = useState('');
+
   const [loadingStrands, setLoadingStrands] = useState(false);
 
   const [lessonDate, setLessonDate] = useState(new Date().toISOString().split('T')[0]);
@@ -105,61 +112,90 @@ export const CreateLessonPlanModal: React.FC<CreateLessonPlanModalProps> = ({
     apiService.getStrandsByLearningArea(selectedLearningAreaId, classGradeFormat)
       .then(res => {
         if (res.success && res.data && res.data.length > 0) {
-          // Strict frontend filter
-          const gradeStrands = res.data.filter((st: any) => st.gradeLevel === classGradeFormat);
-          setStrands(gradeStrands);
+          const gradeStrands = res.data.filter((st: any) => matchGradeLevels(st.gradeLevel, classGradeFormat));
+          const effectiveStrands = gradeStrands.length > 0 ? gradeStrands : res.data;
+
+          // Deduplicate
+          const seen = new Set<string>();
+          const uniqueStrands: BackendStrand[] = [];
+          for (const s of effectiveStrands) {
+            const k = (s.title || '').trim().toLowerCase();
+            if (!k || seen.has(k)) continue;
+            seen.add(k);
+            uniqueStrands.push(s);
+          }
+          setStrands(uniqueStrands);
           
-          if (gradeStrands.length > 0) {
-            setSelectedStrandId(gradeStrands[0].id);
-            setStrandTitle(gradeStrands[0].title);
+          if (uniqueStrands.length > 0) {
+            setSelectedStrandId(uniqueStrands[0].id);
+            setStrandTitle(uniqueStrands[0].title);
+            setIsCustomStrand(false);
           } else {
             setSelectedStrandId('');
             setStrandTitle('');
+            setIsCustomStrand(true);
           }
         } else {
           setStrands([]);
           setSelectedStrandId('');
           setStrandTitle('');
+          setIsCustomStrand(true);
         }
       })
       .catch(() => {
         setStrands([]);
         setSelectedStrandId('');
         setStrandTitle('');
+        setIsCustomStrand(true);
       })
       .finally(() => setLoadingStrands(false));
   }, [selectedLearningAreaId, selectedClassRoomId, classes, isOpen]);
 
   useEffect(() => {
-    if (!selectedStrandId || !isOpen) {
+    if (!selectedStrandId || !isOpen || isCustomStrand) {
       setSubStrands([]);
       setSelectedSubStrandId('');
       setSubStrandTitle('');
+      if (isCustomStrand) setIsCustomSubStrand(true);
       return;
     }
 
     apiService.getSubStrandsByStrand(selectedStrandId)
       .then(res => {
         if (res.success && res.data && res.data.length > 0) {
-          setSubStrands(res.data);
-          setSelectedSubStrandId(res.data[0].id);
-          setSubStrandTitle(res.data[0].title);
-          
-          if (res.data[0].specificLearningOutcomes?.length > 0 && !outcomes) {
-            setOutcomes(res.data[0].specificLearningOutcomes.join('\n'));
+          const seen = new Set<string>();
+          const uniqueSubs: BackendSubStrand[] = [];
+          for (const sub of res.data) {
+            const sk = (sub.title || '').trim().toLowerCase();
+            if (!sk || seen.has(sk)) continue;
+            seen.add(sk);
+            uniqueSubs.push(sub);
+          }
+          setSubStrands(uniqueSubs);
+          if (uniqueSubs.length > 0) {
+            setSelectedSubStrandId(uniqueSubs[0].id);
+            setSubStrandTitle(uniqueSubs[0].title);
+            setIsCustomSubStrand(false);
+            if (uniqueSubs[0].specificLearningOutcomes?.length > 0 && !outcomes) {
+              setOutcomes(uniqueSubs[0].specificLearningOutcomes.join('\n'));
+            }
+          } else {
+            setIsCustomSubStrand(true);
           }
         } else {
           setSubStrands([]);
           setSelectedSubStrandId('');
           setSubStrandTitle('');
+          setIsCustomSubStrand(true);
         }
       })
       .catch(() => {
         setSubStrands([]);
         setSelectedSubStrandId('');
         setSubStrandTitle('');
+        setIsCustomSubStrand(true);
       });
-  }, [selectedStrandId, isOpen]);
+  }, [selectedStrandId, isOpen, isCustomStrand]);
 
   useEffect(() => {
     if (!selectedClassRoomId) return;
@@ -188,8 +224,35 @@ export const CreateLessonPlanModal: React.FC<CreateLessonPlanModalProps> = ({
     }
 
     const teacherId = user?.id || '';
-    const finalStrandTitle = strandTitle || strands.find(s => s.id === selectedStrandId)?.title || '';
-    const finalSubStrandTitle = subStrandTitle || subStrands.find(s => s.id === selectedSubStrandId)?.title || '';
+    const finalStrandTitle = (isCustomStrand || strands.length === 0 ? customStrandTitle : strandTitle) || strands.find(s => s.id === selectedStrandId)?.title || customStrandTitle;
+    const finalSubStrandTitle = (isCustomSubStrand || subStrands.length === 0 || isCustomStrand ? customSubStrandTitle : subStrandTitle) || subStrands.find(s => s.id === selectedSubStrandId)?.title || customSubStrandTitle;
+
+    if (!finalStrandTitle.trim() || !finalSubStrandTitle.trim()) {
+      setError('Curriculum Strand and Sub-strand are required');
+      setIsLoading(false);
+      return;
+    }
+
+    // Auto-save custom strand & sub-strand to DB on the fly
+    if (isCustomStrand || strands.length === 0) {
+      const cls = classes.find(c => c.id === selectedClassRoomId);
+      const grade = cls?.gradeLevel || 'GRADE_7';
+      apiService.createStrand({
+        learningAreaId: selectedLearningAreaId,
+        gradeLevel: grade as any,
+        code: `STR-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
+        title: finalStrandTitle.trim(),
+      }).then(res => {
+        if (res.success && res.data && finalSubStrandTitle) {
+          apiService.createSubStrand({
+            strandId: res.data.id,
+            code: `${res.data.code}.1`,
+            title: finalSubStrandTitle.trim(),
+            specificLearningOutcomes: [outcomes.trim() || 'Demonstrates competency']
+          }).catch(() => {});
+        }
+      }).catch(() => {});
+    }
 
     const steps = [
       { stepNumber: 1, stepTitle: 'Introduction (5 mins)', durationMinutes: 5, teacherActivities: 'Introduces lesson outcomes and sets context through inquiry questions.', learnerActivities: 'Engage actively in answering initial review questions.' },
@@ -278,25 +341,112 @@ export const CreateLessonPlanModal: React.FC<CreateLessonPlanModalProps> = ({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">Curriculum Strand *</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold uppercase text-on-surface-variant">Curriculum Strand *</label>
+                {strands.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCustomStrand(!isCustomStrand);
+                      if (!isCustomStrand) {
+                        setCustomStrandTitle(strandTitle || '');
+                      }
+                    }}
+                    className="text-[10px] text-primary hover:underline font-bold"
+                  >
+                    {isCustomStrand ? 'Select From List' : '+ Enter New'}
+                  </button>
+                )}
+              </div>
               {loadingStrands ? (
                 <div className="p-2 text-xs text-on-surface-variant">Loading DB strands...</div>
-              ) : strands.length > 0 ? (
-                <select value={selectedStrandId} onChange={(e) => { setSelectedStrandId(e.target.value); setStrandTitle(strands.find(s => s.id === e.target.value)?.title || ''); }} required className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-sm text-on-surface focus:outline-primary cursor-pointer truncate">
-                  {strands.map(st => <option key={st.id} value={st.id}>{st.title}</option>)}
-                </select>
+              ) : isCustomStrand || strands.length === 0 ? (
+                <input
+                  type="text"
+                  required
+                  placeholder="Enter strand title (e.g. Numbers, Force)..."
+                  value={customStrandTitle}
+                  onChange={(e) => {
+                    setCustomStrandTitle(e.target.value);
+                    setStrandTitle(e.target.value);
+                  }}
+                  className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-sm text-on-surface focus:outline-primary"
+                />
               ) : (
-                <div className="p-2 text-xs text-error bg-error/10 rounded-lg font-medium">No strands for this grade.</div>
+                <select
+                  value={selectedStrandId}
+                  onChange={(e) => {
+                    if (e.target.value === '__custom__') {
+                      setIsCustomStrand(true);
+                      setCustomStrandTitle('');
+                      setStrandTitle('');
+                    } else {
+                      setSelectedStrandId(e.target.value);
+                      setStrandTitle(strands.find(s => s.id === e.target.value)?.title || '');
+                    }
+                  }}
+                  required
+                  className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-sm text-on-surface focus:outline-primary cursor-pointer truncate"
+                >
+                  {strands.map(st => <option key={st.id} value={st.id}>{st.title}</option>)}
+                  <option value="__custom__">+ Enter Custom Strand...</option>
+                </select>
               )}
             </div>
+            
             <div>
-              <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">Sub-strand *</label>
-              {subStrands.length > 0 ? (
-                <select value={selectedSubStrandId} onChange={(e) => { setSelectedSubStrandId(e.target.value); const selected = subStrands.find(s => s.id === e.target.value); if (selected) { setSubStrandTitle(selected.title); setOutcomes(selected.specificLearningOutcomes?.join('\n') || ''); } }} required className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-sm text-on-surface focus:outline-primary cursor-pointer truncate">
-                  {subStrands.map(sub => <option key={sub.id} value={sub.id}>{sub.title}</option>)}
-                </select>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold uppercase text-on-surface-variant">Sub-strand *</label>
+                {subStrands.length > 0 && !isCustomStrand && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCustomSubStrand(!isCustomSubStrand);
+                      if (!isCustomSubStrand) {
+                        setCustomSubStrandTitle(subStrandTitle || '');
+                      }
+                    }}
+                    className="text-[10px] text-primary hover:underline font-bold"
+                  >
+                    {isCustomSubStrand ? 'Select From List' : '+ Enter New'}
+                  </button>
+                )}
+              </div>
+              {isCustomSubStrand || isCustomStrand || subStrands.length === 0 ? (
+                <input
+                  type="text"
+                  required
+                  placeholder="Enter sub-strand title..."
+                  value={customSubStrandTitle}
+                  onChange={(e) => {
+                    setCustomSubStrandTitle(e.target.value);
+                    setSubStrandTitle(e.target.value);
+                  }}
+                  className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-sm text-on-surface focus:outline-primary"
+                />
               ) : (
-                <div className="p-2 text-xs text-on-surface-variant">-</div>
+                <select
+                  value={selectedSubStrandId}
+                  onChange={(e) => {
+                    if (e.target.value === '__custom__') {
+                      setIsCustomSubStrand(true);
+                      setCustomSubStrandTitle('');
+                      setSubStrandTitle('');
+                    } else {
+                      setSelectedSubStrandId(e.target.value);
+                      const selected = subStrands.find(s => s.id === e.target.value);
+                      if (selected) {
+                        setSubStrandTitle(selected.title);
+                        setOutcomes(selected.specificLearningOutcomes?.join('\n') || '');
+                      }
+                    }
+                  }}
+                  required
+                  className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2.5 text-sm text-on-surface focus:outline-primary cursor-pointer truncate"
+                >
+                  {subStrands.map(sub => <option key={sub.id} value={sub.id}>{sub.title}</option>)}
+                  <option value="__custom__">+ Enter Custom Sub-strand...</option>
+                </select>
               )}
             </div>
           </div>

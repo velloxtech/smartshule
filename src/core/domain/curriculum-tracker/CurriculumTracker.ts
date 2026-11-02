@@ -1,6 +1,15 @@
 import { Entity } from '../shared/Entity';
 
-export type WeekCoverageStatus = 'PENDING' | 'IN_PROGRESS' | 'COVERED' | 'DELAYED';
+export type WeekCoverageStatus =
+  | 'PENDING'
+  | 'IN_PROGRESS'
+  | 'SUBMITTED'
+  | 'APPROVED'
+  | 'RETURNED'
+  | 'COVERED'
+  | 'DELAYED'
+  | 'EXEMPTED'
+  | 'RESCHEDULED';
 
 export type DailyLessonStatus = 'TAUGHT' | 'PARTIALLY_TAUGHT' | 'POSTPONED' | 'REMEDIAL';
 export type LearnerComprehension = 'EXCELLENT' | 'GOOD' | 'AVERAGE' | 'NEEDS_REMEDIATION';
@@ -45,7 +54,9 @@ export interface CurriculumTrackerWeekItem {
   id: string;
   weekNumber: number; // 1, 2, ... totalWeeks
   strand: string; // e.g. "Numbers", "Language Use", "Living Things"
+  strandId?: string; // Internal UUID preserved
   subStrand: string; // e.g. "Addition with Regrouping", "Nouns & Pronouns"
+  subStrandId?: string; // Internal UUID preserved
   learningOutcomes: string; // What learners should cover / achieve
   plannedLessons: number; // Planned lessons (default 5)
   targetDate?: string; // Target planned date
@@ -58,7 +69,12 @@ export interface CurriculumTrackerWeekItem {
   teacherComment?: string; // Teacher's reflection / comment / remedial notes
   confirmedByTeacherId?: string;
   confirmedByTeacherName?: string;
+  submittedAt?: string;
+  approvedByUserId?: string;
+  approvedByName?: string;
+  approvedAt?: string;
   hodRemarks?: string;
+  returnedReason?: string;
 }
 
 export interface CurriculumTrackerProps {
@@ -81,10 +97,16 @@ export interface CurriculumTrackerProps {
 
 export interface CurriculumTrackerStats {
   totalWeeks: number;
+  totalPlannedLessons: number;
+  approvedWeeks: number;
+  approvedLessons: number;
+  submittedWeeks: number;
   coveredWeeks: number;
   inProgressWeeks: number;
   pendingWeeks: number;
   delayedWeeks: number;
+  returnedWeeks: number;
+  exemptedWeeks: number;
   completionPercentage: number;
   commentsCount: number;
   totalDailyLogs: number;
@@ -287,6 +309,105 @@ export class CurriculumTracker extends Entity<CurriculumTrackerProps> {
     this.touch();
   }
 
+  public submitWeekForApproval(
+    weekNumber: number,
+    submission: {
+      lessonsTaught?: number;
+      teacherComment?: string;
+      submittedByTeacherId: string;
+      submittedByTeacherName: string;
+    }
+  ): void {
+    let item = this._props.items.find(i => i.weekNumber === weekNumber);
+    if (!item) {
+      this.setWeekPlan(weekNumber, {});
+      item = this._props.items.find(i => i.weekNumber === weekNumber)!;
+    }
+
+    // Progression Rule: Sequentially check previous week unless week 1
+    if (weekNumber > 1) {
+      const prevWeek = this._props.items.find(i => i.weekNumber === weekNumber - 1);
+      if (prevWeek && !prevWeek.isCovered && prevWeek.status !== 'APPROVED' && prevWeek.status !== 'EXEMPTED') {
+        throw new Error(
+          `Week ${weekNumber} is locked. Previous Week ${weekNumber - 1} must be completed and officially approved before submitting this week.`
+        );
+      }
+    }
+
+    item.status = 'SUBMITTED';
+    item.isCovered = false; // Never count as covered until approved
+    item.lessonsTaught = submission.lessonsTaught || item.plannedLessons || 5;
+    if (submission.teacherComment) item.teacherComment = submission.teacherComment;
+    item.confirmedByTeacherId = submission.submittedByTeacherId;
+    item.confirmedByTeacherName = submission.submittedByTeacherName;
+    item.submittedAt = new Date().toISOString();
+    this.checkAndUpdateOverallStatus();
+    this.touch();
+  }
+
+  public approveWeekCoverage(
+    weekNumber: number,
+    approval: {
+      approvedByUserId: string;
+      approvedByName: string;
+      remarks?: string;
+    }
+  ): void {
+    let item = this._props.items.find(i => i.weekNumber === weekNumber);
+    if (!item) throw new Error(`Week ${weekNumber} in curriculum tracker not found`);
+
+    item.status = 'APPROVED';
+    item.isCovered = true; // Genuine approved coverage
+    item.coveredAt = new Date().toISOString().split('T')[0];
+    item.approvedByUserId = approval.approvedByUserId;
+    item.approvedByName = approval.approvedByName;
+    item.approvedAt = new Date().toISOString();
+    if (approval.remarks) item.hodRemarks = approval.remarks;
+
+    this.checkAndUpdateOverallStatus();
+    this.touch();
+  }
+
+  public returnWeekCoverage(
+    weekNumber: number,
+    rejection: {
+      returnedByUserId: string;
+      returnedByName: string;
+      reason: string;
+    }
+  ): void {
+    let item = this._props.items.find(i => i.weekNumber === weekNumber);
+    if (!item) throw new Error(`Week ${weekNumber} in curriculum tracker not found`);
+
+    item.status = 'RETURNED';
+    item.isCovered = false;
+    item.hodRemarks = rejection.reason;
+    item.returnedReason = rejection.reason;
+
+    this.checkAndUpdateOverallStatus();
+    this.touch();
+  }
+
+  public exemptOrRescheduleWeek(
+    weekNumber: number,
+    override: {
+      status: 'EXEMPTED' | 'RESCHEDULED';
+      overrideByUserId: string;
+      overrideByName: string;
+      reason: string;
+    }
+  ): void {
+    let item = this._props.items.find(i => i.weekNumber === weekNumber);
+    if (!item) throw new Error(`Week ${weekNumber} in curriculum tracker not found`);
+
+    item.status = override.status;
+    item.isCovered = override.status === 'EXEMPTED'; // Exempted counts as fulfilled
+    item.hodRemarks = `Administrative Override: ${override.reason} (by ${override.overrideByName})`;
+
+    this.checkAndUpdateOverallStatus();
+    this.touch();
+  }
+
   public confirmWeekCovered(
     weekNumber: number,
     data: {
@@ -307,7 +428,7 @@ export class CurriculumTracker extends Entity<CurriculumTrackerProps> {
 
     const isCovered = data.covered !== undefined ? data.covered : true;
     item.isCovered = isCovered;
-    item.status = data.status || (isCovered ? 'COVERED' : 'PENDING');
+    item.status = data.status || (isCovered ? 'APPROVED' : 'PENDING');
     item.coveredAt = isCovered ? (data.coveredAt || new Date().toISOString().split('T')[0]) : undefined;
 
     if (data.comment !== undefined) {
@@ -350,12 +471,21 @@ export class CurriculumTracker extends Entity<CurriculumTrackerProps> {
   }
 
   public getStats(): CurriculumTrackerStats {
-    const total = this._props.totalWeeks || this._props.items.length || 1;
-    const covered = this._props.items.filter(i => i.isCovered).length;
-    const inProgress = this._props.items.filter(i => !i.isCovered && i.status === 'IN_PROGRESS').length;
-    const delayed = this._props.items.filter(i => !i.isCovered && i.status === 'DELAYED').length;
-    const pending = total - (covered + inProgress + delayed);
-    const commentsCount = this._props.items.filter(i => !!i.teacherComment && i.teacherComment.trim().length > 0).length;
+    const totalWeeks = this._props.totalWeeks || this._props.items.length || 1;
+    const totalPlannedLessons = this._props.items.reduce((sum, i) => sum + (i.plannedLessons || 5), 0);
+    const approvedItems = this._props.items.filter(i => i.isCovered || i.status === 'APPROVED' || i.status === 'COVERED');
+    const approvedWeeks = approvedItems.length;
+    const approvedLessons = approvedItems.reduce((sum, i) => sum + (i.lessonsTaught || i.plannedLessons || 5), 0);
+    const submittedWeeks = this._props.items.filter(i => i.status === 'SUBMITTED').length;
+    const inProgressWeeks = this._props.items.filter(i => i.status === 'IN_PROGRESS').length;
+    const returnedWeeks = this._props.items.filter(i => i.status === 'RETURNED').length;
+    const delayedWeeks = this._props.items.filter(i => i.status === 'DELAYED' || i.status === 'RESCHEDULED').length;
+    const exemptedWeeks = this._props.items.filter(i => i.status === 'EXEMPTED').length;
+    const pendingWeeks = Math.max(0, totalWeeks - (approvedWeeks + submittedWeeks + inProgressWeeks + returnedWeeks + delayedWeeks + exemptedWeeks));
+
+    const completionPercentage = totalPlannedLessons > 0
+      ? Math.min(100, Math.round((approvedLessons / totalPlannedLessons) * 100))
+      : Math.min(100, Math.round((approvedWeeks / totalWeeks) * 100));
 
     const dailyLogs = this._props.dailyLogs || [];
     const totalDailyLogs = dailyLogs.length;
@@ -365,13 +495,19 @@ export class CurriculumTracker extends Entity<CurriculumTrackerProps> {
     const totalEndorsements = dailyLogs.filter(l => !!l.endorsement).length;
 
     return {
-      totalWeeks: total,
-      coveredWeeks: covered,
-      inProgressWeeks: inProgress,
-      pendingWeeks: pending > 0 ? pending : 0,
-      delayedWeeks: delayed,
-      completionPercentage: total > 0 ? Math.round((covered / total) * 100) : 0,
-      commentsCount,
+      totalWeeks,
+      totalPlannedLessons,
+      approvedWeeks,
+      approvedLessons,
+      submittedWeeks,
+      coveredWeeks: approvedWeeks,
+      inProgressWeeks,
+      pendingWeeks,
+      delayedWeeks,
+      returnedWeeks,
+      exemptedWeeks,
+      completionPercentage,
+      commentsCount: this._props.items.filter(i => !!i.teacherComment && i.teacherComment.trim().length > 0).length,
       totalDailyLogs,
       totalReflections,
       totalEndorsements

@@ -9,24 +9,26 @@ export class BroadsheetController {
     try {
       const streamId = req.query.streamId as string;
       const classId = req.query.classId as string | undefined;
+      const gradeLevel = req.query.gradeLevel as string | undefined;
       const termId = req.query.termId as string | undefined;
       const academicYearId = req.query.academicYearId as string | undefined;
       const examType = req.query.examType as string | undefined;
 
-      if (!streamId && !classId) {
+      if (!streamId && !classId && !gradeLevel) {
         return res.status(400).json({
           success: false,
-          message: 'streamId or classId query parameter is required'
+          message: 'streamId, classId, or gradeLevel query parameter is required'
         });
       }
 
       const result = await this.broadsheetUseCases.getStreamBroadsheet({
         streamId: streamId || 'all',
         classId,
+        gradeLevel,
         termId,
         academicYearId,
         examType
-      });
+      }, req.user as any);
 
       return res.status(200).json({
         success: true,
@@ -50,7 +52,7 @@ export class BroadsheetController {
         });
       }
 
-      const result = await this.broadsheetUseCases.getClassAnalytics(classId, termId, academicYearId);
+      const result = await this.broadsheetUseCases.getClassAnalytics(classId, termId, academicYearId, req.user as any);
 
       return res.status(200).json({
         success: true,

@@ -2337,28 +2337,107 @@ export class PostgresAcademicRepository implements IAcademicRepository {
 export class PostgresCBCAssessmentRepository implements ICBCAssessmentRepository {
   constructor(private pool: Pool) {}
   public async findStrandById(id: string): Promise<Strand | null> {
-    const res = await this.pool.query('SELECT * FROM strands WHERE id = $1', [id]);
+    const res = await this.pool.query('SELECT * FROM strands WHERE id = $1 OR code = $1 LIMIT 1', [id]);
     if (!res.rows.length) return null;
     const r = res.rows[0];
     return Strand.create({ learningAreaId: r.learning_area_id, gradeLevel: r.grade_level, code: r.code, title: r.title, description: r.description }, r.id, r.created_at, r.updated_at);
   }
   public async findStrandsByLearningArea(learningAreaId: string, gradeLevel?: CBCGradeLevel): Promise<Strand[]> {
-    let q = 'SELECT * FROM strands WHERE learning_area_id = $1';
-    const params: any[] = [learningAreaId];
-    
-    if (gradeLevel) {
-      params.push(gradeLevel);
-      q += ' AND grade_level = $2';
+    // 1. Resolve candidate learning areas for this subject (by id, code, name, or canonical alias)
+    const candidateQuery = `
+      WITH target_la AS (
+        SELECT id, code, name FROM learning_areas
+        WHERE id = $1 
+           OR UPPER(code) = UPPER($1) 
+           OR UPPER(name) = UPPER($1)
+        LIMIT 1
+      )
+      SELECT id FROM learning_areas
+      WHERE id = $1
+         OR id IN (SELECT id FROM target_la)
+         OR (
+           (SELECT code FROM target_la) IS NOT NULL 
+           AND (
+             UPPER(code) = (SELECT UPPER(code) FROM target_la)
+             OR (UPPER(code) IN ('MATH', 'MAT') AND (SELECT UPPER(code) FROM target_la) IN ('MATH', 'MAT'))
+             OR (UPPER(code) IN ('KIS', 'KISW', 'KUSO') AND (SELECT UPPER(code) FROM target_la) IN ('KIS', 'KISW', 'KUSO'))
+             OR (UPPER(code) IN ('ENG', 'REA', 'LIT', 'LAN') AND (SELECT UPPER(code) FROM target_la) IN ('ENG', 'REA', 'LIT', 'LAN'))
+             OR (UPPER(code) IN ('AGR', 'AGRI') AND (SELECT UPPER(code) FROM target_la) IN ('AGR', 'AGRI'))
+             OR (UPPER(code) IN ('ARTS', 'CREA') AND (SELECT UPPER(code) FROM target_la) IN ('ARTS', 'CREA'))
+             OR (UPPER(code) IN ('CRE', 'IRE', 'HRE', 'SRE') AND (SELECT UPPER(code) FROM target_la) IN ('CRE', 'IRE', 'HRE', 'SRE'))
+             OR (UPPER(code) IN ('SCI', 'INTSCI', 'SCI_TECH', 'ENV') AND (SELECT UPPER(code) FROM target_la) IN ('SCI', 'INTSCI', 'SCI_TECH', 'ENV'))
+             OR (UPPER(code) IN ('PRETECH', 'PRET') AND (SELECT UPPER(code) FROM target_la) IN ('PRETECH', 'PRET'))
+             OR (UPPER(code) IN ('BUS') AND (SELECT UPPER(code) FROM target_la) IN ('BUS'))
+             OR (UPPER(code) IN ('HLTH') AND (SELECT UPPER(code) FROM target_la) IN ('HLTH'))
+           )
+         )
+    `;
+    let candidateIds: string[] = [learningAreaId];
+    try {
+      const candRes = await this.pool.query(candidateQuery, [learningAreaId]);
+      candidateIds = candRes.rows.map(r => r.id);
+      if (!candidateIds.includes(learningAreaId)) {
+        candidateIds.push(learningAreaId);
+      }
+    } catch {
+      candidateIds = [learningAreaId];
     }
-    
-    const res = await this.pool.query(q, params);
-    return res.rows.map(r => Strand.create({ 
-      learningAreaId: r.learning_area_id, 
-      gradeLevel: r.grade_level, 
-      code: r.code, 
-      title: r.title, 
-      description: r.description 
-    }, r.id, r.created_at, r.updated_at));
+
+    const normGrade = gradeLevel 
+      ? gradeLevel.toString().trim().toUpperCase().replace(/[\s-]+/g, '_').replace(/^GRADE_/, '')
+      : null;
+
+    let res;
+    if (normGrade) {
+      const q = `
+        SELECT * FROM strands 
+        WHERE learning_area_id = ANY($1) OR code = ANY($1)
+        ORDER BY 
+          CASE 
+            WHEN UPPER(REPLACE(REPLACE(REPLACE(COALESCE(grade_level, ''), ' ', '_'), '-', '_'), 'GRADE_', '')) = $2 THEN 0
+            WHEN grade_level IS NULL OR grade_level = '' THEN 1
+            ELSE 2
+          END,
+          code, title
+      `;
+      res = await this.pool.query(q, [candidateIds, normGrade]);
+
+      const exactOrUniversal = res.rows.filter(r => {
+        const rowGradeNorm = (r.grade_level || '').trim().toUpperCase().replace(/[\s-]+/g, '_').replace(/^GRADE_/, '');
+        return !rowGradeNorm || rowGradeNorm === normGrade;
+      });
+
+      if (exactOrUniversal.length > 0) {
+        res.rows = exactOrUniversal;
+      }
+    } else {
+      const q = `
+        SELECT * FROM strands 
+        WHERE learning_area_id = ANY($1) OR code = ANY($1)
+        ORDER BY code, title
+      `;
+      res = await this.pool.query(q, [candidateIds]);
+    }
+
+    // Deduplicate strands by normalized title so no duplicates are returned
+    const seenTitles = new Set<string>();
+    const deduplicatedStrands: Strand[] = [];
+
+    for (const r of res.rows) {
+      const normTitle = (r.title || '').trim().toLowerCase();
+      if (!normTitle || seenTitles.has(normTitle)) continue;
+      seenTitles.add(normTitle);
+
+      deduplicatedStrands.push(Strand.create({ 
+        learningAreaId: r.learning_area_id, 
+        gradeLevel: r.grade_level, 
+        code: r.code, 
+        title: r.title, 
+        description: r.description 
+      }, r.id, r.created_at, r.updated_at));
+    }
+
+    return deduplicatedStrands;
   }
   public async saveStrand(s: Strand): Promise<void> {
     const q = `INSERT INTO strands (id, learning_area_id, grade_level, code, title, description, created_at, updated_at)
@@ -2377,14 +2456,50 @@ export class PostgresCBCAssessmentRepository implements ICBCAssessmentRepository
     await this.pool.query('DELETE FROM strands WHERE id = $1', [id]);
   }
   public async findSubStrandById(id: string): Promise<SubStrand | null> {
-    const res = await this.pool.query('SELECT * FROM sub_strands WHERE id = $1', [id]);
+    const res = await this.pool.query('SELECT * FROM sub_strands WHERE id = $1 OR code = $1 LIMIT 1', [id]);
     if (!res.rows.length) return null;
     const r = res.rows[0];
     return SubStrand.create({ strandId: r.strand_id, code: r.code, title: r.title, specificLearningOutcomes: typeof r.specific_learning_outcomes === 'string' ? JSON.parse(r.specific_learning_outcomes) : (r.specific_learning_outcomes || []) }, r.id, r.created_at, r.updated_at);
   }
   public async findSubStrandsByStrand(strandId: string): Promise<SubStrand[]> {
-    const res = await this.pool.query('SELECT * FROM sub_strands WHERE strand_id = $1', [strandId]);
-    return res.rows.map(r => SubStrand.create({ strandId: r.strand_id, code: r.code, title: r.title, specificLearningOutcomes: typeof r.specific_learning_outcomes === 'string' ? JSON.parse(r.specific_learning_outcomes) : (r.specific_learning_outcomes || []) }, r.id, r.created_at, r.updated_at));
+    const q = `
+      SELECT * FROM sub_strands 
+      WHERE strand_id = $1 
+         OR strand_id IN (
+           SELECT id FROM strands 
+           WHERE code = $1 
+              OR code = (SELECT code FROM strands WHERE id = $1 LIMIT 1)
+              OR (
+                LOWER(title) = (SELECT LOWER(title) FROM strands WHERE id = $1 LIMIT 1)
+                AND grade_level = (SELECT grade_level FROM strands WHERE id = $1 LIMIT 1)
+              )
+         )
+      ORDER BY code, title
+    `;
+    let res;
+    try {
+      res = await this.pool.query(q, [strandId]);
+    } catch {
+      res = await this.pool.query('SELECT * FROM sub_strands WHERE strand_id = $1 ORDER BY code, title', [strandId]);
+    }
+
+    const seenTitles = new Set<string>();
+    const deduplicatedSubs: SubStrand[] = [];
+
+    for (const r of res.rows) {
+      const normTitle = (r.title || '').trim().toLowerCase();
+      if (!normTitle || seenTitles.has(normTitle)) continue;
+      seenTitles.add(normTitle);
+
+      deduplicatedSubs.push(SubStrand.create({ 
+        strandId: r.strand_id, 
+        code: r.code, 
+        title: r.title, 
+        specificLearningOutcomes: typeof r.specific_learning_outcomes === 'string' ? JSON.parse(r.specific_learning_outcomes) : (r.specific_learning_outcomes || []) 
+      }, r.id, r.created_at, r.updated_at));
+    }
+
+    return deduplicatedSubs;
   }
   public async saveSubStrand(sub: SubStrand): Promise<void> {
     const q = `INSERT INTO sub_strands (id, strand_id, code, title, specific_learning_outcomes, suggested_experiences, created_at, updated_at)
@@ -3059,6 +3174,7 @@ export class PostgresAttendanceRepository implements IAttendanceRepository {
     if (filters.streamId) { params.push(filters.streamId); q += ` AND stream_id = $${params.length}`; }
     if (filters.termId) { params.push(filters.termId); q += ` AND term_id = $${params.length}`; }
     if (filters.academicYearId) { params.push(filters.academicYearId); q += ` AND academic_year_id = $${params.length}`; }
+    if (filters.date) { params.push(filters.date); q += ` AND date = $${params.length}`; }
     if (filters.startDate) { params.push(filters.startDate); q += ` AND date >= $${params.length}`; }
     if (filters.endDate) { params.push(filters.endDate); q += ` AND date <= $${params.length}`; }
     if (filters.type) { params.push(filters.type); q += ` AND type = $${params.length}`; }

@@ -75,7 +75,6 @@ import { ForwardPaymentModal } from './components/modals/ForwardPaymentModal';
 import { CBCFormativeModal } from './components/modals/CBCFormativeModal';
 import { AdmitLearnerModal } from './components/modals/AdmitLearnerModal';
 import { SendSmsModal } from './components/modals/SendSmsModal';
-import { KnecSyncModal } from './components/modals/KnecSyncModal';
 import { ExportReportModal } from './components/modals/ExportReportModal';
 import { OnboardTeacherModal } from './components/modals/OnboardTeacherModal';
 import { UploadMarksModal } from './components/modals/UploadMarksModal';
@@ -126,7 +125,6 @@ export default function App() {
   const [smsModalOpen, setSmsModalOpen] = useState(false);
   const [smsTarget, setSmsTarget] = useState<'absentee' | 'fee' | 'all'>('all');
 
-  const [knecSyncModalOpen, setKnecSyncModalOpen] = useState(false);
   const [exportReportModalOpen, setExportReportModalOpen] = useState(false);
   const [selectedStudentForReport, setSelectedStudentForReport] = useState<Student | undefined>(undefined);
   const [uploadMarksModalOpen, setUploadMarksModalOpen] = useState(false);
@@ -264,6 +262,8 @@ export default function App() {
             grade: resolveGradeName(st.grade || st.gradeLevel),
             gradeLevel: st.gradeLevel || st.grade,
             stream: resolveStreamName(st.streamId, st.stream?.name || st.streamName || st.stream),
+            streamId: st.streamId,
+            classroomId: st.classroomId,
             guardianName:
               st.guardian && (st.guardian.firstName || st.guardian.lastName)
                 ? `${st.guardian.firstName || ''} ${st.guardian.lastName || ''}`.trim()
@@ -956,8 +956,11 @@ export default function App() {
                       students={students}
                       teachers={teachers}
                       onNavigateTab={(tab) => setCurrentTab(tab)}
-                      onOpenKnecSync={() => setKnecSyncModalOpen(true)}
-                      onOpenExportReport={() => setExportReportModalOpen(true)}
+                      onOpenUploadMarks={() => {
+                        setUploadMarksInitialStudent(undefined);
+                        setUploadMarksInitialType('SUMMATIVE');
+                        setUploadMarksModalOpen(true);
+                      }}
                     />
                   );
                 case UserRole.DEPUTY_HEAD_TEACHER:
@@ -1025,8 +1028,12 @@ export default function App() {
                       onOpenCBCModal={() => handleOpenCBC()}
                       onOpenAdmitModal={() => setAdmitModalOpen(true)}
                       onOpenSmsModal={handleOpenSms}
-                      onOpenKnecSync={() => setKnecSyncModalOpen(true)}
                       onOpenExportReport={() => setExportReportModalOpen(true)}
+                      onOpenUploadMarks={() => {
+                        setUploadMarksInitialStudent(undefined);
+                        setUploadMarksInitialType('SUMMATIVE');
+                        setUploadMarksModalOpen(true);
+                      }}
                       onNavigateTab={(tab) => setCurrentTab(tab)}
                     />
                   );
@@ -1393,11 +1400,6 @@ export default function App() {
         isOpen={smsModalOpen}
         onClose={() => setSmsModalOpen(false)}
         defaultTarget={smsTarget}
-      />
-
-      <KnecSyncModal
-        isOpen={knecSyncModalOpen}
-        onClose={() => setKnecSyncModalOpen(false)}
       />
 
       <ExportReportModal

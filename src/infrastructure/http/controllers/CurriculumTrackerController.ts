@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
 import { CurriculumTrackerUseCases } from '../../../application/curriculum-tracker/CurriculumTrackerUseCases';
+import { SystemLogUseCases } from '../../../application/system-logs/SystemLogUseCases';
 
 export const CreateCurriculumTrackerSchema = z.object({
   schoolId: z.string().optional(),
@@ -90,7 +91,10 @@ export const EndorseDailyLogSchema = z.object({
 });
 
 export class CurriculumTrackerController {
-  constructor(private readonly trackerUseCases: CurriculumTrackerUseCases) {}
+  constructor(
+    private readonly trackerUseCases: CurriculumTrackerUseCases,
+    private readonly systemLogUseCases?: SystemLogUseCases
+  ) {}
 
   public create = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
@@ -228,6 +232,154 @@ export class CurriculumTrackerController {
       return res.status(200).json({
         success: true,
         message: `Week ${weekNumber} coverage confirmed successfully`,
+        data: tracker
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public submitWeek = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const user = req.user;
+      const weekNumber = parseInt(req.params.weekNumber as string, 10);
+      const tracker = await this.trackerUseCases.submitWeekForApproval(
+        req.params.id as string,
+        weekNumber,
+        req.body,
+        {
+          userId: user?.userId,
+          role: user?.role,
+          fullName: (user as any)?.fullName || (user as any)?.name
+        }
+      );
+      this.systemLogUseCases?.log({
+        schoolId: (user as any)?.schoolId || 'school-001',
+        level: 'INFO',
+        category: 'ACADEMICS',
+        action: 'CURRICULUM_WEEK_SUBMITTED',
+        actorUserId: user?.userId,
+        actorEmail: (user as any)?.email,
+        actorRole: user?.role,
+        status: 'SUCCESS',
+        details: `Submitted Week ${weekNumber} coverage for approval on tracker ${req.params.id}`,
+        metadata: { trackerId: req.params.id, weekNumber, submission: req.body }
+      }).catch(() => {});
+
+      return res.status(200).json({
+        success: true,
+        message: `Week ${weekNumber} coverage submitted for review and approval`,
+        data: tracker
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public approveWeek = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const user = req.user;
+      const weekNumber = parseInt(req.params.weekNumber as string, 10);
+      const tracker = await this.trackerUseCases.approveWeekCoverage(
+        req.params.id as string,
+        weekNumber,
+        req.body,
+        {
+          userId: user?.userId,
+          role: user?.role,
+          fullName: (user as any)?.fullName || (user as any)?.name
+        }
+      );
+      this.systemLogUseCases?.log({
+        schoolId: (user as any)?.schoolId || 'school-001',
+        level: 'AUDIT',
+        category: 'ACADEMICS',
+        action: 'CURRICULUM_WEEK_APPROVED',
+        actorUserId: user?.userId,
+        actorEmail: (user as any)?.email,
+        actorRole: user?.role,
+        status: 'SUCCESS',
+        details: `Approved Week ${weekNumber} coverage on tracker ${req.params.id}`,
+        metadata: { trackerId: req.params.id, weekNumber, approval: req.body }
+      }).catch(() => {});
+
+      return res.status(200).json({
+        success: true,
+        message: `Week ${weekNumber} coverage approved and unlocked next unit`,
+        data: tracker
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public returnWeek = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const user = req.user;
+      const weekNumber = parseInt(req.params.weekNumber as string, 10);
+      const tracker = await this.trackerUseCases.returnWeekCoverage(
+        req.params.id as string,
+        weekNumber,
+        req.body,
+        {
+          userId: user?.userId,
+          role: user?.role,
+          fullName: (user as any)?.fullName || (user as any)?.name
+        }
+      );
+      this.systemLogUseCases?.log({
+        schoolId: (user as any)?.schoolId || 'school-001',
+        level: 'AUDIT',
+        category: 'ACADEMICS',
+        action: 'CURRICULUM_WEEK_RETURNED',
+        actorUserId: user?.userId,
+        actorEmail: (user as any)?.email,
+        actorRole: user?.role,
+        status: 'SUCCESS',
+        details: `Returned Week ${weekNumber} coverage on tracker ${req.params.id} for correction: ${req.body?.reviewFeedback || 'No feedback'}`,
+        metadata: { trackerId: req.params.id, weekNumber, review: req.body }
+      }).catch(() => {});
+
+      return res.status(200).json({
+        success: true,
+        message: `Week ${weekNumber} coverage returned for correction`,
+        data: tracker
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public overrideWeek = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const user = req.user;
+      const weekNumber = parseInt(req.params.weekNumber as string, 10);
+      const tracker = await this.trackerUseCases.exemptOrRescheduleWeek(
+        req.params.id as string,
+        weekNumber,
+        req.body,
+        {
+          userId: user?.userId,
+          role: user?.role,
+          fullName: (user as any)?.fullName || (user as any)?.name
+        }
+      );
+      this.systemLogUseCases?.log({
+        schoolId: (user as any)?.schoolId || 'school-001',
+        level: 'AUDIT',
+        category: 'ACADEMICS',
+        action: 'CURRICULUM_WEEK_OVERRIDDEN',
+        actorUserId: user?.userId,
+        actorEmail: (user as any)?.email,
+        actorRole: user?.role,
+        status: 'SUCCESS',
+        details: `Applied progression override (${req.body?.status}) for Week ${weekNumber} on tracker ${req.params.id}: ${req.body?.reason || ''}`,
+        metadata: { trackerId: req.params.id, weekNumber, override: req.body }
+      }).catch(() => {});
+
+      return res.status(200).json({
+        success: true,
+        message: `Week ${weekNumber} progression override applied successfully`,
         data: tracker
       });
     } catch (err) {

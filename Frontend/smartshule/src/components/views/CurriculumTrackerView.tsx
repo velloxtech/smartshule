@@ -18,6 +18,7 @@ import {
   getCurriculumDailyLogs
 } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { matchGradeLevels } from '../../utils/formatters';
 import {
   CurriculumTracker,
   CurriculumTrackerWeekItem,
@@ -49,6 +50,18 @@ const trackerApi = {
   },
   confirmCovered: (id: string, week: number, data: ConfirmWeekCoveredDTO) => {
     const fn = apiService?.confirmTrackerWeekCovered || libraryApi?.confirmTrackerWeekCovered || confirmTrackerWeekCovered;
+    return fn(id, week, data);
+  },
+  submitWeek: (id: string, week: number, data: any) => {
+    const fn = (apiService as any)?.submitTrackerWeek || (libraryApi as any)?.submitTrackerWeek;
+    return fn(id, week, data);
+  },
+  approveWeek: (id: string, week: number, data: any) => {
+    const fn = (apiService as any)?.approveTrackerWeek || (libraryApi as any)?.approveTrackerWeek;
+    return fn(id, week, data);
+  },
+  returnWeek: (id: string, week: number, data: any) => {
+    const fn = (apiService as any)?.returnTrackerWeek || (libraryApi as any)?.returnTrackerWeek;
     return fn(id, week, data);
   },
   updatePlan: (id: string, week: number, data: Partial<CurriculumTrackerWeekItem>) => {
@@ -128,6 +141,16 @@ export const CurriculumTrackerView: React.FC = () => {
   const [confirmModalWeek, setConfirmModalWeek] = useState<CurriculumTrackerWeekItem | null>(null);
   const [editPlanModalWeek, setEditPlanModalWeek] = useState<CurriculumTrackerWeekItem | null>(null);
   const [commentModalWeek, setCommentModalWeek] = useState<CurriculumTrackerWeekItem | null>(null);
+
+  // Controlled Progression Action States
+  const [submitModalWeek, setSubmitModalWeek] = useState<CurriculumTrackerWeekItem | null>(null);
+  const [submitLessons, setSubmitLessons] = useState<number>(5);
+  const [submitComment, setSubmitComment] = useState<string>('');
+  const [isSubmittingWeek, setIsSubmittingWeek] = useState<boolean>(false);
+
+  const [returnModalWeek, setReturnModalWeek] = useState<CurriculumTrackerWeekItem | null>(null);
+  const [returnReason, setReturnReason] = useState<string>('');
+  const [isReturningWeek, setIsReturningWeek] = useState<boolean>(false);
 
   // Form states for Confirm Covered
   const [confirmDate, setConfirmDate] = useState<string>(new Date().toISOString().split('T')[0]);
@@ -244,8 +267,18 @@ export const CurriculumTrackerView: React.FC = () => {
     apiService.getStrandsByLearningArea(selectedTracker.learningAreaId, classGradeFormat)
       .then(res => {
         if (res.success && res.data && res.data.length > 0) {
-          const gradeStrands = res.data.filter((st: any) => !classGradeFormat || st.gradeLevel === classGradeFormat);
-          setStrands(gradeStrands.length > 0 ? gradeStrands : res.data);
+          const gradeStrands = res.data.filter((st: any) => !classGradeFormat || matchGradeLevels(st.gradeLevel, classGradeFormat));
+          const effectiveStrands = gradeStrands.length > 0 ? gradeStrands : res.data;
+
+          const seen = new Set<string>();
+          const uniqueStrands: BackendStrand[] = [];
+          for (const s of effectiveStrands) {
+            const k = (s.title || '').trim().toLowerCase();
+            if (!k || seen.has(k)) continue;
+            seen.add(k);
+            uniqueStrands.push(s);
+          }
+          setStrands(uniqueStrands);
         } else {
           setStrands([]);
         }
@@ -500,6 +533,65 @@ export const CurriculumTrackerView: React.FC = () => {
     }
   };
 
+  const handleSubmitWeek = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedTracker || !submitModalWeek) return;
+    setIsSubmittingWeek(true);
+    try {
+      const res = await trackerApi.submitWeek(selectedTracker.id, submitModalWeek.weekNumber, {
+        lessonsTaught: submitLessons,
+        teacherComment: submitComment,
+      });
+      if (res?.data) {
+        setTrackers((prev) => prev.map((t) => (t.id === res.data.id ? res.data : t)));
+        setSelectedTracker(res.data);
+      }
+      setSubmitModalWeek(null);
+    } catch (err: any) {
+      alert(err.message || 'Failed to submit coverage for review');
+    } finally {
+      setIsSubmittingWeek(false);
+    }
+  };
+
+  const handleApproveWeek = async (weekNumber: number) => {
+    if (!selectedTracker) return;
+    const remarks = window.prompt(
+      `Approve Week ${weekNumber} curriculum coverage? Enter optional review endorsement remarks:`,
+      'Coverage verified according to syllabus standard'
+    );
+    if (remarks === null) return;
+    try {
+      const res = await trackerApi.approveWeek(selectedTracker.id, weekNumber, { remarks });
+      if (res?.data) {
+        setTrackers((prev) => prev.map((t) => (t.id === res.data.id ? res.data : t)));
+        setSelectedTracker(res.data);
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to approve week coverage');
+    }
+  };
+
+  const handleReturnWeek = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedTracker || !returnModalWeek) return;
+    setIsReturningWeek(true);
+    try {
+      const res = await trackerApi.returnWeek(selectedTracker.id, returnModalWeek.weekNumber, {
+        reason: returnReason,
+      });
+      if (res?.data) {
+        setTrackers((prev) => prev.map((t) => (t.id === res.data.id ? res.data : t)));
+        setSelectedTracker(res.data);
+      }
+      setReturnModalWeek(null);
+    } catch (err: any) {
+      alert(err.message || 'Failed to return week coverage');
+    } finally {
+      setIsReturningWeek(false);
+    }
+  };
+
   const handleOpenEditPlan = (week: CurriculumTrackerWeekItem) => {
     setEditPlanModalWeek(week);
     
@@ -658,28 +750,93 @@ export const CurriculumTrackerView: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {filteredWeeks.map((week) => (
-                  <tr key={week.weekNumber} className={week.isCovered ? 'bg-emerald-50/15' : ''}>
-                    <td className="px-4 py-3.5"><span className="font-bold text-xs bg-gray-100 px-2 py-1 rounded-lg">Week {week.weekNumber}</span></td>
-                    <td className="px-4 py-3.5">
-                      <div className="font-bold text-gray-900 text-sm">{week.strand || 'No Strand'}</div>
-                      <div className="text-xs text-gray-600 mt-0.5">{week.subStrand || '--'}</div>
-                      <div className="text-xs text-gray-500 mt-1">{week.learningOutcomes}</div>
-                    </td>
-                    <td className="px-4 py-3.5 text-center">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${week.isCovered ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-600'}`}>
-                        {week.isCovered ? 'Covered' : 'Pending'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3.5 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => handleOpenEditPlan(week)} className="p-1.5 text-gray-400 hover:text-[#7a1228] hover:bg-rose-50 rounded-lg cursor-pointer"><span className="material-symbols-outlined text-[18px]">edit</span></button>
-                        <button onClick={() => { setActiveTab('daily'); handleOpenAddDailyLog(week.weekNumber, week.strand, week.subStrand); }} className="p-1.5 text-gray-400 hover:text-[#7a1228] hover:bg-rose-50 rounded-lg cursor-pointer"><span className="material-symbols-outlined text-[18px]">add_circle</span></button>
-                        <button onClick={() => handleOpenConfirm(week)} className="p-1.5 text-gray-400 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg cursor-pointer"><span className="material-symbols-outlined text-[18px]">verified</span></button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {filteredWeeks.map((week) => {
+                  const displayStrand = strands.find(s => s.id === week.strand || s.title?.toLowerCase() === week.strand?.toLowerCase())?.title || week.strand || 'General Strand';
+                  const displaySubStrand = subStrands.find(s => s.id === week.subStrand || s.title?.toLowerCase() === week.subStrand?.toLowerCase())?.title || week.subStrand || '--';
+                  const prevWeekItem = selectedTracker.items.find(w => w.weekNumber === week.weekNumber - 1);
+                  const isWeekLocked = week.weekNumber > 1 && prevWeekItem && !prevWeekItem.isCovered && prevWeekItem.status !== 'APPROVED' && prevWeekItem.status !== 'EXEMPTED';
+
+                  return (
+                    <tr key={week.weekNumber} className={week.isCovered || week.status === 'APPROVED' ? 'bg-emerald-50/15' : (isWeekLocked ? 'bg-gray-50/60 opacity-80' : '')}>
+                      <td className="px-4 py-3.5">
+                        <span className="font-bold text-xs bg-gray-100 px-2 py-1 rounded-lg">Week {week.weekNumber}</span>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <div className="font-bold text-gray-900 text-sm flex items-center gap-1.5">
+                          {isWeekLocked && <span className="material-symbols-outlined text-gray-400 text-base" title="Locked sequentially">lock</span>}
+                          <span>{displayStrand}</span>
+                        </div>
+                        <div className="text-xs text-gray-600 mt-0.5">{displaySubStrand}</div>
+                        <div className="text-xs text-gray-500 mt-1">{week.learningOutcomes}</div>
+                        {week.hodRemarks && (
+                          <div className="mt-1 text-[11px] p-1.5 rounded-lg bg-amber-50 text-amber-900 border border-amber-200">
+                            <strong>Supervisor Feedback:</strong> {week.hodRemarks}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3.5 text-center">
+                        {week.isCovered || week.status === 'APPROVED' ? (
+                          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 inline-flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                            Approved
+                          </span>
+                        ) : week.status === 'SUBMITTED' ? (
+                          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 inline-flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[14px]">hourglass_top</span>
+                            Awaiting Review
+                          </span>
+                        ) : week.status === 'RETURNED' ? (
+                          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 inline-flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[14px]">replay</span>
+                            Returned
+                          </span>
+                        ) : isWeekLocked ? (
+                          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-500 inline-flex items-center gap-1" title={`Complete and get Week ${week.weekNumber - 1} approved first`}>
+                            <span className="material-symbols-outlined text-[14px]">lock</span>
+                            Locked
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 inline-flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[14px]">play_circle</span>
+                            Ready
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3.5 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          {isWeekLocked ? (
+                            <span className="text-[11px] text-gray-400 italic font-medium px-2 py-1">Locked</span>
+                          ) : (
+                            <>
+                              <button onClick={() => handleOpenEditPlan(week)} title="Edit Curriculum Plan" className="p-1.5 text-gray-400 hover:text-[#7a1228] hover:bg-rose-50 rounded-lg cursor-pointer">
+                                <span className="material-symbols-outlined text-[18px]">edit</span>
+                              </button>
+                              <button onClick={() => { setActiveTab('daily'); handleOpenAddDailyLog(week.weekNumber, displayStrand, displaySubStrand); }} title="Log Daily Lesson" className="p-1.5 text-gray-400 hover:text-[#7a1228] hover:bg-rose-50 rounded-lg cursor-pointer">
+                                <span className="material-symbols-outlined text-[18px]">add_circle</span>
+                              </button>
+                              {week.status === 'SUBMITTED' && isSchoolAdmin && (
+                                <>
+                                  <button onClick={() => handleApproveWeek(week.weekNumber)} title="Approve Coverage & Unlock Next Week" className="p-1.5 text-emerald-700 hover:bg-emerald-50 rounded-lg cursor-pointer">
+                                    <span className="material-symbols-outlined text-[18px]">verified</span>
+                                  </button>
+                                  <button onClick={() => { setReturnModalWeek(week); setReturnReason(''); }} title="Return for Correction" className="p-1.5 text-rose-700 hover:bg-rose-50 rounded-lg cursor-pointer">
+                                    <span className="material-symbols-outlined text-[18px]">undo</span>
+                                  </button>
+                                </>
+                              )}
+                              {!week.isCovered && week.status !== 'APPROVED' && week.status !== 'SUBMITTED' && (
+                                <button onClick={() => { setSubmitModalWeek(week); setSubmitLessons(week.plannedLessons || 5); setSubmitComment(''); }} title="Submit for Approval" className="px-2 py-1 bg-secondary text-white rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer hover:bg-secondary-container">
+                                  <span className="material-symbols-outlined text-[15px]">send</span>
+                                  <span>Submit</span>
+                                </button>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -884,6 +1041,96 @@ export const CurriculumTrackerView: React.FC = () => {
         </div>
       )}
 
+      {/* SUBMIT FOR APPROVAL MODAL */}
+      {submitModalWeek && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95">
+            <div className="px-6 py-4 bg-secondary text-white flex justify-between">
+              <div>
+                <h3 className="font-bold text-sm">Submit Week {submitModalWeek.weekNumber} Coverage</h3>
+                <p className="text-xs text-white/80">{selectedTracker?.subjectName} &mdash; {selectedTracker?.className}</p>
+              </div>
+              <button onClick={() => setSubmitModalWeek(null)} className="cursor-pointer">
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <form onSubmit={handleSubmitWeek} className="p-6 space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-gray-700 uppercase mb-1">Lessons Taught This Week *</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={20}
+                  required
+                  value={submitLessons}
+                  onChange={(e) => setSubmitLessons(parseInt(e.target.value, 10) || 5)}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl"
+                />
+              </div>
+              <div>
+                <label className="block font-bold text-gray-700 uppercase mb-1">Teacher Coverage Reflection / Notes</label>
+                <textarea
+                  rows={3}
+                  placeholder="Summarize outcomes achieved, pupil mastery, and any areas requiring review..."
+                  value={submitComment}
+                  onChange={(e) => setSubmitComment(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl"
+                />
+              </div>
+              <div className="p-3 bg-blue-50 rounded-xl text-blue-900 border border-blue-200">
+                <strong>Sequential Workflow:</strong> Submitting sends this unit to the Head Teacher/Deputy for formal review. Upon approval, Week {submitModalWeek.weekNumber + 1} unlocks.
+              </div>
+              <div className="flex justify-end gap-2 pt-2 border-t">
+                <button type="button" onClick={() => setSubmitModalWeek(null)} className="px-4 py-2 text-xs border rounded-xl">
+                  Cancel
+                </button>
+                <button type="submit" disabled={isSubmittingWeek} className="px-4 py-2 bg-secondary text-white text-xs font-semibold rounded-xl">
+                  {isSubmittingWeek ? 'Submitting...' : 'Submit for Review'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* RETURN FOR REVISION MODAL */}
+      {returnModalWeek && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95">
+            <div className="px-6 py-4 bg-rose-700 text-white flex justify-between">
+              <div>
+                <h3 className="font-bold text-sm">Return Week {returnModalWeek.weekNumber} for Revision</h3>
+                <p className="text-xs text-rose-100">Supervisory Feedback & Correction Directive</p>
+              </div>
+              <button onClick={() => setReturnModalWeek(null)} className="cursor-pointer">
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <form onSubmit={handleReturnWeek} className="p-6 space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-gray-700 uppercase mb-1">Reason for Return *</label>
+                <textarea
+                  rows={3}
+                  required
+                  placeholder="Specify why coverage is not approved (e.g. practical inquiry lesson missing evidence, remedial outcomes required)..."
+                  value={returnReason}
+                  onChange={(e) => setReturnReason(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl"
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2 border-t">
+                <button type="button" onClick={() => setReturnModalWeek(null)} className="px-4 py-2 text-xs border rounded-xl">
+                  Cancel
+                </button>
+                <button type="submit" disabled={isReturningWeek} className="px-4 py-2 bg-rose-700 text-white text-xs font-semibold rounded-xl">
+                  {isReturningWeek ? 'Returning...' : 'Return for Correction'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {isCreateModalOpen && (
         <CreateTrackerModal
           classes={classes}
@@ -910,7 +1157,16 @@ interface CreateTrackerModalProps {
 const CreateTrackerModal: React.FC<CreateTrackerModalProps> = ({ classes, learningAreas, onClose, onCreated }) => {
   const [learningAreaId, setLearningAreaId] = useState('');
   const [classRoomId, setClassRoomId] = useState('');
+  const [academicYear, setAcademicYear] = useState('2026');
+  const [term, setTerm] = useState('Term 1');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    apiService.getCurrentContext().then((res) => {
+      if (res?.data?.currentYear?.name) setAcademicYear(res.data.currentYear.name);
+      if (res?.data?.currentTerm?.name) setTerm(res.data.currentTerm.name);
+    }).catch(() => {});
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -925,8 +1181,8 @@ const CreateTrackerModal: React.FC<CreateTrackerModalProps> = ({ classes, learni
         subjectName: la.name,
         classRoomId,
         className: cls.name,
-        academicYear: '2026',
-        term: 'Term 3',
+        academicYear,
+        term,
         totalWeeks: 12
       });
       if (res?.data) onCreated(res.data);

@@ -33,6 +33,7 @@ export interface AttendanceFilterCriteria {
   streamId?: string;
   termId?: string;
   academicYearId?: string;
+  date?: string;
   startDate?: string;
   endDate?: string;
   type?: AttendanceType;

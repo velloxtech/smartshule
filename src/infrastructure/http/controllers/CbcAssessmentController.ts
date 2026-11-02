@@ -11,9 +11,16 @@ import { CBCGradeLevel } from '../../../core/domain/user/Student';
 import { UserRole } from '../../../core/domain/user/User';
 import { SystemLogUseCases } from '../../../application/system-logs/SystemLogUseCases';
 
+const normalizeGradeLevelInput = (val: unknown) => {
+  if (typeof val !== 'string') return val;
+  const cleaned = val.trim().toUpperCase().replace(/[\s-]+/g, '_');
+  if (/^\d+$/.test(cleaned)) return `GRADE_${cleaned}`;
+  return cleaned;
+};
+
 export const CreateStrandSchema = z.object({
   learningAreaId: z.string().min(1),
-  gradeLevel: z.nativeEnum(CBCGradeLevel),
+  gradeLevel: z.preprocess(normalizeGradeLevelInput, z.nativeEnum(CBCGradeLevel)),
   code: z.string().min(1),
   title: z.string().min(1),
   description: z.string().optional()
@@ -21,7 +28,7 @@ export const CreateStrandSchema = z.object({
 
 export const UpdateStrandSchema = z.object({
   learningAreaId: z.string().optional(),
-  gradeLevel: z.nativeEnum(CBCGradeLevel).optional(),
+  gradeLevel: z.preprocess(normalizeGradeLevelInput, z.nativeEnum(CBCGradeLevel)).optional(),
   code: z.string().optional(),
   title: z.string().optional(),
   description: z.string().optional()
@@ -192,7 +199,7 @@ export class CBCAssessmentController {
       const assessment = await this.CBCUseCases.recordFormativeAssessment({
         ...req.body,
         teacherId
-      });
+      }, user);
 
       this.systemLogUseCases?.log({
         schoolId: user?.schoolId || 'school-001',
@@ -267,7 +274,7 @@ export class CBCAssessmentController {
       const assessment = await this.CBCUseCases.recordSummativeAssessment({
         ...req.body,
         teacherId
-      });
+      }, user);
 
       const rawScoreText = (req.body.strandScores && req.body.strandScores.length > 0 && req.body.strandScores[0].rawScore !== undefined)
         ? ` (${req.body.strandScores[0].rawScore}/${req.body.strandScores[0].maxScore || 100})`
@@ -323,7 +330,7 @@ export class CBCAssessmentController {
     try {
       const user = (req as any).user;
       const assessments = req.body.assessments;
-      const results = await this.CBCUseCases.recordSummativeBatch(assessments);
+      const results = await this.CBCUseCases.recordSummativeBatch(assessments, user);
 
       this.systemLogUseCases?.log({
         schoolId: (req as any).user?.schoolId || 'school-001',

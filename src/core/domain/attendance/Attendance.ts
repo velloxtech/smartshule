@@ -14,6 +14,17 @@ export enum AttendanceType {
   LESSON = 'LESSON'
 }
 
+export interface AbsenceFollowUp {
+  contactedAt: string; // ISO date-time string
+  contactMethod: 'PHONE_CALL' | 'SMS' | 'WHATSAPP' | 'IN_PERSON';
+  contactedByUserId: string;
+  contactedByName: string;
+  guardianResponse?: string;
+  resolutionStatus: 'PENDING' | 'RESOLVED' | 'ESCALATED_TO_HEADTEACHER';
+  assignedTo?: string;
+  notes?: string;
+}
+
 export interface StudentAttendanceEntry {
   studentId: string;
   studentName?: string;
@@ -21,6 +32,7 @@ export interface StudentAttendanceEntry {
   status: AttendanceStatus;
   remarks?: string;
   parentNotified: boolean;
+  followUp?: AbsenceFollowUp;
 }
 
 export interface AttendanceRegisterProps {
@@ -109,6 +121,14 @@ export class AttendanceRegister extends Entity<AttendanceRegisterProps> {
   public removeEntry(studentId: string): void {
     this._props.entries = this._props.entries.filter(e => e.studentId !== studentId);
     this.touch();
+  }
+
+  public updateEntryFollowUp(studentId: string, followUp: AbsenceFollowUp): void {
+    const idx = this._props.entries.findIndex(e => e.studentId === studentId);
+    if (idx >= 0) {
+      this._props.entries[idx].followUp = followUp;
+      this.touch();
+    }
   }
 
   public toJSON() {

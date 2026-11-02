@@ -277,6 +277,116 @@ export class CurriculumTrackerUseCases {
     return tracker.toJSON();
   }
 
+  public async submitWeekForApproval(
+    trackerId: string,
+    weekNumber: number,
+    data: { lessonsTaught?: number; teacherComment?: string },
+    requestingUser?: { userId?: string; role?: string; fullName?: string }
+  ) {
+    const tracker = await this.trackerRepo.findById(trackerId);
+    if (!tracker) throw new NotFoundError('Curriculum Tracker', trackerId);
+
+    await this.checkPermission(tracker, requestingUser);
+
+    const teacherName = requestingUser?.fullName || tracker.teacherName;
+    const teacherId = requestingUser?.userId || tracker.teacherId;
+
+    tracker.submitWeekForApproval(weekNumber, {
+      lessonsTaught: data.lessonsTaught,
+      teacherComment: data.teacherComment,
+      submittedByTeacherId: teacherId,
+      submittedByTeacherName: teacherName
+    });
+
+    await this.trackerRepo.update(tracker);
+    return tracker.toJSON();
+  }
+
+  public async approveWeekCoverage(
+    trackerId: string,
+    weekNumber: number,
+    data: { remarks?: string },
+    requestingUser?: { userId?: string; role?: string; fullName?: string }
+  ) {
+    const tracker = await this.trackerRepo.findById(trackerId);
+    if (!tracker) throw new NotFoundError('Curriculum Tracker', trackerId);
+
+    if (
+      !requestingUser ||
+      !['HEAD_TEACHER', 'DEPUTY_HEAD_TEACHER', 'SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN'].includes(
+        requestingUser.role || ''
+      )
+    ) {
+      throw new ForbiddenError('Only Head Teacher, Deputy, or School Administrators can approve curriculum coverage.');
+    }
+
+    tracker.approveWeekCoverage(weekNumber, {
+      approvedByUserId: requestingUser.userId || 'admin-01',
+      approvedByName: requestingUser.fullName || 'Academic Supervisor',
+      remarks: data.remarks
+    });
+
+    await this.trackerRepo.update(tracker);
+    return tracker.toJSON();
+  }
+
+  public async returnWeekCoverage(
+    trackerId: string,
+    weekNumber: number,
+    data: { reason: string },
+    requestingUser?: { userId?: string; role?: string; fullName?: string }
+  ) {
+    const tracker = await this.trackerRepo.findById(trackerId);
+    if (!tracker) throw new NotFoundError('Curriculum Tracker', trackerId);
+
+    if (
+      !requestingUser ||
+      !['HEAD_TEACHER', 'DEPUTY_HEAD_TEACHER', 'SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN'].includes(
+        requestingUser.role || ''
+      )
+    ) {
+      throw new ForbiddenError('Only Head Teacher, Deputy, or School Administrators can return curriculum coverage.');
+    }
+
+    tracker.returnWeekCoverage(weekNumber, {
+      returnedByUserId: requestingUser.userId || 'admin-01',
+      returnedByName: requestingUser.fullName || 'Academic Supervisor',
+      reason: data.reason || 'Returned for correction'
+    });
+
+    await this.trackerRepo.update(tracker);
+    return tracker.toJSON();
+  }
+
+  public async exemptOrRescheduleWeek(
+    trackerId: string,
+    weekNumber: number,
+    data: { status: 'EXEMPTED' | 'RESCHEDULED'; reason: string },
+    requestingUser?: { userId?: string; role?: string; fullName?: string }
+  ) {
+    const tracker = await this.trackerRepo.findById(trackerId);
+    if (!tracker) throw new NotFoundError('Curriculum Tracker', trackerId);
+
+    if (
+      !requestingUser ||
+      !['HEAD_TEACHER', 'DEPUTY_HEAD_TEACHER', 'SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN'].includes(
+        requestingUser.role || ''
+      )
+    ) {
+      throw new ForbiddenError('Only Academic Supervisors can grant progression overrides or exemptions.');
+    }
+
+    tracker.exemptOrRescheduleWeek(weekNumber, {
+      status: data.status,
+      overrideByUserId: requestingUser.userId || 'admin-01',
+      overrideByName: requestingUser.fullName || 'Administrator',
+      reason: data.reason
+    });
+
+    await this.trackerRepo.update(tracker);
+    return tracker.toJSON();
+  }
+
   public async updateWeekComment(
     trackerId: string,
     weekNumber: number,

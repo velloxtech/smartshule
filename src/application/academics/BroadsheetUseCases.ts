@@ -1,14 +1,18 @@
 import { IAcademicRepository } from '../../core/ports/repositories/IAcademicRepository';
 import { IStudentRepository } from '../../core/ports/repositories/IStudentRepository';
 import { ICBCAssessmentRepository } from '../../core/ports/repositories/ICbcAssessmentRepository';
+import { ITeacherRepository } from '../../core/ports/repositories/ITeacherRepository';
 import { Stream } from '../../core/domain/academic/ClassRoom';
 import { PerformanceLevel } from '../../core/domain/cbc/CbcAssessment';
-import { CBCGradeLevel } from '../../core/domain/user/Student';
-import { NotFoundError, ValidationError } from '../../core/domain/shared/Errors';
+import { CBCGradeLevel, Student, StudentStatus } from '../../core/domain/user/Student';
+import { UserRole } from '../../core/domain/user/User';
+import { NotFoundError, ValidationError, ForbiddenError } from '../../core/domain/shared/Errors';
+import { UserContext } from '../students/StudentUseCases';
 
 export interface BroadsheetQueryDTO {
   streamId: string;
   classId?: string;
+  gradeLevel?: string;
   termId?: string;
   academicYearId?: string;
   examType?: string;
@@ -42,6 +46,8 @@ export interface BroadsheetRow {
   streamRank: number;
   classRank: number;
   schoolRank?: number;
+  evaluatedCount?: number;
+  isPending?: boolean;
   remarks: string;
 }
 
@@ -174,14 +180,69 @@ export interface BroadsheetResult {
   schoolBestStudentsPerSubject: BestStudentPerSubjectItem[];
 }
 
+const CANONICAL_ORDER = [
+  'LAN',
+  'ENG',
+  'REA',
+  'MATH',
+  'KISW',
+  'KUSO',
+  'ENV',
+  'ENVI',
+  'CRE',
+  'SRE',
+  'CREA',
+  'SCI',
+  'SST',
+  'AGRI',
+  'ARTS',
+  'PRETECH',
+  'HLTH',
+  'BUS',
+  'COMP',
+  'FRE',
+  'GER',
+  'ARA',
+  'IND'
+];
+
 export class BroadsheetUseCases {
   constructor(
     private readonly academicRepository: IAcademicRepository,
     private readonly studentRepository: IStudentRepository,
-    private readonly CBCAssessmentRepository: ICBCAssessmentRepository
+    private readonly CBCAssessmentRepository: ICBCAssessmentRepository,
+    private readonly teacherRepository?: ITeacherRepository
   ) {}
 
-  public async getClassAnalytics(classId: string, termId?: string, academicYearId?: string) {
+  public async getClassAnalytics(classId: string, termId?: string, academicYearId?: string, requestingUser?: UserContext) {
+    if (requestingUser && requestingUser.role === UserRole.TEACHER) {
+      if (this.teacherRepository) {
+        let teacher = await this.teacherRepository.findByUserId(requestingUser.userId);
+        if (!teacher) teacher = await this.teacherRepository.findById(requestingUser.userId);
+        if (teacher) {
+          const assignedClasses = new Set<string>();
+          const assignedStreams = new Set<string>(teacher.assignedClassStreamIds || []);
+          try {
+            const ctas = await this.academicRepository.findClassTeacherAssignments({ teacherId: teacher.id, isActive: true });
+            for (const a of ctas) {
+              if (a.classRoomId) assignedClasses.add(a.classRoomId);
+              if (a.streamId) assignedStreams.add(a.streamId);
+            }
+          } catch {}
+          try {
+            const stas = await this.academicRepository.findSubjectTeacherAssignments({ teacherId: teacher.id, isActive: true });
+            for (const s of stas) {
+              if (s.classRoomId) assignedClasses.add(s.classRoomId);
+              if (s.streamId) assignedStreams.add(s.streamId);
+            }
+          } catch {}
+          if (!assignedClasses.has(classId) && !assignedStreams.has(classId)) {
+            throw new ForbiddenError('Access denied: You are not authorized to view analytics for this class.');
+          }
+        }
+      }
+    }
+
     const allClasses = await this.academicRepository.findAllClasses();
     const classRoom = allClasses.find(c => c.id === classId) || null;
     return {
@@ -196,7 +257,7 @@ export class BroadsheetUseCases {
     };
   }
 
-  public async getStreamBroadsheet(query: BroadsheetQueryDTO): Promise<BroadsheetResult> {
+  public async getStreamBroadsheet(query: BroadsheetQueryDTO, requestingUser?: UserContext): Promise<BroadsheetResult> {
     if (!query.streamId) {
       throw new ValidationError('Stream ID is required to generate broadsheet.');
     }
@@ -205,6 +266,59 @@ export class BroadsheetUseCases {
       query.streamId.toLowerCase() === 'all' ||
       query.streamId.toLowerCase().startsWith('all_') ||
       query.streamId.toLowerCase().startsWith('all-');
+
+    if (requestingUser && requestingUser.role === UserRole.TEACHER) {
+      if (!this.teacherRepository) {
+        throw new ForbiddenError('Teacher repository unavailable to verify permissions.');
+      }
+      let teacher = await this.teacherRepository.findByUserId(requestingUser.userId);
+      if (!teacher) {
+        teacher = await this.teacherRepository.findById(requestingUser.userId);
+      }
+      if (!teacher) {
+        throw new ForbiddenError('No teacher profile associated with your account.');
+      }
+
+      const assignedStreams = new Set<string>(teacher.assignedClassStreamIds || []);
+      const assignedClasses = new Set<string>();
+
+      try {
+        const ctas = await this.academicRepository.findClassTeacherAssignments({
+          teacherId: teacher.id,
+          isActive: true
+        });
+        for (const a of ctas) {
+          if (a.streamId) assignedStreams.add(a.streamId);
+          if (a.classRoomId) assignedClasses.add(a.classRoomId);
+        }
+      } catch {}
+
+      try {
+        const stas = await this.academicRepository.findSubjectTeacherAssignments({
+          teacherId: teacher.id,
+          isActive: true
+        });
+        for (const s of stas) {
+          if (s.streamId) assignedStreams.add(s.streamId);
+          if (s.classRoomId) assignedClasses.add(s.classRoomId);
+        }
+      } catch {}
+
+      const matchesStream = query.streamId && (assignedStreams.has(query.streamId) || assignedClasses.has(query.streamId));
+      const matchesClass = query.classId && assignedClasses.has(query.classId);
+
+      let matchesAllClass = false;
+      if (isAllStreams) {
+        const targetClassId = query.classId || (query.streamId.includes('_') ? query.streamId.split('_')[1] : undefined);
+        if (targetClassId && assignedClasses.has(targetClassId)) {
+          matchesAllClass = true;
+        }
+      }
+
+      if (!matchesStream && !matchesClass && !matchesAllClass) {
+        throw new ForbiddenError('Access denied: You are not authorized to view the broadsheet for this stream or class.');
+      }
+    }
 
     const allClasses = typeof this.academicRepository.findAllClasses === 'function'
       ? await this.academicRepository.findAllClasses()
@@ -230,6 +344,13 @@ export class BroadsheetUseCases {
           ) || null;
         }
       }
+      if (!classRoom && query.gradeLevel) {
+        const normGrade = query.gradeLevel.toUpperCase().replace(/[\s_-]/g, '');
+        classRoom = allClasses.find(
+          c => (c.gradeLevel || '').toUpperCase().replace(/[\s_-]/g, '') === normGrade ||
+               (c.name || '').toUpperCase().replace(/[\s_-]/g, '') === normGrade
+        ) || null;
+      }
       if (!classRoom) {
         for (const cls of allClasses) {
           const clsStreams = await this.academicRepository.findStreamsByClass(cls.id);
@@ -248,7 +369,17 @@ export class BroadsheetUseCases {
         const cls = await this.academicRepository.findClassById(query.streamId);
         if (cls) {
           classRoom = cls;
-        } else {
+        } else if (query.classId) {
+          classRoom = await this.academicRepository.findClassById(query.classId);
+        }
+        if (!classRoom && query.gradeLevel) {
+          const normGrade = query.gradeLevel.toUpperCase().replace(/[\s_-]/g, '');
+          classRoom = allClasses.find(
+            c => (c.gradeLevel || '').toUpperCase().replace(/[\s_-]/g, '') === normGrade ||
+                 (c.name || '').toUpperCase().replace(/[\s_-]/g, '') === normGrade
+          ) || null;
+        }
+        if (!classRoom) {
           throw new NotFoundError('Stream not found.');
         }
       } else {
@@ -257,7 +388,17 @@ export class BroadsheetUseCases {
     }
 
     if (!classRoom && allClasses.length > 0) {
-      classRoom = allClasses[0];
+      if (query.gradeLevel) {
+        const normGrade = query.gradeLevel.toUpperCase().replace(/[\s_-]/g, '');
+        const matched = allClasses.find(
+          c => (c.gradeLevel || '').toUpperCase().replace(/[\s_-]/g, '') === normGrade ||
+               (c.name || '').toUpperCase().replace(/[\s_-]/g, '') === normGrade
+        );
+        if (matched) classRoom = matched;
+      }
+      if (!classRoom) {
+        classRoom = allClasses[0];
+      }
     }
 
     const gradeLevel = classRoom?.gradeLevel || CBCGradeLevel.GRADE_4;
@@ -341,9 +482,123 @@ export class BroadsheetUseCases {
     const termId = term?.id || `term-${academicYearId}-t1`;
     const termName = term?.name || 'Term 1';
 
-    // 3. Global Learning areas for the school
-    const allLearningAreas = await this.academicRepository.findAllLearningAreas();
-    const learningAreas = allLearningAreas.map(la => ({ id: la.id, name: la.name }));
+    // 3. Authoritative Learning Areas strictly from the database for this class/grade
+    const allLearningAreas = typeof this.academicRepository.findAllLearningAreas === 'function'
+      ? await this.academicRepository.findAllLearningAreas()
+      : [];
+
+    // Filter by grade level of the classroom if available
+    let gradeDbAreas = allLearningAreas.filter(la => {
+      const laGrade = (la.gradeLevel || '').toUpperCase().replace(/[\s-]/g, '_');
+      const targetGrade = String(gradeLevel).toUpperCase().replace(/[\s-]/g, '_');
+      return laGrade === targetGrade;
+    });
+
+    const hasSpecificGradeAreas = gradeDbAreas.length > 0;
+    if (gradeDbAreas.length === 0) {
+      gradeDbAreas = allLearningAreas;
+    }
+
+    // Build deduplicated canonical learning areas map
+    const canonicalMap = new Map<string, { id: string; name: string; code?: string; aliasIds: string[] }>();
+    for (const la of gradeDbAreas) {
+      const key = this.getSubjectCanonicalKey(la.code || la.name || la.id);
+      if (!canonicalMap.has(key)) {
+        canonicalMap.set(key, {
+          id: la.id,
+          name: this.getCanonicalDisplayName(key, la.name),
+          code: this.getCanonicalDisplayCode(key, la.code),
+          aliasIds: [la.id, la.code, la.name, key].filter(Boolean) as string[]
+        });
+      } else {
+        const item = canonicalMap.get(key)!;
+        if (!item.aliasIds.includes(la.id)) item.aliasIds.push(la.id);
+        if (la.code && !item.aliasIds.includes(la.code)) item.aliasIds.push(la.code);
+        if (la.name && !item.aliasIds.includes(la.name)) item.aliasIds.push(la.name);
+        if (key === 'MATH' && la.name.toLowerCase() === 'mathematics') {
+          item.name = 'Mathematics';
+          item.code = 'MATH';
+          item.id = la.id;
+        } else if (key === 'SCI' && (la.name.toLowerCase().includes('science and technology') || la.name.toLowerCase() === 'science')) {
+          item.name = la.name;
+          item.code = 'SCI';
+          item.id = la.id;
+        }
+      }
+    }
+
+    // Ensure all examination subjects with saved marks for this cohort are included in canonicalMap
+    const altTermId = termId.includes('-t') ? termId.replace('-t', '-') : termId.replace(/-(\d)$/, '-t$1');
+    let cohortSummatives = await this.CBCAssessmentRepository.findSummatives({ termId, academicYearId }).catch(() => []);
+    if (!cohortSummatives || cohortSummatives.length === 0) {
+      cohortSummatives = await this.CBCAssessmentRepository.findSummatives({ termId }).catch(() => []);
+    }
+    if (!cohortSummatives || cohortSummatives.length === 0) {
+      cohortSummatives = await this.CBCAssessmentRepository.findSummatives({ termId: altTermId }).catch(() => []);
+    }
+
+    let cohortReportCards = await this.CBCAssessmentRepository.findReportCardsByTerm(termId).catch(() => []);
+    if (!cohortReportCards || cohortReportCards.length === 0) {
+      cohortReportCards = await this.CBCAssessmentRepository.findReportCardsByTerm(altTermId).catch(() => []);
+    }
+
+    // Cohort student IDs to ensure we include subjects assessed for this class/grade
+    let cohortStudentIds: Set<string> | null = null;
+    if (classRoom?.id) {
+      const cohortStudents = await this.studentRepository.findAll({ classroomId: classRoom.id }).catch(() => []);
+      if (cohortStudents && cohortStudents.length > 0) {
+        cohortStudentIds = new Set(cohortStudents.map(s => s.id));
+      } else if (classRoom.gradeLevel) {
+        const gradeStudents = await this.studentRepository.findAll({ gradeLevel: classRoom.gradeLevel as any }).catch(() => []);
+        if (gradeStudents && gradeStudents.length > 0) {
+          cohortStudentIds = new Set(gradeStudents.map(s => s.id));
+        }
+      }
+    }
+
+    const registerAssessedSubject = (rawIdOrCode: string) => {
+      if (!rawIdOrCode) return;
+      const laMatch = allLearningAreas.find(
+        a => a.id === rawIdOrCode ||
+             a.id.toLowerCase() === rawIdOrCode.toLowerCase() ||
+             (a.code && a.code.toLowerCase() === rawIdOrCode.toLowerCase()) ||
+             a.name.toLowerCase() === rawIdOrCode.toLowerCase()
+      );
+      const key = this.getSubjectCanonicalKey(laMatch?.code || laMatch?.name || rawIdOrCode);
+      if (key === 'OTHER' && /^[0-9a-f]{8}-/i.test(rawIdOrCode)) {
+        return;
+      }
+      if (!canonicalMap.has(key)) {
+        canonicalMap.set(key, {
+          id: laMatch?.id || rawIdOrCode,
+          name: this.getCanonicalDisplayName(key, laMatch?.name || rawIdOrCode),
+          code: this.getCanonicalDisplayCode(key, laMatch?.code || rawIdOrCode),
+          aliasIds: [rawIdOrCode, laMatch?.id, laMatch?.code, laMatch?.name, key].filter(Boolean) as string[]
+        });
+      } else {
+        const item = canonicalMap.get(key)!;
+        if (!item.aliasIds.includes(rawIdOrCode)) item.aliasIds.push(rawIdOrCode);
+        if (laMatch?.id && !item.aliasIds.includes(laMatch.id)) item.aliasIds.push(laMatch.id);
+        if (laMatch?.code && !item.aliasIds.includes(laMatch.code)) item.aliasIds.push(laMatch.code);
+        if (laMatch?.name && !item.aliasIds.includes(laMatch.name)) item.aliasIds.push(laMatch.name);
+      }
+    };
+
+    for (const s of (cohortSummatives || [])) {
+      if (!cohortStudentIds || cohortStudentIds.has(s.studentId)) {
+        registerAssessedSubject(s.learningAreaId);
+      }
+    }
+
+    for (const rc of (cohortReportCards || [])) {
+      if (!cohortStudentIds || cohortStudentIds.has(rc.studentId)) {
+        for (const e of (rc.props.learningAreaAssessments || [])) {
+          registerAssessedSubject(e.learningAreaId || e.code || e.learningAreaName);
+        }
+      }
+    }
+
+    let learningAreas = Array.from(canonicalMap.values());
 
     // 4. Streams for selected class
     let streamsToCompare = classRoom ? await this.academicRepository.findStreamsByClass(classRoom.id) : [];
@@ -369,6 +624,42 @@ export class BroadsheetUseCases {
     const allClassRows: BroadsheetRow[] = [];
     allStreamResults.forEach(sr => {
       allClassRows.push(...sr.rows);
+    });
+
+    // Count learners with marks per subject to factor in priority (highest priority for subjects with marks)
+    const marksCountMap = new Map<string, number>();
+    for (const la of learningAreas) {
+      const count = allClassRows.filter(r => {
+        const sub = r.subjects[la.id];
+        return sub && sub.levelLabel !== '--';
+      }).length;
+      marksCountMap.set(la.id, count);
+    }
+
+    const hasAnyCohortMarks = Array.from(marksCountMap.values()).some(cnt => cnt > 0);
+    if (hasAnyCohortMarks) {
+      // The master broadsheet must display strictly ONLY the fields/subjects with marks actually uploaded
+      learningAreas = learningAreas.filter(la => (marksCountMap.get(la.id) || 0) > 0);
+    }
+
+    // Sort learning areas so that subjects with marks have HIGHEST priority in display
+    learningAreas.sort((a, b) => {
+      const countA = marksCountMap.get(a.id) || 0;
+      const countB = marksCountMap.get(b.id) || 0;
+      if (countA > 0 && countB === 0) return -1;
+      if (countA === 0 && countB > 0) return 1;
+      if (countB !== countA) return countB - countA;
+      const idxA = CANONICAL_ORDER.indexOf(this.getSubjectCanonicalKey(a.code || a.name || a.id));
+      const idxB = CANONICAL_ORDER.indexOf(this.getSubjectCanonicalKey(b.code || b.name || b.id));
+      const rankA = idxA === -1 ? 999 : idxA;
+      const rankB = idxB === -1 ? 999 : idxB;
+      if (rankA !== rankB) return rankA - rankB;
+      return (a.name || '').localeCompare(b.name || '');
+    });
+
+    // Re-evaluate subject summaries for streams in prioritized order
+    allStreamResults.forEach(sr => {
+      sr.subjectSummaries = this.calculateSubjectSummaries(sr.rows, learningAreas);
     });
 
     allClassRows.sort((a, b) => this.compareBroadsheetRows(a, b));
@@ -559,7 +850,7 @@ export class BroadsheetUseCases {
         runnerUpStreamName: runnerUp?.streamName,
         runnerUpMeanScore: runnerUpScore
       };
-    });
+    }).filter(b => b.meanScore > 0);
 
     // D. Best Student Per Subject in Class
     const bestStudentsPerSubject: BestStudentPerSubjectItem[] = learningAreas.map(la => {
@@ -594,7 +885,7 @@ export class BroadsheetUseCases {
         performanceLevel: level,
         scope: 'CLASS' as const
       };
-    });
+    }).filter(s => s.score > 0);
 
     // E. Best Student Per Subject in the Entire School (School Champions)
     const schoolBestStudentsPerSubject: BestStudentPerSubjectItem[] = Array.from(schoolAllLearningAreasMap.values()).map(la => {
@@ -673,16 +964,34 @@ export class BroadsheetUseCases {
     academicYearId: string,
     learningAreas: Array<{ id: string; name: string }>
   ): Promise<StreamSection> {
-    let students = await this.studentRepository.findAll({ streamId: stream.id });
-    if (!students || students.length === 0) {
-      students = await this.studentRepository.findAll({ classroomId: classRoom?.id, streamId: stream.id });
-    }
-    if ((!students || students.length === 0) && classRoom?.id) {
+    let students: Student[] = [];
+    if (stream && stream.id !== classRoom?.id) {
+      students = await this.studentRepository.findAll({ streamId: stream.id });
+      if (!students || students.length === 0) {
+        const allInClass = classRoom?.id ? await this.studentRepository.findAll({ classroomId: classRoom.id }) : [];
+        students = allInClass.filter(s => s.streamId === stream.id);
+      }
+      if (!students || students.length === 0) {
+        const allStreamsInClass = classRoom?.id ? await this.academicRepository.findStreamsByClass(classRoom.id) : [];
+        if (allStreamsInClass.length <= 1) {
+          const unassigned = await this.studentRepository.findAll({ gradeLevel: classRoom?.gradeLevel as any });
+          students = unassigned.filter(s => !s.streamId || s.streamId === stream.id);
+        }
+      }
+    } else if (classRoom?.id) {
       students = await this.studentRepository.findAll({ classroomId: classRoom.id });
-    }
-    if ((!students || students.length === 0) && classRoom?.gradeLevel) {
+      if ((!students || students.length === 0) && classRoom.gradeLevel) {
+        students = await this.studentRepository.findAll({ gradeLevel: classRoom.gradeLevel as any });
+      }
+    } else if (classRoom?.gradeLevel) {
       students = await this.studentRepository.findAll({ gradeLevel: classRoom.gradeLevel as any });
     }
+
+    // Strict active student filter: Only ACTIVE students are eligible for academic ranking
+    students = (students || []).filter(s => {
+      const st = (s as any).status;
+      return st === StudentStatus.ACTIVE || st === 'ACTIVE' || st === 'Active' || !st;
+    });
 
     const altTermId = termId.includes('-t') ? termId.replace('-t', '-') : termId.replace(/-(\d)$/, '-t$1');
 
@@ -709,10 +1018,31 @@ export class BroadsheetUseCases {
     }
     const reportCardsByStudent = new Map(reportCards.map(rc => [rc.studentId, rc]));
 
+    const allLearningAreas = typeof this.academicRepository.findAllLearningAreas === 'function'
+      ? await this.academicRepository.findAllLearningAreas()
+      : [];
+
     const summativeMap = new Map<string, any>();
     for (const s of summatives) {
       summativeMap.set(`${s.studentId}_${s.learningAreaId}`, s);
       summativeMap.set(`${s.studentId}_${s.learningAreaId.toLowerCase()}`, s);
+      const laMatch = allLearningAreas.find(
+        a => a.id === s.learningAreaId ||
+             a.id.toLowerCase() === s.learningAreaId.toLowerCase() ||
+             (a.code && a.code.toLowerCase() === s.learningAreaId.toLowerCase()) ||
+             a.name.toLowerCase() === s.learningAreaId.toLowerCase()
+      );
+      if (laMatch) {
+        if (laMatch.code) {
+          summativeMap.set(`${s.studentId}_${laMatch.code}`, s);
+          summativeMap.set(`${s.studentId}_${laMatch.code.toLowerCase()}`, s);
+        }
+        if (laMatch.name) {
+          summativeMap.set(`${s.studentId}_${laMatch.name.toLowerCase()}`, s);
+        }
+        const sKey = this.getSubjectCanonicalKey(laMatch.code || laMatch.name || laMatch.id);
+        summativeMap.set(`${s.studentId}_${sKey}`, s);
+      }
     }
 
     const rows: BroadsheetRow[] = [];
@@ -726,12 +1056,39 @@ export class BroadsheetUseCases {
       const rc = reportCardsByStudent.get(student.id);
 
       for (const la of learningAreas) {
-        const s = summativeMap.get(`${student.id}_${la.id}`) || summativeMap.get(`${student.id}_${la.id.toLowerCase()}`);
-        const rcScore = rc?.props.learningAreaAssessments?.find((e: any) => 
-          e.learningAreaId === la.id || 
-          e.learningAreaId?.toLowerCase() === la.id.toLowerCase() ||
-          e.learningAreaName?.trim().toLowerCase() === la.name.trim().toLowerCase()
-        );
+        const laKey = this.getSubjectCanonicalKey((la as any).code || la.name || la.id);
+        const aliases: string[] = (la as any).aliasIds || [la.id];
+        let s: any = null;
+        for (const aId of aliases) {
+          const match = summativeMap.get(`${student.id}_${aId}`) || summativeMap.get(`${student.id}_${String(aId).toLowerCase()}`);
+          if (match) {
+            s = match;
+            break;
+          }
+        }
+        if (!s) {
+          for (const summ of summatives) {
+            if (summ.studentId === student.id) {
+              const summKey = this.getSubjectCanonicalKey(summ.learningAreaId);
+              if (summKey === laKey) {
+                s = summ;
+                break;
+              }
+            }
+          }
+        }
+
+        const rcScore = rc?.props.learningAreaAssessments?.find((e: any) => {
+          const eKey = this.getSubjectCanonicalKey(e.code || e.learningAreaName || e.learningAreaId || '');
+          if (eKey === laKey) return true;
+          return (
+            aliases.some(aId => 
+              e.learningAreaId === aId || 
+              e.learningAreaId?.toLowerCase() === aId.toLowerCase()
+            ) ||
+            e.learningAreaName?.trim().toLowerCase() === la.name.trim().toLowerCase()
+          );
+        });
         let hasEvaluation = false;
         let level: PerformanceLevel = PerformanceLevel.BELOW_EXPECTATIONS;
         let score = 0;
@@ -769,11 +1126,11 @@ export class BroadsheetUseCases {
         };
       }
 
-      const subjectDivisor = learningAreas.length > 0 ? learningAreas.length : (evaluatedCount || 1);
-      const averageScore = Math.round(totalScore / subjectDivisor);
-      const meanPoints = Number((totalPoints / subjectDivisor).toFixed(2));
-      const overallLevel = this.levelFromScore(averageScore);
-      const remarks = this.generateRemark(overallLevel, averageScore);
+      const subjectDivisor = evaluatedCount > 0 ? evaluatedCount : 1;
+      const averageScore = evaluatedCount > 0 ? Math.round(totalScore / subjectDivisor) : 0;
+      const meanPoints = evaluatedCount > 0 ? Number((totalPoints / subjectDivisor).toFixed(2)) : 0;
+      const overallLevel = evaluatedCount > 0 ? this.levelFromScore(averageScore) : PerformanceLevel.BELOW_EXPECTATIONS;
+      const remarks = evaluatedCount > 0 ? this.generateRemark(overallLevel, averageScore) : this.generateRemark(overallLevel, 0);
 
       rows.push({
         studentId: student.id,
@@ -792,6 +1149,8 @@ export class BroadsheetUseCases {
         rank: 0,
         streamRank: 0,
         classRank: 0,
+        evaluatedCount,
+        isPending: evaluatedCount === 0,
         remarks
       });
     }
@@ -847,7 +1206,7 @@ export class BroadsheetUseCases {
     rows: BroadsheetRow[],
     learningAreas: Array<{ id: string; name: string }>
   ): BroadsheetSubjectSummary[] {
-    return learningAreas.map(la => {
+    const list: BroadsheetSubjectSummary[] = learningAreas.map(la => {
       let subTotal = 0;
       let subPoints = 0;
       let assessedCount = 0;
@@ -897,6 +1256,11 @@ export class BroadsheetUseCases {
         counts
       };
     });
+
+    const hasAnyAssessed = list.some(item => (item.counts.EE + item.counts.ME + item.counts.AE + item.counts.BE) > 0);
+    return hasAnyAssessed
+      ? list.filter(item => (item.counts.EE + item.counts.ME + item.counts.AE + item.counts.BE) > 0)
+      : list;
   }
 
   private computeGenderStats(rows: BroadsheetRow[]): GenderStats {
@@ -1005,6 +1369,11 @@ export class BroadsheetUseCases {
   }
 
   private compareBroadsheetRows(a: BroadsheetRow, b: BroadsheetRow): number {
+    const aHas = (a.evaluatedCount !== undefined ? a.evaluatedCount > 0 : a.totalScore > 0);
+    const bHas = (b.evaluatedCount !== undefined ? b.evaluatedCount > 0 : b.totalScore > 0);
+    if (aHas && !bHas) return -1;
+    if (!aHas && bHas) return 1;
+
     if (b.totalScore !== a.totalScore) return b.totalScore - a.totalScore;
     if (b.averageScore !== a.averageScore) return b.averageScore - a.averageScore;
     if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
@@ -1013,18 +1382,101 @@ export class BroadsheetUseCases {
     return (a.studentId || '').localeCompare(b.studentId || '');
   }
 
+  public getCanonicalDisplayName(key: string, defaultName: string): string {
+    switch (key) {
+      case 'MATH': return 'Mathematics';
+      case 'ENG': return 'English Language';
+      case 'KISW': return 'Kiswahili Language';
+      case 'SCI': return 'Science and Technology';
+      case 'SST': return 'Social Studies';
+      case 'CRE': return 'Christian Religious Education';
+      case 'SRE': return 'Religious Education Activities';
+      case 'AGRI': return 'Agriculture & Nutrition';
+      case 'ARTS': return 'Creative Arts & Sports';
+      case 'PRETECH': return 'Pre-Technical Studies';
+      case 'HLTH': return 'Health Education';
+      case 'BUS': return 'Business Studies';
+      case 'COMP': return 'Computer Science';
+      case 'ENV': return 'Environmental Activities';
+      case 'REA': return 'English Reading / Literacy Activities';
+      case 'KUSO': return 'Kusoma Activities';
+      case 'CREA': return 'Creative Activities';
+      case 'IND': return 'Indigenous Language Activities';
+      default: return defaultName;
+    }
+  }
+
+  public getCanonicalDisplayCode(key: string, defaultCode?: string): string {
+    switch (key) {
+      case 'MATH': return 'MATH';
+      case 'ENG': return 'ENG';
+      case 'KISW': return 'KIS';
+      case 'SCI': return 'SCI';
+      case 'SST': return 'SST';
+      case 'SOC': return 'SST';
+      case 'CRE': return 'CRE';
+      case 'SRE': return 'CRE';
+      case 'AGRI': return 'AGR';
+      case 'ARTS': return 'ARTS';
+      case 'PRETECH': return 'PRET';
+      case 'HLTH': return 'HLTH';
+      case 'BUS': return 'BUS';
+      case 'COMP': return 'COMP';
+      case 'ENV': return 'ENV';
+      case 'REA': return 'REA';
+      case 'KUSO': return 'KUSO';
+      case 'CREA': return 'CREA';
+      case 'IND': return 'IND';
+      default: return defaultCode || key;
+    }
+  }
+
+  public getSubjectCanonicalKey(str: string): string {
+    if (!str) return 'OTHER';
+    const clean = str.trim().toUpperCase();
+    if (clean.includes('READING') || clean.includes('LITERACY') || /(^|[-_ \b])(REA|LIT)([-_ \b]|$)/i.test(clean)) return 'REA';
+    if (clean.includes('KUSOMA') || /(^|[-_ \b])(KUSO|WKU)([-_ \b]|$)/i.test(clean)) return 'KUSO';
+    if (clean.includes('ENVIRONMENT') || clean.includes('ENVI') || clean.includes('SENV') || /(^|[-_ \b])ENV([-_ \b]|$)/i.test(clean)) return 'ENV';
+    if (clean.includes('ENG') || clean.includes('ENGLISH')) return 'ENG';
+    if (clean.includes('KISW') || clean.includes('SWAHILI') || /(^|[-_ \b])KIS([-_ \b]|$)/i.test(clean)) return 'KISW';
+    if (clean.includes('INDIGENOUS') || /(^|[-_ \b])IND([-_ \b]|$)/i.test(clean)) return 'IND';
+    if (clean.includes('FRENCH') || /(^|[-_ \b])FRE([-_ \b]|$)/i.test(clean)) return 'FRE';
+    if (clean.includes('GERMAN') || /(^|[-_ \b])GER([-_ \b]|$)/i.test(clean)) return 'GER';
+    if (clean.includes('ARABIC') || /(^|[-_ \b])ARA([-_ \b]|$)/i.test(clean)) return 'ARA';
+    if (clean.includes('MATH') || /(^|[-_ \b])MAT([-_ \b]|$)/i.test(clean)) return 'MATH';
+    if (clean.includes('SPIRITUAL') || /(^|[-_ \b])SRE([-_ \b]|$)/i.test(clean)) return 'SRE';
+    if (clean.includes('ARTS') || clean.includes('SPORT') || clean.includes('MUSIC')) return 'ARTS';
+    if (clean.includes('CREATIVE') || clean.includes('PSYCHOMOTOR') || /(^|[-_ \b])(CREA|CRA)([-_ \b]|$)/i.test(clean)) return 'CREA';
+    if (clean.includes('RELIGIOUS') || clean.includes('IRE') || clean.includes('HRE') || /(^|[-_ \b])CRE([-_ \b]|$)/i.test(clean)) return 'CRE';
+    if (clean.includes('INTEGRATED SCIENCE') || clean.includes('INTSCI') || clean.includes('SCI_TECH') || clean.includes('SCIENCE') || /(^|[-_ \b])SCI([-_ \b]|$)/i.test(clean)) return 'SCI';
+    if (clean.includes('HEALTH') || /(^|[-_ \b])HLTH([-_ \b]|$)/i.test(clean)) return 'HLTH';
+    if (clean.includes('SOCIAL') || clean.includes('SST') || /(^|[-_ \b])SOC([-_ \b]|$)/i.test(clean)) return 'SST';
+    if (clean.includes('AGRI') || clean.includes('NUTRITION') || /(^|[-_ \b])AGR([-_ \b]|$)/i.test(clean)) return 'AGRI';
+    if (clean.includes('PRE-TECH') || clean.includes('PRETECH') || clean.includes('TECHNICAL') || clean.includes('PTECH') || /(^|[-_ \b])PRET([-_ \b]|$)/i.test(clean)) return 'PRETECH';
+    if (clean.includes('BUSINESS') || /(^|[-_ \b])BUS([-_ \b]|$)/i.test(clean)) return 'BUS';
+    if (clean.includes('COMPUTER') || /(^|[-_ \b])COMP([-_ \b]|$)/i.test(clean)) return 'COMP';
+    if (clean.includes('LANGUAGE ACTIVITIES') || /(^|[-_ \b])LAN([-_ \b]|$)/i.test(clean)) return 'LAN';
+    return clean;
+  }
+
   private assignCompetitionRanks(
     rows: BroadsheetRow[],
     scoreFn: (r: BroadsheetRow) => number,
     assignFn: (r: BroadsheetRow, rank: number) => void
   ): void {
+    const eligibleRows = rows.filter(r => (r.evaluatedCount !== undefined ? r.evaluatedCount > 0 : r.totalScore > 0));
     let currentRank = 1;
-    for (let i = 0; i < rows.length; i++) {
-      if (i > 0 && scoreFn(rows[i]) === scoreFn(rows[i - 1])) {
-        assignFn(rows[i], currentRank);
+    for (let i = 0; i < eligibleRows.length; i++) {
+      if (i > 0 && scoreFn(eligibleRows[i]) === scoreFn(eligibleRows[i - 1])) {
+        assignFn(eligibleRows[i], currentRank);
       } else {
         currentRank = i + 1;
-        assignFn(rows[i], currentRank);
+        assignFn(eligibleRows[i], currentRank);
+      }
+    }
+    for (const r of rows) {
+      if ((r.evaluatedCount !== undefined && r.evaluatedCount === 0) && r.totalScore === 0) {
+        assignFn(r, 0);
       }
     }
   }

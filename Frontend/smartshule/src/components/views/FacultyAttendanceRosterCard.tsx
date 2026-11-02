@@ -162,17 +162,17 @@ export const FacultyAttendanceRosterCard: React.FC<FacultyAttendanceRosterCardPr
   return (
     <div className="bg-white rounded-2xl p-6 shadow-xs border border-outline-variant/30 space-y-6">
       {/* Top Banner / Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-4 border-b border-surface-container">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
-          <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-xl bg-[#7a1228]/10 text-[#7a1228] flex items-center justify-center shrink-0">
-              <span className="material-symbols-outlined text-[20px]">how_to_reg</span>
+          <div className="flex items-center gap-2.5">
+            <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center shrink-0 border border-slate-200 shadow-2xs">
+              <span className="material-symbols-outlined text-[22px]">how_to_reg</span>
             </div>
             <div>
-              <h2 className="text-base sm:text-lg font-bold text-on-surface">
+              <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
                 Faculty Clock-In & Compound Attendance Roster
               </h2>
-              <p className="text-xs text-on-surface-variant">
+              <p className="text-xs font-semibold text-slate-700 mt-0.5">
                 Live biometric roll call for School Director, Head Teacher & Deputy
               </p>
             </div>
@@ -182,10 +182,10 @@ export const FacultyAttendanceRosterCard: React.FC<FacultyAttendanceRosterCardPr
         {/* Action Controls & Live Status */}
         <div className="flex flex-wrap items-center gap-2.5">
           {/* Live Indicator */}
-          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-50 border border-teal-200 text-teal-800 text-[11px] font-semibold">
-            <span className="w-2 h-2 rounded-full bg-teal-500 animate-pulse"></span>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-50 border border-teal-300 text-teal-900 text-xs font-bold">
+            <span className="w-2 h-2 rounded-full bg-teal-600 animate-pulse"></span>
             <span>Live Sync Active</span>
-            <span className="text-teal-600 font-mono text-[10px]">
+            <span className="text-teal-700 font-mono text-[10px]">
               ({lastRefreshedAt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })})
             </span>
           </div>
@@ -196,7 +196,7 @@ export const FacultyAttendanceRosterCard: React.FC<FacultyAttendanceRosterCardPr
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="px-3 py-1.5 text-xs font-data-mono bg-gray-50 border border-gray-200 rounded-lg text-gray-800 focus:outline-primary cursor-pointer"
+              className="px-3 py-1.5 text-xs font-data-mono font-bold bg-slate-50 border border-slate-300 rounded-lg text-slate-900 focus:outline-primary cursor-pointer"
             />
           </div>
 
@@ -205,11 +205,11 @@ export const FacultyAttendanceRosterCard: React.FC<FacultyAttendanceRosterCardPr
             type="button"
             onClick={() => fetchRoster(false)}
             disabled={loading || refreshing}
-            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-xs font-semibold text-gray-800 transition-all cursor-pointer disabled:opacity-60"
+            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-800 border border-slate-300 transition-all cursor-pointer disabled:opacity-60"
             title="Refresh faculty attendance roster"
           >
             <span
-              className={`material-symbols-outlined text-[16px] text-[#7a1228] ${
+              className={`material-symbols-outlined text-[16px] text-slate-700 ${
                 refreshing || loading ? 'animate-spin' : ''
               }`}
             >
@@ -222,7 +222,7 @@ export const FacultyAttendanceRosterCard: React.FC<FacultyAttendanceRosterCardPr
           <button
             type="button"
             onClick={handlePrintRoster}
-            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-xs font-semibold text-gray-800 transition-all cursor-pointer"
+            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-800 border border-slate-300 transition-all cursor-pointer"
             title="Print daily roll-call roster"
           >
             <span className="material-symbols-outlined text-[16px]">print</span>
@@ -234,7 +234,7 @@ export const FacultyAttendanceRosterCard: React.FC<FacultyAttendanceRosterCardPr
             <button
               type="button"
               onClick={() => onNavigateTab('geofencing')}
-              className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-lg bg-[#7a1228] hover:bg-[#5e0d1e] text-white text-xs font-bold transition-all shadow-2xs cursor-pointer"
+              className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
             >
               <span className="material-symbols-outlined text-[16px]">open_in_new</span>
               <span>Geofencing Page</span>
@@ -329,8 +329,8 @@ export const FacultyAttendanceRosterCard: React.FC<FacultyAttendanceRosterCardPr
             onClick={() => setStatusFilter('ALL')}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
               statusFilter === 'ALL'
-                ? 'bg-[#7a1228] text-white shadow-2xs'
-                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                ? 'bg-slate-900 text-white shadow-2xs font-bold'
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold'
             }`}
           >
             All Faculty ({summary.totalTeachers})
@@ -395,38 +395,38 @@ export const FacultyAttendanceRosterCard: React.FC<FacultyAttendanceRosterCardPr
 
       {/* Roster Table / Card Grid */}
       {loading ? (
-        <div className="py-16 text-center text-gray-500 flex flex-col items-center gap-2">
-          <span className="material-symbols-outlined text-4xl text-[#7a1228] animate-spin">
+        <div className="py-16 text-center text-slate-700 flex flex-col items-center gap-2">
+          <span className="material-symbols-outlined text-4xl text-indigo-700 animate-spin">
             sync
           </span>
-          <p className="text-xs font-semibold">Loading faculty attendance roster...</p>
+          <p className="text-xs font-bold text-slate-800">Loading faculty attendance roster...</p>
         </div>
       ) : filteredRoster.length === 0 ? (
-        <div className="py-14 text-center text-gray-500 flex flex-col items-center gap-2 border border-dashed border-gray-200 rounded-xl">
-          <span className="material-symbols-outlined text-4xl text-gray-400">badge</span>
-          <p className="font-bold text-sm text-gray-800">No faculty members found</p>
-          <p className="text-xs text-gray-500">
+        <div className="py-14 text-center text-slate-600 flex flex-col items-center gap-2 border border-dashed border-slate-300 rounded-xl bg-slate-50">
+          <span className="material-symbols-outlined text-4xl text-slate-500">badge</span>
+          <p className="font-bold text-sm text-slate-900">No faculty members found</p>
+          <p className="text-xs font-medium text-slate-700">
             {search
               ? 'No teachers match your search query.'
               : 'No teachers match the selected status filter.'}
           </p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-gray-200">
+        <div className="overflow-x-auto rounded-xl border border-slate-300">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-200 text-gray-600 uppercase tracking-wider text-[10px]">
-                <th className="py-3 px-3.5 font-bold">Educator & TSC No.</th>
-                <th className="py-3 px-3 font-bold">Today Status</th>
-                <th className="py-3 px-3 font-bold">Clock In</th>
-                <th className="py-3 px-3 font-bold">Clock Out</th>
-                <th className="py-3 px-3 font-bold">Distance to Center</th>
-                <th className="py-3 px-3 font-bold">Assigned Subject / Class</th>
-                <th className="py-3 px-3 font-bold">Compliance</th>
-                <th className="py-3 px-3.5 font-bold text-right">Actions</th>
+              <tr className="bg-slate-100 border-b border-slate-300 text-slate-800 uppercase tracking-wider text-[11px] font-black">
+                <th className="py-3 px-3.5">Educator &amp; TSC No.</th>
+                <th className="py-3 px-3">Today Status</th>
+                <th className="py-3 px-3">Clock In</th>
+                <th className="py-3 px-3">Clock Out</th>
+                <th className="py-3 px-3">Distance to Center</th>
+                <th className="py-3 px-3">Assigned Subject / Class</th>
+                <th className="py-3 px-3">Compliance</th>
+                <th className="py-3 px-3.5 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-slate-200">
               {filteredRoster.map((teacher) => {
                 const isClockedIn = teacher.status === 'CLOCKED_IN';
                 const isClockedOut = teacher.status === 'CLOCKED_OUT';
@@ -435,14 +435,14 @@ export const FacultyAttendanceRosterCard: React.FC<FacultyAttendanceRosterCardPr
                 return (
                   <tr
                     key={teacher.teacherId}
-                    className="hover:bg-gray-50/80 transition-colors"
+                    className="hover:bg-slate-50/90 transition-colors"
                   >
                     {/* Educator Details */}
                     <td className="py-3 px-3.5">
                       <div className="flex items-center gap-2.5">
                         {/* Avatar Beacon */}
                         <div className="relative shrink-0">
-                          <div className="w-9 h-9 rounded-xl bg-[#7a1228]/10 text-[#7a1228] font-bold text-xs flex items-center justify-center">
+                          <div className="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-900 font-black text-xs flex items-center justify-center">
                             {teacher.name
                               .split(' ')
                               .map((n) => n[0])
@@ -468,17 +468,17 @@ export const FacultyAttendanceRosterCard: React.FC<FacultyAttendanceRosterCardPr
                         </div>
 
                         <div>
-                          <div className="font-bold text-gray-900 leading-tight">
+                          <div className="font-black text-slate-900 leading-tight">
                             {teacher.name}
                           </div>
-                          <div className="text-[10px] text-gray-500 font-data-mono flex items-center gap-1.5 mt-0.5">
+                          <div className="text-[11px] text-slate-700 font-bold font-data-mono flex items-center gap-1.5 mt-0.5">
                             {teacher.tscNumber && (
-                              <span className="bg-gray-100 px-1.5 py-0.2 rounded text-gray-700">
+                              <span className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-900 font-bold border border-slate-200">
                                 TSC: {teacher.tscNumber}
                               </span>
                             )}
                             {teacher.phoneNumber && (
-                              <span className="inline-flex items-center gap-1">
+                              <span className="inline-flex items-center gap-1 text-slate-800">
                                 <span className="material-symbols-outlined text-[13px]">phone</span>
                                 <span>{teacher.phoneNumber}</span>
                               </span>

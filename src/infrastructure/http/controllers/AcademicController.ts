@@ -421,4 +421,17 @@ export class AcademicController {
       next(err);
     }
   };
+
+  public getTeacherAuthorizedContext = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { academicYearId } = req.query;
+      const result = await this.academicUseCases.getTeacherAuthorizedContext(
+        (req as any).user,
+        academicYearId as string | undefined
+      );
+      return res.status(200).json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  };
 }

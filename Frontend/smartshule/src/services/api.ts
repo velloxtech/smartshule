@@ -308,6 +308,28 @@ export interface MarksCommitResult {
   message: string;
 }
 
+export interface TeacherAuthorizedClass {
+  id: string;
+  name: string;
+  gradeLevel: string;
+  streams: Array<{ id: string; name: string }>;
+}
+
+export interface TeacherAuthorizedSubject {
+  id: string;
+  code: string;
+  name: string;
+  gradeLevel?: string;
+}
+
+export interface TeacherAuthorizedContext {
+  isGlobalAdmin: boolean;
+  teacherId?: string;
+  teachingModel: 'CLASS_TEACHER' | 'SUBJECT_TEACHER' | 'HYBRID' | 'GLOBAL_ADMIN';
+  assignedClasses: TeacherAuthorizedClass[];
+  authorizedSubjectsByClass: Record<string, TeacherAuthorizedSubject[]>;
+}
+
 const coreApiService = {
   // Health & Status Check
   checkHealth: async (): Promise<boolean> => {
@@ -716,6 +738,11 @@ const coreApiService = {
       method: 'DELETE',
       body: effectiveTo ? JSON.stringify({ effectiveTo }) : undefined
     });
+  },
+
+  getTeacherAuthorizedContext: async (academicYearId?: string): Promise<ApiResponse<TeacherAuthorizedContext>> => {
+    const q = academicYearId ? `?academicYearId=${academicYearId}` : '';
+    return apiFetch<ApiResponse<TeacherAuthorizedContext>>(`/academics/teacher/authorized-context${q}`);
   },
 
   // 3. Students & Guardians Endpoints
@@ -2311,7 +2338,16 @@ const coreApiService = {
 
   // 13. Dashboard & Analytics Endpoints
   getDashboardAnalytics: async (
-    optionsOrSchoolId?: string | { schoolId?: string; yearId?: string; termId?: string }
+    optionsOrSchoolId?: string | {
+      schoolId?: string;
+      yearId?: string;
+      termId?: string;
+      date?: string;
+      classRoomId?: string;
+      streamId?: string;
+      gradeLevel?: string;
+      teacherId?: string;
+    }
   ): Promise<ApiResponse<DashboardSummary>> => {
     let query = '';
     if (typeof optionsOrSchoolId === 'string') {
@@ -2321,10 +2357,59 @@ const coreApiService = {
       if (optionsOrSchoolId.schoolId) params.append('schoolId', optionsOrSchoolId.schoolId);
       if (optionsOrSchoolId.yearId) params.append('academicYearId', optionsOrSchoolId.yearId);
       if (optionsOrSchoolId.termId) params.append('termId', optionsOrSchoolId.termId);
+      if (optionsOrSchoolId.date) params.append('date', optionsOrSchoolId.date);
+      if (optionsOrSchoolId.classRoomId) params.append('classRoomId', optionsOrSchoolId.classRoomId);
+      if (optionsOrSchoolId.streamId) params.append('streamId', optionsOrSchoolId.streamId);
+      if (optionsOrSchoolId.gradeLevel) params.append('gradeLevel', optionsOrSchoolId.gradeLevel);
+      if (optionsOrSchoolId.teacherId) params.append('teacherId', optionsOrSchoolId.teacherId);
       const qStr = params.toString();
       if (qStr) query = `?${qStr}`;
     }
     return apiFetch<ApiResponse<DashboardSummary>>(`/analytics/dashboard${query}`);
+  },
+
+  recordAttendanceFollowUp: async (
+    registerId: string,
+    studentId: string,
+    data: {
+      contactMethod?: 'PHONE_CALL' | 'SMS' | 'WHATSAPP' | 'IN_PERSON';
+      guardianResponse?: string;
+      resolutionStatus?: 'PENDING' | 'RESOLVED' | 'ESCALATED_TO_HEADTEACHER';
+      assignedTo?: string;
+      notes?: string;
+    }
+  ): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/attendance/${encodeURIComponent(registerId)}/entries/${encodeURIComponent(studentId)}/follow-up`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  getAttendanceTrends: async (params?: {
+    schoolId?: string;
+    academicYearId?: string;
+    termId?: string;
+    days?: number;
+  }): Promise<ApiResponse<any>> => {
+    const q = new URLSearchParams();
+    if (params?.schoolId) q.append('schoolId', params.schoolId);
+    if (params?.academicYearId) q.append('academicYearId', params.academicYearId);
+    if (params?.termId) q.append('termId', params.termId);
+    if (params?.days) q.append('days', String(params.days));
+    const qs = q.toString() ? `?${q.toString()}` : '';
+    return apiFetch<ApiResponse<any>>(`/analytics/attendance/trends${qs}`);
+  },
+
+  getWholeTermReport: async (params: {
+    academicYearId: string;
+    termId: string;
+    schoolId?: string;
+  }): Promise<ApiResponse<any>> => {
+    const q = new URLSearchParams();
+    if (params.academicYearId) q.append('academicYearId', params.academicYearId);
+    if (params.termId) q.append('termId', params.termId);
+    if (params.schoolId) q.append('schoolId', params.schoolId);
+    return apiFetch<ApiResponse<any>>(`/analytics/reports/whole-term?${q.toString()}`);
   },
 
   getGuardianPortalData: async (): Promise<ApiResponse<any>> => {
@@ -3388,7 +3473,8 @@ export const libraryApi = {
     termId?: string,
     academicYearId?: string,
     classId?: string,
-    examType?: string
+    examType?: string,
+    gradeLevel?: string
   ): Promise<ApiResponse<BroadsheetResult>> => {
     const params = new URLSearchParams();
     params.append('streamId', streamId);
@@ -3396,6 +3482,7 @@ export const libraryApi = {
     if (academicYearId) params.append('academicYearId', academicYearId);
     if (classId) params.append('classId', classId);
     if (examType) params.append('examType', examType);
+    if (gradeLevel) params.append('gradeLevel', gradeLevel);
     return apiFetch<ApiResponse<BroadsheetResult>>(`/broadsheets/stream?${params.toString()}`);
   },
 
@@ -3525,6 +3612,50 @@ export const libraryApi = {
     data: ConfirmWeekCoveredDTO
   ): Promise<ApiResponse<CurriculumTracker>> => {
     return apiFetch<ApiResponse<CurriculumTracker>>(`/curriculum-tracker/${id}/weeks/${weekNumber}/confirm-covered`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  submitTrackerWeek: async (
+    id: string,
+    weekNumber: number,
+    data: { lessonsTaught?: number; teacherComment?: string }
+  ): Promise<ApiResponse<CurriculumTracker>> => {
+    return apiFetch<ApiResponse<CurriculumTracker>>(`/curriculum-tracker/${id}/weeks/${weekNumber}/submit`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  approveTrackerWeek: async (
+    id: string,
+    weekNumber: number,
+    data: { remarks?: string }
+  ): Promise<ApiResponse<CurriculumTracker>> => {
+    return apiFetch<ApiResponse<CurriculumTracker>>(`/curriculum-tracker/${id}/weeks/${weekNumber}/approve`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  returnTrackerWeek: async (
+    id: string,
+    weekNumber: number,
+    data: { reason: string }
+  ): Promise<ApiResponse<CurriculumTracker>> => {
+    return apiFetch<ApiResponse<CurriculumTracker>>(`/curriculum-tracker/${id}/weeks/${weekNumber}/return`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  overrideTrackerWeek: async (
+    id: string,
+    weekNumber: number,
+    data: { status: 'EXEMPTED' | 'RESCHEDULED'; reason: string }
+  ): Promise<ApiResponse<CurriculumTracker>> => {
+    return apiFetch<ApiResponse<CurriculumTracker>>(`/curriculum-tracker/${id}/weeks/${weekNumber}/override`, {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -3934,6 +4065,10 @@ export const getCurriculumTrackerById = libraryApi.getCurriculumTrackerById;
 export const createCurriculumTracker = libraryApi.createCurriculumTracker;
 export const updateTrackerWeekPlan = libraryApi.updateTrackerWeekPlan;
 export const confirmTrackerWeekCovered = libraryApi.confirmTrackerWeekCovered;
+export const submitTrackerWeek = libraryApi.submitTrackerWeek;
+export const approveTrackerWeek = libraryApi.approveTrackerWeek;
+export const returnTrackerWeek = libraryApi.returnTrackerWeek;
+export const overrideTrackerWeek = libraryApi.overrideTrackerWeek;
 export const updateTrackerWeekComment = libraryApi.updateTrackerWeekComment;
 export const batchUpdateTrackerWeeks = libraryApi.batchUpdateTrackerWeeks;
 export const getCurriculumSummary = libraryApi.getCurriculumSummary;

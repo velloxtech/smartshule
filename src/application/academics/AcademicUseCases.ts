@@ -1158,4 +1158,272 @@ export class AcademicUseCases {
     await this.academicRepository.saveSubjectTeacherAssignment(assignment);
     return assignment.toJSON();
   }
+
+  public async getTeacherAuthorizedContext(
+    requestingUser?: UserContext,
+    academicYearId?: string
+  ): Promise<{
+    isGlobalAdmin: boolean;
+    teacherId?: string;
+    teachingModel: 'CLASS_TEACHER' | 'SUBJECT_TEACHER' | 'HYBRID' | 'GLOBAL_ADMIN';
+    assignedClasses: Array<{
+      id: string;
+      name: string;
+      gradeLevel: string;
+      streams: Array<{ id: string; name: string }>;
+    }>;
+    authorizedSubjectsByClass: Record<string, Array<{
+      id: string;
+      code: string;
+      name: string;
+      gradeLevel?: string;
+    }>>;
+  }> {
+    if (!requestingUser) {
+      throw new ForbiddenError('Authentication required to retrieve academic context.');
+    }
+
+    const schoolId = requestingUser.schoolId || 'school-001';
+    const allClasses = await this.academicRepository.findAllClasses(schoolId);
+    const allLearningAreas = await this.listLearningAreas({ schoolId });
+
+    // If Admin, Principal, Head Teacher, Super Admin -> return full school context
+    if (isAcademicAdminRole(requestingUser.role)) {
+      const assignedClasses = await Promise.all(
+        allClasses.map(async (cls: ClassRoom) => {
+          const streams = await this.academicRepository.findStreamsByClass(cls.id);
+          return {
+            id: cls.id,
+            name: cls.name,
+            gradeLevel: cls.gradeLevel,
+            streams: streams.map(s => ({ id: s.id, name: s.name }))
+          };
+        })
+      );
+
+      const authorizedSubjectsByClass: Record<string, Array<{ id: string; code: string; name: string; gradeLevel?: string }>> = {};
+      for (const cls of allClasses) {
+        const clsGrade = (cls.gradeLevel || '').toUpperCase().replace(/[\s-]/g, '_');
+        const matchingLas = allLearningAreas.filter((la: any) => {
+          if (!la.gradeLevel) return true;
+          const laGrade = String(la.gradeLevel).toUpperCase().replace(/[\s-]/g, '_');
+          return laGrade === clsGrade || clsGrade.includes(laGrade) || laGrade.includes(clsGrade);
+        });
+        const lasToUse = matchingLas.length > 0 ? matchingLas : allLearningAreas;
+        authorizedSubjectsByClass[cls.id] = lasToUse.map((la: any) => ({
+          id: la.id,
+          code: la.code,
+          name: la.name,
+          gradeLevel: la.gradeLevel
+        }));
+      }
+
+      return {
+        isGlobalAdmin: true,
+        teachingModel: 'GLOBAL_ADMIN',
+        assignedClasses,
+        authorizedSubjectsByClass
+      };
+    }
+
+    if (!this.teacherRepository) {
+      return {
+        isGlobalAdmin: false,
+        teachingModel: 'SUBJECT_TEACHER',
+        assignedClasses: [],
+        authorizedSubjectsByClass: {}
+      };
+    }
+
+    const teacher = await this.teacherRepository.findByUserId(requestingUser.userId);
+    if (!teacher) {
+      return {
+        isGlobalAdmin: false,
+        teachingModel: 'SUBJECT_TEACHER',
+        assignedClasses: [],
+        authorizedSubjectsByClass: {}
+      };
+    }
+
+    const classTeacherAssignments = await this.academicRepository.findClassTeacherAssignments({
+      teacherId: teacher.id,
+      academicYearId: academicYearId || undefined,
+      isActive: true
+    });
+
+    const subjectTeacherAssignments = await this.academicRepository.findSubjectTeacherAssignments({
+      teacherId: teacher.id,
+      academicYearId: academicYearId || undefined,
+      isActive: true
+    });
+
+    const legacyStreamIds = teacher.assignedClassStreamIds || [];
+    const lowerPrimaryGrades = ['PLAYGROUP', 'CRECHE', 'RECEPTION', 'PP1', 'PP2', 'GRADE_1', 'GRADE_2', 'GRADE_3'];
+
+    const streamMap = new Map<string, Stream>();
+    for (const cls of allClasses) {
+      const streams = await this.academicRepository.findStreamsByClass(cls.id);
+      for (const s of streams) {
+        streamMap.set(s.id, s);
+      }
+    }
+
+    const classTeacherClassIds = new Set<string>();
+    const classTeacherStreamIdsByClass = new Map<string, Set<string>>();
+
+    for (const cta of classTeacherAssignments) {
+      classTeacherClassIds.add(cta.classRoomId);
+      if (cta.streamId) {
+        if (!classTeacherStreamIdsByClass.has(cta.classRoomId)) {
+          classTeacherStreamIdsByClass.set(cta.classRoomId, new Set());
+        }
+        classTeacherStreamIdsByClass.get(cta.classRoomId)!.add(cta.streamId);
+      }
+    }
+
+    for (const sId of legacyStreamIds) {
+      const st = streamMap.get(sId);
+      if (st) {
+        classTeacherClassIds.add(st.classRoomId);
+        if (!classTeacherStreamIdsByClass.has(st.classRoomId)) {
+          classTeacherStreamIdsByClass.set(st.classRoomId, new Set());
+        }
+        classTeacherStreamIdsByClass.get(st.classRoomId)!.add(sId);
+      }
+    }
+
+    const subjectTeacherClassIds = new Set<string>();
+    const subjectTeacherSubjectsByClass = new Map<string, Set<string>>();
+    const subjectTeacherStreamsByClass = new Map<string, Set<string>>();
+
+    for (const sta of subjectTeacherAssignments) {
+      let clsId = sta.classRoomId;
+      if (!clsId && sta.streamId) {
+        const st = streamMap.get(sta.streamId);
+        if (st) clsId = st.classRoomId;
+      }
+      if (clsId) {
+        subjectTeacherClassIds.add(clsId);
+        if (!subjectTeacherSubjectsByClass.has(clsId)) {
+          subjectTeacherSubjectsByClass.set(clsId, new Set());
+        }
+        subjectTeacherSubjectsByClass.get(clsId)!.add(sta.learningAreaId);
+
+        if (sta.streamId) {
+          if (!subjectTeacherStreamsByClass.has(clsId)) {
+            subjectTeacherStreamsByClass.set(clsId, new Set());
+          }
+          subjectTeacherStreamsByClass.get(clsId)!.add(sta.streamId);
+        }
+      }
+    }
+
+    const allAuthorizedClassIds = new Set<string>([...classTeacherClassIds, ...subjectTeacherClassIds]);
+    const assignedClasses: Array<{
+      id: string;
+      name: string;
+      gradeLevel: string;
+      streams: Array<{ id: string; name: string }>;
+    }> = [];
+    const authorizedSubjectsByClass: Record<string, Array<{ id: string; code: string; name: string; gradeLevel?: string }>> = {};
+
+    let hasClassTeacherRole = false;
+    let hasSubjectTeacherRole = false;
+
+    for (const clsId of allAuthorizedClassIds) {
+      const cls = allClasses.find((c: ClassRoom) => c.id === clsId);
+      if (!cls) continue;
+
+      const isCt = classTeacherClassIds.has(clsId);
+      const isSt = subjectTeacherClassIds.has(clsId);
+
+      const classStreams = await this.academicRepository.findStreamsByClass(clsId);
+      let allowedStreams: Stream[] = [];
+
+      const ctStreams = classTeacherStreamIdsByClass.get(clsId);
+      const stStreams = subjectTeacherStreamsByClass.get(clsId);
+
+      if ((!ctStreams || ctStreams.size === 0) && (!stStreams || stStreams.size === 0)) {
+        allowedStreams = classStreams;
+      } else {
+        const allowedStreamIds = new Set<string>();
+        if (ctStreams) ctStreams.forEach(id => allowedStreamIds.add(id));
+        if (stStreams) stStreams.forEach(id => allowedStreamIds.add(id));
+        allowedStreams = classStreams.filter(s => allowedStreamIds.has(s.id));
+        if (allowedStreams.length === 0 && classStreams.length > 0) {
+          allowedStreams = classStreams;
+        }
+      }
+
+      assignedClasses.push({
+        id: cls.id,
+        name: cls.name,
+        gradeLevel: cls.gradeLevel,
+        streams: allowedStreams.map(s => ({ id: s.id, name: s.name }))
+      });
+
+      const clsGrade = (cls.gradeLevel || '').toUpperCase().replace(/[\s-]/g, '_');
+      const isLowerPrimary = lowerPrimaryGrades.includes(clsGrade);
+
+      const classLearningAreas = allLearningAreas.filter((la: any) => {
+        if (!la.gradeLevel) return true;
+        const laGrade = String(la.gradeLevel).toUpperCase().replace(/[\s-]/g, '_');
+        return laGrade === clsGrade || clsGrade.includes(laGrade) || laGrade.includes(clsGrade);
+      });
+      const lasToSelectFrom = classLearningAreas.length > 0 ? classLearningAreas : allLearningAreas;
+
+      const authorizedLas: Array<{ id: string; code: string; name: string; gradeLevel?: string }> = [];
+
+      if (isCt) {
+        hasClassTeacherRole = true;
+        if (isLowerPrimary) {
+          for (const la of lasToSelectFrom) {
+            authorizedLas.push({ id: la.id, code: la.code, name: la.name, gradeLevel: la.gradeLevel });
+          }
+        } else {
+          const allClassSubjAssignments = await this.academicRepository.findSubjectTeacherAssignments({
+            classRoomId: cls.id,
+            isActive: true
+          });
+          const competingAssignments = allClassSubjAssignments.filter(a => a.teacherId !== teacher.id);
+          const competingSubjIds = new Set(competingAssignments.map(a => a.learningAreaId));
+
+          for (const la of lasToSelectFrom) {
+            if (!competingSubjIds.has(la.id) && !competingSubjIds.has(la.code)) {
+              authorizedLas.push({ id: la.id, code: la.code, name: la.name, gradeLevel: la.gradeLevel });
+            }
+          }
+        }
+      }
+
+      if (isSt) {
+        hasSubjectTeacherRole = true;
+        const assignedSubjIds = subjectTeacherSubjectsByClass.get(clsId) || new Set();
+        for (const la of allLearningAreas) {
+          if (assignedSubjIds.has(la.id) || assignedSubjIds.has(la.code)) {
+            if (!authorizedLas.some(a => a.id === la.id)) {
+              authorizedLas.push({ id: la.id, code: la.code, name: la.name, gradeLevel: la.gradeLevel });
+            }
+          }
+        }
+      }
+
+      authorizedSubjectsByClass[cls.id] = authorizedLas;
+    }
+
+    let teachingModel: 'CLASS_TEACHER' | 'SUBJECT_TEACHER' | 'HYBRID' = 'SUBJECT_TEACHER';
+    if (hasClassTeacherRole && hasSubjectTeacherRole) {
+      teachingModel = 'HYBRID';
+    } else if (hasClassTeacherRole) {
+      teachingModel = 'CLASS_TEACHER';
+    }
+
+    return {
+      isGlobalAdmin: false,
+      teacherId: teacher.id,
+      teachingModel,
+      assignedClasses,
+      authorizedSubjectsByClass
+    };
+  }
 }

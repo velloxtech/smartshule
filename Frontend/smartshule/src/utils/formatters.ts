@@ -384,3 +384,31 @@ export function resolveTeacherAssignedClasses(
 
   return Array.from(new Set(names)).join(', ');
 }
+
+/**
+ * Normalizes a grade level string for safe comparison.
+ * e.g. "Grade 7", "GRADE_7", "grade 7", "7" -> "7"
+ * "PP1", "Pre-Primary 1", "PP 1" -> "PP1"
+ * "Playgroup", "PLAY_GROUP" -> "PLAYGROUP"
+ */
+export function normalizeGradeLevel(grade?: string | null): string {
+  if (!grade) return '';
+  return grade
+    .trim()
+    .toUpperCase()
+    .replace(/[\s-]+/g, '_')
+    .replace(/^GRADE_/, '')
+    .replace(/^PRE_PRIMARY_/, 'PP')
+    .replace(/^PP_/, 'PP');
+}
+
+/**
+ * Checks if two grade levels match, with support for universal/null grades.
+ */
+export function matchGradeLevels(g1?: string | null, g2?: string | null): boolean {
+  if (!g1 || !g2) return true; // universal
+  const norm1 = normalizeGradeLevel(g1);
+  const norm2 = normalizeGradeLevel(g2);
+  if (!norm1 || !norm2) return true;
+  return norm1 === norm2;
+}

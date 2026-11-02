@@ -242,7 +242,7 @@ export function createApiRouter(container: AppContainer): Router {
   const curriculumController = new CurriculumPlanController(container.curriculumUseCases);
   const recordOfWorkController = new RecordOfWorkController(container.recordOfWorkUseCases);
   const timetableController = new TimetableController(container.timetableUseCases);
-  const attendanceController = new AttendanceController(container.attendanceUseCases);
+  const attendanceController = new AttendanceController(container.attendanceUseCases, container.systemLogUseCases);
   const financeController = new FinanceController(container.feeUseCases, container.systemLogUseCases, container.financialApprovalUseCases);
   const lunchFeeController = new LunchFeeController(container.lunchFeeUseCases, container.systemLogUseCases);
   const analyticsController = new AnalyticsController(container.analyticsUseCases);
@@ -260,7 +260,7 @@ export function createApiRouter(container: AppContainer): Router {
   const disciplineController = new DisciplineController(container.disciplineUseCases);
   const broadsheetController = new BroadsheetController(container.broadsheetUseCases);
   const occurrenceController = new OccurrenceController(container.occurrenceUseCases);
-  const curriculumTrackerController = new CurriculumTrackerController(container.curriculumTrackerUseCases);
+  const curriculumTrackerController = new CurriculumTrackerController(container.curriculumTrackerUseCases, container.systemLogUseCases);
   const sponsorshipController = new StudentSponsorshipController(container.studentSponsorshipUseCases);
   const signatureController = new SignatureController(container.signatureUseCases);
 
@@ -330,6 +330,7 @@ export function createApiRouter(container: AppContainer): Router {
   academicRouter.post('/subject-assignments', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER), validateBody(AssignSubjectTeacherSchema), academicController.assignSubjectTeacher);
   academicRouter.get('/subject-assignments', authMiddleware, academicController.listSubjectTeacherAssignments);
   academicRouter.delete('/subject-assignments/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER), academicController.deactivateSubjectTeacherAssignment);
+  academicRouter.get('/teacher/authorized-context', authMiddleware, academicController.getTeacherAuthorizedContext);
 
   router.use('/academics', academicRouter);
 
@@ -482,6 +483,7 @@ export function createApiRouter(container: AppContainer): Router {
   // ==========================================
   const attendanceRouter = Router();
   attendanceRouter.post('/', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN), validateBody(MarkAttendanceSchema), attendanceController.markAttendance);
+  attendanceRouter.post('/:registerId/entries/:studentId/follow-up', authMiddleware, requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN), attendanceController.recordFollowUp);
   attendanceRouter.get('/daily', authMiddleware, attendanceController.getDailyRegister);
   attendanceRouter.get('/report', authMiddleware, attendanceController.getAttendanceReport);
   attendanceRouter.get('/student/:studentId', authMiddleware, attendanceController.getStudentSummary);
@@ -676,6 +678,8 @@ export function createApiRouter(container: AppContainer): Router {
   // ==========================================
   const analyticsRouter = Router();
   analyticsRouter.get('/dashboard', authMiddleware, analyticsController.getDashboard);
+  analyticsRouter.get('/attendance/trends', authMiddleware, analyticsController.getAttendanceTrends);
+  analyticsRouter.get('/reports/whole-term', authMiddleware, analyticsController.getWholeTermReport);
   router.use('/analytics', analyticsRouter);
 
   // ==========================================
@@ -1202,6 +1206,30 @@ export function createApiRouter(container: AppContainer): Router {
     requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.SUPER_ADMIN),
     validateBody(ConfirmWeekCoveredSchema),
     curriculumTrackerController.confirmWeekCovered
+  );
+  curriculumTrackerRouter.post(
+    '/:id/weeks/:weekNumber/submit',
+    authMiddleware,
+    requireRoles(UserRole.TEACHER, UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.SUPER_ADMIN),
+    curriculumTrackerController.submitWeek
+  );
+  curriculumTrackerRouter.post(
+    '/:id/weeks/:weekNumber/approve',
+    authMiddleware,
+    requireRoles(UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.SUPER_ADMIN),
+    curriculumTrackerController.approveWeek
+  );
+  curriculumTrackerRouter.post(
+    '/:id/weeks/:weekNumber/return',
+    authMiddleware,
+    requireRoles(UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.SUPER_ADMIN),
+    curriculumTrackerController.returnWeek
+  );
+  curriculumTrackerRouter.post(
+    '/:id/weeks/:weekNumber/override',
+    authMiddleware,
+    requireRoles(UserRole.HEAD_TEACHER, UserRole.DEPUTY_HEAD_TEACHER, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.SUPER_ADMIN),
+    curriculumTrackerController.overrideWeek
   );
   curriculumTrackerRouter.put(
     '/:id/weeks/:weekNumber/comment',

@@ -1,7 +1,16 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { apiService, MarksTemplateResult, MarksValidationResult, MarksCommitResult } from '../../services/api';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import {
+  apiService,
+  MarksTemplateResult,
+  MarksValidationResult,
+  MarksCommitResult,
+  TeacherAuthorizedContext,
+  TeacherAuthorizedClass,
+  TeacherAuthorizedSubject,
+} from '../../services/api';
 import {
   Student,
+  UserRole,
   BackendLearningArea,
   BackendStrand,
   BackendSubStrand,
@@ -45,6 +54,19 @@ export interface SubjectMarkEntry {
   isCustomRemark: boolean;
 }
 
+export interface RosterStudentRow {
+  studentId: string;
+  admissionNumber: string;
+  learnerName: string;
+  score: string;
+  maxScore: string;
+  performanceLevel: string;
+  remarks: string;
+  isExisting: boolean;
+  status: 'SAVED' | 'DRAFT' | 'BLANK' | 'INVALID';
+  errorMessage?: string;
+}
+
 interface UploadMarksModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -53,11 +75,16 @@ interface UploadMarksModalProps {
   initialAssessmentType?: 'SUMMATIVE' | 'FORMATIVE';
 }
 
+export type MarksPortalSubjectItem = CanonicalSubjectItem & {
+  isAssigned?: boolean;
+};
+
 const DEFAULT_CBC_LEARNING_AREAS: BackendLearningArea[] = [
+  { id: 'la-lan', code: 'LAN', name: 'Language Activities' } as any,
   { id: 'la-mat', code: 'MATH', name: 'Mathematics' } as any,
-  { id: 'la-eng', code: 'ENG', name: 'English Language' } as any,
+  { id: 'la-eng', code: 'ENG', name: 'English Language Activities' } as any,
   { id: 'la-rea', code: 'REA', name: 'English Reading Activities' } as any,
-  { id: 'la-kis', code: 'KISW', name: 'Kiswahili Language' } as any,
+  { id: 'la-kis', code: 'KISW', name: 'Kiswahili Language Activities' } as any,
   { id: 'la-kuso', code: 'KUSO', name: 'Kusoma Activities' } as any,
   { id: 'la-envi', code: 'ENVI', name: 'Environmental Activities' } as any,
   { id: 'la-sci', code: 'SCI', name: 'Science and Technology' } as any,
@@ -67,6 +94,13 @@ const DEFAULT_CBC_LEARNING_AREAS: BackendLearningArea[] = [
   { id: 'la-agr', code: 'AGRI', name: 'Agriculture & Nutrition' } as any,
   { id: 'la-art', code: 'ARTS', name: 'Creative Arts & Sports' } as any,
   { id: 'la-pret', code: 'PRETECH', name: 'Pre-Technical Studies' } as any,
+  { id: 'la-hlth', code: 'HLTH', name: 'Health Education' } as any,
+  { id: 'la-bus', code: 'BUS', name: 'Business Studies' } as any,
+  { id: 'la-comp', code: 'COMP', name: 'Computer Science' } as any,
+  { id: 'la-ind', code: 'IND', name: 'Indigenous Language Activities' } as any,
+  { id: 'la-fre', code: 'FRE', name: 'French' } as any,
+  { id: 'la-ger', code: 'GER', name: 'German' } as any,
+  { id: 'la-ara', code: 'ARA', name: 'Arabic' } as any,
 ];
 
 interface DefaultStrandItem {
@@ -267,6 +301,50 @@ const DEFAULT_STRANDS_MAP: Record<string, DefaultStrandItem[]> = {
       ],
     },
   ],
+  HLTH: [
+    {
+      id: 'str-hlth-prev',
+      code: 'STR-H01',
+      title: 'Health Promotion & Disease Prevention',
+      subStrands: [
+        { id: 'sub-h01-1', code: 'SUB-H1', title: 'Personal Hygiene and Sanitation' },
+        { id: 'sub-h01-2', code: 'SUB-H2', title: 'Nutrition and Healthy Living' },
+      ],
+    },
+  ],
+  BUS: [
+    {
+      id: 'str-bus-ent',
+      code: 'STR-B01',
+      title: 'Business & Financial Literacy',
+      subStrands: [
+        { id: 'sub-b01-1', code: 'SUB-B1', title: 'Money Management and Savings' },
+        { id: 'sub-b01-2', code: 'SUB-B2', title: 'Simple Entrepreneurship Projects' },
+      ],
+    },
+  ],
+  COMP: [
+    {
+      id: 'str-comp-found',
+      code: 'STR-CS01',
+      title: 'Computing Concepts & Digital Literacy',
+      subStrands: [
+        { id: 'sub-cs01-1', code: 'SUB-CS1', title: 'Computer Hardware & Software Basics' },
+        { id: 'sub-cs01-2', code: 'SUB-CS2', title: 'Internet Safety and Ethics' },
+      ],
+    },
+  ],
+  IND: [
+    {
+      id: 'str-ind-lang',
+      code: 'STR-IND01',
+      title: 'Indigenous Language and Culture',
+      subStrands: [
+        { id: 'sub-ind01-1', code: 'SUB-IND1', title: 'Oral Literature and Cultural Narratives' },
+        { id: 'sub-ind01-2', code: 'SUB-IND2', title: 'Community Customs & Etiquette' },
+      ],
+    },
+  ],
 };
 
 const CBC_ASSESSMENT_METHODS = [
@@ -386,9 +464,18 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
   const [subjectMarks, setSubjectMarks] = useState<Record<string, SubjectMarkEntry>>({});
   const [loadingExistingMarks, setLoadingExistingMarks] = useState<boolean>(false);
   const [existingMarksCount, setExistingMarksCount] = useState<number>(0);
+  const [scoredSubjectKeys, setScoredSubjectKeys] = useState<Set<string>>(new Set());
 
-  // Bulk CSV Import States
-  const [entryMode, setEntryMode] = useState<'MANUAL_FORM' | 'BULK_CSV'>('MANUAL_FORM');
+  // Entry Modes: ROSTER_GRID (Fast interactive roster spreadsheet), MANUAL_FORM (Individual student rubric), BULK_CSV (CSV Import)
+  const [entryMode, setEntryMode] = useState<'ROSTER_GRID' | 'MANUAL_FORM' | 'BULK_CSV'>('ROSTER_GRID');
+  const [teacherAuthContext, setTeacherAuthContext] = useState<TeacherAuthorizedContext | null>(null);
+  const [authorizedClasses, setAuthorizedClasses] = useState<TeacherAuthorizedClass[]>([]);
+  const [rosterRows, setRosterRows] = useState<RosterStudentRow[]>([]);
+  const [rosterSearch, setRosterSearch] = useState<string>('');
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
+  const [isSavingRoster, setIsSavingRoster] = useState<boolean>(false);
+  const [isLoadingRosterMarks, setIsLoadingRosterMarks] = useState<boolean>(false);
+  const [rosterSubmissionStatus, setRosterSubmissionStatus] = useState<'UNSAVED' | 'SAVED_DRAFT' | 'SUBMITTED' | 'IDLE'>('IDLE');
   const [bulkSubjectId, setBulkSubjectId] = useState<string>('');
   const [bulkMaxScore, setBulkMaxScore] = useState<string>('100');
   const [csvFileName, setCsvFileName] = useState<string>('');
@@ -402,7 +489,31 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const effectiveSubjects: CanonicalSubjectItem[] = useMemo(() => {
+  const isSchoolAdmin =
+    user?.role === UserRole.ADMIN ||
+    user?.role === UserRole.SCHOOL_ADMIN ||
+    user?.role === UserRole.SUPER_ADMIN ||
+    user?.role === UserRole.HEAD_TEACHER ||
+    user?.role === UserRole.DEPUTY_HEAD_TEACHER ||
+    !!teacherAuthContext?.isGlobalAdmin;
+
+  const effectiveSubjects: MarksPortalSubjectItem[] = useMemo(() => {
+    // 1. Identify teacher assigned subjects for this selected class (if available)
+    const assignedSubjectKeys = new Set<string>();
+    const assignedSubjectIds = new Set<string>();
+    if (teacherAuthContext && filterClassId && teacherAuthContext.authorizedSubjectsByClass?.[filterClassId]) {
+      const authorizedList = teacherAuthContext.authorizedSubjectsByClass[filterClassId];
+      if (authorizedList && authorizedList.length > 0) {
+        authorizedList.forEach((la) => {
+          const key = getSubjectCanonicalKey(`${la.code || ''} ${la.name || ''} ${la.id || ''}`);
+          assignedSubjectKeys.add(key);
+          if (la.id) assignedSubjectIds.add(la.id);
+          if (la.code) assignedSubjectIds.add(la.code);
+        });
+      }
+    }
+
+    // 2. Determine target grade level from student or selected class
     const student = students.find((s) => s.id === selectedStudentId);
     let targetGrade = '';
     if (student) {
@@ -415,106 +526,183 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
       }
     }
 
-    let sourceList = learningAreas;
-    if (targetGrade && learningAreas.length > 0) {
-      const matching = learningAreas.filter((la: any) => {
-        const laGrade = (la.gradeLevel || la.grade_level || '').toUpperCase().replace(/[\s-]/g, '_');
-        return laGrade && (laGrade === targetGrade || targetGrade.includes(laGrade) || laGrade.includes(targetGrade));
-      });
-      if (matching.length > 0) {
-        sourceList = matching;
-      }
-    }
-
     const canonicalMap = new Map<string, {
       id: string;
       key: string;
       code: string;
       name: string;
       initial: string;
+      isAssigned: boolean;
       aliasSet: Set<string>;
+      isGradeMatch: boolean;
     }>();
 
-    sourceList.forEach((la) => {
-      const key = getSubjectCanonicalKey(`${la.code || ''} ${la.name || ''} ${la.id || ''}`);
+    const registerSubject = (
+      la: { id: string; code?: string; name: string },
+      isGradeMatch: boolean,
+      isDbEntity: boolean
+    ) => {
+      // 1. Resolve raw UUID names if any
+      let resolvedCode = la.code;
+      let resolvedName = la.name;
+      const isUuidName = !resolvedName || /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(resolvedName.trim());
+      if (isUuidName) {
+        const found = learningAreas.find((x: any) => x.id === la.id && x.name && !x.name.includes('-'));
+        if (found) {
+          resolvedCode = found.code || resolvedCode;
+          resolvedName = found.name;
+        }
+      }
+
+      const key = getSubjectCanonicalKey(`${resolvedCode || ''} ${resolvedName || ''} ${la.id || ''}`);
+
+      // If key is STILL an unmapped raw UUID or OTHER, do NOT create an invalid raw UUID subject item
+      if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(key.trim()) || key === 'OTHER') {
+        return;
+      }
+
+      const isAssigned =
+        isSchoolAdmin ||
+        assignedSubjectKeys.has(key) ||
+        assignedSubjectIds.has(la.id) ||
+        (resolvedCode ? assignedSubjectIds.has(resolvedCode) : false);
+
       if (!canonicalMap.has(key)) {
         canonicalMap.set(key, {
           id: la.id,
           key,
-          code: la.code || key,
-          name: getCanonicalName(key, la.name),
+          code: resolvedCode || getCanonicalInitial(key),
+          name: getCanonicalName(key, resolvedName),
           initial: getCanonicalInitial(key),
-          aliasSet: new Set([la.id, la.code, la.name, key].filter(Boolean) as string[]),
+          isAssigned,
+          aliasSet: new Set([la.id, resolvedCode, resolvedName, key].filter(Boolean) as string[]),
+          isGradeMatch,
         });
       } else {
         const item = canonicalMap.get(key)!;
         item.aliasSet.add(la.id);
-        if (la.code) item.aliasSet.add(la.code);
-        if (la.name) item.aliasSet.add(la.name);
+        if (resolvedCode) item.aliasSet.add(resolvedCode);
+        if (resolvedName) item.aliasSet.add(resolvedName);
+        if (isAssigned) item.isAssigned = true;
+
+        // If this item is a grade-level match or a DB entity overriding a fallback, update id/code/name
+        if (isGradeMatch || (isDbEntity && !item.isGradeMatch)) {
+          item.id = la.id;
+          if (resolvedCode) item.code = resolvedCode;
+          if (resolvedName) item.name = getCanonicalName(key, resolvedName);
+          if (isGradeMatch) item.isGradeMatch = true;
+        }
       }
+    };
+
+    // Grade-level matching learning areas from DB (highest priority for ID resolution)
+    if (targetGrade && learningAreas.length > 0) {
+      learningAreas.forEach((la: any) => {
+        const laGrade = (la.gradeLevel || la.grade_level || '').toUpperCase().replace(/[\s-]/g, '_');
+        const matches = laGrade && (laGrade === targetGrade || targetGrade.includes(laGrade) || laGrade.includes(targetGrade));
+        if (matches) {
+          registerSubject(la, true, true);
+        }
+      });
+    }
+
+    // All other learning areas from DB
+    learningAreas.forEach((la: any) => {
+      registerSubject(la, false, true);
     });
 
+    // Authorized subjects from teacher context
+    if (teacherAuthContext && filterClassId && teacherAuthContext.authorizedSubjectsByClass?.[filterClassId]) {
+      teacherAuthContext.authorizedSubjectsByClass[filterClassId].forEach((la) => {
+        registerSubject(la, true, true);
+      });
+    }
+
+    // Guaranteed canonical CBC learning areas so ALL subjects are always available
     DEFAULT_CBC_LEARNING_AREAS.forEach((defLa) => {
-      const key = getSubjectCanonicalKey(`${defLa.code || ''} ${defLa.name || ''} ${defLa.id || ''}`);
-      if (!canonicalMap.has(key)) {
-        canonicalMap.set(key, {
-          id: defLa.id,
-          key,
-          code: defLa.code || key,
-          name: getCanonicalName(key, defLa.name),
-          initial: getCanonicalInitial(key),
-          aliasSet: new Set([defLa.id, defLa.code, defLa.name, key].filter(Boolean) as string[]),
-        });
-      } else {
-        canonicalMap.get(key)!.aliasSet.add(defLa.id);
-      }
+      registerSubject(defLa, false, false);
     });
 
-    learningAreas.forEach((la) => {
-      const key = getSubjectCanonicalKey(`${la.code || ''} ${la.name || ''} ${la.id || ''}`);
-      if (canonicalMap.has(key)) {
-        const item = canonicalMap.get(key)!;
-        item.aliasSet.add(la.id);
-        if (la.code) item.aliasSet.add(la.code);
-        if (la.name) item.aliasSet.add(la.name);
-      }
-    });
-
-    const list = Array.from(canonicalMap.values()).map((c) => ({
+    const list: MarksPortalSubjectItem[] = Array.from(canonicalMap.values()).map((c) => ({
       id: c.id,
       key: c.key,
       code: c.code,
       name: c.name,
       initial: c.initial,
+      isAssigned: c.isAssigned,
       aliasIds: Array.from(c.aliasSet),
     }));
 
     list.sort((a, b) => {
+      // 1. Subjects with marks entered for this student/session have highest priority
+      const hasA = scoredSubjectKeys.has(a.id) || scoredSubjectKeys.has(a.key) || (a.code && scoredSubjectKeys.has(a.code));
+      const hasB = scoredSubjectKeys.has(b.id) || scoredSubjectKeys.has(b.key) || (b.code && scoredSubjectKeys.has(b.code));
+      if (hasA && !hasB) return -1;
+      if (!hasA && hasB) return 1;
+
+      // 2. Assigned subjects to the teacher
+      if (a.isAssigned && !b.isAssigned) return -1;
+      if (!a.isAssigned && b.isAssigned) return 1;
+
+      // 3. Canonical CBC curriculum order
       const idxA = CANONICAL_ORDER.indexOf(a.key);
       const idxB = CANONICAL_ORDER.indexOf(b.key);
       const rankA = idxA === -1 ? 999 : idxA;
       const rankB = idxB === -1 ? 999 : idxB;
-      return rankA - rankB;
+      if (rankA !== rankB) return rankA - rankB;
+
+      // 4. Alphabetical name
+      return a.name.localeCompare(b.name);
     });
 
     return list;
-  }, [learningAreas, selectedStudentId, students, filterClassId, classes]);
+  }, [learningAreas, teacherAuthContext, filterClassId, selectedStudentId, students, classes, scoredSubjectKeys, isSchoolAdmin]);
+
+  const effectiveSubjectsRef = useRef<MarksPortalSubjectItem[]>([]);
+  useEffect(() => {
+    effectiveSubjectsRef.current = effectiveSubjects;
+  }, [effectiveSubjects]);
 
   useEffect(() => {
     if (!isOpen) return;
 
     async function loadData() {
       try {
-        const [stRes, laRes, ctxRes, yrRes, cRes] = await Promise.all([
+        const [stRes, laRes, ctxRes, yrRes, cRes, authCtxRes] = await Promise.all([
           apiService.getStudents().catch(() => null),
           apiService.getLearningAreas().catch(() => null),
           apiService.getCurrentContext().catch(() => null),
           apiService.getYears().catch(() => null),
           apiService.getClasses().catch(() => null),
+          apiService.getTeacherAuthorizedContext().catch(() => null),
         ]);
 
         if (cRes?.data && Array.isArray(cRes.data)) {
           setClasses(cRes.data);
+        }
+
+        let availableClassesList: any[] = [];
+        if (authCtxRes?.data) {
+          setTeacherAuthContext(authCtxRes.data);
+          if (!authCtxRes.data.isGlobalAdmin && authCtxRes.data.assignedClasses && authCtxRes.data.assignedClasses.length > 0) {
+            availableClassesList = authCtxRes.data.assignedClasses;
+          } else if (cRes?.data && Array.isArray(cRes.data) && cRes.data.length > 0) {
+            availableClassesList = cRes.data;
+          } else if (authCtxRes.data.assignedClasses && authCtxRes.data.assignedClasses.length > 0) {
+            availableClassesList = authCtxRes.data.assignedClasses;
+          }
+        } else if (cRes?.data && Array.isArray(cRes.data)) {
+          availableClassesList = cRes.data;
+        }
+
+        setAuthorizedClasses(availableClassesList);
+
+        if (!filterClassId && availableClassesList.length > 0) {
+          const firstClass = availableClassesList[0];
+          setFilterClassId(firstClass.id);
+          if (firstClass.streams && firstClass.streams.length > 0) {
+            setStreams(firstClass.streams as any);
+          }
         }
 
         const curCalYear = new Date().getFullYear();
@@ -577,7 +765,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
     }
 
     loadData();
-  }, [isOpen, initialStudent]);
+  }, [isOpen, initialStudent?.id]);
 
   useEffect(() => {
     if (!academicYearId) return;
@@ -599,6 +787,16 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
       setFilterStreamId('');
       return;
     }
+
+    if (authorizedClasses && authorizedClasses.length > 0) {
+      const authClass = authorizedClasses.find((c) => c.id === filterClassId);
+      if (authClass && authClass.streams && authClass.streams.length > 0) {
+        setStreams(authClass.streams as any);
+        setFilterStreamId('');
+        return;
+      }
+    }
+
     apiService
       .getStreamsByClass(filterClassId)
       .then((res) => {
@@ -613,7 +811,256 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
         setStreams([]);
         setFilterStreamId('');
       });
-  }, [filterClassId]);
+  }, [filterClassId, authorizedClasses]);
+
+  useEffect(() => {
+    if (effectiveSubjects && effectiveSubjects.length > 0) {
+      const hasSelected = effectiveSubjects.some(
+        (s) =>
+          s.id === selectedLearningAreaId ||
+          s.key === selectedLearningAreaId ||
+          (s.code && s.code === selectedLearningAreaId) ||
+          (s.aliasIds && s.aliasIds.includes(selectedLearningAreaId))
+      );
+      if (!hasSelected) {
+        setSelectedLearningAreaId(effectiveSubjects[0].id);
+        setBulkSubjectId(effectiveSubjects[0].id);
+      }
+    }
+  }, [effectiveSubjects, selectedLearningAreaId]);
+
+  // Load roster and marks whenever class, stream, subject, academic year, or term changes
+  useEffect(() => {
+    if (!filterClassId || !selectedLearningAreaId) {
+      setRosterRows([]);
+      return;
+    }
+
+    const classStudents = students.filter((s) => {
+      const matchClass = s.classroomId === filterClassId || (!s.classroomId && filterClassId === 'All');
+      if (!matchClass) return false;
+      if (filterStreamId && s.streamId && s.streamId !== filterStreamId) return false;
+      return true;
+    });
+
+    classStudents.sort((a, b) => a.name.localeCompare(b.name));
+
+    let isSubscribed = true;
+    setIsLoadingRosterMarks(true);
+
+    apiService
+      .listSummatives({
+        academicYearId: academicYearId || undefined,
+        termId: termId || undefined,
+        learningAreaId: selectedLearningAreaId || undefined,
+      })
+      .then((res) => {
+        if (!isSubscribed) return;
+        const summatives = res?.data && Array.isArray(res.data) ? res.data : [];
+        const summativeMap = new Map<string, any>();
+        for (const s of summatives) {
+          summativeMap.set(s.studentId, s);
+        }
+
+        const rows: RosterStudentRow[] = classStudents.map((st) => {
+          const existing = summativeMap.get(st.id);
+          if (existing) {
+            const raw =
+              existing.strandScores?.[0]?.rawScore !== undefined
+                ? String(existing.strandScores[0].rawScore)
+                : existing.rawScore !== undefined
+                ? String(existing.rawScore)
+                : '';
+            const max =
+              existing.strandScores?.[0]?.maxScore !== undefined
+                ? String(existing.strandScores[0].maxScore)
+                : existing.maxScore !== undefined
+                ? String(existing.maxScore)
+                : bulkMaxScore || '100';
+            const perf =
+              existing.overallPerformanceLevel || existing.strandScores?.[0]?.performanceLevel || '';
+            return {
+              studentId: st.id,
+              admissionNumber: st.admNo || '--',
+              learnerName: st.name,
+              score: raw,
+              maxScore: max,
+              performanceLevel: perf,
+              remarks: existing.teacherRemarks || '',
+              isExisting: true,
+              status: raw ? 'SAVED' : 'BLANK',
+            };
+          } else {
+            return {
+              studentId: st.id,
+              admissionNumber: st.admNo || '--',
+              learnerName: st.name,
+              score: '',
+              maxScore: bulkMaxScore || '100',
+              performanceLevel: '',
+              remarks: '',
+              isExisting: false,
+              status: 'BLANK',
+            };
+          }
+        });
+
+        setRosterRows(rows);
+        setHasUnsavedChanges(false);
+        setIsLoadingRosterMarks(false);
+      })
+      .catch(() => {
+        if (!isSubscribed) return;
+        const rows: RosterStudentRow[] = classStudents.map((st) => ({
+          studentId: st.id,
+          admissionNumber: st.admNo || '--',
+          learnerName: st.name,
+          score: '',
+          maxScore: bulkMaxScore || '100',
+          performanceLevel: '',
+          remarks: '',
+          isExisting: false,
+          status: 'BLANK',
+        }));
+        setRosterRows(rows);
+        setHasUnsavedChanges(false);
+        setIsLoadingRosterMarks(false);
+      });
+
+    return () => {
+      isSubscribed = false;
+    };
+  }, [filterClassId, filterStreamId, selectedLearningAreaId, academicYearId, termId, students, bulkMaxScore]);
+
+  const handleRosterScoreChange = (index: number, val: string) => {
+    setRosterRows((prev) => {
+      const next = [...prev];
+      const row = { ...next[index] };
+      row.score = val;
+      const max = Number(row.maxScore) || Number(bulkMaxScore) || 100;
+
+      if (val.trim() === '') {
+        row.performanceLevel = '';
+        row.status = 'BLANK';
+        row.errorMessage = undefined;
+      } else {
+        const num = Number(val);
+        if (isNaN(num) || num < 0 || num > max) {
+          row.status = 'INVALID';
+          row.errorMessage = `Must be 0-${max}`;
+        } else {
+          row.status = 'DRAFT';
+          row.errorMessage = undefined;
+          const pct = (num / max) * 100;
+          let level: 'EE' | 'ME' | 'AE' | 'BE';
+          if (pct >= 80) level = 'EE';
+          else if (pct >= 65) level = 'ME';
+          else if (pct >= 50) level = 'AE';
+          else level = 'BE';
+          row.performanceLevel = level;
+          if (
+            !row.remarks ||
+            row.remarks.trim() === '' ||
+            row.remarks.startsWith('Exceeds') ||
+            row.remarks.startsWith('Meets') ||
+            row.remarks.startsWith('Approaching') ||
+            row.remarks.startsWith('Below')
+          ) {
+            row.remarks = getStandardRemark(level);
+          }
+        }
+      }
+      next[index] = row;
+      return next;
+    });
+    setHasUnsavedChanges(true);
+  };
+
+  const handleRosterRemarksChange = (index: number, val: string) => {
+    setRosterRows((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], remarks: val };
+      return next;
+    });
+    setHasUnsavedChanges(true);
+  };
+
+  const handleSaveRosterMarks = async (isFinalSubmit: boolean = false) => {
+    const invalidRows = rosterRows.filter((r) => r.status === 'INVALID');
+    if (invalidRows.length > 0) {
+      setError(`Cannot save marks: ${invalidRows.length} learner(s) have invalid marks out of range (0-${bulkMaxScore || 100}).`);
+      return;
+    }
+
+    const filledRows = rosterRows.filter((r) => r.score.trim() !== '');
+    if (filledRows.length === 0) {
+      setError('No marks have been entered to save. Please enter marks for at least one learner.');
+      return;
+    }
+
+    setIsSavingRoster(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      const rowsPayload = rosterRows.map((r) => ({
+        admissionNumber: r.admissionNumber,
+        learnerName: r.learnerName,
+        score: r.score.trim() !== '' ? Number(r.score) : undefined,
+        maxScore: Number(r.maxScore) || Number(bulkMaxScore) || 100,
+        performanceLevel: r.performanceLevel || undefined,
+        teacherRemarks: r.remarks || undefined,
+      }));
+
+      const res = await apiService.commitMarksUpload({
+        academicYearId: academicYearId || (academicYears.find((y) => y.isCurrent)?.id || academicYears[0]?.id || 'year-2026'),
+        termId: termId || (terms.find((t) => t.isCurrent)?.id || terms[0]?.id || 'term-2026-t1'),
+        classRoomId: filterClassId,
+        streamId: filterStreamId || undefined,
+        learningAreaId: selectedLearningAreaId,
+        maxScore: Number(bulkMaxScore) || 100,
+        rows: rowsPayload,
+      });
+
+      if (res?.success && res.data) {
+        setHasUnsavedChanges(false);
+        setRosterSubmissionStatus(isFinalSubmit ? 'SUBMITTED' : 'SAVED_DRAFT');
+        setSuccessMessage(
+          res.data.message ||
+            `Successfully persisted marks for ${res.data.recordedCount + res.data.updatedCount} learner(s).`
+        );
+        setRosterRows((prev) =>
+          prev.map((r) => (r.score.trim() !== '' ? { ...r, status: 'SAVED', isExisting: true } : r))
+        );
+        if (onMarksUploaded) onMarksUploaded(res.data.message);
+      } else {
+        setError((res as any)?.message || 'Failed to save marks to the database.');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Network communication error. Marks could not be saved to server.');
+    } finally {
+      setIsSavingRoster(false);
+    }
+  };
+
+  const rosterMetrics = useMemo(() => {
+    const total = rosterRows.length;
+    const entered = rosterRows.filter((r) => r.score.trim() !== '').length;
+    const missing = total - entered;
+    const invalid = rosterRows.filter((r) => r.status === 'INVALID').length;
+    const pct = total > 0 ? Math.round((entered / total) * 100) : 0;
+    return { total, entered, missing, invalid, pct };
+  }, [rosterRows]);
+
+  const filteredRosterRows = useMemo(() => {
+    if (!rosterSearch.trim()) return rosterRows;
+    const q = rosterSearch.toLowerCase();
+    return rosterRows.filter(
+      (r) =>
+        r.learnerName.toLowerCase().includes(q) ||
+        r.admissionNumber.toLowerCase().includes(q)
+    );
+  }, [rosterRows, rosterSearch]);
 
   useEffect(() => {
     if (!selectedLearningAreaId) {
@@ -624,13 +1071,23 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
 
     const currentLa = learningAreas.find((l) => l.id === selectedLearningAreaId);
     const laCode = (currentLa?.code || 'MATH').toUpperCase();
+    const cls = classes.find((c) => c.id === filterClassId);
+    const targetGrade = cls?.gradeLevel || '';
 
     apiService
-      .getStrandsByLearningArea(selectedLearningAreaId)
+      .getStrandsByLearningArea(selectedLearningAreaId, targetGrade)
       .then((res) => {
         if (res?.success && res.data && res.data.length > 0) {
-          setStrands(res.data);
-          setSelectedStrandId(res.data[0].id);
+          const seen = new Set<string>();
+          const uniqueStrands: BackendStrand[] = [];
+          for (const s of res.data) {
+            const k = (s.title || '').trim().toLowerCase();
+            if (!k || seen.has(k)) continue;
+            seen.add(k);
+            uniqueStrands.push(s);
+          }
+          setStrands(uniqueStrands);
+          setSelectedStrandId(uniqueStrands[0].id);
         } else {
           const defaultList = DEFAULT_STRANDS_MAP[laCode] || DEFAULT_STRANDS_MAP.MATH;
           const mappedStrands: BackendStrand[] = defaultList.map((d) => ({
@@ -674,8 +1131,16 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
       .getSubStrandsByStrand(selectedStrandId)
       .then((res) => {
         if (res?.success && res.data && res.data.length > 0) {
-          setSubStrands(res.data);
-          setSelectedSubStrandId(res.data[0].id);
+          const seen = new Set<string>();
+          const uniqueSubs: BackendSubStrand[] = [];
+          for (const sub of res.data) {
+            const sk = (sub.title || '').trim().toLowerCase();
+            if (!sk || seen.has(sk)) continue;
+            seen.add(sk);
+            uniqueSubs.push(sub);
+          }
+          setSubStrands(uniqueSubs);
+          setSelectedSubStrandId(uniqueSubs[0].id);
         } else if (defaultStrand && defaultStrand.subStrands.length > 0) {
           const mappedSubs: BackendSubStrand[] = defaultStrand.subStrands.map((sub) => ({
             id: sub.id,
@@ -717,45 +1182,47 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
       });
   }, [selectedStrandId, selectedLearningAreaId, learningAreas]);
 
-  const filteredStudents = students.filter((s) => {
-    if (learnerSearch.trim()) {
-      const q = learnerSearch.toLowerCase();
-      const matchesName = s.name.toLowerCase().includes(q);
-      const matchesAdm = s.admNo.toLowerCase().includes(q);
-      const matchesUpi = s.upi.toLowerCase().includes(q);
-      if (!matchesName && !matchesAdm && !matchesUpi) {
-        return false;
-      }
-    }
-
-    if (filterClassId) {
-      const cls = classes.find((c) => c.id === filterClassId);
-      if (cls) {
-        const matchesClassId = s.classroomId === filterClassId;
-        const gradeText = cls.gradeLevel?.replace(/_/g, ' ').toLowerCase() || '';
-        const clsName = cls.name?.toLowerCase() || '';
-        const sGrade = (s.grade || '').toLowerCase();
-        const sGradeLevel = (s.gradeLevel || '').toLowerCase();
-        if (!matchesClassId && !sGrade.includes(gradeText) && !sGrade.includes(clsName) && !sGradeLevel.includes(gradeText)) {
+  const filteredStudents = useMemo(() => {
+    return students.filter((s) => {
+      if (learnerSearch.trim()) {
+        const q = learnerSearch.toLowerCase();
+        const matchesName = s.name.toLowerCase().includes(q);
+        const matchesAdm = s.admNo.toLowerCase().includes(q);
+        const matchesUpi = s.upi.toLowerCase().includes(q);
+        if (!matchesName && !matchesAdm && !matchesUpi) {
           return false;
         }
       }
-    }
 
-    if (filterStreamId) {
-      const stm = streams.find((st) => st.id === filterStreamId);
-      if (stm) {
-        const matchesStreamId = s.streamId === filterStreamId;
-        const stmName = stm.name?.toLowerCase() || '';
-        const sStream = (s.stream || '').toLowerCase();
-        if (!matchesStreamId && !sStream.includes(stmName)) {
-          return false;
+      if (filterClassId) {
+        const cls = classes.find((c) => c.id === filterClassId);
+        if (cls) {
+          const matchesClassId = s.classroomId === filterClassId;
+          const gradeText = cls.gradeLevel?.replace(/_/g, ' ').toLowerCase() || '';
+          const clsName = cls.name?.toLowerCase() || '';
+          const sGrade = (s.grade || '').toLowerCase();
+          const sGradeLevel = (s.gradeLevel || '').toLowerCase();
+          if (!matchesClassId && !sGrade.includes(gradeText) && !sGrade.includes(clsName) && !sGradeLevel.includes(gradeText)) {
+            return false;
+          }
         }
       }
-    }
 
-    return true;
-  });
+      if (filterStreamId) {
+        const stm = streams.find((st) => st.id === filterStreamId);
+        if (stm) {
+          const matchesStreamId = s.streamId === filterStreamId;
+          const stmName = stm.name?.toLowerCase() || '';
+          const sStream = (s.stream || '').toLowerCase();
+          if (!matchesStreamId && !sStream.includes(stmName)) {
+            return false;
+          }
+        }
+      }
+
+      return true;
+    });
+  }, [students, learnerSearch, filterClassId, filterStreamId, classes, streams]);
 
   useEffect(() => {
     if (filteredStudents.length > 0) {
@@ -785,9 +1252,14 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
         if (isCancelled) return;
         const records = res?.data || [];
         const newMarks: Record<string, SubjectMarkEntry> = {};
+        const scoredKeys = new Set<string>();
         let loadedCount = 0;
 
-        effectiveSubjects.forEach((sub) => {
+        const currentSubjects = effectiveSubjectsRef.current.length > 0
+          ? effectiveSubjectsRef.current
+          : effectiveSubjects;
+
+        currentSubjects.forEach((sub) => {
           const match = records.find(
             (r: any) =>
               r.learningAreaId === sub.id ||
@@ -808,7 +1280,12 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
               remarks: match.teacherRemarks || getStandardRemark(level as any),
               isCustomRemark: !!match.teacherRemarks,
             };
-            if (typeof raw === 'number') loadedCount++;
+            if (typeof raw === 'number') {
+              loadedCount++;
+              scoredKeys.add(sub.id);
+              scoredKeys.add(sub.key);
+              if (sub.code) scoredKeys.add(sub.code);
+            }
           } else {
             newMarks[sub.id] = {
               rawScore: '',
@@ -821,11 +1298,15 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
 
         setSubjectMarks(newMarks);
         setExistingMarksCount(loadedCount);
+        setScoredSubjectKeys(scoredKeys);
       })
       .catch((err) => {
         console.error('Failed to load existing student summatives:', err);
         const blankMarks: Record<string, SubjectMarkEntry> = {};
-        effectiveSubjects.forEach((sub) => {
+        const currentSubjects = effectiveSubjectsRef.current.length > 0
+          ? effectiveSubjectsRef.current
+          : effectiveSubjects;
+        currentSubjects.forEach((sub) => {
           blankMarks[sub.id] = {
             rawScore: '',
             maxScore: '100',
@@ -835,6 +1316,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
         });
         setSubjectMarks(blankMarks);
         setExistingMarksCount(0);
+        setScoredSubjectKeys(new Set());
       })
       .finally(() => {
         if (!isCancelled) setLoadingExistingMarks(false);
@@ -843,7 +1325,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
     return () => {
       isCancelled = true;
     };
-  }, [isOpen, selectedStudentId, academicYearId, termId, effectiveSubjects]);
+  }, [isOpen, selectedStudentId, academicYearId, termId]);
 
   const handleSubjectScoreChange = (subId: string, value: string) => {
     setSubjectMarks((prev) => {
@@ -941,7 +1423,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
         hasMark: true,
         percentage: pct,
         level: 'ME',
-        badgeColor: 'bg-rose-100 text-[#7a1228] border-rose-300',
+        badgeColor: 'bg-sky-100 text-sky-950 border-sky-300',
       };
     }
     if (pct >= 40) {
@@ -989,7 +1471,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
 
     let levelBadgeColor = 'bg-slate-100 text-slate-700 border-slate-300';
     if (overallLevel === 'EE') levelBadgeColor = 'bg-teal-100 text-teal-900 border-teal-300';
-    else if (overallLevel === 'ME') levelBadgeColor = 'bg-[#7a1228]/15 text-[#7a1228] border-[#7a1228]/30';
+    else if (overallLevel === 'ME') levelBadgeColor = 'bg-sky-100 text-sky-950 border-sky-300';
     else if (overallLevel === 'AE') levelBadgeColor = 'bg-amber-100 text-amber-900 border-amber-300';
     else if (overallLevel === 'BE') levelBadgeColor = 'bg-rose-100 text-rose-800 border-rose-300';
 
@@ -1042,7 +1524,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
   } else if (percentage >= 60) {
     performanceLevel = 'ME';
     levelTitle = 'Meeting Expectations (ME) - Level 3';
-    levelBadgeColor = 'bg-[#7a1228]/15 text-[#7a1228] border-[#7a1228]/30';
+    levelBadgeColor = 'bg-sky-100 text-sky-950 border-sky-300';
     standardCBCRemark = getStandardRemark('ME');
   } else if (percentage >= 40) {
     performanceLevel = 'AE';
@@ -1362,19 +1844,19 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-sm overflow-y-auto">
       <div className="bg-surface-container-lowest rounded-2xl shadow-2xl max-w-4xl w-full max-h-[92vh] sm:max-h-[90vh] flex flex-col overflow-hidden border border-outline-variant/30 my-auto">
-        <div className="bg-[#7a1228] text-white p-4 sm:p-5 flex items-center justify-between shrink-0 shadow-xs">
+        <div className="bg-[#7a1228] text-white p-4 sm:p-5 flex items-center justify-between shrink-0 shadow-md border-b border-[#5e0d1e]">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-white/10 text-white flex items-center justify-center font-bold shrink-0 shadow-inner">
+            <div className="w-10 h-10 rounded-xl bg-white/20 text-white flex items-center justify-center font-bold shrink-0 shadow-inner border border-white/30">
               <span className="material-symbols-outlined text-[24px]">grade</span>
             </div>
             <div>
-              <h3 className="font-semibold text-base leading-tight">Upload Marks & CBE Rubric</h3>
-              <p className="text-xs text-rose-100">KICD Competency-Based Assessment System</p>
+              <h3 className="font-black text-base leading-tight text-white tracking-wide">Upload Marks &amp; CBE Rubric</h3>
+              <p className="text-xs text-rose-100 font-semibold">Grace Seeds School · Competency-Based Assessment System</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-rose-100 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+            className="p-1 rounded-lg text-rose-100 hover:text-white hover:bg-white/15 transition-colors cursor-pointer shrink-0"
             title="Close modal"
           >
             <span className="material-symbols-outlined text-[20px]">close</span>
@@ -1382,21 +1864,36 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
         </div>
 
         {/* Mode Switcher */}
-        <div className="p-3 bg-surface-container-low border-b border-outline-variant/30 flex items-center gap-2 shrink-0">
+        <div className="p-2 sm:p-3 bg-slate-100 border-b border-slate-200 flex items-center gap-1.5 sm:gap-2 shrink-0 overflow-x-auto">
+          <button
+            type="button"
+            onClick={() => {
+              setEntryMode('ROSTER_GRID');
+              setError(null);
+            }}
+            className={`flex-1 py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
+              entryMode === 'ROSTER_GRID'
+                ? 'bg-[#7a1228] text-white shadow-xs'
+                : 'bg-white text-slate-800 hover:bg-slate-200 border border-slate-300'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[16px]">table_chart</span>
+            <span>Class Roster Grid (Recommended)</span>
+          </button>
           <button
             type="button"
             onClick={() => {
               setEntryMode('MANUAL_FORM');
               setError(null);
             }}
-            className={`flex-1 py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+            className={`flex-1 py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
               entryMode === 'MANUAL_FORM'
                 ? 'bg-[#7a1228] text-white shadow-xs'
-                : 'bg-white text-on-surface-variant hover:bg-surface-container border border-outline-variant/30'
+                : 'bg-white text-slate-800 hover:bg-slate-200 border border-slate-300'
             }`}
           >
             <span className="material-symbols-outlined text-[16px]">person_edit</span>
-            <span>Manual Individual Entry</span>
+            <span>Single Learner Form</span>
           </button>
           <button
             type="button"
@@ -1404,10 +1901,10 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
               setEntryMode('BULK_CSV');
               setError(null);
             }}
-            className={`flex-1 py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+            className={`flex-1 py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap ${
               entryMode === 'BULK_CSV'
                 ? 'bg-[#7a1228] text-white shadow-xs'
-                : 'bg-white text-on-surface-variant hover:bg-surface-container border border-outline-variant/30'
+                : 'bg-white text-slate-800 hover:bg-slate-200 border border-slate-300'
             }`}
           >
             <span className="material-symbols-outlined text-[16px]">file_upload</span>
@@ -1415,7 +1912,426 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
           </button>
         </div>
 
-        {entryMode === 'BULK_CSV' ? (
+        {entryMode === 'ROSTER_GRID' ? (
+          <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1 overscroll-contain text-xs">
+            {error && (
+              <div className="p-3 rounded-lg bg-rose-50 border border-rose-300 text-rose-900 font-semibold flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px] text-rose-700">error</span>
+                <span className="flex-1">{error}</span>
+                <button type="button" onClick={() => setError(null)} className="text-rose-600 hover:text-rose-900 cursor-pointer">
+                  <span className="material-symbols-outlined text-[16px]">close</span>
+                </button>
+              </div>
+            )}
+
+            {successMessage && (
+              <div className="p-3.5 rounded-xl bg-emerald-50 border-2 border-emerald-400 text-emerald-950 font-bold flex items-center gap-2.5 shadow-xs">
+                <span className="material-symbols-outlined text-[22px] text-emerald-600">check_circle</span>
+                <div className="flex-1">
+                  <div className="text-xs font-black uppercase tracking-wider text-emerald-800">Saved Successfully</div>
+                  <div className="text-xs text-emerald-900 font-medium mt-0.5">{successMessage}</div>
+                </div>
+              </div>
+            )}
+
+            {/* Empty state: No assigned classes for this teacher */}
+            {!isSchoolAdmin && authorizedClasses.length === 0 ? (
+              <div className="p-8 text-center bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
+                <div className="w-14 h-14 mx-auto rounded-full bg-amber-100 text-amber-800 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-[30px]">lock_person</span>
+                </div>
+                <h4 className="text-base font-bold text-slate-800">No Assigned Classes Found</h4>
+                <p className="text-xs text-slate-600 max-w-md mx-auto leading-relaxed">
+                  Your teacher account is active, but you are not currently assigned to any classes or subjects for this academic session.
+                  Please contact the school administrator or Head Teacher to configure your teaching allocations.
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* 1. Clear Selection Sequence Workflow */}
+                <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-3 shadow-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[16px] text-[#7a1228]">filter_alt</span>
+                      <span>Target Class, Subject &amp; Assessment Sequence</span>
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-[#7a1228] border border-[#7a1228]/30">
+                      Model: {isSchoolAdmin ? 'Administrator / Full School Grading Oversight' : (teacherAuthContext?.teachingModel?.replace(/_/g, ' ') || 'Class Teacher')}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5">
+                    {/* Class Selector */}
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                        1. Class / Grade Level *
+                      </label>
+                      <select
+                        value={filterClassId}
+                        onChange={(e) => setFilterClassId(e.target.value)}
+                        className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-900 cursor-pointer focus:outline-primary"
+                      >
+                        <option value="">-- Choose Assigned Class --</option>
+                        {(authorizedClasses.length > 0 ? authorizedClasses : classes).map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name} {c.gradeLevel ? `(${c.gradeLevel.replace(/_/g, ' ')})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Stream Selector */}
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                        2. Stream / Cohort
+                      </label>
+                      <select
+                        value={filterStreamId}
+                        onChange={(e) => setFilterStreamId(e.target.value)}
+                        disabled={!filterClassId}
+                        className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-900 cursor-pointer disabled:opacity-50 focus:outline-primary"
+                      >
+                        <option value="">All Streams / Whole Grade</option>
+                        {streams.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            Stream {s.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Learning Area Selector */}
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                        3. Learning Area / Subject *
+                      </label>
+                      <select
+                        value={selectedLearningAreaId}
+                        onChange={(e) => {
+                          setSelectedLearningAreaId(e.target.value);
+                          setBulkSubjectId(e.target.value);
+                        }}
+                        disabled={!filterClassId}
+                        className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-bold text-slate-900 cursor-pointer disabled:opacity-50 focus:outline-primary"
+                      >
+                        <option value="">-- Select Subject ({effectiveSubjects.length} Available) --</option>
+                        {effectiveSubjects.map((la: any) => (
+                          <option key={la.id} value={la.id}>
+                            {la.name} {la.code ? `(${la.code})` : ''} {la.isAssigned ? '★ (Assigned)' : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Max Score & Period */}
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                        4. Maximum Allowed Marks
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="1000"
+                        value={bulkMaxScore}
+                        onChange={(e) => setBulkMaxScore(e.target.value)}
+                        className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-bold font-data-mono text-slate-900 focus:outline-primary"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Academic Period Bar */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1 border-t border-slate-200">
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">
+                        Academic Year
+                      </label>
+                      <select
+                        value={academicYearId}
+                        onChange={(e) => setAcademicYearId(e.target.value)}
+                        className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-900 cursor-pointer"
+                      >
+                        {academicYears.map((yr) => (
+                          <option key={yr.id} value={yr.id}>
+                            Year {resolveAcademicYearName(yr.name || yr.id)} {yr.isCurrent ? '(Current)' : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1">Term</label>
+                      <select
+                        value={termId}
+                        onChange={(e) => setTermId(e.target.value)}
+                        className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-900 cursor-pointer"
+                      >
+                        {terms.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.name} {t.isCurrent ? '(Current)' : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Assessment Overview & Progress Banner */}
+                {filterClassId && selectedLearningAreaId && (
+                  <div className="p-3.5 rounded-xl bg-gradient-to-r from-slate-50 via-rose-50/20 to-slate-50 border border-slate-200 space-y-2.5 shadow-xs">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-3">
+                        <span className="font-bold text-slate-900 text-xs">
+                          {classes.find(c => c.id === filterClassId)?.name || 'Class'}{filterStreamId ? ` (${streams.find(s => s.id === filterStreamId)?.name || 'Stream'})` : ''}
+                        </span>
+                        <span className="text-slate-400">·</span>
+                        <span className="font-bold text-[#7a1228] text-xs">
+                          {effectiveSubjects.find(s => s.id === selectedLearningAreaId)?.name || 'Subject'}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {hasUnsavedChanges && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-pulse" />
+                            <span>Unsaved changes</span>
+                          </span>
+                        )}
+                        {!hasUnsavedChanges && rosterMetrics.entered > 0 && rosterMetrics.missing === 0 && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-900 border border-emerald-300 flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[13px]">check</span>
+                            <span>All Marks Entered ({rosterMetrics.total})</span>
+                          </span>
+                        )}
+                        {!hasUnsavedChanges && rosterMetrics.entered > 0 && rosterMetrics.missing > 0 && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-900 border border-blue-300 flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[13px]">save</span>
+                            <span>Saved Draft ({rosterMetrics.entered}/{rosterMetrics.total})</span>
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Progress metrics */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                      <div className="p-2 rounded-lg bg-white border border-slate-200">
+                        <span className="text-[10px] font-bold uppercase text-slate-500 block">Enrolled Learners</span>
+                        <span className="font-black text-sm text-slate-900 font-data-mono">{rosterMetrics.total}</span>
+                      </div>
+                      <div className="p-2 rounded-lg bg-white border border-slate-200">
+                        <span className="text-[10px] font-bold uppercase text-slate-500 block">Marks Entered</span>
+                        <span className="font-black text-sm text-emerald-700 font-data-mono">{rosterMetrics.entered}</span>
+                      </div>
+                      <div className="p-2 rounded-lg bg-white border border-slate-200">
+                        <span className="text-[10px] font-bold uppercase text-slate-500 block">Missing Marks</span>
+                        <span className="font-black text-sm text-amber-700 font-data-mono">{rosterMetrics.missing}</span>
+                      </div>
+                      <div className="p-2 rounded-lg bg-white border border-slate-200">
+                        <span className="text-[10px] font-bold uppercase text-slate-500 block">Completion %</span>
+                        <span className="font-black text-sm text-[#7a1228] font-data-mono">{rosterMetrics.pct}%</span>
+                      </div>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                      <div
+                        className="bg-[#7a1228] h-full transition-all duration-300 rounded-full"
+                        style={{ width: `${rosterMetrics.pct}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* 3. Class Roster Spreadsheet Grid */}
+                {!filterClassId || !selectedLearningAreaId ? (
+                  <div className="p-8 text-center bg-slate-50 border border-dashed border-slate-300 rounded-xl space-y-2">
+                    <span className="material-symbols-outlined text-[32px] text-slate-400">touch_app</span>
+                    <h5 className="font-bold text-slate-700 text-xs">Please Select a Class and Subject Above</h5>
+                    <p className="text-[11px] text-slate-500">
+                      Choose your authorized class and learning area to load the learner roster and enter marks.
+                    </p>
+                  </div>
+                ) : rosterRows.length === 0 ? (
+                  <div className="p-8 text-center bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                    <span className="material-symbols-outlined text-[32px] text-slate-400">group_off</span>
+                    <h5 className="font-bold text-slate-700 text-xs">No Active Learners Found in this Cohort</h5>
+                    <p className="text-[11px] text-slate-500">
+                      No active learners were found matching this class and stream selection.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {/* Filter search & Keyboard hint */}
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
+                      <div className="relative flex-1 max-w-sm">
+                        <span className="material-symbols-outlined absolute left-2.5 top-2 text-slate-400 text-[16px]">search</span>
+                        <input
+                          type="text"
+                          value={rosterSearch}
+                          onChange={(e) => setRosterSearch(e.target.value)}
+                          placeholder="Search learner in roster by name or admission..."
+                          className="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-primary"
+                        />
+                      </div>
+                      <div className="text-[11px] text-slate-500 flex items-center gap-1.5 self-center sm:self-auto">
+                        <span className="material-symbols-outlined text-[15px] text-slate-400">keyboard</span>
+                        <span>Use <kbd className="px-1 py-0.5 bg-slate-100 border border-slate-300 rounded text-[10px] font-mono">Enter</kbd> or <kbd className="px-1 py-0.5 bg-slate-100 border border-slate-300 rounded text-[10px] font-mono">↓</kbd> to jump to next score</span>
+                      </div>
+                    </div>
+
+                    {/* Table */}
+                    <div className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-xs max-h-[48vh] overflow-y-auto">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead className="bg-slate-100 border-b border-slate-200 text-slate-600 font-bold uppercase text-[10px] tracking-wider sticky top-0 z-10 shadow-xs">
+                          <tr>
+                            <th className="p-2.5 w-10 text-center">#</th>
+                            <th className="p-2.5 w-24">Adm No</th>
+                            <th className="p-2.5 min-w-[160px]">Learner Full Name</th>
+                            <th className="p-2.5 w-28 text-center">Score ({bulkMaxScore})</th>
+                            <th className="p-2.5 w-24 text-center">CBC Level</th>
+                            <th className="p-2.5 min-w-[200px]">Teacher Remarks</th>
+                            <th className="p-2.5 w-20 text-center">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {filteredRosterRows.map((row, idx) => {
+                            const originalIdx = rosterRows.findIndex(r => r.studentId === row.studentId);
+                            const actualIdx = originalIdx !== -1 ? originalIdx : idx;
+                            const isInvalid = row.status === 'INVALID';
+                            return (
+                              <tr key={row.studentId} className={`hover:bg-slate-50/80 transition-colors ${isInvalid ? 'bg-rose-50/50' : ''}`}>
+                                <td className="p-2.5 text-center text-slate-400 font-mono text-[11px]">{idx + 1}</td>
+                                <td className="p-2.5 font-bold font-data-mono text-slate-700">{row.admissionNumber}</td>
+                                <td className="p-2.5 font-semibold text-slate-900">{row.learnerName}</td>
+                                <td className="p-2 text-center">
+                                  <div className="relative inline-block">
+                                    <input
+                                      id={`roster-score-${actualIdx}`}
+                                      type="number"
+                                      min="0"
+                                      max={row.maxScore || bulkMaxScore || '100'}
+                                      value={row.score}
+                                      onChange={(e) => handleRosterScoreChange(actualIdx, e.target.value)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter' || e.key === 'ArrowDown') {
+                                          e.preventDefault();
+                                          const nextInput = document.getElementById(`roster-score-${actualIdx + 1}`);
+                                          if (nextInput) nextInput.focus();
+                                        } else if (e.key === 'ArrowUp') {
+                                          e.preventDefault();
+                                          const prevInput = document.getElementById(`roster-score-${actualIdx - 1}`);
+                                          if (prevInput) prevInput.focus();
+                                        }
+                                      }}
+                                      placeholder="--"
+                                      className={`w-20 px-2 py-1.5 text-center font-bold text-xs rounded-lg border font-data-mono transition-all ${
+                                        isInvalid
+                                          ? 'border-2 border-rose-500 bg-rose-50 text-rose-900 focus:ring-2 focus:ring-rose-400'
+                                          : row.status === 'SAVED'
+                                          ? 'border-emerald-300 bg-emerald-50/40 text-emerald-950 focus:border-primary'
+                                          : 'border-slate-300 bg-white text-slate-900 focus:border-primary focus:ring-1 focus:ring-primary'
+                                      }`}
+                                    />
+                                    {row.errorMessage && (
+                                      <span className="block text-[9px] font-bold text-rose-600 mt-0.5 whitespace-nowrap">
+                                        {row.errorMessage}
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="p-2 text-center">
+                                  {row.performanceLevel ? (
+                                    <span
+                                      className={`px-2 py-0.5 rounded text-[10px] font-bold font-mono inline-block ${
+                                        row.performanceLevel === 'EE'
+                                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                          : row.performanceLevel === 'ME'
+                                          ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                                          : row.performanceLevel === 'AE'
+                                          ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                                          : 'bg-rose-100 text-rose-800 border border-rose-300'
+                                      }`}
+                                    >
+                                      {row.performanceLevel}
+                                    </span>
+                                  ) : (
+                                    <span className="text-[10px] text-slate-400 font-medium">Pending</span>
+                                  )}
+                                </td>
+                                <td className="p-2">
+                                  <input
+                                    type="text"
+                                    value={row.remarks}
+                                    onChange={(e) => handleRosterRemarksChange(actualIdx, e.target.value)}
+                                    placeholder="Remarks auto-generate or enter custom..."
+                                    className="w-full px-2 py-1 bg-white border border-slate-200 rounded text-xs text-slate-800 focus:outline-primary"
+                                  />
+                                </td>
+                                <td className="p-2 text-center">
+                                  {row.status === 'SAVED' ? (
+                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800">
+                                      Saved
+                                    </span>
+                                  ) : row.status === 'DRAFT' ? (
+                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800">
+                                      Draft
+                                    </span>
+                                  ) : row.status === 'INVALID' ? (
+                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-100 text-rose-800">
+                                      Invalid
+                                    </span>
+                                  ) : (
+                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-medium text-slate-400">
+                                      Blank
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* 4. Action buttons footer */}
+                <div className="pt-3 flex flex-col sm:flex-row items-center justify-between gap-2.5 border-t border-slate-200">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="w-full sm:w-auto px-4 py-2 border border-slate-300 rounded-lg text-slate-700 font-bold hover:bg-slate-50 transition-colors cursor-pointer text-xs"
+                  >
+                    Cancel
+                  </button>
+
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <button
+                      type="button"
+                      disabled={isSavingRoster || rosterRows.length === 0}
+                      onClick={() => handleSaveRosterMarks(false)}
+                      className="flex-1 sm:flex-none px-4 py-2 bg-slate-800 text-white font-bold rounded-lg hover:bg-slate-900 shadow-sm transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5 text-xs"
+                      title="Save current entered marks as draft without overwriting blank records"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">save</span>
+                      <span>{isSavingRoster ? 'Saving draft...' : 'Save Draft Marks'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={isSavingRoster || rosterRows.length === 0 || rosterMetrics.invalid > 0}
+                      onClick={() => handleSaveRosterMarks(true)}
+                      className="flex-1 sm:flex-none px-5 py-2 bg-[#7a1228] text-white font-bold rounded-lg hover:bg-[#5e0d1e] shadow-md transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5 text-xs"
+                      title="Commit and submit assessment marks"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">task_alt</span>
+                      <span>{isSavingRoster ? 'Submitting...' : 'Submit Assessment Marks'}</span>
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        ) : entryMode === 'BULK_CSV' ? (
           <div className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1 overscroll-contain text-xs">
             {error && (
               <div className="p-3 rounded-lg bg-error/10 border border-error/20 text-error font-medium flex items-center gap-2">
@@ -1487,10 +2403,10 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                     }}
                     className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-semibold text-slate-900 cursor-pointer"
                   >
-                    <option value="">-- Choose Subject --</option>
+                    <option value="">-- Choose Subject ({effectiveSubjects.length} Available) --</option>
                     {(effectiveSubjects.length > 0 ? effectiveSubjects : learningAreas).map((la: any) => (
                       <option key={la.id} value={la.id}>
-                        {la.name} {la.code ? `(${la.code})` : ''}
+                        {la.name} {la.code ? `(${la.code})` : ''} {la.isAssigned ? '★ (Assigned)' : ''}
                       </option>
                     ))}
                   </select>
@@ -1858,7 +2774,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                 <select
                   value={assessmentType}
                   onChange={(e) => setAssessmentType(e.target.value as any)}
-                  className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-bold text-[#7a1228] focus:outline-primary cursor-pointer"
+                  className="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs font-bold text-slate-900 focus:outline-[#7a1228] cursor-pointer"
                 >
                   <option value="SUMMATIVE">Summative (Term Exam)</option>
                   <option value="FORMATIVE">Formative (Continuous Rubric)</option>
@@ -2027,7 +2943,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                     <h4 className="font-bold text-sm text-gray-900 truncate">
                       {currentLearner.name}
                     </h4>
-                    <span className="px-2 py-0.5 rounded-full bg-rose-100 text-[#7a1228] font-bold text-[10px]">
+                    <span className="px-2 py-0.5 rounded-full bg-rose-50 text-[#7a1228] border border-[#7a1228]/30 font-bold text-[10px]">
                       {currentLearner.grade} {currentLearner.stream ? `· ${currentLearner.stream}` : ''}
                     </span>
                   </div>
@@ -2045,7 +2961,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
 
           {assessmentType === 'SUMMATIVE' && (
             <div className="space-y-3.5">
-              <div className="p-3.5 bg-gradient-to-r from-slate-50 via-rose-50/20 to-slate-50 border border-slate-200 rounded-xl flex flex-wrap items-center justify-between gap-3 shadow-xs">
+              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex flex-wrap items-center justify-between gap-3 shadow-xs">
                 <div className="flex items-center gap-4 sm:gap-6 flex-wrap">
                   <div>
                     <span className="text-[10px] font-bold uppercase text-slate-500 block">Subjects Filled</span>
@@ -2129,7 +3045,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                 <div className="divide-y divide-slate-100 max-h-[380px] overflow-y-auto">
                   {effectiveSubjects.map((sub, index) => {
                     const mark = subjectMarks[sub.id] || { rawScore: '', maxScore: '100', remarks: '', isCustomRemark: false };
-                    const initials = getSubjectInitials(sub.code || sub.name);
+                    const initials = sub.initial || getSubjectInitials(sub.code || sub.name);
                     const rubric = getSubjectRubric(mark.rawScore, mark.maxScore);
 
                     return (
@@ -2140,13 +3056,20 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                         }`}
                       >
                         <div className="col-span-5 sm:col-span-4 flex items-center gap-2.5 min-w-0">
-                          <span className="w-10 h-7 rounded-md bg-[#7a1228] text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs font-data-mono">
+                          <span className="w-10 h-7 rounded-md bg-[#7a1228] text-white font-black text-xs flex items-center justify-center shrink-0 shadow-xs font-data-mono">
                             {initials}
                           </span>
                           <div className="min-w-0">
-                            <p className="font-bold text-xs text-slate-900 truncate" title={sub.name}>
-                              {sub.name}
-                            </p>
+                            <div className="flex items-center gap-1.5 truncate">
+                              <p className="font-bold text-xs text-slate-900 truncate" title={sub.name}>
+                                {sub.name}
+                              </p>
+                              {sub.isAssigned && (
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800 border border-amber-200 shrink-0">
+                                  Assigned
+                                </span>
+                              )}
+                            </div>
                             <p className="text-[10px] text-slate-500 font-data-mono">
                               {sub.code || `SUB-${index + 1}`}
                             </p>
@@ -2221,7 +3144,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                     ) : (
                       effectiveSubjects.map((sub) => (
                         <option key={sub.id} value={sub.id}>
-                          {sub.name} ({sub.code || sub.initial})
+                          {sub.name} ({sub.code || sub.initial}) {sub.isAssigned ? '★ (Assigned)' : ''}
                         </option>
                       ))
                     )}
@@ -2253,7 +3176,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                 </div>
               </div>
 
-              <div className="p-3.5 bg-rose-50/40 border border-rose-200/60 rounded-xl space-y-3">
+              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
                 <div className="text-[11px] font-bold uppercase tracking-wider text-[#7a1228] flex items-center gap-1.5">
                   <span className="material-symbols-outlined text-[16px]">psychology</span>
                   <span>Formative CBE Competency Evaluation</span>
@@ -2430,8 +3353,8 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
                       }}
                       className={`px-2 py-1.5 rounded-lg border font-bold text-xs transition-all cursor-pointer ${
                         performanceLevel === 'ME'
-                          ? 'bg-[#7a1228] text-white border-[#5e0d1e] shadow-xs'
-                          : 'bg-white border-rose-300 text-[#7a1228] hover:bg-rose-50'
+                          ? 'bg-sky-700 text-white border-sky-800 shadow-xs'
+                          : 'bg-white border-sky-300 text-sky-950 hover:bg-sky-50'
                       }`}
                     >
                       ME (60-79%)

@@ -51,7 +51,9 @@ const getSubjectInitials = (nameOrCode: string): string => {
   if (clean.includes('GERMAN') || clean === 'GER') return 'GER';
   if (clean.includes('ARABIC') || clean === 'ARA') return 'ARA';
   if (clean.includes('INDIGENOUS') || clean === 'IND') return 'IND';
+  if (clean.includes('LANGUAGE ACTIVITIES') || clean.includes('LAN_ACT') || /(^|[-_ \b])LAN([-_ \b]|$)/i.test(clean) || (clean.includes('LANGUAGE') && !clean.includes('INDIGENOUS') && !clean.includes('KISWAHILI') && !clean.includes('SWAHILI'))) return 'LAN';
 
+  if (/^[0-9A-F]{8}-/i.test(clean) || /^[0-9A-F]{16,}/i.test(clean)) return 'SUB';
   const firstWord = clean.replace(/[^A-Z0-9]/g, ' ').trim().split(/\s+/)[0];
   return firstWord.slice(0, 4) || 'SUB';
 };
@@ -236,6 +238,64 @@ export const MasterBroadsheetView: React.FC = () => {
     return broadsheet?.bestStudentsPerSubject || [];
   }, [broadsheet, scopeFilter]);
 
+  const getLearnerSubjectScore = (row: any, la: { id: string; name?: string; code?: string }) => {
+    if (!row?.subjects) return null;
+    if (row.subjects[la.id]) return row.subjects[la.id];
+    const targetInitials = getSubjectInitials(la.code || la.name || la.id);
+    for (const k of Object.keys(row.subjects)) {
+      const sub = row.subjects[k];
+      if (
+        sub &&
+        (sub.learningAreaId === la.id ||
+          sub.learningAreaName?.toLowerCase() === la.name?.toLowerCase() ||
+          getSubjectInitials(sub.learningAreaName || sub.learningAreaId) === targetInitials)
+      ) {
+        return sub;
+      }
+    }
+    return null;
+  };
+
+  const prioritizedLearningAreas = useMemo(() => {
+    if (!broadsheet?.learningAreas || broadsheet.learningAreas.length === 0) return [];
+
+    // Deduplicate by canonical code / initials
+    const uniqueMap = new Map<string, { id: string; name: string; code?: string }>();
+    for (const la of broadsheet.learningAreas) {
+      const key = getSubjectInitials(la.name || (la as any).code || la.id);
+      if (!uniqueMap.has(key)) {
+        uniqueMap.set(key, la);
+      }
+    }
+    const list = Array.from(uniqueMap.values());
+
+    // Sort by highest priority for subjects with marks across the rows
+    const rows = broadsheet.rows || [];
+    const countWithMarks = (la: { id: string; name?: string; code?: string }) => {
+      return rows.filter((r) => {
+        const sub = getLearnerSubjectScore(r, la);
+        return sub && sub.levelLabel !== '--';
+      }).length;
+    };
+
+    // Filter strictly to uploaded fields if any marks exist!
+    const hasAnyMarks = list.some((la) => countWithMarks(la) > 0);
+    const filteredList = hasAnyMarks
+      ? list.filter((la) => countWithMarks(la) > 0)
+      : list;
+
+    filteredList.sort((a, b) => {
+      const countA = countWithMarks(a);
+      const countB = countWithMarks(b);
+      if (countA > 0 && countB === 0) return -1;
+      if (countA === 0 && countB > 0) return 1;
+      if (countB !== countA) return countB - countA;
+      return (a.name || '').localeCompare(b.name || '');
+    });
+
+    return filteredList;
+  }, [broadsheet?.learningAreas, broadsheet?.rows]);
+
   const filteredRows = useMemo(() => {
     if (!broadsheet || !broadsheet.rows) return [];
     if (!searchTerm.trim()) return broadsheet.rows;
@@ -360,7 +420,7 @@ export const MasterBroadsheetView: React.FC = () => {
       12
     );
 
-    const laHeaders = broadsheet.learningAreas.map((la) => getSubjectInitials(la.name || la.code));
+    const laHeaders = prioritizedLearningAreas.map((la) => getSubjectInitials(la.name || (la as any).code));
     const tableHead = [
       'Pos',
       'Student Name',
@@ -374,14 +434,17 @@ export const MasterBroadsheetView: React.FC = () => {
     ];
 
     const tableRows = broadsheet.rows.map((r, index) => {
-      const subScores = broadsheet.learningAreas.map((la) => {
-        const sub = r.subjects[la.id];
+      const subScores = prioritizedLearningAreas.map((la) => {
+        const sub = getLearnerSubjectScore(r, la);
         return sub && sub.levelLabel !== '--' ? `${sub.numericScore}%` : '--';
       });
 
-      const displayPos = selectedStreamId === 'all'
-        ? String(index + 1)
-        : String(r.streamRank || index + 1);
+      const rankNum = selectedStreamId === 'all'
+        ? (r.classRank || r.rank)
+        : (r.streamRank || r.rank);
+      const displayPos = (!rankNum || r.totalScore === 0)
+        ? '--'
+        : String(rankNum);
 
       return [
         displayPos,
@@ -786,7 +849,7 @@ export const MasterBroadsheetView: React.FC = () => {
 
           <button
             onClick={() => fetchBroadsheetData(selectedStreamId)}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all"
+            className="bg-[#7a1228] hover:bg-[#5e0d1e] text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all"
           >
             <span className="material-symbols-outlined text-base">refresh</span>
             Recalculate Broadsheet
@@ -798,14 +861,14 @@ export const MasterBroadsheetView: React.FC = () => {
       {broadsheet && (
         <div className="space-y-4 print:hidden">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-indigo-200 transition-all">
+            <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-rose-200 transition-all">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-slate-500">
                   {selectedStreamId === 'all' ? 'Grade Mean Score' : 'Stream Mean Score'}
                 </span>
-                <span className="material-symbols-outlined text-indigo-500 text-lg">trending_up</span>
+                <span className="material-symbols-outlined text-[#7a1228] text-lg">trending_up</span>
               </div>
-              <p className="text-2xl font-black text-indigo-600 mt-1">{broadsheet.streamMeanScore}%</p>
+              <p className="text-2xl font-black text-[#7a1228] mt-1">{broadsheet.streamMeanScore}%</p>
               <p className="text-xs text-slate-500 mt-1 font-mono">
                 {broadsheet.streamMeanPoints ? `${broadsheet.streamMeanPoints} Mean GPA` : ''} • {broadsheet.totalStudents} ranked
               </p>
@@ -946,7 +1009,7 @@ export const MasterBroadsheetView: React.FC = () => {
 
         {loading ? (
           <div className="p-16 text-center text-slate-500">
-            <span className="material-symbols-outlined animate-spin text-4xl mb-3 text-indigo-600">
+            <span className="material-symbols-outlined animate-spin text-4xl mb-3 text-[#7a1228]">
               progress_activity
             </span>
             <p className="font-semibold">Aggregating marks from database records...</p>
@@ -973,7 +1036,7 @@ export const MasterBroadsheetView: React.FC = () => {
                         <th className="p-2 border whitespace-nowrap text-left">Learner Full Name</th>
                         <th className="p-2 border whitespace-nowrap text-center">Stream</th>
 
-                        {broadsheet.learningAreas.map((la) => (
+                        {prioritizedLearningAreas.map((la) => (
                           <th
                             key={la.id}
                             className="p-2 border text-center font-black text-xs font-mono text-[#7a1228] bg-rose-50/40 whitespace-nowrap"
@@ -985,17 +1048,20 @@ export const MasterBroadsheetView: React.FC = () => {
 
                         <th className="p-2 border text-center whitespace-nowrap bg-slate-100">Total Marks</th>
                         <th className="p-2 border text-center whitespace-nowrap bg-slate-100">Mean %</th>
-                        <th className="p-2 border text-center whitespace-nowrap bg-indigo-50/60 text-indigo-950">Pts</th>
-                        <th className="p-2 border text-center whitespace-nowrap bg-indigo-50/60 text-indigo-950">GPA</th>
-                        <th className="p-2 border text-center whitespace-nowrap bg-indigo-50/60 text-indigo-950">Level</th>
+                        <th className="p-2 border text-center whitespace-nowrap bg-rose-50/60 text-[#7a1228]">Pts</th>
+                        <th className="p-2 border text-center whitespace-nowrap bg-rose-50/60 text-[#7a1228]">GPA</th>
+                        <th className="p-2 border text-center whitespace-nowrap bg-rose-50/60 text-[#7a1228]">Level</th>
                         <th className="p-2 border text-left whitespace-nowrap">Remarks</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200">
                       {filteredRows.map((row, index) => {
-                        const displayPos = selectedStreamId === 'all'
-                          ? (index + 1)
-                          : (row.streamRank || index + 1);
+                        const rankNum = selectedStreamId === 'all'
+                          ? (row.classRank || row.rank)
+                          : (row.streamRank || row.rank);
+                        const displayPos = (!rankNum || row.totalScore === 0)
+                          ? '--'
+                          : rankNum;
 
                         return (
                           <tr key={row.studentId} className="hover:bg-slate-50 transition-colors">
@@ -1011,8 +1077,8 @@ export const MasterBroadsheetView: React.FC = () => {
                               </span>
                             </td>
 
-                            {broadsheet.learningAreas.map((la) => {
-                              const scoreObj = row.subjects[la.id];
+                            {prioritizedLearningAreas.map((la) => {
+                              const scoreObj = getLearnerSubjectScore(row, la);
                               return (
                                 <td key={la.id} className="p-1.5 border text-center whitespace-nowrap">
                                   {scoreObj && scoreObj.levelLabel !== '--' ? (
@@ -1032,16 +1098,16 @@ export const MasterBroadsheetView: React.FC = () => {
                             <td className="p-2 border text-center font-mono font-bold text-slate-900 whitespace-nowrap">
                               {row.totalScore}
                             </td>
-                            <td className="p-2 border text-center font-mono font-black text-indigo-700 whitespace-nowrap">
+                            <td className="p-2 border text-center font-mono font-black text-[#7a1228] whitespace-nowrap">
                               {row.averageScore}%
                             </td>
-                            <td className="p-2 border text-center font-mono font-bold text-indigo-950 bg-indigo-50/20 whitespace-nowrap">
+                            <td className="p-2 border text-center font-mono font-bold text-slate-900 bg-rose-50/20 whitespace-nowrap">
                               {row.totalPoints || 0}
                             </td>
-                            <td className="p-2 border text-center font-mono font-extrabold text-indigo-800 bg-indigo-50/20 text-xs whitespace-nowrap">
+                            <td className="p-2 border text-center font-mono font-extrabold text-[#7a1228] bg-rose-50/20 text-xs whitespace-nowrap">
                               {row.meanPoints || 0}
                             </td>
-                            <td className="p-2 border text-center bg-indigo-50/20 whitespace-nowrap">
+                            <td className="p-2 border text-center bg-rose-50/20 whitespace-nowrap">
                               {getLevelBadge(row.overallPerformanceLevel)}
                             </td>
                             <td className="p-2 border text-xs text-slate-700 whitespace-nowrap text-left">
@@ -1055,15 +1121,21 @@ export const MasterBroadsheetView: React.FC = () => {
                         <td colSpan={3} className="p-2 border text-right uppercase tracking-wider text-[11px] text-slate-700 whitespace-nowrap">
                           Subject Mean (%)
                         </td>
-                        {broadsheet.learningAreas.map((la) => {
-                          const sumObj = broadsheet.subjectSummaries.find((s) => s.learningAreaId === la.id);
+                        {prioritizedLearningAreas.map((la) => {
+                          const targetInitials = getSubjectInitials(la.code || la.name || la.id);
+                          const sumObj = broadsheet.subjectSummaries.find(
+                            (s) =>
+                              s.learningAreaId === la.id ||
+                              s.learningAreaName?.toLowerCase() === la.name?.toLowerCase() ||
+                              getSubjectInitials(s.learningAreaName || s.learningAreaId) === targetInitials
+                          );
                           return (
-                            <td key={la.id} className="p-2 border text-center font-mono font-black text-indigo-700 text-xs whitespace-nowrap">
+                            <td key={la.id} className="p-2 border text-center font-mono font-black text-[#7a1228] text-xs whitespace-nowrap">
                               {sumObj?.averageScore ? `${sumObj.averageScore}%` : '--'}
                             </td>
                           );
                         })}
-                        <td colSpan={6} className="p-2 border text-center font-mono font-black text-indigo-900 text-xs whitespace-nowrap">
+                        <td colSpan={6} className="p-2 border text-center font-mono font-black text-[#7a1228] text-xs whitespace-nowrap">
                           {broadsheet.streamMeanScore}% Overall Mean
                         </td>
                       </tr>
@@ -1107,7 +1179,7 @@ export const MasterBroadsheetView: React.FC = () => {
                             {cr.className} {cr.streamName !== 'Whole Grade' ? `(${cr.streamName})` : ''}
                           </td>
                           <td className="p-2.5 border text-center font-mono">{cr.totalStudents}</td>
-                          <td className="p-2.5 border text-center font-mono font-black text-indigo-700">
+                          <td className="p-2.5 border text-center font-mono font-black text-[#7a1228]">
                             {cr.meanScore}%
                           </td>
                           <td className="p-2.5 border text-center">{getLevelBadge(cr.overallPerformanceLevel)}</td>
@@ -1150,8 +1222,8 @@ export const MasterBroadsheetView: React.FC = () => {
                         <tr key={sub.learningAreaId} className="hover:bg-slate-50">
                           <td className="p-2.5 border text-center font-mono font-bold text-slate-500">{idx + 1}</td>
                           <td className="p-2.5 border font-extrabold text-slate-900">{sub.learningAreaName}</td>
-                          <td className="p-2.5 border font-bold text-indigo-950">{sub.bestClassName} - {sub.bestStreamName}</td>
-                          <td className="p-2.5 border text-center font-mono font-black text-indigo-700">{sub.meanScore}%</td>
+                          <td className="p-2.5 border font-bold text-slate-900">{sub.bestClassName} - {sub.bestStreamName}</td>
+                          <td className="p-2.5 border text-center font-mono font-black text-[#7a1228]">{sub.meanScore}%</td>
                           <td className="p-2.5 border text-center">{getLevelBadge(sub.performanceLevel)}</td>
                           <td className="p-2.5 border text-center font-mono">{sub.totalStudents}</td>
                           <td className="p-2.5 border text-slate-700">
