@@ -710,7 +710,7 @@ export const MasterBroadsheetView: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Top Banner */}
-      <div className="print:hidden bg-gradient-to-r from-[#500b1b] via-[#7a1228] to-[#991b36] rounded-2xl p-6 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-5">
+      <div className="print:hidden bg-gradient-to-r from-[#800000] via-[#7a1228] to-[#991b36] rounded-2xl p-6 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-5">
         <div>
           <div className="flex items-center gap-2 text-rose-200 text-xs font-semibold uppercase tracking-wider mb-1.5">
             <span className="material-symbols-outlined text-base">analytics</span>
@@ -737,7 +737,7 @@ export const MasterBroadsheetView: React.FC = () => {
           <button
             onClick={handlePrint}
             disabled={!broadsheet || !broadsheet.rows.length}
-            className="bg-white hover:bg-slate-100 disabled:opacity-50 text-[#500b1b] px-4 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 shadow-sm"
+            className="bg-white hover:bg-slate-100 disabled:opacity-50 text-[#800000] px-4 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 shadow-sm"
           >
             <span className="material-symbols-outlined text-lg">print</span>
             Print Broadsheet
@@ -758,7 +758,7 @@ export const MasterBroadsheetView: React.FC = () => {
               onClick={() => handleClassChange(c.id)}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
                 c.id === selectedClassId
-                  ? 'bg-[#500b1b] text-white shadow-sm'
+                  ? 'bg-[#800000] text-white shadow-sm'
                   : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
               }`}
             >
@@ -774,7 +774,7 @@ export const MasterBroadsheetView: React.FC = () => {
               <select
                 value={selectedClassId}
                 onChange={(e) => handleClassChange(e.target.value)}
-                className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-sm font-semibold text-slate-900 focus:ring-2 focus:ring-[#500b1b] focus:border-[#500b1b]"
+                className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-sm font-semibold text-slate-900 focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
               >
                 {classes.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -789,7 +789,7 @@ export const MasterBroadsheetView: React.FC = () => {
               <select
                 value={selectedStreamId}
                 onChange={(e) => setSelectedStreamId(e.target.value)}
-                className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-sm font-semibold text-slate-900 focus:ring-2 focus:ring-[#500b1b] focus:border-[#500b1b]"
+                className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-sm font-semibold text-slate-900 focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
               >
                 <option value="all">
                   ⭐ All Streams ({classes.find((c) => c.id === selectedClassId)?.name || 'Grade Consolidated'})
@@ -807,7 +807,7 @@ export const MasterBroadsheetView: React.FC = () => {
               <select
                 value={selectedExamType}
                 onChange={(e) => setSelectedExamType(e.target.value)}
-                className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-sm font-medium text-slate-900 focus:ring-2 focus:ring-[#500b1b] focus:border-[#500b1b]"
+                className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-sm font-medium text-slate-900 focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
               >
                 <option value="End of Term Examination">End of Term Examination</option>
                 <option value="Mid-Term Assessment">Mid-Term Assessment</option>
@@ -821,7 +821,7 @@ export const MasterBroadsheetView: React.FC = () => {
               <select
                 value={selectedTerm}
                 onChange={(e) => setSelectedTerm(e.target.value)}
-                className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-sm font-medium text-slate-900 focus:ring-2 focus:ring-[#500b1b] focus:border-[#500b1b]"
+                className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-sm font-medium text-slate-900 focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
               >
                 {academicTerms.map((t) => (
                   <option key={t.id} value={t.id}>
@@ -836,7 +836,7 @@ export const MasterBroadsheetView: React.FC = () => {
               <select
                 value={selectedYear}
                 onChange={(e) => handleYearChange(e.target.value)}
-                className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-sm font-medium text-slate-900 focus:ring-2 focus:ring-[#500b1b] focus:border-[#500b1b]"
+                className="px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-sm font-medium text-slate-900 focus:ring-2 focus:ring-[#800000] focus:border-[#800000]"
               >
                 {academicYears.map((y) => (
                   <option key={y.id} value={y.id}>
@@ -849,7 +849,7 @@ export const MasterBroadsheetView: React.FC = () => {
 
           <button
             onClick={() => fetchBroadsheetData(selectedStreamId)}
-            className="bg-[#7a1228] hover:bg-[#5e0d1e] text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all"
+            className="bg-[#800000] hover:bg-[#660000] text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all"
           >
             <span className="material-symbols-outlined text-base">refresh</span>
             Recalculate Broadsheet
@@ -925,7 +925,7 @@ export const MasterBroadsheetView: React.FC = () => {
             onClick={() => setActiveTab('marksheet')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
               activeTab === 'marksheet'
-                ? 'bg-[#500b1b] text-white shadow-sm'
+                ? 'bg-[#800000] text-white shadow-sm'
                 : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200'
             }`}
           >
@@ -937,7 +937,7 @@ export const MasterBroadsheetView: React.FC = () => {
             onClick={() => setActiveTab('classRanking')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
               activeTab === 'classRanking'
-                ? 'bg-[#500b1b] text-white shadow-sm'
+                ? 'bg-[#800000] text-white shadow-sm'
                 : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200'
             }`}
           >
@@ -949,7 +949,7 @@ export const MasterBroadsheetView: React.FC = () => {
             onClick={() => setActiveTab('bestClassPerSubject')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
               activeTab === 'bestClassPerSubject'
-                ? 'bg-[#500b1b] text-white shadow-sm'
+                ? 'bg-[#800000] text-white shadow-sm'
                 : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200'
             }`}
           >
@@ -961,7 +961,7 @@ export const MasterBroadsheetView: React.FC = () => {
             onClick={() => setActiveTab('bestStudentPerSubject')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
               activeTab === 'bestStudentPerSubject'
-                ? 'bg-[#500b1b] text-white shadow-sm'
+                ? 'bg-[#800000] text-white shadow-sm'
                 : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200'
             }`}
           >
@@ -976,7 +976,7 @@ export const MasterBroadsheetView: React.FC = () => {
               onClick={() => setScopeFilter('CLASS')}
               className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
                 scopeFilter === 'CLASS'
-                  ? 'bg-[#500b1b] text-white shadow-xs'
+                  ? 'bg-[#800000] text-white shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
@@ -986,7 +986,7 @@ export const MasterBroadsheetView: React.FC = () => {
               onClick={() => setScopeFilter('SCHOOL')}
               className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
                 scopeFilter === 'SCHOOL'
-                  ? 'bg-[#500b1b] text-white shadow-xs'
+                  ? 'bg-[#800000] text-white shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >

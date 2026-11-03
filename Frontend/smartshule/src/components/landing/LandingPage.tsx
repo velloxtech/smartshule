@@ -30,6 +30,7 @@ import AdmissionsPage from './AdmissionsPage'
 import InteractiveLearningLab from './InteractiveLearningLab'
 import LearnerOnboardingPage from './LearnerOnboardingPage'
 import ApplyAdmissionSlotPage from './ApplyAdmissionSlotPage'
+import FindUsPage from './FindUsPage'
 
 const logo = '/logo.jpg'
 const whatsappImg = '/hero-school.png'
@@ -44,6 +45,7 @@ const NAV_LINKS = [
   { name: 'Programmes', view: 'programmes', section: null },
   { name: 'Admissions', view: 'admissions', section: null },
   { name: 'Apply for Slot', view: 'apply-slot', section: null },
+  { name: 'Find Us', view: 'find-us', section: null },
   { name: 'Contact', view: 'home', section: 'contact' },
 ]
 
@@ -204,6 +206,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } else if (link.view === 'apply-slot') {
       setCurrentPage('apply-slot')
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } else if (link.view === 'find-us') {
+      setCurrentPage('find-us')
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } else {
       setCurrentPage('home')
@@ -388,6 +393,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           }}
           initialGrade={preselectedGrade}
         />
+      ) : currentPage === 'find-us' ? (
+        <FindUsPage
+          onNavigateHome={() => {
+            setCurrentPage('home')
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+          }}
+          onNavigateApplySlot={() => {
+            setCurrentPage('apply-slot')
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+          }}
+        />
       ) : currentPage === 'onboarding' ? (
         <LearnerOnboardingPage
           onNavigateHome={() => {
@@ -450,6 +466,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       <span>{isAuthenticated ? 'Return to Dashboard' : 'School Portal Login'}</span>
                     </button>
                   )}
+                  <button
+                    onClick={() => {
+                      setCurrentPage('find-us');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="bg-[#800000] hover:bg-[#660000] border border-[#990000] text-white font-bold px-8 py-3.5 rounded-full transition-all duration-200 text-sm shadow-md hover:scale-105 cursor-pointer flex items-center gap-2"
+                  >
+                    <span>Find me</span>
+                  </button>
                 </div>
               </div>
 
