@@ -9,8 +9,10 @@ export enum StudentGender {
 export enum StudentStatus {
   ACTIVE = 'ACTIVE',
   INACTIVE = 'INACTIVE',
+  WITHDRAWAL_PENDING = 'WITHDRAWAL_PENDING',
   WITHDRAWN = 'WITHDRAWN',
   TRANSFERRED = 'TRANSFERRED',
+  ARCHIVED = 'ARCHIVED',
   GRADUATED = 'GRADUATED',
   SUSPENDED = 'SUSPENDED'
 }
@@ -51,6 +53,11 @@ export interface StudentProps {
   specialNeeds?: string;
   status: StudentStatus;
   profilePhotoUrl?: string;
+  withdrawalDate?: string;
+  withdrawalReason?: string;
+  destinationSchool?: string;
+  withdrawnByUserId?: string;
+  withdrawalNotes?: string;
 }
 
 export class Student extends Entity<StudentProps> {
@@ -128,6 +135,26 @@ export class Student extends Entity<StudentProps> {
     return this._props.status;
   }
 
+  public get withdrawalDate(): string | undefined {
+    return this._props.withdrawalDate;
+  }
+
+  public get withdrawalReason(): string | undefined {
+    return this._props.withdrawalReason;
+  }
+
+  public get destinationSchool(): string | undefined {
+    return this._props.destinationSchool;
+  }
+
+  public get withdrawnByUserId(): string | undefined {
+    return this._props.withdrawnByUserId;
+  }
+
+  public get withdrawalNotes(): string | undefined {
+    return this._props.withdrawalNotes;
+  }
+
   public get profilePhotoUrl(): string | undefined {
     return this._props.profilePhotoUrl;
   }
@@ -194,6 +221,11 @@ export class Student extends Entity<StudentProps> {
     }
   }
 
+  public removeGuardian(guardianId: string): void {
+    this._props.guardianIds = this._props.guardianIds.filter(id => id !== guardianId);
+    this.touch();
+  }
+
   public setAdmissionNumber(admNo: string): void {
     this._props.admissionNumber = admNo;
     this.touch();
@@ -201,6 +233,41 @@ export class Student extends Entity<StudentProps> {
 
   public setStatus(status: StudentStatus): void {
     this._props.status = status;
+    this.touch();
+  }
+
+  public withdraw(params: {
+    withdrawalDate: string;
+    reason: string;
+    destinationSchool?: string;
+    staffUserId?: string;
+    notes?: string;
+  }): void {
+    this._props.status = StudentStatus.WITHDRAWN;
+    this._props.withdrawalDate = params.withdrawalDate;
+    this._props.withdrawalReason = params.reason;
+    if (params.destinationSchool !== undefined) {
+      this._props.destinationSchool = params.destinationSchool;
+    }
+    if (params.staffUserId !== undefined) {
+      this._props.withdrawnByUserId = params.staffUserId;
+    }
+    if (params.notes !== undefined) {
+      this._props.withdrawalNotes = params.notes;
+    }
+    this.touch();
+  }
+
+  public suspend(reason?: string): void {
+    this._props.status = StudentStatus.SUSPENDED;
+    if (reason) {
+      this._props.withdrawalReason = reason;
+    }
+    this.touch();
+  }
+
+  public reactivate(): void {
+    this._props.status = StudentStatus.ACTIVE;
     this.touch();
   }
 
@@ -230,6 +297,11 @@ export class Student extends Entity<StudentProps> {
       specialNeeds: this.specialNeeds,
       status: this.status,
       profilePhotoUrl: this.profilePhotoUrl,
+      withdrawalDate: this.withdrawalDate,
+      withdrawalReason: this.withdrawalReason,
+      destinationSchool: this.destinationSchool,
+      withdrawnByUserId: this.withdrawnByUserId,
+      withdrawalNotes: this.withdrawalNotes,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt
     };

@@ -20,6 +20,7 @@ import { IPasswordHasher } from '../../core/ports/services/IExternalServices';
 import { StudentInvoice, InvoiceStatus, FeeStructure, FeeItem, Payment, PaymentStatus } from '../../core/domain/finance/Fee';
 import { ClassRoom, EducationLevel } from '../../core/domain/academic/ClassRoom';
 import { ClassTeacherAssignment } from '../../core/domain/academic/TeacherAssignment';
+import { GuardianIdentityResolver } from '../shared/GuardianIdentityResolver';
 
 export const CBC_GRADE_PROGRESSION: Record<CBCGradeLevel, CBCGradeLevel | 'GRADUATED'> = {
   [CBCGradeLevel.PLAYGROUP]: CBCGradeLevel.PP1,
@@ -621,8 +622,8 @@ export class StudentUseCases {
     };
   }
 
-  public async updateStudent(studentId: string, dto: UpdateStudentDTO, requestingUser?: UserContext) {
-    const isParent = requestingUser?.role === UserRole.PARENT || requestingUser?.role === UserRole.GUARDIAN;
+  public async updateStudent(studentId: string, dto: UpdateStudentDTO, requestingUser?: UserContext & { isGuardianRoute?: boolean }) {
+    const isParent = requestingUser?.role === UserRole.PARENT || requestingUser?.role === UserRole.GUARDIAN || Boolean(requestingUser?.isGuardianRoute);
     if (isParent && requestingUser) {
       const childIds = await this.getLinkedStudentIdsForUser(requestingUser.userId);
       if (!childIds.includes(studentId)) {
@@ -825,84 +826,13 @@ export class StudentUseCases {
   }
 
   public async getLinkedStudentIdsForUser(userId: string): Promise<string[]> {
-    let guardian = await this.guardianRepository.findByUserId(userId);
-    const user = await this.userRepository.findById(userId);
-
-    if (!guardian && user) {
-      if (user.phone) {
-        guardian = await this.guardianRepository.findByPhone(user.phone);
-      }
-      if (!guardian) {
-        const allG = await this.guardianRepository.findAll();
-        guardian = allG.find(g => g.emergencyContact === user.phone || g.userId === user.id) || null;
-      }
-      if (guardian) {
-        guardian.setUserId(user.id);
-        await this.guardianRepository.update(guardian);
-      }
-    }
-
-    const linkedStudentIds = new Set<string>();
-
-    if (guardian && guardian.studentIds) {
-      for (const id of guardian.studentIds) {
-        linkedStudentIds.add(id);
-      }
-    }
-
-    if (guardian) {
-      const allStudents = await this.studentRepository.findAll();
-      for (const s of allStudents) {
-        if (s.guardianIds && s.guardianIds.includes(guardian.id)) {
-          if (s.status === StudentStatus.ACTIVE || !s.status) {
-            linkedStudentIds.add(s.id);
-          }
-        }
-      }
-    }
-
-    const validStudentIds: string[] = [];
-    for (const sid of Array.from(linkedStudentIds)) {
-      const st = await this.studentRepository.findById(sid);
-      if (st && (st.status === StudentStatus.ACTIVE || !st.status)) {
-        validStudentIds.push(sid);
-      }
-    }
-
-    if (validStudentIds.length > 0) {
-      return validStudentIds;
-    }
-
-    // Link demo/default parent or staff member with child if unassigned but students exist
-    const allStudents = await this.studentRepository.findAll();
-    if (allStudents.length > 0 && user) {
-      if (user.email === 'parent@smartshule.ac.ke' || user.id === 'usr-parent-01') {
-        const demoStudent = allStudents.find(s => s.id === 'student-001') || allStudents[0];
-        if (guardian) {
-          guardian.linkStudent(demoStudent.id);
-          await this.guardianRepository.update(guardian);
-        } else {
-          guardian = Guardian.create(
-            {
-              userId: user.id,
-              nationalId: '28475921',
-              relationship: GuardianRelationship.MOTHER,
-              emergencyContact: user.phone || '+254777000777',
-              studentIds: [demoStudent.id]
-            },
-            'grd-default-01'
-          );
-          await this.guardianRepository.save(guardian);
-        }
-        if (!demoStudent.guardianIds.includes(guardian.id)) {
-          demoStudent.addGuardian(guardian.id);
-          await this.studentRepository.update(demoStudent);
-        }
-        return [demoStudent.id];
-      }
-    }
-
-    return [];
+    const res = await GuardianIdentityResolver.resolveLinkedStudentIdsForUser({
+      userId,
+      guardianRepository: this.guardianRepository,
+      studentRepository: this.studentRepository,
+      userRepository: this.userRepository
+    });
+    return res.studentIds;
   }
 
   private async hydrateStudentAcademicMetadata(
@@ -1141,8 +1071,8 @@ export class StudentUseCases {
     };
   }
 
-  public async getStudentById(studentId: string, requestingUser?: UserContext) {
-    const isParent = requestingUser?.role === UserRole.PARENT || requestingUser?.role === UserRole.GUARDIAN;
+  public async getStudentById(studentId: string, requestingUser?: UserContext & { isGuardianRoute?: boolean }) {
+    const isParent = requestingUser?.role === UserRole.PARENT || requestingUser?.role === UserRole.GUARDIAN || Boolean(requestingUser?.isGuardianRoute);
     if (isParent && requestingUser) {
       const childIds = await this.getLinkedStudentIdsForUser(requestingUser.userId);
       if (!childIds.includes(studentId)) {
@@ -1611,8 +1541,14 @@ export class StudentUseCases {
   }
 
   public async getGuardianPortalData(userId: string) {
-    const childIds = await this.getLinkedStudentIdsForUser(userId);
-    let guardian = await this.guardianRepository.findByUserId(userId);
+    const res = await GuardianIdentityResolver.resolveLinkedStudentIdsForUser({
+      userId,
+      guardianRepository: this.guardianRepository,
+      studentRepository: this.studentRepository,
+      userRepository: this.userRepository
+    });
+    const childIds = res.studentIds;
+    let guardian = res.guardian;
     const user = await this.userRepository.findById(userId);
 
     if (!guardian) {
@@ -1629,7 +1565,9 @@ export class StudentUseCases {
       await this.guardianRepository.save(guardian);
     }
 
-    const students = await this.studentRepository.findByIds(childIds);
+    const rawStudents = res.students.length > 0 ? res.students : await this.studentRepository.findByIds(childIds);
+    // Exclude withdrawn or soft-deleted learners so parent portal displays only active children
+    const students = rawStudents.filter(s => s.status !== StudentStatus.WITHDRAWN && (s as any).status !== 'WITHDRAWN');
 
     const childrenDetails = await Promise.all(
       students.map(async s => {
@@ -1833,6 +1771,7 @@ export class StudentUseCases {
         user: user ? user.toJSON() : null
       },
       children: childrenDetails,
+      students: childrenDetails,
       feeBanner: feeBanner || {
         deadlineDate: '2026-11-15',
         bannerTitle: 'School Fee Payment Notice',
@@ -2517,7 +2456,10 @@ export class StudentUseCases {
         pendingWorkCleared,
         deletedAt: new Date(),
         deletedByUserId: options?.deletedByUserId,
-        reason: options?.reason || 'Deleted by administrator'
+        reason: options?.reason || 'Deleted by administrator',
+        retentionPolicyYears: 7,
+        retentionExpiresAt: new Date(Date.now() + 7 * 365.25 * 24 * 3600 * 1000),
+        archivedAt: new Date()
       },
       IdGenerator.generate()
     );
@@ -2571,19 +2513,34 @@ export class StudentUseCases {
       }
     }
 
-    // Parents / Guardians: If parent account was exclusive to this student, remove from active tables
+    // Parents / Guardians: Safe suspension without destructive hard-deletion
     for (const eg of enrichedGuardians) {
       const g = guardians.find(orig => orig.id === eg.id);
       if (!g) continue;
 
-      if (eg.willArchiveParentAccount) {
-        await this.guardianRepository.delete(g.id);
-        if (eg.userId) {
-          await this.userRepository.delete(eg.userId);
+      g.unlinkStudent(id);
+      await this.guardianRepository.update(g);
+
+      if (eg.willArchiveParentAccount && eg.userId) {
+        const parentUser = await this.userRepository.findById(eg.userId);
+        if (parentUser) {
+          const isStaff = [
+            UserRole.SUPER_ADMIN,
+            UserRole.ADMIN,
+            UserRole.SCHOOL_ADMIN,
+            UserRole.HEAD_TEACHER,
+            UserRole.TEACHER,
+            UserRole.BURSAR,
+            UserRole.ACCOUNTANT
+          ].includes(parentUser.role);
+
+          if (!isStaff) {
+            // Pure parent account: suspend active access, preserve user record for history & audit
+            parentUser.setStatus(UserStatus.SUSPENDED);
+            await this.userRepository.update(parentUser);
+          }
+          // Dual-role staff retain 100% of their staff account and permissions untouched
         }
-      } else {
-        g.unlinkStudent(id);
-        await this.guardianRepository.update(g);
       }
     }
 
@@ -2746,6 +2703,9 @@ export class StudentUseCases {
               gData.parentUser.id
             );
             await this.userRepository.save(restoredUser);
+          } else if (existingUser.status === UserStatus.SUSPENDED) {
+            existingUser.setStatus(UserStatus.ACTIVE);
+            await this.userRepository.update(existingUser);
           }
         }
 
@@ -2775,5 +2735,292 @@ export class StudentUseCases {
     await this.deletedStudentRepository.delete(deletedStudentId);
 
     return student;
+  }
+
+  public async withdrawStudent(
+    studentId: string,
+    dto: {
+      withdrawalDate: string;
+      reason: string;
+      destinationSchool?: string;
+      notes?: string;
+    },
+    requestingUser?: UserContext
+  ) {
+    if (!requestingUser) {
+      throw new ForbiddenError('Authentication required to process student withdrawal.');
+    }
+
+    const allowedRoles: UserRole[] = [
+      UserRole.SUPER_ADMIN,
+      UserRole.ADMIN,
+      UserRole.SCHOOL_ADMIN,
+      UserRole.HEAD_TEACHER
+    ];
+
+    if (!allowedRoles.includes(requestingUser.role)) {
+      throw new ForbiddenError('Access Denied: Only Administrators and Head Teachers can withdraw students.');
+    }
+
+    if (!dto.withdrawalDate || !dto.reason || dto.reason.trim() === '') {
+      throw new ValidationError('Withdrawal date and reason are required.');
+    }
+
+    const student = await this.studentRepository.findById(studentId);
+    if (!student) {
+      throw new NotFoundError('Student', studentId);
+    }
+
+    // 1. Calculate outstanding balances
+    const feeInvoices = this.feeRepository ? await this.feeRepository.findInvoices({ studentId }) : [];
+    const outstandingFeeBalance = feeInvoices.reduce((sum, inv) => sum + (inv.balance || 0), 0);
+
+    const lunchEnrollments = this.lunchFeeRepository ? await this.lunchFeeRepository.findEnrollments({ studentId }) : [];
+    const outstandingLunchBalance = lunchEnrollments.reduce((sum, enr) => sum + (enr.balance || 0), 0);
+
+    // 2. Withdraw student
+    student.withdraw({
+      withdrawalDate: dto.withdrawalDate,
+      reason: dto.reason.trim(),
+      destinationSchool: dto.destinationSchool?.trim(),
+      staffUserId: requestingUser.userId,
+      notes: dto.notes?.trim()
+    });
+    await this.studentRepository.update(student);
+
+    // 3. Parent / Guardian isolation & multi-role protection
+    const guardians = await this.guardianRepository.findByStudentId(studentId);
+    for (const g of guardians) {
+      const otherStudentIds = (g.studentIds || []).filter(id => id !== studentId);
+      let hasOtherActiveStudents = false;
+      for (const otherId of otherStudentIds) {
+        const otherStud = await this.studentRepository.findById(otherId);
+        if (otherStud && (otherStud.status === StudentStatus.ACTIVE || !otherStud.status)) {
+          hasOtherActiveStudents = true;
+          break;
+        }
+      }
+
+      g.unlinkStudent(studentId);
+      await this.guardianRepository.update(g);
+
+      if (!hasOtherActiveStudents && g.userId) {
+        const parentUser = await this.userRepository.findById(g.userId);
+        if (parentUser) {
+          const isStaff = [
+            UserRole.SUPER_ADMIN,
+            UserRole.ADMIN,
+            UserRole.SCHOOL_ADMIN,
+            UserRole.HEAD_TEACHER,
+            UserRole.TEACHER,
+            UserRole.BURSAR,
+            UserRole.ACCOUNTANT
+          ].includes(parentUser.role);
+
+          if (!isStaff) {
+            parentUser.setStatus(UserStatus.SUSPENDED);
+            await this.userRepository.update(parentUser);
+          }
+        }
+      }
+    }
+
+    return {
+      message: `Learner ${student.fullName} has been withdrawn successfully.`,
+      student: student.toJSON(),
+      outstandingBalances: {
+        feeBalance: outstandingFeeBalance,
+        lunchBalance: outstandingLunchBalance,
+        totalOutstanding: Math.round((outstandingFeeBalance + outstandingLunchBalance) * 100) / 100
+      }
+    };
+  }
+
+  public async suspendStudent(
+    studentId: string,
+    reason?: string,
+    requestingUser?: UserContext
+  ) {
+    if (!requestingUser) {
+      throw new ForbiddenError('Authentication required to suspend student.');
+    }
+
+    const allowedRoles: UserRole[] = [
+      UserRole.SUPER_ADMIN,
+      UserRole.ADMIN,
+      UserRole.SCHOOL_ADMIN,
+      UserRole.HEAD_TEACHER
+    ];
+
+    if (!allowedRoles.includes(requestingUser.role)) {
+      throw new ForbiddenError('Access Denied: Only Administrators and Head Teachers can suspend students.');
+    }
+
+    const student = await this.studentRepository.findById(studentId);
+    if (!student) {
+      throw new NotFoundError('Student', studentId);
+    }
+
+    student.suspend(reason);
+    await this.studentRepository.update(student);
+
+    return {
+      message: `Learner ${student.fullName} has been suspended.`,
+      student: student.toJSON()
+    };
+  }
+
+  public async reactivateStudent(
+    studentId: string,
+    requestingUser?: UserContext
+  ) {
+    if (!requestingUser) {
+      throw new ForbiddenError('Authentication required to reactivate student.');
+    }
+
+    const allowedRoles: UserRole[] = [
+      UserRole.SUPER_ADMIN,
+      UserRole.ADMIN,
+      UserRole.SCHOOL_ADMIN,
+      UserRole.HEAD_TEACHER
+    ];
+
+    if (!allowedRoles.includes(requestingUser.role)) {
+      throw new ForbiddenError('Access Denied: Only Administrators and Head Teachers can reactivate students.');
+    }
+
+    const student = await this.studentRepository.findById(studentId);
+    if (!student) {
+      throw new NotFoundError('Student', studentId);
+    }
+
+    student.reactivate();
+    await this.studentRepository.update(student);
+
+    // Reactivate parent account if suspended
+    const guardians = await this.guardianRepository.findByStudentId(studentId);
+    for (const g of guardians) {
+      if (g.userId) {
+        const parentUser = await this.userRepository.findById(g.userId);
+        if (parentUser && parentUser.status === UserStatus.SUSPENDED) {
+          parentUser.setStatus(UserStatus.ACTIVE);
+          await this.userRepository.update(parentUser);
+        }
+      }
+    }
+
+    return {
+      message: `Learner ${student.fullName} has been reactivated successfully.`,
+      student: student.toJSON()
+    };
+  }
+
+  public async permanentDeleteStudent(
+    archivedId: string,
+    requestingUser?: UserContext
+  ) {
+    if (!requestingUser) {
+      throw new ForbiddenError('Authentication required for permanent deletion.');
+    }
+
+    const elevatedRoles: UserRole[] = [
+      UserRole.SUPER_ADMIN,
+      UserRole.ADMIN
+    ];
+
+    if (!elevatedRoles.includes(requestingUser.role)) {
+      throw new ForbiddenError('Access Denied: Permanent deletion requires elevated Administrator authority.');
+    }
+
+    if (!this.deletedStudentRepository) {
+      throw new ValidationError('Deleted students repository is not available');
+    }
+
+    const archived = await this.deletedStudentRepository.findById(archivedId);
+    if (!archived) {
+      throw new NotFoundError('DeletedStudent', archivedId);
+    }
+
+    // Retention check
+    const retentionExpiry = archived.retentionExpiresAt
+      ? new Date(archived.retentionExpiresAt)
+      : new Date(new Date(archived.deletedAt).getTime() + (archived.retentionPolicyYears || 7) * 365.25 * 24 * 3600 * 1000);
+
+    const now = new Date();
+    if (now < retentionExpiry) {
+      throw new ValidationError(
+        `Permanent deletion blocked: Learner records cannot be purged before statutory retention period expires (${retentionExpiry.toISOString().split('T')[0]}). Premature permanent deletion is prohibited.`
+      );
+    }
+
+    await this.deletedStudentRepository.delete(archivedId);
+
+    return {
+      message: `Archived record for '${archived.fullName}' (Adm: ${archived.admissionNumber}) permanently purged in compliance with retention policy.`,
+      purgedId: archivedId
+    };
+  }
+
+  public async getArchiveCompletenessReport(archivedId: string) {
+    if (!this.deletedStudentRepository) {
+      throw new ValidationError('Deleted students repository is not available');
+    }
+
+    const archived = await this.deletedStudentRepository.findById(archivedId);
+    if (!archived) {
+      throw new NotFoundError('DeletedStudent', archivedId);
+    }
+
+    const ld = archived.linkedData || {};
+    const domainChecks = [
+      { domain: 'profile', name: 'Learner Profile & Bio', present: Boolean(archived.studentData), count: archived.studentData ? 1 : 0 },
+      { domain: 'invoices', name: 'General Fee Invoices', present: Array.isArray(ld.invoices), count: Array.isArray(ld.invoices) ? ld.invoices.length : 0 },
+      { domain: 'payments', name: 'General Fee Payments', present: Array.isArray(ld.payments), count: Array.isArray(ld.payments) ? ld.payments.length : 0 },
+      { domain: 'lunchEnrollments', name: 'Lunch Enrollments', present: Array.isArray(ld.lunchEnrollments), count: Array.isArray(ld.lunchEnrollments) ? ld.lunchEnrollments.length : 0 },
+      { domain: 'lunchPayments', name: 'Lunch Daily Payments', present: Array.isArray(ld.lunchPayments), count: Array.isArray(ld.lunchPayments) ? ld.lunchPayments.length : 0 },
+      { domain: 'formativeAssessments', name: 'CBC Formative Assessments', present: Array.isArray(ld.formativeAssessments), count: Array.isArray(ld.formativeAssessments) ? ld.formativeAssessments.length : 0 },
+      { domain: 'summativeAssessments', name: 'CBC Summative Assessments', present: Array.isArray(ld.summativeAssessments), count: Array.isArray(ld.summativeAssessments) ? ld.summativeAssessments.length : 0 },
+      { domain: 'reportCards', name: 'Academic Report Cards', present: Array.isArray(ld.reportCards), count: Array.isArray(ld.reportCards) ? ld.reportCards.length : 0 },
+      { domain: 'attendanceRecords', name: 'Attendance Registers & Entries', present: Array.isArray(ld.attendanceRecords), count: Array.isArray(ld.attendanceRecords) ? ld.attendanceRecords.length : 0 },
+      { domain: 'complaints', name: 'Incident & Complaints Log', present: Array.isArray(ld.complaints), count: Array.isArray(ld.complaints) ? ld.complaints.length : 0 },
+      { domain: 'ediaryEntries', name: 'Communication & E-Diary Entries', present: Array.isArray(ld.ediaryEntries), count: Array.isArray(ld.ediaryEntries) ? ld.ediaryEntries.length : 0 },
+      { domain: 'progressPhotos', name: 'Progress Photos & Media', present: Array.isArray(ld.progressPhotos), count: Array.isArray(ld.progressPhotos) ? ld.progressPhotos.length : 0 }
+    ];
+
+    const totalDomains = domainChecks.length;
+    const completenessScore = Math.round((domainChecks.filter(d => d.present).length / totalDomains) * 100);
+
+    const domains = {
+      profile: Boolean(archived.studentData),
+      invoices: Array.isArray(ld.invoices) ? ld.invoices.length : 0,
+      payments: Array.isArray(ld.payments) ? ld.payments.length : 0,
+      lunchEnrollments: Array.isArray(ld.lunchEnrollments) ? ld.lunchEnrollments.length : 0,
+      lunchPayments: Array.isArray(ld.lunchPayments) ? ld.lunchPayments.length : 0,
+      formativeAssessments: Array.isArray(ld.formativeAssessments) ? ld.formativeAssessments.length : 0,
+      summativeAssessments: Array.isArray(ld.summativeAssessments) ? ld.summativeAssessments.length : 0,
+      reportCards: Array.isArray(ld.reportCards) ? ld.reportCards.length : 0,
+      attendanceRecords: Array.isArray(ld.attendanceRecords) ? ld.attendanceRecords.length : 0,
+      complaints: Array.isArray(ld.complaints) ? ld.complaints.length : 0,
+      ediaryEntries: Array.isArray(ld.ediaryEntries) ? ld.ediaryEntries.length : 0,
+      progressPhotos: Array.isArray(ld.progressPhotos) ? ld.progressPhotos.length : 0,
+      guardians: Array.isArray(ld.guardians) ? ld.guardians.length : 0
+    };
+
+    const isComplete = domains.profile && Boolean(archived.admissionNumber);
+
+    return {
+      archivedId: archived.id,
+      studentId: archived.studentId,
+      fullName: archived.fullName,
+      admissionNumber: archived.admissionNumber,
+      isComplete,
+      totalDomains,
+      domainChecks,
+      completenessScore,
+      archivedAt: archived.archivedAt,
+      retentionPolicyYears: archived.retentionPolicyYears,
+      retentionExpiresAt: archived.retentionExpiresAt,
+      domains
+    };
   }
 }

@@ -399,6 +399,9 @@ export interface DeletedStudentRecord {
   deletedByUserId?: string;
   deletedBy?: string;
   reason?: string;
+  retentionPolicyYears?: number;
+  retentionExpiresAt?: string;
+  archivedAt?: string;
 }
 
 export interface TeacherEmergencyContact {
@@ -951,22 +954,78 @@ export interface LessonPlan {
   createdAt?: string;
 }
 
+export type RecordOfWorkStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'RETURNED';
+
+export type LearnerComprehension = 'EXCELLENT' | 'GOOD' | 'AVERAGE' | 'BELOW_AVERAGE' | 'POOR';
+
+export interface RecordOfWorkReflection {
+  comprehensionLevel?: LearnerComprehension;
+  whatWentWell?: string;
+  challengesFaced?: string;
+  remedialPlan?: string;
+  nextSteps?: string;
+  generalRemarks?: string;
+  homeworkGiven?: string;
+  absentLearnersCount?: number;
+  totalLearnersPresent?: number;
+}
+
 export interface RecordOfWork {
   id: string;
+  schoolId?: string;
   teacherId?: string;
+  teacherName?: string;
+  academicYear?: string;
+  academicYearId?: string;
   term?: string;
   termId?: string;
-  academicYearId?: string;
+  classRoomId?: string;
+  className?: string;
+  streamId?: string;
+  streamName?: string;
+  learningAreaId?: string;
+  subjectName?: string;
+  strandId?: string;
+  strand?: string;
+  subStrandId?: string;
+  subStrand?: string;
   week: number;
+  weekNumber?: number;
   day: string;
   period?: string;
+  lessonPeriod?: string;
+  lessonDate?: string;
+  lessonTopic?: string;
+  learningObjectives?: string;
+  learningActivities?: string;
+  resources?: string;
   subjectAndGrade: string;
   strandAndWorkCovered: string;
   reference: string;
+  status: RecordOfWorkStatus;
   reflection?: string;
+  reflectionData?: RecordOfWorkReflection;
   comments?: string;
+  submittedAt?: string;
+  reviewedByUserId?: string;
+  reviewedByName?: string;
+  reviewedAt?: string;
+  reviewRemarks?: string;
+  returnReason?: string;
+  trackerId?: string;
+  isOfficialCoverage?: boolean;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface RecordOfWorkSummary {
+  totalLessons: number;
+  draftsCount: number;
+  submittedCount: number;
+  approvedCount: number;
+  returnedCount: number;
+  reflectionsCount: number;
+  officialCoveragePercentage: number;
 }
 
 export interface PeriodDefinition {
@@ -1597,6 +1656,9 @@ export interface EDiaryEntry {
   teacherUserId: string;
   teacherName?: string;
   date: string;
+  title?: string;
+  homework?: string;
+  status?: 'DRAFT' | 'PUBLISHED';
   homeworkTasks: Array<{
     learningArea: string;
     description: string;
@@ -1604,9 +1666,22 @@ export interface EDiaryEntry {
   }>;
   teacherRemarks?: string;
   tomorrowRequirements?: string[];
+  applicableStudents?: Array<{
+    id: string;
+    name: string;
+    admissionNumber: string;
+    grade: string;
+    streamId?: string;
+  }>;
+  studentName?: string;
+  admissionNumber?: string;
+  grade?: string;
+  isAcknowledgedByParent?: boolean;
+  parentAcknowledgement?: any;
   parentAcknowledgements?: Array<{
     guardianUserId: string;
     guardianName: string;
+    studentId?: string;
     signedAt: string;
     parentNote?: string;
   }>;
@@ -1748,6 +1823,11 @@ export interface LunchPaymentItem {
   transactionReference: string;
   paymentDate: string;
   notes?: string;
+  isReversed?: boolean;
+  reversedAt?: string;
+  reversedByUserId?: string;
+  reversalReason?: string;
+  idempotencyKey?: string;
   createdAt: string;
 }
 
@@ -1764,6 +1844,8 @@ export interface LunchEnrollmentItem {
   academicYearId?: string;
   termId?: string;
   planName: string;
+  paymentFrequency?: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'TERMLY';
+  dailyRate?: number;
   amount: number;
   amountPaid: number;
   balance: number;
@@ -1776,6 +1858,60 @@ export interface LunchEnrollmentItem {
   payments?: LunchPaymentItem[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface LunchWeeklyReportDay {
+  date: string;
+  dayOfWeek: string;
+  totalCollected: number;
+  learnersPaidCount: number;
+  transactionCount: number;
+  methods: Record<string, number>;
+  transactions: any[];
+}
+
+export interface LunchWeeklyCollectionReport {
+  startDate: string;
+  endDate: string;
+  totalLearnersEnrolled: number;
+  uniqueLearnersPaid: number;
+  totalCollected: number;
+  unpaidLearnersCount: number;
+  byPaymentMethod: Record<string, number>;
+  dailyBreakdown: LunchWeeklyReportDay[];
+}
+
+export interface LunchMonthlyCollectionReport {
+  year: number;
+  month: number;
+  monthName: string;
+  startDate: string;
+  endDate: string;
+  totalEnrolled: number;
+  uniqueLearnersPaid: number;
+  unpaidLearnersCount: number;
+  totalCollected: number;
+  totalReversed: number;
+  netCollected: number;
+  byPaymentMethod: Record<string, number>;
+  dailyTotals: Record<string, number>;
+  weeklyBreakdown: Array<{
+    weekLabel: string;
+    startDate: string;
+    endDate: string;
+    totalCollected: number;
+    transactionCount: number;
+  }>;
+}
+
+export interface LunchDashboardMetrics {
+  todayCollected: number;
+  todayLearnersPaid: number;
+  thisWeekCollected: number;
+  thisMonthCollected: number;
+  totalEnrolled: number;
+  totalOutstandingBalance: number;
+  frequencyBreakdown: Record<string, number>;
 }
 
 export interface LunchSummaryStats {

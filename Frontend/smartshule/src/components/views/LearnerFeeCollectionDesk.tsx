@@ -252,6 +252,50 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
     };
   }, [feePositionData, selectedStudent]);
 
+  // Mandatory Allocation Preview for Cashier Desk (Arrears -> Current Fees -> Overpayment)
+  const deskAllocation = useMemo(() => {
+    const numAmount = Number(paymentAmount) || 0;
+    const arrearsOutstanding = Math.max(0, financials.previousBalance);
+    const currentFeesOutstanding = Math.max(0, financials.feesThisTerm);
+
+    const arrearsAllocated = Math.min(numAmount, arrearsOutstanding);
+    const remAfterArrears = Math.max(0, Math.round((numAmount - arrearsAllocated) * 100) / 100);
+    const currentFeesAllocated = Math.min(remAfterArrears, currentFeesOutstanding);
+    const remAfterCurrent = Math.max(0, Math.round((remAfterArrears - currentFeesAllocated) * 100) / 100);
+
+    const remArrears = Math.max(0, Math.round((arrearsOutstanding - arrearsAllocated) * 100) / 100);
+    const remCurrent = Math.max(0, Math.round((currentFeesOutstanding - currentFeesAllocated) * 100) / 100);
+
+    const isEligibleForOverpayment = remArrears === 0 && remCurrent === 0;
+    const overpaymentCredit = isEligibleForOverpayment ? remAfterCurrent : 0;
+
+    let explanation = '';
+    if (numAmount <= 0) {
+      explanation = 'Enter payment amount to view allocation breakdown.';
+    } else if (isEligibleForOverpayment && overpaymentCredit > 0) {
+      explanation = `All obligations cleared (Arrears: KES ${arrearsAllocated.toLocaleString()}, Current fees: KES ${currentFeesAllocated.toLocaleString()}). Surplus of KES ${overpaymentCredit.toLocaleString()} credited to advance account.`;
+    } else if (isEligibleForOverpayment && overpaymentCredit === 0) {
+      explanation = `Payment of KES ${numAmount.toLocaleString()} exactly settles all obligations. Balance is KES 0.00.`;
+    } else if (remArrears > 0) {
+      explanation = `No overpayment credit eligible: KES ${remArrears.toLocaleString()} in previous arrears remains unpaid. Funds applied to arrears first.`;
+    } else if (remCurrent > 0) {
+      explanation = `No overpayment credit eligible: KES ${remCurrent.toLocaleString()} in current fees remains unpaid. Arrears cleared, current fees partially paid.`;
+    }
+
+    return {
+      numAmount,
+      arrearsOutstanding,
+      currentFeesOutstanding,
+      arrearsAllocated,
+      currentFeesAllocated,
+      remArrears,
+      remCurrent,
+      isEligibleForOverpayment,
+      overpaymentCredit,
+      explanation
+    };
+  }, [paymentAmount, financials]);
+
   // Handle student selection from search
   const handleSelectStudent = (st: Student) => {
     setSelectedStudent(st);
@@ -993,6 +1037,84 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
                       Academic Period: <strong>2026 · {selectedTerm.toUpperCase()}</strong>
                     </div>
                   </div>
+                </div>
+
+                {/* Authoritative Payment Allocation Breakdown Card */}
+                <div className="bg-surface-container-high/60 rounded-xl p-3 sm:p-3.5 border border-outline-variant/30 space-y-2.5">
+                  <div className="flex items-center justify-between pb-1.5 border-b border-outline-variant/20">
+                    <span className="text-xs font-bold text-on-surface flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[16px] text-primary">account_balance_wallet</span>
+                      Mandatory Payment Allocation Preview
+                    </span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      deskAllocation.isEligibleForOverpayment && deskAllocation.overpaymentCredit > 0
+                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                        : 'bg-surface-container text-on-surface-variant'
+                    }`}>
+                      {deskAllocation.isEligibleForOverpayment && deskAllocation.overpaymentCredit > 0
+                        ? 'Overpayment Credit Eligible'
+                        : 'Obligations Active'}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                    <div className="p-2.5 rounded-lg bg-surface border border-outline-variant/20">
+                      <div className="text-[10px] uppercase font-bold text-on-surface-variant mb-0.5">1. Previous Arrears</div>
+                      <div className="text-xs font-bold text-on-surface">
+                        Due: <span className="font-mono text-red-600">KES {deskAllocation.arrearsOutstanding.toLocaleString()}</span>
+                      </div>
+                      <div className="text-xs font-bold text-emerald-700 mt-1">
+                        Paying: <span className="font-mono">KES {deskAllocation.arrearsAllocated.toLocaleString()}</span>
+                      </div>
+                      <div className="text-[10px] text-on-surface-variant mt-0.5">
+                        Rem: KES {deskAllocation.remArrears.toLocaleString()}
+                      </div>
+                    </div>
+
+                    <div className="p-2.5 rounded-lg bg-surface border border-outline-variant/20">
+                      <div className="text-[10px] uppercase font-bold text-on-surface-variant mb-0.5">2. Current Term Fees</div>
+                      <div className="text-xs font-bold text-on-surface">
+                        Due: <span className="font-mono text-primary">KES {deskAllocation.currentFeesOutstanding.toLocaleString()}</span>
+                      </div>
+                      <div className="text-xs font-bold text-emerald-700 mt-1">
+                        Paying: <span className="font-mono">KES {deskAllocation.currentFeesAllocated.toLocaleString()}</span>
+                      </div>
+                      <div className="text-[10px] text-on-surface-variant mt-0.5">
+                        Rem: KES {deskAllocation.remCurrent.toLocaleString()}
+                      </div>
+                    </div>
+
+                    <div className={`p-2.5 rounded-lg border ${
+                      deskAllocation.overpaymentCredit > 0
+                        ? 'bg-emerald-50 border-emerald-300 text-emerald-950'
+                        : 'bg-surface border-outline-variant/20 text-on-surface'
+                    }`}>
+                      <div className="text-[10px] uppercase font-bold text-on-surface-variant mb-0.5">3. Overpayment Credit</div>
+                      <div className={`text-base font-extrabold font-mono ${
+                        deskAllocation.overpaymentCredit > 0 ? 'text-emerald-700' : 'text-on-surface-variant/40'
+                      }`}>
+                        KES {deskAllocation.overpaymentCredit.toLocaleString()}
+                      </div>
+                      <div className="text-[10px] text-on-surface-variant mt-1">
+                        {deskAllocation.isEligibleForOverpayment ? 'Recorded to advance credit' : 'Requires zero balance'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {deskAllocation.numAmount > 0 && (
+                    <div className={`p-2 rounded-lg text-xs flex items-start gap-1.5 ${
+                      deskAllocation.isEligibleForOverpayment && deskAllocation.overpaymentCredit > 0
+                        ? 'bg-emerald-50 text-emerald-900 border border-emerald-200'
+                        : deskAllocation.isEligibleForOverpayment
+                        ? 'bg-primary/5 text-primary border border-primary/20'
+                        : 'bg-amber-50 text-amber-900 border border-amber-200'
+                    }`}>
+                      <span className="material-symbols-outlined text-[15px] shrink-0 mt-0.5">
+                        {deskAllocation.isEligibleForOverpayment ? 'check_circle' : 'info'}
+                      </span>
+                      <span className="text-[11px] leading-snug">{deskAllocation.explanation}</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Conditional Reference Fields */}

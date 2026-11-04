@@ -25,6 +25,7 @@ import {
   SchemeEntry,
   LessonPlan,
   RecordOfWork,
+  RecordOfWorkSummary,
   TimetableData,
   AttendanceRegister,
   FeeStructure,
@@ -386,7 +387,7 @@ const coreApiService = {
     return apiFetch<ApiResponse<AuthUser>>('/auth/profile');
   },
 
-  changePassword: async (data: { currentPassword: string; newPassword: string }): Promise<ApiResponse<any>> => {
+  changePassword: async (data: { currentPassword?: string; newPassword: string; confirmPassword?: string }): Promise<ApiResponse<any>> => {
     return apiFetch<ApiResponse<any>>('/auth/change-password', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -862,6 +863,44 @@ const coreApiService = {
     return apiFetch<ApiResponse<any>>(`/students/deleted/${id}/restore`, {
       method: 'POST',
     });
+  },
+
+  withdrawStudent: async (
+    id: string,
+    data: {
+      withdrawalDate?: string;
+      reason?: string;
+      destinationSchool?: string;
+      notes?: string;
+    }
+  ): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/students/${id}/withdraw`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  suspendStudent: async (id: string, reason?: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/students/${id}/suspend`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  },
+
+  reactivateStudent: async (id: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/students/${id}/reactivate`, {
+      method: 'POST',
+    });
+  },
+
+  permanentDeleteStudent: async (id: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/students/deleted/${id}/permanent-delete`, {
+      method: 'POST',
+    });
+  },
+
+  getArchiveCompletenessReport: async (id: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/students/deleted/${id}/completeness`);
   },
 
   promoteStudent: async (
@@ -1416,9 +1455,26 @@ const coreApiService = {
     });
   },
 
-  // Records of Work
-  getRecordsOfWork: async (): Promise<ApiResponse<RecordOfWork[]>> => {
-    return apiFetch<ApiResponse<RecordOfWork[]>>('/curriculum/records-of-work');
+  // Records of Work (Teacher Diary)
+  getRecordsOfWork: async (params?: Record<string, any>): Promise<ApiResponse<RecordOfWork[]>> => {
+    let url = '/curriculum/records-of-work';
+    if (params) {
+      const searchParams = new URLSearchParams();
+      Object.entries(params).forEach(([key, val]) => {
+        if (val !== undefined && val !== null && val !== '' && val !== 'ALL') {
+          searchParams.append(key, String(val));
+        }
+      });
+      const queryStr = searchParams.toString();
+      if (queryStr) {
+        url += `?${queryStr}`;
+      }
+    }
+    return apiFetch<ApiResponse<RecordOfWork[]>>(url);
+  },
+
+  getRecordOfWorkById: async (id: string): Promise<ApiResponse<RecordOfWork>> => {
+    return apiFetch<ApiResponse<RecordOfWork>>(`/curriculum/records-of-work/${id}`);
   },
 
   createRecordOfWork: async (data: Partial<RecordOfWork>): Promise<ApiResponse<RecordOfWork>> => {
@@ -1435,10 +1491,50 @@ const coreApiService = {
     });
   },
 
+  submitRecordOfWork: async (id: string): Promise<ApiResponse<RecordOfWork>> => {
+    return apiFetch<ApiResponse<RecordOfWork>>(`/curriculum/records-of-work/${id}/submit`, {
+      method: 'POST',
+    });
+  },
+
+  approveRecordOfWork: async (id: string, data?: { remarks?: string }): Promise<ApiResponse<RecordOfWork>> => {
+    return apiFetch<ApiResponse<RecordOfWork>>(`/curriculum/records-of-work/${id}/approve`, {
+      method: 'POST',
+      body: JSON.stringify(data || {}),
+    });
+  },
+
+  returnRecordOfWork: async (id: string, data: { reason: string }): Promise<ApiResponse<RecordOfWork>> => {
+    return apiFetch<ApiResponse<RecordOfWork>>(`/curriculum/records-of-work/${id}/return`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  overrideRecordOfWork: async (id: string, data: { reason: string; status?: string }): Promise<ApiResponse<RecordOfWork>> => {
+    return apiFetch<ApiResponse<RecordOfWork>>(`/curriculum/records-of-work/${id}/override`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
   deleteRecordOfWork: async (id: string): Promise<ApiResponse<any>> => {
     return apiFetch<ApiResponse<any>>(`/curriculum/records-of-work/${id}`, {
       method: 'DELETE',
     });
+  },
+
+  getRecordOfWorkSummary: async (params?: { schoolId?: string; term?: string; academicYear?: string }): Promise<ApiResponse<RecordOfWorkSummary>> => {
+    let url = '/curriculum/records-of-work/summary';
+    if (params) {
+      const searchParams = new URLSearchParams();
+      Object.entries(params).forEach(([key, val]) => {
+        if (val) searchParams.append(key, String(val));
+      });
+      const queryStr = searchParams.toString();
+      if (queryStr) url += `?${queryStr}`;
+    }
+    return apiFetch<ApiResponse<RecordOfWorkSummary>>(url);
   },
 
   // 7. Timetable Endpoints
@@ -1694,9 +1790,23 @@ const coreApiService = {
     });
   },
 
+  previewPaymentAllocation: async (data: {
+    studentId: string;
+    amount: number;
+    schoolId?: string;
+    termId?: string;
+    academicYearId?: string;
+  }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/finance/payments/preview-allocation', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
   recordPayment: async (data: {
     schoolId: string;
-    invoiceId: string;
+    invoiceId?: string;
+    studentId?: string;
     amount: number;
     paymentMethod: 'MPESA' | 'BANK_TRANSFER' | 'BANK_DEPOSIT' | 'CHEQUE' | 'CASH' | 'CARD' | 'KCB_BUNI';
     transactionReference?: string;
@@ -2106,6 +2216,27 @@ const coreApiService = {
 
 
   // 10. Digital eDiary Endpoints
+  getParentEDiaryFeed: async (params?: {
+    studentId?: string;
+    academicYearId?: string;
+    termId?: string;
+    startDate?: string;
+    endDate?: string;
+    date?: string;
+    limit?: number;
+  }): Promise<ApiResponse<EDiaryEntry[]>> => {
+    const q = new URLSearchParams();
+    if (params?.studentId) q.append('studentId', params.studentId);
+    if (params?.academicYearId) q.append('academicYearId', params.academicYearId);
+    if (params?.termId) q.append('termId', params.termId);
+    if (params?.startDate) q.append('startDate', params.startDate);
+    if (params?.endDate) q.append('endDate', params.endDate);
+    if (params?.date) q.append('date', params.date);
+    if (params?.limit) q.append('limit', String(params.limit));
+    const qs = q.toString() ? `?${q.toString()}` : '';
+    return apiFetch<ApiResponse<EDiaryEntry[]>>(`/ediary/parent-feed${qs}`);
+  },
+
   getStudentEDiary: async (studentId: string): Promise<ApiResponse<EDiaryEntry[]>> => {
     return apiFetch<ApiResponse<EDiaryEntry[]>>(`/ediary/student/${studentId}`);
   },
@@ -2116,11 +2247,13 @@ const coreApiService = {
   },
 
   createEDiaryEntry: async (data: {
+    id?: string;
     schoolId: string;
     classRoomId: string;
     streamId: string;
     studentId?: string;
     date: string;
+    title?: string;
     homeworkTasks: Array<{
       learningArea: string;
       description: string;
@@ -2128,6 +2261,7 @@ const coreApiService = {
     }>;
     teacherRemarks?: string;
     tomorrowRequirements?: string[];
+    status?: 'DRAFT' | 'PUBLISHED';
   }): Promise<ApiResponse<EDiaryEntry>> => {
     return apiFetch<ApiResponse<EDiaryEntry>>('/ediary', {
       method: 'POST',
@@ -2135,7 +2269,7 @@ const coreApiService = {
     });
   },
 
-  acknowledgeEDiary: async (entryId: string, data?: { guardianName?: string; parentNote?: string }): Promise<ApiResponse<EDiaryEntry>> => {
+  acknowledgeEDiary: async (entryId: string, data?: { studentId?: string; guardianName?: string; parentNote?: string }): Promise<ApiResponse<EDiaryEntry>> => {
     return apiFetch<ApiResponse<EDiaryEntry>>(`/ediary/${entryId}/acknowledge`, {
       method: 'POST',
       body: JSON.stringify(data || {}),
@@ -2711,6 +2845,61 @@ const coreApiService = {
       method: 'POST',
       body: JSON.stringify(data),
     });
+  },
+
+  recordDailyLunchPayment: async (data: {
+    studentId: string;
+    schoolId?: string;
+    academicYearId?: string;
+    termId?: string;
+    amount: number;
+    paymentDate: string;
+    paymentMethod: string;
+    transactionReference?: string;
+    idempotencyKey?: string;
+    notes?: string;
+    recordedByStaffName?: string;
+  }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/lunch/payments/daily', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  reverseLunchPayment: async (
+    paymentId: string,
+    data: { reason: string }
+  ): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/lunch/payments/${paymentId}/reverse`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  getWeeklyLunchReport: async (params?: {
+    startDate?: string;
+    endDate?: string;
+  }): Promise<ApiResponse<LunchWeeklyCollectionReport>> => {
+    const query = new URLSearchParams();
+    if (params?.startDate) query.append('startDate', params.startDate);
+    if (params?.endDate) query.append('endDate', params.endDate);
+    const qs = query.toString() ? `?${query.toString()}` : '';
+    return apiFetch<ApiResponse<LunchWeeklyCollectionReport>>(`/lunch/reports/weekly${qs}`);
+  },
+
+  getMonthlyLunchReport: async (params?: {
+    year?: number;
+    month?: number;
+  }): Promise<ApiResponse<LunchMonthlyCollectionReport>> => {
+    const query = new URLSearchParams();
+    if (params?.year) query.append('year', String(params.year));
+    if (params?.month) query.append('month', String(params.month));
+    const qs = query.toString() ? `?${query.toString()}` : '';
+    return apiFetch<ApiResponse<LunchMonthlyCollectionReport>>(`/lunch/reports/monthly${qs}`);
+  },
+
+  getLunchDashboardMetrics: async (): Promise<ApiResponse<LunchDashboardMetrics>> => {
+    return apiFetch<ApiResponse<LunchDashboardMetrics>>('/lunch/dashboard-metrics');
   },
 
   getLunchSummary: async (params?: {

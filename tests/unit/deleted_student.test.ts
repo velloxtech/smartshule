@@ -1,6 +1,7 @@
 import { AppContainer } from '../../src/infrastructure/container';
 import { setupTestFixtures } from '../helpers/testFixtures';
 import { Student, StudentGender, CBCGradeLevel, StudentStatus } from '../../src/core/domain/user/Student';
+import { UserStatus } from '../../src/core/domain/user/User';
 import { DeletedStudent } from '../../src/core/domain/user/DeletedStudent';
 
 describe('Deleted Student & Archive Table Unit & Flow Tests', () => {
@@ -143,13 +144,13 @@ describe('Deleted Student & Archive Table Unit & Flow Tests', () => {
       const remainingPayments = await container.feeRepository.findPayments({ schoolId: 'school-001', studentId });
       expect(remainingPayments).toHaveLength(0);
 
-      // 5. Verify exclusive parents/guardians are removed from active tables so no orphaned accounts remain
+      // 5. Verify exclusive parents/guardians are unlinked and suspended without destructive deletion
       const remainingGuardians = await container.guardianRepository.findByStudentId(studentId);
       expect(remainingGuardians).toHaveLength(0);
       const remainingGuardianById = await container.guardianRepository.findById(initialGuardians[0].id);
-      expect(remainingGuardianById).toBeNull();
+      expect(remainingGuardianById!.studentIds).toHaveLength(0);
       const remainingUserById = await container.userRepository.findById(initialGuardians[0].userId);
-      expect(remainingUserById).toBeNull();
+      expect(remainingUserById!.status).toBe(UserStatus.SUSPENDED);
     });
 
     it('retains parent account if parent has another active student enrolled in the school', async () => {
@@ -221,10 +222,10 @@ describe('Deleted Student & Archive Table Unit & Flow Tests', () => {
       });
       const archiveId = deleteResult.deletedStudent.id;
 
-      // Verify student and exclusive guardian are not in active tables
+      // Verify student is removed and exclusive parent account is safely suspended
       expect(await container.studentRepository.findById('student-001')).toBeNull();
-      expect(await container.guardianRepository.findById('guardian-001')).toBeNull();
-      expect(await container.userRepository.findById('usr-guardian-01')).toBeNull();
+      const suspendedUser = await container.userRepository.findById('usr-guardian-01');
+      expect(suspendedUser!.status).toBe(UserStatus.SUSPENDED);
 
       // Restore
       const restored = await container.studentUseCases.restoreStudent(archiveId);

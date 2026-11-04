@@ -237,11 +237,13 @@ describe('Parent Forwarded Payment Verification and Arrears Persistence Tests', 
       expect(verified.payment.status).toBe(PaymentStatus.COMPLETED);
       expect(verified.payment.receiptNumber).toMatch(/^REC-2026-\d+/);
 
-      // Current term invoice balance should be 14,000 - 10,000 = 4,000
+      // Under mandatory allocation order, arrears (6,000) is settled first, and remaining 4,000 settles current term
       const updatedInv = await feeRepo.findInvoiceById(currentTermInvoice.id);
-      expect(updatedInv?.amountPaid).toBe(10000);
-      expect(updatedInv?.balance).toBe(4000);
+      expect(updatedInv?.amountPaid).toBe(4000);
+      expect(updatedInv?.balance).toBe(10000);
       expect(updatedInv?.status).toBe(InvoiceStatus.PARTIALLY_PAID);
+      const settledArr = await feeRepo.findInvoiceById(arrearsInvoice.id);
+      expect(settledArr?.balance).toBe(0);
 
       // Total balance must include 6,000 arrears + 4,000 current = 10,000
       expect(verified.remainingBalance).toBe(10000);
@@ -296,19 +298,21 @@ describe('Parent Forwarded Payment Verification and Arrears Persistence Tests', 
         recordedByUserId: 'usr-bursar-01',
       });
 
-      // Current term invoice is fully paid
-      expect(paymentResult.updatedInvoice.balance).toBe(0);
-      expect(paymentResult.updatedInvoice.status).toBe(InvoiceStatus.PAID);
+      // Under mandatory allocation order, arrears (6,000) is settled first, and remaining 8,000 settles current term invoice
+      expect(paymentResult.updatedInvoice.balance).toBe(6000);
+      expect(paymentResult.updatedInvoice.status).toBe(InvoiceStatus.PARTIALLY_PAID);
+      const settledArr2 = await feeRepo.findInvoiceById(arrearsInvoice.id);
+      expect(settledArr2?.balance).toBe(0);
 
-      // BUT the student's true total balance is STILL 6,000 (arrears invoice is unpaid)!
+      // Student's total balance is 6,000
       expect(paymentResult.studentTotalBalance).toBe(6000);
-      expect(paymentResult.hasArrears).toBe(true);
+      expect(paymentResult.hasArrears).toBe(false); // Arrears settled first under mandatory allocation order
 
       // Check Fee Statement: arrears must be present and total balance must be 6,000
       const statement = await feeUseCases.getStudentFeeStatement(testStudent.id);
 
       expect(statement.summary.currentBalance).toBe(6000);
-      expect(statement.summary.arrearsBalance).toBe(6000);
+      expect(statement.summary.arrearsBalance).toBe(0); // Arrears settled first under mandatory allocation order
       expect(statement.summary.totalBilled).toBe(20000);
       expect(statement.summary.totalPaid).toBe(14000);
 

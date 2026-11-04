@@ -87,6 +87,7 @@ import {
   CreditStatus
 } from '../../../core/domain/finance/Fee';
 import { FeeBannerConfig } from '../../../core/domain/finance/FeeBannerConfig';
+import { IdGenerator } from '../../../core/domain/shared/Errors';
 
 export class PostgresDatabaseInitializer {
   public static async initializeSchema(pool: Pool): Promise<void> {
@@ -505,9 +506,18 @@ export class PostgresDatabaseInitializer {
         recorded_by_user_id VARCHAR(100) NOT NULL,
         status VARCHAR(50) DEFAULT 'COMPLETED',
         notes TEXT,
+        arrears_paid NUMERIC(12,2) DEFAULT 0,
+        current_fees_paid NUMERIC(12,2) DEFAULT 0,
+        overpayment_amount NUMERIC(12,2) DEFAULT 0,
+        allocation_breakdown JSONB DEFAULT '[]'::jsonb,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+
+      ALTER TABLE payments ADD COLUMN IF NOT EXISTS arrears_paid NUMERIC(12,2) DEFAULT 0;
+      ALTER TABLE payments ADD COLUMN IF NOT EXISTS current_fees_paid NUMERIC(12,2) DEFAULT 0;
+      ALTER TABLE payments ADD COLUMN IF NOT EXISTS overpayment_amount NUMERIC(12,2) DEFAULT 0;
+      ALTER TABLE payments ADD COLUMN IF NOT EXISTS allocation_breakdown JSONB DEFAULT '[]'::jsonb;
 
       CREATE TABLE IF NOT EXISTS expenses (
         id VARCHAR(100) PRIMARY KEY,
@@ -548,20 +558,83 @@ export class PostgresDatabaseInitializer {
 
       CREATE TABLE IF NOT EXISTS records_of_work (
         id VARCHAR(100) PRIMARY KEY,
+        school_id VARCHAR(100) DEFAULT 'school-001',
         teacher_id VARCHAR(100) NOT NULL,
+        teacher_name VARCHAR(255),
         academic_year_id VARCHAR(100),
+        academic_year VARCHAR(50),
         term_id VARCHAR(100),
-        week INT NOT NULL,
-        day VARCHAR(50) NOT NULL,
+        term VARCHAR(50),
+        classroom_id VARCHAR(100),
+        class_name VARCHAR(150),
+        stream_id VARCHAR(100),
+        stream_name VARCHAR(150),
+        learning_area_id VARCHAR(100),
+        subject_name VARCHAR(255),
+        strand_id VARCHAR(100),
+        strand VARCHAR(255),
+        sub_strand_id VARCHAR(100),
+        sub_strand VARCHAR(255),
+        week INT NOT NULL DEFAULT 1,
+        week_number INT DEFAULT 1,
+        day VARCHAR(50) NOT NULL DEFAULT 'Mon',
         period VARCHAR(50),
+        lesson_period VARCHAR(50),
+        lesson_date DATE,
         subject_and_grade VARCHAR(255) NOT NULL,
         strand_and_work_covered TEXT NOT NULL,
+        lesson_topic TEXT,
+        learning_objectives TEXT,
+        learning_activities TEXT,
+        resources TEXT,
         reference TEXT NOT NULL,
+        status VARCHAR(50) DEFAULT 'DRAFT',
+        reflection_data JSONB DEFAULT '{}'::jsonb,
         comments TEXT,
         reflection TEXT,
+        submitted_at TIMESTAMP,
+        reviewed_by_user_id VARCHAR(100),
+        reviewed_by_name VARCHAR(255),
+        reviewed_at TIMESTAMP,
+        review_remarks TEXT,
+        return_reason TEXT,
+        tracker_id VARCHAR(100),
+        is_official_coverage BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS school_id VARCHAR(100) DEFAULT 'school-001';
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS teacher_name VARCHAR(255);
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS academic_year VARCHAR(50);
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS term VARCHAR(50);
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS classroom_id VARCHAR(100);
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS class_name VARCHAR(150);
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS stream_id VARCHAR(100);
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS stream_name VARCHAR(150);
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS learning_area_id VARCHAR(100);
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS subject_name VARCHAR(255);
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS strand_id VARCHAR(100);
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS strand VARCHAR(255);
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS sub_strand_id VARCHAR(100);
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS sub_strand VARCHAR(255);
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS week_number INT DEFAULT 1;
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS lesson_period VARCHAR(50);
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS lesson_date DATE;
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS lesson_topic TEXT;
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS learning_objectives TEXT;
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS learning_activities TEXT;
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS resources TEXT;
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'DRAFT';
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS reflection_data JSONB DEFAULT '{}'::jsonb;
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS submitted_at TIMESTAMP;
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS reviewed_by_user_id VARCHAR(100);
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS reviewed_by_name VARCHAR(255);
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMP;
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS review_remarks TEXT;
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS return_reason TEXT;
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS tracker_id VARCHAR(100);
+      ALTER TABLE records_of_work ADD COLUMN IF NOT EXISTS is_official_coverage BOOLEAN DEFAULT FALSE;
 
       CREATE TABLE IF NOT EXISTS complaints (
         id VARCHAR(100) PRIMARY KEY,
@@ -1281,6 +1354,35 @@ export class PostgresDatabaseInitializer {
       );
       CREATE INDEX IF NOT EXISTS idx_far_school_status ON financial_approval_requests(school_id, status);
       CREATE INDEX IF NOT EXISTS idx_far_target ON financial_approval_requests(target_record_id);
+
+      CREATE TABLE IF NOT EXISTS ediary_entries (
+        id VARCHAR(100) PRIMARY KEY,
+        school_id VARCHAR(100) NOT NULL,
+        classroom_id VARCHAR(100),
+        stream_id VARCHAR(100) NOT NULL,
+        student_id VARCHAR(100),
+        teacher_id VARCHAR(100) NOT NULL,
+        teacher_name VARCHAR(255),
+        academic_year_id VARCHAR(100),
+        term_id VARCHAR(100),
+        date VARCHAR(50) NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        homework TEXT,
+        homework_tasks JSONB DEFAULT '[]'::jsonb,
+        teacher_remarks TEXT,
+        requirements_tomorrow TEXT,
+        tomorrow_requirements JSONB DEFAULT '[]'::jsonb,
+        acknowledgements JSONB DEFAULT '[]'::jsonb,
+        status VARCHAR(50) DEFAULT 'PUBLISHED',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS idx_ediary_school ON ediary_entries(school_id);
+      CREATE INDEX IF NOT EXISTS idx_ediary_stream_date ON ediary_entries(stream_id, date);
+      CREATE INDEX IF NOT EXISTS idx_ediary_student ON ediary_entries(student_id);
+      CREATE INDEX IF NOT EXISTS idx_ediary_teacher ON ediary_entries(teacher_id);
+      CREATE INDEX IF NOT EXISTS idx_ediary_date ON ediary_entries(date);
+      CREATE INDEX IF NOT EXISTS idx_ediary_status ON ediary_entries(status);
     `;
 
     await pool.query(ddl);
@@ -1535,7 +1637,12 @@ export class PostgresStudentRepository implements IStudentRepository {
       medicalConditions: r.medical_conditions,
       specialNeeds: r.special_needs,
       status: r.status,
-      profilePhotoUrl: r.profile_photo_url
+      profilePhotoUrl: r.profile_photo_url,
+      withdrawalDate: r.withdrawal_date || undefined,
+      withdrawalReason: r.withdrawal_reason || undefined,
+      destinationSchool: r.destination_school || undefined,
+      withdrawnByUserId: r.withdrawn_by_user_id || undefined,
+      withdrawalNotes: r.withdrawal_notes || undefined
     }, r.id, r.created_at, r.updated_at);
   }
   public async findById(id: string): Promise<Student | null> {
@@ -1543,12 +1650,28 @@ export class PostgresStudentRepository implements IStudentRepository {
     return res.rows.length ? this.mapRow(res.rows[0]) : null;
   }
   public async findByAdmissionNumber(admissionNumber: string, schoolId?: string): Promise<Student | null> {
-    const res = await this.pool.query('SELECT * FROM students WHERE admission_number = $1', [admissionNumber]);
+    let formatted: string | null = null;
+    try {
+      formatted = IdGenerator.formatAdmissionNumber(admissionNumber);
+    } catch {}
+    const res = await this.pool.query(
+      'SELECT * FROM students WHERE (admission_number = $1 OR ($2::text IS NOT NULL AND admission_number = $2))',
+      [admissionNumber, formatted]
+    );
     return res.rows.length ? this.mapRow(res.rows[0]) : null;
   }
   public async findByUpiNumber(upiNumber: string): Promise<Student | null> {
     const res = await this.pool.query('SELECT * FROM students WHERE upi_number = $1', [upiNumber]);
     return res.rows.length ? this.mapRow(res.rows[0]) : null;
+  }
+  public async findByGuardianId(guardianId: string): Promise<Student[]> {
+    const res = await this.pool.query(
+      `SELECT * FROM students 
+       WHERE (guardian_ids @> $1::jsonb OR guardian_ids::text LIKE $2)
+       ORDER BY created_at ASC`,
+      [JSON.stringify([guardianId]), `%"${guardianId}"%`]
+    );
+    return res.rows.map(r => this.mapRow(r));
   }
   public async findAll(filters?: StudentFilterCriteria): Promise<Student[]> {
     let q = 'SELECT * FROM students WHERE 1=1';
@@ -1564,6 +1687,13 @@ export class PostgresStudentRepository implements IStudentRepository {
       q += ` AND (stream_id = $${params.length} OR classroom_id = $${params.length})`;
     }
     if (filters?.academicYearId) { params.push(filters.academicYearId); q += ` AND academic_year_id = $${params.length}`; }
+    if (filters?.guardianId) {
+      params.push(JSON.stringify([filters.guardianId]));
+      const jsonParamIdx = params.length;
+      params.push(`%"${filters.guardianId}"%`);
+      const textParamIdx = params.length;
+      q += ` AND (guardian_ids @> $${jsonParamIdx}::jsonb OR guardian_ids::text LIKE $${textParamIdx})`;
+    }
     if (filters?.search && filters.search.trim()) {
       const searchRaw = filters.search.trim();
       params.push(`%${searchRaw}%`);
@@ -1587,8 +1717,14 @@ export class PostgresStudentRepository implements IStudentRepository {
     return res.rows.map(r => this.mapRow(r));
   }
   public async save(s: Student): Promise<void> {
-    const q = `INSERT INTO students (id, admission_number, upi_number, first_name, middle_name, last_name, date_of_birth, gender, grade_level, classroom_id, stream_id, school_id, academic_year_id, guardian_ids, medical_conditions, special_needs, status, profile_photo_url, created_at, updated_at)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+    const q = `INSERT INTO students (
+                 id, admission_number, upi_number, first_name, middle_name, last_name,
+                 date_of_birth, gender, grade_level, classroom_id, stream_id, school_id,
+                 academic_year_id, guardian_ids, medical_conditions, special_needs, status,
+                 profile_photo_url, withdrawal_date, withdrawal_reason, destination_school,
+                 withdrawn_by_user_id, withdrawal_notes, created_at, updated_at
+               )
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
                ON CONFLICT (id) DO UPDATE SET 
                  admission_number = EXCLUDED.admission_number,
                  upi_number = EXCLUDED.upi_number,
@@ -1606,6 +1742,11 @@ export class PostgresStudentRepository implements IStudentRepository {
                  special_needs = EXCLUDED.special_needs,
                  status = EXCLUDED.status, 
                  profile_photo_url = EXCLUDED.profile_photo_url,
+                 withdrawal_date = EXCLUDED.withdrawal_date,
+                 withdrawal_reason = EXCLUDED.withdrawal_reason,
+                 destination_school = EXCLUDED.destination_school,
+                 withdrawn_by_user_id = EXCLUDED.withdrawn_by_user_id,
+                 withdrawal_notes = EXCLUDED.withdrawal_notes,
                  updated_at = NOW()`;
     await this.pool.query(q, [
       s.id,
@@ -1626,6 +1767,11 @@ export class PostgresStudentRepository implements IStudentRepository {
       s.specialNeeds || null,
       s.status,
       s.profilePhotoUrl || null,
+      s.withdrawalDate || null,
+      s.withdrawalReason || null,
+      s.destinationSchool || null,
+      s.withdrawnByUserId || null,
+      s.withdrawalNotes || null,
       s.createdAt,
       s.updatedAt
     ]);
@@ -3333,23 +3479,49 @@ export class PostgresFeeRepository implements IFeeRepository {
   public async deleteInvoicesByStudentId(studentId: string): Promise<void> {
     await this.pool.query('DELETE FROM student_invoices WHERE student_id = $1', [studentId]);
   }
+  private mapPaymentRow(r: any): Payment {
+    let breakdown: any[] = [];
+    if (r.allocation_breakdown) {
+      if (Array.isArray(r.allocation_breakdown)) {
+        breakdown = r.allocation_breakdown;
+      } else if (typeof r.allocation_breakdown === 'string') {
+        try { breakdown = JSON.parse(r.allocation_breakdown); } catch {}
+      }
+    }
+    return Payment.create({
+      schoolId: r.school_id,
+      invoiceId: r.invoice_id,
+      studentId: r.student_id,
+      receiptNumber: r.receipt_number,
+      amount: Number(r.amount),
+      paymentMethod: r.payment_method,
+      transactionReference: r.transaction_reference,
+      mpesaPhoneNumber: r.mpesa_phone_number,
+      paymentDate: r.payment_date,
+      recordedByUserId: r.recorded_by_user_id,
+      status: r.status as PaymentStatus,
+      notes: r.notes,
+      arrearsPaid: r.arrears_paid != null ? Number(r.arrears_paid) : 0,
+      currentFeesPaid: r.current_fees_paid != null ? Number(r.current_fees_paid) : 0,
+      overpaymentAmount: r.overpayment_amount != null ? Number(r.overpayment_amount) : 0,
+      allocationBreakdown: breakdown
+    }, r.id, r.created_at, r.updated_at);
+  }
+
   public async findPaymentById(id: string): Promise<Payment | null> {
     const res = await this.pool.query('SELECT * FROM payments WHERE id = $1', [id]);
     if (!res.rows.length) return null;
-    const r = res.rows[0];
-    return Payment.create({ schoolId: r.school_id, invoiceId: r.invoice_id, studentId: r.student_id, receiptNumber: r.receipt_number, amount: Number(r.amount), paymentMethod: r.payment_method, transactionReference: r.transaction_reference, mpesaPhoneNumber: r.mpesa_phone_number, paymentDate: r.payment_date, recordedByUserId: r.recorded_by_user_id, status: r.status as PaymentStatus, notes: r.notes }, r.id, r.created_at, r.updated_at);
+    return this.mapPaymentRow(res.rows[0]);
   }
   public async findPaymentByReceiptNumber(receiptNumber: string): Promise<Payment | null> {
     const res = await this.pool.query('SELECT * FROM payments WHERE receipt_number = $1', [receiptNumber]);
     if (!res.rows.length) return null;
-    const r = res.rows[0];
-    return Payment.create({ schoolId: r.school_id, invoiceId: r.invoice_id, studentId: r.student_id, receiptNumber: r.receipt_number, amount: Number(r.amount), paymentMethod: r.payment_method, transactionReference: r.transaction_reference, mpesaPhoneNumber: r.mpesa_phone_number, paymentDate: r.payment_date, recordedByUserId: r.recorded_by_user_id, status: r.status as PaymentStatus, notes: r.notes }, r.id, r.created_at, r.updated_at);
+    return this.mapPaymentRow(res.rows[0]);
   }
   public async findPaymentByReference(reference: string): Promise<Payment | null> {
     const res = await this.pool.query('SELECT * FROM payments WHERE transaction_reference = $1', [reference]);
     if (!res.rows.length) return null;
-    const r = res.rows[0];
-    return Payment.create({ schoolId: r.school_id, invoiceId: r.invoice_id, studentId: r.student_id, receiptNumber: r.receipt_number, amount: Number(r.amount), paymentMethod: r.payment_method, transactionReference: r.transaction_reference, mpesaPhoneNumber: r.mpesa_phone_number, paymentDate: r.payment_date, recordedByUserId: r.recorded_by_user_id, status: r.status as PaymentStatus, notes: r.notes }, r.id, r.created_at, r.updated_at);
+    return this.mapPaymentRow(res.rows[0]);
   }
   public async findPayments(filters: PaymentFilterCriteria): Promise<Payment[]> {
     let q = 'SELECT * FROM payments WHERE 1=1';
@@ -3361,14 +3533,14 @@ export class PostgresFeeRepository implements IFeeRepository {
     if (filters.endDate) { params.push(filters.endDate); q += ` AND payment_date <= $${params.length}`; }
     q += ' ORDER BY payment_date DESC';
     const res = await this.pool.query(q, params);
-    return res.rows.map(r => Payment.create({ schoolId: r.school_id, invoiceId: r.invoice_id, studentId: r.student_id, receiptNumber: r.receipt_number, amount: Number(r.amount), paymentMethod: r.payment_method, transactionReference: r.transaction_reference, mpesaPhoneNumber: r.mpesa_phone_number, paymentDate: r.payment_date, recordedByUserId: r.recorded_by_user_id, status: r.status as PaymentStatus, notes: r.notes }, r.id, r.created_at, r.updated_at));
+    return res.rows.map(r => this.mapPaymentRow(r));
   }
   public async deletePaymentsByStudentId(studentId: string): Promise<void> {
     await this.pool.query('DELETE FROM payments WHERE student_id = $1', [studentId]);
   }
   public async savePayment(p: Payment): Promise<void> {
-    const q = `INSERT INTO payments (id, school_id, invoice_id, student_id, receipt_number, amount, payment_method, transaction_reference, mpesa_phone_number, payment_date, recorded_by_user_id, status, notes, created_at, updated_at)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+    const q = `INSERT INTO payments (id, school_id, invoice_id, student_id, receipt_number, amount, payment_method, transaction_reference, mpesa_phone_number, payment_date, recorded_by_user_id, status, notes, arrears_paid, current_fees_paid, overpayment_amount, allocation_breakdown, created_at, updated_at)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
                ON CONFLICT (id) DO NOTHING`;
     await this.pool.query(q, [
       p.id,
@@ -3384,6 +3556,10 @@ export class PostgresFeeRepository implements IFeeRepository {
       (p.recordedByUserId && p.recordedByUserId.trim() !== '') ? p.recordedByUserId : null,
       p.status,
       p.notes || null,
+      p.arrearsPaid,
+      p.currentFeesPaid,
+      p.overpaymentAmount,
+      JSON.stringify(p.allocationBreakdown),
       p.createdAt,
       p.updatedAt
     ]);
@@ -3392,8 +3568,10 @@ export class PostgresFeeRepository implements IFeeRepository {
     const q = `UPDATE payments
                SET invoice_id = $1, student_id = $2, receipt_number = $3, amount = $4,
                    payment_method = $5, transaction_reference = $6, mpesa_phone_number = $7,
-                   payment_date = $8, status = $9, notes = $10, updated_at = NOW()
-               WHERE id = $11`;
+                   payment_date = $8, status = $9, notes = $10,
+                   arrears_paid = $11, current_fees_paid = $12, overpayment_amount = $13, allocation_breakdown = $14,
+                   updated_at = NOW()
+               WHERE id = $15`;
     await this.pool.query(q, [
       (p.invoiceId && p.invoiceId.trim() !== '') ? p.invoiceId : null,
       p.studentId,
@@ -3405,6 +3583,10 @@ export class PostgresFeeRepository implements IFeeRepository {
       p.paymentDate,
       p.status,
       p.notes || null,
+      p.arrearsPaid,
+      p.currentFeesPaid,
+      p.overpaymentAmount,
+      JSON.stringify(p.allocationBreakdown),
       p.id
     ]);
   }
@@ -3739,7 +3921,10 @@ export class PostgresDeletedStudentRepository implements IDeletedStudentReposito
       pendingWorkCleared: typeof r.pending_work_cleared === 'string' ? JSON.parse(r.pending_work_cleared) : (r.pending_work_cleared || {}),
       deletedAt: r.deleted_at ? new Date(r.deleted_at) : new Date(),
       deletedByUserId: r.deleted_by_user_id || undefined,
-      reason: r.reason || undefined
+      reason: r.reason || undefined,
+      retentionPolicyYears: r.retention_policy_years ? Number(r.retention_policy_years) : 7,
+      retentionExpiresAt: r.retention_expires_at ? new Date(r.retention_expires_at) : undefined,
+      archivedAt: r.archived_at ? new Date(r.archived_at) : new Date(r.deleted_at || Date.now())
     }, r.id);
   }
 
@@ -3748,13 +3933,17 @@ export class PostgresDeletedStudentRepository implements IDeletedStudentReposito
       id, student_id, admission_number, first_name, middle_name, last_name,
       upi_number, school_id, grade_level, classroom_id, stream_id,
       academic_year_id, student_data, linked_data, pending_work_cleared,
-      deleted_at, deleted_by_user_id, reason
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+      deleted_at, deleted_by_user_id, reason, retention_policy_years,
+      retention_expires_at, archived_at
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
     ON CONFLICT (id) DO UPDATE SET
       student_data = EXCLUDED.student_data,
       linked_data = EXCLUDED.linked_data,
       pending_work_cleared = EXCLUDED.pending_work_cleared,
-      reason = EXCLUDED.reason`;
+      reason = EXCLUDED.reason,
+      retention_policy_years = EXCLUDED.retention_policy_years,
+      retention_expires_at = EXCLUDED.retention_expires_at,
+      archived_at = EXCLUDED.archived_at`;
 
     await this.pool.query(q, [
       d.id,
@@ -3774,7 +3963,10 @@ export class PostgresDeletedStudentRepository implements IDeletedStudentReposito
       JSON.stringify(d.pendingWorkCleared),
       d.deletedAt,
       d.deletedByUserId || null,
-      d.reason || null
+      d.reason || null,
+      d.retentionPolicyYears,
+      d.retentionExpiresAt || null,
+      d.archivedAt
     ]);
   }
 

@@ -24,6 +24,8 @@ function mapRowToLunchEnrollment(row: any, payments: LunchPayment[] = []): Lunch
       academicYearId: row.academic_year_id || undefined,
       termId: row.term_id || undefined,
       planName: row.plan_name,
+      paymentFrequency: row.payment_frequency || 'TERMLY',
+      dailyRate: parseFloat(row.daily_rate || 0),
       amount: parseFloat(row.amount || 0),
       amountPaid: parseFloat(row.amount_paid || 0),
       balance: parseFloat(row.balance || 0),
@@ -54,7 +56,12 @@ function mapRowToLunchPayment(row: any): LunchPayment {
     paymentDate: row.payment_date,
     recordedByUserId: row.recorded_by_user_id || undefined,
     notes: row.notes || undefined,
-    createdAt: new Date(row.created_at)
+    createdAt: new Date(row.created_at),
+    isReversed: Boolean(row.is_reversed),
+    reversedAt: row.reversed_at ? new Date(row.reversed_at) : undefined,
+    reversedByUserId: row.reversed_by_user_id || undefined,
+    reversalReason: row.reversal_reason || undefined,
+    idempotencyKey: row.idempotency_key || undefined
   };
 }
 
@@ -90,12 +97,12 @@ export class PostgresLunchFeeRepository implements ILunchFeeRepository {
     const query = `
       INSERT INTO lunch_enrollments (
         id, school_id, student_id, academic_year_id, term_id, plan_name,
-        amount, amount_paid, balance, payment_status, dietary_notes, status,
-        notes, enrolled_by_user_id, enrolled_at, created_at, updated_at
+        payment_frequency, daily_rate, amount, amount_paid, balance, payment_status,
+        dietary_notes, status, notes, enrolled_by_user_id, enrolled_at, created_at, updated_at
       ) VALUES (
         $1, $2, $3, $4, $5, $6,
         $7, $8, $9, $10, $11, $12,
-        $13, $14, $15, $16, $17
+        $13, $14, $15, $16, $17, $18, $19
       ) RETURNING *;
     `;
 
@@ -106,6 +113,8 @@ export class PostgresLunchFeeRepository implements ILunchFeeRepository {
       enrollment.academicYearId || null,
       enrollment.termId || null,
       enrollment.planName,
+      enrollment.paymentFrequency || 'TERMLY',
+      enrollment.dailyRate || 0,
       enrollment.amount,
       enrollment.amountPaid,
       enrollment.balance,
@@ -211,20 +220,24 @@ export class PostgresLunchFeeRepository implements ILunchFeeRepository {
     const query = `
       UPDATE lunch_enrollments SET
         plan_name = $1,
-        amount = $2,
-        amount_paid = $3,
-        balance = $4,
-        payment_status = $5,
-        dietary_notes = $6,
-        status = $7,
-        notes = $8,
-        updated_at = $9
-      WHERE id = $10
+        payment_frequency = $2,
+        daily_rate = $3,
+        amount = $4,
+        amount_paid = $5,
+        balance = $6,
+        payment_status = $7,
+        dietary_notes = $8,
+        status = $9,
+        notes = $10,
+        updated_at = $11
+      WHERE id = $12
       RETURNING *;
     `;
 
     const values = [
       enrollment.planName,
+      enrollment.paymentFrequency || 'TERMLY',
+      enrollment.dailyRate || 0,
       enrollment.amount,
       enrollment.amountPaid,
       enrollment.balance,
@@ -259,11 +272,13 @@ export class PostgresLunchFeeRepository implements ILunchFeeRepository {
       INSERT INTO lunch_payments (
         id, lunch_enrollment_id, student_id, school_id, amount,
         receipt_number, payment_method, transaction_reference, payment_date,
-        recorded_by_user_id, notes, created_at
+        recorded_by_user_id, notes, is_reversed, reversed_at, reversed_by_user_id,
+        reversal_reason, idempotency_key, created_at
       ) VALUES (
         $1, $2, $3, $4, $5,
         $6, $7, $8, $9,
-        $10, $11, $12
+        $10, $11, $12, $13, $14,
+        $15, $16, $17
       ) RETURNING *;
     `;
 
@@ -279,6 +294,11 @@ export class PostgresLunchFeeRepository implements ILunchFeeRepository {
       payment.paymentDate,
       payment.recordedByUserId || null,
       payment.notes || null,
+      payment.isReversed ?? false,
+      payment.reversedAt || null,
+      payment.reversedByUserId || null,
+      payment.reversalReason || null,
+      payment.idempotencyKey || null,
       payment.createdAt
     ];
 
@@ -286,7 +306,59 @@ export class PostgresLunchFeeRepository implements ILunchFeeRepository {
     return mapRowToLunchPayment(res.rows[0]);
   }
 
-  async findPayments(enrollmentId?: string, studentId?: string): Promise<LunchPayment[]> {
+  async updatePayment(payment: LunchPayment): Promise<LunchPayment> {
+    const query = `
+      UPDATE lunch_payments SET
+        is_reversed = $1,
+        reversed_at = $2,
+        reversed_by_user_id = $3,
+        reversal_reason = $4,
+        notes = $5
+      WHERE id = $6
+      RETURNING *;
+    `;
+    const values = [
+      payment.isReversed ?? false,
+      payment.reversedAt || null,
+      payment.reversedByUserId || null,
+      payment.reversalReason || null,
+      payment.notes || null,
+      payment.id
+    ];
+    const res = await this.pool.query(query, values);
+    return mapRowToLunchPayment(res.rows[0]);
+  }
+
+  async findPaymentById(id: string): Promise<LunchPayment | null> {
+    const res = await this.pool.query('SELECT * FROM lunch_payments WHERE id = $1', [id]);
+    if (res.rows.length === 0) return null;
+    return mapRowToLunchPayment(res.rows[0]);
+  }
+
+  async findByIdempotencyKey(key: string): Promise<LunchPayment | null> {
+    const res = await this.pool.query(
+      'SELECT * FROM lunch_payments WHERE idempotency_key = $1 AND is_reversed = FALSE',
+      [key]
+    );
+    if (res.rows.length === 0) return null;
+    return mapRowToLunchPayment(res.rows[0]);
+  }
+
+  async findByTransactionReference(schoolId: string, reference: string): Promise<LunchPayment | null> {
+    if (!reference || reference.trim() === '') return null;
+    const res = await this.pool.query(
+      'SELECT * FROM lunch_payments WHERE school_id = $1 AND transaction_reference = $2 AND is_reversed = FALSE',
+      [schoolId, reference.trim()]
+    );
+    if (res.rows.length === 0) return null;
+    return mapRowToLunchPayment(res.rows[0]);
+  }
+
+  async findPayments(
+    enrollmentId?: string,
+    studentId?: string,
+    filters?: { startDate?: string; endDate?: string; includeReversed?: boolean }
+  ): Promise<LunchPayment[]> {
     let query = 'SELECT * FROM lunch_payments WHERE 1=1';
     const values: any[] = [];
     let idx = 1;
@@ -299,8 +371,19 @@ export class PostgresLunchFeeRepository implements ILunchFeeRepository {
       query += ` AND student_id = $${idx++}`;
       values.push(studentId);
     }
+    if (filters?.startDate) {
+      query += ` AND payment_date >= $${idx++}`;
+      values.push(filters.startDate);
+    }
+    if (filters?.endDate) {
+      query += ` AND payment_date <= $${idx++}`;
+      values.push(filters.endDate);
+    }
+    if (!filters?.includeReversed) {
+      query += ` AND (is_reversed IS FALSE OR is_reversed IS NULL)`;
+    }
 
-    query += ' ORDER BY created_at DESC';
+    query += ' ORDER BY payment_date DESC, created_at DESC';
     const res = await this.pool.query(query, values);
     return res.rows.map(row => mapRowToLunchPayment(row));
   }

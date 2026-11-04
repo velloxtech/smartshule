@@ -521,6 +521,13 @@ export class StudentInvoice extends Entity<StudentInvoiceProps> {
 }
 
 // 3. Payment Record Entity
+export interface PaymentAllocationItem {
+  invoiceId: string;
+  invoiceNumber: string;
+  amount: number;
+  type: 'ARREARS' | 'CURRENT_TERM';
+}
+
 export interface PaymentProps {
   schoolId: string;
   invoiceId: string;
@@ -534,13 +541,21 @@ export interface PaymentProps {
   recordedByUserId: string;
   status: PaymentStatus;
   notes?: string;
+  arrearsPaid?: number;
+  currentFeesPaid?: number;
+  overpaymentAmount?: number;
+  allocationBreakdown?: PaymentAllocationItem[];
 }
 
 export class Payment extends Entity<PaymentProps> {
   public static create(props: PaymentProps, id: string, createdAt?: Date, updatedAt?: Date): Payment {
     const cleanProps: PaymentProps = {
       ...props,
-      amount: Math.round((Number(props.amount) || 0) * 100) / 100
+      amount: Math.round((Number(props.amount) || 0) * 100) / 100,
+      arrearsPaid: Math.round((Number(props.arrearsPaid) || 0) * 100) / 100,
+      currentFeesPaid: Math.round((Number(props.currentFeesPaid) || 0) * 100) / 100,
+      overpaymentAmount: Math.round((Number(props.overpaymentAmount) || 0) * 100) / 100,
+      allocationBreakdown: Array.isArray(props.allocationBreakdown) ? props.allocationBreakdown : []
     };
     return new Payment(cleanProps, id, createdAt, updatedAt);
   }
@@ -593,6 +608,30 @@ export class Payment extends Entity<PaymentProps> {
     return this._props.notes;
   }
 
+  public get arrearsPaid(): number {
+    return this._props.arrearsPaid || 0;
+  }
+
+  public get currentFeesPaid(): number {
+    return this._props.currentFeesPaid || 0;
+  }
+
+  public get overpaymentAmount(): number {
+    return this._props.overpaymentAmount || 0;
+  }
+
+  public get allocationBreakdown(): PaymentAllocationItem[] {
+    return this._props.allocationBreakdown || [];
+  }
+
+  public setAllocations(arrearsPaid: number, currentFeesPaid: number, overpaymentAmount: number, breakdown?: PaymentAllocationItem[]): void {
+    this._props.arrearsPaid = Math.round((Number(arrearsPaid) || 0) * 100) / 100;
+    this._props.currentFeesPaid = Math.round((Number(currentFeesPaid) || 0) * 100) / 100;
+    this._props.overpaymentAmount = Math.round((Number(overpaymentAmount) || 0) * 100) / 100;
+    if (breakdown) this._props.allocationBreakdown = breakdown;
+    this.touch();
+  }
+
   public setStatus(status: PaymentStatus): void {
     this._props.status = status;
     this.touch();
@@ -618,6 +657,10 @@ export class Payment extends Entity<PaymentProps> {
       recordedByUserId: this.recordedByUserId,
       status: this.status,
       notes: this.notes,
+      arrearsPaid: this.arrearsPaid,
+      currentFeesPaid: this.currentFeesPaid,
+      overpaymentAmount: this.overpaymentAmount,
+      allocationBreakdown: this.allocationBreakdown,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt
     };

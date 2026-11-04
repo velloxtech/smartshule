@@ -244,8 +244,9 @@ describe('Fee Ledger Harmonisation & Manual Arrears Unit Tests (Cases 1 - 10)', 
 
     const pos = await feeUseCases.getLearnerFeePosition(student.id, { termId: term3Id });
     expect(pos.financialPosition.feesThisTerm).toBe(4500);
-    expect(pos.financialPosition.previousBalance).toBe(1000);
-    expect(pos.financialPosition.totalPaid).toBe(4000);
+    // Under mandatory allocation order, 1,000 arrears is settled first to 0, leaving 3,000 paid on current term
+    expect(pos.financialPosition.previousBalance).toBe(0);
+    expect(pos.financialPosition.totalPaid).toBe(3000);
     expect(pos.financialPosition.outstandingBalance).toBe(1500);
     expect(pos.financialPosition.status).toBe('PARTIAL');
   });
@@ -409,20 +410,7 @@ describe('Fee Ledger Harmonisation & Manual Arrears Unit Tests (Cases 1 - 10)', 
   test('Case 6: Current term paid, arrears remain - NEVER mark as Fees Cleared', async () => {
     const student = await createTestStudent('st-c6', 'ADM-C6', 'Kevin Omondi');
 
-    // 1. Prior arrears of 1,000
-    await feeUseCases.addOrUpdateManualArrear(
-      {
-        studentId: student.id,
-        amount: 1000,
-        academicYearId: 'year-2025',
-        termId: 'term-2025-t3',
-        reason: 'Prior Year Unpaid Arrears',
-        mode: 'ADD'
-      },
-      bursarUserContext
-    );
-
-    // 2. Current term invoice of 4,500
+    // 1. Current term invoice of 4,500
     const currentInv = StudentInvoice.create(
       {
         schoolId,
@@ -444,7 +432,7 @@ describe('Fee Ledger Harmonisation & Manual Arrears Unit Tests (Cases 1 - 10)', 
     );
     await feeRepo.saveInvoice(currentInv);
 
-    // 3. Pay exactly 4,500 towards current term invoice
+    // 2. Pay exactly 4,500 towards current term invoice
     await feeUseCases.recordPayment({
       schoolId,
       studentId: student.id,
@@ -456,10 +444,24 @@ describe('Fee Ledger Harmonisation & Manual Arrears Unit Tests (Cases 1 - 10)', 
       recordedByUserId: 'usr-bursar-1'
     });
 
+    // 3. Prior arrears of 1,000 recorded afterwards (e.g. historical audit)
+    await feeUseCases.addOrUpdateManualArrear(
+      {
+        studentId: student.id,
+        amount: 1000,
+        academicYearId: 'year-2025',
+        termId: 'term-2025-t3',
+        reason: 'Prior Year Unpaid Arrears',
+        mode: 'ADD'
+      },
+      bursarUserContext
+    );
+
     const pos = await feeUseCases.getLearnerFeePosition(student.id, { termId: term3Id });
 
     // Current term invoice is fully paid
-    expect(currentInv.balance).toBe(0);
+    const reloadedCurInv = await feeRepo.findInvoiceById(currentInv.id);
+    expect(reloadedCurInv?.balance).toBe(0);
     expect(pos.financialPosition.feesThisTerm).toBe(4500);
     expect(pos.financialPosition.previousBalance).toBe(1000);
     expect(pos.financialPosition.totalPaid).toBe(4500);

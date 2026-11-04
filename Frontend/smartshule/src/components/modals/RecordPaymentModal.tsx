@@ -421,6 +421,81 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
   const projectedInvoiceBalance = Math.max(0, invBalance - numAmount);
   const projectedTotalBalanceAfterPay = Math.max(0, effectiveBalance - numAmount);
 
+  // Authoritative Allocation Preview (Arrears -> Current Fees -> Overpayment)
+  const allocationPreview = useMemo(() => {
+    let arrearsOutstanding = 0;
+    let currentFeesOutstanding = 0;
+
+    for (const inv of invoices) {
+      if ((inv.status as any) === 'CARRIED_FORWARD' || (inv.balance || 0) <= 0) continue;
+      const isManualArrear = inv.feeStructureId === 'MANUAL_ARREARS' || inv.invoiceNumber?.includes('ARR');
+      if (isManualArrear) {
+        arrearsOutstanding += inv.balance || 0;
+      } else {
+        let embeddedArrears = 0;
+        if (Array.isArray(inv.items)) {
+          for (const it of inv.items) {
+            const itName = (it.name || '').toLowerCase();
+            if (itName.includes('arrear') || itName.includes('carried forward') || itName.includes('previous balance')) {
+              embeddedArrears += Number(it.amount) || 0;
+            }
+          }
+        }
+        if (embeddedArrears > 0) {
+          const paidSoFar = inv.amountPaid || 0;
+          const arrearsUnpaid = Math.max(0, embeddedArrears - paidSoFar);
+          const actArrears = Math.min(arrearsUnpaid, inv.balance || 0);
+          const actCurrent = Math.max(0, (inv.balance || 0) - actArrears);
+          arrearsOutstanding += actArrears;
+          currentFeesOutstanding += actCurrent;
+        } else {
+          currentFeesOutstanding += inv.balance || 0;
+        }
+      }
+    }
+
+    arrearsOutstanding = Math.round(arrearsOutstanding * 100) / 100;
+    currentFeesOutstanding = Math.round(currentFeesOutstanding * 100) / 100;
+    const totalObligations = Math.round((arrearsOutstanding + currentFeesOutstanding) * 100) / 100;
+
+    const arrearsAllocated = Math.min(numAmount, arrearsOutstanding);
+    const remAfterArrears = Math.max(0, Math.round((numAmount - arrearsAllocated) * 100) / 100);
+    const currentFeesAllocated = Math.min(remAfterArrears, currentFeesOutstanding);
+    const remAfterCurrent = Math.max(0, Math.round((remAfterArrears - currentFeesAllocated) * 100) / 100);
+
+    const remArrears = Math.max(0, Math.round((arrearsOutstanding - arrearsAllocated) * 100) / 100);
+    const remCurrent = Math.max(0, Math.round((currentFeesOutstanding - currentFeesAllocated) * 100) / 100);
+
+    const isEligibleForOverpayment = remArrears === 0 && remCurrent === 0;
+    const overpaymentCredit = isEligibleForOverpayment ? remAfterCurrent : 0;
+
+    let explanation = '';
+    if (numAmount <= 0) {
+      explanation = 'Enter an amount to see payment allocation breakdown.';
+    } else if (isEligibleForOverpayment && overpaymentCredit > 0) {
+      explanation = `All outstanding obligations will be cleared (Arrears: KES ${arrearsAllocated.toLocaleString()}, Current fees: KES ${currentFeesAllocated.toLocaleString()}). Surplus of KES ${overpaymentCredit.toLocaleString()} will be recorded as advance fee credit.`;
+    } else if (isEligibleForOverpayment && overpaymentCredit === 0) {
+      explanation = `Payment of KES ${numAmount.toLocaleString()} will clear all obligations exactly. Balance will be KES 0.00.`;
+    } else if (remArrears > 0) {
+      explanation = `No overpayment credit eligible: KES ${remArrears.toLocaleString()} in previous arrears remains unpaid. Payment is applied to arrears first.`;
+    } else if (remCurrent > 0) {
+      explanation = `No overpayment credit eligible: KES ${remCurrent.toLocaleString()} in current fees remains unpaid. Arrears cleared (KES ${arrearsAllocated.toLocaleString()}) and current fees partially paid (KES ${currentFeesAllocated.toLocaleString()}).`;
+    }
+
+    return {
+      arrearsOutstanding,
+      currentFeesOutstanding,
+      totalObligations,
+      arrearsAllocated,
+      currentFeesAllocated,
+      remArrears,
+      remCurrent,
+      isEligibleForOverpayment,
+      overpaymentCredit,
+      explanation
+    };
+  }, [invoices, numAmount]);
+
   // Calculations for Arrear
   const numArrear = Number(arrearAmount) || 0;
   const projectedTotalBalanceAfterArrear =
@@ -653,33 +728,14 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
       });
       return;
     }
-    if (!selectedInvoiceId) {
-      setFeedback({
-        type: 'error',
-        message: 'No active billed invoice selected. You can switch to the "Record / Adjust Arrears" tab to initialize this student\'s balance.'
-      });
-      return;
-    }
     if (numAmount <= 0) {
       setFeedback({ type: 'error', message: 'Please enter a valid payment amount greater than zero.' });
       return;
     }
 
-    const maxPayable = effectiveBalance > 0 ? effectiveBalance : (invBalance > 0 ? invBalance : 0);
-    if (maxPayable <= 0) {
-      setFeedback({
-        type: 'error',
-        message: 'This learner has zero outstanding balance. No fee payment is required.'
-      });
-      return;
-    }
-    if (numAmount > maxPayable) {
-      setFeedback({
-        type: 'error',
-        message: `Payment exceeds the outstanding balance of KES ${maxPayable.toLocaleString()}. Please enter an amount equal to or less than the outstanding balance.`
-      });
-      return;
-    }
+    // Overpayment and advance fee credit are accepted according to strict allocation policy.
+    // Backend authoritative allocation service settles previous-term arrears first,
+    // then current-term billed fees, and classifies any remaining surplus as advance fee credit.
 
     if (paymentChannel === 'BANK_DEPOSIT') {
       if (!bankName) {
@@ -711,7 +767,8 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
     try {
       const res = await apiService.recordPayment({
         schoolId: schoolId || 'school-001',
-        invoiceId: selectedInvoiceId,
+        invoiceId: selectedInvoiceId || undefined,
+        studentId: currentStudent.id,
         amount: numAmount,
         paymentMethod: paymentChannel,
         transactionReference: finalTxRef,
@@ -1790,36 +1847,87 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
                 </div>
               )}
 
-              {/* Live Payment Calculator Bar */}
-              {currentInvoice && (
-                <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 flex flex-wrap items-center justify-between text-xs gap-2 font-mono">
-                  <div>
-                    <span className="text-slate-500 block text-[10px] uppercase font-bold font-sans">Invoice Balance</span>
-                    <span className="font-bold text-rose-700">KES {invBalance.toLocaleString()}</span>
-                  </div>
-                  <div className="text-center">
-                    <span className="text-slate-500 block text-[10px] uppercase font-bold font-sans">Amount Paying</span>
-                    <span className="font-bold text-emerald-800">KES {numAmount.toLocaleString()}</span>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-slate-500 block text-[10px] uppercase font-bold font-sans">New Balance</span>
-                    <span className={`font-bold ${projectedInvoiceBalance === 0 ? 'text-emerald-700' : 'text-slate-900'}`}>
-                      KES {projectedInvoiceBalance.toLocaleString()} {projectedInvoiceBalance === 0 && '(Cleared)'}
-                    </span>
-                  </div>
-                  {numAmount > (invBalance || effectiveBalance) && (
-                    <div className="w-full pt-2 mt-1 border-t border-rose-200 flex items-center justify-between font-sans">
-                      <span className="text-rose-800 font-bold flex items-center gap-1 text-[11px]">
-                        <span className="material-symbols-outlined text-[15px]">error</span>
-                        Exceeds Outstanding Balance:
-                      </span>
-                      <span className="font-mono font-extrabold text-xs px-2 py-0.5 rounded bg-rose-100 text-rose-900 border border-rose-200">
-                        Payment will be rejected
-                      </span>
-                    </div>
-                  )}
+              {/* Authoritative Payment Allocation Breakdown Card */}
+              <div className="bg-slate-50/90 rounded-2xl p-4 border border-slate-200 space-y-3 font-sans shadow-xs">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-base text-[#7a1228]">account_balance_wallet</span>
+                    Mandatory Fee Allocation Preview
+                  </span>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    allocationPreview.isEligibleForOverpayment && allocationPreview.overpaymentCredit > 0
+                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                      : 'bg-slate-200 text-slate-700'
+                  }`}>
+                    {allocationPreview.isEligibleForOverpayment && allocationPreview.overpaymentCredit > 0
+                      ? 'Overpayment Credit Eligible'
+                      : 'Obligations Active'}
+                  </span>
                 </div>
-              )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+                  {/* Step 1: Previous-Term Arrears */}
+                  <div className="p-2.5 rounded-xl bg-white border border-slate-200">
+                    <div className="text-[10px] uppercase font-bold text-slate-500 mb-0.5">1. Previous Arrears</div>
+                    <div className="text-xs font-bold text-slate-800">
+                      Due: <span className="font-mono text-rose-700">KES {allocationPreview.arrearsOutstanding.toLocaleString()}</span>
+                    </div>
+                    <div className="text-xs font-bold text-emerald-700 mt-1">
+                      Paying: <span className="font-mono">KES {allocationPreview.arrearsAllocated.toLocaleString()}</span>
+                    </div>
+                    <div className="text-[10px] text-slate-500 mt-0.5">
+                      Rem: KES {allocationPreview.remArrears.toLocaleString()}
+                    </div>
+                  </div>
+
+                  {/* Step 2: Current-Term Billed Fees */}
+                  <div className="p-2.5 rounded-xl bg-white border border-slate-200">
+                    <div className="text-[10px] uppercase font-bold text-slate-500 mb-0.5">2. Current Term Fees</div>
+                    <div className="text-xs font-bold text-slate-800">
+                      Due: <span className="font-mono text-sky-700">KES {allocationPreview.currentFeesOutstanding.toLocaleString()}</span>
+                    </div>
+                    <div className="text-xs font-bold text-emerald-700 mt-1">
+                      Paying: <span className="font-mono">KES {allocationPreview.currentFeesAllocated.toLocaleString()}</span>
+                    </div>
+                    <div className="text-[10px] text-slate-500 mt-0.5">
+                      Rem: KES {allocationPreview.remCurrent.toLocaleString()}
+                    </div>
+                  </div>
+
+                  {/* Step 3: Overpayment / Advance Credit */}
+                  <div className={`p-2.5 rounded-xl border ${
+                    allocationPreview.overpaymentCredit > 0
+                      ? 'bg-emerald-50/80 border-emerald-300 ring-1 ring-emerald-400'
+                      : 'bg-white border-slate-200'
+                  }`}>
+                    <div className="text-[10px] uppercase font-bold text-slate-500 mb-0.5">3. Overpayment Credit</div>
+                    <div className={`text-base font-extrabold font-mono ${
+                      allocationPreview.overpaymentCredit > 0 ? 'text-emerald-800' : 'text-slate-400'
+                    }`}>
+                      KES {allocationPreview.overpaymentCredit.toLocaleString()}
+                    </div>
+                    <div className="text-[10px] text-slate-500 mt-1">
+                      {allocationPreview.isEligibleForOverpayment ? 'Recorded to advance credit' : 'Requires zero balance'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Explanation Banner */}
+                {numAmount > 0 && (
+                  <div className={`p-2.5 rounded-xl text-xs flex items-start gap-2 ${
+                    allocationPreview.isEligibleForOverpayment && allocationPreview.overpaymentCredit > 0
+                      ? 'bg-emerald-50 text-emerald-900 border border-emerald-200'
+                      : allocationPreview.isEligibleForOverpayment
+                      ? 'bg-sky-50 text-sky-900 border border-sky-200'
+                      : 'bg-amber-50 text-amber-900 border border-amber-200'
+                  }`}>
+                    <span className="material-symbols-outlined text-[16px] shrink-0 mt-0.5">
+                      {allocationPreview.isEligibleForOverpayment ? 'check_circle' : 'info'}
+                    </span>
+                    <span className="text-[11px] leading-snug">{allocationPreview.explanation}</span>
+                  </div>
+                )}
+              </div>
 
               {/* Internal Notes */}
               <div>

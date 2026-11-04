@@ -13,6 +13,7 @@ import { PhoneUtils } from '../../infrastructure/utils/PhoneUtils';
 import { EmailTemplateEngine } from '../../infrastructure/services/email/EmailTemplateEngine';
 import { EmailService } from '../../infrastructure/services/email/EmailService';
 import { env } from '../../infrastructure/config/env';
+import { GuardianIdentityResolver } from '../shared/GuardianIdentityResolver';
 
 export interface RegisterUserDTO {
   email?: string;
@@ -365,69 +366,31 @@ export class AuthUseCases {
     enrolledChildIds: string[];
     guardianId?: string;
   }> {
-    if (!this.guardianRepository) {
+    if (!this.guardianRepository || !this.studentRepository) {
       if (userEmail === 'parent@smartshule.ac.ke' || userId === 'usr-parent-01') {
         return { hasEnrolledChildren: true, enrolledChildIds: ['student-001'], guardianId: 'grd-default-01' };
       }
       return { hasEnrolledChildren: false, enrolledChildIds: [] };
     }
+
     try {
-      let guardian = await this.guardianRepository.findByUserId(userId);
-      if (!guardian && userPhone) {
-        guardian = await this.guardianRepository.findByPhone(userPhone);
-      }
-      if (!guardian) {
-        const allGuardians = await this.guardianRepository.findAll();
-        guardian = allGuardians.find(g => (userPhone && PhoneUtils.areMatches(g.emergencyContact, userPhone)) || g.userId === userId) || null;
-      }
-      if (guardian) {
-        if (guardian.userId !== userId) {
-          guardian.setUserId(userId);
-          await this.guardianRepository.update(guardian);
-        }
-        const studentIdsSet = new Set<string>(guardian.studentIds || []);
-        if (this.studentRepository) {
-          const allStudents = await this.studentRepository.findAll();
-          for (const s of allStudents) {
-            if (s.guardianIds && s.guardianIds.includes(guardian.id)) {
-              if (s.status === StudentStatus.ACTIVE || !s.status) {
-                studentIdsSet.add(s.id);
-              }
-            }
-          }
-          const validStudentIds: string[] = [];
-          for (const sid of Array.from(studentIdsSet)) {
-            const st = await this.studentRepository.findById(sid);
-            if (st && (st.status === StudentStatus.ACTIVE || !st.status)) {
-              validStudentIds.push(sid);
-            }
-          }
-          return {
-            hasEnrolledChildren: validStudentIds.length > 0,
-            enrolledChildIds: validStudentIds,
-            guardianId: guardian.id
-          };
-        }
+      const res = await GuardianIdentityResolver.resolveLinkedStudentIdsForUser({
+        userId,
+        userPhone,
+        userEmail,
+        guardianRepository: this.guardianRepository,
+        studentRepository: this.studentRepository,
+        userRepository: this.userRepository
+      });
 
-        const studentIds = Array.from(studentIdsSet);
-        return {
-          hasEnrolledChildren: studentIds.length > 0,
-          enrolledChildIds: studentIds,
-          guardianId: guardian.id
-        };
-      }
-
-      if (userEmail === 'parent@smartshule.ac.ke' || userId === 'usr-parent-01') {
-        return {
-          hasEnrolledChildren: true,
-          enrolledChildIds: ['student-001'],
-          guardianId: 'grd-default-01'
-        };
-      }
+      return {
+        hasEnrolledChildren: res.hasEnrolledChildren,
+        enrolledChildIds: res.studentIds,
+        guardianId: res.guardian?.id
+      };
     } catch {
-      // Ignore lookup errors
+      return { hasEnrolledChildren: false, enrolledChildIds: [] };
     }
-    return { hasEnrolledChildren: false, enrolledChildIds: [] };
   }
 
   public async getProfile(userId: string) {
@@ -445,35 +408,89 @@ export class AuthUseCases {
     };
   }
 
-  public async changePassword(userId: string, dto: { currentPassword: string; newPassword: string }) {
+  public async changePassword(
+    userId: string,
+    dto: { currentPassword?: string; newPassword: string; confirmPassword?: string }
+  ) {
     const user = await this.userRepository.findById(userId);
     if (!user) {
       throw new NotFoundError('User', userId);
     }
 
-    let isMatch = await this.passwordHasher.compare(dto.currentPassword, user.passwordHash);
-    if (!isMatch && user.phone && PhoneUtils.areMatches(user.phone, dto.currentPassword)) {
-      isMatch = true;
-    }
-    if (!isMatch && this.guardianRepository && (user.role === UserRole.PARENT || user.role === UserRole.GUARDIAN)) {
-      const g = await this.guardianRepository.findByUserId(user.id);
-      if (g) {
-        if (g.emergencyContact && PhoneUtils.areMatches(g.emergencyContact, dto.currentPassword)) {
-          isMatch = true;
-        } else if (g.nationalId && g.nationalId.trim() === dto.currentPassword.trim()) {
-          isMatch = true;
-        }
-      }
+    if (!dto.newPassword || dto.newPassword.trim().length < 6) {
+      throw new ValidationError('New password must be at least 6 characters long.');
     }
 
-    if (!isMatch) {
-      throw new UnauthorizedError('Current password is incorrect.');
+    if (dto.confirmPassword && dto.newPassword !== dto.confirmPassword) {
+      throw new ValidationError('New password and confirmation do not match.');
+    }
+
+    // If user has mustChangePassword = true (Forced Change screen with 2 fields only)
+    if (user.mustChangePassword) {
+      const isSameAsCurrent = await this.passwordHasher.compare(dto.newPassword, user.passwordHash);
+      if (isSameAsCurrent) {
+        throw new ValidationError('New password must be different from your temporary password.');
+      }
+      // Allowed to change password without entering current password!
+    } else {
+      // Voluntary change: verify current password
+      if (!dto.currentPassword || dto.currentPassword.trim() === '') {
+        throw new ValidationError('Please enter your current password.');
+      }
+
+      let isMatch = await this.passwordHasher.compare(dto.currentPassword, user.passwordHash);
+      if (!isMatch && user.phone && PhoneUtils.areMatches(user.phone, dto.currentPassword)) {
+        isMatch = true;
+      }
+      if (!isMatch && this.guardianRepository && (user.role === UserRole.PARENT || user.role === UserRole.GUARDIAN)) {
+        const g = await this.guardianRepository.findByUserId(user.id);
+        if (g) {
+          if (g.emergencyContact && PhoneUtils.areMatches(g.emergencyContact, dto.currentPassword)) {
+            isMatch = true;
+          } else if (g.nationalId && g.nationalId.trim() === dto.currentPassword.trim()) {
+            isMatch = true;
+          }
+        }
+      }
+
+      if (!isMatch) {
+        throw new UnauthorizedError('Current password is incorrect.');
+      }
+
+      if (dto.currentPassword === dto.newPassword) {
+        throw new ValidationError('New password must be different from your current password.');
+      }
     }
 
     const newHash = await this.passwordHasher.hash(dto.newPassword);
     user.updatePassword(newHash);
     user.setMustChangePassword(false);
     await this.userRepository.update(user);
+
+    if (this.systemLogRepository) {
+      try {
+        await this.systemLogRepository.create(
+          SystemLog.create(
+            {
+              schoolId: user.schoolId || 'school-001',
+              timestamp: new Date(),
+              level: 'INFO',
+              category: 'AUTH',
+              action: 'PASSWORD_CHANGED',
+              actorUserId: user.id,
+              actorEmail: user.email,
+              actorRole: user.role,
+              details: `User ${user.email} successfully updated their password. Forced flag cleared.`,
+              metadata: { userId: user.id }
+            },
+            IdGenerator.generate()
+          )
+        );
+      } catch (logErr) {
+        // Non-fatal
+      }
+    }
+
     return { success: true, message: 'Password changed successfully.', user: user.toJSON() };
   }
 
@@ -1116,7 +1133,7 @@ export class AuthUseCases {
 
   public async adminResetPassword(
     userId: string,
-    newPassword: string,
+    newPassword?: string,
     requestingUser?: { userId: string; role: UserRole }
   ) {
     const user = await this.userRepository.findById(userId);
@@ -1128,10 +1145,46 @@ export class AuthUseCases {
       throw new ForbiddenError('Only Super Administrators can reset Super Admin passwords.');
     }
 
-    const newPasswordHash = await this.passwordHasher.hash(newPassword);
+    // Generate secure temporary password if not provided
+    const tempPassword = (newPassword && newPassword.trim() !== '')
+      ? newPassword.trim()
+      : `Temp${Math.random().toString(36).substring(2, 6).toUpperCase()}!${Math.floor(1000 + Math.random() * 9000)}`;
+
+    const newPasswordHash = await this.passwordHasher.hash(tempPassword);
     user.updatePassword(newPasswordHash);
+    user.setMustChangePassword(true);
     await this.userRepository.update(user);
-    return { id: user.id, email: user.email, message: 'Password reset successfully' };
+
+    if (this.systemLogRepository) {
+      try {
+        await this.systemLogRepository.create(
+          SystemLog.create(
+            {
+              schoolId: user.schoolId || 'school-001',
+              timestamp: new Date(),
+              level: 'WARN',
+              category: 'AUTH',
+              action: 'ADMIN_PASSWORD_RESET',
+              actorUserId: requestingUser?.userId,
+              actorRole: requestingUser?.role,
+              details: `Administrator ${requestingUser?.userId || 'system'} reset password for user ${user.email} (${user.id}). Forced password change required at next login.`,
+              metadata: { targetUserId: user.id, targetEmail: user.email }
+            },
+            IdGenerator.generate()
+          )
+        );
+      } catch (logErr) {
+        // Non-fatal
+      }
+    }
+
+    return {
+      id: user.id,
+      email: user.email,
+      temporaryPassword: tempPassword,
+      mustChangePassword: true,
+      message: 'Password reset successfully. The user must set a new password on their next login.'
+    };
   }
 
   public async adminDeleteUser(

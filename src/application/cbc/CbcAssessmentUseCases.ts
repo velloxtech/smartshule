@@ -28,6 +28,7 @@ import {
   TermTrendEntry
 } from '../../core/domain/cbc/CbcAssessment';
 import { Student, CBCGradeLevel, StudentStatus } from '../../core/domain/user/Student';
+import { GuardianIdentityResolver } from '../shared/GuardianIdentityResolver';
 import { EducationLevel, LearningArea } from '../../core/domain/academic/ClassRoom';
 import { IdGenerator, NotFoundError, ValidationError, ForbiddenError, ConflictError } from '../../core/domain/shared/Errors';
 import { BroadsheetUseCases } from '../academics/BroadsheetUseCases';
@@ -164,54 +165,14 @@ export class CBCAssessmentUseCases {
   }
 
   public async getLinkedStudentIdsForUser(userId: string): Promise<string[]> {
-    if (!this.guardianRepository) return [];
-    let guardian = await this.guardianRepository.findByUserId(userId);
-    let user = this.userRepository ? await this.userRepository.findById(userId) : null;
-
-    if (!guardian && user) {
-      if (user.phone) {
-        guardian = await this.guardianRepository.findByPhone(user.phone);
-      }
-      if (!guardian) {
-        const allG = await this.guardianRepository.findAll();
-        guardian = allG.find(g => g.emergencyContact === user?.phone || g.userId === user?.id) || null;
-      }
-      if (guardian) {
-        guardian.setUserId(user.id);
-        await this.guardianRepository.update(guardian);
-      }
-    }
-
-    if (guardian && (!guardian.studentIds || guardian.studentIds.length === 0) && user) {
-      if (user.email === 'parent@smartshule.ac.ke' || user.id === 'usr-parent-01') {
-        const allS = await this.studentRepository.findAll();
-        if (allS.length > 0) {
-          const targetS = allS.find(s => s.id === 'student-001') || allS[0];
-          guardian.linkStudent(targetS.id);
-          await this.guardianRepository.update(guardian);
-        }
-      }
-    }
-
-    const linkedStudentIds = new Set<string>(guardian?.studentIds || []);
-    if (guardian) {
-      const allStudents = await this.studentRepository.findAll();
-      let updated = false;
-      for (const s of allStudents) {
-        if (s.guardianIds && s.guardianIds.includes(guardian.id)) {
-          linkedStudentIds.add(s.id);
-          if (!guardian.studentIds.includes(s.id)) {
-            guardian.linkStudent(s.id);
-            updated = true;
-          }
-        }
-      }
-      if (updated) {
-        await this.guardianRepository.update(guardian);
-      }
-    }
-
-    return Array.from(linkedStudentIds);
+    if (!this.guardianRepository || !this.studentRepository) return [];
+    const res = await GuardianIdentityResolver.resolveLinkedStudentIdsForUser({
+      userId,
+      guardianRepository: this.guardianRepository,
+      studentRepository: this.studentRepository,
+      userRepository: this.userRepository
+    });
+    return res.studentIds;
   }
 
   // 1. Strands and SubStrands

@@ -142,7 +142,9 @@ export class StudentController {
 
   public updateStudent = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const student = await this.studentUseCases.updateStudent(req.params.id as string, req.body, (req as any).user);
+      const isGuardianRoute = Boolean(req.originalUrl && req.originalUrl.includes('/guardian/'));
+      const userContext = (req as any).user ? { ...(req as any).user, isGuardianRoute } : undefined;
+      const student = await this.studentUseCases.updateStudent(req.params.id as string, req.body, userContext);
 
       this.systemLogUseCases?.log({
         schoolId: (student as any).schoolId || (req as any).user?.schoolId,
@@ -170,7 +172,9 @@ export class StudentController {
 
   public getStudentById = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const student = await this.studentUseCases.getStudentById(req.params.id as string, (req as any).user);
+      const isGuardianRoute = Boolean(req.originalUrl && req.originalUrl.includes('/guardian/'));
+      const userContext = (req as any).user ? { ...(req as any).user, isGuardianRoute } : undefined;
+      const student = await this.studentUseCases.getStudentById(req.params.id as string, userContext);
       return res.status(200).json({
         success: true,
         data: student
@@ -286,6 +290,7 @@ export class StudentController {
         message: 'Student deleted successfully and archived with all linked records. All pending work was cleared.',
         data: {
           deletedStudent: result.deletedStudent.toJSON(),
+          deletedStudentId: result.deletedStudent.id,
           pendingWorkCleared: result.pendingWorkCleared
         }
       });
@@ -335,6 +340,83 @@ export class StudentController {
         success: true,
         message: `Student '${restored.fullName}' restored successfully.`,
         data: restored.toJSON()
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public withdrawStudent = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const user = (req as any).user;
+      const result = await this.studentUseCases.withdrawStudent(
+        req.params.id as string,
+        {
+          withdrawalDate: req.body.withdrawalDate,
+          reason: req.body.reason,
+          destinationSchool: req.body.destinationSchool,
+          notes: req.body.notes
+        },
+        user
+      );
+      return res.status(200).json({
+        success: true,
+        message: result.message,
+        data: result
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public suspendStudent = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const user = (req as any).user;
+      const result = await this.studentUseCases.suspendStudent(req.params.id as string, req.body.reason, user);
+      return res.status(200).json({
+        success: true,
+        message: result.message,
+        data: result
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public reactivateStudent = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const user = (req as any).user;
+      const result = await this.studentUseCases.reactivateStudent(req.params.id as string, user);
+      return res.status(200).json({
+        success: true,
+        message: result.message,
+        data: result
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public permanentDeleteStudent = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const user = (req as any).user;
+      const result = await this.studentUseCases.permanentDeleteStudent(req.params.id as string, user);
+      return res.status(200).json({
+        success: true,
+        message: result.message,
+        data: result
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public getArchiveCompletenessReport = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const report = await this.studentUseCases.getArchiveCompletenessReport(req.params.id as string);
+      return res.status(200).json({
+        success: true,
+        data: report
       });
     } catch (err) {
       next(err);

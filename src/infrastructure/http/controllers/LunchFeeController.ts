@@ -41,7 +41,22 @@ export const RecordLunchPaymentSchema = z.object({
   paymentMethod: z.string().optional(),
   transactionReference: z.string().optional(),
   paymentDate: z.string().optional(),
+  idempotencyKey: z.string().optional(),
   notes: z.string().optional()
+});
+
+export const RecordDailyLunchPaymentSchema = z.object({
+  studentId: z.string().min(1, 'Student ID is required'),
+  amount: z.number().positive('Payment amount must be greater than zero'),
+  paymentMethod: z.string().optional(),
+  transactionReference: z.string().optional(),
+  paymentDate: z.string().optional(),
+  idempotencyKey: z.string().optional(),
+  notes: z.string().optional()
+});
+
+export const ReverseLunchPaymentSchema = z.object({
+  reason: z.string().min(1, 'Reversal reason is required')
 });
 
 export const RecordLunchExpenseSchema = z.object({
@@ -263,6 +278,135 @@ export class LunchFeeController {
         success: true,
         message: result.message,
         data: result
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public recordDailyPayment = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const validated = RecordDailyLunchPaymentSchema.parse(req.body);
+      const result = await this.lunchFeeUseCases.recordDailyPayment(
+        {
+          studentId: validated.studentId,
+          amount: validated.amount,
+          paymentMethod: validated.paymentMethod || 'CASH',
+          transactionReference: validated.transactionReference,
+          paymentDate: validated.paymentDate,
+          idempotencyKey: validated.idempotencyKey,
+          notes: validated.notes
+        },
+        req.user
+      );
+
+      this.systemLogUseCases?.log({
+        level: 'INFO',
+        category: 'FINANCE',
+        action: 'LUNCH_DAILY_PAYMENT_RECORDED',
+        actorUserId: req.user?.userId,
+        actorEmail: req.user?.email,
+        actorRole: req.user?.role,
+        details: `Daily payment of KES ${validated.amount} recorded for student ${validated.studentId} (Receipt: ${result.receiptNumber})`,
+        schoolId: req.user?.schoolId || 'school-001',
+        metadata: { studentId: validated.studentId, amount: validated.amount, receipt: result.receiptNumber }
+      }).catch(() => {});
+
+      const statusCode = result.isDuplicateReplay ? 200 : 201;
+      return res.status(statusCode).json({
+        success: true,
+        message: result.message,
+        data: result
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public reversePayment = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const paymentId = req.params.id as string;
+      const validated = ReverseLunchPaymentSchema.parse(req.body);
+      const result = await this.lunchFeeUseCases.reversePayment(paymentId, validated.reason, req.user);
+
+      this.systemLogUseCases?.log({
+        level: 'WARN',
+        category: 'FINANCE',
+        action: 'LUNCH_PAYMENT_REVERSED',
+        actorUserId: req.user?.userId,
+        actorEmail: req.user?.email,
+        actorRole: req.user?.role,
+        details: `Reversed lunch payment ${paymentId} (${result.receiptNumber}) - Reason: ${validated.reason}`,
+        schoolId: req.user?.schoolId || 'school-001',
+        metadata: { paymentId, reason: validated.reason, receipt: result.receiptNumber }
+      }).catch(() => {});
+
+      return res.status(200).json({
+        success: true,
+        message: result.message,
+        data: result
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public getWeeklyCollectionReport = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const { startDate, endDate, schoolId } = req.query;
+      if (!startDate || !endDate) {
+        return res.status(400).json({ success: false, message: 'startDate and endDate query parameters are required (YYYY-MM-DD).' });
+      }
+
+      const data = await this.lunchFeeUseCases.getWeeklyCollectionReport(
+        {
+          startDate: startDate as string,
+          endDate: endDate as string,
+          schoolId: (schoolId as string) || req.user?.schoolId
+        },
+        req.user
+      );
+
+      return res.status(200).json({
+        success: true,
+        data
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public getMonthlyCollectionReport = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const year = req.query.year ? parseInt(req.query.year as string, 10) : new Date().getFullYear();
+      const month = req.query.month ? parseInt(req.query.month as string, 10) : new Date().getMonth() + 1;
+      const schoolId = (req.query.schoolId as string) || req.user?.schoolId;
+
+      const data = await this.lunchFeeUseCases.getMonthlyCollectionReport(
+        {
+          year,
+          month,
+          schoolId
+        },
+        req.user
+      );
+
+      return res.status(200).json({
+        success: true,
+        data
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public getLunchDashboardMetrics = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const schoolId = (req.query.schoolId as string) || req.user?.schoolId;
+      const data = await this.lunchFeeUseCases.getLunchDashboardMetrics(schoolId, req.user);
+      return res.status(200).json({
+        success: true,
+        data
       });
     } catch (err) {
       next(err);
