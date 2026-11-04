@@ -30,6 +30,7 @@ import AdmissionsPage from './AdmissionsPage'
 import InteractiveLearningLab from './InteractiveLearningLab'
 import LearnerOnboardingPage from './LearnerOnboardingPage'
 import ApplyAdmissionSlotPage from './ApplyAdmissionSlotPage'
+import FindUsPage from './FindUsPage'
 
 const logo = '/logo.jpg'
 const whatsappImg = '/hero-school.png'
@@ -44,6 +45,7 @@ const NAV_LINKS = [
   { name: 'Programmes', view: 'programmes', section: null },
   { name: 'Admissions', view: 'admissions', section: null },
   { name: 'Apply for Slot', view: 'apply-slot', section: null },
+  { name: 'Find Us', view: 'find-us', section: null },
   { name: 'Contact', view: 'home', section: 'contact' },
 ]
 
@@ -150,7 +152,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   onOpenLegalModal,
 }) => {
   const [menuOpen, setMenuOpen] = useState(false)
-  const [currentPage, setCurrentPage] = useState<'home' | 'programmes' | 'admissions' | 'apply-slot' | 'onboarding'>('home')
+  const [currentPage, setCurrentPage] = useState<'home' | 'programmes' | 'admissions' | 'apply-slot' | 'onboarding' | 'find-us'>('home')
   const [preselectedGrade, setPreselectedGrade] = useState<string>('PP1')
   const [showEnrolModal, setShowEnrolModal] = useState(false)
   const [modalSubmitted, setModalSubmitted] = useState(false)
@@ -187,6 +189,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         setCurrentPage('programmes')
       } else if (hash === '#admissions') {
         setCurrentPage('admissions')
+      } else if (hash === '#find-us' || hash === '#findus' || hash === '#location' || hash === '#directions' || hash === '#map') {
+        setCurrentPage('find-us')
+        window.scrollTo({ top: 0, behavior: 'smooth' })
       }
     }
     handleHash()
@@ -204,6 +209,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } else if (link.view === 'apply-slot') {
       setCurrentPage('apply-slot')
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } else if (link.view === 'find-us') {
+      setCurrentPage('find-us')
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } else {
       setCurrentPage('home')
@@ -259,6 +267,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   (currentPage === 'programmes' && link.view === 'programmes') ||
                   (currentPage === 'admissions' && link.view === 'admissions') ||
                   (currentPage === 'apply-slot' && link.view === 'apply-slot') ||
+                  (currentPage === 'find-us' && link.view === 'find-us') ||
                   (currentPage === 'home' && link.name === 'Home')
                     ? 'text-[#f5c84a] font-bold border-b-2 border-[#f5c84a] pb-0.5'
                     : 'text-white/80 hover:text-white'
@@ -367,6 +376,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             setCurrentPage('apply-slot')
             window.scrollTo({ top: 0, behavior: 'smooth' })
           }}
+          onNavigateFindUs={() => {
+            setCurrentPage('find-us')
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+          }}
         />
       ) : currentPage === 'apply-slot' ? (
         <ApplyAdmissionSlotPage
@@ -387,6 +400,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             window.scrollTo({ top: 0, behavior: 'smooth' })
           }}
           initialGrade={preselectedGrade}
+        />
+      ) : currentPage === 'find-us' ? (
+        <FindUsPage
+          onNavigateHome={() => {
+            setCurrentPage('home')
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+          }}
+          onNavigateAdmissions={() => {
+            setCurrentPage('admissions')
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+          }}
+          onNavigateApplySlot={() => {
+            setCurrentPage('apply-slot')
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+          }}
         />
       ) : currentPage === 'onboarding' ? (
         <LearnerOnboardingPage
@@ -918,6 +946,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </div>
                 <h4 style={{ fontFamily: 'Fraunces, serif' }} className="text-lg font-bold text-[#f5c84a] mb-1">Our Location</h4>
                 <p className="text-white/75 text-sm">Kisumu, Kisian, KEMRI Road</p>
+                <button
+                  onClick={() => {
+                    setCurrentPage('find-us')
+                    window.scrollTo({ top: 0, behavior: 'smooth' })
+                  }}
+                  className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-[#f5c84a] hover:text-white underline cursor-pointer"
+                >
+                  <span>Get Exact Google Maps Directions →</span>
+                </button>
               </div>
 
               <div className="bg-white/5 p-6 rounded-2xl border border-white/10">
@@ -987,7 +1024,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <div>
               <p className="text-white text-xs font-bold tracking-widest uppercase mb-4">Contact</p>
               <ul className="space-y-2 text-white/50 text-sm">
-                <li className="flex items-center gap-2"><MapPin className="w-3.5 h-3.5 text-[#f5c84a] shrink-0" /> Kisumu, Kisian, KEMRI Road</li>
+                <li className="flex items-center gap-2">
+                  <MapPin className="w-3.5 h-3.5 text-[#f5c84a] shrink-0" />
+                  <button
+                    onClick={() => {
+                      setCurrentPage('find-us')
+                      window.scrollTo({ top: 0, behavior: 'smooth' })
+                    }}
+                    className="hover:text-[#f5c84a] transition-colors cursor-pointer text-left"
+                  >
+                    Kisumu, Kisian, KEMRI Road (Google Maps)
+                  </button>
+                </li>
                 <li className="flex items-center gap-2"><Phone className="w-3.5 h-3.5 text-[#f5c84a] shrink-0" /> 0745 436312</li>
                 <li className="flex items-center gap-2"><Mail className="w-3.5 h-3.5 text-[#f5c84a] shrink-0" /> schoolgraceseeds@gmail.com</li>
                 <li className="flex items-center gap-2"><Clock className="w-3.5 h-3.5 text-[#f5c84a] shrink-0" /> Mon – Fri: 7:30 am – 3:30 pm</li>
