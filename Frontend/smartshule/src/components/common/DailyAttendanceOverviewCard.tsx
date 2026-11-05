@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { UserRole } from '../../types';
@@ -41,7 +41,13 @@ export const DailyAttendanceOverviewCard: React.FC<DailyAttendanceOverviewCardPr
   const { user } = useAuth();
   const isHeadTeacher = user?.role === UserRole.HEAD_TEACHER || user?.role === UserRole.DEPUTY_HEAD_TEACHER;
   const canShowWholeTermReport = showWholeTermReport && !isHeadTeacher;
-  const todayIso = new Date().toISOString().split('T')[0];
+  const todayIso = useMemo(() => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }, []);
   const [selectedDate, setSelectedDate] = useState<string>(todayIso);
   const [selectedClassId, setSelectedClassId] = useState<string>('');
   const [availableClasses, setAvailableClasses] = useState<any[]>([]);

@@ -1,11 +1,16 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { Student, StudentInvoice, UserRole, FeeStructure } from '../../types';
+import { Student, StudentInvoice, UserRole, FeeStructure, FeeCreditUtilizationReceiptPayload } from '../../types';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { RecordPaymentModal } from '../modals/RecordPaymentModal';
 import { LearnerFeeCollectionDesk } from './LearnerFeeCollectionDesk';
+import { TransactionReversalsView } from './TransactionReversalsView';
+import { FeeCreditReceiptModal } from '../modals/FeeCreditReceiptModal';
+import { AdminInitiateCreditUtilizationModal } from '../modals/AdminInitiateCreditUtilizationModal';
+import { RequestTransactionReversalModal } from '../modals/RequestTransactionReversalModal';
+import { ReceiptViewModal } from '../modals/ReceiptViewModal';
 
 export interface StudentFeeCheckerViewProps {
   students: Student[];
@@ -191,8 +196,8 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
 }) => {
   const { user } = useAuth();
 
-  // Mode: Director & Cashier Fast-Track Desk vs Full Roster Accounting Ledger
-  const [viewMode, setViewMode] = useState<'cashier_desk' | 'full_roster'>('cashier_desk');
+  // Mode: Director & Cashier Fast-Track Desk vs Full Roster Accounting Ledger vs Transaction Reversals
+  const [viewMode, setViewMode] = useState<'cashier_desk' | 'full_roster' | 'reversals'>('cashier_desk');
 
   // Search & Filter States
   const [searchQuery, setSearchQuery] = useState('');
@@ -214,6 +219,8 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
   const [isLoadingAccounts, setIsLoadingAccounts] = useState(false);
   const [isApplyingCredit, setIsApplyingCredit] = useState(false);
   const [creditActionFeedback, setCreditActionFeedback] = useState<string | null>(null);
+  const [isReconcilingCredits, setIsReconcilingCredits] = useState(false);
+  const [reconciliationFeedback, setReconciliationFeedback] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -289,6 +296,27 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
   // Modals & Active Student State
   const [isRecordPaymentOpen, setIsRecordPaymentOpen] = useState(false);
   const [selectedStudentForPayment, setSelectedStudentForPayment] = useState<Student | null>(null);
+  const [paymentModalMode, setPaymentModalMode] = useState<'PAYMENT' | 'ARREARS' | 'INVOICE'>('PAYMENT');
+  const [selectedPaymentIdForReceipt, setSelectedPaymentIdForReceipt] = useState<string | null>(null);
+  const [isPaymentReceiptOpen, setIsPaymentReceiptOpen] = useState(false);
+
+  // Fee Credit Utilization Receipt & Admin Modal State
+  const [isCreditReceiptModalOpen, setIsCreditReceiptModalOpen] = useState(false);
+  const [selectedCreditReceiptNumber, setSelectedCreditReceiptNumber] = useState<string | null>(null);
+  const [activeCreditReceiptPayload, setActiveCreditReceiptPayload] = useState<FeeCreditUtilizationReceiptPayload | null>(null);
+  const [isAdminCreditModalOpen, setIsAdminCreditModalOpen] = useState(false);
+
+  // Transaction Reversal Modal State
+  const [reversalModalTx, setReversalModalTx] = useState<any | null>(null);
+  const [isReversalModalOpen, setIsReversalModalOpen] = useState(false);
+
+  // Reusable position loader
+  const loadPosition = async (studentId?: string, termId?: string) => {
+    if (studentId) {
+      return await apiService.getLearnerFeePosition(studentId, { termId });
+    }
+    await loadStudentAccounts();
+  };
 
   // Statement Inspection Modal State
   const [isStatementModalOpen, setIsStatementModalOpen] = useState(false);
@@ -310,6 +338,12 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
     UserRole.HEAD_TEACHER,
     UserRole.BURSAR,
     UserRole.ACCOUNTANT
+  ].includes(user?.role as UserRole);
+  // Admin-only: credit utilization / overpayment application to new term invoices
+  const isAdminCreditAuthorized = [
+    UserRole.SUPER_ADMIN,
+    UserRole.ADMIN,
+    UserRole.BURSAR,
   ].includes(user?.role as UserRole);
 
   const [isAuthorizingBilling, setIsAuthorizingBilling] = useState(false);
@@ -575,6 +609,13 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
       });
       if (res.success) {
         setCreditActionFeedback(res.message || 'Credit applied successfully to invoice.');
+        // Show receipt if returned
+        const rec = res.data?.receipt || (res as any).receipt || res.data?.application?.receiptPayload;
+        if (rec) {
+          setActiveCreditReceiptPayload(rec);
+          setSelectedCreditReceiptNumber(rec.receiptNumber);
+          setIsCreditReceiptModalOpen(true);
+        }
         const statementRes = await apiService.getFeeStatement(statementStudent.id).catch(() => null);
         if (statementRes?.success && statementRes.data) {
           setStatementData(statementRes.data);
@@ -591,6 +632,46 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
       setCreditActionFeedback(err.message || 'Error applying credit.');
     } finally {
       setIsApplyingCredit(false);
+    }
+  };
+
+  // Automatic Fee Credit Reconciliation Handler
+  const handleTriggerReconciliation = async (studentId?: string) => {
+    setIsReconcilingCredits(true);
+    setReconciliationFeedback(null);
+    try {
+      const res = await apiService.reconcileCredits(studentId ? { studentId } : {});
+      if (res?.success) {
+        const count = res.data?.reconciledCount ?? 0;
+        const totalApplied = res.data?.totalApplied ?? 0;
+        setReconciliationFeedback(
+          studentId
+            ? `Successfully reconciled! Applied KES ${totalApplied.toLocaleString()} across eligible fees.`
+            : `System-wide reconciliation complete: ${count} student(s) reconciled, KES ${totalApplied.toLocaleString()} total credit applied.`
+        );
+        if (studentId && res.data?.receipt) {
+          setActiveCreditReceiptPayload(res.data.receipt);
+          setSelectedCreditReceiptNumber(res.data.receipt.receiptNumber);
+          setIsCreditReceiptModalOpen(true);
+        }
+        if (statementStudent) {
+          const statementRes = await apiService.getFeeStatement(statementStudent.id).catch(() => null);
+          if (statementRes?.success && statementRes.data) {
+            setStatementData(statementRes.data);
+          }
+        }
+        if (onRefreshStudents) {
+          await onRefreshStudents();
+        }
+        await loadStudentAccounts();
+        setTimeout(() => setReconciliationFeedback(null), 6000);
+      } else {
+        setReconciliationFeedback(res?.message || 'Credit reconciliation encountered an issue.');
+      }
+    } catch (err: any) {
+      setReconciliationFeedback(err?.message || 'Error during fee credit reconciliation.');
+    } finally {
+      setIsReconcilingCredits(false);
     }
   };
 
@@ -933,6 +1014,18 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
             <span className="material-symbols-outlined text-[16px]">table_rows</span>
             <span>Full Ledger & Class Roster</span>
           </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('reversals')}
+            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
+              viewMode === 'reversals'
+                ? 'bg-[#7a1228] text-white shadow-xs font-bold'
+                : 'text-slate-700 hover:text-[#7a1228] font-semibold'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[16px]">history</span>
+            <span>Transaction Reversals</span>
+          </button>
         </div>
       </div>
 
@@ -946,6 +1039,8 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
             loadStudentAccounts();
           }}
         />
+      ) : viewMode === 'reversals' ? (
+        <TransactionReversalsView />
       ) : (
         <>
       {/* 1. Header Toolbar with Title & Action Buttons */}
@@ -1001,20 +1096,70 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
             <span>Export Ledger PDF</span>
           </button>
 
-          {/* Record Fee Payment / Arrears Shortcut */}
+          {/* Automatic Fee Credit Reconciliation Button */}
+          {isBillingAuthorized && (
+            <button
+              type="button"
+              disabled={isReconcilingCredits}
+              onClick={() => handleTriggerReconciliation()}
+              className="px-3.5 py-2 bg-teal-800 hover:bg-teal-900 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer disabled:opacity-50"
+              title="Automatically reconcile all eligible fee overpayments and advance credits across learners"
+            >
+              <span className={`material-symbols-outlined text-[16px] ${isReconcilingCredits ? 'animate-spin' : ''}`}>
+                sync
+              </span>
+              <span>{isReconcilingCredits ? 'Reconciling...' : 'Auto-Reconcile Credits'}</span>
+            </button>
+          )}
+
+          {/* Cashier Desk Shortcut */}
           <button
             type="button"
             onClick={() => {
               setSelectedStudentForPayment(students.length > 0 ? students[0] : null);
+              setPaymentModalMode('PAYMENT');
               setIsRecordPaymentOpen(true);
             }}
             className="px-4 py-2 bg-[#7a1228] hover:bg-[#600e1f] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+            title="Open Cashier Desk to record payment or fee collections"
           >
-            <span className="material-symbols-outlined text-[16px]">add_card</span>
-            <span>Record Fee / Arrear</span>
+            <span className="material-symbols-outlined text-[16px]">point_of_sale</span>
+            <span>Cashier Desk</span>
+          </button>
+
+          {/* Create Individual Invoice Shortcut */}
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedStudentForPayment(students.length > 0 ? students[0] : null);
+              setPaymentModalMode('INVOICE');
+              setIsRecordPaymentOpen(true);
+            }}
+            className="px-4 py-2 bg-indigo-700 hover:bg-indigo-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+            title="Create and issue fee invoice for a student"
+          >
+            <span className="material-symbols-outlined text-[16px]">post_add</span>
+            <span>+ Create Invoice</span>
           </button>
         </div>
       </div>
+
+      {/* Global Feedback Banner for Credit Reconciliation */}
+      {reconciliationFeedback && (
+        <div className="p-3 bg-teal-50 border border-teal-300 text-teal-900 rounded-xl text-xs flex items-center justify-between shadow-2xs">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-teal-700 text-base">check_circle</span>
+            <span className="font-semibold">{reconciliationFeedback}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setReconciliationFeedback(null)}
+            className="text-teal-700 hover:text-teal-900 p-0.5"
+          >
+            <span className="material-symbols-outlined text-sm">close</span>
+          </button>
+        </div>
+      )}
 
       {/* 2. High-Density KPI Accounting Ribbon */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2.5">
@@ -1505,21 +1650,36 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                         )}
                       </td>
 
-                      {/* 13. Actions - Sticky Right to ALWAYS remain visible */}
                       <td className="px-2 py-1 border border-slate-300 font-sans text-center sticky right-0 z-10 bg-white group-hover:bg-slate-50 shadow-[-3px_0_5px_rgba(0,0,0,0.06)] whitespace-nowrap">
                         <div className="flex items-center justify-center gap-1">
-                          {/* 1-click Transact (Record Payment / Arrears) */}
+                          {/* Cashier Modal – Receive Payment */}
                           <button
                             type="button"
                             onClick={() => {
                               setSelectedStudentForPayment(st);
+                              setPaymentModalMode('PAYMENT');
                               setIsRecordPaymentOpen(true);
                             }}
-                            title="Record manual fee payment or fee arrears for this student"
-                            className="px-2 py-0.5 rounded text-[11px] font-bold flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs cursor-pointer transition-colors"
+                            title="Open Cashier Desk to record fee payment for this student"
+                            className="px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs cursor-pointer transition-colors"
                           >
-                            <span className="material-symbols-outlined text-[13px]">payments</span>
-                            <span>Transact</span>
+                            <span className="material-symbols-outlined text-[13px]">point_of_sale</span>
+                            <span>Cashier</span>
+                          </button>
+
+                          {/* Invoice Part – Create or Bill Invoice */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedStudentForPayment(st);
+                              setPaymentModalMode('INVOICE');
+                              setIsRecordPaymentOpen(true);
+                            }}
+                            title="Create or bill new term invoice for this student"
+                            className="px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs cursor-pointer transition-colors"
+                          >
+                            <span className="material-symbols-outlined text-[13px]">post_add</span>
+                            <span>Invoice</span>
                           </button>
 
                           {/* View Statement & Breakdown Modal */}
@@ -1990,12 +2150,28 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                                   <th className="p-2.5">Reference / Slip</th>
                                   <th className="p-2.5 text-right">Amount</th>
                                   <th className="p-2.5 text-center font-sans">Status</th>
+                                  {isBillingAuthorized && <th className="p-2.5 text-right font-sans">Action</th>}
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-slate-100">
                                 {paymentsList.map((p, pIdx) => (
                                   <tr key={pIdx} className="hover:bg-slate-50">
-                                    <td className="p-2.5 font-bold text-[#7a1228]">{p.receiptNumber || `REC-${pIdx + 1000}`}</td>
+                                    <td className="p-2.5 font-bold text-[#7a1228]">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          if (p.id) {
+                                            setSelectedPaymentIdForReceipt(p.id);
+                                            setIsPaymentReceiptOpen(true);
+                                          }
+                                        }}
+                                        className="hover:underline cursor-pointer inline-flex items-center gap-1 text-[#7a1228] text-xs font-bold"
+                                        title="Click to view & print official payment receipt"
+                                      >
+                                        <span className="material-symbols-outlined text-[13px]">receipt_long</span>
+                                        <span>{p.receiptNumber || `REC-${pIdx + 1000}`}</span>
+                                      </button>
+                                    </td>
                                     <td className="p-2.5 text-slate-600">{p.paymentDate || 'Recent'}</td>
                                     <td className="p-2.5 font-sans font-medium text-slate-800">{p.paymentMethod || 'KCB_BUNI'}</td>
                                     <td className="p-2.5 text-slate-600">{p.transactionReference || '--'}</td>
@@ -2003,10 +2179,39 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                                       +KES {(p.amount || 0).toLocaleString()}
                                     </td>
                                     <td className="p-2.5 text-center font-sans">
-                                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                        p.status === 'REVERSED' ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800'
+                                      }`}>
                                         {p.status || 'COMPLETED'}
                                       </span>
                                     </td>
+                                    {isBillingAuthorized && (
+                                      <td className="p-2.5 text-right font-sans">
+                                        {p.status !== 'REVERSED' && (
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setReversalModalTx({
+                                                id: p.id,
+                                                reference: p.receiptNumber || p.transactionReference,
+                                                receiptNumber: p.receiptNumber,
+                                                type: 'PAYMENT',
+                                                amount: p.amount,
+                                                date: p.paymentDate || new Date().toISOString().split('T')[0],
+                                                studentId: statementStudent.id,
+                                                studentName: statementStudent.name,
+                                                admissionNumber: statementStudent.admNo
+                                              });
+                                              setIsReversalModalOpen(true);
+                                            }}
+                                            className="px-2 py-0.5 rounded bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-[10px] border border-amber-200 cursor-pointer inline-flex items-center gap-1"
+                                          >
+                                            <span className="material-symbols-outlined text-[12px]">rotate_left</span>
+                                            <span>Reverse</span>
+                                          </button>
+                                        )}
+                                      </td>
+                                    )}
                                   </tr>
                                 ))}
                               </tbody>
@@ -2150,30 +2355,37 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                         {availableCreditAmount > 0 && invoicesList.some(inv => (inv.balance || 0) > 0) && (
                           <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                             <div className="flex items-center gap-2.5">
-                              <span className="material-symbols-outlined text-amber-700 text-xl">info</span>
+                              <span className="material-symbols-outlined text-amber-700 text-xl">auto_mode</span>
                               <div>
-                                <span className="font-bold text-amber-900">Unsettled Fee Invoices Found</span>
+                                <span className="font-bold text-amber-900">Unsettled Fee Invoices &amp; Available Credit</span>
                                 <p className="text-[11px] text-amber-800">
-                                  This learner has available credit of KES {availableCreditAmount.toLocaleString()} that can offset outstanding fees.
+                                  This learner has available credit of KES {availableCreditAmount.toLocaleString()} that can be applied to settle outstanding fees (prior arrears first, then current term).
                                 </p>
                               </div>
                             </div>
-                            {isBillingAuthorized && (
-                              <button
-                                type="button"
-                                disabled={isApplyingCredit}
-                                onClick={() => {
-                                  const targetInvoice = invoicesList.find(inv => (inv.balance || 0) > 0);
-                                  const availableCredit = creditsList.find((c: any) => (c.balance || 0) > 0 && c.status !== 'REVERSED');
-                                  if (targetInvoice && availableCredit) {
-                                    handleApplyCredit(availableCredit.id, targetInvoice.id);
-                                  }
-                                }}
-                                className="px-3.5 py-2 bg-teal-700 hover:bg-teal-800 text-white rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50 shrink-0 flex items-center gap-1"
-                              >
-                                <span className="material-symbols-outlined text-sm">price_check</span>
-                                <span>{isApplyingCredit ? 'Applying...' : 'Apply Credit to Earliest Invoice'}</span>
-                              </button>
+                            {isAdminCreditAuthorized && (
+                              <div className="flex items-center gap-2 shrink-0">
+                                <button
+                                  type="button"
+                                  disabled={isReconcilingCredits || isApplyingCredit}
+                                  onClick={() => handleTriggerReconciliation(statementStudent.id)}
+                                  className="px-3.5 py-2 bg-teal-800 hover:bg-teal-900 text-white rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                                  title="Automatically allocate credit across all outstanding fees with priority"
+                                >
+                                  <span className={`material-symbols-outlined text-sm ${isReconcilingCredits ? 'animate-spin' : ''}`}>sync</span>
+                                  <span>{isReconcilingCredits ? 'Reconciling...' : 'Auto-Apply Available Credit'}</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={isReconcilingCredits || isApplyingCredit}
+                                  onClick={() => setIsAdminCreditModalOpen(true)}
+                                  className="px-3.5 py-2 bg-[#7a1228] hover:bg-[#600e1f] text-white rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                                  title="Initiate custom fee credit allocation with audit reason and live preview (Admin only)"
+                                >
+                                  <span className="material-symbols-outlined text-sm">tune</span>
+                                  <span>Admin Utilization</span>
+                                </button>
+                              </div>
                             )}
                           </div>
                         )}
@@ -2204,7 +2416,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                                     <th className="p-2.5 text-right">Amount Used</th>
                                     <th className="p-2.5 text-right font-bold text-teal-800">Remaining Balance</th>
                                     <th className="p-2.5 text-center font-sans">Status</th>
-                                    {isBillingAuthorized && <th className="p-2.5 text-center font-sans">Action</th>}
+                                    {isAdminCreditAuthorized && <th className="p-2.5 text-center font-sans">Action (Admin)</th>}
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
@@ -2232,7 +2444,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                                             {c.status}
                                           </span>
                                         </td>
-                                        {isBillingAuthorized && (
+                                        {isAdminCreditAuthorized && (
                                           <td className="p-2.5 text-center font-sans">
                                             {canApply ? (
                                               <button
@@ -2274,21 +2486,90 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
                               <table className="w-full text-left text-xs font-mono">
                                 <thead className="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200">
                                   <tr>
-                                    <th className="p-2.5">Applied Date</th>
-                                    <th className="p-2.5">Credit Ref</th>
+                                    <th className="p-2.5">Date</th>
+                                    <th className="p-2.5">Application Ref</th>
+                                    <th className="p-2.5">Origin Ref</th>
                                     <th className="p-2.5">Target Invoice</th>
-                                    <th className="p-2.5 text-right">Amount Applied</th>
-                                    <th className="p-2.5 font-sans">Applied By</th>
+                                    <th className="p-2.5 text-right">Applied</th>
+                                    <th className="p-2.5 text-right">Rem. Credit</th>
+                                    <th className="p-2.5 font-sans">Trigger</th>
+                                    <th className="p-2.5 font-sans text-center">Type</th>
+                                    <th className="p-2.5 font-sans text-center">Receipt</th>
+                                    {isBillingAuthorized && <th className="p-2.5 font-sans text-right">Action</th>}
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
                                   {applicationsList.map((app: any, aIdx: number) => (
                                     <tr key={app.id || aIdx} className="hover:bg-slate-50">
                                       <td className="p-2.5 text-slate-600">{app.createdAt ? new Date(app.createdAt).toLocaleDateString() : 'Recent'}</td>
-                                      <td className="p-2.5 text-slate-700 font-bold">{app.creditId ? app.creditId.slice(0, 10) : '--'}</td>
+                                      <td className="p-2.5 text-slate-800 font-bold">{app.applicationReference || (app.id ? app.id.slice(0, 14) : '--')}</td>
+                                      <td className="p-2.5 text-slate-700 font-bold">{app.originatingPaymentReference || (app.creditId ? app.creditId.slice(0, 10) : '--')}</td>
                                       <td className="p-2.5 font-bold text-[#7a1228]">{app.invoiceId ? app.invoiceId.slice(0, 14) : '--'}</td>
                                       <td className="p-2.5 text-right font-black text-emerald-800">+KES {(Number(app.amountApplied) || 0).toLocaleString()}</td>
-                                      <td className="p-2.5 font-sans text-slate-600 text-[11px]">{app.appliedByUserId || 'ADMIN'}</td>
+                                      <td className="p-2.5 text-right font-mono text-teal-800">
+                                        {app.remainingCredit != null ? `KES ${(Number(app.remainingCredit) || 0).toLocaleString()}` : '--'}
+                                      </td>
+                                      <td className="p-2.5 font-sans text-slate-600 text-[11px]">{app.triggerSource || 'MANUAL'}</td>
+                                      <td className="p-2.5 font-sans text-center">
+                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                          app.isSystemGenerated
+                                            ? 'bg-purple-100 text-purple-900 border border-purple-200'
+                                            : 'bg-slate-100 text-slate-700 border border-slate-200'
+                                        }`}>
+                                          {app.isSystemGenerated ? 'AUTO' : 'MANUAL'}
+                                        </span>
+                                      </td>
+                                      <td className="p-2.5 font-sans text-center">
+                                        {app.receiptNumber ? (
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              if (app.receiptPayload) {
+                                                setActiveCreditReceiptPayload(app.receiptPayload);
+                                                setSelectedCreditReceiptNumber(app.receiptNumber);
+                                              } else {
+                                                setActiveCreditReceiptPayload(null);
+                                                setSelectedCreditReceiptNumber(app.receiptNumber);
+                                              }
+                                              setIsCreditReceiptModalOpen(true);
+                                            }}
+                                            className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#7a1228]/10 hover:bg-[#7a1228]/20 text-[#7a1228] font-bold rounded text-[10px] transition-colors cursor-pointer"
+                                            title="View Official Fee Credit Utilization Receipt"
+                                          >
+                                            <span className="material-symbols-outlined text-[13px]">receipt_long</span>
+                                            <span>{app.receiptNumber}</span>
+                                          </button>
+                                        ) : (
+                                          <span className="text-slate-400 text-[10px]">--</span>
+                                        )}
+                                      </td>
+                                      {isBillingAuthorized && (
+                                        <td className="p-2.5 text-right font-sans">
+                                          {app.status !== 'REVERSED' && (
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                setReversalModalTx({
+                                                  id: app.id,
+                                                  reference: app.receiptNumber || app.applicationReference,
+                                                  receiptNumber: app.receiptNumber,
+                                                  type: 'CREDIT_UTILIZATION',
+                                                  amount: app.amountApplied,
+                                                  date: app.createdAt ? new Date(app.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+                                                  studentId: statementStudent.id,
+                                                  studentName: statementStudent.name,
+                                                  admissionNumber: statementStudent.admNo
+                                                });
+                                                setIsReversalModalOpen(true);
+                                              }}
+                                              className="px-2 py-0.5 rounded bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-[10px] border border-amber-200 cursor-pointer inline-flex items-center gap-1"
+                                            >
+                                              <span className="material-symbols-outlined text-[12px]">rotate_left</span>
+                                              <span>Reverse</span>
+                                            </button>
+                                          )}
+                                        </td>
+                                      )}
                                     </tr>
                                   ))}
                                 </tbody>
@@ -2320,7 +2601,7 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
         </div>
       )}
 
-      {/* 6. MODAL: UNIFIED RECORD PAYMENT / ARREARS MODAL */}
+      {/* 6. MODAL: CASHIER DESK & STUDENT BILLING (PAYMENTS, ARREARS & INVOICING) */}
       {isRecordPaymentOpen && (
         <RecordPaymentModal
           isOpen={isRecordPaymentOpen}
@@ -2330,9 +2611,30 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
           }}
           students={students}
           initialStudent={selectedStudentForPayment || (students.length > 0 ? students[0] : undefined)}
-          onPaymentRecorded={handlePaymentSuccess}
+          initialMode={paymentModalMode}
+          onPaymentRecorded={(payment) => {
+            handlePaymentSuccess();
+            const pId = payment?.id || payment?.payment?.id || payment?.receipt?.paymentId;
+            if (pId) {
+              setSelectedPaymentIdForReceipt(pId);
+              setIsPaymentReceiptOpen(true);
+            }
+          }}
           onArrearRecorded={handlePaymentSuccess}
+          onInvoiceCreated={handlePaymentSuccess}
           onRefreshStudents={onRefreshStudents}
+        />
+      )}
+
+      {/* Official Payment Receipt Modal */}
+      {isPaymentReceiptOpen && (
+        <ReceiptViewModal
+          isOpen={isPaymentReceiptOpen}
+          onClose={() => {
+            setIsPaymentReceiptOpen(false);
+            setSelectedPaymentIdForReceipt(null);
+          }}
+          paymentId={selectedPaymentIdForReceipt || undefined}
         />
       )}
 
@@ -2429,6 +2731,72 @@ export const StudentFeeCheckerView: React.FC<StudentFeeCheckerViewProps> = ({
             </div>
           </div>
         </div>
+      )}
+      {/* Fee Credit Utilization Receipt Modal */}
+      {isCreditReceiptModalOpen && (
+        <FeeCreditReceiptModal
+          isOpen={isCreditReceiptModalOpen}
+          onClose={() => {
+            setIsCreditReceiptModalOpen(false);
+            setSelectedCreditReceiptNumber(null);
+            setActiveCreditReceiptPayload(null);
+          }}
+          receiptNumber={selectedCreditReceiptNumber || undefined}
+          initialReceipt={activeCreditReceiptPayload}
+        />
+      )}
+
+      {/* Admin-Initiated Fee Credit Utilization Modal */}
+      {isAdminCreditModalOpen && statementStudent && (
+        <AdminInitiateCreditUtilizationModal
+          isOpen={isAdminCreditModalOpen}
+          onClose={() => setIsAdminCreditModalOpen(false)}
+          studentId={statementStudent.id}
+          studentName={statementStudent.name}
+          admissionNumber={statementStudent.admNo}
+          gradeLevel={statementStudent.grade || (statementStudent as any).gradeLevel}
+          availableCredit={availableCreditAmount}
+          totalDue={invoicesList.reduce((sum, inv) => sum + (Number(inv.balance) || 0), 0)}
+          onSuccess={async (receipt) => {
+            setActiveCreditReceiptPayload(receipt);
+            setSelectedCreditReceiptNumber(receipt.receiptNumber);
+            setIsCreditReceiptModalOpen(true);
+            if (statementStudent) {
+              const statementRes = await apiService.getFeeStatement(statementStudent.id).catch(() => null);
+              if (statementRes?.success && statementRes.data) {
+                setStatementData(statementRes.data);
+              }
+            }
+            if (onRefreshStudents) {
+              await onRefreshStudents();
+            }
+            await loadStudentAccounts();
+          }}
+        />
+      )}
+
+      {/* Transaction Reversal Request Modal */}
+      {reversalModalTx && (
+        <RequestTransactionReversalModal
+          isOpen={isReversalModalOpen}
+          onClose={() => {
+            setIsReversalModalOpen(false);
+            setReversalModalTx(null);
+          }}
+          onSuccess={async () => {
+            if (statementStudent) {
+              const statementRes = await apiService.getFeeStatement(statementStudent.id).catch(() => null);
+              if (statementRes?.success && statementRes.data) {
+                setStatementData(statementRes.data);
+              }
+            }
+            if (onRefreshStudents) {
+              await onRefreshStudents();
+            }
+            await loadPosition();
+          }}
+          transaction={reversalModalTx}
+        />
       )}
       </>
       )}

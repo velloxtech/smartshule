@@ -47,6 +47,7 @@ import {
   CreateClassRoomSchema,
   CreateStreamSchema,
   CreateLearningAreaSchema,
+  CreateGlobalSubjectSchema,
   AssignClassTeacherSchema,
   AssignSubjectTeacherSchema
 } from '../controllers/AcademicController';
@@ -150,7 +151,12 @@ import {
   UpdateComplaintSchema,
   UpdateComplaintStatusSchema,
   AssignComplaintSchema,
+  AcknowledgeConcernSchema,
+  EscalateConcernSchema,
+  AddConcernMessageSchema,
   ResolveComplaintSchema,
+  CloseConcernSchema,
+  ReopenConcernSchema,
   DismissComplaintSchema
 } from '../controllers/ComplaintController';
 import { SystemLogController } from '../controllers/SystemLogController';
@@ -325,6 +331,8 @@ export function createApiRouter(container: AppContainer): Router {
   academicRouter.get('/classes', authMiddleware, academicController.listClasses);
   academicRouter.post('/streams', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN, UserRole.HEAD_TEACHER), validateBody(CreateStreamSchema), academicController.createStream);
   academicRouter.get('/streams/by-class/:classRoomId', authMiddleware, academicController.listStreamsByClass);
+  academicRouter.post('/global-subjects', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN, UserRole.HEAD_TEACHER), validateBody(CreateGlobalSubjectSchema), academicController.createGlobalSubject);
+  academicRouter.get('/global-subjects', authMiddleware, academicController.listGlobalSubjects);
   academicRouter.post('/learning-areas', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN, UserRole.HEAD_TEACHER), validateBody(CreateLearningAreaSchema), academicController.createLearningArea);
   academicRouter.get('/learning-areas', authMiddleware, academicController.listLearningAreas);
   academicRouter.delete('/classes/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ADMIN, UserRole.HEAD_TEACHER), academicController.deleteClass);
@@ -670,7 +678,7 @@ export function createApiRouter(container: AppContainer): Router {
   financeRouter.post('/payments/preview-allocation', authMiddleware, financeController.previewPaymentAllocation);
   financeRouter.get('/students/:studentId/payment-preview', authMiddleware, financeController.previewPaymentAllocation);
   financeRouter.post('/payments', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), validateBody(RecordPaymentSchema), financeController.recordPayment);
-  financeRouter.post('/payments/:id/reverse', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), validateBody(ReversePaymentSchema), financeController.reversePayment);
+  financeRouter.post('/payments/:id/reverse', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), validateBody(ReversePaymentSchema), financeController.reversePayment);
   financeRouter.get('/payments', authMiddleware, financeController.listPayments); // Parent isolated
   financeRouter.get('/payments/:id/receipt', authMiddleware, financeController.getPaymentReceipt);
   financeRouter.post('/payments/:id/issue-receipt', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), financeController.reissueReceipt);
@@ -682,6 +690,26 @@ export function createApiRouter(container: AppContainer): Router {
   financeRouter.get('/student-accounts', authMiddleware, financeController.getStudentFeeAccounts);
   financeRouter.get('/credits/:studentId', authMiddleware, financeController.getStudentCredits);
   financeRouter.post('/credits/apply', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), financeController.applyCreditToInvoice);
+  financeRouter.post('/reconcile-credits', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), financeController.reconcileCredits);
+  financeRouter.get('/reconcile-credits/status', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), financeController.getReconciliationStatus);
+  financeRouter.post('/reconcile-credits/retry', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), financeController.retryFailedReconciliations);
+  financeRouter.post('/credit-utilization/preview', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), financeController.previewCreditUtilization);
+  financeRouter.post('/credit-utilization/initiate', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), financeController.adminInitiateCreditUtilization);
+  financeRouter.get('/credit-receipts', authMiddleware, financeController.getAllCreditReceipts);
+  financeRouter.get('/credit-receipts/:receiptNumber', authMiddleware, financeController.getCreditUtilizationReceipt);
+  financeRouter.get('/credit-receipts/:receiptNumber/pdf', authMiddleware, financeController.downloadCreditUtilizationReceiptPdf);
+  financeRouter.post('/credit-receipts/:receiptNumber/reverse', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), financeController.reverseCreditUtilization);
+  financeRouter.get('/students/:studentId/credit-receipts', authMiddleware, financeController.getStudentCreditReceipts);
+
+  // Transaction Reversal Workflow (Bursar Request -> Admin Approval & Execution)
+  financeRouter.post('/reversals/request', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), financeController.requestTransactionReversal);
+  financeRouter.get('/reversals', authMiddleware, financeController.listTransactionReversals);
+  financeRouter.get('/reversals/:id/preview', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.BURSAR, UserRole.ACCOUNTANT), financeController.getTransactionReversalPreview);
+  financeRouter.get('/reversals/:id', authMiddleware, financeController.getTransactionReversalById);
+  financeRouter.post('/reversals/:id/approve', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), financeController.approveAndExecuteTransactionReversal);
+  financeRouter.post('/reversals/:id/reject', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), financeController.rejectTransactionReversal);
+  financeRouter.post('/reversals/:id/retry', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), financeController.retryTransactionReversal);
+  financeRouter.get('/reversals/:receiptNumber/receipt', authMiddleware, financeController.getReversalReceiptDocument);
   financeRouter.get('/defaulters', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT), financeController.getDefaulters);
 
   // Financial Approvals Workflow (OTP-authorized sensitive corrections/reversals)
@@ -830,6 +858,26 @@ export function createApiRouter(container: AppContainer): Router {
     UserRole.HEAD_TEACHER
   );
 
+  const allowedComplaintStaffRoles = requireRoles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.HEAD_TEACHER,
+    UserRole.TEACHER,
+    UserRole.BURSAR
+  );
+
+  const allowedConcernParticipantRoles = requireRoles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.HEAD_TEACHER,
+    UserRole.TEACHER,
+    UserRole.BURSAR,
+    UserRole.PARENT,
+    UserRole.GUARDIAN
+  );
+
   const allowedComplaintViewAndCreateRoles = requireRoles(
     UserRole.SUPER_ADMIN,
     UserRole.ADMIN,
@@ -842,11 +890,18 @@ export function createApiRouter(container: AppContainer): Router {
   complaintRouter.post('/', authMiddleware, allowedComplaintViewAndCreateRoles, validateBody(CreateComplaintSchema), complaintController.create);
   complaintRouter.get('/', authMiddleware, allowedComplaintViewAndCreateRoles, complaintController.getAll);
   complaintRouter.get('/stats/summary', authMiddleware, allowedComplaintAdminRoles, complaintController.getStats);
-  complaintRouter.get('/:id', authMiddleware, allowedComplaintViewAndCreateRoles, complaintController.getById);
+  complaintRouter.get('/reports', authMiddleware, allowedComplaintAdminRoles, complaintController.getStats);
+  complaintRouter.get('/:id', authMiddleware, allowedConcernParticipantRoles, complaintController.getById);
   complaintRouter.put('/:id', authMiddleware, allowedComplaintAdminRoles, validateBody(UpdateComplaintSchema), complaintController.update);
   complaintRouter.patch('/:id/status', authMiddleware, allowedComplaintAdminRoles, validateBody(UpdateComplaintStatusSchema), complaintController.updateStatus);
+  complaintRouter.post('/:id/acknowledge', authMiddleware, allowedComplaintAdminRoles, validateBody(AcknowledgeConcernSchema), complaintController.acknowledge);
   complaintRouter.post('/:id/assign', authMiddleware, allowedComplaintAdminRoles, validateBody(AssignComplaintSchema), complaintController.assign);
+  complaintRouter.post('/:id/escalate', authMiddleware, allowedComplaintStaffRoles, validateBody(EscalateConcernSchema), complaintController.escalate);
+  complaintRouter.post('/:id/messages', authMiddleware, allowedConcernParticipantRoles, validateBody(AddConcernMessageSchema), complaintController.addMessage);
+  complaintRouter.post('/:id/respond', authMiddleware, allowedConcernParticipantRoles, validateBody(AddConcernMessageSchema), complaintController.addMessage);
   complaintRouter.post('/:id/resolve', authMiddleware, allowedComplaintAdminRoles, validateBody(ResolveComplaintSchema), complaintController.resolve);
+  complaintRouter.post('/:id/close', authMiddleware, allowedComplaintAdminRoles, validateBody(CloseConcernSchema), complaintController.close);
+  complaintRouter.post('/:id/reopen', authMiddleware, allowedConcernParticipantRoles, validateBody(ReopenConcernSchema), complaintController.reopen);
   complaintRouter.post('/:id/dismiss', authMiddleware, allowedComplaintAdminRoles, validateBody(DismissComplaintSchema), complaintController.dismiss);
   complaintRouter.delete('/:id', authMiddleware, allowedComplaintAdminRoles, complaintController.delete);
 
@@ -955,6 +1010,14 @@ export function createApiRouter(container: AppContainer): Router {
     authMiddleware,
     requireRoles(UserRole.ADMIN, UserRole.HEAD_TEACHER, UserRole.BURSAR),
     lunchFeeController.recordDailyPayment
+  );
+
+  // Record monthly lunch payment against individual learner
+  lunchRouter.post(
+    '/payments/monthly',
+    authMiddleware,
+    requireRoles(UserRole.ADMIN, UserRole.HEAD_TEACHER, UserRole.BURSAR),
+    lunchFeeController.recordMonthlyPayment
   );
 
   // Reverse lunch payment

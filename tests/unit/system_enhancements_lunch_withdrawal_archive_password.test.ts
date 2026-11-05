@@ -7,6 +7,7 @@ import { User, UserRole, UserStatus } from '../../src/core/domain/user/User';
 import { Guardian, GuardianRelationship } from '../../src/core/domain/user/Guardian';
 import { Student, StudentGender, CBCGradeLevel, StudentStatus } from '../../src/core/domain/user/Student';
 import { ClassRoom, Stream, EducationLevel } from '../../src/core/domain/academic/ClassRoom';
+import { LunchEnrollment, LunchEnrollmentStatus } from '../../src/core/domain/finance/LunchEnrollment';
 
 describe('SmartShule Enhancements: Lunch Daily Collections, Withdrawal, Archiving & Password Reset', () => {
   let app: Express;
@@ -225,6 +226,23 @@ describe('SmartShule Enhancements: Lunch Daily Collections, Withdrawal, Archivin
     );
     await container.studentRepository.save(singleChild);
 
+    // 6. Setup Daily Lunch Enrollment for HT Child
+    const htLunchEnrollment = LunchEnrollment.create(
+      {
+        schoolId,
+        studentId: HT_STUDENT_ID,
+        academicYearId,
+        planName: 'Standard Daily Lunch',
+        paymentFrequency: 'DAILY',
+        dailyRate: 150,
+        amount: 0,
+        status: LunchEnrollmentStatus.ACTIVE,
+        enrolledAt: new Date(),
+      },
+      'enr-ht-daily-01'
+    );
+    await container.lunchFeeRepository.save(htLunchEnrollment);
+
     // Obtain JWT Tokens
     const adminLogin = await request(app).post('/api/v1/auth/login').send({
       email: 'admin.enhancements@smartshule.ac.ke',
@@ -251,7 +269,7 @@ describe('SmartShule Enhancements: Lunch Daily Collections, Withdrawal, Archivin
   describe('Module 1: Lunch Program Daily Collection & Financial Accountability', () => {
     const studentId = HT_STUDENT_ID;
 
-    it('1.1 should record daily lunch collection and auto-enroll learner with DAILY frequency', async () => {
+    it('1.1 should record daily lunch collection for learner enrolled with DAILY frequency', async () => {
       const res = await request(app)
         .post('/api/v1/lunch/payments/daily')
         .set('Authorization', `Bearer ${adminToken}`)

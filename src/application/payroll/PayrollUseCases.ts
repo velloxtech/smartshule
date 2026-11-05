@@ -275,8 +275,25 @@ export class PayrollUseCases {
   }
 
   public async listPayrolls(month?: string, schoolId?: string): Promise<any[]> {
-    const targetMonth = month || new Date().toISOString().substring(0, 7);
-    const payrolls = await this.payrollRepository.findPayrollsByMonth(targetMonth, schoolId);
+    if (month && month.toUpperCase() === 'ALL') {
+      const payrolls = await this.payrollRepository.findPayrollsByMonth(undefined, schoolId);
+      return payrolls.map(p => p.toJSON());
+    }
+
+    const currentMonth = new Date().toISOString().substring(0, 7);
+    const targetMonth = month || currentMonth;
+    let payrolls = await this.payrollRepository.findPayrollsByMonth(targetMonth, schoolId);
+
+    // If month was not explicitly provided by client and current month has 0 records,
+    // check if there are records in the most recent month so the user doesn't see an empty screen
+    if (!month && payrolls.length === 0) {
+      const allPayrolls = await this.payrollRepository.findPayrollsByMonth(undefined, schoolId);
+      if (allPayrolls.length > 0) {
+        const latestMonth = allPayrolls[0].month;
+        payrolls = allPayrolls.filter(p => p.month === latestMonth);
+      }
+    }
+
     return payrolls.map(p => p.toJSON());
   }
 
@@ -773,7 +790,8 @@ export class PayrollUseCases {
   }
 
   public async getPayrollStats(month?: string, schoolId?: string) {
-    const targetMonth = month || new Date().toISOString().substring(0, 7);
+    const isAll = month && month.toUpperCase() === 'ALL';
+    const targetMonth = isAll ? undefined : (month || new Date().toISOString().substring(0, 7));
     const payrolls = await this.payrollRepository.findPayrollsByMonth(targetMonth, schoolId);
 
     const totalGross = payrolls.reduce((sum, p) => sum + p.grossSalary, 0);

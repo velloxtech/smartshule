@@ -5,9 +5,16 @@ import { apiService } from '../../services/api';
 import { SchemeOfWork, LessonPlan, UserRole } from '../../types';
 import { CreateSchemeModal } from '../modals/CreateSchemeModal';
 import { CreateLessonPlanModal } from '../modals/CreateLessonPlanModal';
+import { ViewSchemeModal } from '../modals/ViewSchemeModal';
+import { CurriculumSuiteSwitcher, CurriculumSuiteTab } from '../common/CurriculumSuiteSwitcher';
 import { useAuth } from '../../context/AuthContext';
 
-export const SchemesView: React.FC = () => {
+interface SchemesViewProps {
+  onNavigateTab?: (tab: string) => void;
+  initialTab?: 'schemes' | 'lesson-plans';
+}
+
+export const SchemesView: React.FC<SchemesViewProps> = ({ onNavigateTab, initialTab = 'schemes' }) => {
   const { user } = useAuth();
   const isTeacher = user?.role === UserRole.TEACHER;
   const isApprover = Boolean(
@@ -20,7 +27,7 @@ export const SchemesView: React.FC = () => {
     ].includes(user.role)
   );
 
-  const [activeTab, setActiveTab] = useState<'schemes' | 'lesson-plans'>('schemes');
+  const [activeTab, setActiveTab] = useState<'schemes' | 'lesson-plans'>(initialTab);
   const [schemes, setSchemes] = useState<SchemeOfWork[]>([]);
   const [lessonPlans, setLessonPlans] = useState<LessonPlan[]>([]);
   const [teacherProfile, setTeacherProfile] = useState<any>(null);
@@ -31,6 +38,7 @@ export const SchemesView: React.FC = () => {
   const [isCreateSchemeOpen, setIsCreateSchemeOpen] = useState(false);
   const [isCreatePlanOpen, setIsCreatePlanOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<LessonPlan | null>(null);
+  const [selectedScheme, setSelectedScheme] = useState<SchemeOfWork | null>(null);
 
   const getSchoolLogoBase64 = async (customUrl?: string): Promise<string | null> => {
     const urlsToTry = [customUrl, '/logo.png', '/logo.jpg'].filter(Boolean) as string[];
@@ -527,31 +535,21 @@ export const SchemesView: React.FC = () => {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex border-b border-surface-container gap-6 text-sm font-semibold">
-        <button
-          onClick={() => setActiveTab('schemes')}
-          className={`pb-3 flex items-center gap-2 transition-colors cursor-pointer ${
-            activeTab === 'schemes'
-              ? 'text-[#7a1228] border-b-2 border-[#7a1228]'
-              : 'text-on-surface-variant hover:text-on-surface'
-          }`}
-        >
-          <span className="material-symbols-outlined text-[18px]">calendar_month</span>
-          <span>Schemes of Work ({schemes.length})</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('lesson-plans')}
-          className={`pb-3 flex items-center gap-2 transition-colors cursor-pointer ${
-            activeTab === 'lesson-plans'
-              ? 'text-[#7a1228] border-b-2 border-[#7a1228]'
-              : 'text-on-surface-variant hover:text-on-surface'
-          }`}
-        >
-          <span className="material-symbols-outlined text-[18px]">menu_book</span>
-          <span>40-Min Lesson Plans ({lessonPlans.length})</span>
-        </button>
-      </div>
+      {/* Curriculum Planning & Coverage Suite Switcher */}
+      <CurriculumSuiteSwitcher
+        activeTab={activeTab}
+        onSelectTab={(tab) => {
+          if (tab === 'schemes' || tab === 'lesson-plans') {
+            setActiveTab(tab);
+          } else if (onNavigateTab) {
+            onNavigateTab(tab);
+          }
+        }}
+        counts={{
+          schemes: schemes.length,
+          lessonPlans: lessonPlans.length,
+        }}
+      />
 
       {/* Schemes View */}
       {activeTab === 'schemes' && (
@@ -567,7 +565,15 @@ export const SchemesView: React.FC = () => {
                     <span className="font-bold text-xs text-secondary font-data-mono bg-secondary-container px-2 py-0.5 rounded">
                       Term 1 · 2026
                     </span>
-                    <span className="font-bold text-sm text-primary">{s.title}</span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedScheme(s)}
+                      className="font-bold text-sm text-primary hover:underline cursor-pointer flex items-center gap-1.5 text-left"
+                      title="Click to view full Scheme of Work details"
+                    >
+                      <span className="material-symbols-outlined text-[16px] text-[#7a1228]">visibility</span>
+                      <span>{s.title}</span>
+                    </button>
                   </div>
 
                   {s.entries && s.entries[0] && (
@@ -606,6 +612,14 @@ export const SchemesView: React.FC = () => {
                   </span>
 
                   <div className="flex gap-2 items-center flex-wrap">
+                    <button
+                      onClick={() => setSelectedScheme(s)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#7a1228] text-white hover:bg-[#5e0d1e] text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                      title="View complete Scheme of Work details and full syllabus matrix"
+                    >
+                      <span className="material-symbols-outlined text-[17px]">visibility</span>
+                      <span>View Details</span>
+                    </button>
                     <button
                       onClick={() => downloadSchemePDF(s)}
                       className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#7a1228] text-white hover:bg-[#5e0d1e] text-xs font-semibold shadow-xs transition-colors cursor-pointer"
@@ -698,7 +712,15 @@ export const SchemesView: React.FC = () => {
                     </div>
 
                     <div className="mt-2 space-y-1">
-                      <h3 className="font-bold text-sm text-on-surface">{lp.strand}</h3>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedPlan(lp)}
+                        className="font-bold text-sm text-on-surface hover:text-[#7a1228] text-left flex items-center gap-1.5 cursor-pointer"
+                        title="Click to view lesson plan details"
+                      >
+                        <span className="material-symbols-outlined text-[16px] text-[#7a1228]">visibility</span>
+                        <span>{lp.strand}</span>
+                      </button>
                       <p className="text-xs text-primary font-medium">Sub-strand: {lp.subStrand}</p>
                     </div>
 
@@ -782,10 +804,11 @@ export const SchemesView: React.FC = () => {
 
                     <button
                       onClick={() => setSelectedPlan(lp)}
-                      className="text-xs font-bold text-primary hover:underline flex items-center gap-1 cursor-pointer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#7a1228] text-white hover:bg-[#5e0d1e] text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                      title="View complete 40-Minute CBE Lesson Plan details"
                     >
-                      <span>View 40-Min Plan</span>
-                      <span className="material-symbols-outlined text-[14px]">visibility</span>
+                      <span className="material-symbols-outlined text-[16px]">visibility</span>
+                      <span>View Details</span>
                     </button>
                   </div>
                 </div>
@@ -957,6 +980,16 @@ export const SchemesView: React.FC = () => {
         isOpen={isCreatePlanOpen}
         onClose={() => setIsCreatePlanOpen(false)}
         onPlanCreated={() => loadCurriculum()}
+      />
+
+      {/* On-screen Scheme of Work Matrix Modal */}
+      <ViewSchemeModal
+        scheme={selectedScheme}
+        onClose={() => setSelectedScheme(null)}
+        onDownloadPDF={downloadSchemePDF}
+        onSubmitForReview={handleSubmitScheme}
+        onApproveScheme={handleApproveScheme}
+        isApprover={isApprover}
       />
     </div>
   );

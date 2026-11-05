@@ -104,6 +104,7 @@ export interface LearningAreaProps {
   isElective: boolean;
   schoolId: string;
   teacherId?: string;
+  globalSubjectId?: string;
 }
 
 export class LearningArea extends Entity<LearningAreaProps> {
@@ -139,8 +140,17 @@ export class LearningArea extends Entity<LearningAreaProps> {
     return this._props.teacherId;
   }
 
+  public get globalSubjectId(): string | undefined {
+    return this._props.globalSubjectId;
+  }
+
   public setTeacher(teacherId: string | undefined): void {
     this._props.teacherId = teacherId;
+    this.touch();
+  }
+
+  public setGlobalSubject(globalSubjectId: string | undefined): void {
+    this._props.globalSubjectId = globalSubjectId;
     this.touch();
   }
 
@@ -154,6 +164,7 @@ export class LearningArea extends Entity<LearningAreaProps> {
       isElective: this.isElective,
       schoolId: this.schoolId,
       teacherId: this.teacherId,
+      globalSubjectId: this.globalSubjectId,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt
     };

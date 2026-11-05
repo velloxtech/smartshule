@@ -1131,6 +1131,234 @@ export class FinanceController {
     }
   };
 
+  public reconcileCredits = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const studentId = req.body?.studentId || (req.query?.studentId as string);
+      const schoolId = req.body?.schoolId || req.user?.schoolId;
+
+      if (studentId) {
+        const result = await this.feeUseCases.autoReconcileStudentFeeCredits(studentId, {
+          triggerSource: 'ON_DEMAND_RECONCILIATION',
+          requestingUser: req.user,
+          schoolId
+        });
+        return res.status(200).json({
+          success: true,
+          message: result
+            ? `Successfully reconciled learner credits. Applied KES ${result.creditApplied.toLocaleString()} to outstanding fees.`
+            : 'No eligible credit or outstanding fees to reconcile for this learner.',
+          data: result
+        });
+      }
+
+      const summary = await this.feeUseCases.reconcileAllStudentCredits({
+        schoolId,
+        triggerSource: 'ON_DEMAND_BATCH_RECONCILIATION',
+        requestingUser: req.user
+      });
+      return res.status(200).json({
+        success: true,
+        message: `Batch credit reconciliation complete. Reconciled ${summary.reconciledCount} learner(s) totaling KES ${summary.totalCreditApplied.toLocaleString()}.`,
+        data: summary
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public getReconciliationStatus = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const status = this.feeUseCases.getReconciliationStatus();
+      return res.status(200).json({ success: true, data: status });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public retryFailedReconciliations = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const result = await this.feeUseCases.retryFailedReconciliations(req.user);
+      return res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public previewCreditUtilization = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const result = await this.feeUseCases.previewFeeCreditUtilization(req.body, req.user);
+      return res.status(200).json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public adminInitiateCreditUtilization = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const result = await this.feeUseCases.adminInitiateFeeCreditUtilization(req.body, req.user!);
+      return res.status(200).json({
+        success: true,
+        message: result.message,
+        data: result
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public getCreditUtilizationReceipt = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const receiptNumber = String(req.params.receiptNumber);
+      const result = await this.feeUseCases.getCreditUtilizationReceipt(receiptNumber, req.user);
+      return res.status(200).json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public getAllCreditReceipts = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const filters = {
+        search: req.query.search as string,
+        receiptNumber: req.query.receiptNumber as string,
+        studentId: req.query.studentId as string,
+        academicYear: req.query.academicYear as string,
+        academicTerm: req.query.academicTerm as string,
+        transactionType: req.query.transactionType as string,
+        status: req.query.status as string,
+        startDate: req.query.startDate as string,
+        endDate: req.query.endDate as string,
+        schoolId: req.query.schoolId as string,
+      };
+      const receipts = await this.feeUseCases.getCreditUtilizationReceipts(filters, req.user);
+      return res.status(200).json({ success: true, count: receipts.length, data: receipts });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public reverseCreditUtilization = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const receiptNumber = String(req.params.receiptNumber);
+      const reason = String(req.body.reason || '');
+      const result = await this.feeUseCases.reverseCreditUtilization(receiptNumber, reason, req.user!);
+      return res.status(200).json({ success: true, message: result.message, data: result });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public downloadCreditUtilizationReceiptPdf = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const receiptNumber = String(req.params.receiptNumber);
+      const result = await this.feeUseCases.generateOrRetryCreditUtilizationPdf(receiptNumber, req.user);
+      return res.status(200).json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public getStudentCreditReceipts = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const studentId = String(req.params.studentId);
+      const result = await this.feeUseCases.getStudentCreditUtilizationReceipts(studentId, req.user);
+      return res.status(200).json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  // Admin-Approved Transaction Reversals
+  public requestTransactionReversal = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const result = await this.feeUseCases.requestTransactionReversal(req.body, req.user);
+      return res.status(201).json(result);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public listTransactionReversals = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const filters = {
+        schoolId: req.query.schoolId as string,
+        studentId: req.query.studentId as string,
+        status: req.query.status as string,
+        transactionType: req.query.transactionType as string,
+        requestedByUserId: req.query.requestedByUserId as string,
+        search: req.query.search as string,
+        startDate: req.query.startDate as string,
+        endDate: req.query.endDate as string,
+      };
+      const requests = await this.feeUseCases.getTransactionReversalRequests(filters, req.user);
+      return res.status(200).json({ success: true, count: requests.length, data: requests.map(r => r.toJSON()) });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public getTransactionReversalById = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const reqId = String(req.params.id);
+      const request = await this.feeUseCases.getTransactionReversalById(reqId, req.user);
+      return res.status(200).json({ success: true, data: request.toJSON() });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public getTransactionReversalPreview = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const idOrRef = String(req.params.id);
+      const preview = await this.feeUseCases.getTransactionReversalPreview(idOrRef, req.user);
+      return res.status(200).json({ success: true, data: preview });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public approveAndExecuteTransactionReversal = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const requestId = String(req.params.id);
+      const comment = req.body.comment || req.body.approvalComment;
+      const result = await this.feeUseCases.approveAndExecuteTransactionReversal(requestId, comment, req.user);
+      return res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public rejectTransactionReversal = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const requestId = String(req.params.id);
+      const reason = String(req.body.reason || req.body.rejectionReason || '');
+      const result = await this.feeUseCases.rejectTransactionReversalRequest(requestId, reason, req.user);
+      return res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public retryTransactionReversal = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const requestId = String(req.params.id);
+      const result = await this.feeUseCases.retryFailedTransactionReversal(requestId, req.user);
+      return res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public getReversalReceiptDocument = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const receiptNumber = String(req.params.receiptNumber);
+      const result = await this.feeUseCases.getReversalReceiptDocument(receiptNumber, req.user);
+      return res.status(200).json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  };
+
   public requestFinancialApproval = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       if (!this.financialApprovalUseCases) {

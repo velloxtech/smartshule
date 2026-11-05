@@ -801,7 +801,7 @@ export const ArchivedRecordsView: React.FC<ArchivedRecordsViewProps> = ({
                       <strong className="text-on-surface">{helpRequests.length} closed</strong>
                     </div>
                     <div>
-                      <span className="text-on-surface-variant block">eDiary Homework:</span>
+                      <span className="text-on-surface-variant block">eDiary Homefun:</span>
                       <strong className="text-on-surface">{ediary.length} items</strong>
                     </div>
                   </div>

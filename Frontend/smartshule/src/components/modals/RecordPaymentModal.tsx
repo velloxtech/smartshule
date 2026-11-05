@@ -748,11 +748,6 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
       }
     }
 
-    if (!isStaffVerified) {
-      setFeedback({ type: 'error', message: 'Please confirm the verification checkbox below before recording this payment.' });
-      return;
-    }
-
     setIsSubmittingPayment(true);
     setFeedback(null);
 
@@ -1218,11 +1213,11 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
         <div className="bg-[#7a1228] text-white p-4 sm:p-5 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center font-bold shrink-0">
-              <span className="material-symbols-outlined text-[24px]">account_balance_wallet</span>
+              <span className="material-symbols-outlined text-[24px]">point_of_sale</span>
             </div>
             <div>
-              <h3 className="font-semibold text-base leading-tight">Unified Fee & Arrears Entry</h3>
-              <p className="text-xs text-rose-100">Manual Fee Payments · Opening Balances · Arrears Adjustments</p>
+              <h3 className="font-semibold text-base leading-tight">Cashier Desk & Student Billing</h3>
+              <p className="text-xs text-rose-100">Fee Collection · Invoicing · Arrears Adjustments · Receipts</p>
             </div>
           </div>
           <button
@@ -1366,8 +1361,8 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
               }`}
             >
-              <span className="material-symbols-outlined text-[17px] text-emerald-700">payments</span>
-              <span>Record Paid Fees (Manual Entry)</span>
+              <span className="material-symbols-outlined text-[17px] text-emerald-700">point_of_sale</span>
+              <span>Cashier Desk (Record Payment)</span>
             </button>
             <button
               type="button"
@@ -1396,8 +1391,8 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
               }`}
             >
-              <span className="material-symbols-outlined text-[17px] text-blue-700">receipt_long</span>
-              <span>Create Individual Invoice</span>
+              <span className="material-symbols-outlined text-[17px] text-indigo-700">post_add</span>
+              <span>+ Create / Bill Invoice</span>
             </button>
           </div>
 
@@ -1406,36 +1401,32 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
           {/* ================================================================= */}
           {activeTab === 'PAYMENT' && (
             <form onSubmit={handlePaymentSubmit} className="space-y-4 animate-fade-in">
-              {/* Forwarded Confirmation Message Extractor */}
-              <div className="bg-gradient-to-r from-purple-50/80 to-indigo-50/80 rounded-xl p-3 border border-purple-200 shadow-xs">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[18px] text-purple-700">mark_chat_read</span>
-                    <div>
-                      <span className="text-xs font-bold text-purple-950 block">Forwarded Payment Message / SMS Extractor</span>
-                      <span className="text-[10px] text-purple-700">Extracts code, amount, date & matches learner</span>
-                    </div>
-                  </div>
+              {/* Payment Channel Selector & Optional SMS Paste */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-bold uppercase text-slate-600">
+                    Payment Channel *
+                  </label>
                   <button
                     type="button"
                     onClick={() => setIsForwardedBoxOpen(!isForwardedBoxOpen)}
-                    className="text-[11px] font-bold text-purple-700 hover:text-purple-900 bg-white/80 hover:bg-white px-2.5 py-1 rounded-lg border border-purple-200 transition-colors flex items-center gap-1 cursor-pointer"
+                    className="text-[11px] font-semibold text-purple-700 hover:text-purple-900 bg-purple-50 hover:bg-purple-100 px-2.5 py-1 rounded-md border border-purple-200 transition-colors flex items-center gap-1 cursor-pointer"
                   >
-                    <span>{isForwardedBoxOpen ? 'Hide Box' : 'Paste Forwarded SMS'}</span>
-                    <span className="material-symbols-outlined text-sm">{isForwardedBoxOpen ? 'expand_less' : 'expand_more'}</span>
+                    <span className="material-symbols-outlined text-[14px]">mark_chat_read</span>
+                    <span>{isForwardedBoxOpen ? 'Hide SMS Extractor' : 'Paste M-Pesa / SMS'}</span>
                   </button>
                 </div>
 
                 {isForwardedBoxOpen && (
-                  <div className="mt-2.5 space-y-2 pt-2 border-t border-purple-200/60">
-                    <p className="text-[11px] text-purple-800">
-                      Paste the M-Pesa or Bank confirmation message forwarded by the parent. Details will be populated into the verified fields:
+                  <div className="mb-3 p-3 bg-purple-50/90 rounded-xl border border-purple-200 space-y-2">
+                    <p className="text-[11px] text-purple-900 font-medium">
+                      Paste forwarded M-Pesa or bank notification to auto-fill code, amount and match learner:
                     </p>
                     <textarea
                       rows={2}
                       value={forwardedSmsText}
                       onChange={(e) => handleExtractFromForwardedSms(e.target.value)}
-                      placeholder="e.g. QK7823LM91 Confirmed. Ksh15,000.00 paid to Grace Seeds School on 24/10/26 at 11:32 AM..."
+                      placeholder="e.g. QK7823LM91 Confirmed. Ksh15,000.00 paid to Grace Seeds School..."
                       className="w-full bg-white border border-purple-300 rounded-lg p-2 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-600 font-mono text-[11px]"
                     />
                     {extractedSmsSummary && (
@@ -1448,7 +1439,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
                       <div className="bg-indigo-50 text-indigo-900 border border-indigo-300 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold flex items-center justify-between gap-1.5">
                         <div className="flex items-center gap-1.5">
                           <span className="material-symbols-outlined text-sm text-indigo-700">person</span>
-                          <span>Matched Learner: <strong>{suggestedStudent.name}</strong> (Adm: {suggestedStudent.admNo})</span>
+                          <span>Matched: <strong>{suggestedStudent.name}</strong> (Adm: {suggestedStudent.admNo})</span>
                         </div>
                         <button
                           type="button"
@@ -1467,72 +1458,62 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
                     )}
                   </div>
                 )}
-              </div>
 
-              {/* Payment Channel Selector */}
-              <div>
-                <label className="block text-xs font-bold uppercase text-slate-600 mb-1.5">
-                  Select Payment Channel *
-                </label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {/* Cash */}
                   <button
                     type="button"
                     onClick={() => setPaymentChannel('CASH')}
-                    className={`flex flex-col items-center justify-center p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                    className={`flex items-center justify-center gap-2 p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
                       paymentChannel === 'CASH'
-                        ? 'bg-emerald-50 border-emerald-600 text-emerald-800 shadow-xs ring-1 ring-emerald-600'
-                        : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                        ? 'bg-emerald-700 text-white border-emerald-800 shadow-sm ring-2 ring-emerald-500'
+                        : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
                     }`}
                   >
-                    <span className="material-symbols-outlined text-xl mb-0.5 text-emerald-700">payments</span>
-                    <span>Cash Office</span>
-                    <span className="text-[9px] font-normal text-slate-500">Physical currency</span>
-                  </button>
-
-                  {/* Bank Deposit */}
-                  <button
-                    type="button"
-                    onClick={() => setPaymentChannel('BANK_DEPOSIT')}
-                    className={`flex flex-col items-center justify-center p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                      paymentChannel === 'BANK_DEPOSIT'
-                        ? 'bg-sky-50 border-sky-600 text-sky-800 shadow-xs ring-1 ring-sky-600'
-                        : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                    }`}
-                  >
-                    <span className="material-symbols-outlined text-xl mb-0.5 text-sky-700">account_balance</span>
-                    <span>Bank Deposit</span>
-                    <span className="text-[9px] font-normal text-slate-500">Manual slip / teller</span>
+                    <span className="material-symbols-outlined text-[18px]">payments</span>
+                    <span>Cash</span>
                   </button>
 
                   {/* M-Pesa */}
                   <button
                     type="button"
                     onClick={() => setPaymentChannel('MPESA')}
-                    className={`flex flex-col items-center justify-center p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                    className={`flex items-center justify-center gap-2 p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
                       paymentChannel === 'MPESA'
-                        ? 'bg-purple-50 border-purple-600 text-purple-800 shadow-xs ring-1 ring-purple-600'
-                        : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                        ? 'bg-emerald-700 text-white border-emerald-800 shadow-sm ring-2 ring-emerald-500'
+                        : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
                     }`}
                   >
-                    <span className="material-symbols-outlined text-xl mb-0.5 text-purple-700">smartphone</span>
+                    <span className="material-symbols-outlined text-[18px]">smartphone</span>
                     <span>M-Pesa</span>
-                    <span className="text-[9px] font-normal text-slate-500">Till / Paybill code</span>
                   </button>
 
-                  {/* Cheque / EFT */}
+                  {/* Bank Deposit */}
+                  <button
+                    type="button"
+                    onClick={() => setPaymentChannel('BANK_DEPOSIT')}
+                    className={`flex items-center justify-center gap-2 p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                      paymentChannel === 'BANK_DEPOSIT'
+                        ? 'bg-sky-700 text-white border-sky-800 shadow-sm ring-2 ring-sky-500'
+                        : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[18px]">account_balance</span>
+                    <span>Bank Deposit</span>
+                  </button>
+
+                  {/* Cheque / Wire */}
                   <button
                     type="button"
                     onClick={() => setPaymentChannel('CHEQUE')}
-                    className={`flex flex-col items-center justify-center p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                    className={`flex items-center justify-center gap-2 p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
                       paymentChannel === 'CHEQUE'
-                        ? 'bg-amber-50 border-amber-600 text-amber-800 shadow-xs ring-1 ring-amber-600'
-                        : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                        ? 'bg-amber-600 text-white border-amber-700 shadow-sm ring-2 ring-amber-500'
+                        : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
                     }`}
                   >
-                    <span className="material-symbols-outlined text-xl mb-0.5 text-amber-700">receipt_long</span>
+                    <span className="material-symbols-outlined text-[18px]">receipt_long</span>
                     <span>Cheque / Wire</span>
-                    <span className="text-[9px] font-normal text-slate-500">Banker's cheque</span>
                   </button>
                 </div>
               </div>
@@ -1541,11 +1522,21 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="text-xs font-bold uppercase text-slate-600">
-                    Target Invoice to Credit *
+                    Target Invoice to Settle *
                   </label>
-                  {isLoadingInvoices && (
-                    <span className="text-[10px] text-slate-400 animate-pulse">Loading invoices...</span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {isLoadingInvoices && (
+                      <span className="text-[10px] text-slate-400 animate-pulse">Loading invoices...</span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => { setActiveTab('INVOICE'); setFeedback(null); }}
+                      className="text-[11px] font-bold text-indigo-700 hover:text-indigo-900 flex items-center gap-1 cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[13px]">post_add</span>
+                      <span>+ Create / Bill Invoice</span>
+                    </button>
+                  </div>
                 </div>
                 <select
                   value={selectedInvoiceId}
@@ -1554,7 +1545,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
                   className="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#7a1228] font-mono font-medium"
                 >
                   {invoices.length === 0 ? (
-                    <option value="">No billed invoice found — switch to "Record Arrears" tab to initialize</option>
+                    <option value="">No billed invoice found — click "+ Create / Bill Invoice" to bill this learner</option>
                   ) : (
                     <>
                       <option value="">-- Choose Invoice to Settle --</option>
@@ -1566,32 +1557,42 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
                     </>
                   )}
                 </select>
+                {invoices.length === 0 && !isLoadingInvoices && (
+                  <div className="mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between text-xs text-amber-900">
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-amber-700 text-sm">info</span>
+                      <span>This learner has no outstanding invoices yet.</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setActiveTab('INVOICE'); setFeedback(null); }}
+                      className="px-2.5 py-1 bg-indigo-700 hover:bg-indigo-800 text-white font-bold rounded text-[11px] cursor-pointer flex items-center gap-1"
+                    >
+                      <span className="material-symbols-outlined text-xs">post_add</span>
+                      <span>Create Invoice Now</span>
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Amount & Date Row */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block text-xs font-bold uppercase text-slate-600">
-                      Amount Paid (KES) *
-                    </label>
-                    <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                      Flexible Installments Accepted
-                    </span>
+                  <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
+                    Amount Paid (KES) *
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2.5 text-xs font-bold text-slate-400">KES</span>
+                    <input
+                      type="number"
+                      required
+                      min="1"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      placeholder="0.00"
+                      className="w-full bg-white border border-slate-300 rounded-lg py-2.5 pl-12 pr-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#7a1228] font-mono font-bold"
+                    />
                   </div>
-                  <input
-                    type="number"
-                    required
-                    min="1"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    placeholder="Enter amount (any small installment accepted, e.g. 200, 500, 1000)"
-                    className="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#7a1228] font-mono font-bold"
-                  />
-                  <p className="text-[11px] text-slate-500 mt-1.5 flex items-center gap-1">
-                    <span className="material-symbols-outlined text-[14px] text-emerald-600">payments</span>
-                    <span>Accept any payment size — no fixed amounts or minimum payment required.</span>
-                  </p>
                 </div>
                 <div>
                   <label className="block text-xs font-bold uppercase text-slate-600 mb-1">
@@ -1611,15 +1612,11 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
 
               {/* 1. CASH OFFICE */}
               {paymentChannel === 'CASH' && (
-                <div className="bg-emerald-50/60 rounded-xl p-3.5 border border-emerald-200 space-y-3">
-                  <div className="flex items-center gap-2 text-emerald-900 font-bold text-xs">
-                    <span className="material-symbols-outlined text-[18px] text-emerald-700">payments</span>
-                    <span>Cash Counter Collection Details</span>
-                  </div>
+                <div className="bg-emerald-50/60 rounded-xl p-3 border border-emerald-200">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-[11px] font-semibold text-emerald-900 mb-1">
-                        Cash Receipt / Voucher Ref
+                      <label className="block text-[11px] font-semibold text-emerald-950 mb-1">
+                        Receipt / Ref (Auto)
                       </label>
                       <input
                         type="text"
@@ -1630,8 +1627,8 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-semibold text-emerald-900 mb-1">
-                        Received From / Payer
+                      <label className="block text-[11px] font-semibold text-emerald-950 mb-1">
+                        Received From / Payer Name
                       </label>
                       <input
                         type="text"
@@ -1642,39 +1639,12 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
                       />
                     </div>
                   </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-emerald-900 mb-1">
-                      Cash Notes / Denominations (Optional)
-                    </label>
-                    <input
-                      type="text"
-                      value={cashDenominations}
-                      onChange={(e) => setCashDenominations(e.target.value)}
-                      placeholder="e.g. Paid in 1,000 notes at counter. Exact change."
-                      className="w-full bg-white border border-emerald-300 rounded-lg p-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-600"
-                    />
-                  </div>
-                  <label className="flex items-center gap-2 pt-1 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={isCashVerified}
-                      onChange={(e) => setIsCashVerified(e.target.checked)}
-                      className="rounded text-emerald-700 focus:ring-emerald-600 w-4 h-4 cursor-pointer"
-                    />
-                    <span className="text-[11px] font-medium text-emerald-900">
-                      I confirm physical currency of KES {numAmount.toLocaleString()} has been counted and placed in the cash drawer/safe.
-                    </span>
-                  </label>
                 </div>
               )}
 
               {/* 2. BANK DEPOSIT */}
               {paymentChannel === 'BANK_DEPOSIT' && (
-                <div className="bg-sky-50/70 rounded-xl p-3.5 border border-sky-200 space-y-3">
-                  <div className="flex items-center gap-2 text-sky-900 font-bold text-xs">
-                    <span className="material-symbols-outlined text-[18px] text-sky-700">account_balance</span>
-                    <span>Manual Bank Deposit Slip / Teller Verification</span>
-                  </div>
+                <div className="bg-sky-50/70 rounded-xl p-3 border border-sky-200 space-y-2.5">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-[11px] font-semibold text-sky-900 mb-1">
@@ -1747,39 +1717,12 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
                       />
                     </div>
                   </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-sky-900 mb-1">
-                      School Account Deposited Into
-                    </label>
-                    <input
-                      type="text"
-                      value={schoolBankAccount}
-                      onChange={(e) => setSchoolBankAccount(e.target.value)}
-                      placeholder="e.g. KCB Fees Collection A/C #1100223344"
-                      className="w-full bg-white border border-sky-300 rounded-lg p-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-600"
-                    />
-                  </div>
-                  <label className="flex items-center gap-2 pt-1 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={isSlipVerified}
-                      onChange={(e) => setIsSlipVerified(e.target.checked)}
-                      className="rounded text-sky-700 focus:ring-sky-600 w-4 h-4 cursor-pointer"
-                    />
-                    <span className="text-[11px] font-medium text-sky-900">
-                      Bank slip stamp and date have been visually verified against school account records.
-                    </span>
-                  </label>
                 </div>
               )}
 
               {/* 3. M-PESA */}
               {paymentChannel === 'MPESA' && (
-                <div className="bg-purple-50/70 rounded-xl p-3.5 border border-purple-200 space-y-3">
-                  <div className="flex items-center gap-2 text-purple-900 font-bold text-xs">
-                    <span className="material-symbols-outlined text-[18px] text-purple-700">smartphone</span>
-                    <span>M-Pesa Transaction Verification</span>
-                  </div>
+                <div className="bg-purple-50/70 rounded-xl p-3 border border-purple-200">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-[11px] font-semibold text-purple-900 mb-1">
@@ -1812,11 +1755,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
 
               {/* 4. CHEQUE / WIRE */}
               {paymentChannel === 'CHEQUE' && (
-                <div className="bg-amber-50/70 rounded-xl p-3.5 border border-amber-200 space-y-3">
-                  <div className="flex items-center gap-2 text-amber-900 font-bold text-xs">
-                    <span className="material-symbols-outlined text-[18px] text-amber-700">receipt_long</span>
-                    <span>Banker's Cheque / Electronic Wire</span>
-                  </div>
+                <div className="bg-amber-50/70 rounded-xl p-3 border border-amber-200">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-[11px] font-semibold text-amber-900 mb-1">
@@ -1847,84 +1786,30 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
                 </div>
               )}
 
-              {/* Authoritative Payment Allocation Breakdown Card */}
-              <div className="bg-slate-50/90 rounded-2xl p-4 border border-slate-200 space-y-3 font-sans shadow-xs">
-                <div className="flex items-center justify-between pb-2 border-b border-slate-200">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-base text-[#7a1228]">account_balance_wallet</span>
-                    Mandatory Fee Allocation Preview
-                  </span>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    allocationPreview.isEligibleForOverpayment && allocationPreview.overpaymentCredit > 0
-                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                      : 'bg-slate-200 text-slate-700'
-                  }`}>
-                    {allocationPreview.isEligibleForOverpayment && allocationPreview.overpaymentCredit > 0
-                      ? 'Overpayment Credit Eligible'
-                      : 'Obligations Active'}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
-                  {/* Step 1: Previous-Term Arrears */}
-                  <div className="p-2.5 rounded-xl bg-white border border-slate-200">
-                    <div className="text-[10px] uppercase font-bold text-slate-500 mb-0.5">1. Previous Arrears</div>
-                    <div className="text-xs font-bold text-slate-800">
-                      Due: <span className="font-mono text-rose-700">KES {allocationPreview.arrearsOutstanding.toLocaleString()}</span>
-                    </div>
-                    <div className="text-xs font-bold text-emerald-700 mt-1">
-                      Paying: <span className="font-mono">KES {allocationPreview.arrearsAllocated.toLocaleString()}</span>
-                    </div>
-                    <div className="text-[10px] text-slate-500 mt-0.5">
-                      Rem: KES {allocationPreview.remArrears.toLocaleString()}
-                    </div>
-                  </div>
-
-                  {/* Step 2: Current-Term Billed Fees */}
-                  <div className="p-2.5 rounded-xl bg-white border border-slate-200">
-                    <div className="text-[10px] uppercase font-bold text-slate-500 mb-0.5">2. Current Term Fees</div>
-                    <div className="text-xs font-bold text-slate-800">
-                      Due: <span className="font-mono text-sky-700">KES {allocationPreview.currentFeesOutstanding.toLocaleString()}</span>
-                    </div>
-                    <div className="text-xs font-bold text-emerald-700 mt-1">
-                      Paying: <span className="font-mono">KES {allocationPreview.currentFeesAllocated.toLocaleString()}</span>
-                    </div>
-                    <div className="text-[10px] text-slate-500 mt-0.5">
-                      Rem: KES {allocationPreview.remCurrent.toLocaleString()}
-                    </div>
-                  </div>
-
-                  {/* Step 3: Overpayment / Advance Credit */}
-                  <div className={`p-2.5 rounded-xl border ${
-                    allocationPreview.overpaymentCredit > 0
-                      ? 'bg-emerald-50/80 border-emerald-300 ring-1 ring-emerald-400'
-                      : 'bg-white border-slate-200'
-                  }`}>
-                    <div className="text-[10px] uppercase font-bold text-slate-500 mb-0.5">3. Overpayment Credit</div>
-                    <div className={`text-base font-extrabold font-mono ${
-                      allocationPreview.overpaymentCredit > 0 ? 'text-emerald-800' : 'text-slate-400'
-                    }`}>
-                      KES {allocationPreview.overpaymentCredit.toLocaleString()}
-                    </div>
-                    <div className="text-[10px] text-slate-500 mt-1">
-                      {allocationPreview.isEligibleForOverpayment ? 'Recorded to advance credit' : 'Requires zero balance'}
-                    </div>
+              {/* Streamlined Live Balance Summary Card */}
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-wrap items-center justify-between gap-2 text-xs shadow-xs">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-slate-500 text-base">account_balance_wallet</span>
+                  <div>
+                    <span className="text-slate-500 font-medium">Total Balance: </span>
+                    <strong className="font-bold font-mono text-slate-900">KES {(currentStudent?.totalBalance ?? invBalance).toLocaleString()}</strong>
                   </div>
                 </div>
 
-                {/* Explanation Banner */}
                 {numAmount > 0 && (
-                  <div className={`p-2.5 rounded-xl text-xs flex items-start gap-2 ${
-                    allocationPreview.isEligibleForOverpayment && allocationPreview.overpaymentCredit > 0
-                      ? 'bg-emerald-50 text-emerald-900 border border-emerald-200'
-                      : allocationPreview.isEligibleForOverpayment
-                      ? 'bg-sky-50 text-sky-900 border border-sky-200'
-                      : 'bg-amber-50 text-amber-900 border border-amber-200'
-                  }`}>
-                    <span className="material-symbols-outlined text-[16px] shrink-0 mt-0.5">
-                      {allocationPreview.isEligibleForOverpayment ? 'check_circle' : 'info'}
-                    </span>
-                    <span className="text-[11px] leading-snug">{allocationPreview.explanation}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-slate-400 text-sm">arrow_forward</span>
+                    <div>
+                      <span className="text-slate-500 font-medium">Balance After Payment: </span>
+                      <strong className={`font-mono text-sm font-bold ${projectedTotalBalanceAfterPay <= 0 ? 'text-emerald-700' : 'text-slate-900'}`}>
+                        KES {Math.max(0, projectedTotalBalanceAfterPay).toLocaleString()}
+                      </strong>
+                      {allocationPreview.overpaymentCredit > 0 && (
+                        <span className="ml-2 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                          +KES {allocationPreview.overpaymentCredit.toLocaleString()} Overpayment Credit
+                        </span>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -1944,26 +1829,12 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
               </div>
 
               {/* Workstation Receipt Printer Detection & Auto-Print Toggle */}
-              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-[#7a1228]/10 flex items-center justify-center text-[#7a1228] font-bold shrink-0">
-                    <span className="material-symbols-outlined text-[18px]">print</span>
-                  </div>
-                  <div>
-                    <div className="font-semibold text-slate-900 text-[11px] leading-tight flex items-center gap-1.5">
-                      <span>Receipt Printer Mode</span>
-                      {printerStatus.hasReceiptPrinter && (
-                        <span className="px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800 text-[9px] font-bold">
-                          Detected
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-[10px] text-slate-500 mt-0.5">
-                      {printerStatus.hasReceiptPrinter
-                        ? printerStatus.printerName
-                        : 'Auto-prints thermal receipt on payment recording'}
-                    </div>
-                  </div>
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[17px] text-slate-600">print</span>
+                  <span className="font-semibold text-slate-800 text-[11px]">
+                    Receipt Printer Mode: {printerStatus.autoPrintEnabled ? 'Auto-print Thermal Receipt' : 'Manual Print / PDF'}
+                  </span>
                 </div>
                 <button
                   type="button"
@@ -1972,7 +1843,7 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
                     setReceiptAutoPrint(next);
                     setPrinterStatus((prev) => ({ ...prev, autoPrintEnabled: next }));
                   }}
-                  className={`px-3 py-1 rounded-full text-[10px] font-bold transition-all cursor-pointer ${
+                  className={`px-2.5 py-1 rounded-full text-[10px] font-bold transition-all cursor-pointer ${
                     printerStatus.autoPrintEnabled
                       ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
                       : 'bg-slate-200 text-slate-600'
@@ -1982,26 +1853,11 @@ export const RecordPaymentModal: React.FC<RecordPaymentModalProps> = ({
                 </button>
               </div>
 
-              {/* Staff Verification Declaration */}
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                <label className="flex items-start gap-2.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={isStaffVerified}
-                    onChange={(e) => setIsStaffVerified(e.target.checked)}
-                    className="rounded text-[#7a1228] focus:ring-[#7a1228] w-4 h-4 mt-0.5 cursor-pointer shrink-0"
-                  />
-                  <span className="text-[11px] font-medium text-slate-700 leading-relaxed">
-                    I confirm that I have verified the transaction reference, payment channel, amount, and payer details against the school's official bank statement / M-Pesa till settlement portal before crediting this fee account.
-                  </span>
-                </label>
-              </div>
-
-              {/* Submit Payment Button */}
-              <div className="pt-2">
+              {/* Submit Payment Button - Immediately Enabled When Valid */}
+              <div className="pt-1">
                 <button
                   type="submit"
-                  disabled={isSubmittingPayment || !selectedInvoiceId || numAmount <= 0 || !!currentStudent?.isSponsored || !isStaffVerified}
+                  disabled={isSubmittingPayment || !selectedInvoiceId || numAmount <= 0 || !!currentStudent?.isSponsored}
                   className="w-full py-3 bg-[#7a1228] text-white font-bold rounded-xl hover:bg-[#600e1f] text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <span className="material-symbols-outlined text-[20px]">

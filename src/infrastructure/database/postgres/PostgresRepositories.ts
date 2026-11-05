@@ -25,8 +25,10 @@ import {
   InvoiceFilterCriteria,
   PaymentFilterCriteria,
   ExpenseFilterCriteria,
-  OtherIncomeFilterCriteria
+  OtherIncomeFilterCriteria,
+  ReversalRequestFilterCriteria
 } from '../../../core/ports/repositories/IFeeRepository';
+import { TransactionReversalRequest } from '../../../core/domain/finance/TransactionReversalRequest';
 import {
   IDeletedStudentRepository,
   DeletedStudentFilterCriteria
@@ -59,6 +61,7 @@ import { Guardian, GuardianRelationship } from '../../../core/domain/user/Guardi
 import { School } from '../../../core/domain/academic/School';
 import { AcademicYear, AcademicTerm } from '../../../core/domain/academic/AcademicYear';
 import { ClassRoom, Stream, LearningArea, EducationLevel } from '../../../core/domain/academic/ClassRoom';
+import { GlobalSubject } from '../../../core/domain/academic/GlobalSubject';
 import { ClassTeacherAssignment, SubjectTeacherAssignment } from '../../../core/domain/academic/TeacherAssignment';
 import {
   Strand,
@@ -453,6 +456,8 @@ export class PostgresDatabaseInitializer {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+
+      CREATE UNIQUE INDEX IF NOT EXISTS uq_attendance_register_cohort ON attendance_registers (school_id, classroom_id, COALESCE(stream_id, ''), date, type);
 
       CREATE TABLE IF NOT EXISTS fee_structures (
         id VARCHAR(100) PRIMARY KEY,
@@ -2200,6 +2205,50 @@ export class PostgresAcademicRepository implements IAcademicRepository {
     await this.pool.query(q, [s.id, s.classRoomId, s.name, s.capacity, (s.classTeacherId && s.classTeacherId.trim() !== '') ? s.classTeacherId : null, s.createdAt, s.updatedAt]);
   }
   public async updateStream(s: Stream): Promise<void> { await this.saveStream(s); }
+
+  public async findGlobalSubjectById(id: string): Promise<GlobalSubject | null> {
+    const res = await this.pool.query('SELECT * FROM global_subjects WHERE id = $1', [id]);
+    if (!res.rows.length) return null;
+    const r = res.rows[0];
+    return GlobalSubject.create({
+      schoolId: r.school_id,
+      code: r.code,
+      name: r.name,
+      department: r.department || undefined,
+      description: r.description || undefined,
+    }, r.id, r.created_at, r.updated_at);
+  }
+
+  public async findAllGlobalSubjects(schoolId?: string): Promise<GlobalSubject[]> {
+    let q = 'SELECT * FROM global_subjects WHERE 1=1';
+    const params: any[] = [];
+    if (schoolId) {
+      params.push(schoolId);
+      q += ` AND school_id = $${params.length}`;
+    }
+    q += ' ORDER BY name ASC';
+    const res = await this.pool.query(q, params);
+    return res.rows.map(r => GlobalSubject.create({
+      schoolId: r.school_id,
+      code: r.code,
+      name: r.name,
+      department: r.department || undefined,
+      description: r.description || undefined,
+    }, r.id, r.created_at, r.updated_at));
+  }
+
+  public async saveGlobalSubject(s: GlobalSubject): Promise<void> {
+    const q = `INSERT INTO global_subjects (id, school_id, code, name, department, description, created_at, updated_at)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+               ON CONFLICT (id) DO UPDATE SET
+                 code = EXCLUDED.code,
+                 name = EXCLUDED.name,
+                 department = EXCLUDED.department,
+                 description = EXCLUDED.description,
+                 updated_at = NOW()`;
+    await this.pool.query(q, [s.id, s.schoolId, s.code, s.name, s.department || null, s.description || null, s.createdAt, s.updatedAt]);
+  }
+
   public async findLearningAreaById(id: string): Promise<LearningArea | null> {
     const res = await this.pool.query('SELECT * FROM learning_areas WHERE id = $1', [id]);
     if (!res.rows.length) return null;
@@ -2210,11 +2259,12 @@ export class PostgresAcademicRepository implements IAcademicRepository {
       gradeLevel: r.grade_level || CBCGradeLevel.GRADE_4, 
       educationLevel: r.education_level || EducationLevel.UPPER_PRIMARY, 
       isElective: r.is_elective, 
-      schoolId: r.school_id 
+      schoolId: r.school_id,
+      globalSubjectId: r.global_subject_id || undefined
     }, r.id, r.created_at, r.updated_at);
   }
 
-  public async findAllLearningAreas(filters?: { gradeLevel?: CBCGradeLevel; schoolId?: string }): Promise<LearningArea[]> {
+  public async findAllLearningAreas(filters?: { gradeLevel?: CBCGradeLevel; schoolId?: string; globalSubjectId?: string }): Promise<LearningArea[]> {
     let q = 'SELECT * FROM learning_areas WHERE 1=1';
     const params: any[] = [];
     
@@ -2222,14 +2272,16 @@ export class PostgresAcademicRepository implements IAcademicRepository {
       params.push(filters.schoolId);
       q += ` AND school_id = $${params.length}`;
     }
-    // Note: gradeLevel filtering is optional/bypassed for global subjects, 
-    // but if requested, we can filter or return all global school subjects.
     if (filters?.gradeLevel) {
       params.push(filters.gradeLevel);
-      q += ` AND (grade_level = $${params.length} OR grade_level IS NULL)`;
+      q += ` AND grade_level = $${params.length}`;
+    }
+    if (filters?.globalSubjectId) {
+      params.push(filters.globalSubjectId);
+      q += ` AND global_subject_id = $${params.length}`;
     }
 
-    q += ' ORDER BY name ASC';
+    q += ' ORDER BY grade_level ASC, name ASC';
     const res = await this.pool.query(q, params);
     return res.rows.map(r => LearningArea.create({ 
       name: r.name, 
@@ -2237,17 +2289,21 @@ export class PostgresAcademicRepository implements IAcademicRepository {
       gradeLevel: r.grade_level || CBCGradeLevel.GRADE_4, 
       educationLevel: r.education_level || EducationLevel.UPPER_PRIMARY, 
       isElective: r.is_elective, 
-      schoolId: r.school_id 
+      schoolId: r.school_id,
+      globalSubjectId: r.global_subject_id || undefined
     }, r.id, r.created_at, r.updated_at));
   }
 
   public async saveLearningArea(la: LearningArea): Promise<void> {
-    const q = `INSERT INTO learning_areas (id, name, code, grade_level, education_level, is_elective, school_id, created_at, updated_at)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-               ON CONFLICT (school_id, code) DO UPDATE SET 
+    const q = `INSERT INTO learning_areas (id, name, code, grade_level, education_level, is_elective, school_id, global_subject_id, created_at, updated_at)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+               ON CONFLICT (id) DO UPDATE SET 
                  name = EXCLUDED.name, 
+                 code = EXCLUDED.code,
+                 grade_level = EXCLUDED.grade_level,
                  education_level = EXCLUDED.education_level,
                  is_elective = EXCLUDED.is_elective,
+                 global_subject_id = EXCLUDED.global_subject_id,
                  updated_at = NOW()`;
     await this.pool.query(q, [
       la.id, 
@@ -2257,6 +2313,7 @@ export class PostgresAcademicRepository implements IAcademicRepository {
       la.educationLevel || EducationLevel.UPPER_PRIMARY, 
       la.isElective, 
       la.schoolId, 
+      la.globalSubjectId || null,
       la.createdAt, 
       la.updatedAt
     ]);
@@ -2668,12 +2725,73 @@ export class PostgresCBCAssessmentRepository implements ICBCAssessmentRepository
     const r = res.rows[0];
     return FormativeAssessment.create({ studentId: r.student_id, teacherId: r.teacher_id, learningAreaId: r.learning_area_id, subStrandId: r.sub_strand_id, termId: r.term_id, academicYearId: r.academic_year_id, assessmentDate: r.assessment_date, assessmentMethod: r.assessment_method, performanceLevel: r.performance_level, specificOutcomeTested: r.specific_outcome_tested, teacherRemarks: r.teacher_remarks, evidenceNotes: r.evidence_notes, targetedCompetencies: r.targeted_competencies, valuesObserved: r.values_observed }, r.id, r.created_at, r.updated_at);
   }
+  private static readonly LEGACY_SUBJECT_ALIASES: Record<string, string> = {
+    'la-lan': 'LAN',
+    'la-mat': 'MATH',
+    'la-eng': 'ENG',
+    'la-rea': 'REA',
+    'la-kis': 'KISW',
+    'la-kuso': 'KUSO',
+    'la-envi': 'ENVI',
+    'la-sci': 'SCI',
+    'la-soc': 'SST',
+    'la-cre': 'CRE',
+    'la-crea': 'CREA',
+    'la-agr': 'AGRI',
+    'la-art': 'ARTS',
+    'la-pret': 'PRETECH',
+    'la-hlth': 'HLTH',
+    'la-bus': 'BUS',
+    'la-comp': 'COMP',
+    'la-ind': 'IND',
+    'la-fre': 'FRE',
+    'la-ger': 'GER',
+    'la-ara': 'ARA'
+  };
+
   public async findFormatives(filters: FormativeFilterCriteria): Promise<FormativeAssessment[]> {
     let q = 'SELECT * FROM formative_assessments WHERE 1=1';
     const params: any[] = [];
     if (filters.studentId) { params.push(filters.studentId); q += ` AND student_id = $${params.length}`; }
-    if (filters.learningAreaId) { params.push(filters.learningAreaId); q += ` AND learning_area_id = $${params.length}`; }
-    if (filters.termId) { params.push(filters.termId); q += ` AND term_id = $${params.length}`; }
+    if (filters.learningAreaId) {
+      const targetLa = filters.learningAreaId.trim();
+      const canonicalCode = PostgresCBCAssessmentRepository.LEGACY_SUBJECT_ALIASES[targetLa.toLowerCase()] || targetLa;
+
+      params.push(targetLa, canonicalCode);
+      const p1 = params.length - 1;
+      const p2 = params.length;
+
+      q += ` AND (
+        learning_area_id = $${p1}
+        OR learning_area_id = $${p2}
+        OR learning_area_id IN (
+          SELECT id FROM learning_areas
+          WHERE id = $${p1}
+             OR code ILIKE $${p1}
+             OR code ILIKE $${p2}
+             OR global_subject_id = $${p1}
+             OR global_subject_id = $${p2}
+             OR global_subject_id IN (
+               SELECT id FROM global_subjects 
+               WHERE id = $${p1} OR id = $${p2} OR code ILIKE $${p1} OR code ILIKE $${p2} OR name ILIKE $${p1} OR name ILIKE $${p2}
+             )
+        )
+      )`;
+    }
+    if (filters.termId) {
+      const rawTerm = filters.termId.trim();
+      const altTerm1 = rawTerm.includes('-t')
+        ? rawTerm.replace('-t', '-')
+        : rawTerm.replace(/-(\d)$/, '-t$1');
+      const matchNum = rawTerm.match(/[-_t]?([1-3])$/i);
+      const termNum = matchNum ? matchNum[1] : '';
+      const altTerm2 = termNum ? `term-${termNum}` : rawTerm;
+      const altTerm3 = termNum && filters.academicYearId ? `term-${filters.academicYearId.replace('year-', '')}-${termNum}` : rawTerm;
+
+      params.push(rawTerm, altTerm1, altTerm2, altTerm3);
+      const startP = params.length - 3;
+      q += ` AND (term_id = $${startP} OR term_id = $${startP + 1} OR term_id = $${startP + 2} OR term_id = $${startP + 3})`;
+    }
     if (filters.academicYearId) { params.push(filters.academicYearId); q += ` AND academic_year_id = $${params.length}`; }
     q += ' ORDER BY student_id ASC, learning_area_id ASC, updated_at DESC, created_at DESC';
     const res = await this.pool.query(q, params);
@@ -2735,13 +2853,44 @@ export class PostgresCBCAssessmentRepository implements ICBCAssessmentRepository
     let q = 'SELECT * FROM summative_assessments WHERE 1=1';
     const params: any[] = [];
     if (filters.studentId) { params.push(filters.studentId); q += ` AND student_id = $${params.length}`; }
-    if (filters.learningAreaId) { params.push(filters.learningAreaId); q += ` AND learning_area_id = $${params.length}`; }
+    if (filters.learningAreaId) {
+      const targetLa = filters.learningAreaId.trim();
+      const canonicalCode = PostgresCBCAssessmentRepository.LEGACY_SUBJECT_ALIASES[targetLa.toLowerCase()] || targetLa;
+
+      params.push(targetLa, canonicalCode);
+      const p1 = params.length - 1;
+      const p2 = params.length;
+
+      q += ` AND (
+        learning_area_id = $${p1}
+        OR learning_area_id = $${p2}
+        OR learning_area_id IN (
+          SELECT id FROM learning_areas
+          WHERE id = $${p1}
+             OR code ILIKE $${p1}
+             OR code ILIKE $${p2}
+             OR global_subject_id = $${p1}
+             OR global_subject_id = $${p2}
+             OR global_subject_id IN (
+               SELECT id FROM global_subjects 
+               WHERE id = $${p1} OR id = $${p2} OR code ILIKE $${p1} OR code ILIKE $${p2} OR name ILIKE $${p1} OR name ILIKE $${p2}
+             )
+        )
+      )`;
+    }
     if (filters.termId) {
-      const altTermId = filters.termId.includes('-t')
-        ? filters.termId.replace('-t', '-')
-        : filters.termId.replace(/-(\d)$/, '-t$1');
-      params.push(filters.termId, altTermId);
-      q += ` AND (term_id = $${params.length - 1} OR term_id = $${params.length})`;
+      const rawTerm = filters.termId.trim();
+      const altTerm1 = rawTerm.includes('-t')
+        ? rawTerm.replace('-t', '-')
+        : rawTerm.replace(/-(\d)$/, '-t$1');
+      const matchNum = rawTerm.match(/[-_t]?([1-3])$/i);
+      const termNum = matchNum ? matchNum[1] : '';
+      const altTerm2 = termNum ? `term-${termNum}` : rawTerm;
+      const altTerm3 = termNum && filters.academicYearId ? `term-${filters.academicYearId.replace('year-', '')}-${termNum}` : rawTerm;
+
+      params.push(rawTerm, altTerm1, altTerm2, altTerm3);
+      const startP = params.length - 3;
+      q += ` AND (term_id = $${startP} OR term_id = $${startP + 1} OR term_id = $${startP + 2} OR term_id = $${startP + 3})`;
     }
     if (filters.academicYearId) { params.push(filters.academicYearId); q += ` AND academic_year_id = $${params.length}`; }
     q += ' ORDER BY student_id ASC, learning_area_id ASC, updated_at DESC, created_at DESC';
@@ -3331,7 +3480,13 @@ export class PostgresAttendanceRepository implements IAttendanceRepository {
   public async saveRegister(reg: AttendanceRegister): Promise<void> {
     const q = `INSERT INTO attendance_registers (id, school_id, classroom_id, stream_id, academic_year_id, term_id, date, type, lesson_id, marked_by_teacher_id, entries, created_at, updated_at)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-               ON CONFLICT (id) DO UPDATE SET entries = EXCLUDED.entries, updated_at = NOW()`;
+               ON CONFLICT (school_id, classroom_id, COALESCE(stream_id, ''), date, type)
+               DO UPDATE SET
+                 entries = EXCLUDED.entries,
+                 marked_by_teacher_id = EXCLUDED.marked_by_teacher_id,
+                 academic_year_id = EXCLUDED.academic_year_id,
+                 term_id = EXCLUDED.term_id,
+                 updated_at = NOW()`;
     await this.pool.query(q, [
       reg.id,
       reg.schoolId,
@@ -3897,6 +4052,183 @@ export class PostgresFeeRepository implements IFeeRepository {
       status: r.status as CreditStatus,
       notes: r.notes
     }, r.id, r.created_at, r.updated_at);
+  }
+
+  public async findCreditApplicationById(id: string): Promise<FeeCreditApplication | null> {
+    const res = await this.pool.query('SELECT * FROM fee_credit_applications WHERE id = $1', [id]);
+    if (!res.rows.length) return null;
+    const r = res.rows[0];
+    return FeeCreditApplication.create({
+      creditId: r.credit_id,
+      studentId: r.student_id,
+      invoiceId: r.invoice_id,
+      academicYearId: r.academic_year_id,
+      termId: r.term_id,
+      amountApplied: Number(r.amount_applied),
+      appliedByUserId: r.applied_by_user_id
+    }, r.id, r.created_at, r.applied_at);
+  }
+
+  public async findCreditApplicationByReceiptNumber(receiptNumber: string): Promise<FeeCreditApplication | null> {
+    const res = await this.pool.query('SELECT * FROM fee_credit_applications WHERE receipt_number = $1 LIMIT 1', [receiptNumber]);
+    if (!res.rows.length) return null;
+    const r = res.rows[0];
+    return FeeCreditApplication.create({
+      creditId: r.credit_id,
+      studentId: r.student_id,
+      invoiceId: r.invoice_id,
+      academicYearId: r.academic_year_id,
+      termId: r.term_id,
+      amountApplied: Number(r.amount_applied),
+      appliedByUserId: r.applied_by_user_id
+    }, r.id, r.created_at, r.applied_at);
+  }
+
+  public async saveReversalRequest(request: TransactionReversalRequest): Promise<void> {
+    const q = `INSERT INTO transaction_reversal_requests (
+      id, school_id, request_reference, transaction_type, transaction_id, transaction_reference,
+      original_receipt_number, student_id, student_name, admission_number, original_amount,
+      requested_reversal_amount, transaction_date, reason, explanation, supporting_attachment_url,
+      status, requested_by_user_id, requested_by_name, requested_by_role, requested_at,
+      reviewed_by_user_id, reviewed_by_name, reviewed_at, approval_comment, rejection_reason,
+      reversal_receipt_number, reversal_receipt_payload, financial_impact_preview, error_message,
+      audit_trail, created_at, updated_at
+    ) VALUES (
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,
+      $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30,
+      $31, $32, $33
+    )
+    ON CONFLICT (id) DO UPDATE SET
+      status = EXCLUDED.status,
+      reviewed_by_user_id = EXCLUDED.reviewed_by_user_id,
+      reviewed_by_name = EXCLUDED.reviewed_by_name,
+      reviewed_at = EXCLUDED.reviewed_at,
+      approval_comment = EXCLUDED.approval_comment,
+      rejection_reason = EXCLUDED.rejection_reason,
+      reversal_receipt_number = EXCLUDED.reversal_receipt_number,
+      reversal_receipt_payload = EXCLUDED.reversal_receipt_payload,
+      financial_impact_preview = EXCLUDED.financial_impact_preview,
+      error_message = EXCLUDED.error_message,
+      audit_trail = EXCLUDED.audit_trail,
+      updated_at = NOW()`;
+
+    await this.pool.query(q, [
+      request.id,
+      request.schoolId,
+      request.requestReference,
+      request.transactionType,
+      request.transactionId,
+      request.transactionReference,
+      request.originalReceiptNumber || null,
+      request.studentId,
+      request.studentName,
+      request.admissionNumber,
+      request.originalAmount,
+      request.requestedReversalAmount,
+      request.transactionDate,
+      request.reason,
+      request.explanation || null,
+      request.supportingAttachmentUrl || null,
+      request.status,
+      request.requestedByUserId,
+      request.requestedByName,
+      request.requestedByRole,
+      request.requestedAt,
+      request.reviewedByUserId || null,
+      request.reviewedByName || null,
+      request.reviewedAt || null,
+      request.approvalComment || null,
+      request.rejectionReason || null,
+      request.reversalReceiptNumber || null,
+      request.reversalReceiptPayload ? JSON.stringify(request.reversalReceiptPayload) : null,
+      request.financialImpactPreview ? JSON.stringify(request.financialImpactPreview) : null,
+      request.errorMessage || null,
+      JSON.stringify(request.auditTrail),
+      request.createdAt,
+      request.updatedAt
+    ]);
+  }
+
+  private mapReversalRow(r: any): TransactionReversalRequest {
+    return TransactionReversalRequest.create({
+      schoolId: r.school_id,
+      requestReference: r.request_reference,
+      transactionType: r.transaction_type,
+      transactionId: r.transaction_id,
+      transactionReference: r.transaction_reference,
+      originalReceiptNumber: r.original_receipt_number || undefined,
+      studentId: r.student_id,
+      studentName: r.student_name,
+      admissionNumber: r.admission_number,
+      originalAmount: Number(r.original_amount),
+      requestedReversalAmount: Number(r.requested_reversal_amount),
+      transactionDate: r.transaction_date,
+      reason: r.reason,
+      explanation: r.explanation || undefined,
+      supportingAttachmentUrl: r.supporting_attachment_url || undefined,
+      status: r.status,
+      requestedByUserId: r.requested_by_user_id,
+      requestedByName: r.requested_by_name,
+      requestedByRole: r.requested_by_role,
+      requestedAt: r.requested_at ? new Date(r.requested_at) : new Date(),
+      reviewedByUserId: r.reviewed_by_user_id || undefined,
+      reviewedByName: r.reviewed_by_name || undefined,
+      reviewedAt: r.reviewed_at ? new Date(r.reviewed_at) : undefined,
+      approvalComment: r.approval_comment || undefined,
+      rejectionReason: r.rejection_reason || undefined,
+      reversalReceiptNumber: r.reversal_receipt_number || undefined,
+      reversalReceiptPayload: typeof r.reversal_receipt_payload === 'string' ? JSON.parse(r.reversal_receipt_payload) : r.reversal_receipt_payload,
+      financialImpactPreview: typeof r.financial_impact_preview === 'string' ? JSON.parse(r.financial_impact_preview) : r.financial_impact_preview,
+      errorMessage: r.error_message || undefined,
+      auditTrail: typeof r.audit_trail === 'string' ? JSON.parse(r.audit_trail) : (r.audit_trail || [])
+    }, r.id, r.created_at ? new Date(r.created_at) : undefined, r.updated_at ? new Date(r.updated_at) : undefined);
+  }
+
+  public async findReversalRequestById(id: string): Promise<TransactionReversalRequest | null> {
+    const res = await this.pool.query('SELECT * FROM transaction_reversal_requests WHERE id = $1', [id]);
+    if (!res.rows.length) return null;
+    return this.mapReversalRow(res.rows[0]);
+  }
+
+  public async findReversalRequestByReference(ref: string): Promise<TransactionReversalRequest | null> {
+    const res = await this.pool.query('SELECT * FROM transaction_reversal_requests WHERE request_reference = $1', [ref]);
+    if (!res.rows.length) return null;
+    return this.mapReversalRow(res.rows[0]);
+  }
+
+  public async findReversalRequests(filters: ReversalRequestFilterCriteria): Promise<TransactionReversalRequest[]> {
+    let q = 'SELECT * FROM transaction_reversal_requests WHERE 1=1';
+    const params: any[] = [];
+    if (filters.schoolId) { params.push(filters.schoolId); q += ` AND school_id = $${params.length}`; }
+    if (filters.studentId) { params.push(filters.studentId); q += ` AND student_id = $${params.length}`; }
+    if (filters.studentIds && filters.studentIds.length > 0) {
+      params.push(filters.studentIds);
+      q += ` AND student_id = ANY($${params.length})`;
+    }
+    if (filters.status) { params.push(filters.status); q += ` AND status = $${params.length}`; }
+    if (filters.transactionType) { params.push(filters.transactionType); q += ` AND transaction_type = $${params.length}`; }
+    if (filters.transactionId) { params.push(filters.transactionId); q += ` AND transaction_id = $${params.length}`; }
+    if (filters.transactionReference) { params.push(filters.transactionReference); q += ` AND transaction_reference = $${params.length}`; }
+    if (filters.requestReference) { params.push(filters.requestReference); q += ` AND request_reference = $${params.length}`; }
+    if (filters.requestedByUserId) { params.push(filters.requestedByUserId); q += ` AND requested_by_user_id = $${params.length}`; }
+    if (filters.startDate) { params.push(filters.startDate); q += ` AND requested_at >= $${params.length}`; }
+    if (filters.endDate) { params.push(filters.endDate); q += ` AND requested_at <= $${params.length}`; }
+    if (filters.search) {
+      params.push(`%${filters.search.toLowerCase()}%`);
+      q += ` AND (LOWER(request_reference) LIKE $${params.length} OR LOWER(transaction_reference) LIKE $${params.length} OR LOWER(student_name) LIKE $${params.length} OR LOWER(admission_number) LIKE $${params.length} OR LOWER(reason) LIKE $${params.length})`;
+    }
+    q += ' ORDER BY requested_at DESC';
+    const res = await this.pool.query(q, params);
+    return res.rows.map(r => this.mapReversalRow(r));
+  }
+
+  public async findActiveReversalRequestForTransaction(transactionId: string): Promise<TransactionReversalRequest | null> {
+    const res = await this.pool.query(
+      "SELECT * FROM transaction_reversal_requests WHERE transaction_id = $1 AND status IN ('PENDING_ADMIN_APPROVAL', 'PROCESSING') LIMIT 1",
+      [transactionId]
+    );
+    if (!res.rows.length) return null;
+    return this.mapReversalRow(res.rows[0]);
   }
 }
 

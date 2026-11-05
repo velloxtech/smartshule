@@ -210,7 +210,7 @@ export const VisualCBCView: React.FC = () => {
   const handleSubmitHelpRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!helpImageBase64) {
-      alert('Please attach a photo of the homework question or page.');
+      alert('Please attach a photo of the homefun question or page.');
       return;
     }
 
@@ -226,7 +226,7 @@ export const VisualCBCView: React.FC = () => {
 
     try {
       const la = availableLearningAreas.find((l) => l.id === helpLearningArea) || availableLearningAreas[0];
-      const subjectName = la?.name || 'Integrated Homework';
+      const subjectName = la?.name || 'Integrated Homefun';
 
       const res = await apiService.uploadHelpRequest({
         schoolId: activeSchoolId,
@@ -366,7 +366,7 @@ export const VisualCBCView: React.FC = () => {
             Visual Learning Evidence & Photo Q&A Desk
           </h1>
           <p className="text-xs text-on-surface-variant mt-0.5">
-            Parents snap photos to ask teachers homework questions, and teachers document hands-on CBE practical milestones
+            Parents snap photos to ask teachers homefun questions, and teachers document hands-on CBE practical milestones
           </p>
         </div>
 
@@ -488,7 +488,7 @@ export const VisualCBCView: React.FC = () => {
               <h3 className="font-bold text-base text-on-surface">No Help Inquiries Found</h3>
               <p className="text-xs text-on-surface-variant">
                 {isGuardian
-                  ? 'Stuck on a homework question? Take a photo of the problem and submit it to get teacher guidance.'
+                  ? 'Stuck on a homefun question? Take a photo of the problem and submit it to get teacher guidance.'
                   : 'No inquiries matching your filter criteria at this time.'}
               </p>
             </div>

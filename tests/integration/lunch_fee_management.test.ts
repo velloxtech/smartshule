@@ -205,7 +205,7 @@ describe('Lunch Fee Management Integration Tests (Admin & Headteacher list creat
         .post('/api/v1/students')
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
-          admissionNumber: 'ADM-LNCH-BULK',
+          admissionNumber: `ADM-LNCH-BULK-${Date.now().toString().slice(-6)}`,
           firstName: 'Faith',
           lastName: 'Chebet',
           dateOfBirth: '2016-01-15',

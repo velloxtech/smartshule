@@ -12,7 +12,7 @@ interface ReportCardsViewProps {
   selectedStudent?: Student;
 }
 
-export const LOWER_PRIMARY_CBC_SUBJECTS = [
+const LOWER_PRIMARY_CBC_SUBJECTS = [
   { name: 'English Language Activities', code: 'ENG', short: 'English' },
   { name: 'English Reading Activities', code: 'REA', short: 'Reading' },
   { name: 'Mathematical Activities', code: 'MAT', short: 'Math' },
@@ -23,7 +23,7 @@ export const LOWER_PRIMARY_CBC_SUBJECTS = [
   { name: 'Creative Arts Activities', code: 'CREA', short: 'Creative Arts' },
 ];
 
-export const STANDARD_12_CBC_SUBJECTS = [
+const STANDARD_12_CBC_SUBJECTS = [
   { name: 'Mathematics', code: 'MAT', short: 'Math' },
   { name: 'English Language', code: 'ENG', short: 'English' },
   { name: 'Kiswahili Language', code: 'KIS', short: 'Kiswahili' },
@@ -102,6 +102,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
   const [selectedId, setSelectedId] = useState<string>(
     initialStudent ? initialStudent.id : (propStudents && propStudents.length > 0 ? propStudents[0].id : '')
   );
+  const [loadingStudents, setLoadingStudents] = useState<boolean>(!initialStudent && (!propStudents || propStudents.length === 0));
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [reportCardData, setReportCardData] = useState<CBCReportCardData | null>(null);
   const [broadsheetData, setBroadsheetData] = useState<BroadsheetResult | null>(null);
@@ -138,6 +139,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
   useEffect(() => {
     if (isParent) {
       setCheckingClearance(true);
+      setLoadingStudents(true);
       apiService.getGuardianPortalData().then((res) => {
         if (res?.data?.children && Array.isArray(res.data.children) && res.data.children.length > 0) {
           setGuardianPortalData(res.data);
@@ -156,17 +158,24 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
           setStudents(mapped);
           if (!selectedId) setSelectedId(mapped[0].id);
         }
-      }).catch(() => {}).finally(() => setCheckingClearance(false));
+      }).catch(() => {}).finally(() => {
+        setCheckingClearance(false);
+        setLoadingStudents(false);
+      });
     } else if (propStudents && propStudents.length > 0) {
       setStudents(propStudents);
       if (!selectedId) setSelectedId(propStudents[0].id);
+      setLoadingStudents(false);
     } else {
+      setLoadingStudents(true);
       apiService.getStudents().then((res) => {
         if (res?.data && Array.isArray(res.data) && res.data.length > 0) {
           setStudents(res.data);
           if (!selectedId) setSelectedId(res.data[0].id);
         }
-      }).catch(() => {});
+      }).catch(() => {}).finally(() => {
+        setLoadingStudents(false);
+      });
     }
   }, [propStudents, isParent]);
 
@@ -748,17 +757,18 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
     return nextTermOpening.formatted || 'Tuesday, 5 January 2027';
   }, [nextTermOpening.formatted]);
 
-  const classTeacherRemarksText = reportCardData?.classTeacherRemarks || `${student.name} demonstrates commendable diligence, discipline, and active engagement in continuous learning outcomes.`;
+  const classTeacherRemarksText = reportCardData?.classTeacherRemarks || `${student?.name || 'Learner'} demonstrates commendable diligence, discipline, and active engagement in continuous learning outcomes.`;
   const headTeacherRemarksText = reportCardData?.headTeacherRemarks || 'Commendable performance throughout the term. Shows steady growth in core competencies and moral values.';
 
   const reportTitleBarText = `SUMMATIVE ASSESMENT REPORT TERM ${activeTermNumber || 3} ${currentYear?.name || currentYear?.year || 2026}`;
 
   const buildReportCardPrintHTML = (termName: string, yearName: string) => {
+    if (!student) return '';
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Grace Seeds School - Summative Assessment Report - ${student.name}</title>
+  <title>Grace Seeds School - Summative Assessment Report - ${student?.name || 'Learner'}</title>
   <style>
     @page {
       size: A4 portrait;
@@ -1027,9 +1037,9 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
 
       <div class="student-info-box">
         <div class="bio-row ${isBoardingSchool && studentHouse && studentHouse !== '-' ? 'has-house' : 'no-house'}">
-          <div><span class="label">Student Name:</span> <span class="val">${student.name}</span></div>
-          <div><span class="label">ADM NO.:</span> <span class="val">${student.admNo}</span></div>
-          <div><span class="label">GRADE:</span> <span class="val">${student.grade}${student.stream && student.stream !== student.grade && student.stream !== 'Main Stream' ? ` (${student.stream})` : ''}</span></div>
+          <div><span class="label">Student Name:</span> <span class="val">${student?.name || 'N/A'}</span></div>
+          <div><span class="label">ADM NO.:</span> <span class="val">${student?.admNo || 'N/A'}</span></div>
+          <div><span class="label">GRADE:</span> <span class="val">${student?.grade || 'N/A'}${student?.stream && student.stream !== student.grade && student.stream !== 'Main Stream' ? ` (${student.stream})` : ''}</span></div>
           ${isBoardingSchool && studentHouse && studentHouse !== '-' ? `<div><span class="label">HSE:</span> <span class="val">${studentHouse}</span></div>` : ''}
         </div>
 
@@ -1266,19 +1276,19 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
     doc.text('Student Name:', 17, curY + 4.5);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(15, 23, 42);
-    doc.text(student.name, 36, curY + 4.5);
+    doc.text(student?.name || '', 36, curY + 4.5);
 
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(100, 116, 139);
     doc.text('ADM NO.:', 92, curY + 4.5);
     doc.setTextColor(15, 23, 42);
-    doc.text(student.admNo, 108, curY + 4.5);
+    doc.text(student?.admNo || '', 108, curY + 4.5);
 
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(100, 116, 139);
     doc.text('GRADE:', 136, curY + 4.5);
     doc.setTextColor(15, 23, 42);
-    doc.text(`${student.grade}${student.stream && student.stream !== student.grade && student.stream !== 'Main Stream' ? ` (${student.stream})` : ''}`, 149, curY + 4.5);
+    doc.text(`${student?.grade || ''}${student?.stream && student.stream !== student.grade && student.stream !== 'Main Stream' ? ` (${student.stream})` : ''}`, 149, curY + 4.5);
 
     if (isBoardingSchool && studentHouse && studentHouse !== '-') {
       doc.setFont('helvetica', 'bold');
@@ -1501,7 +1511,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
     doc.setTextColor(100, 116, 139);
     doc.text('Official Summative Assessment Report', 196, footerY + 6, { align: 'right' });
 
-    doc.save(`Grace_Seeds_School_Report_Card_${student.admNo}_${student.name.replace(/[^a-zA-Z0-9]/g, '_')}_${termName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
+    doc.save(`Grace_Seeds_School_Report_Card_${student?.admNo || 'learner'}_${(student?.name || 'learner').replace(/[^a-zA-Z0-9]/g, '_')}_${termName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
   };
 
   if (isParent && checkingClearance) {
@@ -1514,6 +1524,14 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
   }
 
   if (!student) {
+    if (loadingStudents) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-[50vh] gap-3">
+          <div className="w-10 h-10 border-4 border-[#800000] border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-xs font-semibold text-[#800000] font-body">Loading learner dossiers from Grace Seeds School registry...</p>
+        </div>
+      );
+    }
     return (
       <div className="space-y-6 pb-12">
         <div>
@@ -1901,15 +1919,15 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
             <div className={`grid grid-cols-2 ${isBoardingSchool && studentHouse && studentHouse !== '-' ? 'sm:grid-cols-4' : 'sm:grid-cols-3'} gap-2 px-3 py-1.5 bg-gray-50/60 print:bg-transparent`}>
               <div>
                 <span className="text-gray-500 font-bold uppercase text-[10px] print:text-[7pt] mr-1.5">Student Name:</span>
-                <span className="font-bold text-gray-900">{student.name}</span>
+                <span className="font-bold text-gray-900">{student?.name || ''}</span>
               </div>
               <div>
                 <span className="text-gray-500 font-bold uppercase text-[10px] print:text-[7pt] mr-1.5">ADM NO.:</span>
-                <span className="font-mono font-bold text-gray-900">{student.admNo}</span>
+                <span className="font-mono font-bold text-gray-900">{student?.admNo || ''}</span>
               </div>
               <div>
                 <span className="text-gray-500 font-bold uppercase text-[10px] print:text-[7pt] mr-1.5">GRADE:</span>
-                <span className="font-bold text-gray-900">{student.grade}{student.stream && student.stream !== student.grade && student.stream !== 'Main Stream' ? ` (${student.stream})` : ''}</span>
+                <span className="font-bold text-gray-900">{student?.grade || ''}{student?.stream && student.stream !== student.grade && student.stream !== 'Main Stream' ? ` (${student.stream})` : ''}</span>
               </div>
               {isBoardingSchool && studentHouse && studentHouse !== '-' && (
                 <div>
@@ -2116,7 +2134,7 @@ export const ReportCardsView: React.FC<ReportCardsViewProps> = ({
           documentId={reportCardDocId}
           documentType="REPORT_CARD"
           documentVersion="1.0"
-          documentTitle={`Summative Report Card: ${student.name} (${student.admNo})`}
+          documentTitle={`Summative Report Card: ${student?.name || ''} (${student?.admNo || ''})`}
           documentContent={canonicalDocContent}
           onSignatureComplete={() => {
             loadSignatures(reportCardDocId);

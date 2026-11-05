@@ -48,7 +48,8 @@ export const getSubjectCanonicalKey = (nameOrCodeOrId: string): string => {
   if (
     clean.includes('READING') ||
     clean.includes('REA') ||
-    clean.includes('LITERACY')
+    clean.includes('LITERACY') ||
+    clean.includes('LIT')
   ) {
     return 'REA';
   }
@@ -80,8 +81,11 @@ export const getSubjectCanonicalKey = (nameOrCodeOrId: string): string => {
     clean.includes('LANGUAGE ACTIVITIES') ||
     clean.includes('LAN_ACT') ||
     clean.includes('LANG_ACT') ||
-    /(^|[-_ \b])LAN([-_ \b]|$)/i.test(clean) ||
+    clean.includes('LANG') ||
+    clean.includes('LAN') ||
     clean.startsWith('LA-PLAYGROUP-LAN') ||
+    clean.startsWith('LA-PG-LANG') ||
+    clean.startsWith('LA-PP1-LANG') ||
     (clean.includes('LANGUAGE') && !clean.includes('INDIGENOUS') && !clean.includes('KISWAHILI') && !clean.includes('SWAHILI'))
   ) {
     return 'LAN';
@@ -457,7 +461,16 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
       }
     });
 
+    const classStudentIdSet = selectedClassId !== 'All'
+      ? new Set(internalStudents.filter(st => st.classroomId === selectedClassId).map(st => st.id))
+      : null;
+
     summatives.forEach((s) => {
+      // If a specific class is selected, only add subjects that are assessed for learners in that class
+      if (classStudentIdSet && !classStudentIdSet.has(s.studentId)) {
+        return;
+      }
+
       // 1. Look up learning area in allLearningAreas or sourceList to resolve its actual code/name
       const laMatch = allLearningAreas.find(
         (la) => la.id.toLowerCase() === s.learningAreaId.toLowerCase() || (la.code && la.code.toLowerCase() === s.learningAreaId.toLowerCase())
@@ -610,6 +623,13 @@ export const SummativeAssessmentsView: React.FC<SummativeAssessmentsViewProps> =
         }
         if (laMatch.name) {
           sMap.set(laMatch.name.toLowerCase(), s);
+        }
+        if ((laMatch as any).globalSubjectId) {
+          sMap.set((laMatch as any).globalSubjectId, s);
+        }
+        if ((laMatch as any).globalSubject?.code) {
+          sMap.set((laMatch as any).globalSubject.code, s);
+          sMap.set((laMatch as any).globalSubject.code.toLowerCase(), s);
         }
         const canonKey = getSubjectCanonicalKey(`${laMatch.code || ''} ${laMatch.name || ''} ${laMatch.id || ''}`);
         sMap.set(canonKey, s);

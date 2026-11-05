@@ -480,6 +480,8 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
           UserRole.SUPER_ADMIN,
           UserRole.ADMIN,
           UserRole.SCHOOL_ADMIN,
+          UserRole.HEAD_TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
           UserRole.BURSAR,
           UserRole.ACCOUNTANT,
         ],
@@ -573,7 +575,7 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
       },
       {
         id: 'ediary',
-        label: 'Digital eDiary',
+        label: 'Daily Homefun & Communication Diary (E-Diary)',
         icon: 'edit_note',
         allowedRoles: [
           UserRole.SUPER_ADMIN,

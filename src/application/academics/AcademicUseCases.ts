@@ -5,6 +5,7 @@ import { ISystemLogRepository } from '../../core/ports/repositories/ISystemLogRe
 import { School, SchoolProps } from '../../core/domain/academic/School';
 import { AcademicYear, AcademicTerm } from '../../core/domain/academic/AcademicYear';
 import { ClassRoom, Stream, LearningArea, EducationLevel } from '../../core/domain/academic/ClassRoom';
+import { GlobalSubject } from '../../core/domain/academic/GlobalSubject';
 import { ClassTeacherAssignment, SubjectTeacherAssignment, SubjectTeacherRole } from '../../core/domain/academic/TeacherAssignment';
 import { CBCGradeLevel } from '../../core/domain/user/Student';
 import { UserRole, isTermInitializationAuthorizedRole, TERM_INITIALIZATION_AUTHORIZED_ROLES } from '../../core/domain/user/User';
@@ -663,82 +664,111 @@ export class AcademicUseCases {
     return streams.map(s => s.toJSON());
   }
 
-  // Learning Areas (Subjects)
-  public async createLearningArea(dto: { name: string; code: string; gradeLevel: CBCGradeLevel; educationLevel: EducationLevel; isElective: boolean; schoolId: string; teacherId?: string }) {
+  // Global Subjects Catalogue
+  public async createGlobalSubject(dto: { name: string; code: string; schoolId?: string; department?: string; description?: string }) {
+    const schoolId = dto.schoolId || 'school-001';
+    const id = `subj-${dto.code.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+    const subject = GlobalSubject.create({
+      schoolId,
+      code: dto.code.trim().toUpperCase(),
+      name: dto.name.trim(),
+      department: dto.department?.trim(),
+      description: dto.description?.trim()
+    }, id);
+    await this.academicRepository.saveGlobalSubject(subject);
+    return subject.toJSON();
+  }
+
+  public async listGlobalSubjects(schoolId?: string) {
+    const targetSchoolId = schoolId || 'school-001';
+    let subjects = await this.academicRepository.findAllGlobalSubjects(targetSchoolId);
+    if (subjects.length === 0) {
+      const canonicalDefaults: { id: string; code: string; name: string; department: string; description: string }[] = [
+        { id: 'subj-math', code: 'MATH', name: 'Mathematics', department: 'Mathematics', description: 'Mathematical Activities and Mathematics across all levels' },
+        { id: 'subj-eng', code: 'ENG', name: 'English', department: 'Languages', description: 'English Language Activities, English Reading, and English Language' },
+        { id: 'subj-kisw', code: 'KISW', name: 'Kiswahili', department: 'Languages', description: 'Kiswahili Language Activities, Kusoma, and Kiswahili Language' },
+        { id: 'subj-lan', code: 'LANG', name: 'Language Activities', department: 'Languages', description: 'Early childhood foundational language activities for Pre-Primary' },
+        { id: 'subj-rea', code: 'REA', name: 'Reading & Literacy', department: 'Languages', description: 'Literacy activities, reading fluency, and reading comprehension' },
+        { id: 'subj-kuso', code: 'KUSO', name: 'Kusoma', department: 'Languages', description: 'Kiswahili reading comprehension and literacy activities' },
+        { id: 'subj-sci', code: 'SCI', name: 'Science', department: 'Sciences', description: 'Science & Technology and Integrated Science' },
+        { id: 'subj-env', code: 'ENV', department: 'Sciences', name: 'Environmental Studies', description: 'Environmental Activities and Environmental Studies' },
+        { id: 'subj-re', code: 'RE', name: 'Religious Education', department: 'Humanities', description: 'Religious Activities and Christian Religious Education' },
+        { id: 'subj-crea', code: 'CREA', name: 'Creative Arts', department: 'Creative Arts', description: 'Psychomotor & Creative Activities, Creative Arts Activities, and Creative Arts & Sports' },
+        { id: 'subj-sst', code: 'SST', name: 'Social Studies', department: 'Humanities', description: 'Social Studies across Upper Primary and Junior School' },
+        { id: 'subj-agr', code: 'AGRI', name: 'Agriculture & Nutrition', department: 'Applied Sciences', description: 'Agriculture and Nutrition Activities and Agriculture & Nutrition' },
+        { id: 'subj-pretech', code: 'PRETECH', name: 'Pre-Technical Studies', department: 'Technical', description: 'Pre-Technical and Pre-Career Studies in Junior School' },
+        { id: 'subj-hlth', code: 'HLTH', name: 'Health Education', department: 'Sciences', description: 'Health Education and Life Skills' },
+        { id: 'subj-bus', code: 'BUS', name: 'Business Studies', department: 'Humanities', description: 'Business Studies and Financial Literacy' },
+        { id: 'subj-comp', code: 'COMP', name: 'Computer Science', department: 'Technical', description: 'Computer Science and Digital Literacy' },
+        { id: 'subj-indig', code: 'INDIG', name: 'Indigenous Language', department: 'Languages', description: 'Indigenous Language Activities and Mother Tongue' },
+        { id: 'subj-fre', code: 'FRE', name: 'French', department: 'Languages', description: 'French Foreign Language elective' }
+      ];
+
+      for (const d of canonicalDefaults) {
+        const gs = GlobalSubject.create({
+          schoolId: targetSchoolId,
+          code: d.code,
+          name: d.name,
+          department: d.department,
+          description: d.description
+        }, d.id);
+        await this.academicRepository.saveGlobalSubject(gs);
+      }
+      subjects = await this.academicRepository.findAllGlobalSubjects(targetSchoolId);
+    }
+    return subjects.map(s => s.toJSON());
+  }
+
+  // Learning Areas (Grade-Specific Offerings)
+  public async createLearningArea(dto: {
+    name: string;
+    code: string;
+    gradeLevel: CBCGradeLevel;
+    educationLevel: EducationLevel;
+    isElective: boolean;
+    schoolId: string;
+    teacherId?: string;
+    globalSubjectId?: string;
+  }) {
     const learningArea = LearningArea.create(dto, IdGenerator.generate());
     await this.academicRepository.saveLearningArea(learningArea);
     return learningArea.toJSON();
   }
 
-  public async listLearningAreas(filters?: { gradeLevel?: CBCGradeLevel; schoolId?: string }) {
-    let areas = await this.academicRepository.findAllLearningAreas(filters);
-    if (areas.length === 0) {
-      const schoolId = filters?.schoolId || 'school-001';
-      const defaultSubjects: { name: string; code: string; gradeLevel: CBCGradeLevel; educationLevel: EducationLevel; isElective: boolean }[] = [
-        // 1. Grace Seeds Pre-Primary (Playgroup, PP1, PP2)
-        ...[CBCGradeLevel.PLAYGROUP, CBCGradeLevel.PP1, CBCGradeLevel.PP2].flatMap(g => [
-          { name: 'Language Activities', code: 'LANG_ACT', gradeLevel: g, educationLevel: EducationLevel.PRE_PRIMARY, isElective: false },
-          { name: 'Mathematical Activities', code: 'MATH_ACT', gradeLevel: g, educationLevel: EducationLevel.PRE_PRIMARY, isElective: false },
-          { name: 'Creative Activities', code: 'CREAT_ACT', gradeLevel: g, educationLevel: EducationLevel.PRE_PRIMARY, isElective: false },
-          { name: 'Religious Activities', code: 'REL_ACT', gradeLevel: g, educationLevel: EducationLevel.PRE_PRIMARY, isElective: false },
-          { name: 'Environmental Activities', code: 'ENV_ACT', gradeLevel: g, educationLevel: EducationLevel.PRE_PRIMARY, isElective: false },
-        ]),
-
-        // 2. Grace Seeds Lower Primary (Grade 1 - 3)
-        ...[CBCGradeLevel.GRADE_1, CBCGradeLevel.GRADE_2, CBCGradeLevel.GRADE_3].flatMap(g => [
-          { name: 'English', code: 'ENG', gradeLevel: g, educationLevel: EducationLevel.LOWER_PRIMARY, isElective: false },
-          { name: 'Mathematics', code: 'MATH', gradeLevel: g, educationLevel: EducationLevel.LOWER_PRIMARY, isElective: false },
-          { name: 'Kiswahili', code: 'KISW', gradeLevel: g, educationLevel: EducationLevel.LOWER_PRIMARY, isElective: false },
-          { name: 'Creative Activities', code: 'CREAT', gradeLevel: g, educationLevel: EducationLevel.LOWER_PRIMARY, isElective: false },
-          { name: 'Environmental Activities', code: 'ENV', gradeLevel: g, educationLevel: EducationLevel.LOWER_PRIMARY, isElective: false },
-          { name: 'Religious Education', code: 'CRE', gradeLevel: g, educationLevel: EducationLevel.LOWER_PRIMARY, isElective: false },
-          { name: 'Indigenous Language', code: 'INDIG', gradeLevel: g, educationLevel: EducationLevel.LOWER_PRIMARY, isElective: false },
-        ]),
-
-        // 3. Grace Seeds Upper Primary (Grade 4 - 6)
-        ...[CBCGradeLevel.GRADE_4, CBCGradeLevel.GRADE_5, CBCGradeLevel.GRADE_6].flatMap(g => [
-          { name: 'Mathematics', code: 'MATH', gradeLevel: g, educationLevel: EducationLevel.UPPER_PRIMARY, isElective: false },
-          { name: 'English', code: 'ENG', gradeLevel: g, educationLevel: EducationLevel.UPPER_PRIMARY, isElective: false },
-          { name: 'Kiswahili', code: 'KISW', gradeLevel: g, educationLevel: EducationLevel.UPPER_PRIMARY, isElective: false },
-          { name: 'Science and Technology', code: 'SCI_TECH', gradeLevel: g, educationLevel: EducationLevel.UPPER_PRIMARY, isElective: false },
-          { name: 'Agriculture', code: 'AGRI', gradeLevel: g, educationLevel: EducationLevel.UPPER_PRIMARY, isElective: false },
-          { name: 'Creative Arts', code: 'ARTS', gradeLevel: g, educationLevel: EducationLevel.UPPER_PRIMARY, isElective: false },
-          { name: 'Social Studies', code: 'SST', gradeLevel: g, educationLevel: EducationLevel.UPPER_PRIMARY, isElective: false },
-          { name: 'Christian Religious Education', code: 'CRE', gradeLevel: g, educationLevel: EducationLevel.UPPER_PRIMARY, isElective: false },
-        ]),
-
-        // 4. Junior School (Grade 7 - 12 Standard CBC Learning Areas)
-        { name: 'Mathematics', code: 'MATH', gradeLevel: CBCGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
-        { name: 'English Language', code: 'ENG', gradeLevel: CBCGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
-        { name: 'Kiswahili Language', code: 'KISW', gradeLevel: CBCGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
-        { name: 'Integrated Science', code: 'INTSCI', gradeLevel: CBCGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
-        { name: 'Health Education', code: 'HLTH', gradeLevel: CBCGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
-        { name: 'Social Studies', code: 'SST', gradeLevel: CBCGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
-        { name: 'Christian Religious Education', code: 'CRE', gradeLevel: CBCGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
-        { name: 'Agriculture & Nutrition', code: 'AGRI', gradeLevel: CBCGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
-        { name: 'Pre-Technical Studies', code: 'PRETECH', gradeLevel: CBCGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
-        { name: 'Creative Arts & Sports', code: 'ARTS', gradeLevel: CBCGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
-        { name: 'Business Studies', code: 'BUS', gradeLevel: CBCGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
-        { name: 'Computer Science', code: 'COMP', gradeLevel: CBCGradeLevel.GRADE_7, educationLevel: EducationLevel.JUNIOR_SCHOOL, isElective: false },
-      ];
-
-      for (const subj of defaultSubjects) {
-        const la = LearningArea.create(
-          {
-            name: subj.name,
-            code: subj.code,
-            gradeLevel: subj.gradeLevel,
-            educationLevel: subj.educationLevel,
-            isElective: subj.isElective,
-            schoolId,
-          },
-          IdGenerator.generate()
-        );
-        await this.academicRepository.saveLearningArea(la);
+  public async listLearningAreas(filters?: {
+    gradeLevel?: CBCGradeLevel;
+    schoolId?: string;
+    globalSubjectId?: string;
+    classroomId?: string;
+  }) {
+    let resolvedGradeLevel = filters?.gradeLevel;
+    if (filters?.classroomId && !resolvedGradeLevel) {
+      const cls = await this.academicRepository.findClassById(filters.classroomId);
+      if (cls) {
+        resolvedGradeLevel = cls.gradeLevel;
       }
-      areas = await this.academicRepository.findAllLearningAreas(filters);
     }
-    return areas.map(a => a.toJSON());
+
+    const queryFilters: { gradeLevel?: CBCGradeLevel; schoolId?: string; globalSubjectId?: string } = {};
+    if (filters?.schoolId) queryFilters.schoolId = filters.schoolId;
+    if (resolvedGradeLevel) queryFilters.gradeLevel = resolvedGradeLevel;
+    if (filters?.globalSubjectId) queryFilters.globalSubjectId = filters.globalSubjectId;
+
+    let areas = await this.academicRepository.findAllLearningAreas(queryFilters);
+    const globalSubjects = await this.listGlobalSubjects(filters?.schoolId);
+    const gsMap = new Map<string, any>();
+    globalSubjects.forEach(gs => gsMap.set(gs.id, gs));
+
+    return areas.map(a => {
+      const json = a.toJSON();
+      const globalSubj = a.globalSubjectId ? gsMap.get(a.globalSubjectId) : undefined;
+      return {
+        ...json,
+        globalSubject: globalSubj || null,
+        canonicalSubjectName: globalSubj ? globalSubj.name : a.name,
+        canonicalSubjectCode: globalSubj ? globalSubj.code : a.code
+      };
+    });
   }
 
 

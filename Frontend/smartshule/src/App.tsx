@@ -1170,9 +1170,13 @@ export default function App() {
           {currentTab === 'CBC-analytics' && <CompetencyAnalyticsView />}
           {currentTab === 'broadsheets' && <MasterBroadsheetView />}
 
-          {currentTab === 'schemes-lesson-plans' && <SchemesView />}
+          {currentTab === 'schemes-lesson-plans' && (
+            <SchemesView onNavigateTab={(tab) => setCurrentTab(tab as any)} />
+          )}
 
-          {currentTab === 'records-of-work' && <RecordsOfWorkView />}
+          {currentTab === 'records-of-work' && (
+            <RecordsOfWorkView onNavigateTab={(tab) => setCurrentTab(tab as any)} />
+          )}
 
           {currentTab === 'timetable' && <TimetableView />}
 
@@ -1323,7 +1327,9 @@ export default function App() {
           {currentTab === 'discipline' && <DisciplineClubsView />}
           {currentTab === 'inventory' && <InventoryManagementView />}
           {currentTab === 'occurrence-records' && <OccurrenceBookView />}
-          {currentTab === 'curriculum-tracker' && <CurriculumTrackerView />}
+          {currentTab === 'curriculum-tracker' && (
+            <CurriculumTrackerView onNavigateTab={(tab) => setCurrentTab(tab as any)} />
+          )}
         </main>
 
         {/* Global Portal Footer: Pure Maroon (#800000) & Vellox Tech Watermark */}

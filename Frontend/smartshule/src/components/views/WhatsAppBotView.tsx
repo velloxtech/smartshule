@@ -287,7 +287,7 @@ export const WhatsAppBotView: React.FC = () => {
     } else if (type === 'ediary') {
       setSelectedTemplate('daily_ediary_notice');
       setOutboundMessage(
-        `Dear Parent, ${learnerName}'s homework and teacher remarks for today have been posted to the CBC Digital eDiary. Please review tasks and sign off in the portal. Reply '3' to view details directly here.`
+        `Dear Parent, ${learnerName}'s homefun activities and teacher remarks for today have been posted to the Daily Homefun & Communication Diary (E-Diary). Please review activities and sign off in the portal. Reply '3' to view details directly here.`
       );
     } else if (type === 'attendance') {
       setSelectedTemplate('attendance_alert');
@@ -1217,8 +1217,8 @@ export const WhatsAppBotView: React.FC = () => {
                   onClick={() => applyTemplate('ediary')}
                   className="p-2 rounded-lg bg-surface-container-low hover:bg-surface-container text-left border border-outline-variant/20 transition-all cursor-pointer"
                 >
-                  <span className="font-bold block text-teal-800 text-xs">eDiary / Tasks</span>
-                  <span className="text-[10px] text-on-surface-variant">Homework alert</span>
+                  <span className="font-bold block text-teal-800 text-xs">Homefun &amp; Diary</span>
+                  <span className="text-[10px] text-on-surface-variant">Homefun alert</span>
                 </button>
 
                 <button

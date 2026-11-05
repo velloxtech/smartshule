@@ -760,6 +760,17 @@ export interface StreamItem {
   classTeacherId?: string;
 }
 
+export interface GlobalSubject {
+  id: string;
+  schoolId: string;
+  code: string;
+  name: string;
+  department?: string;
+  description?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface BackendLearningArea {
   id: string;
   name: string;
@@ -769,6 +780,10 @@ export interface BackendLearningArea {
   isElective: boolean;
   schoolId: string;
   teacherId?: string;
+  globalSubjectId?: string;
+  globalSubject?: GlobalSubject;
+  canonicalSubjectName?: string;
+  canonicalSubjectCode?: string;
 }
 
 
@@ -1601,23 +1616,101 @@ export interface ParentHelpRequest {
   updatedAt: string;
 }
 
+export interface ConcernAttachment {
+  id: string;
+  name: string;
+  url: string;
+  type: string;
+  size?: number;
+}
+
+export interface ConcernMessage {
+  id: string;
+  senderUserId: string;
+  senderName: string;
+  senderRole: string;
+  message: string;
+  visibility: 'PARENT_VISIBLE' | 'INTERNAL_ONLY';
+  attachments?: ConcernAttachment[];
+  createdAt: string;
+}
+
+export interface ConcernAuditEntry {
+  id: string;
+  action: string;
+  performedByUserId: string;
+  performedByName: string;
+  performedByRole: string;
+  timestamp: string;
+  details: string;
+  notes?: string;
+}
+
 export interface ConcernRecord {
   id: string;
   schoolId?: string;
-  parentUserId: string;
-  parentName: string;
-  parentPhone?: string;
-  parentEmail?: string;
-  studentName?: string;
-  gradeLevel?: string;
-  category: 'Academic' | 'Discipline' | 'Facilities' | 'Transport' | 'Fee & Finance' | 'General' | 'Other';
+  referenceNumber?: string;
+  title?: string;
   subject: string;
+  description?: string;
   details: string;
-  priority: 'Low' | 'Medium' | 'High' | 'Urgent';
-  status: 'PENDING' | 'IN_REVIEW' | 'RESOLVED';
+  category: string;
+  priority: string;
+  status: string;
+
+  parentUserId?: string;
+  parentName?: string;
+  complainantName?: string;
+  parentPhone?: string;
+  complainantPhone?: string;
+  parentEmail?: string;
+  complainantEmail?: string;
+  complainantRole?: string;
+
+  studentId?: string;
+  studentName?: string;
+  admissionNumber?: string;
+  gradeLevel?: string;
+
+  assignedToUserId?: string;
+  assignedToName?: string;
+  assignedToRole?: string;
+  assignedAt?: string;
+  reassignmentReason?: string;
+
+  acknowledgedAt?: string;
+  acknowledgedByName?: string;
+
+  escalatedAt?: string;
+  escalatedToName?: string;
+  escalationReason?: string;
+
+  actionTaken?: string;
+  resolutionDetails?: string;
+  resolutionNotes?: string;
+  resolvedByName?: string;
+  resolvedByUserId?: string;
+  resolvedAt?: string;
+
+  closedAt?: string;
+  closedByName?: string;
+  closureNotes?: string;
+  reopenedAt?: string;
+  reopenedByName?: string;
+  reopeningReason?: string;
+
+  acknowledgementDeadline?: string;
+  resolutionDeadline?: string;
+  isOverdue?: boolean;
+
   adminResponse?: string;
   respondedBy?: string;
   respondedAt?: string;
+
+  messages?: ConcernMessage[];
+  auditTrail?: ConcernAuditEntry[];
+  attachments?: ConcernAttachment[];
+
   createdAt: string;
   updatedAt?: string;
 }
@@ -2820,4 +2913,249 @@ export interface UpdateDailyLogDTO {
 
 export interface EndorseDailyLogDTO {
   remarks: string;
+}
+
+export interface FeeCreditUtilizationReceiptPayload {
+  receiptNumber: string;
+  receiptTitle?: string;
+  transactionReference: string;
+  timestamp: string;
+  formattedDate: string;
+  transactionType: 'AUTOMATIC' | 'ADMIN-INITIATED';
+  transactionMode?: 'AUTOMATIC' | 'ADMINISTRATOR-INITIATED';
+  status: 'COMPLETED' | 'REVERSED';
+  academicYear: string;
+  academicTerm: string;
+  studentId: string;
+  studentName: string;
+  admissionNumber: string;
+  gradeLevel: string;
+  streamName?: string;
+  parentName?: string;
+  originatingPaymentReferences?: string[];
+  previousTermArrearsBefore: number;
+  currentTermFeesBefore: number;
+  availableCreditBefore: number;
+  outstandingBalanceBefore?: number;
+  amountAppliedToArrears: number;
+  amountAppliedToCurrentFees: number;
+  totalCreditUtilized: number;
+  remainingOutstanding: number;
+  outstandingBalanceAfter?: number;
+  remainingCredit: number;
+  invoiceAllocations?: Array<{
+    invoiceId: string;
+    invoiceNumber: string;
+    amountApplied: number;
+    remainingBalance: number;
+    category?: string;
+  }>;
+  isSystemGenerated: boolean;
+  triggerSource?: string;
+  initiatedByAdminName?: string;
+  initiatedByAdminId?: string;
+  mandatoryReason?: string;
+  statement: string;
+  schoolName: string;
+  schoolAddress: string;
+  schoolPhone: string;
+  schoolEmail: string;
+  reversalReference?: string;
+  reversalDate?: string;
+  reversalReason?: string;
+  reversedByAdminName?: string;
+}
+
+export interface FeeCreditUtilizationReversalPayload {
+  reversalNumber: string;
+  originalReceiptNumber: string;
+  transactionReference: string;
+  timestamp: string;
+  formattedDate: string;
+  status: 'REVERSED';
+  studentId: string;
+  studentName: string;
+  admissionNumber: string;
+  gradeLevel: string;
+  streamName?: string;
+  amountReversed: number;
+  creditRestored: number;
+  reason: string;
+  reversedByAdminId: string;
+  reversedByAdminName: string;
+  statement: string;
+  schoolName: string;
+  schoolLogoUrl?: string;
+  schoolPhone: string;
+  schoolEmail: string;
+  schoolAddress: string;
+  originalReceipt?: FeeCreditUtilizationReceiptPayload;
+}
+
+export interface FeeCreditUtilizationPreview {
+  studentId: string;
+  studentName: string;
+  admissionNumber: string;
+  gradeLevel: string;
+  availableCredit: number;
+  totalOutstanding: number;
+  previousTermArrears: number;
+  currentTermBilledFees: number;
+  maxApplicableAmount: number;
+  proposedAmount: number;
+  amountToArrears: number;
+  amountToCurrentFees: number;
+  projectedRemainingArrears: number;
+  projectedRemainingCurrentFees: number;
+  projectedRemainingOutstanding: number;
+  projectedRemainingCredit: number;
+  invoices: Array<{
+    id: string;
+    invoiceNumber: string;
+    isArrears: boolean;
+    balanceBefore: number;
+    amountToApply: number;
+    balanceAfter: number;
+  }>;
+}
+
+export type TransactionReversalStatus =
+  | 'PENDING_ADMIN_APPROVAL'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'PROCESSING'
+  | 'COMPLETED'
+  | 'FAILED';
+
+export type ReversibleTransactionType =
+  | 'PAYMENT'
+  | 'CREDIT_UTILIZATION'
+  | 'FEE_ALLOCATION'
+  | 'MANUAL_ARREAR'
+  | 'OTHER';
+
+export interface TransactionReversalAuditEntry {
+  action: 'REQUESTED' | 'REVIEWED' | 'APPROVED' | 'REJECTED' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'RETRIED';
+  performedByUserId: string;
+  performedByName: string;
+  performedByRole: string;
+  timestamp: string;
+  notes?: string;
+  metadata?: Record<string, any>;
+}
+
+export interface DependentFinancialTransaction {
+  type: string;
+  reference: string;
+  description: string;
+  amount: number;
+  date?: string;
+  invoiceId?: string;
+  creditId?: string;
+  status: string;
+  impactOnReversal: string;
+}
+
+export interface FinancialImpactPreview {
+  studentId: string;
+  studentName: string;
+  admissionNumber: string;
+  gradeLevel?: string;
+  transactionType: ReversibleTransactionType | string;
+  transactionReference: string;
+  originalReceiptNumber?: string;
+  originalAmount: number;
+  transactionDate: string;
+  currentOutstandingBalance: number;
+  currentArrears: number;
+  currentFeesThisTerm: number;
+  currentAvailableCredit: number;
+  currentCreditUtilized: number;
+  dependentTransactions: DependentFinancialTransaction[];
+  hasBlockingDependencies: boolean;
+  blockingReason?: string;
+  projectedOutstandingBalance: number;
+  projectedCreditBalance: number;
+  projectedArrears: number;
+  impactSummary: string;
+}
+
+export interface ReversalReceiptPayload {
+  reversalReceiptNumber: string;
+  requestReference: string;
+  originalTransactionReference: string;
+  originalReceiptNumber?: string;
+  transactionType: string;
+  schoolId: string;
+  schoolName: string;
+  schoolPhone: string;
+  schoolEmail: string;
+  schoolAddress: string;
+  schoolLogoUrl?: string;
+  studentId: string;
+  studentName: string;
+  admissionNumber: string;
+  gradeLevel?: string;
+  parentName?: string;
+  originalAmount: number;
+  amountReversed: number;
+  requestedByName: string;
+  requestedByRole: string;
+  requestDate: string;
+  bursarReason: string;
+  additionalExplanation?: string;
+  approvedByName: string;
+  approvedByRole: string;
+  approvalDate: string;
+  approvalComment?: string;
+  executionDate: string;
+  status: 'COMPLETED';
+  resultingBalances: {
+    outstandingBalance: number;
+    availableCredit: number;
+    arrears: number;
+  };
+  relatedAllocations?: Array<{
+    invoiceId: string;
+    invoiceNumber: string;
+    amountReversed: number;
+    resultingBalance: number;
+  }>;
+  mandatoryNoticeStatement: string;
+}
+
+export interface TransactionReversalRequest {
+  id: string;
+  schoolId: string;
+  requestReference: string;
+  transactionType: ReversibleTransactionType;
+  transactionId: string;
+  transactionReference: string;
+  originalReceiptNumber?: string;
+  studentId: string;
+  studentName: string;
+  admissionNumber: string;
+  originalAmount: number;
+  requestedReversalAmount: number;
+  transactionDate: string;
+  reason: string;
+  explanation?: string;
+  supportingAttachmentUrl?: string;
+  status: TransactionReversalStatus;
+  requestedByUserId: string;
+  requestedByName: string;
+  requestedByRole: string;
+  requestedAt: string;
+  reviewedByUserId?: string;
+  reviewedByName?: string;
+  reviewedAt?: string;
+  approvalComment?: string;
+  rejectionReason?: string;
+  reversalReceiptNumber?: string;
+  reversalReceiptPayload?: ReversalReceiptPayload;
+  financialImpactPreview?: FinancialImpactPreview;
+  errorMessage?: string;
+  auditTrail: TransactionReversalAuditEntry[];
+  createdAt: string;
+  updatedAt: string;
 }

@@ -2064,7 +2064,7 @@ export class CBCAssessmentUseCases {
     }
 
     const existingSummatives = await this.CBCRepository.findSummatives({
-      learningAreaId: dto.learningAreaId,
+      learningAreaId: learningArea ? learningArea.id : dto.learningAreaId,
       termId: dto.termId,
       academicYearId: dto.academicYearId
     });

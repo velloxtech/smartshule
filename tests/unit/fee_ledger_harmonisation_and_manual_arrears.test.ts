@@ -38,6 +38,12 @@ describe('Fee Ledger Harmonisation & Manual Arrears Unit Tests (Cases 1 - 10)', 
     schoolId
   };
 
+  const adminUserContext = {
+    userId: 'usr-admin-1',
+    role: UserRole.ADMIN,
+    schoolId
+  };
+
   const teacherUserContext = {
     userId: 'usr-teacher-1',
     role: UserRole.TEACHER,
@@ -697,11 +703,11 @@ describe('Fee Ledger Harmonisation & Manual Arrears Unit Tests (Cases 1 - 10)', 
     const posBefore = await feeUseCases.getLearnerFeePosition(student.id, { termId: term3Id });
     expect(posBefore.financialPosition.outstandingBalance).toBe(0);
 
-    // Authorised Bursar reverses payment
+    // Authorised Admin reverses payment
     const revRes = await feeUseCases.reversePayment(
       paymentId,
       'Bank chargeback / Cheque returned unpaid',
-      bursarUserContext
+      adminUserContext
     );
 
     expect(revRes.success).toBe(true);

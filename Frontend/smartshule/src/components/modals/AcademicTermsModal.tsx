@@ -79,7 +79,7 @@ export const AcademicTermsModal: React.FC<AcademicTermsModalProps> = ({
     '2. School Uniform & Grooming: Full official standard uniform, clean black polished leather shoes, and PE sports kit on scheduled activity days.\n' +
     '3. CBC Materials & Stationery: Ensure all CBC strand workbooks, exercise books, and stationery items are clearly labelled with the learner\'s full name.\n' +
     '4. Transport & Bus Routes: Morning school buses will commence routes at 6:15 AM sharp. Parents dropping learners directly are requested to use Gate 2.\n' +
-    '5. Fee Clearance: Kindly finalize term fees or obtain financial clearance via M-Pesa Paybill 247247 prior to the first day of school.'
+    '5. Fee Clearance: Kindly finalize term fees or obtain financial clearance via M-Pesa Paybill 522533 (Account: 8048859#<Child\'s Full Name & Grade>) prior to the first day of school.'
   );
   const [notifySendSms, setNotifySendSms] = useState<boolean>(true);
   const [notifyBroadcasting, setNotifyBroadcasting] = useState<boolean>(false);

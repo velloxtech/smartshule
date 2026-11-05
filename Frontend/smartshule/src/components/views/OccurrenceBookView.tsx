@@ -854,7 +854,7 @@ export const OccurrenceBookView: React.FC = () => {
                     <option value="MEDICAL_ILLNESS">Medical / Illness (Sudden illness, Asthma, Fainting)</option>
                     <option value="PROPERTY_DAMAGE_LOSS">Property Damage / Loss (Broken property, Lost item)</option>
                     <option value="SECURITY_SAFETY">Security & Safety (Perimeter, Stranger, Gate issue)</option>
-                    <option value="ACADEMIC_CLASSROOM">Academic / Classroom (Disturbance, Homework dispute)</option>
+                    <option value="ACADEMIC_CLASSROOM">Academic / Classroom (Disturbance, Homefun dispute)</option>
                     <option value="COMMENDATION_GOOD_DEED">Commendation / Good Deed (Honesty, Heroic act)</option>
                     <option value="GENERAL">General Occurrence (Handover note, Routine notice)</option>
                   </select>

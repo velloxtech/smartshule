@@ -118,6 +118,13 @@ export class AttendanceRegister extends Entity<AttendanceRegisterProps> {
     this.touch();
   }
 
+  public updateMarkedBy(teacherId: string): void {
+    if (teacherId && teacherId.trim() !== '') {
+      this._props.markedByTeacherId = teacherId;
+      this.touch();
+    }
+  }
+
   public removeEntry(studentId: string): void {
     this._props.entries = this._props.entries.filter(e => e.studentId !== studentId);
     this.touch();

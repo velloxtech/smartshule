@@ -54,8 +54,15 @@ export class AttendanceUseCases {
       throw new ForbiddenError('No teacher profile associated with your account.');
     }
 
-    const assignedStreams = new Set<string>(teacher.assignedClassStreamIds || []);
+    const assignedStreams = new Set<string>();
     const assignedClasses = new Set<string>();
+
+    if (teacher.assignedClassStreamIds && Array.isArray(teacher.assignedClassStreamIds)) {
+      teacher.assignedClassStreamIds.forEach(id => {
+        assignedStreams.add(id);
+        assignedClasses.add(id);
+      });
+    }
 
     if (this.academicRepository) {
       try {
@@ -86,6 +93,19 @@ export class AttendanceUseCases {
   public async markAttendance(dto: MarkAttendanceDTO, requestingUser?: UserContext) {
     if (requestingUser && requestingUser.role === UserRole.TEACHER) {
       await this.assertTeacherAssignedToClass(dto.classRoomId, dto.streamId, requestingUser);
+    }
+
+    if ((!dto.academicYearId || !dto.termId) && this.academicRepository) {
+      try {
+        const curYear = await this.academicRepository.findCurrentYear(dto.schoolId);
+        if (curYear) {
+          if (!dto.academicYearId) dto.academicYearId = curYear.id;
+          if (!dto.termId) {
+            const curTerm = await this.academicRepository.findCurrentTerm(curYear.id);
+            if (curTerm) dto.termId = curTerm.id;
+          }
+        }
+      } catch {}
     }
 
     let register = await this.attendanceRepository.findRegister(dto.streamId || '', dto.date, dto.type, dto.classRoomId);
@@ -121,6 +141,9 @@ export class AttendanceUseCases {
     }
 
     if (register) {
+      if (dto.markedByTeacherId) {
+        register.updateMarkedBy(dto.markedByTeacherId);
+      }
       for (const entry of formattedEntries) {
         register.markEntry(entry);
       }

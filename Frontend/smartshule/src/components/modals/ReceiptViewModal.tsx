@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
 import { detectReceiptPrinter, triggerReceiptPrint, PrinterDetectionResult } from '../../utils/printerDetector';
+import { RequestTransactionReversalModal } from './RequestTransactionReversalModal';
 
 interface ReceiptViewModalProps {
   isOpen: boolean;
@@ -26,6 +27,7 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
   });
   const [resendingChannel, setResendingChannel] = useState<'email' | 'whatsapp' | null>(null);
   const [resendFeedback, setResendFeedback] = useState<string | null>(null);
+  const [isReversalModalOpen, setIsReversalModalOpen] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -264,7 +266,17 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
               </div>
 
               {/* Actions */}
-              <div className="pt-2 flex gap-2 no-print">
+              <div className="pt-2 flex gap-2 no-print font-sans">
+                {receipt.status !== 'REVERSED' && (
+                  <button
+                    type="button"
+                    onClick={() => setIsReversalModalOpen(true)}
+                    className="py-2.5 px-3 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">rotate_left</span>
+                    <span>Request Reversal</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => triggerReceiptPrint()}
@@ -285,6 +297,28 @@ export const ReceiptViewModal: React.FC<ReceiptViewModalProps> = ({
           )}
         </div>
       </div>
+
+      {receipt && isReversalModalOpen && (
+        <RequestTransactionReversalModal
+          isOpen={isReversalModalOpen}
+          onClose={() => setIsReversalModalOpen(false)}
+          onSuccess={() => {
+            setIsReversalModalOpen(false);
+            onClose();
+          }}
+          transaction={{
+            id: paymentId || receipt.id || receipt.paymentId,
+            reference: receipt.receiptNumber || receipt.transactionReference,
+            receiptNumber: receipt.receiptNumber,
+            type: 'PAYMENT',
+            amount: receipt.amountPaid || receipt.amount || 0,
+            date: receipt.paymentDate || receipt.date || new Date().toISOString().split('T')[0],
+            studentId: receipt.studentId,
+            studentName: receipt.studentName,
+            admissionNumber: receipt.admissionNumber
+          }}
+        />
+      )}
     </div>
   );
 };

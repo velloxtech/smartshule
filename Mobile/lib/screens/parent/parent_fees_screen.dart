@@ -100,7 +100,7 @@ class _ParentFeesScreenState extends State<ParentFeesScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: const [
                       Text('Paybill / Business No:', style: TextStyle(color: AppTheme.textMuted, fontSize: 13)),
-                      Text('247247 (SmartShule)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                      Text('522533 (KCB Buni / SmartShule)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                     ],
                   ),
                   const SizedBox(height: 6),

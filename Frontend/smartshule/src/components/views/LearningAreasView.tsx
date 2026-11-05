@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiService, SubjectTeacherAssignmentItem } from '../../services/api';
-import { BackendLearningArea, ClassRoom, StreamItem, Teacher, AcademicYear } from '../../types';
+import { BackendLearningArea, ClassRoom, StreamItem, Teacher, AcademicYear, GlobalSubject } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 
 export const LearningAreasView: React.FC = () => {
@@ -43,9 +43,14 @@ export const LearningAreasView: React.FC = () => {
     learningAreaName: string;
   } | null>(null);
 
-  // Subject Form State (Simplified for Global Subjects)
+  const [globalSubjects, setGlobalSubjects] = useState<GlobalSubject[]>([]);
+  const [selectedGradeFilter, setSelectedGradeFilter] = useState<string>('ALL');
+
+  // Subject Form State
   const [subjectName, setSubjectName] = useState('');
   const [subjectCode, setSubjectCode] = useState('');
+  const [subjectGradeLevel, setSubjectGradeLevel] = useState('GRADE_1');
+  const [selectedGlobalSubjectId, setSelectedGlobalSubjectId] = useState('');
   const [isElective, setIsElective] = useState(false);
   const [assignedTeacherId, setAssignedTeacherId] = useState('');
 
@@ -66,17 +71,19 @@ export const LearningAreasView: React.FC = () => {
   const loadAllData = async () => {
     setLoading(true);
     try {
-      const [scRes, laRes, cRes, tRes, yRes, staRes] = await Promise.all([
+      const [scRes, laRes, cRes, tRes, yRes, staRes, gsRes] = await Promise.all([
         apiService.getSchool().catch(() => null),
         apiService.getLearningAreas().catch(() => null),
         apiService.getClasses().catch(() => null),
         apiService.getTeachers().catch(() => null),
         apiService.getYears().catch(() => null),
         apiService.getSubjectTeacherAssignments().catch(() => null),
+        apiService.getGlobalSubjects().catch(() => null),
       ]);
 
       if (scRes?.data) setSchoolInfo(scRes.data);
       if (laRes?.data) setLearningAreas(laRes.data || []);
+      if (gsRes?.data) setGlobalSubjects(gsRes.data || []);
       if (yRes?.data && Array.isArray(yRes.data)) {
         setAcademicYears(yRes.data);
         if (!selectedYearId) {
@@ -179,18 +186,19 @@ export const LearningAreasView: React.FC = () => {
       const res = await apiService.createLearningArea({
         name: subjectName.trim(),
         code: subjectCode.trim().toUpperCase(),
-        gradeLevel: 'GRADE_7', // Hidden default to satisfy backend enum, treated as Global in UI
-        educationLevel: 'JUNIOR_SCHOOL', // Hidden default
+        gradeLevel: subjectGradeLevel,
         isElective,
         schoolId,
         teacherId: assignedTeacherId || undefined,
+        globalSubjectId: selectedGlobalSubjectId || undefined,
       });
 
       if (res.success) {
-        setFeedback({ type: 'success', message: `Global Subject "${subjectName}" created successfully!` });
+        setFeedback({ type: 'success', message: `Subject "${subjectName}" created successfully!` });
         setIsAddSubjectOpen(false);
         setSubjectName('');
         setSubjectCode('');
+        setSelectedGlobalSubjectId('');
         setAssignedTeacherId('');
         await loadAllData();
       } else {
@@ -259,10 +267,20 @@ export const LearningAreasView: React.FC = () => {
     }
   };
 
-  const filteredAreas = learningAreas.filter((la) => 
-    la.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    la.code.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredAreas = learningAreas.filter((la) => {
+    const matchesSearch =
+      la.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      la.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (la.canonicalSubjectName && la.canonicalSubjectName.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (la.canonicalSubjectCode && la.canonicalSubjectCode.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    const matchesGrade =
+      selectedGradeFilter === 'ALL' ||
+      la.gradeLevel === selectedGradeFilter ||
+      (la as any).grade_level === selectedGradeFilter;
+
+    return matchesSearch && matchesGrade;
+  });
 
   const getTeacherName = (tId?: string) => {
     if (!tId) return 'Unassigned';
@@ -316,19 +334,56 @@ export const LearningAreasView: React.FC = () => {
 
       {/* Global Subjects Grid */}
       <div>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-            <span className="material-symbols-outlined text-[18px] text-[#800000]">public</span>
-            <span>Global Subjects Dictionary ({filteredAreas.length})</span>
-          </h2>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div>
+            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <span className="material-symbols-outlined text-[18px] text-[#800000]">public</span>
+              <span>Learning Areas Catalogue ({filteredAreas.length})</span>
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Grade-specific curriculum offerings referencing canonical global subjects.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative">
+              <span className="material-symbols-outlined absolute left-2.5 top-2 text-[16px] text-slate-400">search</span>
+              <input
+                type="text"
+                placeholder="Search subject or code..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8 pr-3 py-1.5 text-xs bg-white border border-slate-300 rounded-xl focus:outline-[#800000]"
+              />
+            </div>
+            <select
+              value={selectedGradeFilter}
+              onChange={(e) => setSelectedGradeFilter(e.target.value)}
+              className="py-1.5 px-3 text-xs font-semibold bg-white border border-slate-300 rounded-xl focus:outline-[#800000] cursor-pointer"
+            >
+              <option value="ALL">All Grades ({learningAreas.length})</option>
+              <option value="PLAYGROUP">Playgroup</option>
+              <option value="PP1">PP1</option>
+              <option value="PP2">PP2</option>
+              <option value="GRADE_1">Grade 1</option>
+              <option value="GRADE_2">Grade 2</option>
+              <option value="GRADE_3">Grade 3</option>
+              <option value="GRADE_4">Grade 4</option>
+              <option value="GRADE_5">Grade 5</option>
+              <option value="GRADE_6">Grade 6</option>
+              <option value="GRADE_7">Grade 7</option>
+              <option value="GRADE_8">Grade 8</option>
+              <option value="GRADE_9">Grade 9</option>
+            </select>
+          </div>
         </div>
 
         {loading ? (
-          <div className="py-16 text-center text-xs text-slate-500 bg-[#F8F5F5] rounded-2xl border border-slate-200">Loading global subjects...</div>
+          <div className="py-16 text-center text-xs text-slate-500 bg-[#F8F5F5] rounded-2xl border border-slate-200">Loading learning areas...</div>
         ) : filteredAreas.length === 0 ? (
           <div className="py-16 text-center text-slate-500 bg-[#F8F5F5] rounded-2xl border border-slate-200 p-8">
             <p className="font-bold text-sm text-slate-800 mt-2">No subjects found</p>
-            <p className="text-xs text-slate-500 mt-1">Click "Create Global Subject" to add your first subject available to all classes.</p>
+            <p className="text-xs text-slate-500 mt-1">Adjust your search or filter, or click "Create Subject Offering" to add a new learning area.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -336,14 +391,28 @@ export const LearningAreasView: React.FC = () => {
               <div key={la.id} className="bg-[#F8F5F5] rounded-2xl p-5 shadow-xs border border-slate-200 flex flex-col justify-between hover:shadow-md transition-all">
                 <div>
                   <div className="flex items-center justify-between">
-                    <span className="font-mono text-xs font-bold text-[#800000] bg-rose-100 px-2.5 py-0.5 rounded-lg border border-rose-200">
-                      {la.code}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-mono text-xs font-bold text-[#800000] bg-rose-100 px-2.5 py-0.5 rounded-lg border border-rose-200">
+                        {la.code}
+                      </span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700 border border-slate-200">
+                        {la.gradeLevel ? la.gradeLevel.replace('_', ' ') : 'General'}
+                      </span>
+                    </div>
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg ${la.isElective ? 'bg-blue-100 text-blue-800' : 'bg-emerald-100 text-emerald-800'}`}>
                       {la.isElective ? 'Elective' : 'Core Subject'}
                     </span>
                   </div>
-                  <h3 className="text-base font-bold text-slate-900 mt-3">{la.name}</h3>
+
+                  <h3 className="text-base font-bold text-slate-900 mt-2.5">{la.name}</h3>
+
+                  {(la.canonicalSubjectName || la.globalSubject?.name) && (
+                    <div className="mt-2 flex items-center gap-1.5 text-[11px] text-indigo-800 bg-indigo-50 border border-indigo-200 rounded-lg px-2.5 py-1">
+                      <span className="material-symbols-outlined text-[14px]">auto_stories</span>
+                      <span>Global: <strong>{la.canonicalSubjectName || la.globalSubject?.name}</strong> {la.canonicalSubjectCode ? `(${la.canonicalSubjectCode})` : ''}</span>
+                    </div>
+                  )}
+
                   {(() => {
                     const activeLead = subjectAssignments.find(
                       (a) => a.isActive && a.learningAreaId === la.id && a.role === 'SUBJECT_LEAD'
@@ -395,7 +464,9 @@ export const LearningAreasView: React.FC = () => {
                   })()}
                 </div>
                 <div className="mt-4 pt-3 border-t border-slate-200 flex items-center justify-between text-xs">
-                  <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded">Global (All Classes)</span>
+                  <span className="text-[10px] text-slate-500 font-medium">
+                    {la.gradeLevel ? `Grade: ${la.gradeLevel.replace('_', ' ')}` : 'School-wide Subject'}
+                  </span>
                   <button onClick={() => handleDeleteSubject(la.id, la.name)} className="px-2 py-1 text-xs text-rose-700 hover:bg-rose-50 rounded-lg transition-colors flex items-center gap-1 cursor-pointer">
                     <span className="material-symbols-outlined text-[15px]">delete</span>
                     <span>Remove</span>
@@ -412,17 +483,64 @@ export const LearningAreasView: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
           <div className="bg-[#F8F5F5] rounded-2xl shadow-2xl max-w-md w-full border border-slate-200 overflow-hidden flex flex-col">
             <div className="bg-[#800000] text-white p-4 flex items-center justify-between">
-              <h3 className="font-bold text-sm">Create Global Subject</h3>
+              <h3 className="font-bold text-sm">Create Subject Offering</h3>
               <button onClick={() => setIsAddSubjectOpen(false)} className="text-rose-100 hover:text-white cursor-pointer"><span className="material-symbols-outlined">close</span></button>
             </div>
-            <form onSubmit={handleCreateSubject} className="p-5 space-y-4 text-xs">
+            <form onSubmit={handleCreateSubject} className="p-5 space-y-3.5 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1 uppercase tracking-wider">Canonical Global Subject</label>
+                <select
+                  value={selectedGlobalSubjectId}
+                  onChange={(e) => {
+                    const selId = e.target.value;
+                    setSelectedGlobalSubjectId(selId);
+                    const matched = globalSubjects.find((g) => g.id === selId);
+                    if (matched) {
+                      if (!subjectName) setSubjectName(matched.name);
+                      if (!subjectCode) setSubjectCode(matched.code);
+                    }
+                  }}
+                  className="w-full bg-white border border-slate-300 rounded-xl p-2.5 focus:outline-[#800000]"
+                >
+                  <option value="">-- Custom / Not Linked --</option>
+                  {globalSubjects.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.name} ({g.code})
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-slate-500 mt-0.5">Links this offering to the school's authoritative global subject catalogue.</p>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1 uppercase tracking-wider">Target Grade Level *</label>
+                <select
+                  value={subjectGradeLevel}
+                  onChange={(e) => setSubjectGradeLevel(e.target.value)}
+                  className="w-full bg-white border border-slate-300 rounded-xl p-2.5 focus:outline-[#800000]"
+                >
+                  <option value="PLAYGROUP">Playgroup</option>
+                  <option value="PP1">Pre-Primary 1 (PP1)</option>
+                  <option value="PP2">Pre-Primary 2 (PP2)</option>
+                  <option value="GRADE_1">Grade 1</option>
+                  <option value="GRADE_2">Grade 2</option>
+                  <option value="GRADE_3">Grade 3</option>
+                  <option value="GRADE_4">Grade 4</option>
+                  <option value="GRADE_5">Grade 5</option>
+                  <option value="GRADE_6">Grade 6</option>
+                  <option value="GRADE_7">Grade 7</option>
+                  <option value="GRADE_8">Grade 8</option>
+                  <option value="GRADE_9">Grade 9</option>
+                </select>
+              </div>
+
               <div>
                 <label className="block font-bold text-slate-700 mb-1 uppercase tracking-wider">Subject Title *</label>
-                <input type="text" required value={subjectName} onChange={(e) => setSubjectName(e.target.value)} placeholder="e.g. Mathematics" className="w-full bg-white border border-slate-300 rounded-xl p-2.5 focus:outline-[#800000]" />
+                <input type="text" required value={subjectName} onChange={(e) => setSubjectName(e.target.value)} placeholder="e.g. Mathematical Activities" className="w-full bg-white border border-slate-300 rounded-xl p-2.5 focus:outline-[#800000]" />
               </div>
               <div>
                 <label className="block font-bold text-slate-700 mb-1 uppercase tracking-wider">Subject Code *</label>
-                <input type="text" required value={subjectCode} onChange={(e) => setSubjectCode(e.target.value.toUpperCase())} placeholder="e.g. MATH" className="w-full bg-white border border-slate-300 rounded-xl p-2.5 font-mono uppercase focus:outline-[#800000]" />
+                <input type="text" required value={subjectCode} onChange={(e) => setSubjectCode(e.target.value.toUpperCase())} placeholder="e.g. MAT" className="w-full bg-white border border-slate-300 rounded-xl p-2.5 font-mono uppercase focus:outline-[#800000]" />
               </div>
               <div>
                 <label className="block font-bold text-slate-700 mb-1 uppercase tracking-wider">Assign Lead Educator (Optional)</label>
@@ -437,7 +555,7 @@ export const LearningAreasView: React.FC = () => {
               </div>
               <div className="pt-3 flex items-center gap-2">
                 <button type="button" onClick={() => setIsAddSubjectOpen(false)} className="flex-1 py-2.5 bg-slate-100 font-bold rounded-xl cursor-pointer">Cancel</button>
-                <button type="submit" className="flex-1 py-2.5 bg-[#800000] text-white font-bold rounded-xl cursor-pointer">Save Global Subject</button>
+                <button type="submit" className="flex-1 py-2.5 bg-[#800000] text-white font-bold rounded-xl cursor-pointer">Save Subject</button>
               </div>
             </form>
           </div>

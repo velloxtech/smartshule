@@ -44,7 +44,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const quickActionRef = useRef<HTMLDivElement>(null);
 
-  const todayIso = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const todayIso = useMemo(() => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -60,7 +66,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     setIsLoading(true);
     try {
       const [res, cRes, attRes] = await Promise.all([
-        apiService.getDashboardAnalytics({ yearId, termId }).catch(() => null),
+        apiService.getDashboardAnalytics({ yearId, termId, date: todayIso }).catch(() => null),
         apiService.getClasses().catch(() => null),
         apiService.getAttendanceReport({ date: todayIso }).catch(() => null),
       ]);
@@ -168,22 +174,42 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const unverifiedPaymentsAmount = summaryData?.finance?.unverifiedPaymentsAmount || 0;
 
   // Attendance
-  const hasRegisterDataToday = Object.keys(todayRegisterMap).length > 0;
+  const hasRegisterDataToday = useMemo(() => {
+    return Object.keys(todayRegisterMap).length > 0 || Boolean(summaryData?.attendanceSummary?.hasData);
+  }, [todayRegisterMap, summaryData]);
+
   const totalPresentToday = useMemo(() => {
-    return Object.values(todayRegisterMap).filter((st) => st === 'PRESENT' || st === 'LATE').length;
-  }, [todayRegisterMap]);
+    if (Object.keys(todayRegisterMap).length > 0) {
+      return Object.values(todayRegisterMap).filter((st) => st === 'PRESENT' || st === 'LATE').length;
+    }
+    return summaryData?.attendanceSummary?.present ?? 0;
+  }, [todayRegisterMap, summaryData]);
 
   const absentStudentsCount = useMemo(() => {
-    return Object.values(todayRegisterMap).filter((st) => st === 'ABSENT').length;
-  }, [todayRegisterMap]);
+    if (Object.keys(todayRegisterMap).length > 0) {
+      return Object.values(todayRegisterMap).filter((st) => st === 'ABSENT').length;
+    }
+    return summaryData?.attendanceSummary?.absent ?? 0;
+  }, [todayRegisterMap, summaryData]);
+
+  const lateStudentsCount = useMemo(() => {
+    if (Object.keys(todayRegisterMap).length > 0) {
+      return Object.values(todayRegisterMap).filter((st) => st === 'LATE').length;
+    }
+    return summaryData?.attendanceSummary?.late ?? 0;
+  }, [todayRegisterMap, summaryData]);
 
   const avgAttendancePct = useMemo(() => {
+    if (!hasRegisterDataToday) return 0;
+    const totalMarked = Object.keys(todayRegisterMap).length;
+    if (totalMarked > 0) {
+      return Math.round((totalPresentToday / totalMarked) * 100);
+    }
     if (summaryData?.attendanceSummary?.presentPercentage !== null && summaryData?.attendanceSummary?.presentPercentage !== undefined) {
       return summaryData.attendanceSummary.presentPercentage;
     }
-    if (!students || students.length === 0 || !hasRegisterDataToday) return 0;
-    return Math.round((totalPresentToday / students.length) * 100);
-  }, [summaryData, students, totalPresentToday, hasRegisterDataToday]);
+    return 0;
+  }, [hasRegisterDataToday, todayRegisterMap, totalPresentToday, summaryData]);
 
   // CBC Assessments
   const CBCProf = summaryData?.CBCProficiency;
@@ -271,36 +297,49 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   // Attendance by Grade Level
   const dynamicAttendanceGradeData = useMemo(() => {
     if (!students || students.length === 0) return [];
-    const map: Record<string, { present: number; total: number; late: number; absent: number; excused: number }> = {};
+    const map: Record<string, { present: number; total: number; marked: number; late: number; absent: number; excused: number }> = {};
 
     students.forEach((s) => {
       const g = s.grade || 'Grade 7';
-      if (!map[g]) map[g] = { present: 0, total: 0, late: 0, absent: 0, excused: 0 };
+      if (!map[g]) map[g] = { present: 0, total: 0, marked: 0, late: 0, absent: 0, excused: 0 };
       map[g].total += 1;
 
       const statusToday = todayRegisterMap[s.id];
-      if (statusToday === 'PRESENT') {
-        map[g].present += 1;
-      } else if (statusToday === 'LATE') {
-        map[g].present += 1;
-        map[g].late += 1;
-      } else if (statusToday === 'ABSENT') {
-        map[g].absent += 1;
-      } else if (statusToday === 'EXCUSED') {
-        map[g].excused += 1;
+      if (statusToday) {
+        map[g].marked += 1;
+        if (statusToday === 'PRESENT') {
+          map[g].present += 1;
+        } else if (statusToday === 'LATE') {
+          map[g].present += 1;
+          map[g].late += 1;
+        } else if (statusToday === 'ABSENT') {
+          map[g].absent += 1;
+        } else if (statusToday === 'EXCUSED') {
+          map[g].excused += 1;
+        }
       }
     });
 
-    return Object.entries(map).map(([grade, d]) => ({
-      grade,
-      present: d.present,
-      total: d.total,
-      pct: d.total > 0 ? (d.present / d.total) * 100 : 0,
-      late: d.late,
-      absent: d.absent,
-      excused: d.excused,
-    }));
+    return Object.entries(map).map(([grade, d]) => {
+      const isMarked = d.marked > 0;
+      const pct = isMarked ? Math.round((d.present / d.marked) * 100) : 0;
+      return {
+        grade,
+        present: d.present,
+        total: d.total,
+        marked: d.marked,
+        isMarked,
+        pct,
+        late: d.late,
+        absent: d.absent,
+        excused: d.excused,
+      };
+    });
   }, [students, todayRegisterMap]);
+
+  const hasAnyGradeAttendanceLoggedToday = useMemo(() => {
+    return dynamicAttendanceGradeData.some(d => d.isMarked);
+  }, [dynamicAttendanceGradeData]);
 
   // Fee Defaulters by Grade
   const dynamicFeeDefaultersByGrade = useMemo(() => {
@@ -719,10 +758,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </span>
             </div>
           </div>
-          <div className="pt-1.5 border-t border-surface-container flex items-center justify-between text-[11px] text-on-surface-variant">
+          <div className="pt-1.5 border-t border-surface-container flex items-center justify-between text-[11px] text-on-surface-variant flex-wrap gap-1">
             <span className="text-[10px] text-secondary font-bold font-data-mono">
               {totalPresentToday} Present
             </span>
+            {lateStudentsCount > 0 && (
+              <span className="text-[10px] text-amber-700 font-bold font-data-mono">
+                · {lateStudentsCount} Late
+              </span>
+            )}
             <span className="text-[10px] text-error font-bold font-data-mono">
               {absentStudentsCount} Absent
             </span>
@@ -903,40 +947,48 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
           {/* Attendance Rows */}
           <div className="flex flex-col gap-sm">
-            {dynamicAttendanceGradeData.length === 0 ? (
+            {!hasAnyGradeAttendanceLoggedToday ? (
               <div className="py-8 text-center text-xs text-on-surface-variant bg-surface-container-low rounded-xl">
                 No class attendance records logged today yet. Teachers mark roll call via the portal.
               </div>
             ) : (
               dynamicAttendanceGradeData.map((item) => (
                 <div key={item.grade} className="flex items-center gap-md">
-                  <div className="w-20 shrink-0 flex flex-col">
+                  <div className="w-24 shrink-0 flex flex-col">
                     <span className="font-body-md text-body-md font-semibold text-on-surface">
                       {item.grade}
                     </span>
                     <span className="font-label-md text-label-md text-on-surface-variant">
-                      {item.present} / {item.total}
+                      {item.isMarked ? `${item.present} / ${item.marked}` : `0 / ${item.total}`}
                     </span>
                   </div>
                   <div className="flex-1 flex flex-col gap-xs">
                     <div className="w-full h-3 rounded-full bg-surface-container-high overflow-hidden flex">
-                      <div className="bg-secondary h-full transition-all duration-300" style={{ width: `${item.pct}%` }}></div>
-                      <div className="bg-error h-full transition-all duration-300" style={{ width: `${100 - item.pct}%` }}></div>
+                      {item.isMarked ? (
+                        <>
+                          <div className="bg-secondary h-full transition-all duration-300" style={{ width: `${item.pct}%` }}></div>
+                          <div className="bg-error h-full transition-all duration-300" style={{ width: `${100 - item.pct}%` }}></div>
+                        </>
+                      ) : (
+                        <div className="bg-slate-200 h-full w-full" title="Roll call pending"></div>
+                      )}
                     </div>
                   </div>
                   <div className="w-16 text-right shrink-0">
-                    <span className="font-data-mono text-data-mono font-semibold text-secondary">
-                      {item.pct.toFixed(1)}%
+                    <span className={`font-data-mono text-data-mono font-semibold ${item.isMarked ? 'text-secondary' : 'text-slate-400'}`}>
+                      {item.isMarked ? `${item.pct.toFixed(1)}%` : 'Pending'}
                     </span>
                   </div>
                   <span
                     className={`px-xs py-0.5 rounded font-label-md text-label-md shrink-0 ${
-                      item.late > 0
+                      !item.isMarked
+                        ? 'bg-slate-100 text-slate-500'
+                        : item.late > 0
                         ? 'bg-amber-100 text-amber-900 font-medium'
-                        : 'bg-surface-container text-on-surface-variant'
+                        : 'bg-emerald-50 text-emerald-800 font-medium'
                     }`}
                   >
-                    {item.late} late
+                    {!item.isMarked ? 'Pending' : item.late > 0 ? `${item.late} Late` : 'On Time'}
                   </span>
                 </div>
               ))

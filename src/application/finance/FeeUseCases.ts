@@ -3,7 +3,8 @@ import {
   InvoiceFilterCriteria,
   PaymentFilterCriteria,
   ExpenseFilterCriteria,
-  OtherIncomeFilterCriteria
+  OtherIncomeFilterCriteria,
+  ReversalRequestFilterCriteria
 } from '../../core/ports/repositories/IFeeRepository';
 import { IStudentRepository } from '../../core/ports/repositories/IStudentRepository';
 import { IGuardianRepository } from '../../core/ports/repositories/ITeacherRepository';
@@ -39,8 +40,18 @@ import {
   ExpenseStatus,
   IncomeSource,
   StudentFeeCredit,
-  FeeCreditApplication
+  FeeCreditApplication,
+  FeeCreditUtilizationReceiptPayload,
+  FeeCreditUtilizationReversalPayload
 } from '../../core/domain/finance/Fee';
+import {
+  TransactionReversalRequest,
+  TransactionReversalStatus,
+  ReversibleTransactionType,
+  FinancialImpactPreview,
+  ReversalReceiptPayload,
+  DependentFinancialTransaction
+} from '../../core/domain/finance/TransactionReversalRequest';
 import {
   FeePaymentAllocationService,
   FeeObligations,
@@ -49,7 +60,7 @@ import {
 import { FeeBannerConfig } from '../../core/domain/finance/FeeBannerConfig';
 import { IStudentSponsorshipRepository } from '../../core/ports/repositories/IStudentSponsorshipRepository';
 import { CBCGradeLevel } from '../../core/domain/user/Student';
-import { UserRole, isBillingAuthorizedRole } from '../../core/domain/user/User';
+import { UserRole, isBillingAuthorizedRole, isReversalApprovalAuthorizedRole } from '../../core/domain/user/User';
 import { WhatsAppClientManager } from '../../infrastructure/services/WhatsAppClientManager';
 
 export interface ReceiptDeliveryInfo {
@@ -267,6 +278,29 @@ export interface BatchAddManualArrearsDTO {
   dueDate?: string;
 }
 
+export interface AdminInitiateCreditUtilizationDTO {
+  studentId: string;
+  amountToApply?: number;
+  amount?: number;
+  targetInvoiceId?: string;
+  reason: string;
+  schoolId?: string;
+}
+
+export interface AutoCreditReconciliationResult {
+  studentId: string;
+  creditApplied: number;
+  remainingCredit: number;
+  remainingOutstanding: number;
+  arrearsSettled: number;
+  currentFeesSettled: number;
+  applications: any[];
+  triggerSource: string;
+  timestamp: string;
+  receiptNumber?: string;
+  receipt?: FeeCreditUtilizationReceiptPayload;
+}
+
 export class FeeUseCases {
   private readonly kcbBuniGateway: IKcbBuniPaymentGateway;
   private readonly pendingKcbTransactions = new Map<string, {
@@ -276,6 +310,29 @@ export class FeeUseCases {
     amount: number;
     initiatedAt: Date;
   }>();
+
+  // Automatic Fee Credit Reconciliation State & Background Scheduler
+  private creditReconciliationTimer?: NodeJS.Timeout;
+  private readonly reconciliationFailures = new Map<string, {
+    studentId: string;
+    studentName?: string;
+    error: string;
+    timestamp: string;
+    attempts: number;
+    triggerSource: string;
+  }>();
+  private readonly reconciliationStats = {
+    totalRuns: 0,
+    totalCreditsAppliedAllTime: 0,
+    lastRunAt: null as string | null,
+    recentReconciliations: [] as Array<{
+      studentId: string;
+      studentName?: string;
+      creditApplied: number;
+      triggerSource: string;
+      timestamp: string;
+    }>
+  };
 
   constructor(
     private readonly feeRepository: IFeeRepository,
@@ -290,6 +347,10 @@ export class FeeUseCases {
     private readonly whatsAppClientManager?: WhatsAppClientManager
   ) {
     this.kcbBuniGateway = kcbBuniGateway || (paymentGateway as any);
+
+    if (process.env.NODE_ENV !== 'test' && process.env.ENABLE_CREDIT_RECONCILIATION === 'true') {
+      this.startScheduledCreditReconciliation();
+    }
   }
 
   public async resolveTermNumber(termId?: string): Promise<number | null> {
@@ -943,37 +1004,17 @@ export class FeeUseCases {
         }
       }
 
-      // Automatically apply any available overpayment credits to the new invoice
-      const studentCredits = await this.feeRepository.findCredits({ studentId: student.id });
-      const availableCredits = studentCredits.filter(
-        c => (c.status === 'AVAILABLE' || c.status === 'PARTIALLY_USED') && c.balance > 0
-      );
-      for (const credit of availableCredits) {
-        if (invoice.balance <= 0) break;
-        const applicable = Math.min(credit.balance, invoice.balance);
-        if (applicable > 0) {
-          credit.useCredit(applicable);
-          await this.feeRepository.updateCredit(credit);
-          invoice.applyCredit(applicable);
-          await this.feeRepository.updateInvoice(invoice);
-
-          const application = FeeCreditApplication.create(
-            {
-              creditId: credit.id,
-              studentId: invoice.studentId,
-              invoiceId: invoice.id,
-              academicYearId: invoice.academicYearId,
-              termId: invoice.termId,
-              amountApplied: applicable,
-              appliedByUserId: requestingUser?.userId || 'SYSTEM'
-            },
-            IdGenerator.generate()
-          );
-          await this.feeRepository.saveCreditApplication(application);
-        }
+      // Apply credit if specific student was targeted or explicitly authorized by admin
+      if (dto.studentId || (dto as any).applyExistingCredits) {
+        await this.autoReconcileStudentFeeCredits(student.id, {
+          triggerSource: 'NEW_INVOICE',
+          requestingUser,
+          schoolId: dto.schoolId
+        });
       }
 
-      generatedInvoices.push(invoice.toJSON());
+      const refreshedInvoice = await this.feeRepository.findInvoiceById(invoice.id);
+      generatedInvoices.push((refreshedInvoice || invoice).toJSON());
     } else {
       // Case 2: Batch generation for all students in grade
       const students = await this.studentRepository.findAll({
@@ -1074,37 +1115,10 @@ export class FeeUseCases {
           }
         }
 
-        // Automatically apply any available overpayment credits to the new invoice
-        const studentCredits = await this.feeRepository.findCredits({ studentId: student.id });
-        const availableCredits = studentCredits.filter(
-          c => (c.status === 'AVAILABLE' || c.status === 'PARTIALLY_USED') && c.balance > 0
-        );
-        for (const credit of availableCredits) {
-          if (invoice.balance <= 0) break;
-          const applicable = Math.min(credit.balance, invoice.balance);
-          if (applicable > 0) {
-            credit.useCredit(applicable);
-            await this.feeRepository.updateCredit(credit);
-            invoice.applyCredit(applicable);
-            await this.feeRepository.updateInvoice(invoice);
+        // Overpayment credits are preserved and only applied to new term invoices when initiated by the admin.
 
-            const application = FeeCreditApplication.create(
-              {
-                creditId: credit.id,
-                studentId: invoice.studentId,
-                invoiceId: invoice.id,
-                academicYearId: invoice.academicYearId,
-                termId: invoice.termId,
-                amountApplied: applicable,
-                appliedByUserId: requestingUser?.userId || 'SYSTEM'
-              },
-              IdGenerator.generate()
-            );
-            await this.feeRepository.saveCreditApplication(application);
-          }
-        }
-
-        generatedInvoices.push(invoice.toJSON());
+        const refreshedInvoice = await this.feeRepository.findInvoiceById(invoice.id);
+        generatedInvoices.push((refreshedInvoice || invoice).toJSON());
       }
     }
 
@@ -1234,7 +1248,10 @@ export class FeeUseCases {
         }
       }
 
-      createdInvoices.push(invoice.toJSON());
+      // Overpayment credits are preserved and only applied to new term invoices when initiated by the admin.
+
+      const refreshed = await this.feeRepository.findInvoiceById(invoice.id);
+      createdInvoices.push((refreshed || invoice).toJSON());
       syncedStudents.push({
         studentId: student.id,
         studentName: `${student.firstName} ${student.lastName}`,
@@ -1470,6 +1487,17 @@ export class FeeUseCases {
       }
     }
 
+    if (!isDraft) {
+      await this.autoReconcileStudentFeeCredits(student.id, {
+        triggerSource: 'NEW_INVOICE',
+        requestingUser,
+        schoolId: student.schoolId
+      });
+    }
+
+    const refreshed = await this.feeRepository.findInvoiceById(invoice.id);
+    const invoiceToReturn = refreshed || invoice;
+
     const auditDetails = isDraft
       ? `Saved draft invoice #${invoiceNumber} for learner ${student.fullName} (Adm: ${student.admissionNumber}) amounting to KES ${amountPayable.toLocaleString()}.`
       : `Issued individual invoice #${invoiceNumber} for learner ${student.fullName} (Adm: ${student.admissionNumber}) amounting to KES ${amountPayable.toLocaleString()}.`;
@@ -1477,7 +1505,7 @@ export class FeeUseCases {
     return {
       message: auditDetails,
       invoice: {
-        ...invoice.toJSON(),
+        ...invoiceToReturn.toJSON(),
         studentName: student.fullName,
         admissionNumber: student.admissionNumber,
         gradeLevel: student.gradeLevel
@@ -1526,10 +1554,15 @@ export class FeeUseCases {
       }
     }
 
+    // Overpayment credits are preserved and only applied to new term invoices when initiated by the admin.
+
+    const refreshed = await this.feeRepository.findInvoiceById(invoice.id);
+    const invoiceToReturn = refreshed || invoice;
+
     return {
       message: `Invoice #${invoice.invoiceNumber} has been officially issued to ${student ? student.fullName : 'learner'}.`,
       invoice: {
-        ...invoice.toJSON(),
+        ...invoiceToReturn.toJSON(),
         studentName: student ? student.fullName : 'Learner',
         admissionNumber: student ? student.admissionNumber : 'N/A'
       }
@@ -2039,6 +2072,11 @@ export class FeeUseCases {
           IdGenerator.generate()
         );
         await this.feeRepository.saveCredit(feeCredit);
+        await this.autoReconcileStudentFeeCredits(studentId, {
+          triggerSource: 'NEW_OVERPAYMENT',
+          requestingUser: dto.recordedByUserId ? { userId: dto.recordedByUserId, schoolId, role: UserRole.BURSAR } : undefined,
+          schoolId
+        });
       }
 
       // Build rich notes combining bank or cash details and allocation summary
@@ -2415,9 +2453,10 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
   // 3.1 Auditable Payment Reversal / Refund
   public async reversePayment(paymentId: string, reason: string, requestingUser?: UserContext) {
     if (requestingUser) {
-      const allowedRoles = [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.BURSAR, UserRole.ACCOUNTANT, UserRole.SCHOOL_ADMIN];
-      if (!allowedRoles.includes(requestingUser.role as UserRole)) {
-        throw new ForbiddenError('Access denied: Only Finance Administrators and Bursars can reverse payment transactions.');
+      if (!isReversalApprovalAuthorizedRole(requestingUser.role)) {
+        throw new ForbiddenError(
+          'Access denied: Bursars and Accountants cannot directly execute payment reversals. You must submit a reversal request for Administrator approval.'
+        );
       }
     }
 
@@ -2672,6 +2711,10 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
             IdGenerator.generate()
           );
           await this.feeRepository.saveCredit(feeCredit);
+          await this.autoReconcileStudentFeeCredits(invoice.studentId, {
+            triggerSource: 'NEW_OVERPAYMENT_KCB',
+            schoolId: invoice.schoolId
+          });
           console.log(`[KCB Buni Webhook] Created overpayment credit of KES ${allocation.overpaymentAmount} for student ${invoice.studentId}`);
         }
 
@@ -2900,6 +2943,10 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
         IdGenerator.generate()
       );
       await this.feeRepository.saveCredit(feeCredit);
+      await this.autoReconcileStudentFeeCredits(student.id, {
+        triggerSource: 'NEW_OVERPAYMENT_FORWARDED',
+        schoolId: student.schoolId
+      });
     }
 
     const payment = Payment.create(
@@ -3777,11 +3824,13 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
     application: any;
     updatedCredit: any;
     updatedInvoice: any;
+    receiptNumber?: string;
+    receipt?: FeeCreditUtilizationReceiptPayload;
   }> {
     if (requestingUser) {
-      const allowedRoles = [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.BURSAR, UserRole.ACCOUNTANT];
+      const allowedRoles = [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.BURSAR];
       if (!allowedRoles.includes(requestingUser.role)) {
-        throw new ForbiddenError('Only finance administrators, bursars, or school heads can apply fee credits to invoices.');
+        throw new ForbiddenError('Access denied: Only school administrators (Admin / Super Admin) can apply overpayment fee credits to invoices.');
       }
     }
 
@@ -3841,7 +3890,80 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
     invoice.applyCredit(maxApplicable);
     await this.feeRepository.updateInvoice(invoice);
 
-    // Record application audit log
+    // Record application audit log and generate official traceable receipt
+    const appRef = `FCU-ADMIN-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
+    const receiptNumber = this.generateCreditReceiptNumber(invoice.academicYearId);
+    const student = await this.studentRepository.findById(invoice.studentId);
+
+    let adminName = requestingUser?.firstName
+      ? `${requestingUser.firstName} ${requestingUser.lastName || ''}`.trim()
+      : (requestingUser?.email || requestingUser?.userId || 'Administrator');
+
+    let parentName: string | undefined = undefined;
+    if (this.guardianRepository && student) {
+      try {
+        const guardians = await this.guardianRepository.findByStudentId(student.id);
+        if (guardians && guardians.length > 0) {
+          const g = guardians[0];
+          if ((g as any).fullName) parentName = (g as any).fullName;
+          else if (g.userId && this.userRepository) {
+            const u = await this.userRepository.findById(g.userId);
+            if (u) parentName = `${u.firstName} ${u.lastName}`.trim();
+          }
+        }
+      } catch {}
+    }
+
+    const receiptPayload: FeeCreditUtilizationReceiptPayload = {
+      receiptNumber,
+      receiptTitle: 'FEE CREDIT UTILIZATION RECEIPT',
+      transactionReference: appRef,
+      timestamp: new Date().toISOString(),
+      formattedDate: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+      transactionType: 'ADMIN-INITIATED',
+      transactionMode: 'ADMINISTRATOR-INITIATED',
+      status: 'COMPLETED',
+      academicYear: invoice.academicYearId || '2026',
+      academicTerm: invoice.termId || 'Term 3',
+      studentId: invoice.studentId,
+      studentName: student?.fullName || invoice.studentId,
+      admissionNumber: student?.admissionNumber || '',
+      gradeLevel: student?.gradeLevel || '',
+      streamName: (student as any)?.streamName || (student as any)?.streamId,
+      parentName,
+      originatingPaymentReferences: [credit.originatingReceiptNumber || credit.originatingPaymentId].filter(Boolean) as string[],
+      previousTermArrearsBefore: 0,
+      currentTermFeesBefore: Math.round((invoice.balance + maxApplicable) * 100) / 100,
+      availableCreditBefore: Math.round((credit.balance + maxApplicable) * 100) / 100,
+      outstandingBalanceBefore: Math.round((invoice.balance + maxApplicable) * 100) / 100,
+      amountAppliedToArrears: 0,
+      amountAppliedToCurrentFees: maxApplicable,
+      totalCreditUtilized: maxApplicable,
+      remainingOutstanding: invoice.balance,
+      outstandingBalanceAfter: invoice.balance,
+      remainingCredit: credit.balance,
+      invoiceAllocations: [
+        {
+          invoiceId: invoice.id,
+          invoiceNumber: invoice.invoiceNumber,
+          amountApplied: maxApplicable,
+          remainingBalance: invoice.balance,
+          category: 'CURRENT_FEES'
+        }
+      ],
+      isSystemGenerated: false,
+      triggerSource: 'ADMIN_INITIATED',
+      initiatedByAdminName: adminName,
+      initiatedByAdminId: requestingUser?.userId || 'ADMIN',
+      mandatoryReason: `Authorized allocation of advance fee credit / overpayment to invoice #${invoice.invoiceNumber}`,
+      statement: "THIS DOCUMENT CONFIRMS THE UTILIZATION OF PREVIOUSLY RECEIVED FEE CREDIT. IT IS NOT A NEW CASH, BANK OR MOBILE MONEY PAYMENT.",
+      schoolName: 'Grace Seeds School',
+      schoolLogoUrl: '/logo.png',
+      schoolPhone: '0745436312',
+      schoolEmail: 'schoolgraceseeds@gmail.com',
+      schoolAddress: 'KEMRI Street, Kisian, Kisumu, Kenya'
+    };
+
     const application = FeeCreditApplication.create(
       {
         creditId: credit.id,
@@ -3850,10 +3972,22 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
         academicYearId: invoice.academicYearId,
         termId: invoice.termId,
         amountApplied: maxApplicable,
-        appliedByUserId: requestingUser?.userId || 'SYSTEM'
+        appliedByUserId: requestingUser?.userId || 'SYSTEM',
+        applicationReference: appRef,
+        originatingPaymentReference: credit.originatingReceiptNumber || credit.originatingPaymentId,
+        triggerSource: 'ADMIN_INITIATED',
+        remainingCredit: credit.balance,
+        remainingFeeBalance: invoice.balance,
+        isSystemGenerated: false,
+        receiptNumber,
+        transactionType: 'ADMIN-INITIATED',
+        reason: `Authorized allocation of advance fee credit / overpayment to invoice #${invoice.invoiceNumber}`,
+        notes: `Admin credit allocation of KES ${maxApplicable.toLocaleString()} applied to invoice #${invoice.invoiceNumber} by ${adminName}.`
       },
       IdGenerator.generate()
     );
+
+    (application as any)._props.receiptPayload = receiptPayload;
     await this.feeRepository.saveCreditApplication(application);
 
     return {
@@ -3861,7 +3995,9 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
       message: `Successfully applied KES ${maxApplicable.toLocaleString()} credit to invoice #${invoice.invoiceNumber}. New invoice balance: KES ${invoice.balance.toLocaleString()}. Remaining credit: KES ${credit.balance.toLocaleString()}.`,
       application: application.toJSON(),
       updatedCredit: credit.toJSON(),
-      updatedInvoice: invoice.toJSON()
+      updatedInvoice: invoice.toJSON(),
+      receiptNumber,
+      receipt: receiptPayload
     };
   }
 
@@ -3888,6 +4024,2103 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
       availableBalance: Math.round(availableBalance * 100) / 100,
       credits: credits.map(c => c.toJSON()),
       applications: applications.map(a => a.toJSON())
+    };
+  }
+
+  // 7c-2. Automatic Fee Credit Reconciliation (Transactional & Idempotent)
+  public async autoReconcileStudentFeeCredits(
+    studentId: string,
+    options?: {
+      triggerSource?: string;
+      requestingUser?: UserContext;
+      schoolId?: string;
+    }
+  ): Promise<AutoCreditReconciliationResult | null> {
+    const lockKey = `student-fee-${studentId}`;
+
+    const executeAllocation = async (): Promise<AutoCreditReconciliationResult | null> => {
+      // 1. Resolve student and check validity
+      const student = await this.studentRepository.findById(studentId);
+      if (!student) return null;
+
+      // 2. Charge-exempt / sponsored students have no fee liability
+      if (this.studentSponsorshipRepository) {
+        try {
+          const sp = await this.studentSponsorshipRepository.findByStudentId(studentId);
+          if (sp && sp.sponsorshipStatus === 'ACTIVE') return null;
+        } catch {}
+      }
+
+      // 3. Retrieve available fee credits for this student
+      const credits = await this.feeRepository.findCredits({ studentId });
+      const availableCredits = credits.filter(
+        c => (c.status === 'AVAILABLE' || c.status === 'PARTIALLY_USED') && Number(c.balance) > 0.001
+      );
+      if (availableCredits.length === 0) return null;
+
+      // Sort FIFO: oldest credits utilized first
+      availableCredits.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
+      // 4. Retrieve student active invoices
+      const invoices = await this.feeRepository.findInvoices({ studentId });
+      const activeInvoices = invoices.filter(
+        i =>
+          (i.status as any) !== 'CARRIED_FORWARD' &&
+          (i.status as any) !== InvoiceStatus.CARRIED_FORWARD &&
+          (i.status as any) !== 'CANCELLED' &&
+          (i.status as any) !== InvoiceStatus.CANCELLED &&
+          (i.status as any) !== 'DRAFT' &&
+          (i.status as any) !== InvoiceStatus.DRAFT &&
+          Number(i.balance) > 0.001
+      );
+      if (activeInvoices.length === 0) return null;
+
+      // 5. Resolve active academic period
+      const schoolId = options?.schoolId || student.schoolId;
+      const period = await this.resolveAcademicYearAndTerm(student.academicYearId, undefined, schoolId);
+
+      // 6. Partition fee obligations strictly into Arrears vs Current Billed Fees
+      const obligations = FeePaymentAllocationService.calculateObligations(
+        studentId,
+        invoices,
+        period.termId,
+        period.yearId
+      );
+
+      if (obligations.totalOutstanding <= 0.001) return null;
+
+      // 7. Mandatory Formula:
+      // credit_to_apply = MIN(available_credit, eligible_outstanding_fees)
+      // remaining_fee_balance = eligible_outstanding_fees - credit_to_apply
+      // remaining_credit = available_credit - credit_to_apply
+      const totalAvailableCredit = Math.round(
+        availableCredits.reduce((sum, c) => sum + (Number(c.balance) || 0), 0) * 100
+      ) / 100;
+      const creditToApply = Math.round(
+        Math.min(totalAvailableCredit, obligations.totalOutstanding) * 100
+      ) / 100;
+
+      if (creditToApply <= 0.001) return null;
+
+      const previousTermArrearsBefore = obligations.previousTermArrearsOutstanding;
+      const currentTermFeesBefore = obligations.currentTermBilledFeesOutstanding;
+      const availableCreditBefore = totalAvailableCredit;
+      const receiptNumber = this.generateCreditReceiptNumber(period.yearId);
+
+      // 8. Strict Allocation Priority:
+      // Priority 1: Previous-term arrears
+      // Priority 2: Current-term billed fees
+      const targets: Array<{ invoice: StudentInvoice; amount: number; isArrears: boolean }> = [];
+      for (const item of obligations.arrearsItems) {
+        targets.push({ invoice: item.invoice, amount: item.amount, isArrears: true });
+      }
+      for (const item of obligations.currentTermItems) {
+        targets.push({ invoice: item.invoice, amount: item.amount, isArrears: false });
+      }
+
+      let remainingCreditToAllocate = creditToApply;
+      let arrearsSettled = 0;
+      let currentFeesSettled = 0;
+      const applicationsCreated: FeeCreditApplication[] = [];
+      const trigger = options?.triggerSource || 'AUTOMATIC';
+
+      for (const target of targets) {
+        if (remainingCreditToAllocate <= 0.001) break;
+        const invBalance = Math.round((Number(target.invoice.balance) || 0) * 100) / 100;
+        if (invBalance <= 0.001) continue;
+
+        const targetApplicable = Math.min(remainingCreditToAllocate, target.amount, invBalance);
+        let remainingForThisInvoice = Math.round(targetApplicable * 100) / 100;
+        if (remainingForThisInvoice <= 0.001) continue;
+
+        for (const credit of availableCredits) {
+          if (remainingForThisInvoice <= 0.001) break;
+          const credBalance = Math.round((Number(credit.balance) || 0) * 100) / 100;
+          if (credBalance <= 0.001) continue;
+
+          const chunk = Math.round(Math.min(remainingForThisInvoice, credBalance) * 100) / 100;
+          if (chunk <= 0.001) continue;
+
+          // Deduct from credit and invoice
+          credit.useCredit(chunk);
+          target.invoice.applyCredit(chunk);
+
+          if (target.isArrears) {
+            arrearsSettled = Math.round((arrearsSettled + chunk) * 100) / 100;
+          } else {
+            currentFeesSettled = Math.round((currentFeesSettled + chunk) * 100) / 100;
+          }
+
+          const appRef = `FCU-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
+          const application = FeeCreditApplication.create(
+            {
+              creditId: credit.id,
+              studentId,
+              invoiceId: target.invoice.id,
+              academicYearId: target.invoice.academicYearId || period.yearId,
+              termId: target.invoice.termId || period.termId,
+              amountApplied: chunk,
+              appliedByUserId: options?.requestingUser?.userId || 'SYSTEM_AUTO_CREDIT',
+              applicationReference: appRef,
+              originatingPaymentReference: credit.originatingReceiptNumber || credit.originatingPaymentId,
+              triggerSource: trigger,
+              remainingCredit: credit.balance,
+              remainingFeeBalance: target.invoice.balance,
+              isSystemGenerated: true,
+              receiptNumber,
+              transactionType: 'AUTOMATIC',
+              notes: `Auto-applied KES ${chunk.toLocaleString()} credit from ${credit.originatingReceiptNumber || 'credit #' + credit.id} to invoice #${target.invoice.invoiceNumber}. Trigger: ${trigger}. Arrears: ${target.isArrears ? 'YES' : 'NO'}.`
+            },
+            IdGenerator.generate()
+          );
+
+          await this.feeRepository.saveCreditApplication(application);
+          await this.feeRepository.updateCredit(credit);
+          await this.feeRepository.updateInvoice(target.invoice);
+
+          applicationsCreated.push(application);
+          remainingForThisInvoice = Math.round((remainingForThisInvoice - chunk) * 100) / 100;
+          remainingCreditToAllocate = Math.round((remainingCreditToAllocate - chunk) * 100) / 100;
+        }
+      }
+
+      const totalRemainingCredit = Math.round(
+        availableCredits.reduce((sum, c) => sum + (Number(c.balance) || 0), 0) * 100
+      ) / 100;
+      const totalApplied = Math.round((creditToApply - remainingCreditToAllocate) * 100) / 100;
+      const remainingOutstanding = Math.max(
+        0,
+        Math.round((obligations.totalOutstanding - totalApplied) * 100) / 100
+      );
+
+      let receiptPayload: FeeCreditUtilizationReceiptPayload | undefined = undefined;
+      if (totalApplied > 0) {
+        let parentName: string | undefined = undefined;
+        if (this.guardianRepository) {
+          try {
+            const guardians = await this.guardianRepository.findByStudentId(student.id);
+            if (guardians && guardians.length > 0) {
+              const g = guardians[0];
+              if ((g as any).fullName) {
+                parentName = (g as any).fullName;
+              } else if (g.userId && this.userRepository) {
+                const u = await this.userRepository.findById(g.userId);
+                if (u) parentName = `${u.firstName} ${u.lastName}`.trim();
+              }
+            }
+          } catch {}
+        }
+
+        const origRefs = Array.from(
+          new Set(
+            availableCredits
+              .map(c => c.originatingReceiptNumber || c.originatingPaymentId)
+              .filter(Boolean) as string[]
+          )
+        );
+
+        const outstandingBalanceBefore = Math.round((previousTermArrearsBefore + currentTermFeesBefore) * 100) / 100;
+        const outstandingBalanceAfter = remainingOutstanding;
+
+        receiptPayload = {
+          receiptNumber,
+          receiptTitle: 'FEE CREDIT UTILIZATION RECEIPT',
+          transactionReference: applicationsCreated[0]?.applicationReference || `FCU-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`,
+          timestamp: new Date().toISOString(),
+          formattedDate: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+          transactionType: 'AUTOMATIC',
+          transactionMode: 'AUTOMATIC',
+          status: 'COMPLETED',
+          academicYear: period.yearId || '2026',
+          academicTerm: period.termId || 'Term 3',
+          studentId: student.id,
+          studentName: student.fullName,
+          admissionNumber: student.admissionNumber,
+          gradeLevel: student.gradeLevel,
+          streamName: (student as any).streamName || (student as any).streamId,
+          parentName,
+          originatingPaymentReferences: origRefs,
+          previousTermArrearsBefore,
+          currentTermFeesBefore,
+          availableCreditBefore,
+          outstandingBalanceBefore,
+          amountAppliedToArrears: arrearsSettled,
+          amountAppliedToCurrentFees: currentFeesSettled,
+          totalCreditUtilized: totalApplied,
+          remainingOutstanding,
+          outstandingBalanceAfter,
+          remainingCredit: totalRemainingCredit,
+          invoiceAllocations: applicationsCreated.map(a => {
+            const inv = invoices.find(i => i.id === a.invoiceId);
+            return {
+              invoiceId: a.invoiceId,
+              invoiceNumber: inv?.invoiceNumber || a.invoiceId,
+              amountApplied: a.amountApplied,
+              remainingBalance: a.remainingFeeBalance,
+              category: a.notes?.includes('Arrears: YES') ? 'ARREARS' : 'CURRENT_FEES'
+            };
+          }),
+          isSystemGenerated: true,
+          triggerSource: trigger,
+          statement: "THIS DOCUMENT CONFIRMS THE UTILIZATION OF PREVIOUSLY RECEIVED FEE CREDIT. IT IS NOT A NEW CASH, BANK OR MOBILE MONEY PAYMENT.",
+          schoolName: 'Grace Seeds School',
+          schoolLogoUrl: '/logo.png',
+          schoolPhone: '0745436312',
+          schoolEmail: 'schoolgraceseeds@gmail.com',
+          schoolAddress: 'KEMRI Street, Kisian, Kisumu, Kenya'
+        };
+
+        for (const app of applicationsCreated) {
+          (app as any)._props.receiptPayload = receiptPayload;
+          await this.feeRepository.saveCreditApplication(app);
+        }
+      }
+
+      // Successfully reconciled; remove from failure queue if it was present
+      this.reconciliationFailures.delete(studentId);
+
+      const result: AutoCreditReconciliationResult = {
+        studentId,
+        creditApplied: totalApplied,
+        remainingCredit: totalRemainingCredit,
+        remainingOutstanding,
+        arrearsSettled,
+        currentFeesSettled,
+        applications: applicationsCreated.map(a => a.toJSON()),
+        triggerSource: trigger,
+        timestamp: new Date().toISOString(),
+        receiptNumber: totalApplied > 0 ? receiptNumber : undefined,
+        receipt: receiptPayload
+      };
+
+      if (totalApplied > 0) {
+        this.reconciliationStats.totalCreditsAppliedAllTime = Math.round(
+          (this.reconciliationStats.totalCreditsAppliedAllTime + totalApplied) * 100
+        ) / 100;
+        this.reconciliationStats.recentReconciliations.unshift({
+          studentId,
+          studentName: student.fullName,
+          creditApplied: totalApplied,
+          triggerSource: trigger,
+          timestamp: new Date().toISOString()
+        });
+        if (this.reconciliationStats.recentReconciliations.length > 50) {
+          this.reconciliationStats.recentReconciliations.pop();
+        }
+      }
+
+      return result;
+    };
+
+    try {
+      if (this.feeRepository.withLock) {
+        return await this.feeRepository.withLock(lockKey, executeAllocation);
+      }
+      return await executeAllocation();
+    } catch (err: any) {
+      console.warn(`[Auto-Credit Reconciliation Error for student ${studentId}]:`, err.message || err);
+      const existing = this.reconciliationFailures.get(studentId);
+      this.reconciliationFailures.set(studentId, {
+        studentId,
+        error: err.message || String(err),
+        timestamp: new Date().toISOString(),
+        attempts: (existing?.attempts || 0) + 1,
+        triggerSource: options?.triggerSource || 'AUTO'
+      });
+      return null;
+    }
+  }
+
+  // 7c-3. Batch Credit Reconciliation (Scans all eligible students with available credit)
+  public async reconcileAllStudentCredits(options?: {
+    schoolId?: string;
+    triggerSource?: string;
+    requestingUser?: UserContext;
+  }): Promise<{
+    success: boolean;
+    totalProcessed: number;
+    reconciledCount: number;
+    totalCreditApplied: number;
+    failuresCount: number;
+    failures: any[];
+    reconciliations: AutoCreditReconciliationResult[];
+    timestamp: string;
+  }> {
+    this.reconciliationStats.totalRuns++;
+    this.reconciliationStats.lastRunAt = new Date().toISOString();
+
+    // 1. Identify all active credits across the target school or whole system
+    const available = await this.feeRepository.findCredits({
+      schoolId: options?.schoolId,
+      status: 'AVAILABLE'
+    });
+    const partial = await this.feeRepository.findCredits({
+      schoolId: options?.schoolId,
+      status: 'PARTIALLY_USED'
+    });
+
+    const candidateCredits = [...available, ...partial].filter(c => Number(c.balance) > 0.001);
+    const uniqueStudentIds = Array.from(new Set(candidateCredits.map(c => c.studentId)));
+
+    let reconciledCount = 0;
+    let totalCreditApplied = 0;
+    const reconciliations: AutoCreditReconciliationResult[] = [];
+    const trigger = options?.triggerSource || 'SCHEDULED_RECONCILIATION';
+
+    for (const studentId of uniqueStudentIds) {
+      try {
+        const res = await this.autoReconcileStudentFeeCredits(studentId, {
+          triggerSource: trigger,
+          requestingUser: options?.requestingUser,
+          schoolId: options?.schoolId
+        });
+        if (res && res.creditApplied > 0) {
+          reconciledCount++;
+          totalCreditApplied = Math.round((totalCreditApplied + res.creditApplied) * 100) / 100;
+          reconciliations.push(res);
+        }
+      } catch (err: any) {
+        console.error(`[Credit Reconciliation] Failed for student ${studentId}:`, err);
+        const existing = this.reconciliationFailures.get(studentId);
+        this.reconciliationFailures.set(studentId, {
+          studentId,
+          error: err.message || 'Unknown reconciliation error',
+          timestamp: new Date().toISOString(),
+          attempts: (existing?.attempts || 0) + 1,
+          triggerSource: trigger
+        });
+      }
+    }
+
+    return {
+      success: true,
+      totalProcessed: uniqueStudentIds.length,
+      reconciledCount,
+      totalCreditApplied,
+      failuresCount: this.reconciliationFailures.size,
+      failures: Array.from(this.reconciliationFailures.values()),
+      reconciliations,
+      timestamp: new Date().toISOString()
+    };
+  }
+
+  // 7c-4. Query Reconciliation Health & Inspection Status
+  public getReconciliationStatus() {
+    return {
+      lastRunAt: this.reconciliationStats.lastRunAt,
+      totalRuns: this.reconciliationStats.totalRuns,
+      totalCreditsAppliedAllTime: this.reconciliationStats.totalCreditsAppliedAllTime,
+      activeFailuresCount: this.reconciliationFailures.size,
+      activeFailures: Array.from(this.reconciliationFailures.values()),
+      recentReconciliations: this.reconciliationStats.recentReconciliations.slice(0, 20),
+      isSchedulerRunning: Boolean(this.creditReconciliationTimer)
+    };
+  }
+
+  // 7c-5. Retry Failed Reconciliations
+  public async retryFailedReconciliations(requestingUser?: UserContext) {
+    const failedStudentIds = Array.from(this.reconciliationFailures.keys());
+    if (failedStudentIds.length === 0) {
+      return {
+        success: true,
+        message: 'No failed accounts to retry.',
+        retriedCount: 0,
+        succeededCount: 0,
+        remainingFailures: []
+      };
+    }
+
+    let succeededCount = 0;
+    const remainingFailures: any[] = [];
+
+    for (const studentId of failedStudentIds) {
+      try {
+        const res = await this.autoReconcileStudentFeeCredits(studentId, {
+          triggerSource: 'MANUAL_RETRY',
+          requestingUser
+        });
+        if (res) succeededCount++;
+        this.reconciliationFailures.delete(studentId);
+      } catch (err: any) {
+        const item = this.reconciliationFailures.get(studentId);
+        if (item) {
+          item.attempts++;
+          item.error = err.message || item.error;
+          item.timestamp = new Date().toISOString();
+          remainingFailures.push(item);
+        }
+      }
+    }
+
+    return {
+      success: true,
+      message: `Retried ${failedStudentIds.length} account(s). ${succeededCount} successfully reconciled.`,
+      retriedCount: failedStudentIds.length,
+      succeededCount,
+      remainingFailures
+    };
+  }
+
+  // 7c-6. Background Scheduler Management
+  public startScheduledCreditReconciliation(intervalMs?: number): void {
+    if (this.creditReconciliationTimer) {
+      clearInterval(this.creditReconciliationTimer);
+    }
+    const interval = intervalMs || Number(process.env.CREDIT_RECONCILIATION_INTERVAL_MS) || (5 * 60 * 1000);
+    this.creditReconciliationTimer = setInterval(() => {
+      this.reconcileAllStudentCredits({ triggerSource: 'SCHEDULED_RECONCILIATION' }).catch(err => {
+        console.error('[Scheduled Credit Reconciliation Error]:', err);
+      });
+    }, interval);
+    if (typeof this.creditReconciliationTimer.unref === 'function') {
+      this.creditReconciliationTimer.unref();
+    }
+  }
+
+  public stopScheduledCreditReconciliation(): void {
+    if (this.creditReconciliationTimer) {
+      clearInterval(this.creditReconciliationTimer);
+      this.creditReconciliationTimer = undefined;
+    }
+  }
+
+  public async activateAutomaticCreditUtilization(options?: { schoolId?: string }): Promise<any> {
+    return await this.reconcileAllStudentCredits({
+      schoolId: options?.schoolId,
+      triggerSource: 'SYSTEM_ACTIVATION'
+    });
+  }
+
+  // 7c-7. Unique Fee Credit Receipt Number Generator
+  public generateCreditReceiptNumber(year?: string): string {
+    const yr = year ? String(year).slice(-4) : new Date().getFullYear().toString();
+    const rand = Math.floor(10000 + Math.random() * 90000);
+    return `FCUR-${yr}-${rand}`;
+  }
+
+  // 7c-8. Printable Fee Credit Utilization Receipt HTML Generator
+  public generateCreditUtilizationReceiptHtml(receipt: FeeCreditUtilizationReceiptPayload): string {
+    const isAuto = receipt.transactionType === 'AUTOMATIC';
+    const isCleared = receipt.remainingOutstanding <= 0;
+    const dateFormatted = receipt.formattedDate || new Date(receipt.timestamp).toLocaleDateString('en-GB', {
+      day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+
+    return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Fee Credit Utilization Receipt - ${receipt.receiptNumber}</title>
+  <style>
+    @media print {
+      body { background: #ffffff !important; padding: 0 !important; }
+      .receipt-card { box-shadow: none !important; border: 1px solid #ddd !important; width: 100% !important; max-width: 100% !important; }
+      .no-print { display: none !important; }
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; margin: 0; padding: 24px; color: #0f172a; }
+    .receipt-card { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; }
+    .header { background: #7a1228; color: #ffffff; padding: 24px; text-align: center; }
+    .school-title { font-size: 20px; font-weight: 800; letter-spacing: 0.5px; margin: 0; text-transform: uppercase; }
+    .school-sub { font-size: 11px; opacity: 0.9; margin-top: 4px; }
+    .badge-type { display: inline-block; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 9999px; padding: 4px 14px; font-size: 11px; font-weight: 700; text-transform: uppercase; margin-top: 10px; letter-spacing: 0.5px; }
+    .content { padding: 24px; }
+    .mandatory-notice { background: #fffbeb; border: 1px solid #fef3c7; border-left: 4px solid #f59e0b; border-radius: 8px; padding: 12px 14px; margin-bottom: 20px; font-size: 11px; color: #92400e; line-height: 1.4; }
+    .highlight-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 16px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+    .highlight-label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #166534; letter-spacing: 0.5px; }
+    .highlight-amount { font-size: 24px; font-weight: 900; color: #14532d; font-family: monospace; margin-top: 2px; }
+    .meta-tag { background: #dcfce7; color: #15803d; font-size: 10px; font-weight: 800; padding: 4px 8px; border-radius: 6px; text-transform: uppercase; }
+    .info-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 18px; }
+    .info-table th { background: #f8fafc; color: #475569; font-weight: 700; padding: 8px 10px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 11px; text-transform: uppercase; }
+    .info-table td { padding: 8px 10px; border-bottom: 1px solid #f1f5f9; }
+    .info-table td.label { color: #64748b; font-weight: 500; width: 45%; }
+    .info-table td.value { color: #0f172a; font-weight: 700; text-align: right; }
+    .financial-summary { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; margin-bottom: 18px; }
+    .audit-box { background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 10px; padding: 12px 14px; margin-bottom: 18px; font-size: 11px; color: #581c87; }
+    .audit-title { font-weight: 800; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; margin-bottom: 4px; display: flex; align-items: center; gap: 4px; }
+    .stamp-box { border: 2px dashed #cbd5e1; border-radius: 8px; padding: 10px; text-align: center; color: #64748b; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin-top: 14px; background: #fafafa; }
+    .footer { background: #f8fafc; padding: 14px 20px; border-top: 1px solid #e2e8f0; text-align: center; font-size: 11px; color: #64748b; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <div class="receipt-card">
+    <div class="header">
+      <div class="school-title">${receipt.schoolName}</div>
+      <div class="school-sub">${receipt.schoolAddress} · Tel: ${receipt.schoolPhone} · Email: ${receipt.schoolEmail}</div>
+      <div class="badge-type">${receipt.receiptTitle || 'FEE CREDIT UTILIZATION RECEIPT'} (${receipt.transactionMode || (isAuto ? 'AUTOMATIC' : 'ADMINISTRATOR-INITIATED')})</div>
+    </div>
+    <div class="content">
+      <div class="mandatory-notice">
+        <strong>Official Statement:</strong> ${receipt.statement}
+      </div>
+
+      ${receipt.status === 'REVERSED' ? `
+      <div style="background: #fef2f2; border: 1px solid #fecaca; border-left: 4px solid #ef4444; border-radius: 8px; padding: 12px 14px; margin-bottom: 20px; font-size: 11px; color: #991b1b; line-height: 1.5;">
+        <strong style="text-transform: uppercase; letter-spacing: 0.5px;">⚠️ Transaction Reversed:</strong> This fee credit utilization was formally reversed.
+        <div><strong>Reversal Ref:</strong> <span style="font-family: monospace;">${receipt.reversalReference || 'N/A'}</span> | <strong>Date:</strong> ${receipt.reversalDate || 'N/A'}</div>
+        <div><strong>Reason:</strong> ${receipt.reversalReason || 'Administrative reversal'}</div>
+        <div><strong>Reversed By:</strong> ${receipt.reversedByAdminName || 'Finance Administrator'}</div>
+      </div>` : ''}
+
+      <div class="highlight-box">
+        <div>
+          <div class="highlight-label">Total Credit Utilized</div>
+          <div class="highlight-amount">KES ${(Number(receipt.totalCreditUtilized) || 0).toLocaleString()}</div>
+        </div>
+        <div class="meta-tag" style="${receipt.status === 'REVERSED' ? 'background: #fee2e2; color: #b91c1c;' : ''}">
+          Status: ${receipt.status}
+        </div>
+      </div>
+
+      <table class="info-table">
+        <thead>
+          <tr><th colspan="2">Transaction &amp; Learner Details</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="label">Receipt Number</td><td class="value" style="font-family: monospace; color: #7a1228;">${receipt.receiptNumber}</td></tr>
+          <tr><td class="label">Transaction Reference</td><td class="value" style="font-family: monospace;">${receipt.transactionReference}</td></tr>
+          <tr><td class="label">Date &amp; Time</td><td class="value">${dateFormatted}</td></tr>
+          <tr><td class="label">Academic Period</td><td class="value">${receipt.academicYear} · ${receipt.academicTerm}</td></tr>
+          <tr><td class="label">Learner Name</td><td class="value">${receipt.studentName}</td></tr>
+          <tr><td class="label">Admission Number</td><td class="value" style="font-family: monospace;">${receipt.admissionNumber}</td></tr>
+          <tr><td class="label">Grade / Class</td><td class="value">${receipt.gradeLevel}${receipt.streamName ? ` (${receipt.streamName})` : ''}</td></tr>
+          ${receipt.parentName ? `<tr><td class="label">Parent / Guardian</td><td class="value">${receipt.parentName}</td></tr>` : ''}
+          ${receipt.originatingPaymentReferences && receipt.originatingPaymentReferences.length > 0 ? `<tr><td class="label">Originating Payment Ref(s)</td><td class="value" style="font-family: monospace;">${receipt.originatingPaymentReferences.join(', ')}</td></tr>` : ''}
+        </tbody>
+      </table>
+
+      <div class="financial-summary">
+        <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #334155; margin-bottom: 8px;">
+          Financial Position &amp; Allocation Breakdown
+        </div>
+        <table class="info-table" style="margin-bottom: 0;">
+          <tr><td class="label">Prior-Term Arrears (Before)</td><td class="value">KES ${(Number(receipt.previousTermArrearsBefore) || 0).toLocaleString()}</td></tr>
+          <tr><td class="label">Current-Term Fees (Before)</td><td class="value">KES ${(Number(receipt.currentTermFeesBefore) || 0).toLocaleString()}</td></tr>
+          <tr><td class="label">Outstanding Balance (Before)</td><td class="value" style="font-weight: 800;">KES ${(Number(receipt.outstandingBalanceBefore ?? (receipt.previousTermArrearsBefore + receipt.currentTermFeesBefore)) || 0).toLocaleString()}</td></tr>
+          <tr><td class="label">Available Fee Credit (Before)</td><td class="value" style="color: #0d9488;">+KES ${(Number(receipt.availableCreditBefore) || 0).toLocaleString()}</td></tr>
+          ${Number(receipt.amountAppliedToArrears) > 0 ? `<tr><td class="label" style="color: #166534; font-weight: 700;">Applied to Prior Arrears</td><td class="value" style="color: #166534;">-KES ${(Number(receipt.amountAppliedToArrears) || 0).toLocaleString()}</td></tr>` : ''}
+          ${Number(receipt.amountAppliedToCurrentFees) > 0 ? `<tr><td class="label" style="color: #166534; font-weight: 700;">Applied to Current-Term Fees</td><td class="value" style="color: #166534;">-KES ${(Number(receipt.amountAppliedToCurrentFees) || 0).toLocaleString()}</td></tr>` : ''}
+          <tr><td class="label" style="color: #166534; font-weight: 800;">Total Credit Utilized</td><td class="value" style="color: #166534; font-weight: 800;">-KES ${(Number(receipt.totalCreditUtilized) || 0).toLocaleString()}</td></tr>
+          <tr style="border-top: 2px solid #cbd5e1;">
+            <td class="label" style="font-weight: 800; color: #0f172a;">Remaining Outstanding Balance</td>
+            <td class="value" style="font-size: 13px; color: ${isCleared ? '#059669' : '#b91c1c'}; font-weight: 800;">
+              KES ${(Number(receipt.remainingOutstanding) || 0).toLocaleString()} ${isCleared ? '(CLEARED)' : ''}
+            </td>
+          </tr>
+          <tr>
+            <td class="label" style="font-weight: 800; color: #0f172a;">Remaining Available Fee Credit</td>
+            <td class="value" style="font-size: 13px; color: #0d9488; font-weight: 800;">
+              +KES ${(Number(receipt.remainingCredit) || 0).toLocaleString()}
+            </td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="audit-box">
+        <div class="audit-title">Audit Verification Details</div>
+        <div><strong>Transaction Workflow:</strong> ${receipt.transactionType} (${isAuto ? 'Automated System Process' : 'Finance Administrator Initiated'})</div>
+        ${isAuto ? `<div><strong>Trigger Source:</strong> ${receipt.triggerSource || 'SYSTEM_AUTO_RECONCILIATION'}</div>` : ''}
+        ${receipt.initiatedByAdminName ? `<div><strong>Initiated By:</strong> ${receipt.initiatedByAdminName} (${receipt.initiatedByAdminId || 'Admin'})</div>` : ''}
+        ${receipt.mandatoryReason ? `<div><strong>Mandatory Reason:</strong> ${receipt.mandatoryReason}</div>` : ''}
+      </div>
+
+      <div class="stamp-box">
+        Official Traceable Electronic Document · Grace Seeds School Accounts Office
+      </div>
+    </div>
+    <div class="footer">
+      Grace Seeds School · Empowering Future Leaders<br/>
+      Inquiries: ${receipt.schoolEmail} | ${receipt.schoolPhone}
+    </div>
+  </div>
+</body>
+</html>`;
+  }
+
+  // 7c-9. Live Preview of Credit Utilization for Finance Admin
+  public async previewFeeCreditUtilization(
+    dto: { studentId: string; amountToApply?: number; amount?: number; schoolId?: string },
+    requestingUser?: UserContext
+  ) {
+    this.verifyBillingAuthorization(requestingUser);
+    const student = await this.studentRepository.findById(dto.studentId);
+    if (!student) throw new NotFoundError('Student', dto.studentId);
+
+    const credits = await this.feeRepository.findCredits({ studentId: student.id });
+    const availableCredits = credits.filter(
+      c => (c.status === 'AVAILABLE' || c.status === 'PARTIALLY_USED') && Number(c.balance) > 0.001
+    );
+    const totalAvailableCredit = Math.round(
+      availableCredits.reduce((s, c) => s + (Number(c.balance) || 0), 0) * 100
+    ) / 100;
+
+    const invoices = await this.feeRepository.findInvoices({ studentId: student.id });
+    const period = await this.resolveAcademicYearAndTerm(student.academicYearId, undefined, dto.schoolId || student.schoolId);
+    const obligations = FeePaymentAllocationService.calculateObligations(student.id, invoices, period.termId, period.yearId);
+
+    const maxEligible = Math.round(Math.min(totalAvailableCredit, obligations.totalOutstanding) * 100) / 100;
+    const rawReq = dto.amountToApply !== undefined ? dto.amountToApply : dto.amount;
+    const requested = rawReq !== undefined ? Number(rawReq) : maxEligible;
+    const amountToApply = Math.max(0, Math.min(requested, maxEligible));
+
+    const projectedArrears = Math.min(amountToApply, obligations.previousTermArrearsOutstanding);
+    const remainingForCurrent = Math.max(0, amountToApply - projectedArrears);
+    const projectedCurrent = Math.min(remainingForCurrent, obligations.currentTermBilledFeesOutstanding);
+
+    return {
+      studentId: student.id,
+      studentName: student.fullName,
+      admissionNumber: student.admissionNumber,
+      gradeLevel: student.gradeLevel,
+      previousTermArrearsBefore: obligations.previousTermArrearsOutstanding,
+      currentTermFeesBefore: obligations.currentTermBilledFeesOutstanding,
+      totalOutstandingBefore: obligations.totalOutstanding,
+      availableCreditBefore: totalAvailableCredit,
+      maxEligibleAmount: maxEligible,
+      amountToApply,
+      projectedArrearsAllocation: projectedArrears,
+      projectedCurrentFeesAllocation: projectedCurrent,
+      projectedRemainingCredit: Math.max(0, Math.round((totalAvailableCredit - amountToApply) * 100) / 100),
+      projectedRemainingBalance: Math.max(0, Math.round((obligations.totalOutstanding - amountToApply) * 100) / 100),
+      isEligible: totalAvailableCredit > 0 && obligations.totalOutstanding > 0
+    };
+  }
+
+  // 7c-10. Admin-Initiated Fee Credit Utilization with Instant Receipt Generation
+  public async adminInitiateFeeCreditUtilization(
+    dto: AdminInitiateCreditUtilizationDTO,
+    requestingUser: UserContext
+  ): Promise<{
+    success: boolean;
+    message: string;
+    allocation: AutoCreditReconciliationResult;
+    receipt: FeeCreditUtilizationReceiptPayload;
+  }> {
+    const adminRoles = [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.BURSAR];
+    if (requestingUser && !adminRoles.includes(requestingUser.role)) {
+      throw new ForbiddenError(
+        `Access denied: Only administrators (Admin / Super Admin) can initiate overpayment credit utilization. Role "${requestingUser.role}" is not authorized.`
+      );
+    }
+
+    if (!dto.reason || typeof dto.reason !== 'string' || dto.reason.trim().length < 3) {
+      throw new ValidationError('A mandatory reason (minimum 3 characters) is required to initiate manual fee credit utilization.');
+    }
+
+    const lockKey = `student-fee-${dto.studentId}`;
+
+    const executeManualUtilization = async () => {
+      const student = await this.studentRepository.findById(dto.studentId);
+      if (!student) throw new NotFoundError('Student', dto.studentId);
+
+      // Check sponsored exemption
+      if (this.studentSponsorshipRepository) {
+        try {
+          const sp = await this.studentSponsorshipRepository.findByStudentId(student.id);
+          if (sp && sp.sponsorshipStatus === 'ACTIVE') {
+            throw new ConflictError(`Cannot apply fee credit: Learner ${student.fullName} is under 100% scholarship.`);
+          }
+        } catch {}
+      }
+
+      // Available credits
+      const credits = await this.feeRepository.findCredits({ studentId: student.id });
+      const availableCredits = credits.filter(
+        c => (c.status === 'AVAILABLE' || c.status === 'PARTIALLY_USED') && Number(c.balance) > 0.001
+      );
+      if (availableCredits.length === 0) {
+        throw new ValidationError(`Learner ${student.fullName} has no available fee credit to utilize.`);
+      }
+
+      availableCredits.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      const totalAvailableCredit = Math.round(
+        availableCredits.reduce((s, c) => s + (Number(c.balance) || 0), 0) * 100
+      ) / 100;
+
+      // Active invoices
+      const invoices = await this.feeRepository.findInvoices({ studentId: student.id });
+      const activeInvoices = invoices.filter(
+        i =>
+          (i.status as any) !== 'CARRIED_FORWARD' &&
+          (i.status as any) !== InvoiceStatus.CARRIED_FORWARD &&
+          (i.status as any) !== 'CANCELLED' &&
+          (i.status as any) !== 'DRAFT' &&
+          Number(i.balance) > 0.001
+      );
+      if (activeInvoices.length === 0) {
+        throw new ValidationError(`Learner ${student.fullName} has no outstanding fee invoices to settle.`);
+      }
+
+      const period = await this.resolveAcademicYearAndTerm(student.academicYearId, undefined, dto.schoolId || student.schoolId);
+      const obligations = FeePaymentAllocationService.calculateObligations(student.id, invoices, period.termId, period.yearId);
+      if (obligations.totalOutstanding <= 0.001) {
+        throw new ValidationError(`Learner ${student.fullName} has zero outstanding fee balance.`);
+      }
+
+      const maxEligible = Math.round(Math.min(totalAvailableCredit, obligations.totalOutstanding) * 100) / 100;
+      let amountToApply = maxEligible;
+      const requestedAmount = dto.amountToApply !== undefined ? dto.amountToApply : dto.amount;
+      if (requestedAmount !== undefined) {
+        const reqAmt = Math.round(Number(requestedAmount) * 100) / 100;
+        if (isNaN(reqAmt) || reqAmt <= 0) {
+          throw new ValidationError('Amount to apply must be greater than zero.');
+        }
+        if (reqAmt > totalAvailableCredit) {
+          throw new ValidationError(
+            `Amount to apply (KES ${reqAmt.toLocaleString()}) exceeds available fee credit (KES ${totalAvailableCredit.toLocaleString()}).`
+          );
+        }
+        if (reqAmt > obligations.totalOutstanding) {
+          throw new ValidationError(
+            `Amount to apply (KES ${reqAmt.toLocaleString()}) exceeds total outstanding fees (KES ${obligations.totalOutstanding.toLocaleString()}).`
+          );
+        }
+        amountToApply = reqAmt;
+      }
+
+      const previousTermArrearsBefore = obligations.previousTermArrearsOutstanding;
+      const currentTermFeesBefore = obligations.currentTermBilledFeesOutstanding;
+      const availableCreditBefore = totalAvailableCredit;
+
+      // Mandatory Allocation Priority:
+      // Arrears first, then current term fees
+      const targets: Array<{ invoice: StudentInvoice; amount: number; isArrears: boolean }> = [];
+      for (const item of obligations.arrearsItems) {
+        targets.push({ invoice: item.invoice, amount: item.amount, isArrears: true });
+      }
+      for (const item of obligations.currentTermItems) {
+        targets.push({ invoice: item.invoice, amount: item.amount, isArrears: false });
+      }
+
+      let remainingCreditToAllocate = amountToApply;
+      let arrearsSettled = 0;
+      let currentFeesSettled = 0;
+      const applicationsCreated: FeeCreditApplication[] = [];
+      const receiptNumber = this.generateCreditReceiptNumber(period.yearId);
+
+      for (const target of targets) {
+        if (remainingCreditToAllocate <= 0.001) break;
+        const invBalance = Math.round((Number(target.invoice.balance) || 0) * 100) / 100;
+        if (invBalance <= 0.001) continue;
+
+        const targetApplicable = Math.min(remainingCreditToAllocate, target.amount, invBalance);
+        let remainingForThisInvoice = Math.round(targetApplicable * 100) / 100;
+        if (remainingForThisInvoice <= 0.001) continue;
+
+        for (const credit of availableCredits) {
+          if (remainingForThisInvoice <= 0.001) break;
+          const credBalance = Math.round((Number(credit.balance) || 0) * 100) / 100;
+          if (credBalance <= 0.001) continue;
+
+          const chunk = Math.round(Math.min(remainingForThisInvoice, credBalance) * 100) / 100;
+          if (chunk <= 0.001) continue;
+
+          credit.useCredit(chunk);
+          target.invoice.applyCredit(chunk);
+
+          if (target.isArrears) {
+            arrearsSettled = Math.round((arrearsSettled + chunk) * 100) / 100;
+          } else {
+            currentFeesSettled = Math.round((currentFeesSettled + chunk) * 100) / 100;
+          }
+
+          const appRef = `FCU-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
+          const application = FeeCreditApplication.create(
+            {
+              creditId: credit.id,
+              studentId: student.id,
+              invoiceId: target.invoice.id,
+              academicYearId: target.invoice.academicYearId || period.yearId,
+              termId: target.invoice.termId || period.termId,
+              amountApplied: chunk,
+              appliedByUserId: requestingUser.userId,
+              applicationReference: appRef,
+              originatingPaymentReference: credit.originatingReceiptNumber || credit.originatingPaymentId,
+              triggerSource: 'ADMIN_INITIATED',
+              remainingCredit: credit.balance,
+              remainingFeeBalance: target.invoice.balance,
+              isSystemGenerated: false,
+              receiptNumber,
+              transactionType: 'ADMIN-INITIATED',
+              reason: dto.reason.trim(),
+              notes: `Admin-initiated credit utilization of KES ${chunk.toLocaleString()} by ${requestingUser.userId}. Reason: ${dto.reason.trim()}. Arrears: ${target.isArrears ? 'YES' : 'NO'}.`
+            },
+            IdGenerator.generate()
+          );
+
+          await this.feeRepository.saveCreditApplication(application);
+          await this.feeRepository.updateCredit(credit);
+          await this.feeRepository.updateInvoice(target.invoice);
+
+          applicationsCreated.push(application);
+          remainingForThisInvoice = Math.round((remainingForThisInvoice - chunk) * 100) / 100;
+          remainingCreditToAllocate = Math.round((remainingCreditToAllocate - chunk) * 100) / 100;
+        }
+      }
+
+      const totalRemainingCredit = Math.round(
+        availableCredits.reduce((s, c) => s + (Number(c.balance) || 0), 0) * 100
+      ) / 100;
+      const totalApplied = Math.round((amountToApply - remainingCreditToAllocate) * 100) / 100;
+      const remainingOutstanding = Math.max(
+        0,
+        Math.round((obligations.totalOutstanding - totalApplied) * 100) / 100
+      );
+
+      let adminName = requestingUser.firstName
+        ? `${requestingUser.firstName} ${requestingUser.lastName || ''}`.trim()
+        : requestingUser.email;
+
+      if ((!adminName || adminName === requestingUser.userId) && this.userRepository) {
+        try {
+          const adminUser = await this.userRepository.findById(requestingUser.userId);
+          if (adminUser) {
+            adminName = `${adminUser.firstName} ${adminUser.lastName}`.trim() || adminUser.email;
+          }
+        } catch {}
+      }
+      if (!adminName) {
+        adminName = requestingUser.userId;
+      }
+
+      let parentName: string | undefined = undefined;
+      if (this.guardianRepository) {
+        try {
+          const guardians = await this.guardianRepository.findByStudentId(student.id);
+          if (guardians && guardians.length > 0) {
+            const g = guardians[0];
+            if ((g as any).fullName) {
+              parentName = (g as any).fullName;
+            } else if (g.userId && this.userRepository) {
+              const u = await this.userRepository.findById(g.userId);
+              if (u) parentName = `${u.firstName} ${u.lastName}`.trim();
+            }
+          }
+        } catch {}
+      }
+
+      const origRefs = Array.from(
+        new Set(
+          availableCredits
+            .map(c => c.originatingReceiptNumber || c.originatingPaymentId)
+            .filter(Boolean) as string[]
+        )
+      );
+
+      const outstandingBalanceBefore = Math.round((previousTermArrearsBefore + currentTermFeesBefore) * 100) / 100;
+      const outstandingBalanceAfter = remainingOutstanding;
+
+      const receiptPayload: FeeCreditUtilizationReceiptPayload = {
+        receiptNumber,
+        receiptTitle: 'FEE CREDIT UTILIZATION RECEIPT',
+        transactionReference: applicationsCreated[0]?.applicationReference || `FCU-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`,
+        timestamp: new Date().toISOString(),
+        formattedDate: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+        transactionType: 'ADMIN-INITIATED',
+        transactionMode: 'ADMINISTRATOR-INITIATED',
+        status: 'COMPLETED',
+        academicYear: period.yearId || '2026',
+        academicTerm: period.termId || 'Term 3',
+        studentId: student.id,
+        studentName: student.fullName,
+        admissionNumber: student.admissionNumber,
+        gradeLevel: student.gradeLevel,
+        streamName: (student as any).streamName || (student as any).streamId,
+        parentName,
+        originatingPaymentReferences: origRefs,
+        previousTermArrearsBefore,
+        currentTermFeesBefore,
+        availableCreditBefore,
+        outstandingBalanceBefore,
+        amountAppliedToArrears: arrearsSettled,
+        amountAppliedToCurrentFees: currentFeesSettled,
+        totalCreditUtilized: totalApplied,
+        remainingOutstanding,
+        outstandingBalanceAfter,
+        remainingCredit: totalRemainingCredit,
+        invoiceAllocations: applicationsCreated.map(a => {
+          const inv = invoices.find(i => i.id === a.invoiceId);
+          return {
+            invoiceId: a.invoiceId,
+            invoiceNumber: inv?.invoiceNumber || a.invoiceId,
+            amountApplied: a.amountApplied,
+            remainingBalance: a.remainingFeeBalance,
+            category: a.notes?.includes('Arrears: YES') ? 'ARREARS' : 'CURRENT_FEES'
+          };
+        }),
+        isSystemGenerated: false,
+        triggerSource: 'ADMIN_INITIATED',
+        initiatedByAdminName: adminName,
+        initiatedByAdminId: requestingUser.userId,
+        mandatoryReason: dto.reason.trim(),
+        statement: "THIS DOCUMENT CONFIRMS THE UTILIZATION OF PREVIOUSLY RECEIVED FEE CREDIT. IT IS NOT A NEW CASH, BANK OR MOBILE MONEY PAYMENT.",
+        schoolName: 'Grace Seeds School',
+        schoolLogoUrl: '/logo.png',
+        schoolPhone: '0745436312',
+        schoolEmail: 'schoolgraceseeds@gmail.com',
+        schoolAddress: 'KEMRI Street, Kisian, Kisumu, Kenya'
+      };
+
+      for (const app of applicationsCreated) {
+        (app as any)._props.receiptPayload = receiptPayload;
+        await this.feeRepository.saveCreditApplication(app);
+      }
+
+      this.reconciliationFailures.delete(student.id);
+
+      const allocationResult: AutoCreditReconciliationResult = {
+        studentId: student.id,
+        creditApplied: totalApplied,
+        remainingCredit: totalRemainingCredit,
+        remainingOutstanding,
+        arrearsSettled,
+        currentFeesSettled,
+        applications: applicationsCreated.map(a => a.toJSON()),
+        triggerSource: 'ADMIN_INITIATED',
+        timestamp: new Date().toISOString(),
+        receiptNumber,
+        receipt: receiptPayload
+      };
+
+      return {
+        success: true,
+        message: `Successfully applied KES ${totalApplied.toLocaleString()} fee credit for ${student.fullName}. Receipt #${receiptNumber} generated.`,
+        allocation: allocationResult,
+        receipt: receiptPayload
+      };
+    };
+
+    if (this.feeRepository.withLock) {
+      return await this.feeRepository.withLock(lockKey, executeManualUtilization);
+    }
+    return await executeManualUtilization();
+  }
+
+  // 7c-11. Retrieve Fee Credit Utilization Receipt by Receipt Number
+  public async getCreditUtilizationReceipt(receiptNumber: string, requestingUser?: UserContext) {
+    if (!receiptNumber) throw new ValidationError('Receipt number is required.');
+    const apps = await this.feeRepository.findCreditApplications({ receiptNumber });
+    if (!apps || apps.length === 0) {
+      throw new NotFoundError('Fee Credit Utilization Receipt', receiptNumber);
+    }
+
+    const firstApp = apps[0];
+    const receiptPayload = firstApp.receiptPayload;
+    if (!receiptPayload) {
+      throw new NotFoundError('Receipt payload for', receiptNumber);
+    }
+
+    // Role-based authorization & parent child-scoping check
+    if (requestingUser) {
+      const isParent = requestingUser.role === UserRole.PARENT || requestingUser.role === UserRole.GUARDIAN;
+      if (isParent) {
+        const linkedStudentIds = await this.getLinkedStudentIdsForUser(requestingUser.userId);
+        if (!linkedStudentIds.includes(firstApp.studentId)) {
+          throw new ForbiddenError("Access denied: You are not authorized to view this learner's fee credit receipt.");
+        }
+      }
+    }
+
+    return {
+      receipt: receiptPayload,
+      html: this.generateCreditUtilizationReceiptHtml(receiptPayload)
+    };
+  }
+
+  // 7c-12. Retrieve All Fee Credit Utilization Receipts for a Learner
+  public async getStudentCreditUtilizationReceipts(studentId: string, requestingUser?: UserContext) {
+    if (!studentId) throw new ValidationError('Student ID is required.');
+
+    // Role-based authorization
+    if (requestingUser) {
+      const isParent = requestingUser.role === UserRole.PARENT || requestingUser.role === UserRole.GUARDIAN;
+      if (isParent) {
+        const linkedStudentIds = await this.getLinkedStudentIdsForUser(requestingUser.userId);
+        if (!linkedStudentIds.includes(studentId)) {
+          throw new ForbiddenError("Access denied: You are not authorized to view this learner's fee credit receipts.");
+        }
+      }
+    }
+
+    const apps = await this.feeRepository.findCreditApplications({ studentId });
+    const receiptsMap = new Map<string, FeeCreditUtilizationReceiptPayload>();
+    for (const app of apps) {
+      if (app.receiptNumber && app.receiptPayload) {
+        if (!receiptsMap.has(app.receiptNumber)) {
+          receiptsMap.set(app.receiptNumber, app.receiptPayload);
+        }
+      }
+    }
+
+    return Array.from(receiptsMap.values());
+  }
+
+  // 7c-13. Auditable Reversal of Fee Credit Utilization Transaction
+  public async reverseCreditUtilization(
+    receiptNumber: string,
+    reason: string,
+    requestingUser?: UserContext
+  ): Promise<{
+    success: boolean;
+    message: string;
+    reversal: FeeCreditUtilizationReversalPayload;
+    originalReceipt: FeeCreditUtilizationReceiptPayload;
+  }> {
+    if (requestingUser && !isReversalApprovalAuthorizedRole(requestingUser.role)) {
+      throw new ForbiddenError(
+        'Access denied: Bursars and Accountants cannot directly execute credit reversals. You must submit a reversal request for Administrator approval.'
+      );
+    }
+
+    if (!reason || reason.trim().length < 3) {
+      throw new ValidationError('A meaningful reason for transaction reversal is required (minimum 3 characters).');
+    }
+
+    if (!receiptNumber) {
+      throw new ValidationError('Receipt number is required for credit reversal.');
+    }
+
+    const apps = await this.feeRepository.findCreditApplications({ receiptNumber });
+    if (!apps || apps.length === 0) {
+      throw new NotFoundError('Fee Credit Utilization Receipt', receiptNumber);
+    }
+
+    const firstApp = apps[0];
+    if (firstApp.status === 'REVERSED' || firstApp.receiptPayload?.status === 'REVERSED') {
+      throw new ConflictError(`Credit utilization receipt ${receiptNumber} has already been reversed.`);
+    }
+
+    const reversalReference = `FCUR-REV-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`;
+    let adminName = requestingUser?.firstName ? `${requestingUser.firstName} ${requestingUser.lastName || ''}`.trim() : 'Finance Administrator';
+    if (requestingUser?.userId && this.userRepository) {
+      try {
+        const u = await this.userRepository.findById(requestingUser.userId);
+        if (u) {
+          adminName = `${u.firstName} ${u.lastName}`.trim() || u.email || 'Finance Administrator';
+        }
+      } catch {}
+    }
+
+    let totalReversed = 0;
+    for (const app of apps) {
+      // 1. Roll back the credit balance (refund used amount)
+      let credit: StudentFeeCredit | null = null;
+      if (this.feeRepository.findCreditById) {
+        credit = await this.feeRepository.findCreditById(app.creditId);
+      }
+      if (!credit) {
+        const credits = await this.feeRepository.findCredits({ studentId: app.studentId });
+        credit = credits.find(c => c.id === app.creditId) || null;
+      }
+      if (credit) {
+        credit.refundCredit(app.amountApplied);
+        await this.feeRepository.updateCredit(credit);
+      }
+
+      // 2. Roll back the invoice applied amount
+      const invoice = await this.feeRepository.findInvoiceById(app.invoiceId);
+      if (invoice) {
+        invoice.reversePayment(app.amountApplied);
+        await this.feeRepository.updateInvoice(invoice);
+      }
+
+      // 3. Mark the application record as REVERSED
+      app.reverse(reason.trim(), adminName, reversalReference);
+      await this.feeRepository.saveCreditApplication(app);
+
+      totalReversed = Math.round((totalReversed + app.amountApplied) * 100) / 100;
+    }
+
+    const origReceipt = firstApp.receiptPayload!;
+    origReceipt.status = 'REVERSED';
+    origReceipt.reversalReference = reversalReference;
+    origReceipt.reversalDate = new Date().toISOString();
+    origReceipt.reversalReason = reason.trim();
+    origReceipt.reversedByAdminName = adminName;
+
+    const reversalPayload: FeeCreditUtilizationReversalPayload = {
+      reversalNumber: reversalReference,
+      originalReceiptNumber: receiptNumber,
+      transactionReference: firstApp.applicationReference,
+      timestamp: new Date().toISOString(),
+      formattedDate: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+      status: 'REVERSED',
+      studentId: firstApp.studentId,
+      studentName: origReceipt.studentName,
+      admissionNumber: origReceipt.admissionNumber,
+      gradeLevel: origReceipt.gradeLevel,
+      streamName: origReceipt.streamName,
+      amountReversed: totalReversed,
+      creditRestored: totalReversed,
+      reason: reason.trim(),
+      reversedByAdminId: requestingUser?.userId || 'ADMIN',
+      reversedByAdminName: adminName,
+      statement: "THIS DOCUMENT CONFIRMS THE REVERSAL OF A PREVIOUS FEE CREDIT UTILIZATION TRANSACTION. THE CREDITED AMOUNT HAS BEEN RESTORED TO THE LEARNER'S AVAILABLE CREDIT AND RE-ADDED TO OUTSTANDING OBLIGATIONS.",
+      schoolName: origReceipt.schoolName,
+      schoolLogoUrl: origReceipt.schoolLogoUrl,
+      schoolPhone: origReceipt.schoolPhone,
+      schoolEmail: origReceipt.schoolEmail,
+      schoolAddress: origReceipt.schoolAddress,
+      originalReceipt: origReceipt
+    };
+
+    return {
+      success: true,
+      message: `Fee credit utilization receipt ${receiptNumber} was successfully reversed. Reversal document #${reversalReference} generated.`,
+      reversal: reversalPayload,
+      originalReceipt: origReceipt
+    };
+  }
+
+  // 7c-14. Generate or Retry Fee Credit Utilization PDF (Idempotent & Safe)
+  public async generateOrRetryCreditUtilizationPdf(
+    receiptNumber: string,
+    requestingUser?: UserContext
+  ): Promise<{
+    success: boolean;
+    receipt: FeeCreditUtilizationReceiptPayload;
+    html: string;
+    retried: boolean;
+  }> {
+    // Strictly idempotent - retrieves the existing committed receipt and renders the document without repeating allocation
+    const { receipt, html } = await this.getCreditUtilizationReceipt(receiptNumber, requestingUser);
+    return {
+      success: true,
+      receipt,
+      html,
+      retried: true
+    };
+  }
+
+  // 7c-15. Dedicated Receipt History Query with Multi-Filter Support
+  public async getCreditUtilizationReceipts(
+    filters?: {
+      search?: string;
+      receiptNumber?: string;
+      studentId?: string;
+      academicYear?: string;
+      academicTerm?: string;
+      transactionType?: string;
+      status?: string;
+      startDate?: string;
+      endDate?: string;
+      schoolId?: string;
+    },
+    requestingUser?: UserContext
+  ): Promise<FeeCreditUtilizationReceiptPayload[]> {
+    // Role isolation: Parents only see their linked children
+    let allowedStudentIds: string[] | undefined = undefined;
+    if (requestingUser) {
+      const isParent = requestingUser.role === UserRole.PARENT || requestingUser.role === UserRole.GUARDIAN;
+      if (isParent) {
+        allowedStudentIds = await this.getLinkedStudentIdsForUser(requestingUser.userId);
+        if (filters?.studentId && !allowedStudentIds.includes(filters.studentId)) {
+          throw new ForbiddenError("Access denied: You are not authorized to view this learner's fee credit receipts.");
+        }
+      } else if (!isBillingAuthorizedRole(requestingUser.role)) {
+        throw new ForbiddenError('Access denied: You are not authorized to view fee credit utilization receipts.');
+      }
+    }
+
+    const repoFilters: any = {};
+    if (filters?.receiptNumber) repoFilters.receiptNumber = filters.receiptNumber;
+    if (filters?.studentId) repoFilters.studentId = filters.studentId;
+    if (allowedStudentIds && !filters?.studentId) repoFilters.studentIds = allowedStudentIds;
+
+    const apps = await this.feeRepository.findCreditApplications(repoFilters);
+    const receiptsMap = new Map<string, FeeCreditUtilizationReceiptPayload>();
+
+    for (const app of apps) {
+      if (app.receiptNumber && app.receiptPayload) {
+        if (!receiptsMap.has(app.receiptNumber)) {
+          receiptsMap.set(app.receiptNumber, app.receiptPayload);
+        }
+      }
+    }
+
+    let receipts = Array.from(receiptsMap.values());
+
+    if (filters?.search) {
+      const q = filters.search.toLowerCase();
+      receipts = receipts.filter(r =>
+        r.receiptNumber.toLowerCase().includes(q) ||
+        r.studentName.toLowerCase().includes(q) ||
+        r.admissionNumber.toLowerCase().includes(q) ||
+        r.transactionReference.toLowerCase().includes(q)
+      );
+    }
+    if (filters?.academicYear) {
+      receipts = receipts.filter(r => r.academicYear === filters.academicYear);
+    }
+    if (filters?.academicTerm) {
+      receipts = receipts.filter(r => r.academicTerm === filters.academicTerm);
+    }
+    if (filters?.transactionType && filters.transactionType !== 'ALL') {
+      receipts = receipts.filter(r => r.transactionType === filters.transactionType || (r as any).transactionMode === filters.transactionType);
+    }
+    if (filters?.status && filters.status !== 'ALL') {
+      receipts = receipts.filter(r => r.status === filters.status);
+    }
+    if (filters?.startDate) {
+      const start = new Date(filters.startDate).getTime();
+      receipts = receipts.filter(r => new Date(r.timestamp).getTime() >= start);
+    }
+    if (filters?.endDate) {
+      const end = new Date(filters.endDate).getTime();
+      receipts = receipts.filter(r => new Date(r.timestamp).getTime() <= end);
+    }
+
+    return receipts.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }
+
+  // 7c-16. Admin-Approved Transaction Reversal Workflow
+
+  // 1. Bursar: Submit Reversal Request (Zero balance impact while pending)
+  public async requestTransactionReversal(
+    dto: {
+      transactionId?: string;
+      transactionReference?: string;
+      transactionType?: ReversibleTransactionType | 'PAYMENT' | 'CREDIT_UTILIZATION' | 'FEE_ALLOCATION' | 'OTHER';
+      studentId?: string;
+      reason: string;
+      explanation?: string;
+      supportingAttachmentUrl?: string;
+    },
+    requestingUser?: UserContext
+  ): Promise<{
+    success: boolean;
+    message: string;
+    request: Record<string, any>;
+    preview: FinancialImpactPreview;
+  }> {
+    if (requestingUser && !isBillingAuthorizedRole(requestingUser.role)) {
+      throw new ForbiddenError('Access denied: You are not authorized to request transaction reversals.');
+    }
+
+    if (!dto.reason || dto.reason.trim().length < 3) {
+      throw new ValidationError('A mandatory reason for transaction reversal is required (minimum 3 characters).');
+    }
+
+    // Resolve transaction: check payment vs credit utilization
+    let payment: Payment | null = null;
+    let creditApp: FeeCreditApplication | null = null;
+
+    if (dto.transactionId) {
+      payment = await this.feeRepository.findPaymentById(dto.transactionId);
+      if (!payment && this.feeRepository.findCreditApplicationById) {
+        creditApp = await this.feeRepository.findCreditApplicationById(dto.transactionId);
+      }
+    }
+
+    if (!payment && !creditApp && dto.transactionReference) {
+      const ref = dto.transactionReference.trim();
+      if (ref.startsWith('FCUR-') || dto.transactionType === 'CREDIT_UTILIZATION') {
+        if (this.feeRepository.findCreditApplicationByReceiptNumber) {
+          creditApp = await this.feeRepository.findCreditApplicationByReceiptNumber(ref);
+        }
+        if (!creditApp) {
+          const apps = await this.feeRepository.findCreditApplications({ receiptNumber: ref });
+          creditApp = apps[0] || null;
+        }
+      }
+      if (!creditApp) {
+        payment = await this.feeRepository.findPaymentByReference(ref);
+        if (!payment) {
+          payment = await this.feeRepository.findPaymentByReceiptNumber(ref);
+        }
+      }
+      if (!creditApp && !payment) {
+        const apps = await this.feeRepository.findCreditApplications({ receiptNumber: ref });
+        creditApp = apps[0] || null;
+      }
+    }
+
+    if (!payment && !creditApp) {
+      throw new NotFoundError(
+        'Financial Transaction',
+        dto.transactionReference || dto.transactionId || 'Unknown transaction'
+      );
+    }
+
+    let transactionType: ReversibleTransactionType = ReversibleTransactionType.OTHER;
+    let transactionId = '';
+    let transactionReference = '';
+    let originalReceiptNumber = '';
+    let studentId = '';
+    let originalAmount = 0;
+    let transactionDate = new Date().toISOString().split('T')[0];
+
+    if (creditApp) {
+      transactionType = ReversibleTransactionType.CREDIT_UTILIZATION;
+      transactionId = creditApp.id;
+      transactionReference = creditApp.receiptNumber || creditApp.applicationReference || creditApp.id;
+      originalReceiptNumber = creditApp.receiptNumber || '';
+      studentId = creditApp.studentId;
+      originalAmount = creditApp.amountApplied;
+      transactionDate = creditApp.createdAt ? new Date(creditApp.createdAt).toISOString().split('T')[0] : transactionDate;
+
+      if (creditApp.status === 'REVERSED' || creditApp.receiptPayload?.status === 'REVERSED') {
+        throw new ConflictError(
+          `Credit utilization receipt ${originalReceiptNumber || transactionReference} has already been reversed.`
+        );
+      }
+    } else if (payment) {
+      transactionType = ReversibleTransactionType.PAYMENT;
+      transactionId = payment.id;
+      transactionReference = payment.transactionReference || payment.receiptNumber || payment.id;
+      originalReceiptNumber = payment.receiptNumber || '';
+      studentId = payment.studentId;
+      originalAmount = payment.amount;
+      transactionDate = payment.paymentDate || transactionDate;
+
+      if (payment.status === PaymentStatus.REVERSED) {
+        throw new ConflictError(
+          `Payment transaction ${originalReceiptNumber || transactionReference} has already been reversed.`
+        );
+      }
+    }
+
+    // Prevent duplicate pending requests for the same transaction
+    const activeReq = await this.feeRepository.findActiveReversalRequestForTransaction(transactionId);
+    if (activeReq) {
+      throw new ConflictError(
+        `A reversal request (${activeReq.requestReference}) for this transaction is already pending Administrator approval.`
+      );
+    }
+
+    const student = await this.studentRepository.findById(studentId);
+    if (!student) {
+      throw new NotFoundError('Student', studentId);
+    }
+
+    // Resolve requesting Bursar name
+    let requestedByName = 'Bursar';
+    if (requestingUser) {
+      if (requestingUser.firstName) {
+        requestedByName = `${requestingUser.firstName} ${requestingUser.lastName || ''}`.trim();
+      } else if (this.userRepository) {
+        try {
+          const u = await this.userRepository.findById(requestingUser.userId);
+          if (u) requestedByName = `${u.firstName} ${u.lastName}`.trim() || u.email || 'Bursar';
+        } catch {}
+      }
+    }
+
+    // Compute financial impact preview
+    const preview = await this.computeFinancialImpactPreview(
+      transactionType,
+      transactionId,
+      transactionReference,
+      originalReceiptNumber,
+      originalAmount,
+      transactionDate,
+      student
+    );
+
+    const schoolId = student.schoolId || requestingUser?.schoolId || 'school-001';
+    const requestReference = `REV-REQ-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`;
+
+    const reversalRequest = TransactionReversalRequest.create(
+      {
+        schoolId,
+        requestReference,
+        transactionType,
+        transactionId,
+        transactionReference,
+        originalReceiptNumber: originalReceiptNumber || undefined,
+        studentId: student.id,
+        studentName: student.fullName,
+        admissionNumber: student.admissionNumber,
+        originalAmount,
+        requestedReversalAmount: originalAmount,
+        transactionDate,
+        reason: dto.reason.trim(),
+        explanation: dto.explanation?.trim() || undefined,
+        supportingAttachmentUrl: dto.supportingAttachmentUrl || undefined,
+        status: TransactionReversalStatus.PENDING_ADMIN_APPROVAL,
+        requestedByUserId: requestingUser?.userId || 'usr-bursar',
+        requestedByName,
+        requestedByRole: requestingUser?.role || UserRole.BURSAR,
+        financialImpactPreview: preview
+      },
+      IdGenerator.generate()
+    );
+
+    await this.feeRepository.saveReversalRequest(reversalRequest);
+
+    // Notify administrators of pending reversal request
+    try {
+      if (this.notificationService) {
+        await this.notificationService.sendEmail(
+          'admin@graceseeds.sc.ke',
+          `[ACTION REQUIRED] New Transaction Reversal Request ${requestReference}`,
+          `Bursar ${requestedByName} has submitted a reversal request for transaction ${transactionReference} (KES ${originalAmount.toLocaleString()} for ${student.fullName}). Please review and approve or reject from the Transaction Reversal Requests dashboard.`
+        );
+      }
+    } catch {}
+
+    return {
+      success: true,
+      message: `Transaction reversal request ${requestReference} submitted successfully and is pending Administrator approval. Financial balances remain unchanged.`,
+      request: reversalRequest.toJSON(),
+      preview
+    };
+  }
+
+  // Helper: Compute Financial Impact Preview for Administrator Review
+  private async computeFinancialImpactPreview(
+    transactionType: ReversibleTransactionType,
+    transactionId: string,
+    transactionReference: string,
+    originalReceiptNumber: string | undefined,
+    originalAmount: number,
+    transactionDate: string,
+    student: Student
+  ): Promise<FinancialImpactPreview> {
+    const studentId = student.id;
+    const authoritative = await this.calculateAuthoritativeFeePosition(studentId);
+    const dependents: DependentFinancialTransaction[] = [];
+    let hasBlockingDependencies = false;
+    let blockingReason: string | undefined = undefined;
+
+    let projectedOutstandingBalance = authoritative.outstandingBalance;
+    let projectedCreditBalance = authoritative.netCreditBalance;
+    let projectedArrears = authoritative.priorArrears;
+    let impactSummary = '';
+
+    if (transactionType === ReversibleTransactionType.CREDIT_UTILIZATION) {
+      const apps = await this.feeRepository.findCreditApplications({
+        receiptNumber: originalReceiptNumber || transactionReference
+      });
+      const firstApp = apps[0];
+      const amount = firstApp ? firstApp.amountApplied : originalAmount;
+
+      let invoice: StudentInvoice | null = null;
+      if (firstApp?.invoiceId) {
+        invoice = await this.feeRepository.findInvoiceById(firstApp.invoiceId);
+      }
+
+      dependents.push({
+        type: 'STUDENT_INVOICE',
+        reference: invoice?.invoiceNumber || firstApp?.invoiceId || 'Invoice',
+        description: `Fee invoice ${invoice?.invoiceNumber || ''} settled using credit`,
+        amount,
+        status: invoice?.status || 'PAID',
+        impactOnReversal: `Invoice balance will increase by KES ${amount.toLocaleString()} (re-opening unpaid balance/arrears).`
+      });
+
+      dependents.push({
+        type: 'STUDENT_FEE_CREDIT',
+        reference: firstApp?.originatingPaymentReference || firstApp?.creditId || 'Credit Ledger',
+        description: 'Advance overpayment credit ledger',
+        amount,
+        status: 'USED',
+        impactOnReversal: `Available overpayment credit balance will increase by KES ${amount.toLocaleString()}.`
+      });
+
+      projectedCreditBalance += amount;
+      projectedOutstandingBalance += amount;
+      projectedArrears += amount;
+      impactSummary = `Reversing this credit utilization will restore KES ${amount.toLocaleString()} to available advance credit and re-open KES ${amount.toLocaleString()} of fee obligations on invoice ${invoice?.invoiceNumber || ''}.`;
+    } else if (transactionType === ReversibleTransactionType.PAYMENT) {
+      const payment = await this.feeRepository.findPaymentById(transactionId);
+      const studentCredits = await this.feeRepository.findCredits({ studentId });
+      const linkedCredits = studentCredits.filter(
+        c => (c.originatingPaymentId === transactionId || c.originatingReceiptNumber === (payment?.receiptNumber || originalReceiptNumber)) && c.status !== 'REVERSED'
+      );
+
+      let totalLinkedCredit = 0;
+      let totalUsedCredit = 0;
+
+      for (const crd of linkedCredits) {
+        totalLinkedCredit += crd.amount;
+        totalUsedCredit += crd.amountUsed;
+
+        if (crd.amountUsed > 0) {
+          hasBlockingDependencies = true;
+          blockingReason = `Cannot reverse payment: An overpayment credit of KES ${crd.amount.toLocaleString()} was generated from this payment, and KES ${crd.amountUsed.toLocaleString()} has already been applied to student invoices. Downstream credit utilizations must be reversed first.`;
+          dependents.push({
+            type: 'STUDENT_FEE_CREDIT_UTILIZATION',
+            reference: crd.originatingReceiptNumber || crd.id,
+            description: `Credit of KES ${crd.amount.toLocaleString()} generated by this payment has been partially or fully utilized (KES ${crd.amountUsed.toLocaleString()} applied)`,
+            amount: crd.amountUsed,
+            status: crd.status,
+            impactOnReversal: 'Blocking dependency: Credit was already used to settle other invoices.'
+          });
+        } else {
+          dependents.push({
+            type: 'STUDENT_FEE_CREDIT',
+            reference: crd.originatingReceiptNumber || crd.id,
+            description: `Unused overpayment credit generated by this payment`,
+            amount: crd.amount,
+            status: crd.status,
+            impactOnReversal: `Unused credit of KES ${crd.amount.toLocaleString()} will be cancelled.`
+          });
+        }
+      }
+
+      const invoiceAmountReversed = Math.max(0, originalAmount - totalLinkedCredit);
+      projectedOutstandingBalance += invoiceAmountReversed;
+      projectedCreditBalance = Math.max(0, projectedCreditBalance - totalLinkedCredit);
+
+      if (hasBlockingDependencies) {
+        impactSummary = `Reversal BLOCKED due to downstream credit utilization of KES ${totalUsedCredit.toLocaleString()}. Resolve dependent credit applications first.`;
+      } else {
+        impactSummary = `Reversing this payment of KES ${originalAmount.toLocaleString()} will cancel unused credit of KES ${totalLinkedCredit.toLocaleString()} and restore KES ${invoiceAmountReversed.toLocaleString()} in unpaid fee obligations.`;
+      }
+    } else if (transactionType === ReversibleTransactionType.FEE_ALLOCATION || (transactionType as any) === 'FEE_ALLOCATION') {
+      projectedOutstandingBalance += originalAmount;
+      impactSummary = `Reversing this fee allocation of KES ${originalAmount.toLocaleString()} will re-open unpaid obligations on the allocated invoice.`;
+    } else {
+      impactSummary = `Reversing this transaction of KES ${originalAmount.toLocaleString()} will adjust student balances accordingly.`;
+    }
+
+    return {
+      studentId: student.id,
+      studentName: student.fullName,
+      admissionNumber: student.admissionNumber,
+      gradeLevel: student.gradeLevel,
+      transactionType,
+      transactionReference,
+      originalReceiptNumber,
+      originalAmount,
+      transactionDate,
+      currentOutstandingBalance: authoritative.outstandingBalance,
+      currentArrears: authoritative.priorArrears,
+      currentFeesThisTerm: authoritative.billedFees,
+      currentAvailableCredit: authoritative.netCreditBalance,
+      currentCreditUtilized: authoritative.approvedApplicableCredit,
+      dependentTransactions: dependents,
+      hasBlockingDependencies,
+      blockingReason,
+      projectedOutstandingBalance,
+      projectedCreditBalance,
+      projectedArrears,
+      impactSummary
+    };
+  }
+
+  // 2. Administrator: Review Financial Impact Preview
+  public async getTransactionReversalPreview(
+    requestIdOrTxRef: string,
+    requestingUser?: UserContext
+  ): Promise<FinancialImpactPreview> {
+    if (requestingUser && !isBillingAuthorizedRole(requestingUser.role)) {
+      throw new ForbiddenError('Access denied: You are not authorized to view transaction reversal previews.');
+    }
+
+    // Try finding by request ID or reference first
+    let req = await this.feeRepository.findReversalRequestById(requestIdOrTxRef);
+    if (!req) {
+      req = await this.feeRepository.findReversalRequestByReference(requestIdOrTxRef);
+    }
+
+    if (req) {
+      const student = await this.studentRepository.findById(req.studentId);
+      if (!student) throw new NotFoundError('Student', req.studentId);
+
+      return await this.computeFinancialImpactPreview(
+        req.transactionType,
+        req.transactionId,
+        req.transactionReference,
+        req.originalReceiptNumber,
+        req.originalAmount,
+        req.transactionDate,
+        student
+      );
+    }
+
+    // Try resolving directly by transaction reference/id
+    const payment = await this.feeRepository.findPaymentByReference(requestIdOrTxRef) ||
+      await this.feeRepository.findPaymentByReceiptNumber(requestIdOrTxRef) ||
+      await this.feeRepository.findPaymentById(requestIdOrTxRef);
+
+    if (payment) {
+      const student = await this.studentRepository.findById(payment.studentId);
+      if (!student) throw new NotFoundError('Student', payment.studentId);
+
+      return await this.computeFinancialImpactPreview(
+        ReversibleTransactionType.PAYMENT,
+        payment.id,
+        payment.transactionReference,
+        payment.receiptNumber,
+        payment.amount,
+        payment.paymentDate,
+        student
+      );
+    }
+
+    const apps = await this.feeRepository.findCreditApplications({ receiptNumber: requestIdOrTxRef });
+    if (apps.length > 0) {
+      const app = apps[0];
+      const student = await this.studentRepository.findById(app.studentId);
+      if (!student) throw new NotFoundError('Student', app.studentId);
+
+      return await this.computeFinancialImpactPreview(
+        ReversibleTransactionType.CREDIT_UTILIZATION,
+        app.id,
+        app.receiptNumber || app.applicationReference,
+        app.receiptNumber,
+        app.amountApplied,
+        app.createdAt ? new Date(app.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+        student
+      );
+    }
+
+    throw new NotFoundError('Transaction or Reversal Request', requestIdOrTxRef);
+  }
+
+  // 3. Administrator Dashboard: List Reversal Requests with Multi-Filter Support
+  public async getTransactionReversalRequests(
+    filters: ReversalRequestFilterCriteria,
+    requestingUser?: UserContext
+  ): Promise<TransactionReversalRequest[]> {
+    if (requestingUser) {
+      const isParent = requestingUser.role === UserRole.PARENT || requestingUser.role === UserRole.GUARDIAN;
+      if (isParent) {
+        const linkedIds = await this.getLinkedStudentIdsForUser(requestingUser.userId);
+        if (filters.studentId && !linkedIds.includes(filters.studentId)) {
+          throw new ForbiddenError("Access denied: You are not authorized to view another learner's reversal requests.");
+        }
+        filters.studentIds = linkedIds;
+      } else if (!isBillingAuthorizedRole(requestingUser.role)) {
+        throw new ForbiddenError('Access denied: You are not authorized to view transaction reversal requests.');
+      }
+    }
+
+    return await this.feeRepository.findReversalRequests(filters);
+  }
+
+  // 4. Administrator / Bursar: Get Reversal Request by ID
+  public async getTransactionReversalById(
+    requestId: string,
+    requestingUser?: UserContext
+  ): Promise<TransactionReversalRequest> {
+    const req = await this.feeRepository.findReversalRequestById(requestId) ||
+      await this.feeRepository.findReversalRequestByReference(requestId);
+
+    if (!req) {
+      throw new NotFoundError('Transaction Reversal Request', requestId);
+    }
+
+    if (requestingUser) {
+      const isParent = requestingUser.role === UserRole.PARENT || requestingUser.role === UserRole.GUARDIAN;
+      if (isParent) {
+        const linkedIds = await this.getLinkedStudentIdsForUser(requestingUser.userId);
+        if (!linkedIds.includes(req.studentId)) {
+          throw new ForbiddenError("Access denied: You are not authorized to view another learner's reversal request.");
+        }
+      } else if (!isBillingAuthorizedRole(requestingUser.role)) {
+        throw new ForbiddenError('Access denied: You are not authorized to view transaction reversal requests.');
+      }
+    }
+
+    return req;
+  }
+
+  // 5. Administrator: Reject Reversal Request (Requires Mandatory Reason)
+  public async rejectTransactionReversalRequest(
+    requestId: string,
+    rejectionReason: string,
+    requestingUser?: UserContext
+  ): Promise<{
+    success: boolean;
+    message: string;
+    request: Record<string, any>;
+  }> {
+    if (!requestingUser || !isReversalApprovalAuthorizedRole(requestingUser.role)) {
+      throw new ForbiddenError(
+        'Access denied: Only authorized Administrators can reject transaction reversal requests.'
+      );
+    }
+
+    if (!rejectionReason || rejectionReason.trim().length < 3) {
+      throw new ValidationError('A mandatory rejection reason is required (minimum 3 characters).');
+    }
+
+    const req = await this.feeRepository.findReversalRequestById(requestId) ||
+      await this.feeRepository.findReversalRequestByReference(requestId);
+
+    if (!req) {
+      throw new NotFoundError('Transaction Reversal Request', requestId);
+    }
+
+    if (req.status !== TransactionReversalStatus.PENDING_ADMIN_APPROVAL) {
+      throw new ConflictError(
+        `Cannot reject request ${req.requestReference}: Current status is ${req.status} (only pending requests can be rejected).`
+      );
+    }
+
+    let adminName = 'Administrator';
+    if (requestingUser.firstName) {
+      adminName = `${requestingUser.firstName} ${requestingUser.lastName || ''}`.trim();
+    } else if (this.userRepository) {
+      try {
+        const u = await this.userRepository.findById(requestingUser.userId);
+        if (u) adminName = `${u.firstName} ${u.lastName}`.trim() || u.email || 'Administrator';
+      } catch {}
+    }
+
+    req.reject(requestingUser.userId, adminName, rejectionReason.trim());
+    await this.feeRepository.saveReversalRequest(req);
+
+    // Notify requesting Bursar
+    try {
+      if (this.notificationService && req.requestedByUserId) {
+        const bursarUser = await this.userRepository.findById(req.requestedByUserId);
+        if (bursarUser?.email) {
+          await this.notificationService.sendEmail(
+            bursarUser.email,
+            `Transaction Reversal Request ${req.requestReference} - Rejected`,
+            `Your transaction reversal request for ${req.transactionReference} was rejected by ${adminName}.\nReason: ${rejectionReason.trim()}`
+          );
+        }
+      }
+    } catch {}
+
+    return {
+      success: true,
+      message: `Reversal request ${req.requestReference} was rejected. Original transaction remains unchanged.`,
+      request: req.toJSON()
+    };
+  }
+
+  // 6. Administrator: Approve and Execute Transaction Reversal
+  public async approveAndExecuteTransactionReversal(
+    requestId: string,
+    approvalComment?: string,
+    requestingUser?: UserContext
+  ): Promise<{
+    success: boolean;
+    message: string;
+    reversalReceiptNumber: string;
+    reversalReceipt: ReversalReceiptPayload;
+    request: Record<string, any>;
+  }> {
+    if (!requestingUser || !isReversalApprovalAuthorizedRole(requestingUser.role)) {
+      throw new ForbiddenError(
+        'Access denied: Only authorized Administrators can approve and execute transaction reversals. Bursars may only submit reversal requests.'
+      );
+    }
+
+    const req = await this.feeRepository.findReversalRequestById(requestId) ||
+      await this.feeRepository.findReversalRequestByReference(requestId);
+
+    if (!req) {
+      throw new NotFoundError('Transaction Reversal Request', requestId);
+    }
+
+    if (req.status === TransactionReversalStatus.COMPLETED) {
+      throw new ConflictError(
+        `Transaction reversal request ${req.requestReference} has already been completed (Receipt #${req.reversalReceiptNumber}). Duplicate execution is prevented.`
+      );
+    }
+
+    if (
+      req.status !== TransactionReversalStatus.PENDING_ADMIN_APPROVAL &&
+      req.status !== TransactionReversalStatus.FAILED &&
+      req.status !== TransactionReversalStatus.PROCESSING
+    ) {
+      throw new ConflictError(
+        `Cannot execute reversal request ${req.requestReference}: Current status is ${req.status}. Only pending or failed requests can be approved/executed.`
+      );
+    }
+
+    let adminName = 'Administrator';
+    if (requestingUser.firstName) {
+      adminName = `${requestingUser.firstName} ${requestingUser.lastName || ''}`.trim();
+    } else if (this.userRepository) {
+      try {
+        const u = await this.userRepository.findById(requestingUser.userId);
+        if (u) adminName = `${u.firstName} ${u.lastName}`.trim() || u.email || 'Administrator';
+      } catch {}
+    }
+
+    const lockKey = `reversal_${req.transactionId}`;
+
+    const executeReversal = async () => {
+      // Re-fetch request inside lock to prevent race conditions
+      const currentReq = await this.feeRepository.findReversalRequestById(req.id) || req;
+      if (currentReq.status === TransactionReversalStatus.COMPLETED) {
+        throw new ConflictError(
+          `Transaction reversal request ${currentReq.requestReference} has already been completed.`
+        );
+      }
+
+      currentReq.markProcessing(requestingUser.userId, adminName);
+      await this.feeRepository.saveReversalRequest(currentReq);
+
+      try {
+        let reversalReceiptNumber = '';
+        let relatedAllocations: Array<{ invoiceId: string; invoiceNumber: string; amountReversed: number; resultingBalance: number }> = [];
+
+        if (currentReq.transactionType === ReversibleTransactionType.CREDIT_UTILIZATION) {
+          reversalReceiptNumber = `FCUR-REV-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`;
+
+          const apps = await this.feeRepository.findCreditApplications({
+            receiptNumber: currentReq.originalReceiptNumber || currentReq.transactionReference
+          });
+
+          if (!apps || apps.length === 0) {
+            throw new NotFoundError('Fee Credit Utilization Record', currentReq.transactionReference);
+          }
+
+          for (const app of apps) {
+            if (app.status === 'REVERSED') {
+              throw new ConflictError(`Credit utilization receipt ${app.receiptNumber} has already been reversed.`);
+            }
+
+            // 1. Roll back credit balance (refund used amount)
+            let credit: StudentFeeCredit | null = null;
+            if (this.feeRepository.findCreditById) {
+              credit = await this.feeRepository.findCreditById(app.creditId);
+            }
+            if (!credit) {
+              const credits = await this.feeRepository.findCredits({ studentId: app.studentId });
+              credit = credits.find(c => c.id === app.creditId) || null;
+            }
+            if (credit) {
+              credit.refundCredit(app.amountApplied);
+              await this.feeRepository.updateCredit(credit);
+            }
+
+            // 2. Roll back invoice applied amount
+            const invoice = await this.feeRepository.findInvoiceById(app.invoiceId);
+            if (invoice) {
+              invoice.reversePayment(app.amountApplied);
+              await this.feeRepository.updateInvoice(invoice);
+
+              relatedAllocations.push({
+                invoiceId: invoice.id,
+                invoiceNumber: invoice.invoiceNumber,
+                amountReversed: app.amountApplied,
+                resultingBalance: invoice.balance
+              });
+            }
+
+            // 3. Mark application record as REVERSED
+            app.reverse(currentReq.reason, adminName, reversalReceiptNumber);
+            await this.feeRepository.saveCreditApplication(app);
+          }
+        } else if (currentReq.transactionType === ReversibleTransactionType.PAYMENT) {
+          reversalReceiptNumber = `PAY-REV-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`;
+
+          const payment = await this.feeRepository.findPaymentById(currentReq.transactionId);
+          if (!payment) {
+            throw new NotFoundError('Payment Record', currentReq.transactionId);
+          }
+
+          if (payment.status === PaymentStatus.REVERSED) {
+            throw new ConflictError(`Payment receipt ${payment.receiptNumber} has already been reversed.`);
+          }
+
+          // Inspect overpayment credit generated by this payment
+          const studentCredits = await this.feeRepository.findCredits({ studentId: payment.studentId });
+          const linkedCredits = studentCredits.filter(
+            c => (c.originatingPaymentId === payment.id || c.originatingReceiptNumber === payment.receiptNumber) && c.status !== 'REVERSED'
+          );
+
+          let reversedCreditAmount = 0;
+          for (const credit of linkedCredits) {
+            if (credit.amountUsed > 0) {
+              throw new ValidationError(
+                `Cannot execute payment reversal: An overpayment credit of KES ${credit.amount.toLocaleString()} was generated from this payment, and KES ${credit.amountUsed.toLocaleString()} has already been applied across student invoices. Reversal of the dependent credit utilization must be processed first.`
+              );
+            }
+            reversedCreditAmount += credit.amount;
+            credit.reverse();
+            await this.feeRepository.updateCredit(credit);
+          }
+
+          // Roll back payment amount from affected invoices
+          let invoice: StudentInvoice | null = payment.invoiceId ? await this.feeRepository.findInvoiceById(payment.invoiceId) : null;
+          if (payment.allocationBreakdown && payment.allocationBreakdown.length > 0) {
+            for (const alloc of payment.allocationBreakdown) {
+              if (alloc.amount > 0) {
+                const inv = await this.feeRepository.findInvoiceById(alloc.invoiceId);
+                if (inv) {
+                  inv.reversePayment(alloc.amount);
+                  await this.feeRepository.updateInvoice(inv);
+                  if (!invoice) invoice = inv;
+
+                  relatedAllocations.push({
+                    invoiceId: inv.id,
+                    invoiceNumber: inv.invoiceNumber,
+                    amountReversed: alloc.amount,
+                    resultingBalance: inv.balance
+                  });
+                }
+              }
+            }
+          } else {
+            if (!invoice) {
+              const studentInvoices = await this.feeRepository.findInvoices({ studentId: payment.studentId });
+              invoice = studentInvoices[0] || null;
+            }
+            if (invoice) {
+              const amountToReverseFromInvoice = Math.max(0, payment.amount - reversedCreditAmount);
+              if (amountToReverseFromInvoice > 0) {
+                invoice.reversePayment(amountToReverseFromInvoice);
+                await this.feeRepository.updateInvoice(invoice);
+
+                relatedAllocations.push({
+                  invoiceId: invoice.id,
+                  invoiceNumber: invoice.invoiceNumber,
+                  amountReversed: amountToReverseFromInvoice,
+                  resultingBalance: invoice.balance
+                });
+              }
+            }
+          }
+
+          // Mark payment as REVERSED
+          payment.setStatus(PaymentStatus.REVERSED);
+          const existingNotes = payment.notes || '';
+          const revNote = `[REVERSED on ${new Date().toISOString()} by Admin ${adminName} via Request ${currentReq.requestReference} | Reason: ${currentReq.reason}]`;
+          payment.setNotes(existingNotes ? `${existingNotes} | ${revNote}` : revNote);
+          await this.feeRepository.updatePayment(payment);
+        } else {
+          reversalReceiptNumber = `REV-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`;
+        }
+
+        // Recompute authoritative position post-reversal
+        const postPosition = await this.calculateAuthoritativeFeePosition(currentReq.studentId);
+
+        const reversalReceipt: ReversalReceiptPayload = {
+          reversalReceiptNumber,
+          requestReference: currentReq.requestReference,
+          originalTransactionReference: currentReq.transactionReference,
+          originalReceiptNumber: currentReq.originalReceiptNumber,
+          transactionType: currentReq.transactionType,
+          schoolId: currentReq.schoolId,
+          schoolName: 'Grace Seeds School',
+          schoolPhone: '0745436312',
+          schoolEmail: 'schoolgraceseeds@gmail.com',
+          schoolAddress: 'KEMRI Street, Kisian, Kisumu, Kenya',
+          studentId: currentReq.studentId,
+          studentName: currentReq.studentName,
+          admissionNumber: currentReq.admissionNumber,
+          originalAmount: currentReq.originalAmount,
+          amountReversed: currentReq.requestedReversalAmount,
+          requestedByName: currentReq.requestedByName,
+          requestedByRole: currentReq.requestedByRole,
+          requestDate: currentReq.requestedAt.toISOString().split('T')[0],
+          bursarReason: currentReq.reason,
+          additionalExplanation: currentReq.explanation,
+          approvedByName: adminName,
+          approvedByRole: requestingUser.role || UserRole.ADMIN,
+          approvalDate: new Date().toISOString().split('T')[0],
+          approvalComment,
+          executionDate: new Date().toISOString(),
+          status: 'COMPLETED',
+          resultingBalances: {
+            outstandingBalance: postPosition.outstandingBalance,
+            availableCredit: postPosition.netCreditBalance,
+            arrears: postPosition.priorArrears
+          },
+          relatedAllocations,
+          mandatoryNoticeStatement:
+            'THIS DOCUMENT CONFIRMS THE REVERSAL OF A PREVIOUS FINANCIAL TRANSACTION. IT IS NOT A NEW CASH, BANK OR MOBILE MONEY PAYMENT.'
+        };
+
+        currentReq.approve(requestingUser.userId, adminName, approvalComment);
+        currentReq.markCompleted(reversalReceiptNumber, reversalReceipt, requestingUser.userId, adminName);
+        await this.feeRepository.saveReversalRequest(currentReq);
+
+        return {
+          success: true,
+          message: `Transaction reversal ${currentReq.requestReference} approved and executed successfully. Reversal receipt #${reversalReceiptNumber} generated.`,
+          reversalReceiptNumber,
+          reversalReceipt,
+          request: currentReq.toJSON()
+        };
+      } catch (err: any) {
+        currentReq.markFailed(err.message || 'Execution error during transaction reversal', requestingUser.userId, adminName);
+        await this.feeRepository.saveReversalRequest(currentReq);
+        throw err;
+      }
+    };
+
+    if (this.feeRepository.withLock) {
+      return await this.feeRepository.withLock(lockKey, executeReversal);
+    }
+    return await executeReversal();
+  }
+
+  // 7. Administrator: Retry Failed Transaction Reversal
+  public async retryFailedTransactionReversal(
+    requestId: string,
+    requestingUser?: UserContext
+  ): Promise<{
+    success: boolean;
+    message: string;
+    reversalReceiptNumber: string;
+    reversalReceipt: ReversalReceiptPayload;
+    request: Record<string, any>;
+  }> {
+    if (!requestingUser || !isReversalApprovalAuthorizedRole(requestingUser.role)) {
+      throw new ForbiddenError(
+        'Access denied: Only authorized Administrators can retry transaction reversals.'
+      );
+    }
+
+    const req = await this.feeRepository.findReversalRequestById(requestId) ||
+      await this.feeRepository.findReversalRequestByReference(requestId);
+
+    if (!req) {
+      throw new NotFoundError('Transaction Reversal Request', requestId);
+    }
+
+    if (req.status !== TransactionReversalStatus.FAILED) {
+      throw new ConflictError(
+        `Cannot retry request ${req.requestReference}: Current status is ${req.status} (only failed requests can be retried).`
+      );
+    }
+
+    let adminName = 'Administrator';
+    if (requestingUser.firstName) {
+      adminName = `${requestingUser.firstName} ${requestingUser.lastName || ''}`.trim();
+    } else if (this.userRepository) {
+      try {
+        const u = await this.userRepository.findById(requestingUser.userId);
+        if (u) adminName = `${u.firstName} ${u.lastName}`.trim() || u.email || 'Administrator';
+      } catch {}
+    }
+
+    req.retry(requestingUser.userId, adminName);
+    await this.feeRepository.saveReversalRequest(req);
+
+    return await this.approveAndExecuteTransactionReversal(requestId, 'Retried after resolving failure', requestingUser);
+  }
+
+  // 8. Finance / Parent: Retrieve Reversal Receipt Document
+  public async getReversalReceiptDocument(
+    reversalReceiptNumber: string,
+    requestingUser?: UserContext
+  ): Promise<{
+    receipt: ReversalReceiptPayload;
+    request: Record<string, any>;
+  }> {
+    const filters: ReversalRequestFilterCriteria = {};
+    const requests = await this.feeRepository.findReversalRequests(filters);
+    const req = requests.find(r => r.reversalReceiptNumber === reversalReceiptNumber);
+
+    if (!req || !req.reversalReceiptPayload) {
+      throw new NotFoundError('Reversal Receipt Document', reversalReceiptNumber);
+    }
+
+    if (requestingUser) {
+      const isParent = requestingUser.role === UserRole.PARENT || requestingUser.role === UserRole.GUARDIAN;
+      if (isParent) {
+        const linkedIds = await this.getLinkedStudentIdsForUser(requestingUser.userId);
+        if (!linkedIds.includes(req.studentId)) {
+          throw new ForbiddenError("Access denied: You are not authorized to view another learner's reversal receipt.");
+        }
+      }
+    }
+
+    return {
+      receipt: req.reversalReceiptPayload,
+      request: req.toJSON()
     };
   }
 
@@ -5033,17 +7266,24 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
       await this.feeRepository.saveInvoice(resultingInvoice);
     }
 
+    await this.autoReconcileStudentFeeCredits(student.id, {
+      triggerSource: 'FEE_ADJUSTMENT',
+      requestingUser
+    });
+    const refreshed = await this.feeRepository.findInvoiceById(resultingInvoice.id);
+    const invoiceToReturn = refreshed || resultingInvoice;
+
     return {
       success: true,
       message: `Fee arrears of KES ${dto.amount.toLocaleString()} ${mode === 'SET' ? 'set' : 'added'} successfully for ${student.fullName}.`,
       studentId: student.id,
       studentName: student.fullName,
       admissionNumber: student.admissionNumber,
-      invoiceId: resultingInvoice.id,
-      invoiceNumber: resultingInvoice.invoiceNumber,
-      amountBilled: resultingInvoice.amountBilled,
-      newBalance: resultingInvoice.balance,
-      invoice: resultingInvoice.toJSON(),
+      invoiceId: invoiceToReturn.id,
+      invoiceNumber: invoiceToReturn.invoiceNumber,
+      amountBilled: invoiceToReturn.amountBilled,
+      newBalance: invoiceToReturn.balance,
+      invoice: invoiceToReturn.toJSON(),
     };
   }
 
@@ -5375,6 +7615,10 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
         IdGenerator.generate()
       );
       await this.feeRepository.saveCredit(feeCredit);
+      await this.autoReconcileStudentFeeCredits(student.id, {
+        triggerSource: 'NEW_OVERPAYMENT_FORWARDED',
+        schoolId: student.schoolId
+      });
     }
 
     // Update payment record to COMPLETED with official receipt number and allocations

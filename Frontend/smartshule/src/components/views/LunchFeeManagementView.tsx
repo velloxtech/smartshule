@@ -24,55 +24,55 @@ export const EXPENSE_CATEGORIES: {
     value: 'FOOD_CEREALS',
     label: 'Food & Cereals (Rice, Beans, Maize, Flour)',
     icon: 'grain',
-    badgeClass: 'bg-amber-50 text-amber-900 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800'
+    badgeClass: 'bg-primary/10 text-primary border border-primary/20 dark:bg-primary/20 dark:text-rose-100 dark:border-primary/40'
   },
   {
     value: 'FRESH_PRODUCE',
     label: 'Fresh Produce (Vegetables, Tomatoes, Fruits, Potatoes)',
     icon: 'eco',
-    badgeClass: 'bg-emerald-50 text-emerald-900 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800'
+    badgeClass: 'bg-primary/10 text-primary border border-primary/20 dark:bg-primary/20 dark:text-rose-100 dark:border-primary/40'
   },
   {
     value: 'MEAT_DAIRY',
     label: 'Meat, Dairy & Eggs (Beef, Chicken, Eggs, Milk)',
     icon: 'egg',
-    badgeClass: 'bg-rose-50 text-rose-900 border-rose-200 dark:bg-rose-900/30 dark:text-rose-300 dark:border-rose-800'
+    badgeClass: 'bg-primary/10 text-primary border border-primary/20 dark:bg-primary/20 dark:text-rose-100 dark:border-primary/40'
   },
   {
     value: 'COOKING_FUEL',
     label: 'Cooking Fuel (Firewood, Gas LPG, Charcoal)',
     icon: 'local_fire_department',
-    badgeClass: 'bg-orange-50 text-orange-900 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800'
+    badgeClass: 'bg-primary/10 text-primary border border-primary/20 dark:bg-primary/20 dark:text-rose-100 dark:border-primary/40'
   },
   {
     value: 'KITCHEN_STAFF_WAGES',
     label: 'Kitchen Staff & Cooks Wages',
     icon: 'badge',
-    badgeClass: 'bg-indigo-50 text-indigo-900 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800'
+    badgeClass: 'bg-primary/10 text-primary border border-primary/20 dark:bg-primary/20 dark:text-rose-100 dark:border-primary/40'
   },
   {
     value: 'EQUIPMENT_UTENSILS',
     label: 'Kitchen Utensils & Equipment (Sufurias, Burners)',
     icon: 'skillet',
-    badgeClass: 'bg-cyan-50 text-cyan-900 border-cyan-200 dark:bg-cyan-900/30 dark:text-cyan-300 dark:border-cyan-800'
+    badgeClass: 'bg-primary/10 text-primary border border-primary/20 dark:bg-primary/20 dark:text-rose-100 dark:border-primary/40'
   },
   {
     value: 'TRANSPORT_DELIVERY',
     label: 'Transport & Produce Delivery',
     icon: 'local_shipping',
-    badgeClass: 'bg-blue-50 text-blue-900 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800'
+    badgeClass: 'bg-primary/10 text-primary border border-primary/20 dark:bg-primary/20 dark:text-rose-100 dark:border-primary/40'
   },
   {
     value: 'WATER_SANITATION',
     label: 'Water & Kitchen Sanitation / Hygiene',
     icon: 'clean_hands',
-    badgeClass: 'bg-teal-50 text-teal-900 border-teal-200 dark:bg-teal-900/30 dark:text-teal-300 dark:border-teal-800'
+    badgeClass: 'bg-primary/10 text-primary border border-primary/20 dark:bg-primary/20 dark:text-rose-100 dark:border-primary/40'
   },
   {
     value: 'OTHER_EXPENSES',
     label: 'Other Sundry Catering Expenses',
     icon: 'inventory_2',
-    badgeClass: 'bg-slate-50 text-slate-900 border-slate-200 dark:bg-slate-800/40 dark:text-slate-300 dark:border-slate-700'
+    badgeClass: 'bg-primary/10 text-primary border border-primary/20 dark:bg-primary/20 dark:text-rose-100 dark:border-primary/40'
   }
 ];
 
@@ -111,9 +111,24 @@ export const LunchFeeManagementView: React.FC = () => {
 
   // Daily Collection Modal
   const [isDailyPaymentModalOpen, setIsDailyPaymentModalOpen] = useState(false);
+  const [dailyLearnerSearch, setDailyLearnerSearch] = useState('');
   const [dailyPaymentForm, setDailyPaymentForm] = useState({
     studentId: '',
     amount: '' as unknown as number,
+    paymentDate: new Date().toISOString().split('T')[0],
+    paymentMethod: 'MPESA',
+    transactionReference: '',
+    recordedByStaffName: user?.fullName || 'Finance Staff',
+    notes: '',
+  });
+
+  // Monthly Payment Modal
+  const [isMonthlyPaymentModalOpen, setIsMonthlyPaymentModalOpen] = useState(false);
+  const [monthlyLearnerSearch, setMonthlyLearnerSearch] = useState('');
+  const [monthlyPaymentForm, setMonthlyPaymentForm] = useState({
+    studentId: '',
+    amount: '' as unknown as number,
+    paymentMonth: new Date().toISOString().slice(0, 7), // YYYY-MM
     paymentDate: new Date().toISOString().split('T')[0],
     paymentMethod: 'MPESA',
     transactionReference: '',
@@ -292,6 +307,46 @@ export const LunchFeeManagementView: React.FC = () => {
     });
   }, [expenses, expenseCategoryFilter, expensePaymentFilter, expenseSearch]);
 
+  // Actively enrolled learners with DAILY payment frequency
+  const eligibleDailyEnrollees = useMemo(() => {
+    return enrollments.filter(
+      (enr) => enr.status === 'ACTIVE' && enr.paymentFrequency === 'DAILY'
+    );
+  }, [enrollments]);
+
+  // Filtered daily enrollees by search query
+  const filteredDailyEnrollees = useMemo(() => {
+    if (!dailyLearnerSearch.trim()) return eligibleDailyEnrollees;
+    const q = dailyLearnerSearch.toLowerCase().trim();
+    return eligibleDailyEnrollees.filter((enr) => {
+      const name = (enr.studentName || '').toLowerCase();
+      const adm = (enr.admissionNumber || '').toLowerCase();
+      const grade = (enr.gradeLevel || '').toLowerCase();
+      const stream = (enr.streamName || '').toLowerCase();
+      return name.includes(q) || adm.includes(q) || grade.includes(q) || stream.includes(q);
+    });
+  }, [eligibleDailyEnrollees, dailyLearnerSearch]);
+
+  // Actively enrolled learners with Monthly/Termly/Weekly payment frequency (exclude DAILY)
+  const eligibleMonthlyEnrollees = useMemo(() => {
+    return enrollments.filter(
+      (enr) => enr.status === 'ACTIVE' && enr.paymentFrequency !== 'DAILY'
+    );
+  }, [enrollments]);
+
+  // Filtered monthly enrollees by search query
+  const filteredMonthlyEnrollees = useMemo(() => {
+    if (!monthlyLearnerSearch.trim()) return eligibleMonthlyEnrollees;
+    const q = monthlyLearnerSearch.toLowerCase().trim();
+    return eligibleMonthlyEnrollees.filter((enr) => {
+      const name = (enr.studentName || '').toLowerCase();
+      const adm = (enr.admissionNumber || '').toLowerCase();
+      const grade = (enr.gradeLevel || '').toLowerCase();
+      const stream = (enr.streamName || '').toLowerCase();
+      return name.includes(q) || adm.includes(q) || grade.includes(q) || stream.includes(q);
+    });
+  }, [eligibleMonthlyEnrollees, monthlyLearnerSearch]);
+
   // Roster handlers
   const handleEnrollSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -415,10 +470,58 @@ export const LunchFeeManagementView: React.FC = () => {
           recordedByStaffName: user?.fullName || 'Finance Staff',
           notes: '',
         });
+        setDailyLearnerSearch('');
         await loadData();
       }
     } catch (err: any) {
       showNotification(err.message || 'Failed to record daily payment', 'error');
+    }
+  };
+
+  const handleMonthlyPaymentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!monthlyPaymentForm.studentId) {
+      showNotification('Please select an enrolled learner for monthly contribution', 'error');
+      return;
+    }
+    if (Number(monthlyPaymentForm.amount) <= 0) {
+      showNotification('Payment amount must be greater than zero', 'error');
+      return;
+    }
+
+    try {
+      const idempotencyKey = `monthly-${monthlyPaymentForm.studentId}-${monthlyPaymentForm.paymentDate}-${monthlyPaymentForm.amount}-${monthlyPaymentForm.paymentMethod}-${Date.now()}`;
+      const res = await apiService.recordMonthlyLunchPayment({
+        studentId: monthlyPaymentForm.studentId,
+        amount: Number(monthlyPaymentForm.amount),
+        paymentMonth: monthlyPaymentForm.paymentMonth,
+        paymentDate: monthlyPaymentForm.paymentDate,
+        paymentMethod: monthlyPaymentForm.paymentMethod,
+        transactionReference: monthlyPaymentForm.transactionReference?.trim() || undefined,
+        idempotencyKey,
+        notes: monthlyPaymentForm.notes?.trim() || undefined,
+        recordedByStaffName: monthlyPaymentForm.recordedByStaffName || user?.fullName || 'Finance Staff',
+      });
+
+      if (res.success) {
+        const receiptNo = res.data?.receiptNumber || res.data?.payment?.receiptNumber || 'LCH-RCPT';
+        showNotification(`Monthly contribution recorded! Receipt: ${receiptNo}`);
+        setIsMonthlyPaymentModalOpen(false);
+        setMonthlyPaymentForm({
+          studentId: '',
+          amount: '' as unknown as number,
+          paymentMonth: new Date().toISOString().slice(0, 7),
+          paymentDate: new Date().toISOString().split('T')[0],
+          paymentMethod: 'MPESA',
+          transactionReference: '',
+          recordedByStaffName: user?.fullName || 'Finance Staff',
+          notes: '',
+        });
+        setMonthlyLearnerSearch('');
+        await loadData();
+      }
+    } catch (err: any) {
+      showNotification(err.message || 'Failed to record monthly lunch payment', 'error');
     }
   };
 
@@ -673,8 +776,8 @@ export const LunchFeeManagementView: React.FC = () => {
         <div
           className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl shadow-lg border text-sm font-semibold flex items-center gap-2 animate-bounce ${
             notification.type === 'success'
-              ? 'bg-emerald-50 border-emerald-300 text-emerald-900 dark:bg-emerald-950 dark:border-emerald-700 dark:text-emerald-100'
-              : 'bg-rose-50 border-rose-300 text-rose-900 dark:bg-rose-950 dark:border-rose-700 dark:text-rose-100'
+              ? 'bg-primary border-primary/40 text-white'
+              : 'bg-[#500b1a] border-white/20 text-white'
           }`}
         >
           <span className="material-symbols-outlined text-[18px]">
@@ -684,18 +787,27 @@ export const LunchFeeManagementView: React.FC = () => {
         </div>
       )}
 
+      {/* Breadcrumb Navigation */}
+      <div className="flex items-center gap-2 font-label-md text-label-md text-on-surface-variant">
+        <span>Home</span>
+        <span>/</span>
+        <span>Finance & Welfare</span>
+        <span>/</span>
+        <span className="text-primary font-semibold">Lunch Program & Catering Fund</span>
+      </div>
+
       {/* Top Banner & Authority Indicator */}
-      <div className="bg-gradient-to-r from-primary to-[#4a0815] text-white p-6 rounded-2xl shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-primary text-white p-6 rounded-2xl shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-1.5">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-white text-xs font-bold tracking-wider uppercase border border-white/15">
-            <span className="material-symbols-outlined text-[16px] text-amber-300">verified_user</span>
-            <span>Admins & Head Teacher Management Authority Only</span>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 text-white text-xs font-bold tracking-wider uppercase border border-white/25">
+            <span className="material-symbols-outlined text-[16px] text-white">verified_user</span>
+            <span>Admins, Head Teachers & Finance Officers Authority</span>
           </div>
           <h1 className="text-2xl md:text-3xl font-black tracking-tight flex items-center gap-2">
-            <span className="material-symbols-outlined text-3xl text-amber-300">lunch_dining</span>
+            <span className="material-symbols-outlined text-3xl text-white">lunch_dining</span>
             Lunch Fee & Catering Fund Management
           </h1>
-          <p className="text-xs md:text-sm text-rose-100/90 max-w-2xl">
+          <p className="text-xs md:text-sm text-white/90 max-w-2xl">
             Maintain learner dining rosters and track all catering expenditures with 100% financial accountability. Parents only view their enrolled children.
           </p>
         </div>
@@ -714,12 +826,35 @@ export const LunchFeeManagementView: React.FC = () => {
                 recordedByStaffName: user?.fullName || 'Finance Staff',
                 notes: '',
               });
+              setDailyLearnerSearch('');
               setIsDailyPaymentModalOpen(true);
             }}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs shadow-sm transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-white text-primary hover:bg-rose-50 rounded-xl font-bold text-xs shadow-sm transition-all cursor-pointer"
           >
             <span className="material-symbols-outlined text-[18px]">add_card</span>
-            <span>Record Daily Collection</span>
+            <span>Record Daily</span>
+          </button>
+
+          {/* Quick Monthly Contribution Action Button */}
+          <button
+            onClick={() => {
+              setMonthlyPaymentForm({
+                studentId: '',
+                amount: '' as unknown as number,
+                paymentMonth: new Date().toISOString().slice(0, 7),
+                paymentDate: new Date().toISOString().split('T')[0],
+                paymentMethod: 'MPESA',
+                transactionReference: '',
+                recordedByStaffName: user?.fullName || 'Finance Staff',
+                notes: '',
+              });
+              setMonthlyLearnerSearch('');
+              setIsMonthlyPaymentModalOpen(true);
+            }}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-white/15 text-white hover:bg-white/25 border border-white/30 rounded-xl font-bold text-xs shadow-sm transition-all cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[18px]">calendar_month</span>
+            <span>Record Monthly</span>
           </button>
 
           {activeSubTab === 'roster' ? (
@@ -752,7 +887,7 @@ export const LunchFeeManagementView: React.FC = () => {
                   setBulkDietary('');
                   setIsBulkModalOpen(true);
                 }}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-amber-400 text-amber-950 rounded-xl font-bold text-xs hover:bg-amber-300 shadow-sm transition-all cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-white/15 text-white hover:bg-white/25 border border-white/30 rounded-xl font-bold text-xs shadow-sm transition-all cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[18px]">group_add</span>
                 <span>Bulk Enroll Class</span>
@@ -793,7 +928,7 @@ export const LunchFeeManagementView: React.FC = () => {
                   });
                   setIsRecordExpenseModalOpen(true);
                 }}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-emerald-500 text-white rounded-xl font-bold text-xs hover:bg-emerald-600 shadow-sm transition-all cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-white text-primary rounded-xl font-bold text-xs hover:bg-rose-50 shadow-sm transition-all cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[18px]">add_shopping_cart</span>
                 <span>Record Lunch Expense</span>
@@ -829,14 +964,14 @@ export const LunchFeeManagementView: React.FC = () => {
             <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
               Lunch Funds Collected
             </span>
-            <div className="text-2xl font-black font-data-mono text-emerald-700 dark:text-emerald-400 mt-1">
+            <div className="text-2xl font-black font-data-mono text-primary mt-1">
               KES {totalCollections.toLocaleString()}
             </div>
-            <span className="text-[11px] text-emerald-800 dark:text-emerald-500 font-semibold mt-0.5 block">
+            <span className="text-[11px] text-on-surface-variant font-semibold mt-0.5 block">
               {(summary?.paidCount || 0) + (summary?.partialCount || 0)} Contributing Learners
             </span>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-400 flex items-center justify-center">
+          <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
             <span className="material-symbols-outlined text-2xl">payments</span>
           </div>
         </div>
@@ -847,14 +982,14 @@ export const LunchFeeManagementView: React.FC = () => {
             <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
               Catering Money Spent
             </span>
-            <div className="text-2xl font-black font-data-mono text-amber-700 dark:text-amber-400 mt-1">
+            <div className="text-2xl font-black font-data-mono text-primary mt-1">
               KES {totalExpenses.toLocaleString()}
             </div>
-            <span className="text-[11px] text-amber-800 dark:text-amber-500 font-semibold mt-0.5 block">
+            <span className="text-[11px] text-on-surface-variant font-semibold mt-0.5 block">
               {expenses.length} Accounted Kitchen Outflows
             </span>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-400 flex items-center justify-center">
+          <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
             <span className="material-symbols-outlined text-2xl">receipt_long</span>
           </div>
         </div>
@@ -865,28 +1000,14 @@ export const LunchFeeManagementView: React.FC = () => {
             <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
               Net Remaining Funds
             </span>
-            <div
-              className={`text-2xl font-black font-data-mono mt-1 ${
-                isSurplus ? 'text-primary dark:text-rose-400' : 'text-rose-700 dark:text-rose-400'
-              }`}
-            >
+            <div className="text-2xl font-black font-data-mono text-primary mt-1">
               KES {netCateringBalance.toLocaleString()}
             </div>
-            <span
-              className={`text-[11px] font-semibold mt-0.5 block ${
-                isSurplus ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'
-              }`}
-            >
+            <span className="text-[11px] text-on-surface-variant font-semibold mt-0.5 block">
               {isSurplus ? 'Funds in Surplus / Reserve' : 'Program Running at Deficit'}
             </span>
           </div>
-          <div
-            className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-              isSurplus
-                ? 'bg-primary/10 text-primary dark:bg-primary/20'
-                : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-400'
-            }`}
-          >
+          <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
             <span className="material-symbols-outlined text-2xl">
               {isSurplus ? 'account_balance_wallet' : 'warning'}
             </span>
@@ -899,14 +1020,14 @@ export const LunchFeeManagementView: React.FC = () => {
             <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
               Enrolled Learners
             </span>
-            <div className="text-2xl font-black font-data-mono text-on-surface mt-1">
+            <div className="text-2xl font-black font-data-mono text-primary mt-1">
               {summary ? summary.totalEnrolled : enrollments.length}
             </div>
             <span className="text-[11px] text-on-surface-variant mt-0.5 block">
               KES {(summary?.totalBalance || 0).toLocaleString()} uncollected fees
             </span>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-secondary/10 text-secondary flex items-center justify-center">
+          <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
             <span className="material-symbols-outlined text-2xl">restaurant</span>
           </div>
         </div>
@@ -918,12 +1039,12 @@ export const LunchFeeManagementView: React.FC = () => {
         <div className="p-3.5 rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs flex flex-col justify-between">
           <div className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider flex items-center justify-between">
             <span>Today's Collections</span>
-            <span className="material-symbols-outlined text-[16px] text-emerald-600">today</span>
+            <span className="material-symbols-outlined text-[16px] text-primary">today</span>
           </div>
-          <div className="text-xl font-black font-data-mono text-emerald-700 dark:text-emerald-400 mt-1">
+          <div className="text-xl font-black font-data-mono text-primary mt-1">
             KES {(dashboardMetrics?.todayCollected ?? 0).toLocaleString()}
           </div>
-          <span className="text-[10px] text-emerald-800 dark:text-emerald-500 font-semibold mt-0.5 block">
+          <span className="text-[10px] text-on-surface-variant font-semibold mt-0.5 block">
             Real-time daily receipts
           </span>
         </div>
@@ -932,12 +1053,12 @@ export const LunchFeeManagementView: React.FC = () => {
         <div className="p-3.5 rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs flex flex-col justify-between">
           <div className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider flex items-center justify-between">
             <span>Paid Today</span>
-            <span className="material-symbols-outlined text-[16px] text-blue-600">how_to_reg</span>
+            <span className="material-symbols-outlined text-[16px] text-primary">how_to_reg</span>
           </div>
-          <div className="text-xl font-black font-data-mono text-blue-700 dark:text-blue-400 mt-1">
+          <div className="text-xl font-black font-data-mono text-primary mt-1">
             {dashboardMetrics?.todayLearnersPaid ?? 0}
           </div>
-          <span className="text-[10px] text-blue-800 dark:text-blue-400 font-semibold mt-0.5 block">
+          <span className="text-[10px] text-on-surface-variant font-semibold mt-0.5 block">
             Learners catered for today
           </span>
         </div>
@@ -946,12 +1067,12 @@ export const LunchFeeManagementView: React.FC = () => {
         <div className="p-3.5 rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs flex flex-col justify-between">
           <div className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider flex items-center justify-between">
             <span>This Week</span>
-            <span className="material-symbols-outlined text-[16px] text-indigo-600">date_range</span>
+            <span className="material-symbols-outlined text-[16px] text-primary">date_range</span>
           </div>
-          <div className="text-xl font-black font-data-mono text-indigo-700 dark:text-indigo-400 mt-1">
+          <div className="text-xl font-black font-data-mono text-primary mt-1">
             KES {(dashboardMetrics?.thisWeekCollected ?? 0).toLocaleString()}
           </div>
-          <span className="text-[10px] text-indigo-800 dark:text-indigo-400 font-semibold mt-0.5 block">
+          <span className="text-[10px] text-on-surface-variant font-semibold mt-0.5 block">
             Monday–Sunday weekly total
           </span>
         </div>
@@ -960,12 +1081,12 @@ export const LunchFeeManagementView: React.FC = () => {
         <div className="p-3.5 rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs flex flex-col justify-between">
           <div className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider flex items-center justify-between">
             <span>This Month</span>
-            <span className="material-symbols-outlined text-[16px] text-amber-600">calendar_month</span>
+            <span className="material-symbols-outlined text-[16px] text-primary">calendar_month</span>
           </div>
-          <div className="text-xl font-black font-data-mono text-amber-700 dark:text-amber-400 mt-1">
+          <div className="text-xl font-black font-data-mono text-primary mt-1">
             KES {(dashboardMetrics?.thisMonthCollected ?? 0).toLocaleString()}
           </div>
-          <span className="text-[10px] text-amber-800 dark:text-amber-400 font-semibold mt-0.5 block">
+          <span className="text-[10px] text-on-surface-variant font-semibold mt-0.5 block">
             Month-to-date collection
           </span>
         </div>
@@ -974,63 +1095,157 @@ export const LunchFeeManagementView: React.FC = () => {
         <div className="p-3.5 rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs flex flex-col justify-between">
           <div className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider flex items-center justify-between">
             <span>Outstanding Balance</span>
-            <span className="material-symbols-outlined text-[16px] text-rose-600">pending</span>
+            <span className="material-symbols-outlined text-[16px] text-primary">pending</span>
           </div>
-          <div className="text-xl font-black font-data-mono text-rose-700 dark:text-rose-400 mt-1">
+          <div className="text-xl font-black font-data-mono text-primary mt-1">
             KES {(dashboardMetrics?.totalOutstandingBalance ?? summary?.totalBalance ?? 0).toLocaleString()}
           </div>
-          <span className="text-[10px] text-rose-800 dark:text-rose-400 font-semibold mt-0.5 block">
+          <span className="text-[10px] text-on-surface-variant font-semibold mt-0.5 block">
             Unpaid lunch arrears
           </span>
         </div>
       </div>
 
-      {/* Main Sub-Tab Switcher */}
-      <div className="flex border-b border-outline-variant/30 gap-2">
-        <button
-          onClick={() => setActiveSubTab('roster')}
-          className={`pb-3 px-5 text-sm font-bold flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
-            activeSubTab === 'roster'
-              ? 'border-primary text-primary dark:border-rose-400 dark:text-rose-400'
-              : 'border-transparent text-on-surface-variant hover:text-on-surface'
-          }`}
-        >
-          <span className="material-symbols-outlined text-[20px]">group</span>
-          <span>Learners Lunch Roster</span>
-          <span className="px-2 py-0.5 text-xs rounded-full bg-surface-container text-on-surface font-semibold">
-            {enrollments.length}
-          </span>
-        </button>
+      {/* Sticky Navigation and Persistent Action Bar */}
+      <div className="sticky top-0 z-20 bg-surface/95 backdrop-blur-md pt-2 pb-2.5 border-b border-primary/20 flex flex-wrap items-center justify-between gap-3 shadow-xs">
+        <div className="flex border-b-0 gap-1 sm:gap-2 overflow-x-auto">
+          <button
+            onClick={() => setActiveSubTab('roster')}
+            className={`pb-2 px-3 sm:px-4 text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 border-b-2 transition-all cursor-pointer ${
+              activeSubTab === 'roster'
+                ? 'border-primary text-primary dark:border-rose-400 dark:text-rose-400'
+                : 'border-transparent text-on-surface-variant hover:text-primary'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[18px]">group</span>
+            <span>Learners Roster</span>
+            <span className="px-1.5 py-0.2 text-[11px] rounded-full bg-primary/10 text-primary border border-primary/20 font-semibold">
+              {enrollments.length}
+            </span>
+          </button>
 
-        <button
-          onClick={() => setActiveSubTab('expenses')}
-          className={`pb-3 px-5 text-sm font-bold flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
-            activeSubTab === 'expenses'
-              ? 'border-primary text-primary dark:border-rose-400 dark:text-rose-400'
-              : 'border-transparent text-on-surface-variant hover:text-on-surface'
-          }`}
-        >
-          <span className="material-symbols-outlined text-[20px]">shopping_basket</span>
-          <span>Lunch Expenses & Accounting Ledger</span>
-          <span className="px-2 py-0.5 text-xs rounded-full bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 font-bold">
-            {expenses.length} Records · KES {totalExpenses.toLocaleString()}
-          </span>
-        </button>
+          <button
+            onClick={() => setActiveSubTab('expenses')}
+            className={`pb-2 px-3 sm:px-4 text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 border-b-2 transition-all cursor-pointer ${
+              activeSubTab === 'expenses'
+                ? 'border-primary text-primary dark:border-rose-400 dark:text-rose-400'
+                : 'border-transparent text-on-surface-variant hover:text-primary'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[18px]">shopping_basket</span>
+            <span>Expenses & Ledger</span>
+            <span className="px-1.5 py-0.2 text-[11px] rounded-full bg-primary/10 text-primary border border-primary/20 font-bold">
+              {expenses.length}
+            </span>
+          </button>
 
-        <button
-          onClick={() => {
-            setActiveSubTab('reports');
-            if (!weeklyReport) handleFetchWeeklyReport();
-          }}
-          className={`pb-3 px-5 text-sm font-bold flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
-            activeSubTab === 'reports'
-              ? 'border-primary text-primary dark:border-rose-400 dark:text-rose-400'
-              : 'border-transparent text-on-surface-variant hover:text-on-surface'
-          }`}
-        >
-          <span className="material-symbols-outlined text-[20px]">analytics</span>
-          <span>Collections & Reports</span>
-        </button>
+          <button
+            onClick={() => {
+              setActiveSubTab('reports');
+              if (!weeklyReport) handleFetchWeeklyReport();
+            }}
+            className={`pb-2 px-3 sm:px-4 text-xs sm:text-sm font-bold flex items-center gap-1.5 sm:gap-2 border-b-2 transition-all cursor-pointer ${
+              activeSubTab === 'reports'
+                ? 'border-primary text-primary dark:border-rose-400 dark:text-rose-400'
+                : 'border-transparent text-on-surface-variant hover:text-primary'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[18px]">analytics</span>
+            <span>Reports & Reconciliation</span>
+          </button>
+        </div>
+
+        {/* Quick Persistent Action Buttons in Sticky Header */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              setDailyPaymentForm({
+                studentId: '',
+                amount: '' as unknown as number,
+                paymentDate: new Date().toISOString().split('T')[0],
+                paymentMethod: 'MPESA',
+                transactionReference: '',
+                recordedByStaffName: user?.fullName || 'Finance Staff',
+                notes: '',
+              });
+              setDailyLearnerSearch('');
+              setIsDailyPaymentModalOpen(true);
+            }}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary hover:bg-[#600000] text-white rounded-lg font-bold text-xs shadow-xs transition-all cursor-pointer"
+            title="Record Daily Lunch Collection"
+          >
+            <span className="material-symbols-outlined text-[16px]">add_card</span>
+            <span className="hidden sm:inline">Record Daily</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setMonthlyPaymentForm({
+                studentId: '',
+                amount: '' as unknown as number,
+                paymentMonth: new Date().toISOString().slice(0, 7),
+                paymentDate: new Date().toISOString().split('T')[0],
+                paymentMethod: 'MPESA',
+                transactionReference: '',
+                recordedByStaffName: user?.fullName || 'Finance Staff',
+                notes: '',
+              });
+              setMonthlyLearnerSearch('');
+              setIsMonthlyPaymentModalOpen(true);
+            }}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-rose-50 text-primary border border-primary/30 rounded-lg font-bold text-xs shadow-xs transition-all cursor-pointer"
+            title="Record Monthly / Termly Lunch Contribution"
+          >
+            <span className="material-symbols-outlined text-[16px]">calendar_month</span>
+            <span className="hidden sm:inline">Record Monthly</span>
+          </button>
+
+          {activeSubTab === 'roster' && (
+            <button
+              onClick={() => {
+                setEnrollForm({
+                  studentId: '',
+                  planName: 'Standard Hot Lunch',
+                  paymentFrequency: 'TERMLY',
+                  dailyRate: 0,
+                  amount: '' as unknown as number,
+                  dietaryNotes: '',
+                  notes: '',
+                });
+                setIsEnrollModalOpen(true);
+              }}
+              className="inline-flex items-center gap-1 px-3 py-1.5 bg-primary hover:bg-[#600000] text-white rounded-lg font-bold text-xs shadow-xs transition-all cursor-pointer"
+              title="Enroll Individual Learner"
+            >
+              <span className="material-symbols-outlined text-[16px]">person_add</span>
+              <span className="hidden md:inline">Enroll</span>
+            </button>
+          )}
+
+          {activeSubTab === 'expenses' && (
+            <button
+              onClick={() => {
+                setExpenseForm({
+                  title: '',
+                  category: 'FOOD_CEREALS',
+                  amount: '' as unknown as number,
+                  expenseDate: '',
+                  paymentMethod: 'MPESA',
+                  paymentReference: '',
+                  vendorPayee: '',
+                  receiptVoucherNumber: '',
+                  notes: '',
+                });
+                setIsRecordExpenseModalOpen(true);
+              }}
+              className="inline-flex items-center gap-1 px-3 py-1.5 bg-primary hover:bg-[#600000] text-white rounded-lg font-bold text-xs shadow-xs transition-all cursor-pointer"
+              title="Record Lunch Expense"
+            >
+              <span className="material-symbols-outlined text-[16px]">add_shopping_cart</span>
+              <span className="hidden md:inline">Record Expense</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* ======================================================== */}
@@ -1180,7 +1395,7 @@ export const LunchFeeManagementView: React.FC = () => {
                           <td className="py-3 px-4 text-on-surface">
                             <div className="font-semibold">{enr.planName}</div>
                             {enr.dietaryNotes && (
-                              <div className="text-[11px] text-amber-700 dark:text-amber-400 flex items-center gap-1 mt-0.5">
+                              <div className="text-[11px] text-primary flex items-center gap-1 mt-0.5">
                                 <span className="material-symbols-outlined text-[12px]">info</span>
                                 <span>{enr.dietaryNotes}</span>
                               </div>
@@ -1189,20 +1404,20 @@ export const LunchFeeManagementView: React.FC = () => {
                           <td className="py-3 px-4 font-data-mono text-on-surface font-semibold">
                             KES {enr.amount.toLocaleString()}
                           </td>
-                          <td className="py-3 px-4 font-data-mono text-emerald-700 dark:text-emerald-400 font-semibold">
+                          <td className="py-3 px-4 font-data-mono text-primary font-semibold">
                             KES {enr.amountPaid.toLocaleString()}
                           </td>
-                          <td className="py-3 px-4 font-data-mono text-error font-bold">
+                          <td className="py-3 px-4 font-data-mono text-primary font-bold">
                             KES {enr.balance.toLocaleString()}
                           </td>
                           <td className="py-3 px-4">
                             <span
                               className={`px-2 py-0.5 rounded-full text-[11px] font-bold inline-flex items-center gap-1 ${
                                 isPaid
-                                  ? 'bg-emerald-100 text-emerald-900 border border-emerald-300 dark:bg-emerald-950 dark:text-emerald-200'
+                                  ? 'bg-primary/10 text-primary border border-primary/20'
                                   : isPartial
-                                  ? 'bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-950 dark:text-amber-200'
-                                  : 'bg-rose-100 text-rose-900 border border-rose-300 dark:bg-rose-950 dark:text-rose-200'
+                                  ? 'bg-primary/5 text-primary border border-primary/15'
+                                  : 'bg-surface-container text-on-surface-variant border border-outline-variant/30'
                               }`}
                             >
                               <span className="material-symbols-outlined text-[13px]">
@@ -1215,7 +1430,7 @@ export const LunchFeeManagementView: React.FC = () => {
                             <span
                               className={`px-2 py-0.5 rounded-md text-[11px] font-semibold ${
                                 enr.status === 'ACTIVE'
-                                  ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                                  ? 'bg-primary/10 text-primary border border-primary/20'
                                   : 'bg-surface-container text-on-surface-variant'
                               }`}
                             >
@@ -1237,7 +1452,7 @@ export const LunchFeeManagementView: React.FC = () => {
                                   });
                                   setIsPaymentModalOpen(true);
                                 }}
-                                className="p-1.5 hover:bg-emerald-50 text-emerald-700 dark:hover:bg-emerald-950 dark:text-emerald-300 rounded-lg cursor-pointer transition-colors"
+                                className="p-1.5 hover:bg-primary/10 text-primary rounded-lg cursor-pointer transition-colors"
                                 title="Record Fee Payment"
                               >
                                 <span className="material-symbols-outlined text-[18px]">payments</span>
@@ -1408,7 +1623,7 @@ export const LunchFeeManagementView: React.FC = () => {
                   });
                   setIsRecordExpenseModalOpen(true);
                 }}
-                className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold shadow-xs cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-2 bg-primary hover:bg-[#600000] text-white rounded-lg text-xs font-bold shadow-xs cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[16px]">add</span>
                 <span>Record Expense</span>
@@ -1504,7 +1719,7 @@ export const LunchFeeManagementView: React.FC = () => {
                           <td className="py-3 px-4 font-data-mono text-[11px] text-on-surface whitespace-nowrap">
                             {exp.receiptVoucherNumber || '—'}
                           </td>
-                          <td className="py-3 px-4 font-data-mono text-amber-800 dark:text-amber-400 font-bold whitespace-nowrap">
+                          <td className="py-3 px-4 font-data-mono text-primary font-bold whitespace-nowrap">
                             KES {exp.amount.toLocaleString()}
                           </td>
                           <td className="py-3 px-4 text-on-surface-variant text-[11px] whitespace-nowrap">
@@ -1687,10 +1902,10 @@ export const LunchFeeManagementView: React.FC = () => {
                   <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
                     Learners Paid This Week
                   </span>
-                  <div className="text-2xl font-black font-data-mono text-emerald-700 dark:text-emerald-400 mt-1">
+                  <div className="text-2xl font-black font-data-mono text-primary mt-1">
                     {weeklyReport.uniqueLearnersPaid}
                   </div>
-                  <span className="text-[11px] text-emerald-800 dark:text-emerald-500 font-semibold mt-0.5 block">
+                  <span className="text-[11px] text-primary font-semibold mt-0.5 block">
                     {weeklyReport.totalLearnersEnrolled > 0
                       ? `${Math.round((weeklyReport.uniqueLearnersPaid / weeklyReport.totalLearnersEnrolled) * 100)}% compliance`
                       : '0% compliance'}
@@ -1701,10 +1916,10 @@ export const LunchFeeManagementView: React.FC = () => {
                   <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
                     Learners with Arrears
                   </span>
-                  <div className="text-2xl font-black font-data-mono text-rose-700 dark:text-rose-400 mt-1">
+                  <div className="text-2xl font-black font-data-mono text-primary mt-1">
                     {weeklyReport.unpaidLearnersCount}
                   </div>
-                  <span className="text-[11px] text-rose-800 dark:text-rose-400 font-semibold mt-0.5 block">
+                  <span className="text-[11px] text-on-surface-variant font-semibold mt-0.5 block">
                     Pending lunch payment
                   </span>
                 </div>
@@ -1713,7 +1928,7 @@ export const LunchFeeManagementView: React.FC = () => {
                   <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
                     Total Weekly Collections
                   </span>
-                  <div className="text-2xl font-black font-data-mono text-emerald-700 dark:text-emerald-400 mt-1">
+                  <div className="text-2xl font-black font-data-mono text-primary mt-1">
                     KES {weeklyReport.totalCollected.toLocaleString()}
                   </div>
                   <span className="text-[11px] text-on-surface-variant mt-0.5 block">
@@ -1764,14 +1979,14 @@ export const LunchFeeManagementView: React.FC = () => {
                         <tr key={day.date} className="hover:bg-surface-container-low/40 transition-colors">
                           <td className="py-3 px-4 font-semibold text-on-surface">{day.date}</td>
                           <td className="py-3 px-4 text-on-surface font-body font-semibold">{day.dayOfWeek}</td>
-                          <td className="py-3 px-4 text-blue-700 dark:text-blue-400 font-bold">{day.learnersPaidCount}</td>
+                          <td className="py-3 px-4 text-primary font-bold">{day.learnersPaidCount}</td>
                           <td className="py-3 px-4 text-on-surface-variant">{day.transactionCount}</td>
                           <td className="py-3 px-4 font-body text-[11px]">
                             {Object.entries(day.methods || {})
                               .map(([k, v]) => `${k}: KES ${v.toLocaleString()}`)
                               .join(' | ') || 'None'}
                           </td>
-                          <td className="py-3 px-4 text-right font-bold text-emerald-700 dark:text-emerald-400">
+                          <td className="py-3 px-4 text-right font-bold text-primary">
                             KES {day.totalCollected.toLocaleString()}
                           </td>
                         </tr>
@@ -1804,10 +2019,10 @@ export const LunchFeeManagementView: React.FC = () => {
                   <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
                     Paid vs Non-Paying
                   </span>
-                  <div className="text-2xl font-black font-data-mono text-emerald-700 dark:text-emerald-400 mt-1">
+                  <div className="text-2xl font-black font-data-mono text-primary mt-1">
                     {monthlyReport.uniqueLearnersPaid} / {monthlyReport.unpaidLearnersCount}
                   </div>
-                  <span className="text-[11px] text-emerald-800 dark:text-emerald-500 font-semibold mt-0.5 block">
+                  <span className="text-[11px] text-on-surface-variant font-semibold mt-0.5 block">
                     {monthlyReport.uniqueLearnersPaid} Paid · {monthlyReport.unpaidLearnersCount} In Arrears
                   </span>
                 </div>
@@ -1816,10 +2031,10 @@ export const LunchFeeManagementView: React.FC = () => {
                   <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
                     Reversals / Adjustments
                   </span>
-                  <div className="text-2xl font-black font-data-mono text-amber-700 dark:text-amber-400 mt-1">
+                  <div className="text-2xl font-black font-data-mono text-primary mt-1">
                     KES {monthlyReport.totalReversed.toLocaleString()}
                   </div>
-                  <span className="text-[11px] text-amber-800 dark:text-amber-500 font-semibold mt-0.5 block">
+                  <span className="text-[11px] text-on-surface-variant font-semibold mt-0.5 block">
                     Audited transaction reversals
                   </span>
                 </div>
@@ -1828,10 +2043,10 @@ export const LunchFeeManagementView: React.FC = () => {
                   <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
                     Net Reconciled Collections
                   </span>
-                  <div className="text-2xl font-black font-data-mono text-emerald-700 dark:text-emerald-400 mt-1">
+                  <div className="text-2xl font-black font-data-mono text-primary mt-1">
                     KES {monthlyReport.netCollected.toLocaleString()}
                   </div>
-                  <span className="text-[11px] text-emerald-800 dark:text-emerald-500 font-semibold mt-0.5 block">
+                  <span className="text-[11px] text-on-surface-variant font-semibold mt-0.5 block">
                     Actual money received
                   </span>
                 </div>
@@ -1859,8 +2074,8 @@ export const LunchFeeManagementView: React.FC = () => {
                         <tr key={idx} className="hover:bg-surface-container-low/40 transition-colors">
                           <td className="py-3 px-4 font-semibold text-on-surface font-body">{wb.weekLabel}</td>
                           <td className="py-3 px-4 text-on-surface-variant">{wb.startDate} to {wb.endDate}</td>
-                          <td className="py-3 px-4 text-blue-700 dark:text-blue-400 font-bold">{wb.transactionCount}</td>
-                          <td className="py-3 px-4 text-right font-bold text-emerald-700 dark:text-emerald-400">
+                          <td className="py-3 px-4 text-primary font-bold">{wb.transactionCount}</td>
+                          <td className="py-3 px-4 text-right font-bold text-primary">
                             KES {wb.totalCollected.toLocaleString()}
                           </td>
                         </tr>
@@ -1877,7 +2092,7 @@ export const LunchFeeManagementView: React.FC = () => {
             <div className="p-4 border-b border-outline-variant/20 flex items-center justify-between">
               <div>
                 <h4 className="font-bold text-xs uppercase tracking-wider text-on-surface flex items-center gap-2">
-                  <span className="material-symbols-outlined text-amber-700 text-[18px]">receipt_long</span>
+                  <span className="material-symbols-outlined text-primary text-[18px]">receipt_long</span>
                   Recorded Lunch Transactions & Reversal Controls
                 </h4>
                 <p className="text-[11px] text-on-surface-variant mt-0.5">
@@ -1930,11 +2145,11 @@ export const LunchFeeManagementView: React.FC = () => {
                           </td>
                           <td className="py-3 px-4">
                             {p.isReversed ? (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-900 border border-rose-300 dark:bg-rose-950 dark:text-rose-200">
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/30">
                                 REVERSED
                               </span>
                             ) : (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-900 border border-emerald-300 dark:bg-emerald-950 dark:text-emerald-200">
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
                                 ACTIVE
                               </span>
                             )}
@@ -1950,7 +2165,7 @@ export const LunchFeeManagementView: React.FC = () => {
                                   setReversalReason('');
                                   setIsReverseModalOpen(true);
                                 }}
-                                className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                                className="px-2.5 py-1 bg-white hover:bg-rose-50 text-primary border border-primary/30 rounded-lg text-xs font-bold transition-all cursor-pointer"
                                 title="Reverse this payment entry with audit trail"
                               >
                                 Reverse
@@ -2118,7 +2333,7 @@ export const LunchFeeManagementView: React.FC = () => {
           <div className="bg-surface-container-lowest rounded-2xl max-w-lg w-full p-6 shadow-xl border border-outline-variant/30 space-y-4">
             <div className="flex items-center justify-between border-b border-surface-container pb-3">
               <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider flex items-center gap-2">
-                <span className="material-symbols-outlined text-amber-500 text-[20px]">group_add</span>
+                <span className="material-symbols-outlined text-primary text-[20px]">group_add</span>
                 Bulk Enroll Entire Class
               </h3>
               <button
@@ -2231,7 +2446,7 @@ export const LunchFeeManagementView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-amber-400 text-amber-950 rounded-lg font-bold hover:bg-amber-300 shadow-xs cursor-pointer"
+                  className="px-4 py-2 bg-primary text-white rounded-lg font-bold hover:bg-[#600000] shadow-xs cursor-pointer"
                 >
                   Enroll {selectedStudentIds.length} Learners
                 </button>
@@ -2248,7 +2463,7 @@ export const LunchFeeManagementView: React.FC = () => {
             <div className="flex items-center justify-between border-b border-surface-container pb-3">
               <div>
                 <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider flex items-center gap-2">
-                  <span className="material-symbols-outlined text-emerald-700 text-[20px]">payments</span>
+                  <span className="material-symbols-outlined text-primary text-[20px]">payments</span>
                   Record Lunch Fee Payment
                 </h3>
                 <p className="text-[11px] text-on-surface-variant mt-0.5">
@@ -2338,7 +2553,7 @@ export const LunchFeeManagementView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-emerald-700 text-white rounded-lg font-bold hover:bg-emerald-800 shadow-xs cursor-pointer"
+                  className="px-4 py-2 bg-primary text-white rounded-lg font-bold hover:bg-[#600000] shadow-xs cursor-pointer"
                 >
                   Record Payment Receipt
                 </button>
@@ -2469,7 +2684,7 @@ export const LunchFeeManagementView: React.FC = () => {
           <div className="bg-surface-container-lowest rounded-2xl max-w-lg w-full p-6 shadow-xl border border-outline-variant/30 space-y-4">
             <div className="flex items-center justify-between border-b border-surface-container pb-3">
               <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider flex items-center gap-2">
-                <span className="material-symbols-outlined text-emerald-600 text-[20px]">add_shopping_cart</span>
+                <span className="material-symbols-outlined text-primary text-[20px]">add_shopping_cart</span>
                 Record Lunch / Catering Expense
               </h3>
               <button
@@ -2624,7 +2839,7 @@ export const LunchFeeManagementView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-emerald-700 text-white rounded-lg font-bold hover:bg-emerald-800 shadow-xs cursor-pointer"
+                  className="px-4 py-2 bg-primary text-white rounded-lg font-bold hover:bg-[#600000] shadow-xs cursor-pointer"
                 >
                   Record Expense
                 </button>
@@ -2808,15 +3023,15 @@ export const LunchFeeManagementView: React.FC = () => {
       {/* Modal 5: Record Daily Payment */}
       {isDailyPaymentModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-surface-container-lowest rounded-2xl max-w-md w-full p-6 shadow-xl border border-outline-variant/30 space-y-4">
+          <div className="bg-surface-container-lowest rounded-2xl max-w-lg w-full p-6 shadow-xl border border-outline-variant/30 space-y-4">
             <div className="flex items-center justify-between border-b border-surface-container pb-3">
               <div>
                 <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider flex items-center gap-2">
-                  <span className="material-symbols-outlined text-emerald-700 text-[20px]">add_card</span>
+                  <span className="material-symbols-outlined text-primary text-[20px]">add_card</span>
                   Daily Lunch Collection
                 </h3>
                 <p className="text-[11px] text-on-surface-variant mt-0.5">
-                  Record daily lunch contribution against individual learner
+                  Record daily lunch contribution against enrolled daily learners
                 </p>
               </div>
               <button
@@ -2827,57 +3042,147 @@ export const LunchFeeManagementView: React.FC = () => {
               </button>
             </div>
 
-            <form onSubmit={handleDailyPaymentSubmit} className="space-y-3 text-xs">
-              {/* Step 1: Select learner */}
-              <div>
-                <label className="block text-on-surface-variant font-semibold mb-1">
-                  Select Learner <span className="text-rose-600">*</span>
-                </label>
-                <select
-                  required
-                  value={dailyPaymentForm.studentId}
-                  onChange={(e) => {
-                    const stId = e.target.value;
-                    const matchedEnrollment = enrollments.find((en) => en.studentId === stId);
-                    setDailyPaymentForm({
-                      ...dailyPaymentForm,
-                      studentId: stId,
-                      amount: (matchedEnrollment?.dailyRate && matchedEnrollment.dailyRate > 0)
-                        ? matchedEnrollment.dailyRate
-                        : (dailyPaymentForm.amount || ('' as any)),
-                    });
-                  }}
-                  className="w-full px-3 py-2 bg-surface-container-low rounded-lg text-on-surface border border-outline-variant/30 font-semibold cursor-pointer"
-                >
-                  <option value="">-- Choose Learner --</option>
-                  {students.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.firstName} {s.lastName} ({s.admissionNumber}) - {s.gradeLevel}
-                    </option>
-                  ))}
-                </select>
+            <form onSubmit={handleDailyPaymentSubmit} className="space-y-3.5 text-xs">
+              {/* Step 1: Searchable Learner Selector Restricted to Daily Enrollees */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="block text-on-surface-variant font-semibold">
+                    Select Enrolled Daily Learner <span className="text-rose-600">*</span>
+                  </label>
+                  <span className="text-[10px] text-primary font-semibold">
+                    {eligibleDailyEnrollees.length} Daily Enrollee{eligibleDailyEnrollees.length === 1 ? '' : 's'} Active
+                  </span>
+                </div>
+
+                {/* Search Input with Clear Button */}
+                <div className="relative">
+                  <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">
+                    search
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="Search enrolled learner by name, adm #, or grade..."
+                    value={dailyLearnerSearch}
+                    onChange={(e) => setDailyLearnerSearch(e.target.value)}
+                    className="w-full pl-8 pr-8 py-2 bg-surface-container-low rounded-lg text-on-surface border border-outline-variant/30 text-xs focus:outline-hidden focus:border-primary"
+                  />
+                  {dailyLearnerSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setDailyLearnerSearch('')}
+                      className="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface text-[16px] cursor-pointer"
+                    >
+                      close
+                    </button>
+                  )}
+                </div>
+
+                {/* Enrolled Learner Options / Results List */}
+                {eligibleDailyEnrollees.length === 0 ? (
+                  <div className="p-3 bg-primary/5 border border-primary/20 rounded-xl text-primary text-xs">
+                    <div className="flex items-center gap-1.5 font-bold mb-1">
+                      <span className="material-symbols-outlined text-[16px]">info</span>
+                      <span>No Active Daily Enrollees</span>
+                    </div>
+                    <p className="text-[11px] leading-relaxed">
+                      No learners are currently enrolled under the <strong>DAILY</strong> lunch arrangement. To record daily contributions, please enroll a learner with Daily payment frequency or update an existing enrollment.
+                    </p>
+                  </div>
+                ) : filteredDailyEnrollees.length === 0 ? (
+                  <div className="p-3 bg-surface-container-low border border-outline-variant/20 rounded-xl text-center text-on-surface-variant text-xs">
+                    <p>No daily enrolled learners match &ldquo;{dailyLearnerSearch}&rdquo;</p>
+                    <button
+                      type="button"
+                      onClick={() => setDailyLearnerSearch('')}
+                      className="mt-1 text-primary text-[11px] font-semibold underline cursor-pointer"
+                    >
+                      Clear search filter
+                    </button>
+                  </div>
+                ) : (
+                  <div className="max-h-44 overflow-y-auto space-y-1 rounded-xl border border-outline-variant/30 p-1 bg-surface-container-low/50">
+                    {filteredDailyEnrollees.map((enr) => {
+                      const isSelected = dailyPaymentForm.studentId === enr.studentId;
+                      return (
+                        <div
+                          key={enr.id}
+                          onClick={() => {
+                            setDailyPaymentForm({
+                              ...dailyPaymentForm,
+                              studentId: enr.studentId,
+                              amount: enr.dailyRate && enr.dailyRate > 0 ? enr.dailyRate : dailyPaymentForm.amount || ('' as any),
+                            });
+                          }}
+                          className={`p-2 rounded-lg cursor-pointer transition-colors flex items-center justify-between text-xs ${
+                            isSelected
+                              ? 'bg-primary/10 border border-primary/40 text-primary font-semibold'
+                              : 'hover:bg-surface-container border border-transparent text-on-surface'
+                          }`}
+                        >
+                          <div className="min-w-0 pr-2">
+                            <div className="font-bold truncate flex items-center gap-1.5">
+                              <span>{enr.studentName || 'Learner'}</span>
+                              <span className="text-[10px] px-1.5 py-0.2 rounded bg-surface-container-high text-on-surface-variant font-data-mono font-medium">
+                                {enr.admissionNumber || 'No Adm'}
+                              </span>
+                            </div>
+                            <div className="text-[11px] text-on-surface-variant flex items-center gap-2 mt-0.5">
+                              <span>{resolveGradeName(enr.gradeLevel)} {resolveStreamName(enr.streamId, enr.streamName)}</span>
+                              <span>•</span>
+                              <span>Daily Rate: <strong className="font-data-mono">KES {enr.dailyRate || 0}</strong></span>
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                              DAILY
+                            </span>
+                            <div className="text-[10px] text-primary mt-1 font-data-mono">
+                              Paid: KES {(enr.amountPaid || 0).toLocaleString()}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
-              {/* Step 2: Show enrollment status */}
+              {/* Step 2: Show Selected Learner's Enrolled Details */}
               {dailyPaymentForm.studentId && (() => {
-                const enr = enrollments.find((e) => e.studentId === dailyPaymentForm.studentId);
+                const enr = eligibleDailyEnrollees.find((e) => e.studentId === dailyPaymentForm.studentId);
+                if (!enr) return null;
                 return (
-                  <div className="p-3 rounded-xl bg-surface-container-low border border-outline-variant/30 space-y-1 text-[11px]">
-                    <div className="flex justify-between">
-                      <span className="text-on-surface-variant">Roster Status:</span>
-                      <span className="font-bold">{enr ? enr.status : 'Auto-enroll on payment'}</span>
+                  <div className="p-3 rounded-xl bg-surface-container-low border border-outline-variant/30 space-y-1.5 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-on-surface flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-[16px] text-primary">verified</span>
+                        {enr.studentName}
+                      </span>
+                      <span className="font-data-mono text-[11px] text-on-surface-variant">
+                        {enr.admissionNumber}
+                      </span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-on-surface-variant">Payment Frequency:</span>
-                      <span className="font-bold text-primary">{enr?.paymentFrequency || 'DAILY'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-on-surface-variant">Daily Rate:</span>
-                      <span className="font-bold font-data-mono">KES {enr?.dailyRate || 0}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-on-surface-variant">Total Paid to Date:</span>
-                      <span className="font-bold font-data-mono text-emerald-700">KES {(enr?.amountPaid || 0).toLocaleString()}</span>
+                    <div className="grid grid-cols-2 gap-2 text-[11px] pt-1 border-t border-outline-variant/20">
+                      <div>
+                        <span className="text-on-surface-variant">Grade & Stream:</span>{' '}
+                        <span className="font-medium text-on-surface">
+                          {resolveGradeName(enr.gradeLevel)} {resolveStreamName(enr.streamId, enr.streamName)}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-on-surface-variant">Payment Arrangement:</span>{' '}
+                        <span className="font-bold text-primary">DAILY Plan</span>
+                      </div>
+                      <div>
+                        <span className="text-on-surface-variant">Standard Daily Rate:</span>{' '}
+                        <span className="font-bold font-data-mono text-on-surface">KES {enr.dailyRate || 0}</span>
+                      </div>
+                      <div>
+                        <span className="text-on-surface-variant">Total Paid to Date:</span>{' '}
+                        <span className="font-bold font-data-mono text-primary">
+                          KES {(enr.amountPaid || 0).toLocaleString()}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 );
@@ -2976,7 +3281,301 @@ export const LunchFeeManagementView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-700 text-white rounded-lg font-bold hover:bg-emerald-800 shadow-xs cursor-pointer"
+                  disabled={!dailyPaymentForm.studentId}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-lg font-bold hover:bg-[#600000] shadow-xs cursor-pointer disabled:opacity-50"
+                >
+                  <span className="material-symbols-outlined text-[16px]">receipt</span>
+                  <span>Record & Generate Receipt</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal 5b: Record Monthly Lunch Contribution */}
+      {isMonthlyPaymentModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-surface-container-lowest rounded-2xl max-w-lg w-full p-6 shadow-xl border border-outline-variant/30 space-y-4">
+            <div className="flex items-center justify-between border-b border-surface-container pb-3">
+              <div>
+                <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary text-[20px]">calendar_month</span>
+                  Monthly Lunch Contribution
+                </h3>
+                <p className="text-[11px] text-on-surface-variant mt-0.5">
+                  Record monthly or termly lunch payments for enrolled learners
+                </p>
+              </div>
+              <button
+                onClick={() => setIsMonthlyPaymentModalOpen(false)}
+                className="p-1 text-on-surface-variant hover:bg-surface-container rounded-lg cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[18px]">close</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleMonthlyPaymentSubmit} className="space-y-3.5 text-xs">
+              {/* Step 1: Searchable Learner Selector Restricted to Monthly / Termly Enrollees */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="block text-on-surface-variant font-semibold">
+                    Select Enrolled Monthly Learner <span className="text-rose-600">*</span>
+                  </label>
+                  <span className="text-[10px] text-primary font-semibold">
+                    {eligibleMonthlyEnrollees.length} Monthly Enrollee{eligibleMonthlyEnrollees.length === 1 ? '' : 's'} Active
+                  </span>
+                </div>
+
+                {/* Search Input with Clear Button */}
+                <div className="relative">
+                  <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">
+                    search
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="Search enrolled learner by name, adm #, or grade..."
+                    value={monthlyLearnerSearch}
+                    onChange={(e) => setMonthlyLearnerSearch(e.target.value)}
+                    className="w-full pl-8 pr-8 py-2 bg-surface-container-low rounded-lg text-on-surface border border-outline-variant/30 text-xs focus:outline-hidden focus:border-primary"
+                  />
+                  {monthlyLearnerSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setMonthlyLearnerSearch('')}
+                      className="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface text-[16px] cursor-pointer"
+                    >
+                      close
+                    </button>
+                  )}
+                </div>
+
+                {/* Enrolled Learner Options / Results List */}
+                {eligibleMonthlyEnrollees.length === 0 ? (
+                  <div className="p-3 bg-primary/5 dark:bg-primary/10 border border-primary/20 rounded-xl text-primary text-xs">
+                    <div className="flex items-center gap-1.5 font-bold mb-1">
+                      <span className="material-symbols-outlined text-[16px]">info</span>
+                      <span>No Active Monthly Enrollees</span>
+                    </div>
+                    <p className="text-[11px] leading-relaxed">
+                      No learners are currently enrolled under <strong>MONTHLY</strong> or <strong>TERMLY</strong> lunch arrangements. Learners enrolled with Daily plans must be paid via the Daily Collection workflow.
+                    </p>
+                  </div>
+                ) : filteredMonthlyEnrollees.length === 0 ? (
+                  <div className="p-3 bg-surface-container-low border border-outline-variant/20 rounded-xl text-center text-on-surface-variant text-xs">
+                    <p>No monthly enrolled learners match &ldquo;{monthlyLearnerSearch}&rdquo;</p>
+                    <button
+                      type="button"
+                      onClick={() => setMonthlyLearnerSearch('')}
+                      className="mt-1 text-primary text-[11px] font-semibold underline cursor-pointer"
+                    >
+                      Clear search filter
+                    </button>
+                  </div>
+                ) : (
+                  <div className="max-h-44 overflow-y-auto space-y-1 rounded-xl border border-outline-variant/30 p-1 bg-surface-container-low/50">
+                    {filteredMonthlyEnrollees.map((enr) => {
+                      const isSelected = monthlyPaymentForm.studentId === enr.studentId;
+                      return (
+                        <div
+                          key={enr.id}
+                          onClick={() => {
+                            setMonthlyPaymentForm({
+                              ...monthlyPaymentForm,
+                              studentId: enr.studentId,
+                              amount: enr.balance && enr.balance > 0 ? enr.balance : (enr.amount || ('' as any)),
+                            });
+                          }}
+                          className={`p-2 rounded-lg cursor-pointer transition-colors flex items-center justify-between text-xs ${
+                            isSelected
+                              ? 'bg-primary/10 border border-primary text-on-surface dark:bg-primary/20 dark:border-primary'
+                              : 'hover:bg-surface-container border border-transparent text-on-surface'
+                          }`}
+                        >
+                          <div className="min-w-0 pr-2">
+                            <div className="font-bold truncate flex items-center gap-1.5">
+                              <span>{enr.studentName || 'Learner'}</span>
+                              <span className="text-[10px] px-1.5 py-0.2 rounded bg-surface-container-high text-on-surface-variant font-data-mono font-medium">
+                                {enr.admissionNumber || 'No Adm'}
+                              </span>
+                            </div>
+                            <div className="text-[11px] text-on-surface-variant flex items-center gap-2 mt-0.5">
+                              <span>{resolveGradeName(enr.gradeLevel)} {resolveStreamName(enr.streamId, enr.streamName)}</span>
+                              <span>•</span>
+                              <span>Fee: <strong className="font-data-mono">KES {enr.amount.toLocaleString()}</strong></span>
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                              {enr.paymentFrequency || 'MONTHLY'}
+                            </span>
+                            <div className="text-[10px] mt-1 font-data-mono font-bold text-primary">
+                              Bal: KES {(enr.balance || 0).toLocaleString()}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Step 2: Show Selected Learner's Enrolled Details */}
+              {monthlyPaymentForm.studentId && (() => {
+                const enr = eligibleMonthlyEnrollees.find((e) => e.studentId === monthlyPaymentForm.studentId);
+                if (!enr) return null;
+                return (
+                  <div className="p-3 rounded-xl bg-surface-container-low border border-outline-variant/30 space-y-1.5 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-on-surface flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-[16px] text-primary">verified</span>
+                        {enr.studentName}
+                      </span>
+                      <span className="font-data-mono text-[11px] text-on-surface-variant">
+                        {enr.admissionNumber}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-[11px] pt-1 border-t border-outline-variant/20">
+                      <div>
+                        <span className="text-on-surface-variant">Grade & Stream:</span>{' '}
+                        <span className="font-medium text-on-surface">
+                          {resolveGradeName(enr.gradeLevel)} {resolveStreamName(enr.streamId, enr.streamName)}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-on-surface-variant">Payment Arrangement:</span>{' '}
+                        <span className="font-bold text-primary">{enr.paymentFrequency || 'MONTHLY'} Plan</span>
+                      </div>
+                      <div>
+                        <span className="text-on-surface-variant">Total Billed Fee:</span>{' '}
+                        <span className="font-bold font-data-mono text-on-surface">KES {enr.amount.toLocaleString()}</span>
+                      </div>
+                      <div>
+                        <span className="text-on-surface-variant">Total Paid to Date:</span>{' '}
+                        <span className="font-bold font-data-mono text-primary">
+                          KES {(enr.amountPaid || 0).toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="col-span-2 pt-1 border-t border-outline-variant/10 flex justify-between items-center">
+                        <span className="text-on-surface-variant">Outstanding Balance:</span>
+                        <span className="font-black font-data-mono text-xs text-primary">
+                          KES {(enr.balance || 0).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Step 3: Billing Month & Payment Date */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-on-surface-variant font-semibold mb-1">
+                    Billing Month <span className="text-rose-600">*</span>
+                  </label>
+                  <input
+                    type="month"
+                    required
+                    value={monthlyPaymentForm.paymentMonth}
+                    onChange={(e) => setMonthlyPaymentForm({ ...monthlyPaymentForm, paymentMonth: e.target.value })}
+                    className="w-full px-3 py-2 bg-surface-container-low rounded-lg text-on-surface border border-outline-variant/30 font-data-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-on-surface-variant font-semibold mb-1">
+                    Payment Date <span className="text-rose-600">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={monthlyPaymentForm.paymentDate}
+                    onChange={(e) => setMonthlyPaymentForm({ ...monthlyPaymentForm, paymentDate: e.target.value })}
+                    className="w-full px-3 py-2 bg-surface-container-low rounded-lg text-on-surface border border-outline-variant/30 font-data-mono"
+                  />
+                </div>
+              </div>
+
+              {/* Step 4: Amount Paid */}
+              <div>
+                <label className="block text-on-surface-variant font-semibold mb-1">
+                  Amount Paid (KES) <span className="text-rose-600">*</span>
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  required
+                  placeholder="0"
+                  value={monthlyPaymentForm.amount || ''}
+                  onChange={(e) => setMonthlyPaymentForm({ ...monthlyPaymentForm, amount: e.target.value === '' ? ('' as any) : Number(e.target.value) })}
+                  className="w-full px-3 py-2 bg-surface-container-low rounded-lg text-on-surface font-data-mono font-bold text-sm border border-outline-variant/30"
+                />
+              </div>
+
+              {/* Step 5: Payment Method & Reference */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-on-surface-variant font-semibold mb-1">Payment Method</label>
+                  <select
+                    value={monthlyPaymentForm.paymentMethod}
+                    onChange={(e) => setMonthlyPaymentForm({ ...monthlyPaymentForm, paymentMethod: e.target.value })}
+                    className="w-full px-3 py-2 bg-surface-container-low rounded-lg text-on-surface border border-outline-variant/30 cursor-pointer"
+                  >
+                    <option value="MPESA">M-Pesa</option>
+                    <option value="CASH">Cash Office</option>
+                    <option value="BANK_DEPOSIT">Bank Direct Deposit</option>
+                    <option value="CHEQUE">Cheque</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-on-surface-variant font-semibold mb-1">Transaction Ref / Receipt</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. QKJ49219 or 0012"
+                    value={monthlyPaymentForm.transactionReference}
+                    onChange={(e) => setMonthlyPaymentForm({ ...monthlyPaymentForm, transactionReference: e.target.value })}
+                    className="w-full px-3 py-2 bg-surface-container-low rounded-lg text-on-surface border border-outline-variant/30 font-data-mono"
+                  />
+                </div>
+              </div>
+
+              {/* Step 6: Recording staff member */}
+              <div>
+                <label className="block text-on-surface-variant font-semibold mb-1">Recording Staff Member</label>
+                <input
+                  type="text"
+                  required
+                  value={monthlyPaymentForm.recordedByStaffName}
+                  onChange={(e) => setMonthlyPaymentForm({ ...monthlyPaymentForm, recordedByStaffName: e.target.value })}
+                  className="w-full px-3 py-2 bg-surface-container-low rounded-lg text-on-surface border border-outline-variant/30"
+                />
+              </div>
+
+              {/* Step 7: Notes */}
+              <div>
+                <label className="block text-on-surface-variant font-semibold mb-1">Notes</label>
+                <input
+                  type="text"
+                  placeholder="Optional remarks..."
+                  value={monthlyPaymentForm.notes}
+                  onChange={(e) => setMonthlyPaymentForm({ ...monthlyPaymentForm, notes: e.target.value })}
+                  className="w-full px-3 py-2 bg-surface-container-low rounded-lg text-on-surface border border-outline-variant/30"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-surface-container">
+                <button
+                  type="button"
+                  onClick={() => setIsMonthlyPaymentModalOpen(false)}
+                  className="px-4 py-2 bg-surface-container text-on-surface rounded-lg font-semibold hover:bg-surface-container-high cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={!monthlyPaymentForm.studentId}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white rounded-lg font-bold hover:bg-[#600000] shadow-xs cursor-pointer disabled:opacity-50"
                 >
                   <span className="material-symbols-outlined text-[16px]">receipt</span>
                   <span>Record & Generate Receipt</span>

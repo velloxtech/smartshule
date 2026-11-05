@@ -307,7 +307,13 @@ export class AppContainer {
       this.userRepository,
       this.systemLogRepository
     ); 
-    this.complaintUseCases = new ComplaintUseCases(this.complaintRepository, this.userRepository);
+    this.complaintUseCases = new ComplaintUseCases(
+      this.complaintRepository,
+      this.userRepository,
+      this.guardianRepository,
+      this.studentRepository,
+      this.notificationService
+    );
     this.libraryUseCases = new LibraryUseCases(
       this.libraryRepository,
       this.studentRepository,

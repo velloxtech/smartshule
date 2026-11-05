@@ -11,8 +11,24 @@ import {
   StudentFeeCredit,
   FeeCreditApplication
 } from '../../domain/finance/Fee';
+import { TransactionReversalRequest } from '../../domain/finance/TransactionReversalRequest';
 import { FeeBannerConfig } from '../../domain/finance/FeeBannerConfig';
 import { CBCGradeLevel } from '../../domain/user/Student';
+
+export interface ReversalRequestFilterCriteria {
+  schoolId?: string;
+  studentId?: string;
+  studentIds?: string[];
+  status?: string;
+  transactionType?: string;
+  transactionId?: string;
+  transactionReference?: string;
+  requestReference?: string;
+  requestedByUserId?: string;
+  search?: string;
+  startDate?: string;
+  endDate?: string;
+}
 
 export interface InvoiceFilterCriteria {
   schoolId?: string;
@@ -105,8 +121,28 @@ export interface IFeeRepository {
   // Concurrency Locking
   withLock?<T>(key: string, operation: () => Promise<T>): Promise<T>;
 
-  // Credit Applications (Audit Trail of Credits Applied to Invoices)
+  // Credit Applications (Audit Trail of Credits Applied to Invoices & Utilization Receipts)
   saveCreditApplication(application: FeeCreditApplication): Promise<void>;
-  findCreditApplications(filters: { studentId?: string; invoiceId?: string; creditId?: string }): Promise<FeeCreditApplication[]>;
+  findCreditApplications(filters: {
+    studentId?: string;
+    studentIds?: string[];
+    invoiceId?: string;
+    creditId?: string;
+    receiptNumber?: string;
+    applicationReference?: string;
+    academicYearId?: string;
+    termId?: string;
+    status?: string;
+    transactionType?: string;
+  }): Promise<FeeCreditApplication[]>;
+  findCreditApplicationById?(id: string): Promise<FeeCreditApplication | null>;
+  findCreditApplicationByReceiptNumber?(receiptNumber: string): Promise<FeeCreditApplication | null>;
+
+  // Transaction Reversals (Approval-Gated Financial Reversal Workflow)
+  saveReversalRequest(request: TransactionReversalRequest): Promise<void>;
+  findReversalRequestById(id: string): Promise<TransactionReversalRequest | null>;
+  findReversalRequestByReference(ref: string): Promise<TransactionReversalRequest | null>;
+  findReversalRequests(filters: ReversalRequestFilterCriteria): Promise<TransactionReversalRequest[]>;
+  findActiveReversalRequestForTransaction(transactionId: string): Promise<TransactionReversalRequest | null>;
 }
 

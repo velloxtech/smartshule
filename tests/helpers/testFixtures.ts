@@ -1005,6 +1005,21 @@ export async function setupTestRoleAccounts(container: AppContainer) {
         acc.id
       );
       await container.userRepository.save(user);
+
+      if (acc.role === UserRole.TEACHER) {
+        const existingTeacher = await container.teacherRepository.findByUserId(acc.id).catch(() => null);
+        if (!existingTeacher) {
+          const teacherProfile = Teacher.create({
+            userId: acc.id,
+            employeeNumber: 'EMP-TEACHER-01',
+            tscNumber: 'TSC/999888',
+            specialization: ['Mathematics', 'English', 'Kiswahili', 'All'],
+            assignedClassStreamIds: ['stream-001', 'all'],
+            qualification: 'B.Ed'
+          }, 'teacher-test-01');
+          await container.teacherRepository.save(teacherProfile);
+        }
+      }
     }
   }
 }

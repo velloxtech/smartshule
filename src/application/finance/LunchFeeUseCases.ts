@@ -85,6 +85,17 @@ export interface RecordDailyLunchPaymentDTO {
   notes?: string;
 }
 
+export interface RecordMonthlyLunchPaymentDTO {
+  studentId: string;
+  amount: number;
+  paymentMonth?: string;
+  paymentMethod?: PaymentMethod | string;
+  paymentDate?: string;
+  transactionReference?: string;
+  idempotencyKey?: string;
+  notes?: string;
+}
+
 export interface ReverseLunchPaymentDTO {
   reason: string;
 }
@@ -403,6 +414,12 @@ export class LunchFeeUseCases {
       throw new NotFoundError('LunchEnrollment', enrollmentId);
     }
 
+    if (enrollment.status !== LunchEnrollmentStatus.ACTIVE) {
+      throw new ValidationError(
+        `Cannot record payment: Lunch enrollment status is ${enrollment.status}. Only active enrollments accept payments.`
+      );
+    }
+
     if (!dto.amount || dto.amount <= 0) {
       throw new ValidationError('A valid payment amount greater than zero is required.');
     }
@@ -546,7 +563,7 @@ export class LunchFeeUseCases {
       }
     }
 
-    // 3. Resolve or Auto-create Enrollment
+    // 3. Resolve Lunch Enrollment - MUST be already enrolled
     let enrollment = await this.lunchFeeRepository.findByStudentAndTerm(dto.studentId, student.academicYearId);
     if (!enrollment) {
       const activeEnrollments = await this.lunchFeeRepository.findEnrollments({ studentId: dto.studentId, status: 'ACTIVE' });
@@ -556,32 +573,28 @@ export class LunchFeeUseCases {
     }
 
     if (!enrollment) {
-      enrollment = LunchEnrollment.create(
-        {
-          schoolId,
-          studentId: dto.studentId,
-          academicYearId: student.academicYearId,
-          planName: 'Daily Catering Plan',
-          paymentFrequency: 'DAILY',
-          dailyRate: Number(dto.amount),
-          amount: Number(dto.amount),
-          amountPaid: 0,
-          balance: Number(dto.amount),
-          paymentStatus: LunchPaymentStatus.UNPAID,
-          status: LunchEnrollmentStatus.ACTIVE,
-          enrolledByUserId: requestingUser.userId,
-          enrolledAt: new Date(),
-          notes: 'Auto-enrolled upon daily collection'
-        },
-        IdGenerator.generate()
+      throw new ValidationError(
+        `Learner ${student.fullName} is not enrolled in the Lunch Program. Daily contributions can only be recorded for enrolled learners.`
       );
-      await this.lunchFeeRepository.save(enrollment);
-    } else {
-      if (enrollment.paymentFrequency === 'DAILY' && enrollment.amount < enrollment.amountPaid + Number(dto.amount)) {
-        enrollment.updateDetails({
-          amount: enrollment.amountPaid + Number(dto.amount)
-        });
-      }
+    }
+
+    if (enrollment.status !== LunchEnrollmentStatus.ACTIVE) {
+      throw new ValidationError(
+        `Learner ${student.fullName}'s lunch enrollment is ${enrollment.status}. Daily contributions cannot be recorded for inactive or withdrawn enrollments.`
+      );
+    }
+
+    // Validate payment frequency compatibility
+    if (enrollment.paymentFrequency && enrollment.paymentFrequency !== 'DAILY') {
+      throw new ValidationError(
+        `Learner ${student.fullName} is enrolled under a ${enrollment.paymentFrequency} lunch plan. Daily contributions are restricted to learners enrolled with DAILY payment frequency.`
+      );
+    }
+
+    if (enrollment.amount < enrollment.amountPaid + Number(dto.amount)) {
+      enrollment.updateDetails({
+        amount: enrollment.amountPaid + Number(dto.amount)
+      });
     }
 
     const receiptNumber = `LNCH-REC-${Date.now().toString().slice(-6)}`;
@@ -608,6 +621,139 @@ export class LunchFeeUseCases {
 
     return {
       message: `Daily lunch payment of KES ${payment.amount.toLocaleString()} recorded successfully for ${student.fullName}.`,
+      receiptNumber: payment.receiptNumber,
+      payment: savedPayment,
+      enrollment: enrollment.toJSON()
+    };
+  }
+
+  /**
+   * 5d. Record a monthly lunch payment against an individual learner.
+   * Restricts to actively enrolled learners with MONTHLY or TERMLY frequency.
+   * Enforces database-backed idempotency & duplicate protection.
+   */
+  public async recordMonthlyPayment(
+    dto: RecordMonthlyLunchPaymentDTO,
+    requestingUser?: UserContext
+  ) {
+    if (!requestingUser) {
+      throw new ForbiddenError('Authentication required to record lunch payments.');
+    }
+
+    const allowedRoles: UserRole[] = [
+      UserRole.SUPER_ADMIN,
+      UserRole.ADMIN,
+      UserRole.SCHOOL_ADMIN,
+      UserRole.HEAD_TEACHER,
+      UserRole.BURSAR,
+      UserRole.ACCOUNTANT
+    ];
+
+    if (!allowedRoles.includes(requestingUser.role)) {
+      throw new ForbiddenError('Access Denied: Only Administrators and Finance Officers can record lunch payments.');
+    }
+
+    if (!dto.studentId) {
+      throw new ValidationError('Student ID is required.');
+    }
+
+    const student = await this.studentRepository.findById(dto.studentId);
+    if (!student) {
+      throw new NotFoundError('Student', dto.studentId);
+    }
+
+    if (!dto.amount || Number(dto.amount) <= 0) {
+      throw new ValidationError('A valid payment amount greater than zero is required.');
+    }
+
+    const paymentDate = dto.paymentDate || new Date().toISOString().split('T')[0];
+    const schoolId = student.schoolId || requestingUser.schoolId || 'school-001';
+
+    // 1. Database-backed Idempotency Check
+    const idempotencyKey = dto.idempotencyKey ||
+      createHash('sha256')
+        .update(`monthly-${dto.studentId}-${paymentDate}-${Number(dto.amount).toFixed(2)}-${dto.paymentMethod}-${(dto.transactionReference || '').trim()}`)
+        .digest('hex');
+
+    const existingByIdempotency = await this.lunchFeeRepository.findByIdempotencyKey(idempotencyKey);
+    if (existingByIdempotency) {
+      if (dto.idempotencyKey) {
+        const enr = await this.lunchFeeRepository.findById(existingByIdempotency.lunchEnrollmentId);
+        return {
+          message: `Payment already processed idempotently with receipt ${existingByIdempotency.receiptNumber}.`,
+          receiptNumber: existingByIdempotency.receiptNumber,
+          payment: existingByIdempotency,
+          enrollment: enr ? enr.toJSON() : null,
+          isDuplicateReplay: true
+        };
+      }
+      throw new ConflictError(
+        `Duplicate payment rejected: A monthly payment of KES ${Number(dto.amount).toLocaleString()} for ${student.fullName} on ${paymentDate} has already been recorded.`
+      );
+    }
+
+    // 2. Database-backed Transaction Reference Check
+    if (dto.transactionReference && dto.transactionReference.trim() !== '') {
+      const existingByRef = await this.lunchFeeRepository.findByTransactionReference(schoolId, dto.transactionReference);
+      if (existingByRef) {
+        throw new ConflictError(
+          `A lunch payment with transaction reference '${dto.transactionReference}' already exists and has already been recorded.`
+        );
+      }
+    }
+
+    // 3. Resolve Lunch Enrollment - MUST be already enrolled
+    let enrollment = await this.lunchFeeRepository.findByStudentAndTerm(dto.studentId, student.academicYearId);
+    if (!enrollment) {
+      const activeEnrollments = await this.lunchFeeRepository.findEnrollments({ studentId: dto.studentId, status: 'ACTIVE' });
+      if (activeEnrollments.length > 0) {
+        enrollment = activeEnrollments[0];
+      }
+    }
+
+    if (!enrollment) {
+      throw new ValidationError(
+        `Learner ${student.fullName} is not enrolled in the Lunch Program. Monthly contributions can only be recorded for enrolled learners.`
+      );
+    }
+
+    if (enrollment.status !== LunchEnrollmentStatus.ACTIVE) {
+      throw new ValidationError(
+        `Learner ${student.fullName}'s lunch enrollment is ${enrollment.status}. Monthly contributions cannot be recorded for inactive or withdrawn enrollments.`
+      );
+    }
+
+    // 4. Validate payment frequency compatibility
+    if (enrollment.paymentFrequency === 'DAILY') {
+      throw new ValidationError(
+        `Learner ${student.fullName} is enrolled under a DAILY lunch plan. Please use the Daily Collection workflow instead of monthly contribution.`
+      );
+    }
+
+    const receiptNumber = `LNCH-REC-${Date.now().toString().slice(-6)}`;
+    const payment: LunchPayment = {
+      id: IdGenerator.generate(),
+      lunchEnrollmentId: enrollment.id,
+      studentId: student.id,
+      schoolId,
+      amount: Number(dto.amount),
+      receiptNumber,
+      paymentMethod: dto.paymentMethod || PaymentMethod.CASH,
+      transactionReference: dto.transactionReference || `TXN-${Date.now().toString().slice(-8)}`,
+      paymentDate,
+      recordedByUserId: requestingUser.userId,
+      notes: dto.notes ? `${dto.paymentMonth ? `[Month: ${dto.paymentMonth}] ` : ''}${dto.notes}` : (dto.paymentMonth ? `Monthly contribution for ${dto.paymentMonth}` : undefined),
+      idempotencyKey,
+      createdAt: new Date(),
+      isReversed: false
+    };
+
+    enrollment.recordPayment(payment);
+    const savedPayment = await this.lunchFeeRepository.savePayment(payment);
+    await this.lunchFeeRepository.update(enrollment);
+
+    return {
+      message: `Monthly lunch payment of KES ${payment.amount.toLocaleString()} recorded successfully for ${student.fullName}.`,
       receiptNumber: payment.receiptNumber,
       payment: savedPayment,
       enrollment: enrollment.toJSON()

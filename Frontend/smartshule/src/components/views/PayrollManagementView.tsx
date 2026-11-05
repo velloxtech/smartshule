@@ -75,6 +75,8 @@ export const PayrollManagementView: React.FC = () => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
   });
+  const [availableMonths, setAvailableMonths] = useState<{ month: string; count: number }[]>([]);
+  const [hasAutoDetected, setHasAutoDetected] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [notification, setNotification] = useState<string | null>(null);
@@ -171,16 +173,45 @@ export const PayrollManagementView: React.FC = () => {
     return null;
   };
 
-  const loadData = async () => {
+  const loadData = async (monthOverride?: string) => {
     setLoading(true);
+    const targetMonth = monthOverride !== undefined ? monthOverride : selectedMonth;
     try {
-      const [payrollRes, leaveRes, teacherRes, schoolRes] = await Promise.all([
-        apiService.getPayrolls(selectedMonth),
+      const [payrollRes, allPayrollsRes, leaveRes, teacherRes, schoolRes] = await Promise.all([
+        apiService.getPayrolls(targetMonth),
+        apiService.getPayrolls('ALL').catch(() => null),
         apiService.getLeaves(),
         apiService.getTeachers().catch(() => null),
         apiService.getSchool().catch(() => null),
       ]);
-      if (payrollRes?.data) setPayrolls(payrollRes.data);
+
+      // Discover all available months and counts across the database
+      const allRecords: PayrollRecord[] = allPayrollsRes?.data || [];
+      const monthMap = new Map<string, number>();
+      allRecords.forEach((p) => {
+        if (p.month) {
+          monthMap.set(p.month, (monthMap.get(p.month) || 0) + 1);
+        }
+      });
+      const monthList = Array.from(monthMap.entries())
+        .map(([m, c]) => ({ month: m, count: c }))
+        .sort((a, b) => b.month.localeCompare(a.month));
+      setAvailableMonths(monthList);
+
+      const activePayrolls = payrollRes?.data || [];
+
+      // If initial load for current month returned 0 records, but earlier months have records,
+      // intelligently auto-switch to the most recent month with records so the user immediately sees their records
+      if (!hasAutoDetected && targetMonth !== 'ALL' && activePayrolls.length === 0 && monthList.length > 0) {
+        const latestMonth = monthList[0].month;
+        setHasAutoDetected(true);
+        setSelectedMonth(latestMonth);
+        const fallbackRecords = allRecords.filter(p => p.month === latestMonth);
+        setPayrolls(fallbackRecords);
+      } else {
+        setPayrolls(activePayrolls);
+      }
+
       if (leaveRes?.data) setLeaves(leaveRes.data);
       if (schoolRes?.data) setSchool(schoolRes.data);
 
@@ -210,7 +241,7 @@ export const PayrollManagementView: React.FC = () => {
   };
 
   useEffect(() => {
-    loadData();
+    loadData(selectedMonth);
     if (activeSubTab === 'reconciliation') {
       loadReconciliation();
     }
@@ -1165,12 +1196,29 @@ export const PayrollManagementView: React.FC = () => {
             <div className="flex flex-wrap items-center gap-3">
               <div>
                 <label className="block text-[11px] font-semibold text-slate-600 mb-1">Payroll Period</label>
-                <input
-                  type="month"
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(e.target.value)}
-                  className="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#7a1228]"
-                />
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="month"
+                    value={selectedMonth === 'ALL' ? '' : selectedMonth}
+                    onChange={(e) => setSelectedMonth(e.target.value)}
+                    className="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#7a1228]"
+                  />
+                  {availableMonths.length > 0 && (
+                    <select
+                      value={selectedMonth}
+                      onChange={(e) => setSelectedMonth(e.target.value)}
+                      className="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#7a1228]"
+                      title="Select period from existing records"
+                    >
+                      <option value="ALL">All Periods ({availableMonths.reduce((acc, m) => acc + m.count, 0)} records)</option>
+                      {availableMonths.map((m) => (
+                        <option key={m.month} value={m.month}>
+                          {m.month} ({m.count} records)
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
               </div>
 
               <div>
@@ -1231,9 +1279,37 @@ export const PayrollManagementView: React.FC = () => {
               <div className="p-16 text-center">
                 <span className="material-symbols-outlined text-4xl text-slate-400 mb-2">table_rows</span>
                 <p className="text-slate-700 font-semibold text-sm">No payroll records found for {selectedMonth}.</p>
-                <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
-                  Click "Run Monthly Run" to automatically calculate all faculty salaries, or "Add Staff Payslip" to create an individual entry.
-                </p>
+                {availableMonths.length > 0 ? (
+                  <div className="mt-4 p-4 max-w-md mx-auto bg-amber-50 border border-amber-200 rounded-xl text-left shadow-sm">
+                    <p className="text-xs font-bold text-amber-900 mb-2 flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-amber-600 text-sm">history</span>
+                      Existing records found in database:
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {availableMonths.map((m) => (
+                        <button
+                          key={m.month}
+                          onClick={() => setSelectedMonth(m.month)}
+                          className="px-3 py-1.5 bg-white hover:bg-amber-100 text-[#7a1228] border border-amber-300 rounded-lg text-xs font-bold shadow-sm transition-all flex items-center gap-1"
+                        >
+                          <span className="material-symbols-outlined text-xs">calendar_month</span>
+                          {m.month} ({m.count} records)
+                        </button>
+                      ))}
+                      <button
+                        onClick={() => setSelectedMonth('ALL')}
+                        className="px-3 py-1.5 bg-[#7a1228] hover:bg-[#600e1f] text-white rounded-lg text-xs font-bold shadow-sm transition-all flex items-center gap-1"
+                      >
+                        <span className="material-symbols-outlined text-xs">view_list</span>
+                        View All
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
+                    Click "Run Monthly Run" to automatically calculate all faculty salaries, or "Add Staff Payslip" to create an individual entry.
+                  </p>
+                )}
               </div>
             ) : (
               <table className="w-full border-collapse border border-slate-300 text-left text-xs text-slate-800 font-mono table-auto">
@@ -1241,6 +1317,9 @@ export const PayrollManagementView: React.FC = () => {
                 <thead className="sticky top-0 z-20 bg-slate-100 text-slate-700 font-bold border-b border-slate-300 uppercase text-[10px] select-none">
                   <tr>
                     <th className="px-1.5 py-1.5 text-center bg-slate-200 border border-slate-300 w-8 whitespace-nowrap">#</th>
+                    {selectedMonth === 'ALL' && (
+                      <th className="px-2 py-1.5 border border-slate-300 whitespace-nowrap bg-amber-100 text-amber-950 font-bold">Month</th>
+                    )}
                     <th className="px-2 py-1.5 border border-slate-300 whitespace-nowrap" title="Staff TSC Number or Employee Number">Staff ID</th>
                     <th className="px-2 py-1.5 border border-slate-300 font-sans whitespace-nowrap">Staff Member</th>
                     <th className="px-1.5 py-1.5 border border-slate-300 text-right whitespace-nowrap" title="Basic Salary">Basic</th>
@@ -1272,6 +1351,12 @@ export const PayrollManagementView: React.FC = () => {
                         <td className="px-1.5 py-1 text-center bg-slate-50 border border-slate-300 font-bold text-slate-500 text-[11px] select-none whitespace-nowrap">
                           {rowNumber}
                         </td>
+
+                        {selectedMonth === 'ALL' && (
+                          <td className="px-2 py-1 border border-slate-300 font-bold text-slate-800 bg-amber-50/50 whitespace-nowrap text-[11px]">
+                            {p.month}
+                          </td>
+                        )}
 
                         {/* Staff ID */}
                         <td className="px-2 py-1 border border-slate-300 text-slate-700 font-mono text-[11px] font-semibold whitespace-nowrap">
@@ -1487,6 +1572,11 @@ export const PayrollManagementView: React.FC = () => {
                     <td className="px-1.5 py-1.5 text-center bg-slate-200 border border-slate-300 font-black text-slate-800 whitespace-nowrap">
                       ∑
                     </td>
+                    {selectedMonth === 'ALL' && (
+                      <td className="px-1.5 py-1.5 border border-slate-300 text-slate-500 font-sans uppercase text-[10px] whitespace-nowrap">
+                        ALL
+                      </td>
+                    )}
                     <td className="px-2 py-1.5 border border-slate-300 text-slate-700 font-sans uppercase text-[10px] whitespace-nowrap">
                       TOTALS
                     </td>

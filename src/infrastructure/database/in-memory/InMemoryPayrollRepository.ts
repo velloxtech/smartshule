@@ -9,12 +9,15 @@ export class InMemoryPayrollRepository implements IPayrollRepository {
     return this.payrolls.get(id) || null;
   }
 
-  public async findPayrollsByMonth(month: string, schoolId?: string): Promise<PayrollRecord[]> {
-    let list = Array.from(this.payrolls.values()).filter(p => p.month === month);
+  public async findPayrollsByMonth(month?: string, schoolId?: string): Promise<PayrollRecord[]> {
+    let list = Array.from(this.payrolls.values());
+    if (month && month.toUpperCase() !== 'ALL') {
+      list = list.filter(p => p.month === month);
+    }
     if (schoolId) {
       list = list.filter(p => p.schoolId === schoolId);
     }
-    return list;
+    return list.sort((a, b) => b.month.localeCompare(a.month) || a.teacherName.localeCompare(b.teacherName));
   }
 
   public async findPayrollsByTeacher(teacherId: string): Promise<PayrollRecord[]> {

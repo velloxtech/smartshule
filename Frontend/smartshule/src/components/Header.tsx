@@ -366,7 +366,7 @@ export const Header: React.FC<HeaderProps> = ({
                     ? 'bg-white text-[#800000] shadow-xs font-bold'
                     : 'text-white/80 hover:text-white hover:bg-white/10'
                 }`}
-                title="Parent View: Child attendance, e-diary, report cards, fees"
+                title="Parent View: Child attendance, Daily Homefun & Communication Diary (E-Diary), report cards, fees"
               >
                 <span className="material-symbols-outlined text-[16px]">family_restroom</span>
                 <span className="hidden sm:inline">Parent View</span>

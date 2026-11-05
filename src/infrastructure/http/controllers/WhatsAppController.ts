@@ -399,14 +399,14 @@ export class WhatsAppController {
         freeTier: status.freeTier,
         officialTemplates: [
           { name: 'fee_balance_reminder', category: 'UTILITY', description: 'Reminds guardian of outstanding balance with KCB Paybill 522533' },
-          { name: 'daily_ediary_notice', category: 'UTILITY', description: 'Alerts parents when daily homework or teacher remark is published' },
+          { name: 'daily_ediary_notice', category: 'UTILITY', description: 'Alerts parents when Daily Homefun & Communication Diary (E-Diary) entry is published' },
           { name: 'attendance_alert', category: 'UTILITY', description: 'Immediate roll-call notification if learner is marked absent' },
           { name: 'general_school_announcement', category: 'UTILITY', description: 'Official circulars, opening dates, and term calendar reminders' },
         ],
         supportedCommands: [
           { command: '1 or BALANCE', description: 'Query student fee balance, statement & last payments (supports multi-child)' },
           { command: '2 or PAY', description: 'Get instant KCB Bank checkout link & M-Pesa paybill instructions' },
-          { command: '3 or EDIARY', description: 'View today\'s homework, tasks & teacher remarks' },
+          { command: '3 or EDIARY', description: 'View today\'s Daily Homefun & Communication Diary (E-Diary) activities & teacher remarks' },
           { command: '4 or ATTENDANCE', description: 'Check daily roll-call status and term attendance percentage' },
           { command: '5 or RESULTS', description: 'View CBC competency performance levels, average score & grades' },
           { command: '6 or TIMETABLE', description: 'Check today\'s class schedule, periods & subject routine' },

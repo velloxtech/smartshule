@@ -1581,16 +1581,49 @@ export class StudentUseCases {
           } catch {}
         }
 
-        let feeInfo = { totalBilled: 0, totalPaid: 0, balance: 0, arrearsAmount: 0, hasArrears: false, isCleared: false, isSponsored: false, sponsorship: null as any, overpayment: 0, creditBalance: 0, dueDate: null as string | null, invoices: [] as any[], payments: [] as any[] };
+        let feeInfo = {
+          totalBilled: 0,
+          totalPaid: 0,
+          balance: 0,
+          arrearsAmount: 0,
+          previousTermArrears: 0,
+          currentTermBilledFees: 0,
+          totalOutstanding: 0,
+          hasArrears: false,
+          isCleared: false,
+          isSponsored: false,
+          sponsorship: null as any,
+          overpayment: 0,
+          creditBalance: 0,
+          availableCredit: 0,
+          totalCreditApplied: 0,
+          dueDate: null as string | null,
+          invoices: [] as any[],
+          payments: [] as any[],
+          credits: [] as any[],
+          creditApplications: [] as any[],
+          creditReceipts: [] as any[]
+        };
         if (this.feeRepository) {
           const invoices = await this.feeRepository.findInvoices({ studentId: s.id });
           const payments = await this.feeRepository.findPayments({ studentId: s.id });
+          const credits = await this.feeRepository.findCredits({ studentId: s.id });
+          const creditApplications = await this.feeRepository.findCreditApplications({ studentId: s.id });
+          const availableCredit = credits
+            .filter(c => c.status === 'AVAILABLE' || c.status === 'PARTIALLY_USED')
+            .reduce((sum, c) => sum + (Number(c.balance) || 0), 0);
+          const totalCreditApplied = creditApplications.reduce(
+            (sum, app) => sum + (Number(app.amountApplied) || 0),
+            0
+          );
+
           const activeInvoices = invoices.filter(inv => (inv.status as any) !== 'CARRIED_FORWARD' && (inv.status as any) !== InvoiceStatus.CARRIED_FORWARD);
           const totalPaid = Math.round(payments.filter(p => p.status === 'COMPLETED' || (p.status as any) === PaymentStatus.COMPLETED).reduce((acc, p) => acc + (Number(p.amount) || 0), 0) * 100) / 100;
           const activeBalance = Math.round(activeInvoices.reduce((sum, inv) => sum + (Number(inv.balance) || 0), 0) * 100) / 100;
           const totalOwed = Math.round(activeInvoices.reduce((sum, inv) => sum + (Number(inv.amountPayable) || Number(inv.amountBilled) || 0), 0) * 100) / 100;
           const overpayment = !sp && totalPaid > totalOwed ? Math.round((totalPaid - totalOwed) * 100) / 100 : 0;
-          const calculatedBalance = sp ? 0 : (overpayment > 0 ? -overpayment : activeBalance);
+          const totalAvailableCredit = Math.round(Math.max(overpayment, availableCredit) * 100) / 100;
+          const calculatedBalance = sp ? 0 : (totalAvailableCredit > 0 && activeBalance <= 0 ? -totalAvailableCredit : activeBalance);
 
           // Identify arrears explicitly from active invoices without duplicate counting
           let arrearsAmount = 0;
@@ -1608,6 +1641,7 @@ export class StudentUseCases {
             }
           }
           const effectiveArrears = Math.round(Math.min(arrearsAmount, activeBalance) * 100) / 100;
+          const currentTermBilledFees = Math.max(0, Math.round((activeBalance - effectiveArrears) * 100) / 100);
 
           const activeInvoice = activeInvoices.find(inv => inv.balance > 0) || activeInvoices[0] || invoices[0];
           const dueDate = activeInvoice ? activeInvoice.dueDate : null;
@@ -1616,15 +1650,33 @@ export class StudentUseCases {
             totalPaid: sp ? 0 : totalPaid,
             balance: calculatedBalance,
             arrearsAmount: sp ? 0 : effectiveArrears,
+            previousTermArrears: sp ? 0 : effectiveArrears,
+            currentTermBilledFees: sp ? 0 : currentTermBilledFees,
+            totalOutstanding: sp ? 0 : activeBalance,
             hasArrears: calculatedBalance > 0,
             isCleared: calculatedBalance <= 0 || !!sp,
             isSponsored: !!sp,
             sponsorship: sp,
-            overpayment,
-            creditBalance: overpayment,
+            overpayment: totalAvailableCredit,
+            creditBalance: totalAvailableCredit,
+            availableCredit: sp ? 0 : Math.round(availableCredit * 100) / 100,
+            totalCreditApplied: sp ? 0 : Math.round(totalCreditApplied * 100) / 100,
             dueDate: dueDate,
             invoices: invoices.map(i => i.toJSON()),
-            payments: payments.map(p => p.toJSON())
+            payments: payments.map(p => p.toJSON()),
+            credits: credits.map(c => c.toJSON()),
+            creditApplications: creditApplications.map(a => a.toJSON()),
+            creditReceipts: (() => {
+              const map = new Map<string, any>();
+              for (const app of creditApplications) {
+                if (app.receiptNumber && app.receiptPayload) {
+                  if (!map.has(app.receiptNumber)) {
+                    map.set(app.receiptNumber, app.receiptPayload);
+                  }
+                }
+              }
+              return Array.from(map.values());
+            })()
           };
         }
 

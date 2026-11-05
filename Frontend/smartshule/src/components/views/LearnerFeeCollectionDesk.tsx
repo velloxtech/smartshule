@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { ReceiptViewModal } from '../modals/ReceiptViewModal';
 import { FeeStatementModal } from '../modals/FeeStatementModal';
 import { InvoiceDetailsModal } from '../modals/InvoiceDetailsModal';
+import { RequestTransactionReversalModal } from '../modals/RequestTransactionReversalModal';
 
 export interface LearnerFeeCollectionDeskProps {
   students: Student[];
@@ -87,6 +88,8 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
   const [isStatementModalOpen, setIsStatementModalOpen] = useState(false);
   const [selectedInvoiceForModal, setSelectedInvoiceForModal] = useState<any | null>(null);
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
+  const [reversalModalTx, setReversalModalTx] = useState<any | null>(null);
+  const [isReversalModalOpen, setIsReversalModalOpen] = useState(false);
 
   // Photo upload state
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
@@ -139,6 +142,15 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
       setFeePositionData(null);
     } finally {
       setIsLoadingPosition(false);
+    }
+  };
+
+  // Reusable authoritative position loader
+  const loadPosition = async (studentId?: string, term?: string) => {
+    const sId = studentId || selectedStudent?.id;
+    const t = term || selectedTerm;
+    if (sId) {
+      await loadLearnerFeePosition(sId, t);
     }
   };
 
@@ -1649,7 +1661,7 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
                                 {p.status}
                               </span>
                             </td>
-                            <td className="px-3 py-2 text-right">
+                            <td className="px-3 py-2 text-right space-x-1.5">
                               <button
                                 type="button"
                                 onClick={() => {
@@ -1661,6 +1673,29 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
                                 <span className="material-symbols-outlined text-[13px]">print</span>
                                 <span>Receipt</span>
                               </button>
+                              {p.status !== 'REVERSED' && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setReversalModalTx({
+                                      id: p.id,
+                                      reference: p.receiptNumber || p.transactionReference,
+                                      receiptNumber: p.receiptNumber,
+                                      type: 'PAYMENT',
+                                      amount: p.amount,
+                                      date: p.paymentDate || new Date().toISOString().split('T')[0],
+                                      studentId: selectedStudent.id,
+                                      studentName: selectedStudent.name,
+                                      admissionNumber: selectedStudent.admissionNumber
+                                    });
+                                    setIsReversalModalOpen(true);
+                                  }}
+                                  className="px-2 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-[10px] transition-colors cursor-pointer inline-flex items-center gap-1 border border-amber-200"
+                                >
+                                  <span className="material-symbols-outlined text-[13px]">rotate_left</span>
+                                  <span>Request Reversal</span>
+                                </button>
+                              )}
                             </td>
                           </tr>
                         ))}
@@ -1685,6 +1720,7 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
                           <th className="px-3 py-2 text-right">Debit / Billed (KES)</th>
                           <th className="px-3 py-2 text-right">Credit / Paid (KES)</th>
                           <th className="px-3 py-2 text-right">Running Balance (KES)</th>
+                          <th className="px-3 py-2 text-right">Action</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-outline-variant/20 font-mono text-[11px]">
@@ -1709,6 +1745,33 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
                             </td>
                             <td className="px-3 py-2 text-right font-extrabold text-on-surface">
                               {Number(item.runningBalance).toLocaleString()}
+                            </td>
+                            <td className="px-3 py-2 text-right">
+                              {item.receiptNumber ? (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setReversalModalTx({
+                                      id: item.id || item.transactionId,
+                                      reference: item.receiptNumber || item.transactionReference,
+                                      receiptNumber: item.receiptNumber,
+                                      type: item.type === 'CREDIT_UTILIZATION' ? 'CREDIT_UTILIZATION' : 'PAYMENT',
+                                      amount: item.credit || item.debit || 0,
+                                      date: item.date || new Date().toISOString().split('T')[0],
+                                      studentId: selectedStudent.id,
+                                      studentName: selectedStudent.name,
+                                      admissionNumber: selectedStudent.admissionNumber
+                                    });
+                                    setIsReversalModalOpen(true);
+                                  }}
+                                  className="px-2 py-0.5 rounded bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-[10px] border border-amber-200 cursor-pointer inline-flex items-center gap-1"
+                                >
+                                  <span className="material-symbols-outlined text-[12px]">rotate_left</span>
+                                  <span>Reverse</span>
+                                </button>
+                              ) : (
+                                <span className="text-outline-variant text-[10px]">--</span>
+                              )}
                             </td>
                           </tr>
                         ))}
@@ -1761,6 +1824,21 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
             setSelectedInvoiceForModal(null);
           }}
           invoice={selectedInvoiceForModal}
+        />
+      )}
+
+      {reversalModalTx && (
+        <RequestTransactionReversalModal
+          isOpen={isReversalModalOpen}
+          onClose={() => {
+            setIsReversalModalOpen(false);
+            setReversalModalTx(null);
+          }}
+          onSuccess={() => {
+            if (onRefreshStudents) onRefreshStudents();
+            loadPosition();
+          }}
+          transaction={reversalModalTx}
         />
       )}
     </div>

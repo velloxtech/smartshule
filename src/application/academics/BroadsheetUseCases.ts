@@ -206,6 +206,16 @@ const CANONICAL_ORDER = [
   'IND'
 ];
 
+// Pre-fetched shared context to avoid N+1 queries across evaluateSingleStream calls
+interface SharedBroadsheetContext {
+  allSummatives: any[];
+  allReportCards: any[];
+  allStudents: any[];
+  allLearningAreas: any[];
+  summativesByStudent: Map<string, any[]>;
+  reportCardsByStudent: Map<string, any>;
+}
+
 export class BroadsheetUseCases {
   constructor(
     private readonly academicRepository: IAcademicRepository,
@@ -527,32 +537,53 @@ export class BroadsheetUseCases {
       }
     }
 
-    // Ensure all examination subjects with saved marks for this cohort are included in canonicalMap
+    // ─── PERFORMANCE: Pre-fetch ALL data once for the entire request ─────────────
+    // This eliminates N+1 queries across evaluateSingleStream() calls.
     const altTermId = termId.includes('-t') ? termId.replace('-t', '-') : termId.replace(/-(\d)$/, '-t$1');
-    let cohortSummatives = await this.CBCAssessmentRepository.findSummatives({ termId, academicYearId }).catch(() => []);
-    if (!cohortSummatives || cohortSummatives.length === 0) {
-      cohortSummatives = await this.CBCAssessmentRepository.findSummatives({ termId }).catch(() => []);
-    }
-    if (!cohortSummatives || cohortSummatives.length === 0) {
-      cohortSummatives = await this.CBCAssessmentRepository.findSummatives({ termId: altTermId }).catch(() => []);
-    }
 
-    let cohortReportCards = await this.CBCAssessmentRepository.findReportCardsByTerm(termId).catch(() => []);
-    if (!cohortReportCards || cohortReportCards.length === 0) {
-      cohortReportCards = await this.CBCAssessmentRepository.findReportCardsByTerm(altTermId).catch(() => []);
+    const [prefetchedSummatives, prefetchedReportCards, prefetchedAllStudents] = await Promise.all([
+      (async () => {
+        let s = await this.CBCAssessmentRepository.findSummatives({ termId, academicYearId }).catch(() => []);
+        if (!s || s.length === 0) s = await this.CBCAssessmentRepository.findSummatives({ termId }).catch(() => []);
+        if (!s || s.length === 0) s = await this.CBCAssessmentRepository.findSummatives({ termId: altTermId }).catch(() => []);
+        return s;
+      })(),
+      (async () => {
+        let rc = await this.CBCAssessmentRepository.findReportCardsByTerm(termId).catch(() => []);
+        if (!rc || rc.length === 0) rc = await this.CBCAssessmentRepository.findReportCardsByTerm(altTermId).catch(() => []);
+        return rc;
+      })(),
+      this.studentRepository.findAll({}).catch(() => [])
+    ]);
+
+    const cohortSummatives = prefetchedSummatives;
+    const cohortReportCards = prefetchedReportCards;
+
+    // Build shared context for downstream evaluateSingleStream calls
+    const sharedCtx: SharedBroadsheetContext = {
+      allSummatives: prefetchedSummatives,
+      allReportCards: prefetchedReportCards,
+      allStudents: prefetchedAllStudents,
+      allLearningAreas,
+      summativesByStudent: new Map(),
+      reportCardsByStudent: new Map(prefetchedReportCards.map((rc: any) => [rc.studentId, rc]))
+    };
+    for (const s of prefetchedSummatives) {
+      if (!sharedCtx.summativesByStudent.has(s.studentId)) {
+        sharedCtx.summativesByStudent.set(s.studentId, []);
+      }
+      sharedCtx.summativesByStudent.get(s.studentId)!.push(s);
     }
 
     // Cohort student IDs to ensure we include subjects assessed for this class/grade
     let cohortStudentIds: Set<string> | null = null;
     if (classRoom?.id) {
-      const cohortStudents = await this.studentRepository.findAll({ classroomId: classRoom.id }).catch(() => []);
-      if (cohortStudents && cohortStudents.length > 0) {
-        cohortStudentIds = new Set(cohortStudents.map(s => s.id));
-      } else if (classRoom.gradeLevel) {
-        const gradeStudents = await this.studentRepository.findAll({ gradeLevel: classRoom.gradeLevel as any }).catch(() => []);
-        if (gradeStudents && gradeStudents.length > 0) {
-          cohortStudentIds = new Set(gradeStudents.map(s => s.id));
-        }
+      const cohortStudents = prefetchedAllStudents.filter(
+        (s: any) => s.classroomId === classRoom.id ||
+          (classRoom.gradeLevel && (s.gradeLevel || '').toUpperCase().replace(/[\s-]/g, '_') === String(classRoom.gradeLevel).toUpperCase().replace(/[\s-]/g, '_'))
+      );
+      if (cohortStudents.length > 0) {
+        cohortStudentIds = new Set(cohortStudents.map((s: any) => s.id));
       }
     }
 
@@ -614,12 +645,10 @@ export class BroadsheetUseCases {
       }
     }
 
-    // Evaluate target class streams
-    const allStreamResults: StreamSection[] = [];
-    for (const s of streamsToCompare) {
-      const evaluated = await this.evaluateSingleStream(s, classRoom, termId, academicYearId, learningAreas);
-      allStreamResults.push(evaluated);
-    }
+    // Evaluate target class streams (parallel, using shared pre-fetched context)
+    const allStreamResults: StreamSection[] = await Promise.all(
+      streamsToCompare.map(s => this.evaluateSingleStream(s, classRoom, termId, academicYearId, learningAreas, sharedCtx))
+    );
 
     const allClassRows: BroadsheetRow[] = [];
     allStreamResults.forEach(sr => {
@@ -722,9 +751,8 @@ export class BroadsheetUseCases {
     // ==========================================
     // 5. SCHOOL-WIDE ANALYTICS COMPUTATION
     // ==========================================
-    const allSchoolLearningAreas = typeof this.academicRepository.findAllLearningAreas === 'function'
-      ? await this.academicRepository.findAllLearningAreas()
-      : [];
+    // Reuse already-fetched allLearningAreas instead of refetching
+    const allSchoolLearningAreas = allLearningAreas;
     const schoolAllLearningAreasMap = new Map<string, { id: string; name: string }>();
     allSchoolLearningAreas.forEach(la => {
       schoolAllLearningAreasMap.set(la.id, { id: la.id, name: la.name });
@@ -733,20 +761,27 @@ export class BroadsheetUseCases {
     const schoolSections: StreamSection[] = [];
     const allSchoolStudentsRows: BroadsheetRow[] = [];
 
-    for (const cls of allClasses) {
-      let clsStreams = await this.academicRepository.findStreamsByClass(cls.id);
-      if (!clsStreams || clsStreams.length === 0) {
-        clsStreams = [Stream.create({ classRoomId: cls.id, name: cls.name, capacity: 50 }, cls.id)];
-      }
+    // Fetch all streams for all classes in parallel
+    const clsLearningAreasList = allSchoolLearningAreas.map(la => ({ id: la.id, name: la.name }));
+    const allClsStreamsArr = await Promise.all(
+      allClasses.map(async cls => {
+        let clsStreams = await this.academicRepository.findStreamsByClass(cls.id);
+        if (!clsStreams || clsStreams.length === 0) {
+          clsStreams = [Stream.create({ classRoomId: cls.id, name: cls.name, capacity: 50 }, cls.id)];
+        }
+        return { cls, clsStreams };
+      })
+    );
 
-      const clsLearningAreas = allSchoolLearningAreas
-        .map(la => ({ id: la.id, name: la.name }));
-
-      for (const stm of clsStreams) {
-        const sec = await this.evaluateSingleStream(stm, cls, termId, academicYearId, clsLearningAreas);
-        schoolSections.push(sec);
-        allSchoolStudentsRows.push(...sec.rows);
-      }
+    // Evaluate all streams in parallel, using shared pre-fetched context
+    const schoolEvalResults = await Promise.all(
+      allClsStreamsArr.flatMap(({ cls, clsStreams }) =>
+        clsStreams.map(stm => this.evaluateSingleStream(stm, cls, termId, academicYearId, clsLearningAreasList, sharedCtx))
+      )
+    );
+    for (const sec of schoolEvalResults) {
+      schoolSections.push(sec);
+      allSchoolStudentsRows.push(...sec.rows);
     }
 
     // Assign school-wide rank to all learners in the entire institution
@@ -962,29 +997,43 @@ export class BroadsheetUseCases {
     classRoom: any,
     termId: string,
     academicYearId: string,
-    learningAreas: Array<{ id: string; name: string }>
+    learningAreas: Array<{ id: string; name: string }>,
+    ctx?: SharedBroadsheetContext
   ): Promise<StreamSection> {
     let students: Student[] = [];
-    if (stream && stream.id !== classRoom?.id) {
-      students = await this.studentRepository.findAll({ streamId: stream.id });
-      if (!students || students.length === 0) {
-        const allInClass = classRoom?.id ? await this.studentRepository.findAll({ classroomId: classRoom.id }) : [];
-        students = allInClass.filter(s => s.streamId === stream.id);
-      }
-      if (!students || students.length === 0) {
-        const allStreamsInClass = classRoom?.id ? await this.academicRepository.findStreamsByClass(classRoom.id) : [];
-        if (allStreamsInClass.length <= 1) {
-          const unassigned = await this.studentRepository.findAll({ gradeLevel: classRoom?.gradeLevel as any });
-          students = unassigned.filter(s => !s.streamId || s.streamId === stream.id);
+
+    // Use pre-fetched students from context when available to avoid extra DB calls
+    if (ctx) {
+      const clsStudents = ctx.allStudents.filter(s => {
+        if (stream && stream.id !== classRoom?.id) {
+          return s.streamId === stream.id || s.classroomId === classRoom?.id;
         }
-      }
-    } else if (classRoom?.id) {
-      students = await this.studentRepository.findAll({ classroomId: classRoom.id });
-      if ((!students || students.length === 0) && classRoom.gradeLevel) {
+        return s.classroomId === classRoom?.id ||
+          (classRoom?.gradeLevel && (s.gradeLevel || '').toUpperCase().replace(/[\s-]/g, '_') === String(classRoom.gradeLevel).toUpperCase().replace(/[\s-]/g, '_'));
+      });
+      students = clsStudents as unknown as Student[];
+    } else {
+      if (stream && stream.id !== classRoom?.id) {
+        students = await this.studentRepository.findAll({ streamId: stream.id });
+        if (!students || students.length === 0) {
+          const allInClass = classRoom?.id ? await this.studentRepository.findAll({ classroomId: classRoom.id }) : [];
+          students = allInClass.filter(s => s.streamId === stream.id);
+        }
+        if (!students || students.length === 0) {
+          const allStreamsInClass = classRoom?.id ? await this.academicRepository.findStreamsByClass(classRoom.id) : [];
+          if (allStreamsInClass.length <= 1) {
+            const unassigned = await this.studentRepository.findAll({ gradeLevel: classRoom?.gradeLevel as any });
+            students = unassigned.filter(s => !s.streamId || s.streamId === stream.id);
+          }
+        }
+      } else if (classRoom?.id) {
+        students = await this.studentRepository.findAll({ classroomId: classRoom.id });
+        if ((!students || students.length === 0) && classRoom.gradeLevel) {
+          students = await this.studentRepository.findAll({ gradeLevel: classRoom.gradeLevel as any });
+        }
+      } else if (classRoom?.gradeLevel) {
         students = await this.studentRepository.findAll({ gradeLevel: classRoom.gradeLevel as any });
       }
-    } else if (classRoom?.gradeLevel) {
-      students = await this.studentRepository.findAll({ gradeLevel: classRoom.gradeLevel as any });
     }
 
     // Strict active student filter: Only ACTIVE students are eligible for academic ranking
@@ -993,34 +1042,42 @@ export class BroadsheetUseCases {
       return st === StudentStatus.ACTIVE || st === 'ACTIVE' || st === 'Active' || !st;
     });
 
-    const altTermId = termId.includes('-t') ? termId.replace('-t', '-') : termId.replace(/-(\d)$/, '-t$1');
+    // Use pre-fetched summatives and report cards from shared context
+    let summatives: any[];
+    let reportCardsByStudent: Map<string, any>;
+    let allLearningAreas: any[];
 
-    let summatives = await this.CBCAssessmentRepository.findSummatives({
-      termId,
-      academicYearId
-    });
-    if (!summatives || summatives.length === 0) {
-      summatives = await this.CBCAssessmentRepository.findSummatives({ termId });
-    }
-    if (!summatives || summatives.length === 0) {
-      summatives = await this.CBCAssessmentRepository.findSummatives({ termId: altTermId });
-    }
+    if (ctx) {
+      summatives = ctx.allSummatives;
+      reportCardsByStudent = ctx.reportCardsByStudent;
+      allLearningAreas = ctx.allLearningAreas;
+    } else {
+      const altTermId = termId.includes('-t') ? termId.replace('-t', '-') : termId.replace(/-(\d)$/, '-t$1');
 
-    let reportCards = await this.CBCAssessmentRepository.findReportCardsByTerm(termId, stream.id);
-    if (!reportCards || reportCards.length === 0) {
-      reportCards = await this.CBCAssessmentRepository.findReportCardsByTerm(termId);
-    }
-    if (!reportCards || reportCards.length === 0) {
-      reportCards = await this.CBCAssessmentRepository.findReportCardsByTerm(altTermId, stream.id);
-    }
-    if (!reportCards || reportCards.length === 0) {
-      reportCards = await this.CBCAssessmentRepository.findReportCardsByTerm(altTermId);
-    }
-    const reportCardsByStudent = new Map(reportCards.map(rc => [rc.studentId, rc]));
+      summatives = await this.CBCAssessmentRepository.findSummatives({ termId, academicYearId });
+      if (!summatives || summatives.length === 0) {
+        summatives = await this.CBCAssessmentRepository.findSummatives({ termId });
+      }
+      if (!summatives || summatives.length === 0) {
+        summatives = await this.CBCAssessmentRepository.findSummatives({ termId: altTermId });
+      }
 
-    const allLearningAreas = typeof this.academicRepository.findAllLearningAreas === 'function'
-      ? await this.academicRepository.findAllLearningAreas()
-      : [];
+      let reportCards = await this.CBCAssessmentRepository.findReportCardsByTerm(termId, stream.id);
+      if (!reportCards || reportCards.length === 0) {
+        reportCards = await this.CBCAssessmentRepository.findReportCardsByTerm(termId);
+      }
+      if (!reportCards || reportCards.length === 0) {
+        reportCards = await this.CBCAssessmentRepository.findReportCardsByTerm(altTermId, stream.id);
+      }
+      if (!reportCards || reportCards.length === 0) {
+        reportCards = await this.CBCAssessmentRepository.findReportCardsByTerm(altTermId);
+      }
+      reportCardsByStudent = new Map(reportCards.map(rc => [rc.studentId, rc]));
+
+      allLearningAreas = typeof this.academicRepository.findAllLearningAreas === 'function'
+        ? await this.academicRepository.findAllLearningAreas()
+        : [];
+    }
 
     const summativeMap = new Map<string, any>();
     for (const s of summatives) {

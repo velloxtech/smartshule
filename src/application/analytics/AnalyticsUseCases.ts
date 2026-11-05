@@ -44,6 +44,9 @@ export class AnalyticsUseCases {
     private readonly occurrenceRepository?: IOccurrenceRepository
   ) {}
 
+  private dashboardCache = new Map<string, { timestamp: number; data: any }>();
+  private inFlightDashboardRequests = new Map<string, Promise<any>>();
+
   public async getSchoolDashboardSummary(
     schoolIdOrOptions?: string | DashboardFilterOptions,
     academicYearIdArg?: string,
@@ -73,8 +76,99 @@ export class AnalyticsUseCases {
       termId = termIdArg;
     }
 
-    // 1. Available Periods & Selected Period
-    const allYears = await this.academicRepository.findAllYears(schoolId);
+    const cacheKey = JSON.stringify({
+      schoolId: schoolId || 'school-001',
+      academicYearId: academicYearId || '',
+      termId: termId || '',
+      filterDate: filterDate || '',
+      filterGrade: filterGrade || '',
+      filterClassId: filterClassId || '',
+      filterStreamId: filterStreamId || '',
+      filterTeacherId: filterTeacherId || ''
+    });
+
+    // 1. Return cached summary if fresh (15 second TTL)
+    const cached = this.dashboardCache.get(cacheKey);
+    const now = Date.now();
+    if (cached && now - cached.timestamp < 15000) {
+      return cached.data;
+    }
+
+    // 2. Coalesce duplicate concurrent in-flight requests to eliminate connection pool stampedes
+    const inFlight = this.inFlightDashboardRequests.get(cacheKey);
+    if (inFlight) {
+      return inFlight;
+    }
+
+    const task = this.computeSchoolDashboardSummary(
+      schoolId,
+      academicYearId,
+      termId,
+      filterDate,
+      filterGrade,
+      filterClassId,
+      filterStreamId,
+      filterTeacherId
+    )
+      .then(result => {
+        this.dashboardCache.set(cacheKey, { timestamp: Date.now(), data: result });
+        this.inFlightDashboardRequests.delete(cacheKey);
+        return result;
+      })
+      .catch(err => {
+        this.inFlightDashboardRequests.delete(cacheKey);
+        throw err;
+      });
+
+    this.inFlightDashboardRequests.set(cacheKey, task);
+    return task;
+  }
+
+  private async computeSchoolDashboardSummary(
+    schoolId: string | undefined,
+    academicYearId: string | undefined,
+    termId: string | undefined,
+    filterDate: string | undefined,
+    filterGrade: string | undefined,
+    filterClassId: string | undefined,
+    filterStreamId: string | undefined,
+    filterTeacherId: string | undefined
+  ) {
+
+    // 1. Foundational data retrieval executed in parallel for maximum dashboard throughput
+    const todayIso = new Date().toISOString().split('T')[0];
+    const targetDate = filterDate || todayIso;
+
+    const [
+      allYears,
+      students,
+      allTeachers,
+      allUsers,
+      invoices,
+      payments,
+      expenses,
+      allClasses,
+      allStreams,
+      registers
+    ] = await Promise.all([
+      this.academicRepository.findAllYears(schoolId),
+      this.studentRepository.findAll({ schoolId }),
+      this.teacherRepository.findAll(),
+      this.userRepository ? this.userRepository.findAll().catch(() => []) : Promise.resolve([]),
+      this.feeRepository.findInvoices({ schoolId }),
+      this.feeRepository.findPayments({ schoolId }),
+      this.feeRepository.findExpenses({ schoolId }),
+      this.academicRepository.findAllClasses(schoolId),
+      this.academicRepository.findAllStreams(),
+      this.attendanceRepository.findRegisters({
+        schoolId,
+        date: targetDate,
+        classRoomId: filterClassId,
+        streamId: filterStreamId
+      })
+    ]);
+
+    // Available Periods & Selected Period
     let selectedYear = academicYearId
       ? allYears.find(y => y.id === academicYearId) || (await this.academicRepository.findYearById(academicYearId))
       : await this.academicRepository.findCurrentYear(schoolId);
@@ -95,7 +189,6 @@ export class AnalyticsUseCases {
     }
 
     // 2. Pupils & Staff Demographics
-    const students = await this.studentRepository.findAll({ schoolId });
     const activeStudents = students.filter(s => s.status === StudentStatus.ACTIVE);
     const inactiveStudents = students.length - activeStudents.length;
 
@@ -109,13 +202,11 @@ export class AnalyticsUseCases {
       return g === 'girl' || g === 'female';
     }).length;
 
-    const allTeachers = await this.teacherRepository.findAll();
     const teachers = allTeachers;
     const activeTeachers = teachers.filter(t => (t as any).employmentStatus !== 'INACTIVE');
 
     let totalNonTeachingStaff = 0;
     if (this.userRepository) {
-      const allUsers = await this.userRepository.findAll();
       totalNonTeachingStaff = allUsers.filter(u => {
         if (schoolId && u.schoolId && u.schoolId !== schoolId) {
           return false;
@@ -130,10 +221,6 @@ export class AnalyticsUseCases {
     }
 
     // 3. Finance Ledger Calculations
-    const invoices = await this.feeRepository.findInvoices({ schoolId });
-    const payments = await this.feeRepository.findPayments({ schoolId });
-    const expenses = await this.feeRepository.findExpenses({ schoolId });
-
     const totalInvoiced = invoices.reduce((sum, i) => sum + (Number(i.amountPayable) || 0), 0);
     const totalArrears = invoices.reduce((sum, i) => sum + (Number(i.balance) || 0), 0);
     const defaultersCount = invoices.filter(i => (Number(i.balance) || 0) > 0).length;
@@ -184,12 +271,6 @@ export class AnalyticsUseCases {
       totalInvoiced > 0 ? Math.min(100, Math.round((totalCollected / totalInvoiced) * 100)) : 0;
 
     // 4. Real Attendance Register Metrics & Daily Executive Figures
-    const todayIso = new Date().toISOString().split('T')[0];
-    const targetDate = filterDate || todayIso;
-
-    // Fetch classes and streams to compute expected registers and labels
-    const allClasses = await this.academicRepository.findAllClasses(schoolId);
-    const allStreams = await this.academicRepository.findAllStreams();
     const classNameMap = new Map<string, string>();
     const classGradeMap = new Map<string, string>();
     allClasses.forEach(c => {
@@ -253,15 +334,7 @@ export class AnalyticsUseCases {
     }
     const expectedLearners = scopedStudents.length;
 
-    // Fetch daily registers for target date
-    const registers = await this.attendanceRepository.findRegisters({
-      schoolId,
-      date: targetDate,
-      classRoomId: filterClassId,
-      streamId: filterStreamId
-    });
-
-    // Calculate completed vs unmarked registers
+    // Calculate completed vs unmarked registers (using pre-fetched registers)
     let completedRegisters = 0;
     const completedUnitKeys = new Set<string>();
     registers.forEach(reg => {
@@ -283,25 +356,39 @@ export class AnalyticsUseCases {
     let excusedCount = 0;
     const absentLearnersList: any[] = [];
     const studentMap = new Map(scopedStudents.map(s => [s.id, s]));
+    const processedStudentIds = new Set<string>();
 
     registers.forEach(reg => {
       const entries = reg.entries || [];
       entries.forEach(entry => {
-        if (scopedStudents.length > 0 && !studentMap.has(entry.studentId)) {
+        if (!entry.studentId) return;
+
+        // When specific classroom/stream filter is provided, keep to that classroom's active students
+        if ((filterClassId || filterStreamId || filterGrade) && scopedStudents.length > 0 && !studentMap.has(entry.studentId)) {
           return;
         }
+
+        if (processedStudentIds.has(entry.studentId)) {
+          return; // Prevent duplicate counts if duplicate register exists
+        }
+        processedStudentIds.add(entry.studentId);
+
         const s = studentMap.get(entry.studentId);
+        const studentName = s?.fullName || entry.studentName || 'Learner';
+        const admissionNumber = s?.admissionNumber || entry.admissionNumber || '';
+
         if (entry.status === AttendanceStatus.PRESENT) {
           presentCount += 1;
         } else if (entry.status === AttendanceStatus.LATE) {
-          lateCount += 1; // Arrived late, but physically present
+          lateCount += 1;
+          presentCount += 1; // Late arrivals are physically present in school
         } else if (entry.status === AttendanceStatus.ABSENT) {
           absentCount += 1;
           absentLearnersList.push({
             registerId: reg.id,
             studentId: entry.studentId,
-            studentName: s?.fullName || entry.studentName || 'Learner',
-            admissionNumber: s?.admissionNumber || entry.admissionNumber || '',
+            studentName,
+            admissionNumber,
             className: classNameMap.get(reg.classRoomId) || 'Class',
             streamName: streamNameMap.get(reg.streamId) || '',
             date: reg.date,
@@ -314,8 +401,8 @@ export class AnalyticsUseCases {
           absentLearnersList.push({
             registerId: reg.id,
             studentId: entry.studentId,
-            studentName: s?.fullName || entry.studentName || 'Learner',
-            admissionNumber: s?.admissionNumber || entry.admissionNumber || '',
+            studentName,
+            admissionNumber,
             className: classNameMap.get(reg.classRoomId) || 'Class',
             streamName: streamNameMap.get(reg.streamId) || '',
             date: reg.date,
@@ -327,11 +414,11 @@ export class AnalyticsUseCases {
       });
     });
 
-    const totalMarked = presentCount + lateCount + absentCount + excusedCount;
+    const totalMarked = processedStudentIds.size;
     const unmarkedLearners = Math.max(0, expectedLearners - totalMarked);
-    const presentPercentage = expectedLearners > 0
-      ? Math.round(((presentCount + lateCount) / expectedLearners) * 100)
-      : (totalMarked > 0 ? Math.round(((presentCount + lateCount) / totalMarked) * 100) : null);
+    const presentPercentage = registers.length === 0
+      ? null
+      : (totalMarked > 0 ? Math.round((presentCount / totalMarked) * 100) : 0);
 
     const attendanceSummary = {
       hasData: registers.length > 0,
@@ -398,7 +485,7 @@ export class AnalyticsUseCases {
     };
 
     if (selectedTerm && selectedYear) {
-      const [summatives, formatives] = await Promise.all([
+      const [summatives, formatives, learningAreas, reportCards] = await Promise.all([
         this.CBCRepository.findSummatives({
           termId: selectedTerm.id,
           academicYearId: selectedYear.id
@@ -406,7 +493,9 @@ export class AnalyticsUseCases {
         this.CBCRepository.findFormatives({
           termId: selectedTerm.id,
           academicYearId: selectedYear.id
-        })
+        }),
+        this.academicRepository.findAllLearningAreas({ schoolId }),
+        this.CBCRepository.findReportCardsByTerm(selectedTerm.id).catch(() => [])
       ]);
 
       const eeCount = summatives.filter(s => s.overallPerformanceLevel === PerformanceLevel.EXCEEDING_EXPECTATIONS).length;
@@ -425,7 +514,6 @@ export class AnalyticsUseCases {
       };
 
       // Learning area breakdown
-      const learningAreas = await this.academicRepository.findAllLearningAreas({ schoolId });
       const areaMap = new Map<string, string>();
       learningAreas.forEach(a => areaMap.set(a.id, a.name));
 
@@ -510,13 +598,7 @@ export class AnalyticsUseCases {
         }
       }
 
-      let reportCardsCount = 0;
-      try {
-        const reportCards = await this.CBCRepository.findReportCardsByTerm(selectedTerm.id);
-        reportCardsCount = reportCards.length;
-      } catch {
-        // Safe fallback
-      }
+      const reportCardsCount = Array.isArray(reportCards) ? reportCards.length : 0;
 
       academicOverview = {
         formativeCount: formatives.length,
@@ -529,9 +611,8 @@ export class AnalyticsUseCases {
       };
     }
 
-    // 6. Real Enrolment & Class Breakdown
-    const classes = await this.academicRepository.findAllClasses(schoolId);
-    const classDistribution = classes.map(c => {
+    // 6. Real Enrolment & Class Breakdown (using pre-fetched allClasses)
+    const classDistribution = allClasses.map(c => {
       const enrolled = students.filter(
         s => s.classroomId === c.id || (s.gradeLevel && s.gradeLevel === c.gradeLevel)
       );

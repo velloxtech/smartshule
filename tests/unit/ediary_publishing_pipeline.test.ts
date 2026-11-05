@@ -272,7 +272,7 @@ describe('E-Diary Module End-to-End Pipeline & Publishing Tests', () => {
           teacherRemarks: '',
           teacherId: teacherUserId
         })
-      ).rejects.toThrow('At least one homework task or teacher remark is required');
+      ).rejects.toThrow(/At least one (homefun activity|homework task) or teacher remark is required/);
     });
   });
 

@@ -638,11 +638,19 @@ const coreApiService = {
     });
   },
 
-  getLearningAreas: async (params?: { gradeLevel?: string; schoolId?: string }): Promise<ApiResponse<BackendLearningArea[]>> => {
+  getLearningAreas: async (params?: { gradeLevel?: string; schoolId?: string; classroomId?: string; globalSubjectId?: string }): Promise<ApiResponse<BackendLearningArea[]>> => {
     const q = new URLSearchParams();
     if (params?.gradeLevel) q.append('gradeLevel', params.gradeLevel);
     if (params?.schoolId) q.append('schoolId', params.schoolId);
+    if (params?.classroomId) q.append('classroomId', params.classroomId);
+    if (params?.globalSubjectId) q.append('globalSubjectId', params.globalSubjectId);
     return apiFetch<ApiResponse<BackendLearningArea[]>>(`/academics/learning-areas?${q.toString()}`);
+  },
+
+  getGlobalSubjects: async (schoolId?: string): Promise<ApiResponse<any[]>> => {
+    const q = new URLSearchParams();
+    if (schoolId) q.append('schoolId', schoolId);
+    return apiFetch<ApiResponse<any[]>>(`/academics/global-subjects?${q.toString()}`);
   },
 
   createLearningArea: async (data: {
@@ -653,6 +661,7 @@ const coreApiService = {
     isElective?: boolean;
     schoolId: string;
     teacherId?: string;
+    globalSubjectId?: string;
   }): Promise<ApiResponse<BackendLearningArea>> => {
     return apiFetch<ApiResponse<BackendLearningArea>>('/academics/learning-areas', {
       method: 'POST',
@@ -1964,6 +1973,116 @@ const coreApiService = {
     });
   },
 
+  reconcileCredits: async (params?: { schoolId?: string; studentId?: string }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/finance/reconcile-credits', {
+      method: 'POST',
+      body: JSON.stringify(params || {}),
+    });
+  },
+
+  getCreditReconciliationStatus: async (): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/finance/reconcile-credits/status');
+  },
+
+  retryFailedCreditReconciliations: async (): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/finance/reconcile-credits/retry', {
+      method: 'POST',
+    });
+  },
+
+  previewCreditUtilization: async (data: { studentId: string; amountToApply?: number; schoolId?: string }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/finance/credit-utilization/preview', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  adminInitiateCreditUtilization: async (data: {
+    studentId: string;
+    amountToApply?: number;
+    targetInvoiceId?: string;
+    reason: string;
+    schoolId?: string;
+  }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/finance/credit-utilization/initiate', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  getCreditUtilizationReceipt: async (receiptNumber: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/finance/credit-receipts/${encodeURIComponent(receiptNumber)}`);
+  },
+
+  getAllCreditReceipts: async (params?: Record<string, any>): Promise<ApiResponse<any>> => {
+    const query = params ? `?${new URLSearchParams(params as any).toString()}` : '';
+    return apiFetch<ApiResponse<any>>(`/finance/credit-receipts${query}`);
+  },
+
+  reverseCreditUtilization: async (receiptNumber: string, reason: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/finance/credit-receipts/${encodeURIComponent(receiptNumber)}/reverse`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  },
+
+  // Admin-Approved Transaction Reversal Workflow
+  requestTransactionReversal: async (data: {
+    transactionId?: string;
+    transactionReference?: string;
+    transactionType?: string;
+    studentId?: string;
+    reason: string;
+    explanation?: string;
+    supportingAttachmentUrl?: string;
+  }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/finance/reversals/request', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  listTransactionReversals: async (params?: Record<string, any>): Promise<ApiResponse<any>> => {
+    const query = params ? `?${new URLSearchParams(params as any).toString()}` : '';
+    return apiFetch<ApiResponse<any>>(`/finance/reversals${query}`);
+  },
+
+  getTransactionReversalById: async (id: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/finance/reversals/${encodeURIComponent(id)}`);
+  },
+
+  getTransactionReversalPreview: async (idOrRef: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/finance/reversals/${encodeURIComponent(idOrRef)}/preview`);
+  },
+
+  approveAndExecuteTransactionReversal: async (id: string, comment?: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/finance/reversals/${encodeURIComponent(id)}/approve`, {
+      method: 'POST',
+      body: JSON.stringify({ comment }),
+    });
+  },
+
+  rejectTransactionReversal: async (id: string, reason: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/finance/reversals/${encodeURIComponent(id)}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  },
+
+  retryTransactionReversal: async (id: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/finance/reversals/${encodeURIComponent(id)}/retry`, {
+      method: 'POST',
+    });
+  },
+
+  getReversalReceiptDocument: async (receiptNumber: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/finance/reversals/${encodeURIComponent(receiptNumber)}/receipt`);
+  },
+
+  getStudentCreditReceipts: async (studentId: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/finance/students/${encodeURIComponent(studentId)}/credit-receipts`);
+  },
+
   getFeeBannerConfig: async (schoolId?: string): Promise<ApiResponse<FeeBannerConfig>> => {
     const qs = schoolId ? `?schoolId=${encodeURIComponent(schoolId)}` : '';
     return apiFetch<ApiResponse<FeeBannerConfig>>(`/finance/fee-banner${qs}`);
@@ -2636,54 +2755,93 @@ const coreApiService = {
   },
 
   // 15. Parent Concerns & Feedback Endpoints
-  getConcerns: async (): Promise<ApiResponse<ConcernRecord[]>> => {
+  getConcerns: async (params?: Record<string, any>): Promise<ApiResponse<ConcernRecord[]>> => {
     try {
-      const res = await apiFetch<ApiResponse<ConcernRecord[]>>('/concerns');
-      return res;
+      let url = '/concerns';
+      if (params) {
+        const query = new URLSearchParams();
+        Object.entries(params).forEach(([k, v]) => {
+          if (v !== undefined && v !== null && v !== '' && v !== 'ALL') {
+            query.append(k, String(v));
+          }
+        });
+        const qs = query.toString();
+        if (qs) url += `?${qs}`;
+      }
+      return await apiFetch<ApiResponse<ConcernRecord[]>>(url);
     } catch {
       try {
-        const res = await apiFetch<ApiResponse<ConcernRecord[]>>('/complaints');
-        return res;
+        let url = '/complaints';
+        if (params) {
+          const query = new URLSearchParams();
+          Object.entries(params).forEach(([k, v]) => {
+            if (v !== undefined && v !== null && v !== '' && v !== 'ALL') {
+              query.append(k, String(v));
+            }
+          });
+          const qs = query.toString();
+          if (qs) url += `?${qs}`;
+        }
+        return await apiFetch<ApiResponse<ConcernRecord[]>>(url);
       } catch {
         const list = getStoredConcerns();
         return { success: true, data: list, count: list.length };
       }
     }
   },
-  getComplaints: async (): Promise<ApiResponse<ComplaintRecord[]>> => {
-    return apiService.getConcerns();
+  getComplaints: async (params?: Record<string, any>): Promise<ApiResponse<ComplaintRecord[]>> => {
+    return apiService.getConcerns(params);
+  },
+
+  getConcernById: async (id: string): Promise<ApiResponse<ConcernRecord>> => {
+    try {
+      return await apiFetch<ApiResponse<ConcernRecord>>(`/concerns/${id}`);
+    } catch {
+      return await apiFetch<ApiResponse<ConcernRecord>>(`/complaints/${id}`);
+    }
   },
 
   createConcern: async (concernData: Partial<ConcernRecord>): Promise<ApiResponse<ConcernRecord>> => {
     try {
-      const res = await apiFetch<ApiResponse<ConcernRecord>>('/concerns', {
+      return await apiFetch<ApiResponse<ConcernRecord>>('/concerns', {
         method: 'POST',
         body: JSON.stringify(concernData),
       });
-      return res;
     } catch {
       try {
-        const res = await apiFetch<ApiResponse<ConcernRecord>>('/complaints', {
+        return await apiFetch<ApiResponse<ConcernRecord>>('/complaints', {
           method: 'POST',
           body: JSON.stringify(concernData),
         });
-        return res;
       } catch {
         const list = getStoredConcerns();
         const newRecord: ConcernRecord = {
           id: `crn-${Date.now()}`,
+          referenceNumber: `CON-2026-${Math.floor(10000 + Math.random() * 90000)}`,
           parentUserId: concernData.parentUserId || 'parent-current',
           parentName: concernData.parentName || 'Parent / Guardian',
           parentPhone: concernData.parentPhone || '',
           parentEmail: concernData.parentEmail || '',
           studentName: concernData.studentName || '',
           gradeLevel: concernData.gradeLevel || '',
-          category: concernData.category || 'General',
+          category: concernData.category || 'General School Matters',
           subject: concernData.subject || 'No Subject',
           details: concernData.details || '',
-          priority: concernData.priority || 'Medium',
-          status: 'PENDING',
+          priority: concernData.priority || 'MEDIUM',
+          status: 'SUBMITTED',
           createdAt: new Date().toISOString(),
+          messages: [],
+          auditTrail: [
+            {
+              id: `audit-${Date.now()}`,
+              action: 'SUBMITTED',
+              performedByUserId: concernData.parentUserId || 'parent',
+              performedByName: concernData.parentName || 'Parent',
+              performedByRole: 'PARENT',
+              timestamp: new Date().toISOString(),
+              details: 'Concern submitted'
+            }
+          ]
         };
         const updated = [newRecord, ...list];
         saveStoredConcerns(updated);
@@ -2695,44 +2853,127 @@ const coreApiService = {
     return apiService.createConcern(complaintData);
   },
 
-  respondToConcern: async (id: string, responseMessage: string, status: 'PENDING' | 'IN_REVIEW' | 'RESOLVED', responderName?: string): Promise<ApiResponse<ConcernRecord>> => {
+  acknowledgeConcern: async (id: string, notes?: string): Promise<ApiResponse<ConcernRecord>> => {
     try {
-      const res = await apiFetch<ApiResponse<ConcernRecord>>(`/concerns/${id}/respond`, {
-        method: 'PUT',
-        body: JSON.stringify({ adminResponse: responseMessage, status }),
+      return await apiFetch<ApiResponse<ConcernRecord>>(`/concerns/${id}/acknowledge`, {
+        method: 'POST',
+        body: JSON.stringify({ notes }),
       });
-      return res;
     } catch {
-      try {
-        const res = await apiFetch<ApiResponse<ConcernRecord>>(`/complaints/${id}/respond`, {
-          method: 'PUT',
-          body: JSON.stringify({ adminResponse: responseMessage, status }),
-        });
-        return res;
-      } catch {
-        const list = getStoredConcerns();
-        let updatedRecord: ConcernRecord | null = null;
-        const updated = list.map((item) => {
-          if (item.id === id) {
-            updatedRecord = {
-              ...item,
-              adminResponse: responseMessage,
-              status,
-              respondedBy: responderName || 'School Administration',
-              respondedAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString(),
-            };
-            return updatedRecord;
-          }
-          return item;
-        });
-        saveStoredConcerns(updated);
-        return { success: true, message: 'Response saved successfully', data: updatedRecord || ({} as ConcernRecord) };
-      }
+      return await apiFetch<ApiResponse<ConcernRecord>>(`/complaints/${id}/acknowledge`, {
+        method: 'POST',
+        body: JSON.stringify({ notes }),
+      });
     }
   },
+
+  assignConcern: async (id: string, assignedToUserId: string, reason?: string): Promise<ApiResponse<ConcernRecord>> => {
+    try {
+      return await apiFetch<ApiResponse<ConcernRecord>>(`/concerns/${id}/assign`, {
+        method: 'POST',
+        body: JSON.stringify({ assignedToUserId, reason }),
+      });
+    } catch {
+      return await apiFetch<ApiResponse<ConcernRecord>>(`/complaints/${id}/assign`, {
+        method: 'POST',
+        body: JSON.stringify({ assignedToUserId, reason }),
+      });
+    }
+  },
+
+  escalateConcern: async (id: string, reason: string, escalatedToUserId?: string): Promise<ApiResponse<ConcernRecord>> => {
+    try {
+      return await apiFetch<ApiResponse<ConcernRecord>>(`/concerns/${id}/escalate`, {
+        method: 'POST',
+        body: JSON.stringify({ reason, escalatedToUserId }),
+      });
+    } catch {
+      return await apiFetch<ApiResponse<ConcernRecord>>(`/complaints/${id}/escalate`, {
+        method: 'POST',
+        body: JSON.stringify({ reason, escalatedToUserId }),
+      });
+    }
+  },
+
+  sendConcernMessage: async (
+    id: string,
+    message: string,
+    visibility: 'PARENT_VISIBLE' | 'INTERNAL_ONLY' = 'PARENT_VISIBLE',
+    attachments?: any[],
+    awaitParentResponse?: boolean
+  ): Promise<ApiResponse<ConcernRecord>> => {
+    try {
+      return await apiFetch<ApiResponse<ConcernRecord>>(`/concerns/${id}/messages`, {
+        method: 'POST',
+        body: JSON.stringify({ message, visibility, attachments, awaitParentResponse }),
+      });
+    } catch {
+      return await apiFetch<ApiResponse<ConcernRecord>>(`/complaints/${id}/messages`, {
+        method: 'POST',
+        body: JSON.stringify({ message, visibility, attachments, awaitParentResponse }),
+      });
+    }
+  },
+
+  resolveConcern: async (
+    id: string,
+    actionTaken: string,
+    resolutionDetails?: string
+  ): Promise<ApiResponse<ConcernRecord>> => {
+    try {
+      return await apiFetch<ApiResponse<ConcernRecord>>(`/concerns/${id}/resolve`, {
+        method: 'POST',
+        body: JSON.stringify({ actionTaken, resolutionDetails, resolutionNotes: actionTaken }),
+      });
+    } catch {
+      return await apiFetch<ApiResponse<ConcernRecord>>(`/complaints/${id}/resolve`, {
+        method: 'POST',
+        body: JSON.stringify({ actionTaken, resolutionDetails, resolutionNotes: actionTaken }),
+      });
+    }
+  },
+
+  closeConcern: async (id: string, notes?: string): Promise<ApiResponse<ConcernRecord>> => {
+    try {
+      return await apiFetch<ApiResponse<ConcernRecord>>(`/concerns/${id}/close`, {
+        method: 'POST',
+        body: JSON.stringify({ notes }),
+      });
+    } catch {
+      return await apiFetch<ApiResponse<ConcernRecord>>(`/complaints/${id}/close`, {
+        method: 'POST',
+        body: JSON.stringify({ notes }),
+      });
+    }
+  },
+
+  reopenConcern: async (id: string, reason: string): Promise<ApiResponse<ConcernRecord>> => {
+    try {
+      return await apiFetch<ApiResponse<ConcernRecord>>(`/concerns/${id}/reopen`, {
+        method: 'POST',
+        body: JSON.stringify({ reason }),
+      });
+    } catch {
+      return await apiFetch<ApiResponse<ConcernRecord>>(`/complaints/${id}/reopen`, {
+        method: 'POST',
+        body: JSON.stringify({ reason }),
+      });
+    }
+  },
+
+  getConcernStats: async (schoolId?: string): Promise<ApiResponse<any>> => {
+    try {
+      return await apiFetch<ApiResponse<any>>(`/concerns/stats/summary${schoolId ? `?schoolId=${schoolId}` : ''}`);
+    } catch {
+      return await apiFetch<ApiResponse<any>>(`/complaints/stats/summary${schoolId ? `?schoolId=${schoolId}` : ''}`);
+    }
+  },
+
+  respondToConcern: async (id: string, responseMessage: string, status: 'PENDING' | 'IN_REVIEW' | 'RESOLVED', responderName?: string): Promise<ApiResponse<ConcernRecord>> => {
+    return apiService.sendConcernMessage(id, responseMessage, 'PARENT_VISIBLE');
+  },
   respondToComplaint: async (id: string, responseMessage: string, status: 'PENDING' | 'IN_REVIEW' | 'RESOLVED', responderName?: string): Promise<ApiResponse<ComplaintRecord>> => {
-    return apiService.respondToConcern(id, responseMessage, status, responderName);
+    return apiService.sendConcernMessage(id, responseMessage, 'PARENT_VISIBLE');
   },
 
   deleteConcern: async (id: string): Promise<ApiResponse<boolean>> => {
@@ -2861,6 +3102,26 @@ const coreApiService = {
     recordedByStaffName?: string;
   }): Promise<ApiResponse<any>> => {
     return apiFetch<ApiResponse<any>>('/lunch/payments/daily', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  recordMonthlyLunchPayment: async (data: {
+    studentId: string;
+    schoolId?: string;
+    academicYearId?: string;
+    termId?: string;
+    amount: number;
+    paymentMonth?: string;
+    paymentDate?: string;
+    paymentMethod?: string;
+    transactionReference?: string;
+    idempotencyKey?: string;
+    notes?: string;
+    recordedByStaffName?: string;
+  }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/lunch/payments/monthly', {
       method: 'POST',
       body: JSON.stringify(data),
     });

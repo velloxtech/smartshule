@@ -25,7 +25,8 @@ import {
   InvoiceFilterCriteria,
   PaymentFilterCriteria,
   ExpenseFilterCriteria,
-  OtherIncomeFilterCriteria
+  OtherIncomeFilterCriteria,
+  ReversalRequestFilterCriteria
 } from '../../../core/ports/repositories/IFeeRepository';
 import {
   IDeletedStudentRepository,
@@ -50,6 +51,7 @@ import { Guardian, GuardianRelationship } from '../../../core/domain/user/Guardi
 import { School } from '../../../core/domain/academic/School';
 import { AcademicYear, AcademicTerm } from '../../../core/domain/academic/AcademicYear';
 import { ClassRoom, Stream, LearningArea, EducationLevel } from '../../../core/domain/academic/ClassRoom';
+import { GlobalSubject } from '../../../core/domain/academic/GlobalSubject';
 import { ClassTeacherAssignment, SubjectTeacherAssignment } from '../../../core/domain/academic/TeacherAssignment';
 import {
   Strand,
@@ -79,6 +81,7 @@ import {
   StudentFeeCredit,
   FeeCreditApplication
 } from '../../../core/domain/finance/Fee';
+import { TransactionReversalRequest } from '../../../core/domain/finance/TransactionReversalRequest';
 import { FeeBannerConfig } from '../../../core/domain/finance/FeeBannerConfig';
 
 // --- Mongoose Schemas ---
@@ -820,15 +823,23 @@ export class MongoAcademicRepository implements IAcademicRepository {
   public async updateStream(stream: Stream): Promise<void> {
     await StreamModel.findByIdAndUpdate(stream.id, stream.toJSON());
   }
+  public async findGlobalSubjectById(id: string): Promise<GlobalSubject | null> {
+    return null;
+  }
+  public async findAllGlobalSubjects(schoolId?: string): Promise<GlobalSubject[]> {
+    return [];
+  }
+  public async saveGlobalSubject(subject: GlobalSubject): Promise<void> {}
   public async findLearningAreaById(id: string): Promise<LearningArea | null> {
     const doc = await LearningAreaModel.findById(id).lean();
     if (!doc) return null;
     return LearningArea.create(doc as any, doc._id, doc.createdAt, doc.updatedAt);
   }
-  public async findAllLearningAreas(filters?: { gradeLevel?: CBCGradeLevel; schoolId?: string }): Promise<LearningArea[]> {
+  public async findAllLearningAreas(filters?: { gradeLevel?: CBCGradeLevel; schoolId?: string; globalSubjectId?: string }): Promise<LearningArea[]> {
     const query: any = {};
     if (filters?.gradeLevel) query.gradeLevel = filters.gradeLevel;
     if (filters?.schoolId) query.schoolId = filters.schoolId;
+    if (filters?.globalSubjectId) query.globalSubjectId = filters.globalSubjectId;
     const docs = await LearningAreaModel.find(query).lean();
     return docs.map((d: any) => LearningArea.create(d, d._id, d.createdAt, d.updatedAt));
   }
@@ -1369,9 +1380,26 @@ export class MongoFeeRepository implements IFeeRepository {
     this.feeBannerConfigs.set(key, config);
   }
 
+  // Concurrency Locking
+  private lockQueues: Map<string, Promise<any>> = new Map();
+  public async withLock<T>(key: string, operation: () => Promise<T>): Promise<T> {
+    const currentLock = this.lockQueues.get(key) || Promise.resolve();
+    let releaseLock: () => void;
+    const newLock = new Promise<void>(resolve => { releaseLock = resolve; });
+    this.lockQueues.set(key, currentLock.then(() => newLock));
+
+    try {
+      await currentLock;
+      return await operation();
+    } finally {
+      releaseLock!();
+    }
+  }
+
   // Student Fee Credits
   private credits: Map<string, StudentFeeCredit> = new Map();
   private creditApplications: Map<string, FeeCreditApplication> = new Map();
+  private reversalRequests: Map<string, TransactionReversalRequest> = new Map();
 
   public async findCreditById(id: string): Promise<StudentFeeCredit | null> {
     return this.credits.get(id) || null;
@@ -1397,12 +1425,86 @@ export class MongoFeeRepository implements IFeeRepository {
     this.creditApplications.set(application.id, application);
   }
 
-  public async findCreditApplications(filters: { studentId?: string; invoiceId?: string; creditId?: string }): Promise<FeeCreditApplication[]> {
+  public async findCreditApplications(filters: {
+    studentId?: string;
+    studentIds?: string[];
+    invoiceId?: string;
+    creditId?: string;
+    receiptNumber?: string;
+    applicationReference?: string;
+    academicYearId?: string;
+    termId?: string;
+    status?: string;
+    transactionType?: string;
+  }): Promise<FeeCreditApplication[]> {
     let result = Array.from(this.creditApplications.values());
     if (filters.studentId) result = result.filter(a => a.studentId === filters.studentId);
+    if (filters.studentIds && filters.studentIds.length > 0) result = result.filter(a => filters.studentIds!.includes(a.studentId));
     if (filters.invoiceId) result = result.filter(a => a.invoiceId === filters.invoiceId);
     if (filters.creditId) result = result.filter(a => a.creditId === filters.creditId);
+    if (filters.receiptNumber) result = result.filter(a => a.receiptNumber === filters.receiptNumber);
+    if (filters.applicationReference) result = result.filter(a => a.applicationReference === filters.applicationReference);
+    if (filters.academicYearId) result = result.filter(a => a.academicYearId === filters.academicYearId);
+    if (filters.termId) result = result.filter(a => a.termId === filters.termId);
+    if (filters.status) result = result.filter(a => a.status === filters.status);
+    if (filters.transactionType) result = result.filter(a => a.transactionType === filters.transactionType);
     return result;
+  }
+
+  public async findCreditApplicationById(id: string): Promise<FeeCreditApplication | null> {
+    return this.creditApplications.get(id) || null;
+  }
+
+  public async findCreditApplicationByReceiptNumber(receiptNumber: string): Promise<FeeCreditApplication | null> {
+    return Array.from(this.creditApplications.values()).find(a => a.receiptNumber === receiptNumber) || null;
+  }
+
+  // Transaction Reversals
+  public async saveReversalRequest(request: TransactionReversalRequest): Promise<void> {
+    this.reversalRequests.set(request.id, request);
+  }
+
+  public async findReversalRequestById(id: string): Promise<TransactionReversalRequest | null> {
+    return this.reversalRequests.get(id) || null;
+  }
+
+  public async findReversalRequestByReference(ref: string): Promise<TransactionReversalRequest | null> {
+    return Array.from(this.reversalRequests.values()).find(r => r.requestReference === ref) || null;
+  }
+
+  public async findReversalRequests(filters: ReversalRequestFilterCriteria): Promise<TransactionReversalRequest[]> {
+    let result = Array.from(this.reversalRequests.values());
+    if (filters.schoolId) result = result.filter(r => r.schoolId === filters.schoolId);
+    if (filters.studentId) result = result.filter(r => r.studentId === filters.studentId);
+    if (filters.studentIds && filters.studentIds.length > 0) result = result.filter(r => filters.studentIds!.includes(r.studentId));
+    if (filters.status) result = result.filter(r => r.status === filters.status);
+    if (filters.transactionType) result = result.filter(r => r.transactionType === filters.transactionType);
+    if (filters.transactionId) result = result.filter(r => r.transactionId === filters.transactionId);
+    if (filters.transactionReference) result = result.filter(r => r.transactionReference === filters.transactionReference);
+    if (filters.requestReference) result = result.filter(r => r.requestReference === filters.requestReference);
+    if (filters.requestedByUserId) result = result.filter(r => r.requestedByUserId === filters.requestedByUserId);
+    if (filters.startDate) result = result.filter(r => new Date(r.requestedAt) >= new Date(filters.startDate!));
+    if (filters.endDate) result = result.filter(r => new Date(r.requestedAt) <= new Date(filters.endDate!));
+    if (filters.search) {
+      const q = filters.search.toLowerCase();
+      result = result.filter(
+        r =>
+          r.requestReference.toLowerCase().includes(q) ||
+          r.transactionReference.toLowerCase().includes(q) ||
+          r.studentName.toLowerCase().includes(q) ||
+          r.admissionNumber.toLowerCase().includes(q) ||
+          (r.reason && r.reason.toLowerCase().includes(q))
+      );
+    }
+    return result.sort((a, b) => b.requestedAt.getTime() - a.requestedAt.getTime());
+  }
+
+  public async findActiveReversalRequestForTransaction(transactionId: string): Promise<TransactionReversalRequest | null> {
+    return (
+      Array.from(this.reversalRequests.values()).find(
+        r => r.transactionId === transactionId && (r.status === 'PENDING_ADMIN_APPROVAL' || r.status === 'PROCESSING')
+      ) || null
+    );
   }
 }
 

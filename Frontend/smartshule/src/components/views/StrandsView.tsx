@@ -58,10 +58,12 @@ export const StrandsView: React.FC = () => {
     loadAreas();
   }, []);
 
-  // GLOBAL SUBJECTS FIX: Make all global database subjects available for selection
+  // Filter available learning areas strictly by the selected grade level
   const availableAreas = useMemo(() => {
-    return learningAreas;
-  }, [learningAreas]);
+    if (!selectedGrade) return learningAreas;
+    const filtered = learningAreas.filter(a => matchGradeLevels(a.gradeLevel, selectedGrade));
+    return filtered.length > 0 ? filtered : learningAreas;
+  }, [learningAreas, selectedGrade]);
 
   // Keep selectedAreaId valid
   useEffect(() => {

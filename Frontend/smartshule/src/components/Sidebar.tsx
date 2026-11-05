@@ -303,7 +303,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         <span className={`material-symbols-outlined text-[18px] ${isActive ? 'text-white' : 'text-[#7a1228]/80'}`}>
                           {item.icon}
                         </span>
-                        <span className="font-body-md text-sm truncate">{item.label}</span>
+                        <span className="font-body-md text-sm truncate">
+                          {item.id === 'concerns' && (user?.role === UserRole.PARENT || user?.role === UserRole.GUARDIAN)
+                            ? 'My Concerns'
+                            : item.label}
+                        </span>
                       </div>
                       {item.id === 'slot-applications' && (
                         <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full uppercase shrink-0 ${
@@ -356,6 +360,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           isActive ? 'bg-white/20 text-white' : 'bg-[#7a1228]/15 text-[#7a1228]'
                         }`}>
                           Exempt
+                        </span>
+                      )}
+                      {item.id === 'lunch-fee-management' && (
+                        <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full uppercase shrink-0 ${
+                          isActive ? 'bg-white/20 text-white' : 'bg-[#7a1228]/15 text-[#7a1228]'
+                        }`}>
+                          Dining
                         </span>
                       )}
                       {item.id === 'fee-deadline-banner' && (

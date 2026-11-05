@@ -25,7 +25,8 @@ import {
   InvoiceFilterCriteria,
   PaymentFilterCriteria,
   ExpenseFilterCriteria,
-  OtherIncomeFilterCriteria
+  OtherIncomeFilterCriteria,
+  ReversalRequestFilterCriteria
 } from '../../../core/ports/repositories/IFeeRepository';
 import {
   IMediaRepository,
@@ -49,6 +50,7 @@ import { Guardian } from '../../../core/domain/user/Guardian';
 import { School } from '../../../core/domain/academic/School';
 import { AcademicYear, AcademicTerm } from '../../../core/domain/academic/AcademicYear';
 import { ClassRoom, Stream, LearningArea } from '../../../core/domain/academic/ClassRoom';
+import { GlobalSubject } from '../../../core/domain/academic/GlobalSubject';
 import { ClassTeacherAssignment, SubjectTeacherAssignment } from '../../../core/domain/academic/TeacherAssignment';
 import {
   Strand,
@@ -70,6 +72,7 @@ import {
   StudentFeeCredit,
   FeeCreditApplication
 } from '../../../core/domain/finance/Fee';
+import { TransactionReversalRequest } from '../../../core/domain/finance/TransactionReversalRequest';
 import { FeeBannerConfig } from '../../../core/domain/finance/FeeBannerConfig';
 import { ParentHelpRequest } from '../../../core/domain/media/ParentHelpRequest';
 import { StudentProgressPhoto } from '../../../core/domain/media/StudentProgressPhoto';
@@ -296,6 +299,7 @@ export class InMemoryAcademicRepository implements IAcademicRepository {
   private terms: Map<string, AcademicTerm> = new Map();
   private classes: Map<string, ClassRoom> = new Map();
   private streams: Map<string, Stream> = new Map();
+  private globalSubjects: Map<string, GlobalSubject> = new Map();
   private learningAreas: Map<string, LearningArea> = new Map();
   private classTeacherAssignments: Map<string, ClassTeacherAssignment> = new Map();
   private subjectTeacherAssignments: Map<string, SubjectTeacherAssignment> = new Map();
@@ -407,15 +411,31 @@ export class InMemoryAcademicRepository implements IAcademicRepository {
     this.streams.set(stream.id, stream);
   }
 
+  // Global Subjects Catalogue
+  public async findGlobalSubjectById(id: string): Promise<GlobalSubject | null> {
+    return this.globalSubjects.get(id) || null;
+  }
+
+  public async findAllGlobalSubjects(schoolId?: string): Promise<GlobalSubject[]> {
+    let result = Array.from(this.globalSubjects.values());
+    if (schoolId) result = result.filter(s => s.schoolId === schoolId);
+    return result;
+  }
+
+  public async saveGlobalSubject(subject: GlobalSubject): Promise<void> {
+    this.globalSubjects.set(subject.id, subject);
+  }
+
   // Learning Areas
   public async findLearningAreaById(id: string): Promise<LearningArea | null> {
     return this.learningAreas.get(id) || null;
   }
 
-  public async findAllLearningAreas(filters?: { gradeLevel?: CBCGradeLevel; schoolId?: string }): Promise<LearningArea[]> {
+  public async findAllLearningAreas(filters?: { gradeLevel?: CBCGradeLevel; schoolId?: string; globalSubjectId?: string }): Promise<LearningArea[]> {
     let result = Array.from(this.learningAreas.values());
     if (filters?.schoolId) result = result.filter(a => a.schoolId === filters.schoolId);
     if (filters?.gradeLevel) result = result.filter(a => a.gradeLevel === filters.gradeLevel);
+    if (filters?.globalSubjectId) result = result.filter(a => a.globalSubjectId === filters.globalSubjectId);
     return result;
   }
 
@@ -587,7 +607,11 @@ export class InMemoryCBCAssessmentRepository implements ICBCAssessmentRepository
     let result = Array.from(this.formatives.values());
     if (filters.studentId) result = result.filter(f => f.studentId === filters.studentId);
     if (filters.learningAreaId) result = result.filter(f => f.learningAreaId === filters.learningAreaId);
-    if (filters.termId) result = result.filter(f => f.termId === filters.termId);
+    if (filters.termId) {
+      const t = filters.termId;
+      const alt = t.includes('-t') ? t.replace('-t', '-') : t.replace(/-(\d)$/, '-t$1');
+      result = result.filter(f => f.termId === t || f.termId === alt);
+    }
     if (filters.academicYearId) result = result.filter(f => f.academicYearId === filters.academicYearId);
     if (filters.subStrandId) result = result.filter(f => f.subStrandId === filters.subStrandId);
     return result;
@@ -622,7 +646,11 @@ export class InMemoryCBCAssessmentRepository implements ICBCAssessmentRepository
     let result = Array.from(this.summatives.values());
     if (filters.studentId) result = result.filter(s => s.studentId === filters.studentId);
     if (filters.learningAreaId) result = result.filter(s => s.learningAreaId === filters.learningAreaId);
-    if (filters.termId) result = result.filter(s => s.termId === filters.termId);
+    if (filters.termId) {
+      const t = filters.termId;
+      const alt = t.includes('-t') ? t.replace('-t', '-') : t.replace(/-(\d)$/, '-t$1');
+      result = result.filter(s => s.termId === t || s.termId === alt);
+    }
     if (filters.academicYearId) result = result.filter(s => s.academicYearId === filters.academicYearId);
     return result;
   }
@@ -846,9 +874,17 @@ export class InMemoryAttendanceRepository implements IAttendanceRepository {
     return this.registers.get(id) || null;
   }
 
-  public async findRegister(streamId: string, date: string, type: AttendanceType): Promise<AttendanceRegister | null> {
+  public async findRegister(streamId: string, date: string, type: AttendanceType, classRoomId?: string): Promise<AttendanceRegister | null> {
+    const sId = (streamId || '').trim();
+    const cId = (classRoomId || '').trim();
     for (const r of this.registers.values()) {
-      if (r.streamId === streamId && r.date === date && r.type === type) return r;
+      const rStream = (r.streamId || '').trim();
+      const rClass = (r.classRoomId || '').trim();
+      if (r.date === date && r.type === type) {
+        if (sId && rStream === sId) return r;
+        if (!sId && cId && rClass === cId && !rStream) return r;
+        if (sId && cId && rStream === sId && rClass === cId) return r;
+      }
     }
     return null;
   }
@@ -868,11 +904,27 @@ export class InMemoryAttendanceRepository implements IAttendanceRepository {
   }
 
   public async saveRegister(register: AttendanceRegister): Promise<void> {
+    const sId = (register.streamId || '').trim();
+    const cId = (register.classRoomId || '').trim();
+    for (const [id, r] of this.registers.entries()) {
+      const rStream = (r.streamId || '').trim();
+      const rClass = (r.classRoomId || '').trim();
+      if (
+        r.schoolId === register.schoolId &&
+        rClass === cId &&
+        rStream === sId &&
+        r.date === register.date &&
+        r.type === register.type
+      ) {
+        this.registers.set(id, register);
+        return;
+      }
+    }
     this.registers.set(register.id, register);
   }
 
   public async updateRegister(register: AttendanceRegister): Promise<void> {
-    this.registers.set(register.id, register);
+    await this.saveRegister(register);
   }
 
   public async findRegistersByStudent(studentId: string): Promise<AttendanceRegister[]> {
@@ -896,6 +948,7 @@ export class InMemoryFeeRepository implements IFeeRepository {
   private payments: Map<string, Payment> = new Map();
   private expenses: Map<string, Expense> = new Map();
   private otherIncomes: Map<string, OtherIncome> = new Map();
+  private reversalRequests: Map<string, TransactionReversalRequest> = new Map();
   private lockQueues: Map<string, Promise<any>> = new Map();
 
   public async withLock<T>(key: string, operation: () => Promise<T>): Promise<T> {
@@ -1164,12 +1217,86 @@ export class InMemoryFeeRepository implements IFeeRepository {
     this.creditApplications.set(application.id, application);
   }
 
-  public async findCreditApplications(filters: { studentId?: string; invoiceId?: string; creditId?: string }): Promise<FeeCreditApplication[]> {
+  public async findCreditApplications(filters: {
+    studentId?: string;
+    studentIds?: string[];
+    invoiceId?: string;
+    creditId?: string;
+    receiptNumber?: string;
+    applicationReference?: string;
+    academicYearId?: string;
+    termId?: string;
+    status?: string;
+    transactionType?: string;
+  }): Promise<FeeCreditApplication[]> {
     let result = Array.from(this.creditApplications.values());
     if (filters.studentId) result = result.filter(a => a.studentId === filters.studentId);
+    if (filters.studentIds && filters.studentIds.length > 0) result = result.filter(a => filters.studentIds!.includes(a.studentId));
     if (filters.invoiceId) result = result.filter(a => a.invoiceId === filters.invoiceId);
     if (filters.creditId) result = result.filter(a => a.creditId === filters.creditId);
+    if (filters.receiptNumber) result = result.filter(a => a.receiptNumber === filters.receiptNumber);
+    if (filters.applicationReference) result = result.filter(a => a.applicationReference === filters.applicationReference);
+    if (filters.academicYearId) result = result.filter(a => a.academicYearId === filters.academicYearId);
+    if (filters.termId) result = result.filter(a => a.termId === filters.termId);
+    if (filters.status) result = result.filter(a => a.status === filters.status);
+    if (filters.transactionType) result = result.filter(a => a.transactionType === filters.transactionType);
     return result;
+  }
+
+  public async findCreditApplicationById(id: string): Promise<FeeCreditApplication | null> {
+    return this.creditApplications.get(id) || null;
+  }
+
+  public async findCreditApplicationByReceiptNumber(receiptNumber: string): Promise<FeeCreditApplication | null> {
+    return Array.from(this.creditApplications.values()).find(a => a.receiptNumber === receiptNumber) || null;
+  }
+
+  // Transaction Reversals
+  public async saveReversalRequest(request: TransactionReversalRequest): Promise<void> {
+    this.reversalRequests.set(request.id, request);
+  }
+
+  public async findReversalRequestById(id: string): Promise<TransactionReversalRequest | null> {
+    return this.reversalRequests.get(id) || null;
+  }
+
+  public async findReversalRequestByReference(ref: string): Promise<TransactionReversalRequest | null> {
+    return Array.from(this.reversalRequests.values()).find(r => r.requestReference === ref) || null;
+  }
+
+  public async findReversalRequests(filters: ReversalRequestFilterCriteria): Promise<TransactionReversalRequest[]> {
+    let result = Array.from(this.reversalRequests.values());
+    if (filters.schoolId) result = result.filter(r => r.schoolId === filters.schoolId);
+    if (filters.studentId) result = result.filter(r => r.studentId === filters.studentId);
+    if (filters.studentIds && filters.studentIds.length > 0) result = result.filter(r => filters.studentIds!.includes(r.studentId));
+    if (filters.status) result = result.filter(r => r.status === filters.status);
+    if (filters.transactionType) result = result.filter(r => r.transactionType === filters.transactionType);
+    if (filters.transactionId) result = result.filter(r => r.transactionId === filters.transactionId);
+    if (filters.transactionReference) result = result.filter(r => r.transactionReference === filters.transactionReference);
+    if (filters.requestReference) result = result.filter(r => r.requestReference === filters.requestReference);
+    if (filters.requestedByUserId) result = result.filter(r => r.requestedByUserId === filters.requestedByUserId);
+    if (filters.startDate) result = result.filter(r => new Date(r.requestedAt) >= new Date(filters.startDate!));
+    if (filters.endDate) result = result.filter(r => new Date(r.requestedAt) <= new Date(filters.endDate!));
+    if (filters.search) {
+      const q = filters.search.toLowerCase();
+      result = result.filter(
+        r =>
+          r.requestReference.toLowerCase().includes(q) ||
+          r.transactionReference.toLowerCase().includes(q) ||
+          r.studentName.toLowerCase().includes(q) ||
+          r.admissionNumber.toLowerCase().includes(q) ||
+          (r.reason && r.reason.toLowerCase().includes(q))
+      );
+    }
+    return result.sort((a, b) => b.requestedAt.getTime() - a.requestedAt.getTime());
+  }
+
+  public async findActiveReversalRequestForTransaction(transactionId: string): Promise<TransactionReversalRequest | null> {
+    return (
+      Array.from(this.reversalRequests.values()).find(
+        r => r.transactionId === transactionId && (r.status === 'PENDING_ADMIN_APPROVAL' || r.status === 'PROCESSING')
+      ) || null
+    );
   }
 }
 

@@ -513,16 +513,18 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
       }
     }
 
-    // 2. Determine target grade level from student or selected class
-    const student = students.find((s) => s.id === selectedStudentId);
+    // 2. Determine target grade level: Filter class takes absolute precedence for class rosters!
     let targetGrade = '';
-    if (student) {
-      targetGrade = (student.gradeLevel || student.grade || '').toUpperCase().replace(/[\s-]/g, '_');
-    }
-    if (!targetGrade && filterClassId) {
+    if (filterClassId && filterClassId !== 'All') {
       const cls = classes.find((c) => c.id === filterClassId);
       if (cls) {
         targetGrade = (cls.gradeLevel || cls.name || '').toUpperCase().replace(/[\s-]/g, '_');
+      }
+    }
+    if (!targetGrade && selectedStudentId) {
+      const student = students.find((s) => s.id === selectedStudentId);
+      if (student) {
+        targetGrade = (student.gradeLevel || student.grade || '').toUpperCase().replace(/[\s-]/g, '_');
       }
     }
 
@@ -575,7 +577,15 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
           name: getCanonicalName(key, resolvedName),
           initial: getCanonicalInitial(key),
           isAssigned,
-          aliasSet: new Set([la.id, resolvedCode, resolvedName, key].filter(Boolean) as string[]),
+          aliasSet: new Set([
+            la.id,
+            resolvedCode,
+            resolvedName,
+            key,
+            (la as any).globalSubjectId,
+            (la as any).globalSubject?.code,
+            (la as any).globalSubject?.name
+          ].filter(Boolean) as string[]),
           isGradeMatch,
         });
       } else {
@@ -583,6 +593,7 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
         item.aliasSet.add(la.id);
         if (resolvedCode) item.aliasSet.add(resolvedCode);
         if (resolvedName) item.aliasSet.add(resolvedName);
+        if ((la as any).globalSubjectId) item.aliasSet.add((la as any).globalSubjectId);
         if (isAssigned) item.isAssigned = true;
 
         // If this item is a grade-level match or a DB entity overriding a fallback, update id/code/name
@@ -606,10 +617,12 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
       });
     }
 
-    // All other learning areas from DB
-    learningAreas.forEach((la: any) => {
-      registerSubject(la, false, true);
-    });
+    // If no specific grade targeted (e.g. all classes view), register all learning areas from DB
+    if (!targetGrade) {
+      learningAreas.forEach((la: any) => {
+        registerSubject(la, false, true);
+      });
+    }
 
     // Authorized subjects from teacher context
     if (teacherAuthContext && filterClassId && teacherAuthContext.authorizedSubjectsByClass?.[filterClassId]) {
@@ -1239,8 +1252,8 @@ export const UploadMarksModal: React.FC<UploadMarksModalProps> = ({
     let isCancelled = false;
     setLoadingExistingMarks(true);
 
-    const effYear = academicYearId || `year-${new Date().getFullYear()}`;
-    const effTerm = termId || `term-${effYear}-t1`;
+    const effYear = academicYearId || (academicYears.find((y) => y.isCurrent)?.id || academicYears[0]?.id || 'year-2026');
+    const effTerm = termId || (terms.find((t) => t.isCurrent)?.id || terms[0]?.id || 'term-2026-3');
 
     apiService
       .listSummatives({

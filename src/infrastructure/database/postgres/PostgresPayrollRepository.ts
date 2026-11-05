@@ -83,14 +83,24 @@ export class PostgresPayrollRepository implements IPayrollRepository {
     return this.mapPayrollRow(res.rows[0]);
   }
 
-  public async findPayrollsByMonth(month: string, schoolId?: string): Promise<PayrollRecord[]> {
-    let query = 'SELECT * FROM payroll_records WHERE month = $1';
-    const params: any[] = [month];
-    if (schoolId) {
-      query += ' AND school_id = $2';
-      params.push(schoolId);
+  public async findPayrollsByMonth(month?: string, schoolId?: string): Promise<PayrollRecord[]> {
+    let query = 'SELECT * FROM payroll_records';
+    const params: any[] = [];
+    const conditions: string[] = [];
+
+    if (month && month.toUpperCase() !== 'ALL') {
+      params.push(month);
+      conditions.push(`month = $${params.length}`);
     }
-    query += ' ORDER BY teacher_name ASC';
+    if (schoolId) {
+      params.push(schoolId);
+      conditions.push(`school_id = $${params.length}`);
+    }
+
+    if (conditions.length > 0) {
+      query += ` WHERE ${conditions.join(' AND ')}`;
+    }
+    query += ' ORDER BY month DESC, teacher_name ASC';
     const res = await this.pool.query(query, params);
     return res.rows.map(r => this.mapPayrollRow(r));
   }

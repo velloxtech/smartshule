@@ -160,7 +160,7 @@ VERIFIED DATABASE PROFILE OF RECIPIENT & STUDENT:
 - Financial / Fee Records: ${feeText}
 - Attendance Records: ${attendanceText}
 - CBC Academic Assessment: ${CBCText}
-- eDiary Homework: ${ediaryText}
+- Daily Homefun & Communication Diary (E-Diary): ${ediaryText}
 
 DESIRED TONE:
 ${tone} (must remain respectful, helpful, and official)
@@ -202,15 +202,15 @@ MANDATORY RULES:
     const schoolPhone = params.schoolPhone || '';
     const contactLine = schoolPhone ? `_Contact: ${schoolPhone}_` : '';
 
-    if (/\b(HOMEWORK|EDIARY|DIARY|ASSIGNMENT|ASSIGNMENTS|TASK|TASKS)\b/i.test(cmdUpper)) {
+    if (/\b(HOMEFUN|HOMEWORK|EDIARY|DIARY|ASSIGNMENT|ASSIGNMENTS|TASK|TASKS)\b/i.test(cmdUpper)) {
       return (
         `*Dear ${guardianName},*\n\n` +
-        `Here is today's CBC eDiary homework notice for *${learner}* (Adm: *${adm}* · ${student.gradeLevel}):\n\n` +
-        `*Assigned Homework:*\n` +
-        `${ediarySummary?.recentHomework || 'No pending homework recorded for today.'}\n\n` +
+        `Here is today's Daily Homefun & Communication Diary (E-Diary) notice for *${learner}* (Adm: *${adm}* · ${student.gradeLevel}):\n\n` +
+        `*Assigned Homefun Activities:*\n` +
+        `${ediarySummary?.recentHomework || 'No pending homefun recorded for today.'}\n\n` +
         `*Requirements for Tomorrow:*\n` +
         `${ediarySummary?.requirementsTomorrow || 'Standard learning materials.'}\n\n` +
-        `Please inspect your child's work and acknowledge via the eDiary portal.\n\n` +
+        `Please inspect your child's homefun activities and acknowledge via the Daily Homefun & Communication Diary (E-Diary) portal.\n\n` +
         `Warm regards,\n` +
         `*${schoolName} Teaching Staff*\n` +
         contactLine

@@ -140,14 +140,14 @@ export const EDiaryView: React.FC = () => {
   };
 
   const handleDeleteEntry = async (entryId: string) => {
-    if (window.confirm('Are you sure you want to delete this eDiary homework entry?')) {
+    if (window.confirm('Are you sure you want to delete this Daily Homefun & Communication Diary entry?')) {
       try {
         const res = await apiService.deleteEDiaryEntry(entryId);
         if (res.success) {
           setEntries((prev) => prev.filter((e) => e.id !== entryId));
         }
       } catch (err: any) {
-        alert(err.message || 'Failed to delete eDiary entry');
+        alert(err.message || 'Failed to delete diary entry');
       }
     }
   };
@@ -181,7 +181,7 @@ export const EDiaryView: React.FC = () => {
       } else if (entryToEdit.homework) {
         setNewTasks([
           {
-            learningArea: 'General Homework',
+            learningArea: 'General Homefun',
             description: entryToEdit.homework,
             dueDate: entryToEdit.date,
           },
@@ -226,7 +226,7 @@ export const EDiaryView: React.FC = () => {
 
       const validTasks = newTasks.filter((t) => t.learningArea.trim() || t.description.trim());
       if (validTasks.length === 0 && !teacherRemarks.trim()) {
-        const msg = 'Please provide at least one homework task or teacher remark before saving.';
+        const msg = 'Please provide at least one homefun activity or teacher remark before saving.';
         setFormError(msg);
         setIsSubmitting(false);
         return;
@@ -322,15 +322,15 @@ export const EDiaryView: React.FC = () => {
             <span>/</span>
             <span>Academics</span>
             <span>/</span>
-            <span className="text-primary font-semibold">Digital School eDiary</span>
+            <span className="text-primary font-semibold">Daily Homefun &amp; Communication Diary (E-Diary)</span>
           </div>
           <h1 className="font-headline-lg text-headline-lg text-on-surface mt-1">
-            {isGuardian ? 'Daily Homework & Communication Diary' : 'Class Digital eDiary & Assignment Board'}
+            Daily Homefun &amp; Communication Diary (E-Diary)
           </h1>
           <p className="text-xs text-on-surface-variant mt-0.5">
             {isGuardian
-              ? 'Review daily assignments, teacher remarks, requirements for tomorrow, and digitally sign off'
-              : 'Record daily homework tasks, learning area requirements, and review parent digital sign-offs'}
+              ? 'Review daily homefun activities, teacher remarks, requirements for tomorrow, and digitally sign off'
+              : 'Record daily homefun activities, learning area requirements, and review parent digital sign-offs'}
           </p>
         </div>
 
@@ -382,7 +382,7 @@ export const EDiaryView: React.FC = () => {
               className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 text-xs font-bold shadow-xs transition-all cursor-pointer"
             >
               <span className="material-symbols-outlined text-[16px]">edit_note</span>
-              <span>+ Record Daily eDiary</span>
+              <span>+ Record Daily Homefun &amp; Communication Diary</span>
             </button>
           )}
         </div>
@@ -421,7 +421,7 @@ export const EDiaryView: React.FC = () => {
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-xl">error</span>
             <div>
-              <p className="text-xs font-bold">Failed to load eDiary entries</p>
+              <p className="text-xs font-bold">Failed to load Daily Homefun &amp; Communication Diary entries</p>
               <p className="text-xs text-error/80">{fetchError}</p>
             </div>
           </div>
@@ -438,7 +438,7 @@ export const EDiaryView: React.FC = () => {
       {loading ? (
         <div className="flex flex-col items-center justify-center py-16 gap-3">
           <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-xs font-semibold text-primary">Loading eDiary entries from database...</p>
+          <p className="text-xs font-semibold text-primary">Loading Daily Homefun &amp; Communication Diary entries from database...</p>
         </div>
       ) : isGuardian && linkedStudents.length === 0 ? (
         <div className="p-12 text-center rounded-2xl bg-surface-container-lowest border border-outline-variant/30 max-w-md mx-auto my-8 space-y-3 shadow-xs">
@@ -455,13 +455,13 @@ export const EDiaryView: React.FC = () => {
           <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto text-primary">
             <span className="material-symbols-outlined text-2xl">menu_book</span>
           </div>
-          <h3 className="font-bold text-base text-on-surface">No eDiary Entries Found</h3>
+          <h3 className="font-bold text-base text-on-surface">No Daily Homefun &amp; Communication Diary Entries Found</h3>
           <p className="text-xs text-on-surface-variant leading-relaxed">
             {isGuardian
               ? selectedStudentId
                 ? 'No published diary entries found for this child’s class in this period.'
-                : 'Your children’s educators have not yet published homework or diary entries for this period.'
-              : 'No entries recorded for this stream yet. Click "Record Daily eDiary" to publish today\'s tasks.'}
+                : 'Your children’s educators have not yet published homefun activities or diary entries for this period.'
+              : 'No entries recorded for this stream yet. Click "+ Record Daily Homefun & Communication Diary" to publish today\'s activities.'}
           </p>
         </div>
       ) : (
@@ -571,7 +571,7 @@ export const EDiaryView: React.FC = () => {
                     {isTeacher && !isDraft && (
                       <button
                         onClick={() => handleOpenCreateModal(entry)}
-                        title="Edit this eDiary entry"
+                        title="Edit this Daily Homefun & Communication Diary entry"
                         className="inline-flex items-center gap-1 px-2.5 py-1 bg-surface-container border border-outline-variant/40 rounded-lg text-xs font-bold text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer"
                       >
                         <span className="material-symbols-outlined text-[14px]">edit</span>
@@ -582,7 +582,7 @@ export const EDiaryView: React.FC = () => {
                     {isTeacher && (
                       <button
                         onClick={() => handleDeleteEntry(entry.id)}
-                        title="Delete eDiary Entry"
+                        title="Delete Diary Entry"
                         className="p-1 rounded-lg text-outline hover:text-error hover:bg-error/10 transition-colors cursor-pointer"
                       >
                         <span className="material-symbols-outlined text-[18px]">delete</span>
@@ -593,11 +593,11 @@ export const EDiaryView: React.FC = () => {
 
                 {/* Entry Body */}
                 <div className="p-5 space-y-4">
-                  {/* Homework Tasks */}
+                  {/* Homefun Activities */}
                   <div>
                     <h4 className="text-xs font-bold uppercase tracking-wider text-on-surface-variant mb-2 flex items-center gap-1.5">
                       <span className="material-symbols-outlined text-[16px] text-primary">assignment</span>
-                      <span>Daily Homework Assignments</span>
+                      <span>Daily Homefun Activities</span>
                     </h4>
                     {entry.homeworkTasks && entry.homeworkTasks.length > 0 ? (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -618,13 +618,13 @@ export const EDiaryView: React.FC = () => {
                       </div>
                     ) : entry.homework ? (
                       <div className="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant/30 space-y-1">
-                        <span className="font-bold text-xs text-primary">{entry.title || 'Daily Assigned Tasks'}</span>
+                        <span className="font-bold text-xs text-primary">{entry.title || 'Daily Homefun Activities'}</span>
                         <p className="text-xs text-on-surface font-medium leading-relaxed">
                           {entry.homework}
                         </p>
                       </div>
                     ) : (
-                      <p className="text-xs text-on-surface-variant italic">No specific homework tasks assigned for today.</p>
+                      <p className="text-xs text-on-surface-variant italic">No specific homefun activities assigned for today.</p>
                     )}
                   </div>
 
@@ -700,7 +700,7 @@ export const EDiaryView: React.FC = () => {
             </div>
 
             <p className="text-xs text-on-surface-variant">
-              By acknowledging, you confirm you have inspected your child’s homework tasks and prepared the necessary items for tomorrow.
+              By acknowledging, you confirm you have inspected your child’s homefun activities and prepared the necessary items for tomorrow.
             </p>
 
             <div>
@@ -711,7 +711,7 @@ export const EDiaryView: React.FC = () => {
                 rows={3}
                 value={parentNote}
                 onChange={(e) => setParentNote(e.target.value)}
-                placeholder="e.g. Homework reviewed and signed. Learner was able to complete all tasks."
+                placeholder="e.g. Homefun reviewed and signed. Learner was able to complete all activities."
                 className="w-full p-2.5 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs text-on-surface focus:outline-hidden focus:border-primary"
               ></textarea>
             </div>
@@ -738,7 +738,7 @@ export const EDiaryView: React.FC = () => {
         </div>
       )}
 
-      {/* Teacher Create/Edit eDiary Modal */}
+      {/* Teacher Create/Edit Daily Homefun & Communication Diary Modal */}
       {isCreateOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
           <div className="bg-surface-container-lowest max-w-lg w-full rounded-2xl shadow-xl border border-outline-variant/30 p-6 space-y-4 max-h-[92vh] flex flex-col">
@@ -746,7 +746,7 @@ export const EDiaryView: React.FC = () => {
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-xl text-primary">edit_note</span>
                 <h3 className="font-bold text-sm text-on-surface">
-                  {editingEntryId ? 'Edit Class eDiary Entry' : 'Publish Class eDiary Entry'}
+                  {editingEntryId ? 'Edit Daily Homefun & Communication Diary Entry' : 'Publish Daily Homefun & Communication Diary Entry'}
                 </h3>
               </div>
               <button
@@ -810,17 +810,17 @@ export const EDiaryView: React.FC = () => {
                 />
               </div>
 
-              {/* Homework Tasks Section */}
+              {/* Homefun Activities Section */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-on-surface">Homework Tasks:</label>
+                  <label className="text-xs font-bold text-on-surface">Homefun Activities &amp; Instructions:</label>
                   <button
                     type="button"
                     onClick={addTaskRow}
                     className="text-xs font-bold text-primary hover:underline cursor-pointer flex items-center gap-1"
                   >
                     <span className="material-symbols-outlined text-sm">add</span>
-                    <span>Add Task</span>
+                    <span>Add Homefun Activity</span>
                   </button>
                 </div>
 
@@ -852,14 +852,14 @@ export const EDiaryView: React.FC = () => {
                         type="button"
                         onClick={() => removeTaskRow(idx)}
                         className="text-outline hover:text-error cursor-pointer p-1"
-                        title="Remove Task"
+                        title="Remove Activity"
                       >
                         <span className="material-symbols-outlined text-sm">delete</span>
                       </button>
                     </div>
                     <textarea
                       rows={2}
-                      placeholder="Task description and questions..."
+                      placeholder="Homefun instructions for learners and parents..."
                       value={t.description}
                       onChange={(e) => {
                         const updated = [...newTasks];

@@ -53,7 +53,7 @@ Grace Seeds School warmly announces the official reopening and reporting schedul
 3. School Uniform & Grooming: Please ensure full standard uniform, clean polished black leather shoes, and clean PE kit on scheduled sports days.
 4. Stationery & CBC Workbooks: Ensure all student exercise books, strand assessment portfolios, and creative learning materials are labelled clearly.
 5. School Transport: Morning bus pickup routes will commence at 6:15 AM sharp. Parents dropping learners directly are requested to use Gate 2.
-6. Term Fee Clearance: Kindly finalize term fees or obtain financial clearance via M-Pesa Paybill 247247 before reporting.
+6. Term Fee Clearance: Kindly finalize term fees or obtain financial clearance via M-Pesa Paybill 522533 (Account: 8048859#<Child's Full Name & Grade>) before reporting.
 
 We look forward to an enriching, inspiring, and fruitful academic session with our learners.
 
@@ -72,8 +72,8 @@ Please be reminded regarding the settlement of the 2026 Annual Fee Schedule for 
 
 1. Simplified Annual Structure: All fees are scheduled as an all-inclusive annual fee covering tuition, learning materials, and ICT levies.
 2. Official Payment Channels:
-   • M-Pesa Paybill: 247247 | Account Number: <Child's Full Name & Grade> (not admission number)
-   • Bank Account: Equity Bank | Account Name: Grace Seeds School | Acc No: 0140293847291
+   • M-Pesa Paybill: 522533 | Account Number: 8048859#<Child's Full Name & Grade> (not admission number)
+   • Bank Account: KCB Bank | Account Name: Grace Seeds School | Acc No: 1234567890
 3. Clearance Deadline: Kindly ensure any outstanding arrears or term settlements are ratified before Monday next week.
 4. Download Structure: You may access and download your learner's full breakdown on the Fee Structure tab.
 

@@ -294,7 +294,7 @@ describe('WhatsApp Bot & Phone Counter-Checking Unit Tests', () => {
       const res = await whatsAppService.handleInboundMessage('+254711223344', 'HOMEWORK');
 
       expect(res.intent).toBe('EDIARY');
-      expect(res.replyText).toContain('eDIARY & HOMEWORK');
+      expect(res.replyText).toMatch(/DAILY HOMEFUN & COMMUNICATION DIARY|eDIARY & HOMEWORK/i);
       expect(res.replyText).toContain('Mathematics Algebra Exercises');
       expect(res.replyText).toContain('Page 50 numbers 1 to 5');
     });
@@ -485,7 +485,7 @@ describe('WhatsApp Bot & Phone Counter-Checking Unit Tests', () => {
         // Command 3: eDiary / Homework
         const res3 = await whatsAppService.handleInboundMessage('+254711223344', '3', { useAI: true });
         expect(res3.intent).toBe('EDIARY');
-        expect(res3.replyText).toContain('eDIARY & HOMEWORK');
+        expect(res3.replyText).toMatch(/DAILY HOMEFUN & COMMUNICATION DIARY|eDIARY & HOMEWORK/i);
         expect(res3.replyText).not.toContain('FEES STATEMENT');
 
         // Command 4: Attendance

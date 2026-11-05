@@ -19,6 +19,10 @@ import {
 } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { matchGradeLevels } from '../../utils/formatters';
+import { CurriculumSuiteSwitcher } from '../common/CurriculumSuiteSwitcher';
+import { ViewCurriculumTrackerModal } from '../modals/ViewCurriculumTrackerModal';
+import { ViewTrackerWeekModal } from '../modals/ViewTrackerWeekModal';
+import { ViewDailyLogModal } from '../modals/ViewDailyLogModal';
 import {
   CurriculumTracker,
   CurriculumTrackerWeekItem,
@@ -115,7 +119,11 @@ const SAMPLE_CBC_TEMPLATES: Record<string, Partial<CurriculumTrackerWeekItem>[]>
   ]
 };
 
-export const CurriculumTrackerView: React.FC = () => {
+interface CurriculumTrackerViewProps {
+  onNavigateTab?: (tab: string) => void;
+}
+
+export const CurriculumTrackerView: React.FC<CurriculumTrackerViewProps> = ({ onNavigateTab }) => {
   const { user } = useAuth();
   const isSchoolAdmin = Boolean(
     user?.role && [
@@ -130,6 +138,9 @@ export const CurriculumTrackerView: React.FC = () => {
   // Data states
   const [trackers, setTrackers] = useState<CurriculumTracker[]>([]);
   const [selectedTracker, setSelectedTracker] = useState<CurriculumTracker | null>(null);
+  const [viewingTrackerDossier, setViewingTrackerDossier] = useState(false);
+  const [viewingWeek, setViewingWeek] = useState<CurriculumTrackerWeekItem | null>(null);
+  const [viewingDailyLog, setViewingDailyLog] = useState<CurriculumTrackerDailyLog | EnrichedDailyLog | null>(null);
   const [classes, setClasses] = useState<ClassRoom[]>([]);
   const [learningAreas, setLearningAreas] = useState<BackendLearningArea[]>([]);
   const [loading, setLoading] = useState(true);
@@ -674,6 +685,24 @@ export const CurriculumTrackerView: React.FC = () => {
 
   return (
     <div className="w-full space-y-6 pb-12">
+      {/* Curriculum Planning & Coverage Suite Switcher */}
+      <CurriculumSuiteSwitcher
+        activeTab="curriculum-tracker"
+        onSelectTab={(tab) => {
+          if (tab === 'curriculum-tracker') return;
+          if (onNavigateTab) {
+            if (tab === 'records-of-work') {
+              onNavigateTab('records-of-work');
+            } else {
+              onNavigateTab('schemes-lesson-plans');
+            }
+          }
+        }}
+        counts={{
+          curriculumTrackers: trackers.length,
+        }}
+      />
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 no-print">
         <div>
           <div className="flex items-center gap-2 font-label-md text-label-md text-on-surface-variant">
@@ -686,6 +715,16 @@ export const CurriculumTrackerView: React.FC = () => {
           </h1>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          {selectedTracker && (
+            <button
+              onClick={() => setViewingTrackerDossier(true)}
+              className="px-3.5 py-2 bg-slate-800 text-white rounded-xl hover:bg-slate-900 font-semibold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
+              title="Open full interactive on-screen tracker dossier"
+            >
+              <span className="material-symbols-outlined text-[18px]">visibility</span>
+              <span>View Tracker Dossier</span>
+            </button>
+          )}
           <button onClick={() => setIsCreateModalOpen(true)} className="px-3.5 py-2 bg-[#7a1228] text-white rounded-xl hover:bg-[#5e0d1e] font-semibold text-xs flex items-center gap-1.5 cursor-pointer">
             <span className="material-symbols-outlined text-[18px]">add</span>
             <span>New Subject Tracker</span>
@@ -712,11 +751,23 @@ export const CurriculumTrackerView: React.FC = () => {
             {trackers.length === 0 && <option value="">No curriculum trackers yet</option>}
           </select>
         </div>
-        {selectedTracker && (
-          <button onClick={() => handleDeleteTracker(selectedTracker.id, selectedTracker.subjectName)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer">
-            <span className="material-symbols-outlined text-[18px]">delete</span>
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {selectedTracker && (
+            <button
+              onClick={() => setViewingTrackerDossier(true)}
+              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 rounded-xl font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors"
+              title="Open full interactive on-screen tracker dossier"
+            >
+              <span className="material-symbols-outlined text-[16px]">visibility</span>
+              <span>View Dossier</span>
+            </button>
+          )}
+          {selectedTracker && (
+            <button onClick={() => handleDeleteTracker(selectedTracker.id, selectedTracker.subjectName)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg cursor-pointer" title="Delete tracker">
+              <span className="material-symbols-outlined text-[18px]">delete</span>
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="flex items-center gap-2 border-b border-gray-200 pb-2 no-print overflow-x-auto">
@@ -804,6 +855,13 @@ export const CurriculumTrackerView: React.FC = () => {
                       </td>
                       <td className="px-4 py-3.5 text-right">
                         <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => setViewingWeek(week)}
+                            title="View Week Progression Details"
+                            className="p-1.5 text-gray-600 hover:text-[#7a1228] hover:bg-rose-50 rounded-lg cursor-pointer transition-colors"
+                          >
+                            <span className="material-symbols-outlined text-[18px]">visibility</span>
+                          </button>
                           {isWeekLocked ? (
                             <span className="text-[11px] text-gray-400 italic font-medium px-2 py-1">Locked</span>
                           ) : (
@@ -859,6 +917,13 @@ export const CurriculumTrackerView: React.FC = () => {
                     {log.date} ({log.dayOfWeek}) · Wk {log.weekNumber}
                   </div>
                   <div className="flex gap-2">
+                    <button
+                      onClick={() => setViewingDailyLog(log)}
+                      title="View Daily Lesson Log & Reflection Details"
+                      className="text-gray-500 hover:text-[#7a1228] hover:bg-rose-50 p-1 rounded-lg transition-colors cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">visibility</span>
+                    </button>
                     <button onClick={() => handleOpenEditDailyLog(log)} className="text-gray-400 hover:text-[#7a1228] cursor-pointer"><span className="material-symbols-outlined text-[18px]">edit</span></button>
                     <button onClick={() => handleDeleteDailyLog(selectedTracker.id, log.id)} className="text-gray-400 hover:text-red-600 cursor-pointer"><span className="material-symbols-outlined text-[18px]">delete</span></button>
                   </div>
@@ -897,9 +962,18 @@ export const CurriculumTrackerView: React.FC = () => {
                     <span className="px-3 py-1 bg-gray-100 text-gray-800 font-bold text-xs rounded-xl">{log.className}</span>
                     <span className="text-xs text-gray-500 font-medium py-1">Teacher: <strong className="text-gray-900">{log.loggedByTeacherName}</strong></span>
                   </div>
-                  {!log.endorsement && (
-                    <button onClick={() => handleOpenEndorseModal(log.trackerId, log)} className="px-3 py-1 bg-emerald-600 text-white rounded-lg text-xs font-semibold cursor-pointer">Endorse</button>
-                  )}
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => setViewingDailyLog(log)}
+                      title="View Complete Daily Log & Reflection Details"
+                      className="p-1.5 rounded-lg text-gray-500 hover:text-[#7a1228] hover:bg-rose-50 transition-colors cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">visibility</span>
+                    </button>
+                    {!log.endorsement && (
+                      <button onClick={() => handleOpenEndorseModal(log.trackerId, log)} className="px-3 py-1 bg-emerald-600 text-white rounded-lg text-xs font-semibold cursor-pointer">Endorse</button>
+                    )}
+                  </div>
                 </div>
                 <h4 className="text-sm font-bold">{log.strand} &mdash; <span className="font-semibold text-gray-700">{log.subStrand}</span></h4>
                 {log.reflection && <p className="text-xs text-gray-600 mt-2">"{log.reflection.whatWentWell}"</p>}
@@ -1143,6 +1217,34 @@ export const CurriculumTrackerView: React.FC = () => {
           }}
         />
       )}
+
+      {/* View Curriculum Tracker Dossier Modal */}
+      {viewingTrackerDossier && selectedTracker && (
+        <ViewCurriculumTrackerModal
+          tracker={selectedTracker}
+          onClose={() => setViewingTrackerDossier(false)}
+        />
+      )}
+
+      {/* View Single Week Syllabus Progression Modal */}
+      {viewingWeek && (
+        <ViewTrackerWeekModal
+          week={viewingWeek}
+          trackerSubject={selectedTracker?.subjectName}
+          trackerClass={selectedTracker?.className}
+          onClose={() => setViewingWeek(null)}
+          onEditPlan={handleOpenEditPlan}
+        />
+      )}
+
+      {/* View Single Daily Lesson Log & Reflection Modal */}
+      {viewingDailyLog && (
+        <ViewDailyLogModal
+          log={viewingDailyLog}
+          onClose={() => setViewingDailyLog(null)}
+          onEdit={handleOpenEditDailyLog}
+        />
+      )}
     </div>
   );
 };
@@ -1160,6 +1262,22 @@ const CreateTrackerModal: React.FC<CreateTrackerModalProps> = ({ classes, learni
   const [academicYear, setAcademicYear] = useState('2026');
   const [term, setTerm] = useState('Term 1');
   const [loading, setLoading] = useState(false);
+
+  const availableLearningAreas = useMemo(() => {
+    if (!classRoomId) return learningAreas;
+    const cls = classes.find(c => c.id === classRoomId);
+    if (!cls?.gradeLevel) return learningAreas;
+    const filtered = learningAreas.filter(la => matchGradeLevels(la.gradeLevel, cls.gradeLevel));
+    return filtered.length > 0 ? filtered : learningAreas;
+  }, [learningAreas, classRoomId, classes]);
+
+  useEffect(() => {
+    if (availableLearningAreas.length > 0 && learningAreaId) {
+      if (!availableLearningAreas.some(la => la.id === learningAreaId)) {
+        setLearningAreaId(availableLearningAreas[0].id);
+      }
+    }
+  }, [availableLearningAreas, learningAreaId]);
 
   useEffect(() => {
     apiService.getCurrentContext().then((res) => {
@@ -1207,7 +1325,7 @@ const CreateTrackerModal: React.FC<CreateTrackerModalProps> = ({ classes, learni
           </select>
           <select value={learningAreaId} onChange={(e) => setLearningAreaId(e.target.value)} required className="w-full p-2 text-sm border rounded-xl">
             <option value="">Select Subject...</option>
-            {learningAreas.map(la => <option key={la.id} value={la.id}>{la.name}</option>)}
+            {availableLearningAreas.map(la => <option key={la.id} value={la.id}>{la.name}</option>)}
           </select>
           <div className="flex justify-end gap-2 pt-2 border-t">
             <button type="button" onClick={onClose} className="px-4 py-2 text-xs font-semibold border rounded-xl">Cancel</button>

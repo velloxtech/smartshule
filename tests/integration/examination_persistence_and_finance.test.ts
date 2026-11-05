@@ -3,6 +3,7 @@ import { Express } from 'express';
 import { AppContainer } from '../../src/infrastructure/container';
 import { createExpressApp } from '../../src/infrastructure/http/app';
 import { setupTestFixtures, setupTestRoleAccounts } from '../helpers/testFixtures';
+import { ClassTeacherAssignment } from '../../src/core/domain/academic/TeacherAssignment';
 
 describe('Examination Persistence, Deduplication & Private School Finance API', () => {
   let app: Express;
@@ -43,6 +44,7 @@ describe('Examination Persistence, Deduplication & Private School Finance API', 
         dateOfBirth: '2016-04-12',
         gender: 'FEMALE',
         gradeLevel: 'GRADE_3',
+        classroomId: 'class-001',
         schoolId: 'school-001',
         academicYearId: 'year-2026',
         guardianName: 'Achieng Mother',
@@ -50,6 +52,23 @@ describe('Examination Persistence, Deduplication & Private School Finance API', 
       });
     expect(studentRes.status).toBe(201);
     testStudentId = studentRes.body.data.id;
+    const createdStudent = await container.studentRepository.findById(testStudentId);
+
+    const teacherProfile = await container.teacherRepository.findByUserId('usr-teacher-01');
+    if (teacherProfile) {
+      const assignment = ClassTeacherAssignment.create(
+        {
+          teacherId: teacherProfile.id,
+          classRoomId: createdStudent?.classroomId || 'class-001',
+          academicYearId: 'year-2026',
+          schoolId: 'school-001',
+          isActive: true,
+          effectiveFrom: '2026-01-05'
+        },
+        'cta-exam-01'
+      );
+      await container.academicRepository.saveClassTeacherAssignment(assignment);
+    }
   });
 
   describe('Examination Recording Lifecycle & Deduplication', () => {

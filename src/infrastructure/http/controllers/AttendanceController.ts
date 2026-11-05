@@ -100,8 +100,9 @@ export class AttendanceController {
       const { schoolId, classRoomId, streamId, termId, academicYearId, startDate, endDate, type, date } = req.query;
       const effectiveStartDate = (startDate as string) || (date as string);
       const effectiveEndDate = (endDate as string) || (date as string);
+      const effectiveSchoolId = (schoolId as string) || (req as any).user?.schoolId || 'school-001';
       const report = await this.attendanceUseCases.getAttendanceReport({
-        schoolId: schoolId as string,
+        schoolId: effectiveSchoolId,
         classRoomId: classRoomId as string,
         streamId: streamId as string,
         termId: termId as string,

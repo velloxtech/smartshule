@@ -51,6 +51,22 @@ export const CreateSchemeModal: React.FC<CreateSchemeModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const availableLearningAreas = React.useMemo(() => {
+    if (!selectedClassRoomId) return learningAreas;
+    const selectedClass = classes.find(c => c.id === selectedClassRoomId);
+    if (!selectedClass?.gradeLevel) return learningAreas;
+    const filtered = learningAreas.filter(la => matchGradeLevels(la.gradeLevel, selectedClass.gradeLevel));
+    return filtered.length > 0 ? filtered : learningAreas;
+  }, [learningAreas, selectedClassRoomId, classes]);
+
+  useEffect(() => {
+    if (availableLearningAreas.length > 0) {
+      if (!availableLearningAreas.some(la => la.id === selectedLearningAreaId)) {
+        setSelectedLearningAreaId(availableLearningAreas[0].id);
+      }
+    }
+  }, [availableLearningAreas, selectedLearningAreaId]);
+
   useEffect(() => {
     if (!isOpen) return;
 
@@ -371,7 +387,7 @@ export const CreateSchemeModal: React.FC<CreateSchemeModalProps> = ({
             <div>
               <label className="block text-xs font-semibold uppercase text-on-surface-variant mb-1">Global Subject *</label>
               <select value={selectedLearningAreaId} onChange={(e) => setSelectedLearningAreaId(e.target.value)} required className="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg p-2 text-xs text-on-surface cursor-pointer">
-                {learningAreas.map((la) => <option key={la.id} value={la.id}>{la.name}</option>)}
+                {availableLearningAreas.map((la) => <option key={la.id} value={la.id}>{la.name}</option>)}
               </select>
             </div>
           </div>

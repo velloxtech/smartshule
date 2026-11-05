@@ -478,6 +478,10 @@ export class StudentInvoice extends Entity<StudentInvoiceProps> {
     return applicable;
   }
 
+  public reverseCredit(amount: number): void {
+    this.reversePayment(amount);
+  }
+
   public markCarriedForward(): void {
     this._props.status = InvoiceStatus.CARRIED_FORWARD;
     this._props.balance = 0;
@@ -975,6 +979,16 @@ export class StudentFeeCredit extends Entity<StudentFeeCreditProps> {
     return usable;
   }
 
+  public refundCredit(amountToRefund: number): void {
+    const refundable = Math.min(amountToRefund, this._props.amountUsed);
+    if (refundable <= 0) return;
+    this._props.amountUsed = Math.max(0, Math.round((this._props.amountUsed - refundable) * 100) / 100);
+    const rawBalance = this._props.amount - this._props.amountUsed;
+    this._props.balance = Math.round(rawBalance * 100) / 100;
+    this._props.status = this._props.amountUsed <= 0.001 ? 'AVAILABLE' : 'PARTIALLY_USED';
+    this.touch();
+  }
+
   public reverse(): void {
     this._props.status = 'REVERSED';
     this._props.balance = 0;
@@ -1001,7 +1015,87 @@ export class StudentFeeCredit extends Entity<StudentFeeCreditProps> {
   }
 }
 
-// 7. Fee Credit Application Entity (Audit log linking credit to invoice)
+// 7. Fee Credit Utilization Receipt Payload
+export interface FeeCreditUtilizationReceiptPayload {
+  receiptNumber: string;
+  receiptTitle?: string;
+  transactionReference: string;
+  timestamp: string;
+  formattedDate: string;
+  transactionType: 'AUTOMATIC' | 'ADMIN-INITIATED';
+  transactionMode?: 'AUTOMATIC' | 'ADMINISTRATOR-INITIATED';
+  status: 'COMPLETED' | 'REVERSED';
+  academicYear: string;
+  academicTerm: string;
+  studentId: string;
+  studentName: string;
+  admissionNumber: string;
+  gradeLevel: string;
+  streamName?: string;
+  parentName?: string;
+  originatingPaymentReferences?: string[];
+  previousTermArrearsBefore: number;
+  currentTermFeesBefore: number;
+  availableCreditBefore: number;
+  outstandingBalanceBefore?: number;
+  amountAppliedToArrears: number;
+  amountAppliedToCurrentFees: number;
+  totalCreditUtilized: number;
+  remainingOutstanding: number;
+  outstandingBalanceAfter?: number;
+  remainingCredit: number;
+  invoiceAllocations?: Array<{
+    invoiceId: string;
+    invoiceNumber: string;
+    amountApplied: number;
+    remainingBalance: number;
+    category?: string;
+  }>;
+  isSystemGenerated: boolean;
+  triggerSource?: string;
+  initiatedByAdminName?: string;
+  initiatedByAdminId?: string;
+  mandatoryReason?: string;
+  statement: string;
+  schoolName: string;
+  schoolLogoUrl?: string;
+  schoolPhone: string;
+  schoolEmail: string;
+  schoolAddress: string;
+  reversalReference?: string;
+  reversalDate?: string;
+  reversalReason?: string;
+  reversedByAdminName?: string;
+}
+
+// 7b. Fee Credit Utilization Reversal Document Payload
+export interface FeeCreditUtilizationReversalPayload {
+  reversalNumber: string;
+  originalReceiptNumber: string;
+  transactionReference: string;
+  timestamp: string;
+  formattedDate: string;
+  status: 'REVERSED';
+  studentId: string;
+  studentName: string;
+  admissionNumber: string;
+  gradeLevel: string;
+  streamName?: string;
+  amountReversed: number;
+  creditRestored: number;
+  reason: string;
+  reversedByAdminId: string;
+  reversedByAdminName: string;
+  statement: string;
+  schoolName: string;
+  schoolLogoUrl?: string;
+  schoolPhone: string;
+  schoolEmail: string;
+  schoolAddress: string;
+  originalReceipt?: FeeCreditUtilizationReceiptPayload;
+}
+
+// 8. Fee Credit Application Entity (Audit log linking credit to invoice)
 export interface FeeCreditApplicationProps {
   creditId: string;
   studentId: string;
@@ -1010,6 +1104,22 @@ export interface FeeCreditApplicationProps {
   termId: string;
   amountApplied: number;
   appliedByUserId?: string;
+  applicationReference?: string;
+  originatingPaymentReference?: string;
+  triggerSource?: string;
+  remainingCredit?: number;
+  remainingFeeBalance?: number;
+  isSystemGenerated?: boolean;
+  receiptNumber?: string;
+  transactionType?: 'AUTOMATIC' | 'ADMIN-INITIATED';
+  reason?: string;
+  receiptPayload?: FeeCreditUtilizationReceiptPayload;
+  status?: 'ACTIVE' | 'REVERSED';
+  reversalReason?: string;
+  reversedAt?: string;
+  reversedByUserId?: string;
+  reversalReference?: string;
+  notes?: string;
 }
 
 export class FeeCreditApplication extends Entity<FeeCreditApplicationProps> {
@@ -1050,6 +1160,86 @@ export class FeeCreditApplication extends Entity<FeeCreditApplicationProps> {
     return this._props.appliedByUserId;
   }
 
+  public get applicationReference(): string {
+    return this._props.applicationReference || `FCU-${this.id.slice(0, 8).toUpperCase()}`;
+  }
+
+  public get originatingPaymentReference(): string | undefined {
+    return this._props.originatingPaymentReference;
+  }
+
+  public get triggerSource(): string {
+    return this._props.triggerSource || 'MANUAL';
+  }
+
+  public get remainingCredit(): number {
+    return this._props.remainingCredit ?? 0;
+  }
+
+  public get remainingFeeBalance(): number {
+    return this._props.remainingFeeBalance ?? 0;
+  }
+
+  public get isSystemGenerated(): boolean {
+    return this._props.isSystemGenerated ?? true;
+  }
+
+  public get receiptNumber(): string | undefined {
+    return this._props.receiptNumber;
+  }
+
+  public get transactionType(): 'AUTOMATIC' | 'ADMIN-INITIATED' {
+    return this._props.transactionType || (this.isSystemGenerated ? 'AUTOMATIC' : 'ADMIN-INITIATED');
+  }
+
+  public get reason(): string | undefined {
+    return this._props.reason;
+  }
+
+  public get receiptPayload(): FeeCreditUtilizationReceiptPayload | undefined {
+    return this._props.receiptPayload;
+  }
+
+  public get status(): 'ACTIVE' | 'REVERSED' {
+    return this._props.status || 'ACTIVE';
+  }
+
+  public get reversalReason(): string | undefined {
+    return this._props.reversalReason;
+  }
+
+  public get reversedAt(): string | undefined {
+    return this._props.reversedAt;
+  }
+
+  public get reversedByUserId(): string | undefined {
+    return this._props.reversedByUserId;
+  }
+
+  public get reversalReference(): string | undefined {
+    return this._props.reversalReference;
+  }
+
+  public reverse(reason: string, reversedByUserId: string, reversalReference: string): void {
+    this._props.status = 'REVERSED';
+    this._props.reversalReason = reason;
+    this._props.reversedAt = new Date().toISOString();
+    this._props.reversedByUserId = reversedByUserId;
+    this._props.reversalReference = reversalReference;
+    if (this._props.receiptPayload) {
+      this._props.receiptPayload.status = 'REVERSED';
+      this._props.receiptPayload.reversalReference = reversalReference;
+      this._props.receiptPayload.reversalDate = this._props.reversedAt;
+      this._props.receiptPayload.reversalReason = reason;
+      this._props.receiptPayload.reversedByAdminName = reversedByUserId;
+    }
+    this.touch();
+  }
+
+  public get notes(): string | undefined {
+    return this._props.notes;
+  }
+
   public toJSON() {
     return {
       id: this.id,
@@ -1060,6 +1250,22 @@ export class FeeCreditApplication extends Entity<FeeCreditApplicationProps> {
       termId: this.termId,
       amountApplied: this.amountApplied,
       appliedByUserId: this.appliedByUserId,
+      applicationReference: this.applicationReference,
+      originatingPaymentReference: this.originatingPaymentReference,
+      triggerSource: this.triggerSource,
+      remainingCredit: this.remainingCredit,
+      remainingFeeBalance: this.remainingFeeBalance,
+      isSystemGenerated: this.isSystemGenerated,
+      receiptNumber: this.receiptNumber,
+      transactionType: this.transactionType,
+      reason: this.reason,
+      status: this.status,
+      reversalReason: this.reversalReason,
+      reversedAt: this.reversedAt,
+      reversedByUserId: this.reversedByUserId,
+      reversalReference: this.reversalReference,
+      receiptPayload: this.receiptPayload,
+      notes: this.notes,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt
     };

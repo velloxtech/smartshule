@@ -5,6 +5,8 @@ import { FeeBannerConfig, EDiaryEntry } from '../../types';
 import { EditStudentModal } from '../modals/EditStudentModal';
 import { ForwardPaymentModal } from '../modals/ForwardPaymentModal';
 import { ReceiptViewModal } from '../modals/ReceiptViewModal';
+import { FeeCreditReceiptModal } from '../modals/FeeCreditReceiptModal';
+import { FeeCreditUtilizationReceiptPayload } from '../../types';
 import { resolveStreamName, resolveGradeName, resolveLearningAreaName } from '../../utils/formatters';
 
 interface ParentDashboardViewProps {
@@ -30,6 +32,9 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
   const [isClearanceModalOpen, setIsClearanceModalOpen] = useState(false);
   const [clearanceModalTarget, setClearanceModalTarget] = useState<'REPORT_CARD' | 'FORMATIVE'>('REPORT_CARD');
   const [selectedPaymentForReceipt, setSelectedPaymentForReceipt] = useState<any | null>(null);
+  const [selectedCreditReceiptPayload, setSelectedCreditReceiptPayload] = useState<FeeCreditUtilizationReceiptPayload | null>(null);
+  const [selectedCreditReceiptNumber, setSelectedCreditReceiptNumber] = useState<string | null>(null);
+  const [isCreditReceiptModalOpen, setIsCreditReceiptModalOpen] = useState(false);
   const [activeCbcTab, setActiveCbcTab] = useState<'formative' | 'summative'>('formative');
   const [selectedFormativeRating, setSelectedFormativeRating] = useState<string>('All');
   const [selectedFormativeSubject, setSelectedFormativeSubject] = useState<string>('All');
@@ -572,8 +577,8 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                   <span className="material-symbols-outlined text-xl">edit_note</span>
                 </div>
                 <div>
-                  <div className="font-bold text-xs text-on-surface">Digital eDiary</div>
-                  <div className="text-[11px] text-on-surface-variant">View homework & sign off</div>
+                  <div className="font-bold text-xs text-on-surface">Daily Homefun &amp; Communication Diary (E-Diary)</div>
+                  <div className="text-[11px] text-on-surface-variant">View homefun &amp; sign off</div>
                 </div>
               </div>
 
@@ -599,7 +604,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                 </div>
                 <div>
                   <div className="font-bold text-xs text-on-surface">Ask Teacher with Photo</div>
-                  <div className="text-[11px] text-on-surface-variant">Homework photo Q&A desk</div>
+                  <div className="text-[11px] text-on-surface-variant">Homefun photo Q&amp;A desk</div>
                 </div>
               </div>
 
@@ -691,7 +696,127 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
             </div>
           </div>
 
-          {/* Active Digital eDiary & Homework Board for Selected Learner */}
+          {/* Automatic Fee Credit Utilization & Breakdown for Parents */}
+          {(Number(currentChildFee?.totalCreditApplied) > 0 || Number(currentChildFee?.availableCredit) > 0) && (
+            <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-4 sm:p-5 shadow-xs space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-outline-variant/20 pb-2.5">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary text-[20px]">account_balance_wallet</span>
+                  <h3 className="font-bold text-xs uppercase tracking-wider text-on-surface">
+                    Fee Statement &amp; Automatic Credit Settlement
+                  </h3>
+                </div>
+                {Number(currentChildFee?.totalCreditApplied) > 0 && (
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
+                    KES {Number(currentChildFee.totalCreditApplied).toLocaleString()} Auto-Credited
+                  </span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 text-xs">
+                <div className="p-2.5 rounded-xl bg-surface-container-low border border-outline-variant/20">
+                  <span className="text-[10px] text-on-surface-variant font-semibold block uppercase">Prior Arrears</span>
+                  <span className="text-sm font-bold font-data-mono text-on-surface">
+                    KES {(Number(currentChildFee?.previousTermArrears) || 0).toLocaleString()}
+                  </span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-surface-container-low border border-outline-variant/20">
+                  <span className="text-[10px] text-on-surface-variant font-semibold block uppercase">Current Fees</span>
+                  <span className="text-sm font-bold font-data-mono text-on-surface">
+                    KES {(Number(currentChildFee?.currentTermBilledFees) || 0).toLocaleString()}
+                  </span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-surface-container-low border border-outline-variant/20">
+                  <span className="text-[10px] text-on-surface-variant font-semibold block uppercase">Total Invoiced</span>
+                  <span className="text-sm font-bold font-data-mono text-on-surface">
+                    KES {(Number(currentChildFee?.totalBilled) || 0).toLocaleString()}
+                  </span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-primary/5 border border-primary/20">
+                  <span className="text-[10px] text-primary font-semibold block uppercase">Credit Auto-Applied</span>
+                  <span className="text-sm font-black font-data-mono text-primary">
+                    -KES {(Number(currentChildFee?.totalCreditApplied) || 0).toLocaleString()}
+                  </span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-surface-container-low border border-outline-variant/20">
+                  <span className="text-[10px] text-on-surface-variant font-semibold block uppercase">Available Credit</span>
+                  <span className="text-sm font-bold font-data-mono text-primary">
+                    KES {(Number(currentChildFee?.availableCredit) || 0).toLocaleString()}
+                  </span>
+                </div>
+                <div className="p-2.5 rounded-xl bg-surface-container-low border border-outline-variant/20">
+                  <span className="text-[10px] text-on-surface-variant font-semibold block uppercase">Remaining Due</span>
+                  <span className="text-sm font-black font-data-mono text-on-surface">
+                    KES {(Math.max(0, Number(currentChildFee?.balance) || 0)).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+
+              {Number(currentChildFee?.totalCreditApplied) > 0 && (
+                <p className="text-[11px] text-on-surface-variant bg-surface-container-low/60 p-2.5 rounded-xl border border-outline-variant/15 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[16px] text-primary shrink-0">info</span>
+                  <span>
+                    Prior advance overpayment credits were automatically applied towards your child's fee obligations in strict priority order (previous arrears settled before current term fees).
+                  </span>
+                </p>
+              )}
+
+              {/* Official Fee Credit Utilization Receipts for this Child */}
+              {currentChildFee?.creditReceipts && currentChildFee.creditReceipts.length > 0 && (
+                <div className="pt-2 border-t border-outline-variant/20 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-on-surface flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[16px] text-primary">receipt_long</span>
+                      <span>Fee Credit Utilization Receipts</span>
+                    </span>
+                    <span className="text-[10px] text-on-surface-variant font-medium">
+                      {currentChildFee.creditReceipts.length} Receipt(s) Issued
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {currentChildFee.creditReceipts.map((cr: any, idx: number) => (
+                      <div
+                        key={cr.receiptNumber || idx}
+                        className="p-3 rounded-xl bg-surface-container-low border border-outline-variant/30 flex items-center justify-between gap-2.5 text-xs font-sans"
+                      >
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono font-bold text-primary text-xs">{cr.receiptNumber}</span>
+                            <span className="text-[9px] px-1.5 py-0.5 rounded font-bold bg-primary/10 text-primary">
+                              {cr.transactionType === 'ADMIN-INITIATED' ? 'ADMIN' : 'AUTO'}
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-on-surface-variant">
+                            {cr.formattedDate || cr.timestamp} · Credit Applied:{' '}
+                            <strong className="text-emerald-700 font-bold font-mono">
+                              KES {(Number(cr.totalCreditUtilized) || 0).toLocaleString()}
+                            </strong>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedCreditReceiptPayload(cr);
+                            setSelectedCreditReceiptNumber(cr.receiptNumber);
+                            setIsCreditReceiptModalOpen(true);
+                          }}
+                          className="px-2.5 py-1.5 bg-primary hover:bg-[#600e1f] text-white rounded-lg text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer shrink-0 shadow-2xs"
+                          title="View & Download Official Receipt"
+                        >
+                          <span className="material-symbols-outlined text-[13px]">visibility</span>
+                          <span>Receipt</span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Active Daily Homefun & Communication Diary (E-Diary) for Selected Learner */}
           <div className="bg-surface-container-lowest rounded-2xl p-5 shadow-xs border border-outline-variant/30 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-outline-variant/20 pb-3">
               <div className="flex items-center gap-3">
@@ -701,14 +826,14 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="font-bold text-sm text-on-surface uppercase tracking-wider">
-                      Digital School eDiary &amp; Homework Board
+                      Daily Homefun &amp; Communication Diary (E-Diary)
                     </h3>
                     <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold">
                       {resolveGradeName(currentChild.gradeLevel)}
                     </span>
                   </div>
                   <p className="text-xs text-on-surface-variant">
-                    Daily learning tasks, teacher instructions, and next-day preparations for <strong className="text-on-surface">{currentChild.firstName}</strong>
+                    Daily homefun activities, teacher instructions, and next-day preparations for <strong className="text-on-surface">{currentChild.firstName}</strong>
                   </p>
                 </div>
               </div>
@@ -716,7 +841,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => loadChildEdiary(currentChild.id)}
-                  title="Refresh eDiary feed"
+                  title="Refresh Daily Homefun & Communication Diary feed"
                   className="p-1.5 rounded-lg bg-surface-container text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[18px]">refresh</span>
@@ -726,7 +851,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                     onClick={() => onNavigateTab('ediary')}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl text-xs font-bold transition-all cursor-pointer"
                   >
-                    <span>Full eDiary Portal</span>
+                    <span>Full Diary Portal</span>
                     <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
                   </button>
                 )}
@@ -756,9 +881,9 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                 <div className="w-10 h-10 rounded-full bg-outline-variant/20 flex items-center justify-center mx-auto text-outline">
                   <span className="material-symbols-outlined text-xl">event_available</span>
                 </div>
-                <h4 className="font-bold text-xs text-on-surface">No eDiary Entries for Today</h4>
+                <h4 className="font-bold text-xs text-on-surface">No Homefun Entries for Today</h4>
                 <p className="text-xs text-on-surface-variant max-w-md mx-auto">
-                  Educators have not yet published daily assignments for {currentChild.firstName}’s class. Check back later or open the Full eDiary Portal.
+                  Educators have not yet published daily homefun activities for {currentChild.firstName}’s class. Check back later or open the Full Diary Portal.
                 </p>
               </div>
             ) : (
@@ -807,17 +932,17 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-primary to-[#500b1a] text-white rounded-lg text-xs font-bold hover:shadow-xs transition-all cursor-pointer"
                             >
                               <span className="material-symbols-outlined text-[14px]">draw</span>
-                              <span>Sign Off Homework</span>
+                              <span>Sign Off Homefun</span>
                             </button>
                           )}
                         </div>
                       </div>
 
-                      {/* Homework Tasks */}
+                      {/* Homefun Activities */}
                       <div>
                         <div className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5 flex items-center gap-1">
                           <span className="material-symbols-outlined text-[14px] text-primary">assignment</span>
-                          <span>Assigned Tasks</span>
+                          <span>Assigned Homefun Activities &amp; Instructions</span>
                         </div>
                         {entry.homeworkTasks && entry.homeworkTasks.length > 0 ? (
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -839,7 +964,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                             {entry.homework}
                           </div>
                         ) : (
-                          <p className="text-xs text-on-surface-variant italic">No specific homework tasks assigned for today.</p>
+                          <p className="text-xs text-on-surface-variant italic">No specific homefun activities assigned for today.</p>
                         )}
                       </div>
 
@@ -1688,7 +1813,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
             </div>
 
             <p className="text-xs text-on-surface-variant leading-relaxed">
-              By acknowledging, you confirm you have reviewed <strong>{currentChild?.firstName}</strong>'s homework assignments and organized the items required for tomorrow.
+              By acknowledging, you confirm you have reviewed <strong>{currentChild?.firstName}</strong>'s homefun activities and organized the items required for tomorrow.
             </p>
 
             <div>
@@ -1699,7 +1824,7 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                 rows={3}
                 value={parentEdiaryNote}
                 onChange={(e) => setParentEdiaryNote(e.target.value)}
-                placeholder="e.g. All math exercises completed. Manila paper packed in school bag."
+                placeholder="e.g. All homefun activities completed. Manila paper packed in school bag."
                 className="w-full p-2.5 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs text-on-surface focus:outline-hidden focus:border-primary"
               ></textarea>
             </div>
@@ -1724,6 +1849,19 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
             </div>
           </div>
         </div>
+      )}
+      {/* Official Fee Credit Utilization Receipt Modal */}
+      {isCreditReceiptModalOpen && (
+        <FeeCreditReceiptModal
+          isOpen={isCreditReceiptModalOpen}
+          onClose={() => {
+            setIsCreditReceiptModalOpen(false);
+            setSelectedCreditReceiptNumber(null);
+            setSelectedCreditReceiptPayload(null);
+          }}
+          receiptNumber={selectedCreditReceiptNumber || undefined}
+          initialReceipt={selectedCreditReceiptPayload}
+        />
       )}
     </div>
   );

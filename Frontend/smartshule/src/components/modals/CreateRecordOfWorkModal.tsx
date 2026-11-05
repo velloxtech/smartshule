@@ -51,6 +51,22 @@ export const CreateRecordOfWorkModal: React.FC<CreateRecordOfWorkModalProps> = (
     status: 'SUBMITTED' as RecordOfWorkStatus
   });
 
+  const availableLearningAreas = React.useMemo(() => {
+    if (!selectedClassId) return learningAreas;
+    const selectedClass = classes.find(c => c.id === selectedClassId);
+    if (!selectedClass?.gradeLevel) return learningAreas;
+    const filtered = learningAreas.filter(la => matchGradeLevels(la.gradeLevel, selectedClass.gradeLevel));
+    return filtered.length > 0 ? filtered : learningAreas;
+  }, [learningAreas, selectedClassId, classes]);
+
+  useEffect(() => {
+    if (availableLearningAreas.length > 0) {
+      if (!availableLearningAreas.some(la => la.id === selectedLearningAreaId)) {
+        setSelectedLearningAreaId(availableLearningAreas[0].id);
+      }
+    }
+  }, [availableLearningAreas, selectedLearningAreaId]);
+
   useEffect(() => {
     async function loadInitial() {
       try {
@@ -319,8 +335,8 @@ export const CreateRecordOfWorkModal: React.FC<CreateRecordOfWorkModalProps> = (
               <div>
                 <label className="block text-xs font-bold uppercase text-gray-600 mb-1.5">Learning Area / Subject *</label>
                 <select value={selectedLearningAreaId} onChange={(e) => setSelectedLearningAreaId(e.target.value)} className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg cursor-pointer">
-                  {learningAreas.length > 0 ? (
-                    learningAreas.map(la => <option key={la.id} value={la.id}>{la.name}</option>)
+                  {availableLearningAreas.length > 0 ? (
+                    availableLearningAreas.map(la => <option key={la.id} value={la.id}>{la.name}</option>)
                   ) : (
                     <option value="">No subjects found</option>
                   )}

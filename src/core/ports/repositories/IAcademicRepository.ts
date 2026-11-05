@@ -1,6 +1,7 @@
 import { School } from '../../domain/academic/School';
 import { AcademicYear, AcademicTerm } from '../../domain/academic/AcademicYear';
 import { ClassRoom, Stream, LearningArea } from '../../domain/academic/ClassRoom';
+import { GlobalSubject } from '../../domain/academic/GlobalSubject';
 import { ClassTeacherAssignment, SubjectTeacherAssignment } from '../../domain/academic/TeacherAssignment';
 import { CBCGradeLevel } from '../../domain/user/Student';
 
@@ -38,9 +39,14 @@ export interface IAcademicRepository {
   updateStream(stream: Stream): Promise<void>;
   deleteStream(id: string): Promise<void>;
 
+  // Global Subjects Catalogue
+  findGlobalSubjectById(id: string): Promise<GlobalSubject | null>;
+  findAllGlobalSubjects(schoolId?: string): Promise<GlobalSubject[]>;
+  saveGlobalSubject(subject: GlobalSubject): Promise<void>;
+
   // Learning Areas
   findLearningAreaById(id: string): Promise<LearningArea | null>;
-  findAllLearningAreas(filters?: { gradeLevel?: CBCGradeLevel; schoolId?: string }): Promise<LearningArea[]>;
+  findAllLearningAreas(filters?: { gradeLevel?: CBCGradeLevel; schoolId?: string; globalSubjectId?: string }): Promise<LearningArea[]>;
   saveLearningArea(area: LearningArea): Promise<void>;
   deleteLearningArea(id: string): Promise<void>;
 

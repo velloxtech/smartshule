@@ -3,6 +3,8 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import CreateRecordOfWorkModal from '../modals/CreateRecordOfWorkModal';
 import EditRecordOfWorkModal from '../modals/EditRecordOfWorkModal';
+import { ViewRecordOfWorkModal } from '../modals/ViewRecordOfWorkModal';
+import { CurriculumSuiteSwitcher } from '../common/CurriculumSuiteSwitcher';
 import { apiService } from '../../services/api';
 import { RecordOfWork, RecordOfWorkStatus, RecordOfWorkSummary } from '../../types';
 import { useAuth } from '../../context/AuthContext';
@@ -11,10 +13,15 @@ export type { RecordOfWork };
 
 type StatusFilterTab = 'ALL' | 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'RETURNED';
 
-const RecordsOfWorkView: React.FC = () => {
+interface RecordsOfWorkViewProps {
+  onNavigateTab?: (tab: string) => void;
+}
+
+export const RecordsOfWorkView: React.FC<RecordsOfWorkViewProps> = ({ onNavigateTab }) => {
   const { user } = useAuth();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<RecordOfWork | null>(null);
+  const [viewingRecord, setViewingRecord] = useState<RecordOfWork | null>(null);
   const [records, setRecords] = useState<RecordOfWork[]>([]);
   const [summary, setSummary] = useState<RecordOfWorkSummary | null>(null);
   const [loading, setLoading] = useState(false);
@@ -252,6 +259,24 @@ const RecordsOfWorkView: React.FC = () => {
         </div>
       )}
 
+      {/* Curriculum Planning & Coverage Suite Switcher */}
+      <CurriculumSuiteSwitcher
+        activeTab="records-of-work"
+        onSelectTab={(tab) => {
+          if (tab === 'records-of-work') return;
+          if (onNavigateTab) {
+            if (tab === 'curriculum-tracker') {
+              onNavigateTab('curriculum-tracker');
+            } else {
+              onNavigateTab('schemes-lesson-plans');
+            }
+          }
+        }}
+        counts={{
+          recordsOfWork: summary?.totalLessons ?? records.length,
+        }}
+      />
+
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -454,9 +479,15 @@ const RecordsOfWorkView: React.FC = () => {
                       {/* Subject & Class */}
                       <td className="px-5 py-4">
                         <div className="flex flex-col gap-1">
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-rose-50 text-[#7a1228] border border-rose-100 font-bold text-xs whitespace-normal leading-snug">
-                            {record.subjectAndGrade}
-                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setViewingRecord(record)}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-[#7a1228] border border-rose-100 font-bold text-xs whitespace-normal leading-snug cursor-pointer transition-colors text-left"
+                            title="Click to view details"
+                          >
+                            <span className="material-symbols-outlined text-[15px] shrink-0">visibility</span>
+                            <span>{record.subjectAndGrade}</span>
+                          </button>
                           {record.teacherName && (
                             <span className="text-[11px] text-gray-500 flex items-center gap-1 mt-0.5">
                               <span className="material-symbols-outlined text-[13px] text-gray-400">person</span>
@@ -585,6 +616,15 @@ const RecordsOfWorkView: React.FC = () => {
 
                           {/* Edit & Delete actions for drafts / returned */}
                           <div className="flex items-center gap-1 mt-1">
+                            <button
+                              onClick={() => setViewingRecord(record)}
+                              className="px-2.5 py-1 bg-[#7a1228] text-white rounded-lg hover:bg-[#5e0d1e] text-[11px] font-bold flex items-center gap-1 shadow-xs transition-colors cursor-pointer"
+                              title="View full record dossier & teacher reflection details"
+                            >
+                              <span className="material-symbols-outlined text-[15px]">visibility</span>
+                              <span>View Details</span>
+                            </button>
+
                             {(record.status !== 'APPROVED' || isSupervisor) && (
                               <button
                                 onClick={() => setSelectedRecord(record)}
@@ -752,6 +792,19 @@ const RecordsOfWorkView: React.FC = () => {
           record={selectedRecord}
           onClose={() => setSelectedRecord(null)}
           onSubmit={handleEdit}
+        />
+      )}
+
+      {/* View Record of Work Dossier Modal */}
+      {viewingRecord && (
+        <ViewRecordOfWorkModal
+          record={viewingRecord}
+          onClose={() => setViewingRecord(null)}
+          onEdit={(rec) => {
+            setViewingRecord(null);
+            setSelectedRecord(rec);
+          }}
+          canEdit={Boolean(viewingRecord.status !== 'APPROVED' || isSupervisor)}
         />
       )}
     </div>

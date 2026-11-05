@@ -13,10 +13,18 @@ interface AttendanceRegisterViewProps {
 export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
   onOpenSmsModal,
 }) => {
+  const getLocalDateIso = () => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
   const { user } = useAuth();
   const [teacherProfile, setTeacherProfile] = useState<any>(null);
   const [streamId, setStreamId] = useState('');
-  const [registerDate, setRegisterDate] = useState(new Date().toISOString().split('T')[0]);
+  const [registerDate, setRegisterDate] = useState(getLocalDateIso());
   const [students, setStudents] = useState<any[]>([]);
   const [attendanceEntries, setAttendanceEntries] = useState<Record<string, 'PRESENT' | 'ABSENT' | 'LATE' | 'EXCUSED'>>({});
   const [attendanceRemarks, setAttendanceRemarks] = useState<Record<string, string>>({});
@@ -827,7 +835,7 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
                 className="bg-surface-container-lowest border border-outline-variant/40 rounded-lg py-1 px-3 text-xs font-semibold text-on-surface cursor-pointer"
               >
                 {availableStreams.length > 0 && (
-                  <optgroup label="Configured Streams">
+                  <optgroup label="Class Streams">
                     {availableStreams.map((st) => (
                       <option key={st.id} value={st.id}>
                         {st.className} - {st.name}
@@ -835,9 +843,9 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
                     ))}
                   </optgroup>
                 )}
-                {availableClasses.length > 0 && (
-                  <optgroup label="Classes">
-                    {availableClasses.map((c) => (
+                {availableClasses.filter(c => !availableStreams.some(st => st.classRoomId === c.id)).length > 0 && (
+                  <optgroup label="Classes (Single Cohort)">
+                    {availableClasses.filter(c => !availableStreams.some(st => st.classRoomId === c.id)).map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.name}
                       </option>
