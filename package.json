@@ -21,10 +21,7 @@
     "db:switch": "ts-node scripts/db-switch.ts",
     "db:status": "ts-node scripts/db-switch.ts status",
     "db:local": "ts-node scripts/db-switch.ts local",
-    "db:online": "ts-node scripts/db-switch.ts online",
-    "prisma:generate": "ts-node scripts/prisma-cli.ts generate",
-    "prisma:push": "ts-node scripts/prisma-cli.ts db push",
-    "prisma:studio": "ts-node scripts/prisma-cli.ts studio"
+    "db:online": "ts-node scripts/db-switch.ts online"
   },
   "keywords": [
     "school-management",
@@ -37,7 +34,6 @@
   "author": "SmartShule Team",
   "license": "ISC",
   "dependencies": {
-    "@prisma/client": "^7.10.0",
     "@types/nodemailer": "^8.0.2",
     "@whiskeysockets/baileys": "^7.0.0-rc14",
     "bcryptjs": "^3.0.3",
@@ -70,7 +66,6 @@
     "@types/supertest": "^7.2.1",
     "@types/uuid": "^10.0.0",
     "jest": "^30.5.1",
-    "prisma": "^8.0.0-rc.12",
     "supertest": "^7.2.2",
     "ts-jest": "^29.4.12",
     "ts-node-dev": "^2.0.0",
