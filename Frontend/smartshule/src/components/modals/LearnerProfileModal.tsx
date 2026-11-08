@@ -121,6 +121,8 @@ export const LearnerProfileModal: React.FC<LearnerProfileModalProps> = ({
                       ? 'bg-teal-100 text-teal-800 border border-teal-200'
                       : feePosition.financialPosition.status === 'PARTIAL'
                       ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                      : feePosition.financialPosition.status === 'UNBILLED'
+                      ? 'bg-slate-100 text-slate-700 border border-slate-300'
                       : 'bg-rose-100 text-rose-800 border border-rose-200'
                   }`}
                 >

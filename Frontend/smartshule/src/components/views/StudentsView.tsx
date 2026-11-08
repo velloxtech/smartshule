@@ -5,6 +5,7 @@ import { LearnerProfileModal } from '../modals/LearnerProfileModal';
 import { PromoteStudentModal } from '../modals/PromoteStudentModal';
 import { ArchivedStudentsModal } from '../modals/ArchivedStudentsModal';
 import { ParentLinkingModal } from '../modals/ParentLinkingModal';
+import { GenerateInvoicesModal } from '../modals/GenerateInvoicesModal';
 import { useAuth } from '../../context/AuthContext';
 import { apiService } from '../../services/api';
 
@@ -57,6 +58,8 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
   const [isArchivedModalOpen, setIsArchivedModalOpen] = useState(false);
   const [isParentLinkingModalOpen, setIsParentLinkingModalOpen] = useState(false);
   const [parentLinkingTargetStudent, setParentLinkingTargetStudent] = useState<Student | null>(null);
+  const [isGenerateInvoiceModalOpen, setIsGenerateInvoiceModalOpen] = useState(false);
+  const [billingTargetStudent, setBillingTargetStudent] = useState<Student | null>(null);
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
   const [deleteReason, setDeleteReason] = useState('Transferred to another institution');
   const [isDeleting, setIsDeleting] = useState(false);
@@ -237,18 +240,33 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
         {!isTeacher && (
           <div className="flex items-center gap-2.5 self-start sm:self-auto flex-wrap">
             {isBillingAuthorized && (
-              <button
-                type="button"
-                onClick={handleSyncFeeBalances}
-                disabled={isSyncingFees}
-                title="Authorize and attach ratified fee structures to enrolled learners missing invoices"
-                className="inline-flex items-center gap-2 px-4 py-2.5 bg-surface-container-high text-primary hover:bg-primary/10 border border-primary/30 rounded-lg text-sm font-semibold shadow-xs transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <span className={`material-symbols-outlined text-[18px] ${isSyncingFees ? 'animate-spin' : ''}`}>
-                  {isSyncingFees ? 'sync' : 'account_balance_wallet'}
-                </span>
-                <span>{isSyncingFees ? 'Authorizing & Syncing...' : 'Authorize & Sync Fee Balances'}</span>
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBillingTargetStudent(null);
+                    setIsGenerateInvoiceModalOpen(true);
+                  }}
+                  title="Generate term fee invoices from grade fee structures (Individual Pupil or Cohort)"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#7a1228] text-white hover:bg-[#600e1f] rounded-lg text-sm font-semibold shadow-xs transition-all cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[18px]">receipt_long</span>
+                  <span>Generate Invoices</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleSyncFeeBalances}
+                  disabled={isSyncingFees}
+                  title="Authorize and attach ratified fee structures to enrolled learners missing invoices"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-surface-container-high text-primary hover:bg-primary/10 border border-primary/30 rounded-lg text-sm font-semibold shadow-xs transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span className={`material-symbols-outlined text-[18px] ${isSyncingFees ? 'animate-spin' : ''}`}>
+                    {isSyncingFees ? 'sync' : 'account_balance_wallet'}
+                  </span>
+                  <span>{isSyncingFees ? 'Authorizing & Syncing...' : 'Authorize & Sync Fee Balances'}</span>
+                </button>
+              </>
             )}
 
             <button
@@ -582,14 +600,32 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                           </div>
                           <span className="text-[11px] text-outline">due this term</span>
                         </div>
-                      ) : (s.totalFee || 0) > 0 ? (
+                      ) : ((s.creditBalance && s.creditBalance > 0) || s.feeBalance < 0) ? (
+                        <div>
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200">
+                            <span className="material-symbols-outlined text-[13px]">savings</span> +KES {Math.abs(s.creditBalance || s.feeBalance).toLocaleString()}
+                          </span>
+                          <span className="text-[10px] text-teal-600 block mt-0.5">Advance Credit</span>
+                        </div>
+                      ) : ((s.totalFee || 0) > 0 || (s.hasInvoices && !s.isUnbilled)) ? (
                         <span className="inline-flex items-center gap-1 text-xs font-semibold text-secondary">
                           <span className="material-symbols-outlined text-[14px]">check_circle</span> Cleared
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
-                          <span className="material-symbols-outlined text-[13px]">receipt_long</span> Pending Invoice
-                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (isBillingAuthorized) {
+                              setBillingTargetStudent(s);
+                              setIsGenerateInvoiceModalOpen(true);
+                            }
+                          }}
+                          className="inline-flex items-center gap-1 text-xs font-medium text-slate-500 bg-slate-100 hover:bg-amber-50 hover:text-amber-800 px-2 py-0.5 rounded-full border border-slate-200 transition-colors cursor-pointer"
+                          title="Click to generate term fee invoice for this pupil"
+                        >
+                          <span className="material-symbols-outlined text-[13px]">receipt_long</span>
+                          <span>Unbilled</span>
+                        </button>
                       )}
                     </td>
                   )}
@@ -619,6 +655,19 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                       >
                         <span className="material-symbols-outlined text-[18px]">rule</span>
                       </button>
+
+                      {isBillingAuthorized && (
+                        <button
+                          onClick={() => {
+                            setBillingTargetStudent(s);
+                            setIsGenerateInvoiceModalOpen(true);
+                          }}
+                          title={`Generate Term Fee Invoice for ${s.name} (${s.grade})`}
+                          className="p-1.5 rounded-lg text-amber-700 hover:bg-amber-50 transition-colors cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">receipt_long</span>
+                        </button>
+                      )}
 
                       {!isTeacher && s.feeBalance > 0 && (
                         <button
@@ -938,6 +987,20 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Bulk & Individual Invoice Generator Modal */}
+      <GenerateInvoicesModal
+        isOpen={isGenerateInvoiceModalOpen}
+        onClose={() => {
+          setIsGenerateInvoiceModalOpen(false);
+          setBillingTargetStudent(null);
+        }}
+        onInvoicesGenerated={() => {
+          if (onRefreshStudents) onRefreshStudents();
+        }}
+        targetStudent={billingTargetStudent}
+        students={students}
+      />
 
     </div>
   );

@@ -170,6 +170,7 @@ export interface GenerateInvoicesDTO {
   gradeLevel?: CBCGradeLevel;
   studentId?: string;
   includePreviousBalance?: boolean;
+  dueDate?: string;
 }
 
 export interface CreateIndividualInvoiceDTO {
@@ -934,12 +935,40 @@ export class FeeUseCases {
       }
       if (!feeStructure) {
         const allStructures = await this.feeRepository.findAllFeeStructures(dto.schoolId);
+        const normalizeGrade = (g?: string) => (g || '').toUpperCase().replace(/[\s-]/g, '_');
+        const sGradeNorm = normalizeGrade(student.gradeLevel);
         feeStructure = allStructures.find(
-          fs => fs.gradeLevel === student.gradeLevel && (fs.termId === targetTermId || fs.termId === dto.termId || fs.termId === 'ALL')
+          fs => normalizeGrade(fs.gradeLevel) === sGradeNorm && (fs.termId === targetTermId || fs.termId === dto.termId || fs.termId === 'ALL')
+        ) || allStructures.find(
+          fs => normalizeGrade(fs.gradeLevel) === sGradeNorm
         ) || null;
       }
       if (!feeStructure) {
-        throw new NotFoundError(`Fee structure for grade ${student.gradeLevel}, term ${dto.termId || targetTermId}`);
+        // Fallback: create standard CBC termly fee structure for this grade
+        const isUpperPrimary = ['GRADE_4', 'GRADE_5', 'GRADE_6'].includes(student.gradeLevel);
+        const isLowerPrimary = ['GRADE_1', 'GRADE_2', 'GRADE_3'].includes(student.gradeLevel);
+        const isPrePrimary = ['PLAYGROUP', 'PP1', 'PP2'].includes(student.gradeLevel);
+        const tuitionTerm = isUpperPrimary ? 5700 : (isLowerPrimary ? 5000 : (isPrePrimary ? 4500 : 5000));
+        const activityTerm = (isUpperPrimary || isLowerPrimary) ? 500 : (isPrePrimary ? 300 : 500);
+        const assessmentTerm = 300;
+
+        feeStructure = FeeStructure.create(
+          {
+            schoolId: dto.schoolId || student.schoolId || 'school-001',
+            title: `${student.gradeLevel.replace(/_/g, ' ')} Standard Termly Fee Structure`,
+            gradeLevel: student.gradeLevel,
+            academicYearId: targetYearId,
+            termId: targetTermId,
+            dueDate: dto.dueDate || `${new Date().getFullYear()}-12-15`,
+            items: [
+              { id: IdGenerator.generate(), name: 'Tuition Fee', amount: tuitionTerm, category: 'TUITION', isOptional: false },
+              { id: IdGenerator.generate(), name: 'Activity & Co-Curricular', amount: activityTerm, category: 'ACTIVITY', isOptional: false },
+              { id: IdGenerator.generate(), name: 'Continuous Assessment & Materials', amount: assessmentTerm, category: 'ASSESSMENT', isOptional: false }
+            ]
+          },
+          IdGenerator.generate()
+        );
+        await this.feeRepository.saveFeeStructure(feeStructure);
       }
 
       // Check for previous unpaid balances to carry forward (if includePreviousBalance is not explicitly false)
@@ -1134,8 +1163,9 @@ export class FeeUseCases {
     schoolId?: string;
     academicYearId: string;
     termId: string;
-    scope: 'ALL' | 'ECDE' | 'PRIMARY' | 'JUNIOR_SECONDARY' | 'GRADE';
+    scope: 'ALL' | 'ECDE' | 'PRIMARY' | 'JUNIOR_SECONDARY' | 'GRADE' | 'SINGLE_STUDENT';
     targetGradeLevel?: CBCGradeLevel;
+    studentId?: string;
     includePreviousBalance?: boolean;
   }, requestingUser?: UserContext) {
     this.verifyBillingAuthorization(requestingUser);
@@ -1163,6 +1193,7 @@ export class FeeUseCases {
     const allStudents = await this.studentRepository.findAll({ schoolId });
     const eligibleStudents = allStudents.filter(s => {
       if (s.status && s.status !== StudentStatus.ACTIVE) return false;
+      if (dto.scope === 'SINGLE_STUDENT') return s.id === dto.studentId;
       if (dto.scope === 'ECDE') return ECDE_GRADES.includes(s.gradeLevel);
       if (dto.scope === 'PRIMARY') return PRIMARY_GRADES.includes(s.gradeLevel);
       if (dto.scope === 'JUNIOR_SECONDARY') return JUNIOR_SECONDARY_GRADES.includes(s.gradeLevel);
@@ -1315,8 +1346,9 @@ export class FeeUseCases {
     schoolId?: string;
     academicYearId: string;
     termId: string;
-    scope: 'ALL' | 'ECDE' | 'PRIMARY' | 'JUNIOR_SECONDARY' | 'GRADE';
+    scope: 'ALL' | 'ECDE' | 'PRIMARY' | 'JUNIOR_SECONDARY' | 'GRADE' | 'SINGLE_STUDENT';
     targetGradeLevel?: CBCGradeLevel;
+    studentId?: string;
     includePreviousBalance?: boolean;
     dueDate?: string;
   }, requestingUser?: UserContext) {

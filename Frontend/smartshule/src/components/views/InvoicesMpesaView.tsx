@@ -1047,6 +1047,7 @@ export const InvoicesMpesaView: React.FC<InvoicesMpesaViewProps> = ({
           loadData();
           setIsGenInvoicesOpen(false);
         }}
+        students={students}
       />
 
       <RecordPaymentModal

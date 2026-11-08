@@ -327,6 +327,8 @@ export interface Student {
   creditBalance?: number;
   totalDue?: number;
   arrearsDue?: number;
+  hasInvoices?: boolean;
+  isUnbilled?: boolean;
 }
 
 export interface ArchivedGuardianInfo {

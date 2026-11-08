@@ -58,11 +58,14 @@ export const ReversePaymentSchema = z.object({
 });
 
 export const GenerateInvoicesSchema = z.object({
-  schoolId: z.string().min(1),
-  academicYearId: z.string().min(1),
-  termId: z.string().min(1),
+  schoolId: z.string().optional(),
+  academicYearId: z.string().optional(),
+  termId: z.string().optional(),
   gradeLevel: z.nativeEnum(CBCGradeLevel).optional(),
-  studentId: z.string().optional()
+  studentId: z.string().optional(),
+  includePreviousBalance: z.boolean().optional(),
+  dueDate: z.string().optional(),
+  applyExistingCredits: z.boolean().optional()
 });
 
 export const CreateIndividualInvoiceSchema = z.object({

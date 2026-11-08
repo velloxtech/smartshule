@@ -270,12 +270,11 @@ export default function App() {
       if (studentData?.data && Array.isArray(studentData.data)) {
         const mappedStudents: Student[] = studentData.data.map((st: any) => {
           const fee = feeMap.get(st.id);
-          const feeBalance = st.feeBalance !== undefined && st.feeBalance !== null
-            ? Number(st.feeBalance)
-            : (fee !== undefined ? fee.balance : 0);
-          const totalFee = st.totalFee !== undefined && st.totalFee !== null
-            ? Number(st.totalFee)
-            : (fee !== undefined ? fee.billed : 0);
+          const hasInvoices = fee !== undefined ? fee.hasInvoices : Boolean(st.hasInvoices);
+          const feeBalance = fee !== undefined ? fee.balance : (Number(st.feeBalance) || 0);
+          const totalFee = fee !== undefined ? fee.billed : (Number(st.totalFee) || 0);
+          const isSponsored = Boolean(st.isSponsored || st.sponsorship);
+          const isUnbilled = !isSponsored && !hasInvoices && feeBalance === 0;
           const fullName =
             st.name ||
             st.fullName ||
@@ -301,12 +300,14 @@ export default function App() {
             guardianPhone: st.guardian?.phone || st.guardianPhone || st.emergencyContactPhone || '--',
             feeBalance,
             totalFee,
+            hasInvoices,
+            isUnbilled,
             priorArrears: Number(st.priorArrears) || 0,
             totalPaid: Number(st.totalPaid) || 0,
             creditBalance: Number(st.creditBalance) || 0,
             totalDue: Number(st.totalDue) || 0,
             arrearsDue: Number(st.arrearsDue) || 0,
-            isSponsored: Boolean(st.isSponsored || st.sponsorship),
+            isSponsored,
             sponsorship: st.sponsorship || null,
             attendanceRate: st.attendanceRate ?? 0,
             CBCRating: st.CBCRating || '--',

@@ -1407,40 +1407,11 @@ export class StudentUseCases {
 
         const feeInfo = studentFeeMap.get(s.id) || { balance: 0, billed: 0, paid: 0, priorArrears: 0 };
 
-        // Fallback to active Fee Structure according to the term if no invoice has been generated yet for this student
-        if (feeInfo.billed === 0 && !sp && feeStructures && feeStructures.length > 0) {
-          const sGrade = (s.gradeLevel || '').toUpperCase();
-          const matchFs = feeStructures.find(fs => {
-            const fsGrade = (fs.gradeLevel || '').toUpperCase();
-            return fsGrade === sGrade || fsGrade.replace(/_/g, ' ') === sGrade.replace(/_/g, ' ');
-          });
-
-          if (matchFs) {
-            let termAmount = 0;
-            const isTermStructure = matchFs.termId && matchFs.termId !== 'ALL' && matchFs.termId !== 'ANNUAL';
-            if (isTermStructure) {
-              termAmount = matchFs.totalAmount || (Array.isArray(matchFs.items) ? matchFs.items.reduce((acc: number, it: any) => acc + (Number(it.amount) || 0), 0) : 0);
-            } else if (currentTermNum === 1 && matchFs.term1Total !== undefined) {
-              termAmount = matchFs.term1Total;
-            } else if (currentTermNum === 2 && matchFs.term2Total !== undefined) {
-              termAmount = matchFs.term2Total;
-            } else if (currentTermNum === 3 && matchFs.term3Total !== undefined) {
-              termAmount = matchFs.term3Total;
-            } else if (matchFs.termBreakdown) {
-              termAmount = currentTermNum === 1
-                ? matchFs.termBreakdown.term1
-                : currentTermNum === 2
-                ? matchFs.termBreakdown.term2
-                : matchFs.termBreakdown.term3;
-            } else {
-              termAmount = matchFs.totalAmount || 0;
-            }
-
-            if (termAmount > 0) {
-              feeInfo.billed = termAmount;
-            }
-          }
-        }
+        // Invoices are the single authoritative source of truth for billed fees and balances.
+        // Fee structures define what can be charged, but only invoices establish what a learner has actually been billed.
+        // If a student has no invoices generated for this term, billed fees are 0.
+        const hasInvoices = (feeInfo.billed > 0 || feeInfo.priorArrears > 0 || feeInfo.paid > 0);
+        const isUnbilled = !sp && !hasInvoices;
 
         const totalDue = sp ? 0 : Math.round((feeInfo.billed + feeInfo.priorArrears) * 100) / 100;
         const overpayment = !sp && feeInfo.paid > totalDue ? Math.round((feeInfo.paid - totalDue) * 100) / 100 : 0;
@@ -1467,6 +1438,8 @@ export class StudentUseCases {
             balance: null,
             isSponsored: false,
             sponsorship: null,
+            hasInvoices: false,
+            isUnbilled: true,
             guardian: guardianSummary,
             guardians: guardianDetails,
             guardianName: gName,
@@ -1486,6 +1459,8 @@ export class StudentUseCases {
           totalDue: sp ? 0 : totalDue,
           arrearsDue: sp ? 0 : arrearsDue,
           balance: balance,
+          hasInvoices: hasInvoices,
+          isUnbilled: isUnbilled,
           isSponsored: !!sp,
           sponsorship: sp ? (typeof sp.toJSON === 'function' ? sp.toJSON() : sp) : null,
           guardian: guardianSummary,

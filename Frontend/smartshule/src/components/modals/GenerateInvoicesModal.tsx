@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { apiService } from '../../services/api';
-import { AcademicYear, AcademicTerm } from '../../types';
+import { AcademicYear, AcademicTerm, Student } from '../../types';
 
 interface GenerateInvoicesModalProps {
   isOpen: boolean;
   onClose: () => void;
   onInvoicesGenerated: () => void;
+  targetStudent?: Student | null;
+  students?: Student[];
 }
 
 interface BulkPreviewCandidate {
@@ -45,15 +47,20 @@ export const GenerateInvoicesModal: React.FC<GenerateInvoicesModalProps> = ({
   isOpen,
   onClose,
   onInvoicesGenerated,
+  targetStudent,
+  students = [],
 }) => {
   // Tabs: 'CREATE' | 'HISTORY'
   const [activeTab, setActiveTab] = useState<'CREATE' | 'HISTORY'>('CREATE');
 
   // Configuration
-  const [scope, setScope] = useState<'ALL' | 'ECDE' | 'PRIMARY' | 'JUNIOR_SECONDARY' | 'GRADE'>('ALL');
+  const [scope, setScope] = useState<'ALL' | 'ECDE' | 'PRIMARY' | 'JUNIOR_SECONDARY' | 'GRADE' | 'SINGLE_STUDENT'>('ALL');
   const [gradeLevel, setGradeLevel] = useState('GRADE_4');
+  const [selectedStudentId, setSelectedStudentId] = useState<string>('');
+  const [studentSearchQuery, setStudentSearchQuery] = useState('');
   const [includePreviousBalance, setIncludePreviousBalance] = useState(true);
   const [dueDate, setDueDate] = useState('');
+  const [allStudentsList, setAllStudentsList] = useState<Student[]>(students);
 
   // Academic Period
   const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
@@ -84,8 +91,26 @@ export const GenerateInvoicesModal: React.FC<GenerateInvoicesModalProps> = ({
       setExecutionResult(null);
       setActiveTab('CREATE');
       loadAcademicData();
+
+      if (targetStudent) {
+        setScope('SINGLE_STUDENT');
+        setSelectedStudentId(targetStudent.id);
+      } else {
+        setScope('ALL');
+        setSelectedStudentId('');
+      }
+
+      if (students.length === 0) {
+        apiService.getStudents().then((res) => {
+          if (res?.success && Array.isArray(res.data)) {
+            setAllStudentsList(res.data as any);
+          }
+        }).catch(() => {});
+      } else {
+        setAllStudentsList(students);
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, targetStudent]);
 
   const loadAcademicData = async () => {
     try {
@@ -145,6 +170,10 @@ export const GenerateInvoicesModal: React.FC<GenerateInvoicesModalProps> = ({
       setError('Please select a CBC grade level.');
       return;
     }
+    if (scope === 'SINGLE_STUDENT' && !selectedStudentId) {
+      setError('Please select a learner to invoice.');
+      return;
+    }
 
     setIsPreviewLoading(true);
     setError(null);
@@ -157,6 +186,7 @@ export const GenerateInvoicesModal: React.FC<GenerateInvoicesModalProps> = ({
         termId: selectedTermId,
         scope,
         targetGradeLevel: scope === 'GRADE' ? gradeLevel : undefined,
+        studentId: scope === 'SINGLE_STUDENT' ? selectedStudentId : undefined,
         includePreviousBalance,
       });
 
@@ -178,7 +208,9 @@ export const GenerateInvoicesModal: React.FC<GenerateInvoicesModalProps> = ({
       return;
     }
 
-    const confirmMsg = `Generate ${previewData.summary.readyCount} invoice(s) totalling KES ${previewData.summary.totalEstimatedBilling.toLocaleString()}? Existing invoices will NOT be duplicated.`;
+    const confirmMsg = scope === 'SINGLE_STUDENT'
+      ? `Generate official term fee invoice for ${previewData.candidates[0]?.studentName || 'selected learner'} totalling KES ${previewData.summary.totalEstimatedBilling.toLocaleString()}?`
+      : `Generate ${previewData.summary.readyCount} invoice(s) totalling KES ${previewData.summary.totalEstimatedBilling.toLocaleString()}? Existing invoices will NOT be duplicated.`;
     if (!confirm(confirmMsg)) return;
 
     setIsExecuting(true);
@@ -191,19 +223,20 @@ export const GenerateInvoicesModal: React.FC<GenerateInvoicesModalProps> = ({
         termId: selectedTermId,
         scope,
         targetGradeLevel: scope === 'GRADE' ? gradeLevel : undefined,
+        studentId: scope === 'SINGLE_STUDENT' ? selectedStudentId : undefined,
         includePreviousBalance,
         dueDate: dueDate || undefined,
       });
 
       if (res.success && res.data) {
         setExecutionResult(res.data);
-        setMessage(res.data.message || 'Invoices generated successfully in bulk!');
+        setMessage(res.data.message || (scope === 'SINGLE_STUDENT' ? 'Learner term invoice generated successfully!' : 'Invoices generated successfully in bulk!'));
         onInvoicesGenerated();
       } else {
-        setError(res.message || 'Bulk invoice generation failed');
+        setError(res.message || 'Invoice generation failed');
       }
     } catch (err: any) {
-      setError(err.message || 'Error executing bulk invoicing');
+      setError(err.message || 'Error executing invoice generation');
     } finally {
       setIsExecuting(false);
     }
@@ -346,6 +379,7 @@ export const GenerateInvoicesModal: React.FC<GenerateInvoicesModalProps> = ({
                     }}
                     className="w-full text-xs py-2 px-3 rounded-lg border border-outline-variant bg-surface text-on-surface font-semibold"
                   >
+                    <option value="SINGLE_STUDENT">Individual Pupil (Search & Bill Single Learner)</option>
                     <option value="ALL">Entire School (All Learners)</option>
                     <option value="ECDE">ECDE Only (Playgroup, PP1, PP2)</option>
                     <option value="PRIMARY">Primary Only (Grade 1 - 6)</option>
@@ -355,34 +389,86 @@ export const GenerateInvoicesModal: React.FC<GenerateInvoicesModalProps> = ({
                 </div>
 
                 {/* Single Grade (if scope is GRADE) */}
-                <div>
-                  <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1">
-                    Grade Level {scope !== 'GRADE' ? '(Auto)' : '*'}
-                  </label>
-                  <select
-                    value={gradeLevel}
-                    disabled={scope !== 'GRADE'}
-                    onChange={e => {
-                      setGradeLevel(e.target.value);
-                      setPreviewData(null);
-                    }}
-                    className="w-full text-xs py-2 px-3 rounded-lg border border-outline-variant bg-surface text-on-surface font-semibold disabled:opacity-50"
-                  >
-                    <option value="PLAYGROUP">Playgroup</option>
-                    <option value="PP1">PP1</option>
-                    <option value="PP2">PP2</option>
-                    <option value="GRADE_1">Grade 1</option>
-                    <option value="GRADE_2">Grade 2</option>
-                    <option value="GRADE_3">Grade 3</option>
-                    <option value="GRADE_4">Grade 4</option>
-                    <option value="GRADE_5">Grade 5</option>
-                    <option value="GRADE_6">Grade 6</option>
-                    <option value="GRADE_7">Grade 7</option>
-                    <option value="GRADE_8">Grade 8</option>
-                    <option value="GRADE_9">Grade 9</option>
-                  </select>
-                </div>
+                {scope === 'GRADE' && (
+                  <div>
+                    <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1">
+                      Grade Level *
+                    </label>
+                    <select
+                      value={gradeLevel}
+                      onChange={e => {
+                        setGradeLevel(e.target.value);
+                        setPreviewData(null);
+                      }}
+                      className="w-full text-xs py-2 px-3 rounded-lg border border-outline-variant bg-surface text-on-surface font-semibold"
+                    >
+                      <option value="PLAYGROUP">Playgroup</option>
+                      <option value="PP1">PP1</option>
+                      <option value="PP2">PP2</option>
+                      <option value="GRADE_1">Grade 1</option>
+                      <option value="GRADE_2">Grade 2</option>
+                      <option value="GRADE_3">Grade 3</option>
+                      <option value="GRADE_4">Grade 4</option>
+                      <option value="GRADE_5">Grade 5</option>
+                      <option value="GRADE_6">Grade 6</option>
+                      <option value="GRADE_7">Grade 7</option>
+                      <option value="GRADE_8">Grade 8</option>
+                      <option value="GRADE_9">Grade 9</option>
+                    </select>
+                  </div>
+                )}
+
+                {/* Pupil Selector (if scope is SINGLE_STUDENT) */}
+                {scope === 'SINGLE_STUDENT' && (
+                  <div className="sm:col-span-2">
+                    <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider block mb-1">
+                      Select Learner to Bill *
+                    </label>
+                    <select
+                      value={selectedStudentId}
+                      onChange={e => {
+                        setSelectedStudentId(e.target.value);
+                        setPreviewData(null);
+                      }}
+                      className="w-full text-xs py-2 px-3 rounded-lg border border-outline-variant bg-surface text-on-surface font-semibold"
+                    >
+                      <option value="">-- Choose Learner to Bill --</option>
+                      {allStudentsList.map(s => (
+                        <option key={s.id} value={s.id}>
+                          {s.name} (Adm: {s.admNo}) · {s.grade} {s.stream ? `(${s.stream})` : ''} · Bal: KES {(s.feeBalance || 0).toLocaleString()}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
+
+              {/* Pupil Spotlight Card when SINGLE_STUDENT is selected */}
+              {scope === 'SINGLE_STUDENT' && selectedStudentId && (() => {
+                const currentPupil = allStudentsList.find(s => s.id === selectedStudentId);
+                if (!currentPupil) return null;
+                return (
+                  <div className="p-3 bg-white rounded-xl border border-[#7a1228]/20 flex items-center justify-between gap-3 shadow-xs">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-full bg-[#7a1228]/10 text-[#7a1228] font-bold text-xs flex items-center justify-center shrink-0">
+                        {currentPupil.name.charAt(0)}
+                      </div>
+                      <div>
+                        <div className="font-bold text-xs text-slate-900">{currentPupil.name}</div>
+                        <div className="text-[11px] text-slate-500 font-mono">
+                          Adm #{currentPupil.admNo} · {currentPupil.grade} {currentPupil.stream ? `(${currentPupil.stream})` : ''} · Guardian: {currentPupil.guardianName || '--'}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Current Outstanding</span>
+                      <span className={`text-xs font-bold font-mono ${currentPupil.feeBalance > 0 ? 'text-rose-700' : 'text-emerald-700'}`}>
+                        {currentPupil.feeBalance > 0 ? `KES ${currentPupil.feeBalance.toLocaleString()}` : 'KES 0 (Cleared / Unbilled)'}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Advanced Options */}
               <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-outline-variant/30">

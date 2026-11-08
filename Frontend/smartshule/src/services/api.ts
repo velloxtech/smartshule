@@ -1790,11 +1790,14 @@ const coreApiService = {
   },
 
   generateInvoices: async (data: {
-    schoolId: string;
-    academicYearId: string;
-    termId: string;
+    schoolId?: string;
+    academicYearId?: string;
+    termId?: string;
     gradeLevel?: string;
     studentId?: string;
+    includePreviousBalance?: boolean;
+    dueDate?: string;
+    applyExistingCredits?: boolean;
   }): Promise<ApiResponse<any>> => {
     return apiFetch<ApiResponse<any>>('/finance/invoices/generate', {
       method: 'POST',
@@ -1806,8 +1809,9 @@ const coreApiService = {
     schoolId?: string;
     academicYearId: string;
     termId: string;
-    scope: 'ALL' | 'ECDE' | 'PRIMARY' | 'JUNIOR_SECONDARY' | 'GRADE';
+    scope: 'ALL' | 'ECDE' | 'PRIMARY' | 'JUNIOR_SECONDARY' | 'GRADE' | 'SINGLE_STUDENT';
     targetGradeLevel?: string;
+    studentId?: string;
     includePreviousBalance?: boolean;
   }): Promise<ApiResponse<any>> => {
     return apiFetch<ApiResponse<any>>('/finance/invoices/bulk/preview', {
@@ -1820,8 +1824,9 @@ const coreApiService = {
     schoolId?: string;
     academicYearId: string;
     termId: string;
-    scope: 'ALL' | 'ECDE' | 'PRIMARY' | 'JUNIOR_SECONDARY' | 'GRADE';
+    scope: 'ALL' | 'ECDE' | 'PRIMARY' | 'JUNIOR_SECONDARY' | 'GRADE' | 'SINGLE_STUDENT';
     targetGradeLevel?: string;
+    studentId?: string;
     includePreviousBalance?: boolean;
     dueDate?: string;
   }): Promise<ApiResponse<any>> => {
