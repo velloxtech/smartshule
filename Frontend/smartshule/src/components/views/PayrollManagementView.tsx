@@ -79,10 +79,12 @@ export const PayrollManagementView: React.FC = () => {
   const [hasAutoDetected, setHasAutoDetected] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [ackFilter, setAckFilter] = useState<'ALL' | 'ACKNOWLEDGED' | 'AWAITING' | 'DISPUTED'>('ALL');
   const [notification, setNotification] = useState<string | null>(null);
 
   // Modals
   const [selectedPayslip, setSelectedPayslip] = useState<PayrollRecord | null>(null);
+  const [selectedAckDossier, setSelectedAckDossier] = useState<PayrollRecord | null>(null);
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
   const [isPayModalOpen, setIsPayModalOpen] = useState(false);
@@ -297,6 +299,9 @@ export const PayrollManagementView: React.FC = () => {
   const filteredPayrolls = useMemo(() => {
     return payrolls.filter((p) => {
       if (statusFilter !== 'ALL' && p.status !== statusFilter) return false;
+      if (ackFilter === 'ACKNOWLEDGED' && p.acknowledgementStatus !== 'ACKNOWLEDGED') return false;
+      if (ackFilter === 'AWAITING' && (p.status !== 'PAID' || p.acknowledgementStatus === 'ACKNOWLEDGED' || p.acknowledgementStatus === 'UNDER_REVIEW')) return false;
+      if (ackFilter === 'DISPUTED' && p.acknowledgementStatus !== 'UNDER_REVIEW') return false;
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const staffId = getStaffDisplayId(p, staffList).toLowerCase();
@@ -304,7 +309,7 @@ export const PayrollManagementView: React.FC = () => {
       }
       return true;
     });
-  }, [payrolls, statusFilter, searchQuery, staffList]);
+  }, [payrolls, statusFilter, ackFilter, searchQuery, staffList]);
 
   const handleGeneratePayroll = async () => {
     try {
@@ -1236,6 +1241,20 @@ export const PayrollManagementView: React.FC = () => {
               </div>
 
               <div>
+                <label className="block text-[11px] font-semibold text-slate-600 mb-1">Teacher Acknowledgement</label>
+                <select
+                  value={ackFilter}
+                  onChange={(e) => setAckFilter(e.target.value as any)}
+                  className="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#7a1228]"
+                >
+                  <option value="ALL">All Acknowledgements</option>
+                  <option value="ACKNOWLEDGED">✓ Acknowledged by Staff</option>
+                  <option value="AWAITING">⏳ Awaiting Acknowledgement</option>
+                  <option value="DISPUTED">⚠ Discrepancy Reported</option>
+                </select>
+              </div>
+
+              <div>
                 <label className="block text-[11px] font-semibold text-slate-600 mb-1">Search Faculty / Staff</label>
                 <div className="relative">
                   <span className="material-symbols-outlined absolute left-2 top-1.5 text-slate-400 text-sm">search</span>
@@ -1450,9 +1469,29 @@ export const PayrollManagementView: React.FC = () => {
                                 </span>
                               )}
                               {p.acknowledgementStatus === 'ACKNOWLEDGED' ? (
-                                <span className="inline-flex items-center gap-1 text-[9.5px] text-teal-800 font-bold">
-                                  <span className="material-symbols-outlined text-[11px]">verified</span>
-                                  <span>Teacher Acknowledged</span>
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedAckDossier(p)}
+                                  className="inline-flex items-center gap-1 text-[9.5px] text-teal-800 font-bold bg-teal-50 hover:bg-teal-100 px-1.5 py-0.5 rounded border border-teal-300 transition-colors cursor-pointer text-left"
+                                  title="Click to view verified teacher acknowledgement slip"
+                                >
+                                  <span className="material-symbols-outlined text-[11px] text-teal-700">verified</span>
+                                  <span>Acknowledged ({p.acknowledgedAt ? new Date(p.acknowledgedAt).toLocaleDateString() : 'Signed'})</span>
+                                </button>
+                              ) : p.acknowledgementStatus === 'UNDER_REVIEW' ? (
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedAckDossier(p)}
+                                  className="inline-flex items-center gap-1 text-[9.5px] text-rose-800 font-bold bg-rose-50 hover:bg-rose-100 px-1.5 py-0.5 rounded border border-rose-300 transition-colors cursor-pointer text-left"
+                                  title="Teacher reported discrepancy: click to view dispute details"
+                                >
+                                  <span className="material-symbols-outlined text-[11px] text-rose-700">warning</span>
+                                  <span>Discrepancy Reported ({p.disputedAt ? new Date(p.disputedAt).toLocaleDateString() : 'Under Review'})</span>
+                                </button>
+                              ) : isPaid ? (
+                                <span className="inline-flex items-center gap-1 text-[9.5px] text-amber-800 font-medium bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                                  <span className="material-symbols-outlined text-[11px] text-amber-700">schedule</span>
+                                  <span>Awaiting Acknowledgement</span>
                                 </span>
                               ) : (
                                 <span className="inline-flex items-center gap-1 text-[9.5px] text-slate-400 font-medium">
@@ -3082,6 +3121,117 @@ export const PayrollManagementView: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: STAFF SALARY ACKNOWLEDGEMENT & DISPUTE DOSSIER */}
+      {selectedAckDossier && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 md:p-8 shadow-2xl border border-slate-200 space-y-5 my-auto animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[#7a1228] text-xl">verified_user</span>
+                <h3 className="font-bold text-base text-slate-900">Staff Remuneration Acknowledgement Dossier</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedAckDossier(null)}
+                className="text-slate-400 hover:text-slate-700 p-1 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Faculty / Employee:</span>
+                <span className="font-bold text-slate-900">{selectedAckDossier.teacherName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Payroll Period:</span>
+                <span className="font-bold font-mono text-slate-900">{selectedAckDossier.month}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Net Salary:</span>
+                <span className="font-mono font-bold text-slate-800">
+                  KES {Number(selectedAckDossier.netSalary || 0).toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Disbursed Amount:</span>
+                <span className="font-mono font-bold text-emerald-800">
+                  KES {Number(selectedAckDossier.amountPaid > 0 ? selectedAckDossier.amountPaid : selectedAckDossier.netSalary).toLocaleString()}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Payment Reference:</span>
+                <span className="font-mono text-slate-800">{selectedAckDossier.paymentReference || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Disbursement Date:</span>
+                <span className="font-mono text-slate-800">
+                  {selectedAckDossier.paidAt ? new Date(selectedAckDossier.paidAt).toLocaleDateString() : 'N/A'}
+                </span>
+              </div>
+            </div>
+
+            {/* Acknowledgement Status Information */}
+            {selectedAckDossier.acknowledgementStatus === 'ACKNOWLEDGED' ? (
+              <div className="p-4 rounded-2xl bg-teal-50 border border-teal-200 space-y-3">
+                <div className="flex items-center gap-2 text-teal-900 font-bold text-xs">
+                  <span className="material-symbols-outlined text-sm text-teal-700">verified</span>
+                  <span>Officially Acknowledged by Staff Member</span>
+                </div>
+                <p className="text-[11px] text-teal-950 italic bg-white p-3 rounded-xl border border-teal-200">
+                  "{selectedAckDossier.acknowledgementStatement || 'I confirm receipt of salary payment.'}"
+                </p>
+                <div className="flex items-center justify-between text-[10px] text-teal-800 font-mono">
+                  <span>Timestamp: {selectedAckDossier.acknowledgedAt ? new Date(selectedAckDossier.acknowledgedAt).toLocaleString() : 'N/A'}</span>
+                  <span>Method: {selectedAckDossier.acknowledgementMethod || 'PORTAL_AUTH'}</span>
+                </div>
+                {selectedAckDossier.acknowledgementSignature && (
+                  <div className="pt-2 border-t border-teal-200 text-center">
+                    <span className="text-[9px] uppercase font-mono text-teal-700 block mb-1">Digital Signature Record</span>
+                    {selectedAckDossier.acknowledgementSignature.startsWith('data:image') ? (
+                      <img src={selectedAckDossier.acknowledgementSignature} alt="Sig" className="h-10 mx-auto object-contain bg-white px-2 py-0.5 rounded border border-teal-200" />
+                    ) : (
+                      <span className="font-serif italic text-lg text-blue-900 font-bold">
+                        {selectedAckDossier.acknowledgementSignature}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : selectedAckDossier.acknowledgementStatus === 'UNDER_REVIEW' ? (
+              <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 space-y-2">
+                <div className="flex items-center gap-2 text-rose-900 font-bold text-xs">
+                  <span className="material-symbols-outlined text-sm text-rose-700">warning</span>
+                  <span>Discrepancy / Dispute Reported by Teacher</span>
+                </div>
+                <div className="bg-white p-3 rounded-xl border border-rose-200 text-xs text-rose-950 font-medium">
+                  {selectedAckDossier.disputeReason || 'Discrepancy reported during salary review.'}
+                </div>
+                <div className="text-[10px] text-rose-800 font-mono">
+                  Reported on: {selectedAckDossier.disputedAt ? new Date(selectedAckDossier.disputedAt).toLocaleString() : 'Recently'}
+                </div>
+              </div>
+            ) : (
+              <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-semibold flex items-center gap-2">
+                <span className="material-symbols-outlined text-sm text-amber-700">schedule</span>
+                <span>Payment disbursed by school accounts; awaiting teacher acknowledgement in Teacher Portal.</span>
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setSelectedAckDossier(null)}
+                className="px-4 py-2 rounded-xl bg-slate-900 text-white font-bold text-xs hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                Close Dossier
+              </button>
+            </div>
           </div>
         </div>
       )}

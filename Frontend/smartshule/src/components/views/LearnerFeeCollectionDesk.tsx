@@ -6,6 +6,7 @@ import { ReceiptViewModal } from '../modals/ReceiptViewModal';
 import { FeeStatementModal } from '../modals/FeeStatementModal';
 import { InvoiceDetailsModal } from '../modals/InvoiceDetailsModal';
 import { RequestTransactionReversalModal } from '../modals/RequestTransactionReversalModal';
+import { GenerateInvoicesModal } from '../modals/GenerateInvoicesModal';
 
 export interface LearnerFeeCollectionDeskProps {
   students: Student[];
@@ -54,6 +55,7 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
   const [activeLedgerTab, setActiveLedgerTab] = useState<'history' | 'statement' | 'invoices'>('history');
 
   // Payment recording panel / modal state
+  const [isBulkInvoiceModalOpen, setIsBulkInvoiceModalOpen] = useState(false);
   const [isRecordPaymentOpen, setIsRecordPaymentOpen] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodType>('MPESA');
@@ -557,6 +559,16 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
           </div>
 
           <div className="flex items-center gap-2 self-end sm:self-auto">
+            <button
+              type="button"
+              onClick={() => setIsBulkInvoiceModalOpen(true)}
+              className="px-3 py-1.5 rounded-xl border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Generate invoices in bulk for Whole School, ECDE, Primary, or Grade"
+            >
+              <span className="material-symbols-outlined text-[16px]">receipt_long</span>
+              <span>Generate Invoices (Bulk)</span>
+            </button>
+
             {onNavigateToFullLedger && (
               <button
                 type="button"
@@ -1841,6 +1853,16 @@ export const LearnerFeeCollectionDesk: React.FC<LearnerFeeCollectionDeskProps> =
           transaction={reversalModalTx}
         />
       )}
+
+      {/* Bulk Fee Invoice Generator Modal */}
+      <GenerateInvoicesModal
+        isOpen={isBulkInvoiceModalOpen}
+        onClose={() => setIsBulkInvoiceModalOpen(false)}
+        onInvoicesGenerated={async () => {
+          if (onRefreshStudents) await onRefreshStudents();
+          loadPosition();
+        }}
+      />
     </div>
   );
 };

@@ -39,7 +39,10 @@ export interface PayrollProps {
   acknowledgementMethod?: 'PORTAL_AUTH' | 'DIGITAL_SIGNATURE' | 'SMS_OTP';
   acknowledgementSignature?: string;
   acknowledgementIp?: string;
-  acknowledgementStatus?: 'UNACKNOWLEDGED' | 'ACKNOWLEDGED';
+  acknowledgementStatus?: 'UNACKNOWLEDGED' | 'AWAITING_ACKNOWLEDGEMENT' | 'ACKNOWLEDGED' | 'UNDER_REVIEW' | 'DISPUTED';
+  disputedAt?: Date;
+  disputeReason?: string;
+  disputedByUserId?: string;
 }
 
 export class PayrollRecord extends Entity<PayrollProps> {
@@ -140,8 +143,18 @@ export class PayrollRecord extends Entity<PayrollProps> {
   public get acknowledgementMethod(): string | undefined { return this._props.acknowledgementMethod; }
   public get acknowledgementSignature(): string | undefined { return this._props.acknowledgementSignature; }
   public get acknowledgementIp(): string | undefined { return this._props.acknowledgementIp; }
-  public get acknowledgementStatus(): 'UNACKNOWLEDGED' | 'ACKNOWLEDGED' {
-    return this._props.acknowledgementStatus || (this._props.acknowledgedAt ? 'ACKNOWLEDGED' : 'UNACKNOWLEDGED');
+  public get disputedAt(): Date | undefined { return this._props.disputedAt; }
+  public get disputeReason(): string | undefined { return this._props.disputeReason; }
+  public get disputedByUserId(): string | undefined { return this._props.disputedByUserId; }
+  public get acknowledgementStatus(): 'UNACKNOWLEDGED' | 'AWAITING_ACKNOWLEDGEMENT' | 'ACKNOWLEDGED' | 'UNDER_REVIEW' {
+    if (this._props.acknowledgementStatus) {
+      if ((this._props.acknowledgementStatus as string) === 'DISPUTED') return 'UNDER_REVIEW';
+      return this._props.acknowledgementStatus as any;
+    }
+    if (this._props.disputedAt) return 'UNDER_REVIEW';
+    if (this._props.acknowledgedAt) return 'ACKNOWLEDGED';
+    if (this._props.status === 'PAID' || this._props.status === 'PARTIALLY_PAID') return 'AWAITING_ACKNOWLEDGEMENT';
+    return 'UNACKNOWLEDGED';
   }
 
   public acknowledgeSalary(
@@ -165,6 +178,21 @@ export class PayrollRecord extends Entity<PayrollProps> {
     this._props.acknowledgementSignature = signature;
     this._props.acknowledgementIp = ipAddress;
     this._props.acknowledgementStatus = 'ACKNOWLEDGED';
+    this.touch();
+  }
+
+  public disputeSalary(userId: string, reason: string): void {
+    if (this._props.status !== 'PAID' && this._props.status !== 'PARTIALLY_PAID') {
+      throw new Error('Cannot dispute an unpaid or draft salary record. Only paid records may be disputed.');
+    }
+    if (this.acknowledgementStatus === 'ACKNOWLEDGED') {
+      throw new Error(`This salary payment record for ${this.month} has already been acknowledged as received.`);
+    }
+
+    this._props.disputedAt = new Date();
+    this._props.disputedByUserId = userId;
+    this._props.disputeReason = reason;
+    this._props.acknowledgementStatus = 'UNDER_REVIEW';
     this.touch();
   }
 

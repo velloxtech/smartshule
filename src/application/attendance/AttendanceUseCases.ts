@@ -174,8 +174,33 @@ export class AttendanceUseCases {
       await this.assertTeacherAssignedToClass(classRoomId, streamId, requestingUser);
     }
     const register = await this.attendanceRepository.findRegister(streamId, date, type, classRoomId);
-    if (!register) throw new NotFoundError('Attendance Register for the specified date');
-    return register.toJSON();
+    if (!register) return null;
+
+    const json = register.toJSON();
+
+    // If requesting user is a parent or guardian, strictly filter entries to only their linked children
+    if (requestingUser && (requestingUser.role === UserRole.PARENT || requestingUser.role === UserRole.GUARDIAN)) {
+      const guardian = await this.guardianRepository.findByUserId(requestingUser.userId);
+      const linkedStudentIds = new Set<string>(guardian?.studentIds || []);
+
+      const directStudents = await this.studentRepository.findByGuardianId(requestingUser.userId);
+      directStudents.forEach(s => linkedStudentIds.add(s.id));
+
+      const filteredEntries = (json.entries || []).filter((e: any) => linkedStudentIds.has(e.studentId));
+      return {
+        ...json,
+        entries: filteredEntries,
+        summary: {
+          total: filteredEntries.length,
+          present: filteredEntries.filter((e: any) => e.status === 'PRESENT').length,
+          absent: filteredEntries.filter((e: any) => e.status === 'ABSENT').length,
+          late: filteredEntries.filter((e: any) => e.status === 'LATE').length,
+          excused: filteredEntries.filter((e: any) => e.status === 'EXCUSED').length,
+        }
+      };
+    }
+
+    return json;
   }
 
   public async getAttendanceReport(filters: AttendanceFilterCriteria) {

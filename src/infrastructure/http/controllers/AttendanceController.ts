@@ -67,13 +67,6 @@ export class AttendanceController {
   public getDailyRegister = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const user = (req as any).user;
-      if (user?.role === UserRole.PARENT || user?.role === UserRole.GUARDIAN) {
-        return res.status(403).json({
-          success: false,
-          message: 'Access denied: Class roll-call registers are restricted to teachers and administrators.'
-        });
-      }
-
       const { streamId, date, type, classRoomId } = req.query;
       const register = await this.attendanceUseCases.getDailyRegister(
         (streamId as string) || '',
@@ -83,7 +76,10 @@ export class AttendanceController {
         user
       );
       return res.status(200).json({ success: true, data: register });
-    } catch (err) {
+    } catch (err: any) {
+      if (err.name === 'NotFoundError' || err.message?.includes('not found') || err.message?.includes('specified date')) {
+        return res.status(200).json({ success: true, data: null });
+      }
       next(err);
     }
   };

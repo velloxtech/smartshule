@@ -110,6 +110,9 @@ import { ITeacherCorrectionRequestRepository } from '../../core/ports/repositori
 import { InMemoryTeacherCorrectionRequestRepository } from './in-memory/InMemoryTeacherCorrectionRequestRepository';
 import { PostgresTeacherCorrectionRequestRepository } from './postgres/PostgresTeacherCorrectionRequestRepository';
 import { PostgresEDiaryRepository } from './postgres/PostgresEDiaryRepository';
+import { IParentConsentRepository } from '../../core/ports/repositories/IParentConsentRepository';
+import { InMemoryParentConsentRepository } from './in-memory/InMemoryParentConsentRepository';
+import { PostgresParentConsentRepository } from './postgres/PostgresParentConsentRepository';
 
 export interface RepositoryBundle {
   userRepository: IUserRepository;
@@ -141,6 +144,7 @@ export interface RepositoryBundle {
   inventoryRepository?: IInventoryRepository;
   signatureRepository?: ISignatureRepository;
   financialApprovalRepository?: IFinancialApprovalRepository;
+  parentConsentRepository?: IParentConsentRepository;
 }
 
 export class DatabaseFactory {
@@ -275,6 +279,7 @@ export class DatabaseFactory {
         teacherCorrectionRequestRepository: new PostgresTeacherCorrectionRequestRepository(pool),
         financialApprovalRepository: new PostgresFinancialApprovalRepository(pool),
         ediaryRepository: new PostgresEDiaryRepository(pool),
+        parentConsentRepository: new PostgresParentConsentRepository(pool),
       };
     }
 
@@ -310,6 +315,7 @@ export class DatabaseFactory {
       inventoryRepository: new InMemoryInventoryRepository(),
       signatureRepository: new InMemorySignatureRepository(),
       financialApprovalRepository: new InMemoryFinancialApprovalRepository(),
+      parentConsentRepository: new InMemoryParentConsentRepository(),
     };
   }
 }

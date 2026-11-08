@@ -415,6 +415,31 @@ export class PayrollController {
     }
   };
 
+  public disputeSalary = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const user = req.user as any;
+      const payrollId = req.params.id as string;
+      const ipAddress = (req.headers['x-forwarded-for'] as string) || req.socket?.remoteAddress;
+
+      const result = await this.payrollUseCases.disputeSalaryPayment(
+        payrollId,
+        {
+          userId: user.id || user.userId,
+          role: user.role,
+          schoolId: user.schoolId,
+          email: user.email
+        },
+        {
+          reason: req.body.reason,
+          ipAddress
+        }
+      );
+      return res.status(200).json(result);
+    } catch (err) {
+      next(err);
+    }
+  };
+
   public getSalaryAcknowledgementsReport = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const month = req.query.month as string | undefined;

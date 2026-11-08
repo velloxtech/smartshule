@@ -13,19 +13,24 @@ import {
   isValidKenyanNationalId,
 } from '../../utils/kenyanConstitution';
 
-interface AdmitLearnerModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+export interface AdmitLearnerModalProps {
+  isOpen?: boolean;
+  onClose?: () => void;
   onAdmit: (newLearner: any, rawBackendData?: any) => void | Promise<void>;
   existingStudents?: Student[];
+  isPage?: boolean;
+  onNavigateTab?: (tab: any) => void;
 }
 
 export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
-  isOpen,
+  isOpen = false,
   onClose,
   onAdmit,
   existingStudents,
+  isPage = false,
+  onNavigateTab,
 }) => {
+  const isComponentActive = isPage ? true : isOpen;
   const { user } = useAuth();
   const isBillingAuthorized = [
     UserRole.SUPER_ADMIN,
@@ -121,7 +126,7 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
         console.error('Failed to load initial data for admission modal:', err);
       }
     }
-    if (isOpen) {
+    if (isComponentActive) {
       loadDbClasses();
       setCurrentStep(1);
       setValidationError(null);
@@ -428,7 +433,11 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
         };
 
         await onAdmit(studentObj, rawPayload);
-        onClose();
+        if (isPage && onNavigateTab) {
+          onNavigateTab('students-guardians');
+        } else if (onClose) {
+          onClose();
+        }
       } else {
         setValidationError((res as any)?.error?.message || (res as any)?.message || 'Failed to admit learner. Please check admission details.');
       }
@@ -440,9 +449,10 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/70 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-200">
-      <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[92vh] sm:max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 my-auto text-slate-800">
+  if (!isComponentActive) return null;
+
+  const innerModal = (
+    <div className={`bg-white rounded-3xl ${isPage ? 'shadow-sm border border-slate-200' : 'shadow-2xl max-w-2xl max-h-[92vh] sm:max-h-[90vh] my-auto border border-slate-200'} w-full flex flex-col overflow-hidden text-slate-800`}>
         {/* Header with Kenyan Flag Bar & Constitutional Reference */}
         <div className="bg-[#7a1228] text-white p-4 sm:p-5 relative shrink-0">
           {/* Top flag stripe accent (Black, Red, Green, White) */}
@@ -473,13 +483,24 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
                 </p>
               </div>
             </div>
-            <button
-              onClick={onClose}
-              className="p-1.5 rounded-xl text-rose-100 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
-              aria-label="Close modal"
-            >
-              <span className="material-symbols-outlined text-[20px]">close</span>
-            </button>
+            {(!isPage || onClose) && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (isPage && onNavigateTab) {
+                    onNavigateTab('admissions-dashboard');
+                  } else if (onClose) {
+                    onClose();
+                  }
+                }}
+                className="p-1.5 rounded-xl text-rose-100 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+                aria-label={isPage ? 'Back to Admissions' : 'Close modal'}
+              >
+                <span className="material-symbols-outlined text-[20px]">
+                  {isPage ? 'arrow_back' : 'close'}
+                </span>
+              </button>
+            )}
           </div>
 
           {/* Stepper Bar */}
@@ -1330,10 +1351,16 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
             ) : (
               <button
                 type="button"
-                onClick={onClose}
+                onClick={() => {
+                  if (isPage && onNavigateTab) {
+                    onNavigateTab('admissions-dashboard');
+                  } else if (onClose) {
+                    onClose();
+                  }
+                }}
                 className="px-4 py-2.5 text-slate-500 hover:text-slate-700 font-semibold text-xs sm:text-sm transition-colors cursor-pointer"
               >
-                Cancel
+                {isPage ? 'Back to Admissions' : 'Cancel'}
               </button>
             )}
 
@@ -1360,7 +1387,44 @@ export const AdmitLearnerModal: React.FC<AdmitLearnerModalProps> = ({
             )}
           </div>
         </form>
+    </div>
+  );
+
+  if (isPage) {
+    return (
+      <div className="space-y-6 pb-16 max-w-4xl mx-auto">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 font-label-md text-label-md text-on-surface-variant">
+              <span>Home</span>
+              <span>/</span>
+              <span>Admissions & Enrolment</span>
+              <span>/</span>
+              <span className="text-primary font-semibold">Admit New Learner</span>
+            </div>
+            <div className="flex items-center gap-2 mt-1">
+              <h1 className="font-headline-lg text-headline-lg text-on-surface">
+                Admit New CBC Learner
+              </h1>
+              <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-teal-50 border border-teal-200 text-teal-800 text-[11px] font-bold">
+                <span className="material-symbols-outlined text-[14px]">verified</span>
+                <span>Article 53 & Basic Education Act</span>
+              </span>
+            </div>
+            <p className="text-xs text-on-surface-variant mt-0.5">
+              Complete student registration, 4-digit admission number assignment, parent/guardian identity binding, and class placement.
+            </p>
+          </div>
+        </div>
+
+        {innerModal}
       </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/70 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-200">
+      {innerModal}
     </div>
   );
 };

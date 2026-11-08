@@ -46,7 +46,10 @@ export class PostgresPayrollRepository implements IPayrollRepository {
         acknowledgementMethod: r.acknowledgement_method || undefined,
         acknowledgementSignature: r.acknowledgement_signature || undefined,
         acknowledgementIp: r.acknowledgement_ip || undefined,
-        acknowledgementStatus: r.acknowledgement_status || (r.acknowledged_at ? 'ACKNOWLEDGED' : 'UNACKNOWLEDGED')
+        acknowledgementStatus: r.acknowledgement_status || (r.disputed_at ? 'UNDER_REVIEW' : r.acknowledged_at ? 'ACKNOWLEDGED' : (r.status === 'PAID' || r.status === 'PARTIALLY_PAID') ? 'AWAITING_ACKNOWLEDGEMENT' : 'UNACKNOWLEDGED'),
+        disputedAt: r.disputed_at ? new Date(r.disputed_at) : undefined,
+        disputeReason: r.dispute_reason || undefined,
+        disputedByUserId: r.disputed_by_user_id || undefined
       },
       r.id,
       r.created_at ? new Date(r.created_at) : undefined,
@@ -124,6 +127,7 @@ export class PostgresPayrollRepository implements IPayrollRepository {
         paid_by_user_id, reversed_by_user_id, reversed_at, reversal_reason, notes,
         acknowledged_at, acknowledged_by_user_id, acknowledgement_statement, acknowledgement_method,
         acknowledgement_signature, acknowledgement_ip, acknowledgement_status,
+        disputed_at, dispute_reason, disputed_by_user_id,
         created_at, updated_at
       ) VALUES (
         $1, $2, $3, $4, $5,
@@ -134,7 +138,8 @@ export class PostgresPayrollRepository implements IPayrollRepository {
         $29, $30, $31, $32, $33,
         $34, $35, $36, $37,
         $38, $39, $40,
-        $41, $42
+        $41, $42, $43,
+        $44, $45
       )
       ON CONFLICT (id) DO UPDATE SET
         basic_salary = EXCLUDED.basic_salary,
@@ -172,6 +177,9 @@ export class PostgresPayrollRepository implements IPayrollRepository {
         acknowledgement_signature = EXCLUDED.acknowledgement_signature,
         acknowledgement_ip = EXCLUDED.acknowledgement_ip,
         acknowledgement_status = EXCLUDED.acknowledgement_status,
+        disputed_at = EXCLUDED.disputed_at,
+        dispute_reason = EXCLUDED.dispute_reason,
+        disputed_by_user_id = EXCLUDED.disputed_by_user_id,
         updated_at = EXCLUDED.updated_at
     `;
     const p = (record as any)._props;
@@ -184,6 +192,7 @@ export class PostgresPayrollRepository implements IPayrollRepository {
       p.paidByUserId || null, p.reversedByUserId || null, p.reversedAt || null, p.reversalReason || null, p.notes || null,
       p.acknowledgedAt || null, p.acknowledgedByUserId || null, p.acknowledgementStatement || null, p.acknowledgementMethod || null,
       p.acknowledgementSignature || null, p.acknowledgementIp || null, p.acknowledgementStatus || 'UNACKNOWLEDGED',
+      p.disputedAt || null, p.disputeReason || null, p.disputedByUserId || null,
       record.createdAt || new Date(), record.updatedAt || new Date()
     ]);
   }

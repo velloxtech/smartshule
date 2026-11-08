@@ -144,5 +144,28 @@ export interface IFeeRepository {
   findReversalRequestByReference(ref: string): Promise<TransactionReversalRequest | null>;
   findReversalRequests(filters: ReversalRequestFilterCriteria): Promise<TransactionReversalRequest[]>;
   findActiveReversalRequestForTransaction(transactionId: string): Promise<TransactionReversalRequest | null>;
+
+  // Bulk Billing History & Batches
+  saveBulkBillingBatch?(batch: BulkBillingBatchRecord): Promise<void>;
+  findBulkBillingBatches?(schoolId: string): Promise<BulkBillingBatchRecord[]>;
+}
+
+export interface BulkBillingBatchRecord {
+  id: string;
+  schoolId: string;
+  academicYearId: string;
+  termId: string;
+  scope: string;
+  targetGradeLevel?: string;
+  totalEligible: number;
+  totalGenerated: number;
+  totalSkipped: number;
+  totalFailed: number;
+  totalAmountBilled: number;
+  status: string;
+  executionSummary: any;
+  createdByUserId?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 

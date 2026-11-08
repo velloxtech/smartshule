@@ -103,6 +103,9 @@ import {
   EndorseDailyLogDTO,
   CurriculumTrackerDailyLog,
   EnrichedDailyLog,
+  ParentConsentRequest,
+  ParentConsentResponse,
+  ParentConsentItem,
 } from '../types';
 function resolveApiBaseUrl(): string {
   let url = ((import.meta as any).env?.VITE_API_URL || '').trim();
@@ -835,6 +838,67 @@ const coreApiService = {
     return apiFetch<ApiResponse<any>>('/students/link-guardian', {
       method: 'POST',
       body: JSON.stringify({ studentId, guardianId }),
+    });
+  },
+
+  searchParents: async (query?: string, schoolId?: string): Promise<ApiResponse<any>> => {
+    const params = new URLSearchParams();
+    if (query) params.append('q', query);
+    if (schoolId) params.append('schoolId', schoolId);
+    return apiFetch<ApiResponse<any>>(`/students/guardians/search?${params.toString()}`);
+  },
+
+  linkParentToLearners: async (data: {
+    parentUserId: string;
+    studentIds: string[];
+    relationship?: string;
+    isPrimary?: boolean;
+    canViewAcademics?: boolean;
+    canViewFinances?: boolean;
+  }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/students/guardians/link-learners', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  createAndLinkParent: async (data: {
+    firstName: string;
+    lastName: string;
+    phone: string;
+    email?: string;
+    nationalId?: string;
+    relationship?: string;
+    studentId: string;
+    isPrimary?: boolean;
+  }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/students/guardians/create-and-link', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  unlinkParentFromLearner: async (data: {
+    parentUserId: string;
+    studentId: string;
+  }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/students/guardians/unlink-learner', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  getParentFamilyTree: async (parentUserId: string): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/students/guardians/${parentUserId}/family-tree`);
+  },
+
+  resolveDuplicateParents: async (data: {
+    primaryUserId: string;
+    duplicateUserIds: string[];
+  }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/students/guardians/resolve-duplicate', {
+      method: 'POST',
+      body: JSON.stringify(data),
     });
   },
 
@@ -1736,6 +1800,40 @@ const coreApiService = {
       method: 'POST',
       body: JSON.stringify(data),
     });
+  },
+
+  previewBulkInvoices: async (data: {
+    schoolId?: string;
+    academicYearId: string;
+    termId: string;
+    scope: 'ALL' | 'ECDE' | 'PRIMARY' | 'JUNIOR_SECONDARY' | 'GRADE';
+    targetGradeLevel?: string;
+    includePreviousBalance?: boolean;
+  }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/finance/invoices/bulk/preview', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  executeBulkInvoices: async (data: {
+    schoolId?: string;
+    academicYearId: string;
+    termId: string;
+    scope: 'ALL' | 'ECDE' | 'PRIMARY' | 'JUNIOR_SECONDARY' | 'GRADE';
+    targetGradeLevel?: string;
+    includePreviousBalance?: boolean;
+    dueDate?: string;
+  }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/finance/invoices/bulk/execute', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  getBulkBillingHistory: async (schoolId?: string): Promise<ApiResponse<any>> => {
+    const query = schoolId ? `?schoolId=${encodeURIComponent(schoolId)}` : '';
+    return apiFetch<ApiResponse<any>>(`/finance/invoices/bulk/history${query}`);
   },
 
   createIndividualInvoice: async (data: {
@@ -3617,6 +3715,16 @@ export const libraryApi = {
     return apiFetch<ApiResponse<any>>(`/payroll/acknowledgements-report${params}`);
   },
 
+  disputeSalary: async (
+    id: string,
+    reason: string
+  ): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>(`/payroll/${id}/dispute`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  },
+
   // Financial Approvals
   requestFinancialApproval: async (data: any): Promise<ApiResponse<any>> => {
     return apiFetch<ApiResponse<any>>('/finance/approvals/request', {
@@ -4236,6 +4344,10 @@ export const signatureApi = {
     return apiFetch<ApiResponse<any>>('/signatures/me');
   },
 
+  getMySignatureProfile: async (): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/signatures/me');
+  },
+
   saveMySignature: async (payload: {
     signatureType: 'DRAWN' | 'TYPED' | 'UPLOADED';
     signatureData: string;
@@ -4440,11 +4552,58 @@ export const signatureApi = {
   },
 };
 
+export const parentConsentApi = {
+  getMyConsents: async (): Promise<ApiResponse<{ hasLinkedChildren: boolean; children: any[]; consents: ParentConsentItem[] }>> => {
+    return apiFetch<ApiResponse<{ hasLinkedChildren: boolean; children: any[]; consents: ParentConsentItem[] }>>('/parent-consents/my-consents');
+  },
+
+  submitConsent: async (data: {
+    consentRequestId: string;
+    studentId: string;
+    decision: 'CONSENTED' | 'DECLINED';
+    notes?: string;
+    parentName: string;
+    parentRelationship?: string;
+    parentNationalId?: string;
+    parentPhone?: string;
+    signatureType?: string;
+    signatureData?: string;
+  }): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/parent-consents/respond', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  getAdminRequests: async (): Promise<ApiResponse<ParentConsentRequest[]>> => {
+    return apiFetch<ApiResponse<ParentConsentRequest[]>>('/parent-consents/admin/requests');
+  },
+
+  createConsentRequest: async (data: Partial<ParentConsentRequest>): Promise<ApiResponse<ParentConsentRequest>> => {
+    return apiFetch<ApiResponse<ParentConsentRequest>>('/parent-consents/admin/requests', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateConsentRequest: async (id: string, data: Partial<ParentConsentRequest>): Promise<ApiResponse<ParentConsentRequest>> => {
+    return apiFetch<ApiResponse<ParentConsentRequest>>(`/parent-consents/admin/requests/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  getConsentResponses: async (id: string): Promise<ApiResponse<{ request: ParentConsentRequest; roster: any[]; summary: any }>> => {
+    return apiFetch<ApiResponse<any>>(`/parent-consents/admin/requests/${id}/responses`);
+  },
+};
+
 // Unified apiService containing core and extended domain endpoints
 export const apiService = {
   ...coreApiService,
   ...libraryApi,
   ...signatureApi,
+  ...parentConsentApi,
 };
 
 // Named exports for static binding & resilient importing
@@ -4554,6 +4713,14 @@ export const initiateSigningChallenge = signatureApi.initiateSigningChallenge;
 export const verifyAndSignDocument = signatureApi.verifyAndSignDocument;
 export const getDocumentSignatures = signatureApi.getDocumentSignatures;
 export const verifyDocumentIntegrity = signatureApi.verifyDocumentIntegrity;
+
+// Parent Consent named exports
+export const getMyConsents = parentConsentApi.getMyConsents;
+export const submitConsent = parentConsentApi.submitConsent;
+export const getAdminConsentRequests = parentConsentApi.getAdminRequests;
+export const createConsentRequest = parentConsentApi.createConsentRequest;
+export const updateConsentRequest = parentConsentApi.updateConsentRequest;
+export const getConsentResponses = parentConsentApi.getConsentResponses;
 
 export default apiService;
 

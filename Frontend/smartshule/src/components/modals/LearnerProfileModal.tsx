@@ -8,6 +8,7 @@ interface LearnerProfileModalProps {
   student: Student | null;
   onClose: () => void;
   onGradeStudent?: (student: Student) => void;
+  onManageParents?: (student: Student) => void;
 }
 
 export const LearnerProfileModal: React.FC<LearnerProfileModalProps> = ({
@@ -15,6 +16,7 @@ export const LearnerProfileModal: React.FC<LearnerProfileModalProps> = ({
   student,
   onClose,
   onGradeStudent,
+  onManageParents,
 }) => {
   const { user } = useAuth();
   const [studentDetails, setStudentDetails] = useState<any>(null);
@@ -183,9 +185,21 @@ export const LearnerProfileModal: React.FC<LearnerProfileModalProps> = ({
 
           {/* Emergency & Guardian Contact */}
           <div className="p-4 rounded-xl bg-surface-container-low border border-outline-variant/30 space-y-2">
-            <span className="font-bold uppercase text-[11px] text-[#7a1228] tracking-wider block">
-              Parent / Guardian Emergency Contact
-            </span>
+            <div className="flex items-center justify-between">
+              <span className="font-bold uppercase text-[11px] text-[#7a1228] tracking-wider block">
+                Parent / Guardian Emergency Contact
+              </span>
+              {onManageParents && !isTeacher && (
+                <button
+                  type="button"
+                  onClick={() => onManageParents(student)}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#7a1228]/10 hover:bg-[#7a1228]/20 text-[#7a1228] font-bold text-[11px] rounded-lg transition-colors cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[14px]">family_restroom</span>
+                  <span>Link / Change Parent</span>
+                </button>
+              )}
+            </div>
             <div className="grid grid-cols-2 gap-2 text-on-surface">
               <div>
                 <span className="text-on-surface-variant block text-[10px]">Primary Guardian:</span>

@@ -4,6 +4,7 @@ import { EditStudentModal } from '../modals/EditStudentModal';
 import { LearnerProfileModal } from '../modals/LearnerProfileModal';
 import { PromoteStudentModal } from '../modals/PromoteStudentModal';
 import { ArchivedStudentsModal } from '../modals/ArchivedStudentsModal';
+import { ParentLinkingModal } from '../modals/ParentLinkingModal';
 import { useAuth } from '../../context/AuthContext';
 import { apiService } from '../../services/api';
 
@@ -54,6 +55,8 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
   const [syncFeedback, setSyncFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   // Deleted Students Archive & Modal States
   const [isArchivedModalOpen, setIsArchivedModalOpen] = useState(false);
+  const [isParentLinkingModalOpen, setIsParentLinkingModalOpen] = useState(false);
+  const [parentLinkingTargetStudent, setParentLinkingTargetStudent] = useState<Student | null>(null);
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
   const [deleteReason, setDeleteReason] = useState('Transferred to another institution');
   const [isDeleting, setIsDeleting] = useState(false);
@@ -272,6 +275,19 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
             >
               <span className="material-symbols-outlined text-[18px] text-rose-800">inventory_2</span>
               <span>Archived Learners</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setParentLinkingTargetStudent(null);
+                setIsParentLinkingModalOpen(true);
+              }}
+              title="Manage parent accounts, multi-learner linkages and Parent Portal access"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-surface-container-high text-on-surface hover:bg-surface-container border border-outline-variant/30 rounded-lg text-sm font-semibold shadow-xs transition-all cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[18px] text-primary">family_restroom</span>
+              <span>Parent Directory & Linking</span>
             </button>
 
 
@@ -510,8 +526,44 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                     <span className="text-xs text-on-surface-variant block">{s.stream ? `${s.stream} Stream` : 'Single Cohort'}</span>
                   </td>
                   <td className="py-3 px-4">
-                    <div className="font-medium text-on-surface">{s.guardianName}</div>
-                    <div className="text-xs font-data-mono text-on-surface-variant">{s.guardianPhone}</div>
+                    {s.guardianName || s.guardianPhone ? (
+                      <div className="group/g flex items-start justify-between gap-1">
+                        <div>
+                          <div className="font-semibold text-xs text-on-surface">{s.guardianName || 'Guardian'}</div>
+                          <div className="text-[11px] font-data-mono text-[#7a1228] font-bold">{s.guardianPhone}</div>
+                        </div>
+                        {!isTeacher && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setParentLinkingTargetStudent(s);
+                              setIsParentLinkingModalOpen(true);
+                            }}
+                            title={`Manage or switch linked parent for ${s.name}`}
+                            className="p-1 rounded text-slate-400 hover:text-[#7a1228] hover:bg-rose-50 transition-colors opacity-70 group-hover/g:opacity-100 cursor-pointer"
+                          >
+                            <span className="material-symbols-outlined text-[15px]">edit</span>
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      !isTeacher ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setParentLinkingTargetStudent(s);
+                            setIsParentLinkingModalOpen(true);
+                          }}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-50 text-amber-900 border border-amber-300 hover:bg-amber-100 transition-colors cursor-pointer shadow-2xs"
+                          title={`Search and link a parent account to ${s.name}`}
+                        >
+                          <span className="material-symbols-outlined text-[14px] text-amber-700">link</span>
+                          <span>+ Link Parent</span>
+                        </button>
+                      ) : (
+                        <span className="text-xs text-slate-400 italic">Not Linked</span>
+                      )
+                    )}
                   </td>
                   <td className="py-3 px-4">{getRatingBadge(s.CBCRating)}</td>
                   
@@ -581,6 +633,16 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
                       {!isTeacher && (
                         <>
                           <button
+                            onClick={() => {
+                              setParentLinkingTargetStudent(s);
+                              setIsParentLinkingModalOpen(true);
+                            }}
+                            title={`Search & link parent or manage family connections for ${s.name}`}
+                            className="p-1.5 rounded-lg text-[#7a1228] hover:bg-rose-50 transition-colors cursor-pointer"
+                          >
+                            <span className="material-symbols-outlined text-[18px]">family_restroom</span>
+                          </button>
+                          <button
                             onClick={() => setPromotingStudent(s)}
                             title="Promote Learner to Next Grade & Carry Forward Balance"
                             className="p-1.5 rounded-lg text-primary hover:bg-primary/10 transition-colors cursor-pointer"
@@ -624,6 +686,11 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
         onGradeStudent={(st) => {
           setProfileStudent(null);
           onOpenCBCWithStudent(st);
+        }}
+        onManageParents={(st) => {
+          setProfileStudent(null);
+          setParentLinkingTargetStudent(st);
+          setIsParentLinkingModalOpen(true);
         }}
       />
 
@@ -670,6 +737,19 @@ export const StudentsView: React.FC<StudentsViewProps> = ({
         isOpen={isArchivedModalOpen}
         onClose={() => setIsArchivedModalOpen(false)}
         onStudentRestored={async () => {
+          await onRefreshStudents?.();
+        }}
+      />
+
+      {/* Parent-to-Learner Linking & Directory Modal */}
+      <ParentLinkingModal
+        isOpen={isParentLinkingModalOpen}
+        onClose={() => {
+          setIsParentLinkingModalOpen(false);
+          setParentLinkingTargetStudent(null);
+        }}
+        preSelectedStudent={parentLinkingTargetStudent}
+        onLinksUpdated={async () => {
           await onRefreshStudents?.();
         }}
       />

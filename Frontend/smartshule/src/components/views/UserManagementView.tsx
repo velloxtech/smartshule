@@ -365,6 +365,17 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({ onNaviga
         </div>
 
         <div className="flex items-center gap-2">
+          {onNavigateTab && (
+            <button
+              type="button"
+              onClick={() => onNavigateTab('teachers-staff')}
+              title="Onboard teaching faculty or non-teaching operational staff with full credentials and Chapter 6 compliance"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-900 rounded-lg text-xs font-bold shadow-xs transition-all cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[17px] text-emerald-700">badge</span>
+              <span>Onboard Staff Member</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={() => onNavigateTab?.('archived-records')}

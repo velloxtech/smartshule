@@ -241,6 +241,7 @@ import {
 } from '../controllers/CurriculumTrackerController';
 import { StudentSponsorshipController } from '../controllers/StudentSponsorshipController';
 import { SignatureController } from '../controllers/SignatureController';
+import { ParentConsentController } from '../controllers/ParentConsentController';
 
 export function createApiRouter(container: AppContainer): Router {
   const router = Router();
@@ -276,6 +277,7 @@ export function createApiRouter(container: AppContainer): Router {
   const curriculumTrackerController = new CurriculumTrackerController(container.curriculumTrackerUseCases, container.systemLogUseCases);
   const sponsorshipController = new StudentSponsorshipController(container.studentSponsorshipUseCases);
   const signatureController = new SignatureController(container.signatureUseCases);
+  const parentConsentController = new ParentConsentController(container.parentConsentUseCases);
 
   // ==========================================
   // 1. AUTH ROUTES
@@ -392,6 +394,15 @@ export function createApiRouter(container: AppContainer): Router {
   );
   studentRouter.delete('/:id', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), studentController.deleteStudent);
   studentRouter.post('/link-guardian', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN), studentController.linkGuardian);
+  
+  // Normalized Parent-to-Learner Linking Engine
+  studentRouter.get('/guardians/search', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.BURSAR, UserRole.ADMISSIONS), studentController.searchParents);
+  studentRouter.post('/guardians/link-learners', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.ADMISSIONS), studentController.linkParentToLearners);
+  studentRouter.post('/guardians/create-and-link', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.ADMISSIONS), studentController.createAndLinkParent);
+  studentRouter.post('/guardians/unlink-learner', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.ADMISSIONS), studentController.unlinkParentFromLearner);
+  studentRouter.get('/guardians/:parentUserId/family-tree', authMiddleware, studentController.getParentFamilyTree);
+  studentRouter.post('/guardians/resolve-duplicate', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN), studentController.resolveDuplicateParents);
+
   router.use('/students', studentRouter);
 
   // ==========================================
@@ -667,6 +678,9 @@ export function createApiRouter(container: AppContainer): Router {
   financeRouter.get('/structures', authMiddleware, financeController.listFeeStructures);
   financeRouter.delete('/structures/:id', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), financeController.deleteFeeStructure);
   financeRouter.post('/invoices/generate', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), validateBody(GenerateInvoicesSchema), financeController.generateInvoices);
+  financeRouter.post('/invoices/bulk/preview', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), financeController.previewBulkInvoices);
+  financeRouter.post('/invoices/bulk/execute', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), financeController.executeBulkInvoices);
+  financeRouter.get('/invoices/bulk/history', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), financeController.getBulkBillingHistory);
   financeRouter.post('/invoices/individual', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), validateBody(CreateIndividualInvoiceSchema), financeController.createIndividualInvoice);
   financeRouter.post('/invoices/:id/issue', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), financeController.issueDraftInvoice);
   financeRouter.post('/invoices/:id/cancel', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), validateBody(CancelInvoiceSchema), financeController.cancelInvoice);
@@ -710,7 +724,7 @@ export function createApiRouter(container: AppContainer): Router {
   financeRouter.post('/reversals/:id/reject', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), financeController.rejectTransactionReversal);
   financeRouter.post('/reversals/:id/retry', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), financeController.retryTransactionReversal);
   financeRouter.get('/reversals/:receiptNumber/receipt', authMiddleware, financeController.getReversalReceiptDocument);
-  financeRouter.get('/defaulters', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN, UserRole.ACCOUNTANT), financeController.getDefaulters);
+  financeRouter.get('/defaulters', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), financeController.getDefaulters);
 
   // Financial Approvals Workflow (OTP-authorized sensitive corrections/reversals)
   financeRouter.post('/approvals/request', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), financeController.requestFinancialApproval);
@@ -1201,6 +1215,7 @@ export function createApiRouter(container: AppContainer): Router {
   payrollRouter.get('/acknowledgements-report', authMiddleware, allowedPayrollViewRoles, payrollController.getSalaryAcknowledgementsReport);
   payrollRouter.get('/my-salary', authMiddleware, payrollController.getMySalary);
   payrollRouter.post('/:id/acknowledge', authMiddleware, payrollController.acknowledgeSalary);
+  payrollRouter.post('/:id/dispute', authMiddleware, payrollController.disputeSalary);
   payrollRouter.get('/', authMiddleware, allowedPayrollViewRoles, payrollController.listPayrolls);
   payrollRouter.get('/:id', authMiddleware, allowedPayrollViewRoles, payrollController.getPayroll);
   payrollRouter.post('/generate', authMiddleware, allowedPayrollAdminRoles, validateBody(GeneratePayrollSchema), payrollController.generateMonthly);
@@ -1601,6 +1616,31 @@ export function createApiRouter(container: AppContainer): Router {
   signatureRouter.get('/bulk/batches/:batchId', signatureController.getBatchDetails);
 
   router.use('/signatures', signatureRouter);
+
+  // ==========================================
+  // Parent Consent Management & Signatures
+  // ==========================================
+  const parentConsentRouter = Router();
+  parentConsentRouter.use(authMiddleware);
+
+  // Parent Portal Endpoints
+  parentConsentRouter.get('/my-consents', parentConsentController.getConsentsForParent);
+  parentConsentRouter.post('/respond', parentConsentController.submitConsent);
+
+  // Admin Portal Endpoints
+  const allowedConsentAdminRoles = requireRoles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ADMIN,
+    UserRole.SCHOOL_ADMIN,
+    UserRole.HEAD_TEACHER,
+    UserRole.DEPUTY_HEAD_TEACHER
+  );
+  parentConsentRouter.get('/admin/requests', allowedConsentAdminRoles, parentConsentController.getAdminRequests);
+  parentConsentRouter.post('/admin/requests', allowedConsentAdminRoles, parentConsentController.createConsentRequest);
+  parentConsentRouter.put('/admin/requests/:id', allowedConsentAdminRoles, parentConsentController.updateConsentRequest);
+  parentConsentRouter.get('/admin/requests/:id/responses', allowedConsentAdminRoles, parentConsentController.getConsentResponses);
+
+  router.use('/parent-consents', parentConsentRouter);
 
   return router;
 }

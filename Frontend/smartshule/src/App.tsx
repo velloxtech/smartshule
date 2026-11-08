@@ -16,6 +16,7 @@ import { SuperAdminDashboardView } from './components/views/SuperAdminDashboardV
 import { HeadTeacherDashboardView } from './components/views/HeadTeacherDashboardView';
 import { DeputyDashboardView } from './components/views/DeputyDashboardView';
 import { AdmissionsDashboardView } from './components/views/AdmissionsDashboardView';
+import { AdmissionsEnrolmentHubView } from './components/views/AdmissionsEnrolmentHubView';
 import { BursarDashboardView } from './components/views/BursarDashboardView';
 import { TeacherDashboardView } from './components/views/TeacherDashboardView';
 import { ParentDashboardView } from './components/views/ParentDashboardView';
@@ -68,6 +69,9 @@ import { SponsoredStudentsView } from './components/views/SponsoredStudentsView'
 import { MyDigitalSignatureView } from './components/views/MyDigitalSignatureView';
 import { DocumentSigningCenterView } from './components/views/DocumentSigningCenterView';
 import { TeacherProfileView } from './components/views/TeacherProfileView';
+import { ParentConsentView } from './components/views/ParentConsentView';
+import { AdminConsentManagementView } from './components/views/AdminConsentManagementView';
+import { TeacherSalaryAcknowledgementView } from './components/views/TeacherSalaryAcknowledgementView';
 
 // Modals
 import { RecordPaymentModal } from './components/modals/RecordPaymentModal';
@@ -82,16 +86,34 @@ import { CreateLessonPlanModal } from './components/modals/CreateLessonPlanModal
 import { CreateSchemeModal } from './components/modals/CreateSchemeModal';
 import { AcademicTermsModal } from './components/modals/AcademicTermsModal';
 import { ChangePasswordModal } from './components/modals/ChangePasswordModal';
+import { ChangePasswordPage } from './components/auth/ChangePasswordPage';
 import { LegalModal, LegalTabType } from './components/legal/LegalModal';
 import { CookieBanner } from './components/legal/CookieBanner';
 
 export default function App() {
-  const { user, isAuthenticated, isLoading, activeViewMode, isStaffWithChildren } = useAuth();
+  const { user, isAuthenticated, isLoading, activeViewMode, isStaffWithChildren, updateUser, logout } = useAuth();
   const effectiveRole = (isStaffWithChildren && activeViewMode === 'PARENT') ? UserRole.PARENT : user?.role;
   const isGuardian = effectiveRole === UserRole.GUARDIAN || effectiveRole === UserRole.PARENT;
   const [appView, setAppView] = useState<'landing' | 'login' | 'portal' | 'archive'>('landing');
   const [currentTab, setCurrentTab] = useState<TabType>('dashboard');
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [isSidebarCompact, setIsSidebarCompact] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('smartshule_sidebar_compact') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const handleToggleSidebarCompact = () => {
+    setIsSidebarCompact((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('smartshule_sidebar_compact', String(next));
+      } catch {}
+      return next;
+    });
+  };
   const [currentTerm, setCurrentTerm] = useState('Term 3 - 2026');
   const [academicTermsModalOpen, setAcademicTermsModalOpen] = useState(false);
   const [changePasswordModalOpen, setChangePasswordModalOpen] = useState(false);
@@ -201,10 +223,18 @@ export default function App() {
         return;
       }
 
+      const canAccessFinance = [
+        UserRole.SUPER_ADMIN,
+        UserRole.ADMIN,
+        UserRole.SCHOOL_ADMIN,
+        UserRole.BURSAR,
+        UserRole.ACCOUNTANT,
+      ].includes(effectiveRole as any);
+
       const [studentData, defaultersRes, invoicesRes] = await Promise.all([
         apiService.getStudents().catch(() => null),
-        apiService.getDefaulters().catch(() => null),
-        apiService.getInvoices().catch(() => null),
+        canAccessFinance ? apiService.getDefaulters().catch(() => null) : Promise.resolve(null),
+        canAccessFinance ? apiService.getInvoices().catch(() => null) : Promise.resolve(null),
       ]);
 
       const feeMap = new Map<string, { balance: number; billed: number; hasInvoices: boolean }>();
@@ -685,19 +715,12 @@ export default function App() {
     );
   };
 
-  // Guard unpermitted tab access
-  useEffect(() => {
-    if (user && currentTab !== 'dashboard' && !isTabPermitted(currentTab, user.role)) {
-      setCurrentTab('dashboard');
-    }
-  }, [user, currentTab]);
-
   // Listen for standalone hash navigation e.g. #/archive or #/archived-records or ?view=archive
   useEffect(() => {
     const checkHashRoute = () => {
       const hash = window.location.hash;
       const search = window.location.search;
-      if (search.includes('view=reset-password') || search.includes('token=') || hash.includes('reset-password')) {
+      if (!isAuthenticated && (search.includes('view=reset-password') || search.includes('token=') || hash.includes('reset-password'))) {
         setAppView('login');
         return;
       }
@@ -786,14 +809,41 @@ export default function App() {
 
   // Render Single Dedicated Login Page
   if (appView === 'login') {
+    const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+    const initialResetToken = urlParams?.get('token') || urlParams?.get('resetCode') || undefined;
+    const initialResetEmail = urlParams?.get('email') || undefined;
+
     return (
       <>
         <LoginPage
           onSuccess={() => setAppView('portal')}
           onNavigateLanding={() => setAppView('landing')}
           onOpenLegalModal={handleOpenLegalModal}
+          initialResetToken={initialResetToken}
+          initialResetEmail={initialResetEmail}
         />
         <CookieBanner onOpenPreferences={() => handleOpenLegalModal('cookies')} />
+        <LegalModal
+          isOpen={legalModalOpen}
+          onClose={() => setLegalModalOpen(false)}
+          initialTab={legalModalTab}
+        />
+      </>
+    );
+  }
+
+  // Dedicated Mandatory Change Password Page (when admin resets user password or temporary credentials)
+  if (isAuthenticated && user?.mustChangePassword) {
+    return (
+      <>
+        <ChangePasswordPage
+          user={user}
+          onSuccess={() => {
+            updateUser({ mustChangePassword: false });
+          }}
+          onLogout={logout}
+          onOpenLegalModal={handleOpenLegalModal}
+        />
         <LegalModal
           isOpen={legalModalOpen}
           onClose={() => setLegalModalOpen(false)}
@@ -863,10 +913,14 @@ export default function App() {
         onCloseMobile={() => setMobileSidebarOpen(false)}
         onNavigateLanding={() => setAppView('landing')}
         onOpenLegalModal={handleOpenLegalModal}
+        isCompact={isSidebarCompact}
+        onToggleCompact={handleToggleSidebarCompact}
       />
 
       {/* Main Content Viewport (offset by sidebar width on desktop) */}
-      <div className="lg:pl-64 print:pl-0 print:m-0 print:w-full flex flex-col flex-1 min-w-0 bg-surface">
+      <div className={`print:pl-0 print:m-0 print:w-full flex flex-col flex-1 min-w-0 bg-surface transition-all duration-200 ${
+        isSidebarCompact ? 'lg:pl-20' : 'lg:pl-64'
+      }`}>
         {/* Top Operational Header: Pure Maroon (#800000) */}
         <Header
           onToggleMobile={() => setMobileSidebarOpen(true)}
@@ -1081,30 +1135,76 @@ export default function App() {
             )
           )}
 
-          {currentTab === 'slot-applications' && (
-            <SlotApplicationsView
-              onAdmitLearner={handleAdmitStudent}
-              onRefreshStudents={refreshStudentsAndFees}
+          {currentTab === 'admit-learner' && (
+            <AdmitLearnerModal
+              isPage={true}
+              isOpen={true}
+              onClose={() => setCurrentTab('admissions-dashboard')}
+              onAdmit={handleAdmitStudent}
+              existingStudents={students}
               onNavigateTab={(tab) => setCurrentTab(tab as any)}
             />
           )}
 
-          {currentTab === 'onboard-queue' && (
-            <OnboardQueueView
-              onAdmitLearner={handleAdmitStudent}
-              onRefreshStudents={refreshStudentsAndFees}
+          {currentTab === 'onboard-staff' && (
+            <OnboardTeacherModal
+              isPage={true}
+              isOpen={true}
+              onClose={() => setCurrentTab('staff-directory')}
+              onTeacherCreated={handleTeacherCreated}
+              existingTeachers={teachers}
               onNavigateTab={(tab) => setCurrentTab(tab as any)}
             />
           )}
 
-          {(currentTab === 'teachers-staff' || (currentTab as string) === 'teachers') && (
+          {[
+            'admissions-dashboard',
+            'new-applications',
+            'slot-applications',
+            'onboard-queue',
+            'application-review',
+            'admission-assessments',
+            'admission-decisions',
+            'admission-offers',
+            'admission-enrolment',
+            'admission-reports',
+            'admission-settings',
+          ].includes(currentTab) && (
+            <AdmissionsEnrolmentHubView
+              currentSubTab={currentTab}
+              onNavigateTab={(tab) => setCurrentTab(tab)}
+              students={students}
+              teachers={teachers}
+              onAdmitLearner={handleAdmitStudent}
+              onRefreshStudents={refreshStudentsAndFees}
+              onOpenAdmitModal={() => setCurrentTab('admit-learner')}
+              onOpenOnboardTeacher={() => setCurrentTab('onboard-staff')}
+            />
+          )}
+
+          {[
+            'staff-directory',
+            'teachers-staff',
+            'teaching-staff',
+            'non-teaching-staff',
+            'staff-verifications',
+            'teachers',
+          ].includes(currentTab) && (
             <TeachersView
               teachers={teachers}
+              initialCategory={
+                currentTab === 'teachers-staff' || currentTab === 'teaching-staff'
+                  ? 'TEACHING'
+                  : currentTab === 'non-teaching-staff'
+                  ? 'NON_TEACHING'
+                  : 'ALL'
+              }
+              initialTab={currentTab === 'staff-verifications' ? 'corrections' : 'roster'}
               onToggleClockIn={handleToggleClockIn}
               onNavigateTab={(tab) => setCurrentTab(tab as any)}
               onOpenOnboardTeacher={
                 user?.role && [UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER, UserRole.ADMISSIONS].includes(user.role)
-                  ? () => setOnboardTeacherModalOpen(true)
+                  ? () => setCurrentTab('onboard-staff')
                   : undefined
               }
               onDeleteTeacher={(deletedId) =>
@@ -1317,11 +1417,14 @@ export default function App() {
           {currentTab === 'document-signing' && <DocumentSigningCenterView />}
           {currentTab === 'digital-signature' && <MyDigitalSignatureView />}
           {currentTab === 'teacher-profile' && <TeacherProfileView />}
+          {currentTab === 'salary-acknowledgement' && <TeacherSalaryAcknowledgementView />}
           {(currentTab === 'concerns' || currentTab === 'complaints') && <ConcernsView />}
           {currentTab === 'lunch-fee-management' && <LunchFeeManagementView />}
           {currentTab === 'parent-profile' && (
             <ParentProfileView onNavigateTab={(tab) => setCurrentTab(tab as any)} />
           )}
+          {currentTab === 'parent-consent' && <ParentConsentView />}
+          {currentTab === 'consent-management' && <AdminConsentManagementView />}
 
           {currentTab === 'clinic' && <ClinicManagementView />}
           {currentTab === 'discipline' && <DisciplineClubsView />}
@@ -1485,13 +1588,9 @@ export default function App() {
       />
 
       <ChangePasswordModal
-        isOpen={changePasswordModalOpen || Boolean(user?.mustChangePassword)}
-        isForced={Boolean(user?.mustChangePassword)}
-        onClose={() => {
-          if (!user?.mustChangePassword) {
-            setChangePasswordModalOpen(false);
-          }
-        }}
+        isOpen={changePasswordModalOpen}
+        isForced={false}
+        onClose={() => setChangePasswordModalOpen(false)}
         onSuccessCallback={() => {
           setChangePasswordModalOpen(false);
         }}

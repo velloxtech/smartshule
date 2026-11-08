@@ -325,6 +325,36 @@ export class FinanceController {
     }
   };
 
+  public previewBulkInvoices = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const schoolId = req.body?.schoolId || req.user?.schoolId || 'school-001';
+      const result = await this.feeUseCases.previewBulkInvoices({ ...req.body, schoolId }, req.user);
+      return res.status(200).json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public executeBulkInvoices = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const schoolId = req.body?.schoolId || req.user?.schoolId || 'school-001';
+      const result = await this.feeUseCases.executeBulkInvoices({ ...req.body, schoolId }, req.user);
+      return res.status(201).json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public getBulkBillingHistory = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      const schoolId = (req.query.schoolId as string) || req.user?.schoolId || 'school-001';
+      const result = await this.feeUseCases.getBulkBillingHistory(schoolId);
+      return res.status(200).json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  };
+
   public createIndividualInvoice = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     try {
       const userSchoolId = req.user?.schoolId;

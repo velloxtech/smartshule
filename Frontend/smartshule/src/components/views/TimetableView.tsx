@@ -71,10 +71,11 @@ export const formatSubjectAbbreviation = (rawName?: string, rawCode?: string): s
 };
 
 export const TimetableView: React.FC = () => {
-  const { user } = useAuth();
-  const isTeacher = user?.role === UserRole.TEACHER;
-  const isParent = user?.role === UserRole.PARENT || user?.role === UserRole.GUARDIAN;
-  const canEditGrid = !isParent && (user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.SCHOOL_ADMIN || user?.role === UserRole.HEAD_TEACHER || isTeacher);
+  const { user, activeViewMode, isStaffWithChildren } = useAuth();
+  const effectiveRole = (isStaffWithChildren && activeViewMode === 'PARENT') ? UserRole.PARENT : user?.role;
+  const isTeacher = effectiveRole === UserRole.TEACHER;
+  const isParent = effectiveRole === UserRole.PARENT || effectiveRole === UserRole.GUARDIAN;
+  const canEditGrid = !isParent && (effectiveRole === UserRole.SUPER_ADMIN || effectiveRole === UserRole.SCHOOL_ADMIN || effectiveRole === UserRole.HEAD_TEACHER || isTeacher);
 
   const [viewMode, setViewMode] = useState<'class' | 'teacher'>(isTeacher ? 'teacher' : 'class');
   

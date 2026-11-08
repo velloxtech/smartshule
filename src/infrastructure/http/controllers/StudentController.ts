@@ -219,6 +219,104 @@ export class StudentController {
     }
   };
 
+  public searchParents = async (req: any, res: Response, next: NextFunction) => {
+    try {
+      const query = (req.query.q || req.query.query || '') as string;
+      const schoolId = (req.query.schoolId || req.user?.schoolId) as string;
+      const results = await this.studentUseCases.searchParents(query, schoolId);
+      return res.status(200).json({
+        success: true,
+        data: results
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public linkParentToLearners = async (req: any, res: Response, next: NextFunction) => {
+    try {
+      const { parentUserId, studentIds, relationship, isPrimary, canViewAcademics, canViewFinances } = req.body;
+      const result = await this.studentUseCases.linkParentToLearners({
+        parentUserId,
+        studentIds,
+        relationship,
+        isPrimary,
+        canViewAcademics,
+        canViewFinances,
+        requestingUser: req.user
+      });
+      return res.status(200).json({
+        success: true,
+        data: result
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public createAndLinkParent = async (req: any, res: Response, next: NextFunction) => {
+    try {
+      const result = await this.studentUseCases.createAndLinkParent({
+        ...req.body,
+        requestingUser: req.user
+      });
+      return res.status(201).json({
+        success: true,
+        data: result
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public unlinkParentFromLearner = async (req: any, res: Response, next: NextFunction) => {
+    try {
+      const { parentUserId, studentId } = req.body;
+      const result = await this.studentUseCases.unlinkParentFromLearner({
+        parentUserId,
+        studentId,
+        requestingUser: req.user
+      });
+      return res.status(200).json({
+        success: true,
+        data: result
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public getParentFamilyTree = async (req: any, res: Response, next: NextFunction) => {
+    try {
+      const parentUserId = req.params.parentUserId || req.user?.userId;
+      const schoolId = req.user?.schoolId;
+      const result = await this.studentUseCases.getParentFamilyTree(parentUserId, schoolId);
+      return res.status(200).json({
+        success: true,
+        data: result
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public resolveDuplicateParents = async (req: any, res: Response, next: NextFunction) => {
+    try {
+      const { primaryUserId, duplicateUserIds } = req.body;
+      const result = await this.studentUseCases.resolveDuplicateParents({
+        primaryUserId,
+        duplicateUserIds,
+        requestingUser: req.user
+      });
+      return res.status(200).json({
+        success: true,
+        data: result
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
   public getGuardianPortalData = async (req: any, res: Response, next: NextFunction) => {
     try {
       const userId = req.user?.userId;

@@ -10,19 +10,19 @@ interface LoginPageProps {
   initialResetEmail?: string;
 }
 
-type AuthMode = 'login' | 'forgot_request' | 'forgot_verify' | 'initial_setup' | 'register';
+type AuthMode = 'login' | 'forgot_request' | 'forgot_verify' | 'initial_setup';
 
 export const LoginPage: React.FC<LoginPageProps> = ({
   onSuccess,
   onNavigateLanding,
   onOpenLegalModal,
   initialResetToken,
-  initialResetEmail
+  initialResetEmail,
 }) => {
   const { login, isLoading, error: authError } = useAuth();
   const [authMode, setAuthMode] = useState<AuthMode>('login');
 
-  // Setup status
+  // Setup status for zero-admin detection
   const [hasAdmin, setHasAdmin] = useState<boolean | null>(null);
 
   // Sign-in state
@@ -31,18 +31,17 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
 
-  // Initial setup / Registration state
+  // Initial admin setup state (only used if zero admins exist in database)
   const [regFirstName, setRegFirstName] = useState('');
   const [regLastName, setRegLastName] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regPhone, setRegPhone] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [regConfirmPassword, setRegConfirmPassword] = useState('');
-  const [regRole, setRegRole] = useState<'SUPER_ADMIN' | 'ADMIN' | 'PARENT' | 'TEACHER'>('SUPER_ADMIN');
   const [agreeToTerms, setAgreeToTerms] = useState(false);
   const [regLoading, setRegLoading] = useState(false);
-  const [regSuccess, setRegSuccess] = useState<string | null>(null);
   const [regError, setRegError] = useState<string | null>(null);
+  const [regSuccess, setRegSuccess] = useState<string | null>(null);
 
   // Forgot password state
   const [forgotEmail, setForgotEmail] = useState('');
@@ -63,7 +62,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           setHasAdmin(res.data.hasAdmin);
           if (!res.data.hasAdmin) {
             setAuthMode('initial_setup');
-            setRegRole('SUPER_ADMIN');
           }
         }
       } catch {
@@ -98,7 +96,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     setLocalError(null);
 
     if (!email.trim() || !password) {
-      setLocalError('Please provide both email/phone and password.');
+      setLocalError('Please provide both your registered email/phone and password.');
       return;
     }
 
@@ -108,7 +106,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     }
   };
 
-  const handleRegisterSubmit = async (e: React.FormEvent) => {
+  const handleInitialAdminSetup = async (e: React.FormEvent) => {
     e.preventDefault();
     setRegError(null);
     setRegSuccess(null);
@@ -142,12 +140,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         email: regEmail.trim() || undefined,
         phone: regPhone.trim() || undefined,
         password: regPassword,
-        role: regRole,
+        role: 'SUPER_ADMIN',
       });
 
       if (res.success) {
         setHasAdmin(true);
-        setRegSuccess('Account created successfully! Signing in...');
+        setRegSuccess('Primary administrator account established! Signing into portal...');
         const cred = regEmail.trim() || regPhone.trim();
         const ok = await login(cred, regPassword);
         if (ok) {
@@ -158,7 +156,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         }
       }
     } catch (err: any) {
-      setRegError(err.message || 'Failed to create account.');
+      setRegError(err.message || 'Failed to initialize administrator account.');
     } finally {
       setRegLoading(false);
     }
@@ -180,7 +178,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       if (res.success) {
         setForgotSuccess(
           res.message ||
-            'A 6-digit verification code has been dispatched to your email / phone SMS. Please check your inbox or phone messages.'
+            'A 6-digit verification code has been dispatched to your email / SMS. Please check your messages.'
         );
         setAuthMode('forgot_verify');
       }
@@ -197,7 +195,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     setForgotSuccess(null);
 
     if (!resetCode.trim() || resetCode.trim().length < 4) {
-      setForgotError('Please enter the verification code or link token sent to your email or phone.');
+      setForgotError('Please enter the verification code sent to your email or phone.');
       return;
     }
 
@@ -224,6 +222,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         setForgotSuccess('Your password has been successfully reset! You can now sign in.');
         setEmail(forgotEmail.trim());
         setPassword(newResetPassword.trim());
+        try {
+          if (typeof window !== 'undefined' && window.location.search) {
+            window.history.replaceState(null, '', window.location.pathname);
+          }
+        } catch {
+          // ignore
+        }
         setTimeout(() => {
           setAuthMode('login');
           setResetCode('');
@@ -239,125 +244,213 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   };
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-[#3b050e] via-[#5c0b1b] to-[#250308] flex flex-col justify-between text-on-surface">
-      {/* Top Bar */}
+    <div className="min-h-screen w-full bg-gradient-to-br from-[#30030b] via-[#520918] to-[#1e0207] flex flex-col justify-between text-on-surface">
+      {/* Top Institutional Header */}
       <header className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex items-center justify-between">
         <button
           type="button"
           onClick={onNavigateLanding}
-          className="flex items-center gap-2.5 text-white hover:opacity-90 transition-opacity cursor-pointer"
+          className="flex items-center gap-3 text-white hover:opacity-95 transition-opacity cursor-pointer group"
         >
           <img
             src="/logo.png"
-            alt="School Logo"
-            className="w-10 h-10 rounded-xl object-cover shadow-md border border-white/20 shrink-0"
+            alt="Grace Seeds School Logo"
+            className="w-11 h-11 rounded-2xl object-cover shadow-lg border border-white/20 shrink-0 group-hover:scale-105 transition-transform"
             onError={(e) => {
               (e.target as HTMLElement).style.display = 'none';
               const fallback = (e.target as HTMLElement).nextElementSibling;
               if (fallback) (fallback as HTMLElement).style.display = 'flex';
             }}
           />
-          <div className="w-10 h-10 rounded-xl bg-white text-[#7a1228] hidden items-center justify-center font-bold shadow-md shrink-0">
-            <span className="material-symbols-outlined text-[24px]">school</span>
+          <div className="w-11 h-11 rounded-2xl bg-white text-[#7a1228] hidden items-center justify-center font-bold shadow-lg shrink-0">
+            <span className="material-symbols-outlined text-[26px]">school</span>
           </div>
           <div className="text-left">
-            <div className="font-bold text-lg tracking-tight text-white flex items-center gap-1.5">
+            <div className="font-black text-xl tracking-tight text-white flex items-center gap-2">
               <span>Grace Seeds School</span>
-              <span className="text-[11px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded bg-white/20 text-white">
-                CBE Portal
+              <span className="text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full bg-amber-400 text-amber-950 shadow-xs">
+                CBC Portal
               </span>
             </div>
-            <p className="text-xs text-rose-200">Competency-Based Education (CBE) System</p>
+            <p className="text-xs text-rose-200/90 font-medium italic">
+              &quot;The Future Begins Here&quot; · Kisumu, Kenya
+            </p>
           </div>
         </button>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={onNavigateLanding}
-            className="flex items-center gap-1.5 text-xs font-semibold text-rose-100 hover:text-white bg-white/10 hover:bg-white/20 px-3.5 py-2 rounded-lg transition-colors cursor-pointer backdrop-blur-xs"
+            className="flex items-center gap-1.5 text-xs font-bold text-rose-100 hover:text-white bg-white/10 hover:bg-white/20 px-4 py-2 rounded-xl transition-all cursor-pointer backdrop-blur-md border border-white/10 shadow-xs"
           >
             <span className="material-symbols-outlined text-[16px]">arrow_back</span>
-            <span>Back to Landing</span>
+            <span>Back to School Website</span>
           </button>
         </div>
       </header>
 
-      {/* Main Login / Forgot Card Shell */}
-      <main className="flex-1 flex items-center justify-center px-4 py-8">
-        <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden border border-white/20 animate-in fade-in zoom-in-95 duration-200">
-          {/* Card Header */}
-          <div className="bg-[#7a1228] text-white p-6 sm:p-7 text-center relative">
-            <div className="w-14 h-14 rounded-2xl bg-white/10 mx-auto flex items-center justify-center text-white mb-3 shadow-inner">
-              <span className="material-symbols-outlined text-[32px]">
-                {authMode === 'login'
-                  ? 'lock_person'
-                  : authMode === 'forgot_request'
-                  ? 'mark_email_read'
-                  : authMode === 'forgot_verify'
-                  ? 'pin'
-                  : authMode === 'initial_setup'
-                  ? 'admin_panel_settings'
-                  : 'how_to_reg'}
-              </span>
+      {/* Main Container */}
+      <main className="flex-1 flex items-center justify-center px-4 py-6 sm:py-10">
+        <div className="w-full max-w-5xl bg-white rounded-3xl shadow-2xl overflow-hidden border border-white/20 grid grid-cols-1 lg:grid-cols-12 animate-in fade-in zoom-in-95 duration-200">
+          
+          {/* Left Column: School Institutional Showcase */}
+          <div className="lg:col-span-5 bg-gradient-to-br from-[#7a1228] via-[#630b1e] to-[#450513] text-white p-7 sm:p-9 flex flex-col justify-between relative overflow-hidden">
+            {/* Background Accent Rings */}
+            <div className="absolute -top-16 -right-16 w-52 h-52 bg-white/5 rounded-full blur-2xl pointer-events-none"></div>
+            <div className="absolute -bottom-20 -left-20 w-60 h-60 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+            <div className="relative z-10 space-y-6">
+              {/* Institutional Badge */}
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center border border-white/20 shadow-inner">
+                  <span className="material-symbols-outlined text-[28px] text-amber-300">school</span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-amber-300 block">
+                    Institutional Gateway
+                  </span>
+                  <h2 className="text-xl font-black text-white leading-tight">Grace Seeds School</h2>
+                </div>
+              </div>
+
+              {/* Mission & Purpose */}
+              <div className="space-y-3">
+                <p className="text-xs text-rose-100/90 leading-relaxed font-light">
+                  Welcome to the official Grace Seeds School management and Competency-Based Curriculum (CBC) platform. Empowering educators, engaging parents, and celebrating learner growth in Kisumu, Kenya.
+                </p>
+                <div className="p-3.5 rounded-2xl bg-white/10 border border-white/15 backdrop-blur-sm">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-300 flex items-center gap-1.5 mb-1">
+                    <span className="material-symbols-outlined text-[14px]">auto_stories</span>
+                    School Motto & Focus
+                  </span>
+                  <p className="text-xs font-semibold italic text-white">
+                    &quot;The Future Begins Here&quot;
+                  </p>
+                  <p className="text-[11px] text-rose-200 mt-1">
+                    Ministry of Education & Kenya National Examinations Council (KNEC) CBA Aligned.
+                  </p>
+                </div>
+              </div>
+
+              {/* Portal Modules Accessible */}
+              <div className="space-y-2.5 pt-2">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-rose-200/80 block">
+                  Connected Stakeholder Services
+                </span>
+                <div className="space-y-2">
+                  <div className="flex items-start gap-2.5 text-xs text-rose-100">
+                    <span className="material-symbols-outlined text-[16px] text-amber-300 shrink-0 mt-0.5">menu_book</span>
+                    <span><strong>Educators & Faculty:</strong> Schemes of work, continuous rubrics, lesson plans & salary records.</span>
+                  </div>
+                  <div className="flex items-start gap-2.5 text-xs text-rose-100">
+                    <span className="material-symbols-outlined text-[16px] text-amber-300 shrink-0 mt-0.5">family_restroom</span>
+                    <span><strong>Parents & Guardians:</strong> Live e-diary notices, attendance roll-call, CBC report cards & fee clearance.</span>
+                  </div>
+                  <div className="flex items-start gap-2.5 text-xs text-rose-100">
+                    <span className="material-symbols-outlined text-[16px] text-amber-300 shrink-0 mt-0.5">verified_user</span>
+                    <span><strong>School Administration:</strong> Admissions, learner onboarding, ledger reconciliation & audits.</span>
+                  </div>
+                </div>
+              </div>
             </div>
-            <h1 className="text-2xl font-bold tracking-tight">
-              {authMode === 'login' && 'Grace Seeds School CBE Portal Sign In'}
-              {authMode === 'forgot_request' && 'Reset Your Password'}
-              {authMode === 'forgot_verify' && 'Verify 6-Digit Code'}
-              {authMode === 'initial_setup' && 'Primary Administrator Setup'}
-              {authMode === 'register' && 'Create Your Grace Seeds School Account'}
-            </h1>
-            <p className="text-xs text-rose-200 mt-1 max-w-xs mx-auto">
-              {authMode === 'login' &&
-                'Secure authentication for Administrators, Teachers, Finance, and Parents'}
-              {authMode === 'forgot_request' &&
-                'Enter your registered email or phone number to receive a password recovery verification code'}
-              {authMode === 'forgot_verify' &&
-                'Enter the code received and choose your new secure password'}
-              {authMode === 'initial_setup' &&
-                'Initialize your institution with a Super Administrator account directly via the UI'}
-              {authMode === 'register' &&
-                'Register a new account to access the school portal'}
-            </p>
+
+            {/* School Helpdesk Contact Info */}
+            <div className="relative z-10 pt-6 mt-6 border-t border-white/15 space-y-1.5 text-[11px] text-rose-200/90">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[14px] text-amber-300">call</span>
+                <span>Admissions & Support: <strong>+254 745 436 312</strong></span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[14px] text-amber-300">mail</span>
+                <span>Office: <strong>schoolgraceseeds@gmail.com</strong></span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[14px] text-amber-300">location_on</span>
+                <span>P.O. Box 12-20123 / 12-40123 Kisumu, Kenya</span>
+              </div>
+            </div>
           </div>
 
-          {/* Form Content */}
-          <div className="p-6 sm:p-8 space-y-5">
-            {/* Notifications / Alerts */}
-            {authMode === 'login' && (localError || authError) && (
-              <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2 animate-in fade-in">
-                <span className="material-symbols-outlined text-[18px] shrink-0 text-red-600">error</span>
-                <span>{localError || authError}</span>
+          {/* Right Column: Sign In / Recovery Card */}
+          <div className="lg:col-span-7 p-7 sm:p-10 flex flex-col justify-between">
+            <div>
+              {/* Form Header */}
+              <div className="mb-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="px-2.5 py-1 rounded-md bg-[#7a1228]/10 text-[#7a1228] text-[10px] font-extrabold uppercase tracking-wider">
+                    Authorized Access
+                  </span>
+                  <span className="text-xs text-slate-400">•</span>
+                  <span className="text-xs text-slate-500 font-medium">Single Sign-On</span>
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                  {authMode === 'login' && 'Sign In to Portal'}
+                  {authMode === 'forgot_request' && 'Password Recovery'}
+                  {authMode === 'forgot_verify' && 'Verify 6-Digit Code'}
+                  {authMode === 'initial_setup' && 'Primary Administrator Setup'}
+                </h1>
+                <p className="text-xs text-slate-500 mt-1">
+                  {authMode === 'login' &&
+                    'Enter your registered mobile phone number or email address and password.'}
+                  {authMode === 'forgot_request' &&
+                    'Provide your registered phone number or email to receive a password reset code.'}
+                  {authMode === 'forgot_verify' &&
+                    'Enter the verification code dispatched to you and set your new password.'}
+                  {authMode === 'initial_setup' &&
+                    'Provision the primary root administrator to activate your institution.'}
+                </p>
               </div>
-            )}
 
-            {authMode !== 'login' && forgotError && (
-              <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2 animate-in fade-in">
-                <span className="material-symbols-outlined text-[18px] shrink-0 text-red-600">error</span>
-                <span>{forgotError}</span>
-              </div>
-            )}
+              {/* Stakeholder Role Pills */}
+              {authMode === 'login' && (
+                <div className="flex items-center gap-2 pb-5 mb-5 border-b border-slate-100 flex-wrap">
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold">
+                    <span className="material-symbols-outlined text-[15px] text-[#7a1228]">person</span>
+                    <span>Staff & Teachers</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold">
+                    <span className="material-symbols-outlined text-[15px] text-emerald-700">family_restroom</span>
+                    <span>Parents & Guardians</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold">
+                    <span className="material-symbols-outlined text-[15px] text-indigo-700">admin_panel_settings</span>
+                    <span>Administration</span>
+                  </div>
+                </div>
+              )}
 
-            {forgotSuccess && (
-              <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2 animate-in fade-in">
-                <span className="material-symbols-outlined text-[18px] shrink-0 text-emerald-600">
-                  check_circle
-                </span>
-                <span>{forgotSuccess}</span>
-              </div>
-            )}
+              {/* Feedback Alerts */}
+              {authMode === 'login' && (localError || authError) && (
+                <div className="mb-4 p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2 animate-in fade-in">
+                  <span className="material-symbols-outlined text-[18px] shrink-0 text-red-600">error</span>
+                  <span>{localError || authError}</span>
+                </div>
+              )}
 
-            {/* 1. SIGN IN VIEW */}
-            {authMode === 'login' && (
-              <>
+              {authMode !== 'login' && forgotError && (
+                <div className="mb-4 p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2 animate-in fade-in">
+                  <span className="material-symbols-outlined text-[18px] shrink-0 text-red-600">error</span>
+                  <span>{forgotError}</span>
+                </div>
+              )}
+
+              {forgotSuccess && (
+                <div className="mb-4 p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2 animate-in fade-in">
+                  <span className="material-symbols-outlined text-[18px] shrink-0 text-emerald-600">check_circle</span>
+                  <span>{forgotSuccess}</span>
+                </div>
+              )}
+
+              {/* 1. SIGN IN VIEW */}
+              {authMode === 'login' && (
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-gray-600 mb-1.5">
-                      Phone Number / Email Address
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                      Phone Number or Email Address
                     </label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 material-symbols-outlined text-[18px]">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined text-[18px]">
                         contact_phone
                       </span>
                       <input
@@ -365,15 +458,15 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                         required
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        placeholder="e.g. 0712345678 or admin@smartshule.ac.ke"
-                        className="w-full pl-9 pr-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-[#7a1228] focus:bg-white transition-colors"
+                        placeholder="e.g. 0712345678 or teacher@graceseeds.ac.ke"
+                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white focus:ring-1 focus:ring-[#7a1228] transition-all font-medium"
                       />
                     </div>
                   </div>
 
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
-                      <label className="block text-xs font-bold uppercase tracking-wider text-gray-600">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
                         Password
                       </label>
                       <button
@@ -384,13 +477,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                           setForgotSuccess(null);
                           setAuthMode('forgot_request');
                         }}
-                        className="text-[11px] text-[#7a1228] font-semibold cursor-pointer hover:underline"
+                        className="text-xs text-[#7a1228] font-bold cursor-pointer hover:underline"
                       >
                         Forgot password?
                       </button>
                     </div>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 material-symbols-outlined text-[18px]">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined text-[18px]">
                         key
                       </span>
                       <input
@@ -398,13 +491,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                         required
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Enter password or default phone number..."
-                        className="w-full pl-9 pr-10 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-[#7a1228] focus:bg-white transition-colors"
+                        placeholder="Enter password..."
+                        className="w-full pl-10 pr-11 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white focus:ring-1 focus:ring-[#7a1228] transition-all font-medium"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer p-0.5"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer p-1"
                         aria-label="Toggle password visibility"
                       >
                         <span className="material-symbols-outlined text-[18px]">
@@ -412,251 +505,85 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                         </span>
                       </button>
                     </div>
-                    <p className="text-[11px] text-slate-500 mt-1">
-                      First-time login? Use your registered phone number as your default password.
-                    </p>
+                    <div className="flex items-center gap-1.5 mt-1.5 text-[11px] text-slate-500">
+                      <span className="material-symbols-outlined text-[14px] text-amber-600">lightbulb</span>
+                      <span>First-time sign in? Your default password is your registered mobile number.</span>
+                    </div>
                   </div>
 
                   <div className="pt-2">
                     <button
                       type="submit"
                       disabled={isLoading}
-                      className="w-full py-3 bg-[#7a1228] hover:bg-[#5c0a1a] text-white font-semibold rounded-xl text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                      className="w-full py-3 bg-[#7a1228] hover:bg-[#5e0d1e] text-white font-bold rounded-xl text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
                     >
                       {isLoading ? (
                         <>
                           <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                          <span>Authenticating...</span>
+                          <span>Verifying Credentials...</span>
                         </>
                       ) : (
                         <>
                           <span className="material-symbols-outlined text-[18px]">login</span>
-                          <span>Sign In to Portal</span>
+                          <span>Sign In to School Portal</span>
                         </>
                       )}
                     </button>
                   </div>
                 </form>
+              )}
 
-                {/* Mode switch / setup link */}
-                <div className="pt-3 border-t border-gray-100 flex flex-col items-center gap-2 text-center">
-                  {hasAdmin === false ? (
-                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 w-full space-y-1.5 text-left">
-                      <div className="font-bold flex items-center gap-1.5 text-amber-800">
-                        <span className="material-symbols-outlined text-[18px]">admin_panel_settings</span>
-                        <span>First-Time System Setup</span>
-                      </div>
-                      <p className="text-[11px] text-amber-800">
-                        No administrator account exists yet in the database. Set up your primary administrator account directly via the UI to activate the portal.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setRegRole('SUPER_ADMIN');
-                          setAuthMode('initial_setup');
-                        }}
-                        className="w-full py-2 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg text-xs transition-colors cursor-pointer"
-                      >
-                        Set Up Primary Administrator
-                      </button>
+              {/* 2. FORGOT PASSWORD - REQUEST CODE */}
+              {authMode === 'forgot_request' && (
+                <form onSubmit={handleRequestResetCode} className="space-y-4 animate-in fade-in">
+                  <div className="p-3.5 bg-rose-50 border border-rose-100 rounded-xl text-xs text-rose-950 space-y-1">
+                    <div className="font-bold flex items-center gap-1.5 text-[#7a1228]">
+                      <span className="material-symbols-outlined text-[16px]">security</span>
+                      <span>Grace Seeds School Security Verification</span>
                     </div>
-                  ) : (
-                    <div className="flex items-center justify-between w-full text-xs text-gray-500">
-                      <span>Don&apos;t have an account?</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setRegRole('PARENT');
-                          setAuthMode('register');
-                        }}
-                        className="text-[#7a1228] font-bold hover:underline cursor-pointer"
-                      >
-                        Register as Parent / Staff
-                      </button>
-                    </div>
-                  )}
-                  <p className="text-[10px] text-gray-400">
-                    Grace Seeds School CBE Portal · All institutional accounts are fed and managed via the UI
-                  </p>
-                </div>
-              </>
-            )}
-
-            {/* 2. FORGOT PASSWORD - STEP 1: REQUEST CODE */}
-            {authMode === 'forgot_request' && (
-              <form onSubmit={handleRequestResetCode} className="space-y-4 animate-in fade-in">
-                <div className="p-3 bg-rose-50 border border-rose-100 rounded-xl text-xs text-rose-950 space-y-1">
-                  <div className="font-semibold flex items-center gap-1.5 text-[#7a1228]">
-                    <span className="material-symbols-outlined text-[16px]">school</span>
-                    <span>Grace Seeds School Email Authentication</span>
+                    <p className="text-[11px] text-rose-900 leading-relaxed">
+                      A secure 6-digit password verification code will be sent to your registered email or phone SMS.
+                    </p>
                   </div>
-                  <p className="text-[11px] text-rose-900 leading-relaxed">
-                    A secure 6-digit verification code will be sent to your inbox from{' '}
-                    <span className="font-semibold">schoolgraceseeds@gmail.com</span> (or via SMS if phone is registered).
-                  </p>
-                </div>
 
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-600 mb-1.5">
-                    Registered Email Address or Phone Number
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 material-symbols-outlined text-[18px]">
-                      contact_phone
-                    </span>
-                    <input
-                      type="text"
-                      required
-                      value={forgotEmail}
-                      onChange={(e) => setForgotEmail(e.target.value)}
-                      placeholder="e.g. 0712345678 or parent@smartshule.ac.ke"
-                      className="w-full pl-9 pr-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-[#7a1228] focus:bg-white transition-colors"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2 pt-2">
-                  <button
-                    type="submit"
-                    disabled={forgotLoading}
-                    className="w-full py-3 bg-[#7a1228] hover:bg-[#5c0a1a] text-white font-semibold rounded-xl text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
-                  >
-                    {forgotLoading ? (
-                      <>
-                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                        <span>Sending 6-Digit Code...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="material-symbols-outlined text-[18px]">send</span>
-                        <span>Send Verification Code</span>
-                      </>
-                    )}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setForgotError(null);
-                      setForgotSuccess(null);
-                      setAuthMode('login');
-                    }}
-                    disabled={forgotLoading}
-                    className="w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">arrow_back</span>
-                    <span>Back to Sign In</span>
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {/* 3. FORGOT PASSWORD - STEP 2: VERIFY CODE & NEW PASSWORD */}
-            {authMode === 'forgot_verify' && (
-              <form onSubmit={handleResetPasswordSubmit} className="space-y-4 animate-in fade-in">
-                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 space-y-1">
-                  <div className="font-semibold flex items-center gap-1.5 text-amber-800">
-                    <span className="material-symbols-outlined text-[16px]">pin</span>
-                    <span>Verification Code Sent</span>
-                  </div>
-                  <p className="text-[11px] text-amber-800">
-                    Code sent to <span className="font-bold">{forgotEmail}</span> via email or SMS. The code is valid for 15 minutes.
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-600 mb-1.5">
-                    {resetCode.length > 6 ? 'Security Verification Token' : 'Verification Code or Token'}
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 material-symbols-outlined text-[18px]">
-                      {resetCode.length > 6 ? 'verified_user' : 'pin'}
-                    </span>
-                    <input
-                      type="text"
-                      required
-                      value={resetCode}
-                      onChange={(e) => setResetCode(e.target.value.trim())}
-                      placeholder="e.g. 123456 or paste reset token"
-                      className="w-full pl-9 pr-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-mono text-center text-gray-900 focus:outline-[#7a1228] focus:bg-white transition-colors"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-600 mb-1.5">
-                    New Password
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 material-symbols-outlined text-[18px]">
-                      lock
-                    </span>
-                    <input
-                      type={showResetPass ? 'text' : 'password'}
-                      required
-                      value={newResetPassword}
-                      onChange={(e) => setNewResetPassword(e.target.value)}
-                      placeholder="Minimum 6 characters..."
-                      className="w-full pl-9 pr-10 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-[#7a1228] focus:bg-white transition-colors"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowResetPass(!showResetPass)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer p-0.5"
-                    >
-                      <span className="material-symbols-outlined text-[18px]">
-                        {showResetPass ? 'visibility_off' : 'visibility'}
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                      Registered Email or Mobile Phone
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined text-[18px]">
+                        contact_phone
                       </span>
-                    </button>
+                      <input
+                        type="text"
+                        required
+                        value={forgotEmail}
+                        onChange={(e) => setForgotEmail(e.target.value)}
+                        placeholder="e.g. 0712345678 or user@graceseeds.ac.ke"
+                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white"
+                      />
+                    </div>
                   </div>
-                </div>
 
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-600 mb-1.5">
-                    Confirm New Password
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 material-symbols-outlined text-[18px]">
-                      lock_reset
-                    </span>
-                    <input
-                      type={showResetPass ? 'text' : 'password'}
-                      required
-                      value={confirmResetPassword}
-                      onChange={(e) => setConfirmResetPassword(e.target.value)}
-                      placeholder="Confirm new password..."
-                      className="w-full pl-9 pr-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-[#7a1228] focus:bg-white transition-colors"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2 pt-2">
-                  <button
-                    type="submit"
-                    disabled={forgotLoading}
-                    className="w-full py-3 bg-[#7a1228] hover:bg-[#5c0a1a] text-white font-semibold rounded-xl text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
-                  >
-                    {forgotLoading ? (
-                      <>
-                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                        <span>Resetting Password...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="material-symbols-outlined text-[18px]">check_circle</span>
-                        <span>Reset Password & Sign In</span>
-                      </>
-                    )}
-                  </button>
-
-                  <div className="flex items-center justify-between text-xs pt-1">
+                  <div className="space-y-2 pt-2">
                     <button
-                      type="button"
-                      onClick={() => setAuthMode('forgot_request')}
-                      className="text-[#7a1228] font-semibold hover:underline cursor-pointer"
+                      type="submit"
+                      disabled={forgotLoading}
+                      className="w-full py-3 bg-[#7a1228] hover:bg-[#5e0d1e] text-white font-bold rounded-xl text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
                     >
-                      Resend Code
+                      {forgotLoading ? (
+                        <>
+                          <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                          <span>Dispatching Code...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="material-symbols-outlined text-[18px]">send</span>
+                          <span>Send 6-Digit Verification Code</span>
+                        </>
+                      )}
                     </button>
+
                     <button
                       type="button"
                       onClick={() => {
@@ -664,231 +591,300 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                         setForgotSuccess(null);
                         setAuthMode('login');
                       }}
-                      className="text-gray-500 hover:text-gray-800 font-semibold cursor-pointer"
+                      disabled={forgotLoading}
+                      className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                     >
-                      Back to Sign In
+                      <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+                      <span>Return to Sign In</span>
                     </button>
                   </div>
-                </div>
-              </form>
-            )}
+                </form>
+              )}
 
-            {/* 3. INITIAL SETUP & REGISTRATION VIEW */}
-            {(authMode === 'initial_setup' || authMode === 'register') && (
-              <form onSubmit={handleRegisterSubmit} className="space-y-4 animate-in fade-in">
-                {regError && (
-                  <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[18px] shrink-0 text-red-600">error</span>
-                    <span>{regError}</span>
-                  </div>
-                )}
-                {regSuccess && (
-                  <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[18px] shrink-0 text-emerald-600">check_circle</span>
-                    <span>{regSuccess}</span>
-                  </div>
-                )}
-
-                {authMode === 'initial_setup' && (
-                  <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-[#7a1228] space-y-1">
-                    <div className="font-bold flex items-center gap-1.5">
-                      <span className="material-symbols-outlined text-[18px]">verified_user</span>
-                      <span>Initial Administrator Setup</span>
+              {/* 3. FORGOT PASSWORD - VERIFY CODE & RESET */}
+              {authMode === 'forgot_verify' && (
+                <form onSubmit={handleResetPasswordSubmit} className="space-y-4 animate-in fade-in">
+                  <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 space-y-1">
+                    <div className="font-bold flex items-center gap-1.5 text-amber-800">
+                      <span className="material-symbols-outlined text-[16px]">pin</span>
+                      <span>Verification Code Sent</span>
                     </div>
-                    <p className="text-[11px] text-rose-900 leading-relaxed">
-                      You are provisioning the root system administrator directly via the UI. This account has full privileges to manage the entire school.
+                    <p className="text-[11px] text-amber-800">
+                      Enter the code dispatched to <strong className="font-mono">{forgotEmail}</strong>. Valid for 15 minutes.
                     </p>
                   </div>
-                )}
 
-                <div className="grid grid-cols-2 gap-2.5">
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-gray-600 mb-1">
-                      First Name
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                      6-Digit Verification Code
                     </label>
-                    <input
-                      type="text"
-                      required
-                      value={regFirstName}
-                      onChange={(e) => setRegFirstName(e.target.value)}
-                      placeholder="e.g. John"
-                      className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-[#7a1228] focus:bg-white"
-                    />
+                    <div className="relative">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined text-[18px]">
+                        pin
+                      </span>
+                      <input
+                        type="text"
+                        required
+                        value={resetCode}
+                        onChange={(e) => setResetCode(e.target.value.trim())}
+                        placeholder="e.g. 123456"
+                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono text-center tracking-widest text-slate-900 focus:outline-[#7a1228] focus:bg-white font-bold"
+                      />
+                    </div>
                   </div>
+
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-gray-600 mb-1">
-                      Last Name
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                      New Password
                     </label>
-                    <input
-                      type="text"
-                      required
-                      value={regLastName}
-                      onChange={(e) => setRegLastName(e.target.value)}
-                      placeholder="e.g. Doe"
-                      className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-[#7a1228] focus:bg-white"
-                    />
+                    <div className="relative">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined text-[18px]">
+                        lock
+                      </span>
+                      <input
+                        type={showResetPass ? 'text' : 'password'}
+                        required
+                        value={newResetPassword}
+                        onChange={(e) => setNewResetPassword(e.target.value)}
+                        placeholder="Minimum 6 characters..."
+                        className="w-full pl-10 pr-11 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowResetPass(!showResetPass)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer p-1"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">
+                          {showResetPass ? 'visibility_off' : 'visibility'}
+                        </span>
+                      </button>
+                    </div>
                   </div>
-                </div>
 
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-600 mb-1">
-                    Email Address
-                  </label>
-                  <input
-                    type="email"
-                    value={regEmail}
-                    onChange={(e) => setRegEmail(e.target.value)}
-                    placeholder="e.g. admin@school.ac.ke"
-                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-[#7a1228] focus:bg-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-600 mb-1">
-                    Mobile Phone Number
-                  </label>
-                  <input
-                    type="tel"
-                    value={regPhone}
-                    onChange={(e) => setRegPhone(e.target.value)}
-                    placeholder="e.g. 0712345678 or +254712345678"
-                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-[#7a1228] focus:bg-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-600 mb-1">
-                    Account Role
-                  </label>
-                  <select
-                    value={regRole}
-                    onChange={(e) => setRegRole(e.target.value as any)}
-                    disabled={authMode === 'initial_setup'}
-                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-[#7a1228] focus:bg-white disabled:opacity-75"
-                  >
-                    {authMode === 'initial_setup' ? (
-                      <>
-                        <option value="SUPER_ADMIN">System Super Administrator</option>
-                        <option value="ADMIN">School Administrator / Director</option>
-                      </>
-                    ) : (
-                      <>
-                        <option value="PARENT">Parent / Guardian</option>
-                        <option value="TEACHER">Teacher / Staff</option>
-                      </>
-                    )}
-                  </select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2.5">
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-gray-600 mb-1">
-                      Password
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                      Confirm New Password
                     </label>
-                    <input
-                      type="password"
-                      required
-                      value={regPassword}
-                      onChange={(e) => setRegPassword(e.target.value)}
-                      placeholder="Min 6 chars"
-                      className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-[#7a1228] focus:bg-white"
-                    />
+                    <div className="relative">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 material-symbols-outlined text-[18px]">
+                        lock_reset
+                      </span>
+                      <input
+                        type={showResetPass ? 'text' : 'password'}
+                        required
+                        value={confirmResetPassword}
+                        onChange={(e) => setConfirmResetPassword(e.target.value)}
+                        placeholder="Confirm password..."
+                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-gray-600 mb-1">
-                      Confirm
-                    </label>
-                    <input
-                      type="password"
-                      required
-                      value={regConfirmPassword}
-                      onChange={(e) => setRegConfirmPassword(e.target.value)}
-                      placeholder="Repeat password"
-                      className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-[#7a1228] focus:bg-white"
-                    />
-                  </div>
-                </div>
 
-                {/* Statutory Terms & Data Protection Consent Checkbox */}
-                <div className="flex items-start gap-2.5 pt-1 bg-gray-50 p-2.5 rounded-xl border border-gray-200">
-                  <input
-                    id="agreeTermsCheckbox"
-                    type="checkbox"
-                    checked={agreeToTerms}
-                    onChange={(e) => setAgreeToTerms(e.target.checked)}
-                    className="mt-0.5 h-4 w-4 rounded text-[#7a1228] focus:ring-[#7a1228] cursor-pointer shrink-0"
-                  />
-                  <label htmlFor="agreeTermsCheckbox" className="text-xs text-gray-700 leading-snug cursor-pointer">
-                    I have read and agree to the{' '}
+                  <div className="space-y-2 pt-2">
                     <button
-                      type="button"
-                      onClick={() => onOpenLegalModal?.('terms')}
-                      className="text-[#7a1228] font-bold underline hover:text-[#5c0a1a]"
+                      type="submit"
+                      disabled={forgotLoading}
+                      className="w-full py-3 bg-[#7a1228] hover:bg-[#5e0d1e] text-white font-bold rounded-xl text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
                     >
-                      Terms & Conditions
-                    </button>{' '}
-                    and consent to the processing of personal data under the{' '}
-                    <button
-                      type="button"
-                      onClick={() => onOpenLegalModal?.('privacy')}
-                      className="text-[#7a1228] font-bold underline hover:text-[#5c0a1a]"
-                    >
-                      Kenya Data Protection Act, 2019
+                      {forgotLoading ? (
+                        <>
+                          <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                          <span>Updating Password...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                          <span>Set New Password & Sign In</span>
+                        </>
+                      )}
                     </button>
-                    .
-                  </label>
-                </div>
 
-                <div className="pt-2 space-y-2">
-                  <button
-                    type="submit"
-                    disabled={regLoading}
-                    className="w-full py-2.5 bg-[#7a1228] hover:bg-[#5c0a1a] text-white font-semibold rounded-xl text-sm shadow-md transition-all cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2"
-                  >
-                    {regLoading ? (
-                      <>
-                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                        <span>Creating Account...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="material-symbols-outlined text-[18px]">how_to_reg</span>
-                        <span>{authMode === 'initial_setup' ? 'Create Administrator & Enter Portal' : 'Register Account'}</span>
-                      </>
-                    )}
-                  </button>
+                    <div className="flex items-center justify-between text-xs pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setAuthMode('forgot_request')}
+                        className="text-[#7a1228] font-bold hover:underline cursor-pointer"
+                      >
+                        Resend Code
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setForgotError(null);
+                          setForgotSuccess(null);
+                          setAuthMode('login');
+                        }}
+                        className="text-slate-600 hover:text-slate-900 font-bold cursor-pointer"
+                      >
+                        Return to Sign In
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              )}
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAuthMode('login');
-                      setRegError(null);
-                      setRegSuccess(null);
-                    }}
-                    className="w-full py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-xl text-xs transition-colors cursor-pointer"
-                  >
-                    Already have an account? Sign In
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
+              {/* 4. FIRST-TIME ADMIN PROVISIONING (ONLY WHEN ZERO ADMINS EXIST) */}
+              {authMode === 'initial_setup' && (
+                <form onSubmit={handleInitialAdminSetup} className="space-y-3.5 animate-in fade-in">
+                  <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 space-y-1">
+                    <div className="font-bold flex items-center gap-1.5 text-amber-800">
+                      <span className="material-symbols-outlined text-[18px]">admin_panel_settings</span>
+                      <span>Initial System Installation</span>
+                    </div>
+                    <p className="text-[11px] text-amber-800 leading-relaxed">
+                      No administrative account currently exists in the database. Please initialize the primary Super Administrator to manage the school.
+                    </p>
+                  </div>
 
-          {/* Card Footer Security Note */}
-          <div className="px-6 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-500">
-            <div className="flex items-center gap-1">
-              <span className="material-symbols-outlined text-[14px] text-green-600">verified_user</span>
-              <span>256-Bit SSL Encrypted</span>
+                  {regError && (
+                    <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[16px] text-red-600">error</span>
+                      <span>{regError}</span>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                        First Name
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={regFirstName}
+                        onChange={(e) => setRegFirstName(e.target.value)}
+                        placeholder="e.g. Director"
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-[#7a1228]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                        Last Name
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={regLastName}
+                        onChange={(e) => setRegLastName(e.target.value)}
+                        placeholder="e.g. Principal"
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-[#7a1228]"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                      Administrator Email
+                    </label>
+                    <input
+                      type="email"
+                      value={regEmail}
+                      onChange={(e) => setRegEmail(e.target.value)}
+                      placeholder="e.g. admin@graceseeds.ac.ke"
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-[#7a1228]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                      Mobile Phone
+                    </label>
+                    <input
+                      type="tel"
+                      value={regPhone}
+                      onChange={(e) => setRegPhone(e.target.value)}
+                      placeholder="e.g. 0712345678"
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-[#7a1228]"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                        Password
+                      </label>
+                      <input
+                        type="password"
+                        required
+                        value={regPassword}
+                        onChange={(e) => setRegPassword(e.target.value)}
+                        placeholder="Min 6 chars"
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-[#7a1228]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                        Confirm
+                      </label>
+                      <input
+                        type="password"
+                        required
+                        value={regConfirmPassword}
+                        onChange={(e) => setRegConfirmPassword(e.target.value)}
+                        placeholder="Repeat password"
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-[#7a1228]"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-2 pt-1 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                    <input
+                      id="agreeTermsSetup"
+                      type="checkbox"
+                      checked={agreeToTerms}
+                      onChange={(e) => setAgreeToTerms(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 rounded text-[#7a1228] focus:ring-[#7a1228] cursor-pointer shrink-0"
+                    />
+                    <label htmlFor="agreeTermsSetup" className="text-[11px] text-slate-700 leading-snug cursor-pointer">
+                      I agree to the Terms & Conditions and acknowledge data processing in compliance with the Kenya Data Protection Act, 2019.
+                    </label>
+                  </div>
+
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      disabled={regLoading}
+                      className="w-full py-2.5 bg-[#7a1228] hover:bg-[#5e0d1e] text-white font-bold rounded-xl text-xs shadow-md transition-all cursor-pointer flex items-center justify-center gap-2"
+                    >
+                      {regLoading ? 'Initializing Administrator...' : 'Initialize Super Administrator Account'}
+                    </button>
+                  </div>
+                </form>
+              )}
             </div>
-            <span>ODPC Registered & Compliant</span>
+
+            {/* School Account Provisioning Notice (Replacing public registration) */}
+            <div className="pt-6 mt-6 border-t border-slate-100 space-y-3">
+              <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5 text-left flex items-start gap-3">
+                <span className="material-symbols-outlined text-[20px] text-[#7a1228] shrink-0 mt-0.5">verified_user</span>
+                <div className="text-[11px] text-slate-600 leading-relaxed">
+                  <strong className="text-slate-900 font-bold block mb-0.5">Official Account Provisioning Notice</strong>
+                  Public self-registration is disabled for student safety and institutional security. Learner, parent, and staff accounts are provisioned exclusively by the School Administration upon admission or onboarding.
+                  <span className="block mt-1 text-slate-500 font-medium">
+                    Need assistance or forgot your credentials? Contact the administration office at <strong className="text-slate-800">+254 745 436 312</strong>.
+                  </span>
+                </div>
+              </div>
+
+              {/* Security & Regulatory Compliance */}
+              <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium pt-1">
+                <div className="flex items-center gap-1.5 text-emerald-700">
+                  <span className="material-symbols-outlined text-[14px]">lock</span>
+                  <span>256-Bit SSL Encrypted</span>
+                </div>
+                <span>ODPC Kenya Registered</span>
+                <span>MOE CBC Framework</span>
+              </div>
+            </div>
           </div>
         </div>
       </main>
 
-      {/* Page Footer & Vellox Tech Watermark */}
-      <footer className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 text-center text-xs text-rose-200/80 flex flex-col items-center justify-center gap-2">
+      {/* Institutional Footer */}
+      <footer className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 text-center text-xs text-rose-200/80 flex flex-col items-center justify-center gap-2.5">
         <div className="flex items-center flex-wrap justify-center gap-x-4 gap-y-1.5 text-[11px] text-rose-200">
           <button
+            type="button"
             onClick={() => onOpenLegalModal?.('terms')}
             className="hover:text-white underline cursor-pointer"
           >
@@ -896,6 +892,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           </button>
           <span>•</span>
           <button
+            type="button"
             onClick={() => onOpenLegalModal?.('privacy')}
             className="hover:text-white underline cursor-pointer"
           >
@@ -903,24 +900,30 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           </button>
           <span>•</span>
           <button
+            type="button"
             onClick={() => onOpenLegalModal?.('cookies')}
             className="hover:text-white underline cursor-pointer"
           >
-            Cookie Settings
+            Cookie Policy
           </button>
           <span>•</span>
           <button
+            type="button"
             onClick={() => onOpenLegalModal?.('child_protection')}
             className="hover:text-white underline cursor-pointer"
           >
-            Learner Data Protection
+            Child Protection & Safeguarding
           </button>
         </div>
 
-        <p>Grace Seeds School · &quot;The future Begins Here&quot;</p>
-        <p className="text-[11px] text-rose-300/70">Grace Seeds School · Competency-Based Education (CBE) System</p>
+        <p className="font-semibold text-white/90">
+          Grace Seeds School · &quot;The Future Begins Here&quot; · P.O. Box 12-20123 / 12-40123 Kisumu, Kenya
+        </p>
+        <p className="text-[11px] text-rose-300/70">
+          Official Competency-Based Education (CBE) Management Platform
+        </p>
         <div className="flex items-center gap-1.5 text-xs text-rose-100 font-medium">
-          <span>Powered by</span>
+          <span>Platform Engineered by</span>
           <span className="font-bold text-white tracking-wide">Vellox Tech</span>
         </div>
       </footer>

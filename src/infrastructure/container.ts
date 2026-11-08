@@ -60,6 +60,9 @@ import { InMemoryTeacherCorrectionRequestRepository } from './database/in-memory
 import { IFinancialApprovalRepository } from '../core/ports/repositories/IFinancialApprovalRepository';
 import { InMemoryFinancialApprovalRepository } from './database/in-memory/InMemoryRepositories';
 import { FinancialApprovalUseCases } from '../application/finance/FinancialApprovalUseCases';
+import { IParentConsentRepository } from '../core/ports/repositories/IParentConsentRepository';
+import { InMemoryParentConsentRepository } from './database/in-memory/InMemoryParentConsentRepository';
+import { ParentConsentUseCases } from '../application/consent/ParentConsentUseCases';
 
 import {
   InMemoryUserRepository,
@@ -138,6 +141,7 @@ export class AppContainer {
   public signatureRepository: ISignatureRepository;
   public teacherCorrectionRequestRepository: ITeacherCorrectionRequestRepository;
   public financialApprovalRepository: IFinancialApprovalRepository;
+  public parentConsentRepository: IParentConsentRepository;
 
   // Services
   public readonly tokenService = new JwtAuthTokenService();
@@ -180,6 +184,7 @@ export class AppContainer {
   public studentSponsorshipUseCases!: StudentSponsorshipUseCases;
   public signatureUseCases!: SignatureUseCases;
   public financialApprovalUseCases!: FinancialApprovalUseCases;
+  public parentConsentUseCases!: ParentConsentUseCases;
 
   constructor(customRepositories?: Partial<RepositoryBundle>) {
     this.userRepository = customRepositories?.userRepository || new InMemoryUserRepository();
@@ -230,6 +235,8 @@ export class AppContainer {
       customRepositories?.teacherCorrectionRequestRepository || new InMemoryTeacherCorrectionRequestRepository();
     this.financialApprovalRepository =
       customRepositories?.financialApprovalRepository || new InMemoryFinancialApprovalRepository();
+    this.parentConsentRepository =
+      customRepositories?.parentConsentRepository || new InMemoryParentConsentRepository();
 
     this.initUseCases();
   }
@@ -465,6 +472,13 @@ export class AppContainer {
       this.feeRepository,
       this.notificationService,
       this.payrollRepository,
+      this.systemLogRepository
+    );
+    this.parentConsentUseCases = new ParentConsentUseCases(
+      this.parentConsentRepository,
+      this.studentRepository,
+      this.guardianRepository,
+      this.userRepository,
       this.systemLogRepository
     );
   }

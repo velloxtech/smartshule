@@ -33,15 +33,16 @@ export const STATUS_CONFIG: Record<string, { label: string; badgeClass: string; 
 };
 
 export const ConcernsView: React.FC = () => {
-  const { user } = useAuth();
+  const { user, activeViewMode, isStaffWithChildren } = useAuth();
+  const effectiveRole = (isStaffWithChildren && activeViewMode === 'PARENT') ? UserRole.PARENT : user?.role;
 
   // Role Checks
-  const isParent = user?.role === UserRole.PARENT || user?.role === UserRole.GUARDIAN;
+  const isParent = effectiveRole === UserRole.PARENT || effectiveRole === UserRole.GUARDIAN;
   const isHeadTeacherOrAdmin =
-    user?.role === UserRole.SUPER_ADMIN ||
-    user?.role === UserRole.ADMIN ||
-    user?.role === UserRole.SCHOOL_ADMIN ||
-    user?.role === UserRole.HEAD_TEACHER;
+    effectiveRole === UserRole.SUPER_ADMIN ||
+    effectiveRole === UserRole.ADMIN ||
+    effectiveRole === UserRole.SCHOOL_ADMIN ||
+    effectiveRole === UserRole.HEAD_TEACHER;
 
   // View States
   const [activeTab, setActiveTab] = useState<'list' | 'submit' | 'analytics'>('list');
@@ -127,7 +128,7 @@ export const ConcernsView: React.FC = () => {
       } else {
         const [studentsRes, usersRes] = await Promise.all([
           apiService.getStudents().catch(() => null),
-          apiService.getUsers().catch(() => null),
+          isHeadTeacherOrAdmin ? apiService.getUsers().catch(() => null) : Promise.resolve(null),
         ]);
         if (studentsRes?.success && Array.isArray(studentsRes.data)) {
           setChildren(studentsRes.data);

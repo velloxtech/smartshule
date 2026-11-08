@@ -17,28 +17,37 @@ export const STAFF_ROLES = [
   { value: 'TEACHER', label: 'Teacher / Subject Educator' },
   { value: 'HEAD_TEACHER', label: 'Head Teacher / Principal' },
   { value: 'DEPUTY_HEAD_TEACHER', label: 'Deputy Head Teacher' },
-  { value: 'ADMISSIONS', label: 'Admissions Officer' },
-  { value: 'BURSAR', label: 'Bursar' },
+  { value: 'ADMISSIONS', label: 'Admissions Officer / Registrar' },
+  { value: 'BURSAR', label: 'Bursar / Cashier' },
   { value: 'ACCOUNTANT', label: 'Accountant / Finance Officer' },
+  { value: 'LIBRARIAN', label: 'Librarian / Media Specialist' },
+  { value: 'INFIRMARY_NURSE', label: 'School Nurse / Welfare Officer' },
+  { value: 'STOREKEEPER', label: 'Stores & Fixed Assets Officer' },
+  { value: 'SUPPORT_STAFF', label: 'Support & Operations Staff' },
   { value: 'SCHOOL_ADMIN', label: 'School Administrator' },
   { value: 'ADMIN', label: 'System Administrator' },
 ];
 
 export const isTeachingRole = (r: string) => ['TEACHER', 'HEAD_TEACHER', 'DEPUTY_HEAD_TEACHER'].includes(r);
 
-interface OnboardTeacherModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+export interface OnboardTeacherModalProps {
+  isOpen?: boolean;
+  onClose?: () => void;
   onTeacherCreated: (teacher: any) => void;
   existingTeachers?: any[];
+  isPage?: boolean;
+  onNavigateTab?: (tab: any) => void;
 }
 
 export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
-  isOpen,
+  isOpen = false,
   onClose,
   onTeacherCreated,
   existingTeachers,
+  isPage = false,
+  onNavigateTab,
 }) => {
+  const isComponentActive = isPage ? true : isOpen;
   const { user } = useAuth();
   const [schoolId, setSchoolId] = useState<string>(user?.schoolId || '');
   const [currentSection, setCurrentSection] = useState<1 | 2 | 3>(1);
@@ -77,7 +86,7 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isOpen) {
+    if (isComponentActive) {
       setCurrentSection(1);
       setError(null);
 
@@ -291,7 +300,11 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
           assignedClassName,
         };
         onTeacherCreated(enriched);
-        onClose();
+        if (isPage && onNavigateTab) {
+          onNavigateTab('staff-directory');
+        } else if (onClose) {
+          onClose();
+        }
       } else {
         setError(res.message || 'Failed to onboard staff member');
       }
@@ -302,46 +315,58 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/70 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-200">
-      <div className="bg-white rounded-3xl shadow-2xl max-w-xl w-full max-h-[92vh] sm:max-h-[90vh] flex flex-col overflow-hidden border border-slate-200 my-auto text-slate-800">
-        {/* Header with Kenya Stripe */}
-        <div className="bg-[#7a1228] text-white p-4 sm:p-5 relative shrink-0">
-          <div className="absolute top-0 left-0 right-0 h-1.5 flex">
-            <div className="flex-1 bg-black"></div>
-            <div className="w-1 bg-white"></div>
-            <div className="flex-1 bg-[#c01823]"></div>
-            <div className="w-1 bg-white"></div>
-            <div className="flex-1 bg-[#006600]"></div>
-          </div>
+  if (!isComponentActive) return null;
 
-          <div className="flex items-center justify-between mt-1">
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-2xl bg-white/15 text-white flex items-center justify-center font-bold shrink-0 border border-white/20">
-                <span className="material-symbols-outlined text-[26px]">badge</span>
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="font-bold text-base sm:text-lg leading-tight text-white">
-                    {role === 'HEAD_TEACHER' ? 'Onboard Head Teacher' : isTeachingRole(role) ? 'Onboard CBE Teacher' : 'Onboard Staff Member'}
-                  </h3>
-                  <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-400/30">
-                    {isTeachingRole(role) ? 'TSC & Chapter 6 Aligned' : 'Staff Onboarding'}
-                  </span>
-                </div>
-                <p className="text-xs text-rose-100/90 mt-0.5">
-                  {isTeachingRole(role) ? 'Teachers Service Commission Act · Constitution of Kenya (Article 237)' : 'School Staff Registry & RBAC System'}
-                </p>
-              </div>
+  const innerModal = (
+    <div className={`bg-white rounded-3xl ${isPage ? 'shadow-sm border border-slate-200' : 'shadow-2xl max-w-xl max-h-[92vh] sm:max-h-[90vh] my-auto border border-slate-200'} w-full flex flex-col overflow-hidden text-slate-800`}>
+      {/* Header with Kenya Stripe */}
+      <div className="bg-[#7a1228] text-white p-4 sm:p-5 relative shrink-0">
+        <div className="absolute top-0 left-0 right-0 h-1.5 flex">
+          <div className="flex-1 bg-black"></div>
+          <div className="w-1 bg-white"></div>
+          <div className="flex-1 bg-[#c01823]"></div>
+          <div className="w-1 bg-white"></div>
+          <div className="flex-1 bg-[#006600]"></div>
+        </div>
+
+        <div className="flex items-center justify-between mt-1">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-2xl bg-white/15 text-white flex items-center justify-center font-bold shrink-0 border border-white/20">
+              <span className="material-symbols-outlined text-[26px]">badge</span>
             </div>
-            <button
-              onClick={onClose}
-              className="p-1.5 rounded-xl text-rose-100 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
-              aria-label="Close modal"
-            >
-              <span className="material-symbols-outlined text-[20px]">close</span>
-            </button>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-base sm:text-lg leading-tight text-white">
+                  {role === 'HEAD_TEACHER' ? 'Onboard Head Teacher' : isTeachingRole(role) ? 'Onboard CBE Teacher' : 'Onboard Staff Member'}
+                </h3>
+                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-400/30">
+                  {isTeachingRole(role) ? 'TSC & Chapter 6 Aligned' : 'Staff Onboarding'}
+                </span>
+              </div>
+              <p className="text-xs text-rose-100/90 mt-0.5">
+                {isTeachingRole(role) ? 'Teachers Service Commission Act · Constitution of Kenya (Article 237)' : 'School Staff Registry & RBAC System'}
+              </p>
+            </div>
           </div>
+          {(!isPage || onClose) && (
+            <button
+              type="button"
+              onClick={() => {
+                if (isPage && onNavigateTab) {
+                  onNavigateTab('staff-directory');
+                } else if (onClose) {
+                  onClose();
+                }
+              }}
+              className="p-1.5 rounded-xl text-rose-100 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+              aria-label={isPage ? 'Back to Staff Directory' : 'Close modal'}
+            >
+              <span className="material-symbols-outlined text-[20px]">
+                {isPage ? 'arrow_back' : 'close'}
+              </span>
+            </button>
+          )}
+        </div>
 
           {/* Stepper Tabs */}
           <div className="mt-4 pt-3 border-t border-white/15 grid grid-cols-3 gap-2">
@@ -609,11 +634,15 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm text-slate-900 focus:outline-[#7a1228] focus:bg-white"
                 >
                   <option value="Bachelor of Commerce / Finance / CPA">Bachelor of Commerce / Finance / CPA</option>
-                  <option value="Diploma / Degree in Business Administration">Diploma / Degree in Business Administration</option>
                   <option value="Certified Public Accountant (CPA-K)">Certified Public Accountant (CPA-K)</option>
+                  <option value="Diploma / Degree in Business Administration">Diploma / Degree in Business Administration</option>
+                  <option value="Diploma / Degree in Nursing / Healthcare">Diploma / Degree in Nursing / Healthcare</option>
+                  <option value="Diploma in Library & Information Science">Diploma in Library & Information Science</option>
                   <option value="Diploma in Procurement & Supply Chain">Diploma in Procurement & Supply Chain</option>
                   <option value="B.A. Public Administration">B.A. Public Administration</option>
                   <option value="Certificate in Computer Applications / ICT">Certificate in Computer Applications / ICT</option>
+                  <option value="Valid Driving License (Class B/C/D) & PSV">Valid Driving License (Class B/C/D) & PSV</option>
+                  <option value="Kenya Certificate of Secondary Education (KCSE)">Kenya Certificate of Secondary Education (KCSE)</option>
                   <option value="Other Professional Qualification">Other Professional Qualification</option>
                 </select>
               </div>
@@ -950,10 +979,16 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
             ) : (
               <button
                 type="button"
-                onClick={onClose}
+                onClick={() => {
+                  if (isPage && onNavigateTab) {
+                    onNavigateTab('staff-directory');
+                  } else if (onClose) {
+                    onClose();
+                  }
+                }}
                 className="px-4 py-2.5 text-slate-500 hover:text-slate-700 font-semibold text-xs sm:text-sm transition-colors cursor-pointer"
               >
-                Cancel
+                {isPage ? 'Back to Staff Directory' : 'Cancel'}
               </button>
             )}
 
@@ -991,7 +1026,44 @@ export const OnboardTeacherModal: React.FC<OnboardTeacherModalProps> = ({
             )}
           </div>
         </form>
+    </div>
+  );
+
+  if (isPage) {
+    return (
+      <div className="space-y-6 pb-16 max-w-4xl mx-auto">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 font-label-md text-label-md text-on-surface-variant">
+              <span>Home</span>
+              <span>/</span>
+              <span>Staff Management</span>
+              <span>/</span>
+              <span className="text-primary font-semibold">Onboard Staff</span>
+            </div>
+            <div className="flex items-center gap-2 mt-1">
+              <h1 className="font-headline-lg text-headline-lg text-on-surface">
+                School Staff & Faculty Onboarding
+              </h1>
+              <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-teal-50 border border-teal-200 text-teal-800 text-[11px] font-bold">
+                <span className="material-symbols-outlined text-[14px]">verified</span>
+                <span>Article 237 (TSC) & Chapter 6 Certified</span>
+              </span>
+            </div>
+            <p className="text-xs text-on-surface-variant mt-0.5">
+              Onboard teaching faculty and non-teaching personnel (Finance, Administration, Welfare, Logistics) into official school records.
+            </p>
+          </div>
+        </div>
+
+        {innerModal}
       </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/70 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-200">
+      {innerModal}
     </div>
   );
 };

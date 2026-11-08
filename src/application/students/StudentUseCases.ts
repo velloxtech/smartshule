@@ -21,6 +21,7 @@ import { StudentInvoice, InvoiceStatus, FeeStructure, FeeItem, Payment, PaymentS
 import { ClassRoom, EducationLevel } from '../../core/domain/academic/ClassRoom';
 import { ClassTeacherAssignment } from '../../core/domain/academic/TeacherAssignment';
 import { GuardianIdentityResolver } from '../shared/GuardianIdentityResolver';
+import { PhoneUtils } from '../../infrastructure/utils/PhoneUtils';
 
 export const CBC_GRADE_PROGRESSION: Record<CBCGradeLevel, CBCGradeLevel | 'GRADUATED'> = {
   [CBCGradeLevel.PLAYGROUP]: CBCGradeLevel.PP1,
@@ -1540,6 +1541,519 @@ export class StudentUseCases {
     return { message: 'Guardian linked successfully' };
   }
 
+  public async searchParents(query: string = '', schoolId?: string) {
+    // 1. Fetch both GUARDIAN and PARENT roles, plus any users linked to Guardian records
+    const guardianUsers = await this.userRepository.findAll({ schoolId, role: UserRole.GUARDIAN });
+    const parentRoleUsers = await this.userRepository.findAll({ schoolId, role: UserRole.PARENT });
+
+    // Combine unique candidate users
+    const userMap = new Map<string, User>();
+    for (const u of [...guardianUsers, ...parentRoleUsers]) {
+      userMap.set(u.id, u);
+    }
+
+    // Also check all guardians table to include dual-role staff/teachers who are parents
+    const allGuardians = await this.guardianRepository.findAll();
+    for (const g of allGuardians) {
+      if (g.userId && !userMap.has(g.userId)) {
+        const u = await this.userRepository.findById(g.userId);
+        if (u) userMap.set(u.id, u);
+      }
+    }
+
+    const allCandidateUsers = Array.from(userMap.values());
+    const normalizedQ = (query || '').trim().toLowerCase();
+    const queryDigits = PhoneUtils.getSubscriberDigits(query || '');
+
+    // Map each candidate with their guardian record and check match
+    const parentCandidates = [];
+    for (const u of allCandidateUsers) {
+      let guardian = await this.guardianRepository.findByUserId(u.id);
+      if (!guardian && u.phone) {
+        guardian = await this.guardianRepository.findByPhone(u.phone);
+      }
+
+      const nationalId = guardian?.nationalId && guardian.nationalId !== 'N/A' ? guardian.nationalId : '';
+      const fullName = `${u.firstName} ${u.lastName}`.trim();
+      const phone = u.phone || guardian?.emergencyContact || '';
+      const email = u.email || '';
+
+      // Check match
+      let isMatch = false;
+      if (!normalizedQ) {
+        isMatch = true;
+      } else {
+        if (fullName.toLowerCase().includes(normalizedQ)) isMatch = true;
+        if (u.firstName?.toLowerCase().includes(normalizedQ)) isMatch = true;
+        if (u.lastName?.toLowerCase().includes(normalizedQ)) isMatch = true;
+        if (email.toLowerCase().includes(normalizedQ)) isMatch = true;
+        if (nationalId.toLowerCase().includes(normalizedQ)) isMatch = true;
+        if (phone && PhoneUtils.areMatches(phone, query)) isMatch = true;
+        if (phone && queryDigits.length >= 6 && PhoneUtils.getSubscriberDigits(phone).includes(queryDigits)) isMatch = true;
+      }
+
+      if (isMatch) {
+        parentCandidates.push({ user: u, guardian, nationalId, fullName, phone, email });
+      }
+    }
+
+    // Sort: exact phone, national ID, or name start matches first
+    if (normalizedQ) {
+      parentCandidates.sort((a, b) => {
+        const aNameMatch = a.fullName.toLowerCase().startsWith(normalizedQ) ? -1 : 0;
+        const bNameMatch = b.fullName.toLowerCase().startsWith(normalizedQ) ? -1 : 0;
+        if (aNameMatch !== bNameMatch) return aNameMatch - bNameMatch;
+        const aPhoneMatch = PhoneUtils.areMatches(a.phone, query) ? -1 : 0;
+        const bPhoneMatch = PhoneUtils.areMatches(b.phone, query) ? -1 : 0;
+        return aPhoneMatch - bPhoneMatch;
+      });
+    }
+
+    // Return top matching parents
+    const limitedCandidates = parentCandidates.slice(0, 40);
+
+    const results = [];
+    for (const item of limitedCandidates) {
+      const u = item.user;
+      const guardian = item.guardian;
+
+      // Check linked students
+      const resolved = await GuardianIdentityResolver.resolveLinkedStudentIdsForUser({
+        userId: u.id,
+        userPhone: u.phone,
+        userEmail: u.email || undefined,
+        guardianRepository: this.guardianRepository,
+        studentRepository: this.studentRepository,
+        userRepository: this.userRepository
+      });
+
+      // Find any duplicate accounts sharing the same phone
+      const duplicateAccounts = u.phone ? allCandidateUsers.filter(
+        other => other.id !== u.id && other.phone && PhoneUtils.areMatches(other.phone, u.phone)
+      ).map(other => ({
+        id: other.id,
+        fullName: `${other.firstName} ${other.lastName}`.trim(),
+        email: other.email,
+        phone: other.phone,
+        createdAt: other.createdAt
+      })) : [];
+
+      results.push({
+        userId: u.id,
+        guardianId: guardian?.id || null,
+        firstName: u.firstName,
+        lastName: u.lastName,
+        fullName: item.fullName || 'Parent / Guardian',
+        phone: item.phone,
+        email: item.email,
+        nationalId: item.nationalId || (guardian?.nationalId !== 'N/A' ? guardian?.nationalId : '') || '',
+        relationship: guardian?.relationship || 'PARENT',
+        role: u.role,
+        linkedStudents: resolved.students.map(s => ({
+          id: s.id,
+          admissionNumber: s.admissionNumber,
+          fullName: s.fullName,
+          gradeLevel: s.gradeLevel,
+          status: s.status
+        })),
+        linkedStudentCount: resolved.students.length,
+        duplicateAccounts
+      });
+    }
+
+    return results;
+  }
+
+  public async linkParentToLearners(dto: {
+    parentUserId: string;
+    studentIds: string[];
+    relationship?: string;
+    isPrimary?: boolean;
+    canViewAcademics?: boolean;
+    canViewFinances?: boolean;
+    requestingUser?: any;
+  }) {
+    const { parentUserId, studentIds, relationship = 'PARENT', isPrimary = true, canViewAcademics = true, canViewFinances = true, requestingUser } = dto;
+    const parentUser = await this.userRepository.findById(parentUserId);
+    if (!parentUser) throw new NotFoundError('Parent User', parentUserId);
+
+    let guardian = await this.guardianRepository.findByUserId(parentUser.id);
+    if (!guardian) {
+      guardian = Guardian.create({
+        userId: parentUser.id,
+        nationalId: 'N/A',
+        relationship: (relationship as any) || GuardianRelationship.MOTHER,
+        emergencyContact: parentUser.phone || '+254700000000',
+        studentIds: []
+      }, IdGenerator.generate());
+      await this.guardianRepository.save(guardian);
+    }
+
+    // Resolve any duplicate guardian accounts with identical phone
+    const effectivePhone = parentUser.phone;
+    let siblingGuardians: Guardian[] = [];
+    if (effectivePhone) {
+      const allG = await this.guardianRepository.findAll();
+      siblingGuardians = allG.filter((g: any) => PhoneUtils.areMatches(g.emergencyContact, effectivePhone));
+    }
+
+    const pool = (this.studentRepository as any).pool;
+    const linkedResults = [];
+
+    for (const studentId of studentIds) {
+      const student = await this.studentRepository.findById(studentId);
+      if (!student) continue;
+
+      student.addGuardian(guardian.id);
+      guardian.linkStudent(student.id);
+
+      for (const sg of siblingGuardians) {
+        student.addGuardian(sg.id);
+        sg.linkStudent(student.id);
+        await this.guardianRepository.update(sg);
+      }
+
+      await this.studentRepository.update(student);
+      await this.guardianRepository.update(guardian);
+
+      if (pool) {
+        try {
+          await pool.query(
+            `INSERT INTO student_parent_links (
+              id, school_id, parent_user_id, guardian_id, student_id, relationship_type, is_primary, can_view_academics, can_view_finances, created_by_user_id
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            ON CONFLICT (school_id, parent_user_id, student_id) DO UPDATE SET
+              guardian_id = EXCLUDED.guardian_id,
+              relationship_type = EXCLUDED.relationship_type,
+              is_primary = EXCLUDED.is_primary,
+              can_view_academics = EXCLUDED.can_view_academics,
+              can_view_finances = EXCLUDED.can_view_finances,
+              updated_at = NOW()`,
+            [
+              `link-${IdGenerator.generate()}`,
+              student.schoolId || parentUser.schoolId || 'school-001',
+              parentUser.id,
+              guardian.id,
+              student.id,
+              relationship,
+              isPrimary,
+              canViewAcademics,
+              canViewFinances,
+              requestingUser?.userId || null
+            ]
+          );
+
+          // Also mirror for sibling user accounts
+          for (const sg of siblingGuardians) {
+            if (sg.userId && sg.userId !== parentUser.id) {
+              await pool.query(
+                `INSERT INTO student_parent_links (
+                  id, school_id, parent_user_id, guardian_id, student_id, relationship_type, is_primary, can_view_academics, can_view_finances, created_by_user_id
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                ON CONFLICT (school_id, parent_user_id, student_id) DO NOTHING`,
+                [
+                  `link-${IdGenerator.generate()}`,
+                  student.schoolId || parentUser.schoolId || 'school-001',
+                  sg.userId,
+                  sg.id,
+                  student.id,
+                  relationship,
+                  isPrimary,
+                  canViewAcademics,
+                  canViewFinances,
+                  requestingUser?.userId || null
+                ]
+              );
+            }
+          }
+        } catch (dbErr) {
+          console.warn('student_parent_links write skipped:', dbErr);
+        }
+      }
+
+      linkedResults.push({
+        studentId: student.id,
+        name: student.fullName,
+        admissionNumber: student.admissionNumber,
+        gradeLevel: student.gradeLevel
+      });
+    }
+
+    return {
+      success: true,
+      message: `Successfully linked ${linkedResults.length} learner(s) to parent ${parentUser.firstName} ${parentUser.lastName}`,
+      linkedStudents: linkedResults
+    };
+  }
+
+  public async createAndLinkParent(dto: {
+    firstName: string;
+    lastName: string;
+    phone: string;
+    email?: string;
+    nationalId?: string;
+    relationship?: string;
+    studentId: string;
+    isPrimary?: boolean;
+    schoolId?: string;
+    requestingUser?: any;
+  }) {
+    const {
+      firstName,
+      lastName,
+      phone,
+      email,
+      nationalId,
+      relationship = 'MOTHER',
+      studentId,
+      isPrimary = true,
+      schoolId = 'school-001',
+      requestingUser
+    } = dto;
+
+    if (!firstName?.trim() || !lastName?.trim()) {
+      throw new ValidationError('First name and last name are required for parent account.');
+    }
+    if (!phone?.trim()) {
+      throw new ValidationError('A valid phone number is required for parent communications.');
+    }
+    const cleanPhone = PhoneUtils.toInternational(phone) || phone.trim();
+
+    // Check if user already exists with this phone or email
+    let parentUser = await this.userRepository.findByPhone(cleanPhone);
+    if (!parentUser && phone.trim()) {
+      parentUser = await this.userRepository.findByPhone(phone.trim());
+    }
+    if (!parentUser && email?.trim()) {
+      parentUser = await this.userRepository.findByEmail(email.trim().toLowerCase());
+    }
+
+    if (!parentUser) {
+      // Create new parent user with phone as default password
+      const defaultPassword = cleanPhone || nationalId?.trim() || 'Parent@123';
+      const defaultHash = await this.passwordHasher.hash(defaultPassword);
+      parentUser = User.create(
+        {
+          email: email?.trim() ? email.trim().toLowerCase() : undefined,
+          passwordHash: defaultHash,
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          role: UserRole.GUARDIAN,
+          phone: cleanPhone,
+          status: UserStatus.ACTIVE,
+          schoolId,
+          mustChangePassword: true
+        },
+        IdGenerator.generate()
+      );
+      await this.userRepository.save(parentUser);
+    } else {
+      parentUser.updateProfile(firstName.trim(), lastName.trim(), cleanPhone);
+      if (email?.trim() && !parentUser.email) {
+        parentUser.updateEmail(email.trim().toLowerCase());
+      }
+      await this.userRepository.update(parentUser);
+    }
+
+    // Ensure Guardian record
+    let guardian = await this.guardianRepository.findByUserId(parentUser.id);
+    if (!guardian) {
+      guardian = Guardian.create(
+        {
+          userId: parentUser.id,
+          nationalId: nationalId?.trim() || 'N/A',
+          relationship: (relationship as any) || GuardianRelationship.MOTHER,
+          emergencyContact: cleanPhone,
+          studentIds: [studentId]
+        },
+        IdGenerator.generate()
+      );
+      await this.guardianRepository.save(guardian);
+    } else {
+      if (nationalId?.trim() && (!guardian.nationalId || guardian.nationalId === 'N/A')) {
+        (guardian as any)._props.nationalId = nationalId.trim();
+      }
+      guardian.linkStudent(studentId);
+      await this.guardianRepository.update(guardian);
+    }
+
+    // Link learner
+    const linkRes = await this.linkParentToLearners({
+      parentUserId: parentUser.id,
+      studentIds: [studentId],
+      relationship,
+      isPrimary,
+      canViewAcademics: true,
+      canViewFinances: true,
+      requestingUser
+    });
+
+    return {
+      success: true,
+      message: `Parent ${parentUser.fullName} successfully registered and linked to learner.`,
+      parent: {
+        userId: parentUser.id,
+        guardianId: guardian.id,
+        fullName: parentUser.fullName,
+        phone: parentUser.phone,
+        email: parentUser.email,
+        nationalId: guardian.nationalId,
+        relationship
+      },
+      linkResult: linkRes
+    };
+  }
+
+  public async unlinkParentFromLearner(dto: {
+    parentUserId: string;
+    studentId: string;
+    requestingUser?: any;
+  }) {
+    const { parentUserId, studentId } = dto;
+    const parentUser = await this.userRepository.findById(parentUserId);
+    if (!parentUser) throw new NotFoundError('Parent User', parentUserId);
+
+    const student = await this.studentRepository.findById(studentId);
+    if (!student) throw new NotFoundError('Student', studentId);
+
+    const guardian = await this.guardianRepository.findByUserId(parentUser.id);
+    if (guardian) {
+      guardian.unlinkStudent(student.id);
+      await this.guardianRepository.update(guardian);
+      student.removeGuardian(guardian.id);
+    }
+
+    const pool = (this.studentRepository as any).pool;
+    if (pool) {
+      try {
+        await pool.query(
+          `DELETE FROM student_parent_links WHERE parent_user_id = $1 AND student_id = $2`,
+          [parentUser.id, student.id]
+        );
+      } catch {}
+    }
+
+    await this.studentRepository.update(student);
+
+    return {
+      success: true,
+      message: `Learner ${student.fullName} unlinked successfully from ${parentUser.firstName} ${parentUser.lastName}`
+    };
+  }
+
+  public async getParentFamilyTree(parentUserId: string, schoolId?: string) {
+    const user = await this.userRepository.findById(parentUserId);
+    if (!user) throw new NotFoundError('Parent User', parentUserId);
+
+    const resolved = await GuardianIdentityResolver.resolveLinkedStudentIdsForUser({
+      userId: user.id,
+      userPhone: user.phone,
+      userEmail: user.email || undefined,
+      guardianRepository: this.guardianRepository,
+      studentRepository: this.studentRepository,
+      userRepository: this.userRepository
+    });
+
+    const students = resolved.students;
+    const enrichedChildren = [];
+
+    for (const s of students) {
+      let feeBalance = 0;
+      let financialStatus = 'UNBILLED';
+      if (this.feeRepository) {
+        try {
+          const invoices = await this.feeRepository.findInvoices({ studentId: s.id });
+          const activeInvoices = invoices.filter(i => (i.status as any) !== 'CARRIED_FORWARD');
+          if (activeInvoices.length > 0) {
+            feeBalance = activeInvoices.reduce((sum, inv) => sum + (Number(inv.balance) || 0), 0);
+            financialStatus = feeBalance <= 0 ? 'CLEARED' : 'ARREARS';
+          }
+        } catch {}
+      }
+
+      enrichedChildren.push({
+        id: s.id,
+        admissionNumber: s.admissionNumber,
+        firstName: s.firstName,
+        lastName: s.lastName,
+        fullName: s.fullName,
+        gradeLevel: s.gradeLevel,
+        status: s.status,
+        feeBalance,
+        financialStatus
+      });
+    }
+
+    return {
+      parent: {
+        userId: user.id,
+        fullName: `${user.firstName} ${user.lastName}`.trim(),
+        phone: user.phone,
+        email: user.email,
+        role: user.role
+      },
+      children: enrichedChildren
+    };
+  }
+
+  public async resolveDuplicateParents(dto: {
+    primaryUserId: string;
+    duplicateUserIds: string[];
+    requestingUser?: any;
+  }) {
+    const { primaryUserId, duplicateUserIds } = dto;
+    const primaryUser = await this.userRepository.findById(primaryUserId);
+    if (!primaryUser) throw new NotFoundError('Primary Parent User', primaryUserId);
+
+    let primaryGuardian = await this.guardianRepository.findByUserId(primaryUser.id);
+    if (!primaryGuardian) {
+      primaryGuardian = Guardian.create({
+        userId: primaryUser.id,
+        nationalId: 'N/A',
+        relationship: GuardianRelationship.MOTHER,
+        emergencyContact: primaryUser.phone || '+254700000000',
+        studentIds: []
+      }, IdGenerator.generate());
+      await this.guardianRepository.save(primaryGuardian);
+    }
+
+    const pool = (this.studentRepository as any).pool;
+
+    for (const dupId of duplicateUserIds) {
+      if (dupId === primaryUserId) continue;
+      const dupGuardian = await this.guardianRepository.findByUserId(dupId);
+      if (dupGuardian) {
+        for (const sid of (dupGuardian.studentIds || [])) {
+          primaryGuardian.linkStudent(sid);
+          const student = await this.studentRepository.findById(sid);
+          if (student) {
+            student.addGuardian(primaryGuardian.id);
+            await this.studentRepository.update(student);
+          }
+        }
+      }
+
+      if (pool) {
+        try {
+          await pool.query(
+            `UPDATE student_parent_links 
+             SET parent_user_id = $1, guardian_id = $2, updated_at = NOW() 
+             WHERE parent_user_id = $3
+             ON CONFLICT (school_id, parent_user_id, student_id) DO NOTHING`,
+            [primaryUser.id, primaryGuardian.id, dupId]
+          );
+        } catch {}
+      }
+    }
+
+    await this.guardianRepository.update(primaryGuardian);
+
+    return {
+      success: true,
+      message: `Merged ${duplicateUserIds.length} duplicate parent account(s) into ${primaryUser.firstName} ${primaryUser.lastName}`
+    };
+  }
+
   public async getGuardianPortalData(userId: string) {
     const res = await GuardianIdentityResolver.resolveLinkedStudentIdsForUser({
       userId,
@@ -1590,6 +2104,9 @@ export class StudentUseCases {
           currentTermBilledFees: 0,
           totalOutstanding: 0,
           hasArrears: false,
+          hasInvoices: false,
+          financialStatus: 'UNBILLED' as 'SPONSORED' | 'OVERPAID' | 'CLEARED' | 'PARTIAL' | 'ARREARS' | 'UNBILLED',
+          statusLabel: 'Not Billed',
           isCleared: false,
           isSponsored: false,
           sponsorship: null as any,
@@ -1645,6 +2162,31 @@ export class StudentUseCases {
 
           const activeInvoice = activeInvoices.find(inv => inv.balance > 0) || activeInvoices[0] || invoices[0];
           const dueDate = activeInvoice ? activeInvoice.dueDate : null;
+          const hasInvoices = activeInvoices.length > 0;
+
+          // Determine accurate financial status
+          let financialStatus: 'SPONSORED' | 'OVERPAID' | 'CLEARED' | 'PARTIAL' | 'ARREARS' | 'UNBILLED' = 'ARREARS';
+          let statusLabel = 'Arrears Outstanding';
+          if (sp) {
+            financialStatus = 'SPONSORED';
+            statusLabel = '100% Scholarship (Exempt)';
+          } else if (totalAvailableCredit > 0 && activeBalance <= 0) {
+            financialStatus = 'OVERPAID';
+            statusLabel = `Advance Credit (+KES ${totalAvailableCredit.toLocaleString()})`;
+          } else if (hasInvoices && calculatedBalance <= 0) {
+            financialStatus = 'CLEARED';
+            statusLabel = 'Fees Cleared';
+          } else if (!hasInvoices && activeBalance === 0) {
+            financialStatus = 'UNBILLED';
+            statusLabel = 'Invoice Pending / Not Billed';
+          } else if (totalPaid > 0 && calculatedBalance > 0) {
+            financialStatus = 'PARTIAL';
+            statusLabel = 'Partially Paid';
+          } else if (calculatedBalance > 0) {
+            financialStatus = 'ARREARS';
+            statusLabel = 'Outstanding Balance';
+          }
+
           feeInfo = {
             totalBilled: sp ? 0 : totalOwed,
             totalPaid: sp ? 0 : totalPaid,
@@ -1654,7 +2196,10 @@ export class StudentUseCases {
             currentTermBilledFees: sp ? 0 : currentTermBilledFees,
             totalOutstanding: sp ? 0 : activeBalance,
             hasArrears: calculatedBalance > 0,
-            isCleared: calculatedBalance <= 0 || !!sp,
+            hasInvoices,
+            financialStatus,
+            statusLabel,
+            isCleared: Boolean(sp) || (hasInvoices && calculatedBalance <= 0),
             isSponsored: !!sp,
             sponsorship: sp,
             overpayment: totalAvailableCredit,

@@ -21,7 +21,10 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
     return `${y}-${m}-${day}`;
   };
 
-  const { user } = useAuth();
+  const { user, activeViewMode, isStaffWithChildren } = useAuth();
+  const effectiveRole = (isStaffWithChildren && activeViewMode === 'PARENT') ? UserRole.PARENT : user?.role;
+  const isTeacher = effectiveRole === UserRole.TEACHER;
+  const isParent = effectiveRole === UserRole.PARENT || effectiveRole === UserRole.GUARDIAN;
   const [teacherProfile, setTeacherProfile] = useState<any>(null);
   const [streamId, setStreamId] = useState('');
   const [registerDate, setRegisterDate] = useState(getLocalDateIso());
@@ -38,8 +41,6 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
   const [availableClasses, setAvailableClasses] = useState<any[]>([]);
   const [availableStreams, setAvailableStreams] = useState<Array<{ id: string; name: string; classRoomId: string; className: string }>>([]);
 
-  const isTeacher = user?.role === UserRole.TEACHER;
-  const isParent = user?.role === UserRole.PARENT || user?.role === UserRole.GUARDIAN;
   const teacherDisplayName = user?.fullName || user?.name || (teacherProfile ? `${teacherProfile.user?.firstName || ''} ${teacherProfile.user?.lastName || ''}`.trim() : 'Class Teacher') || 'Class Teacher';
 
   // Parent view state
@@ -110,7 +111,7 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
   // Load initial data and teacher profile to lock down assigned class
   useEffect(() => {
     async function loadInitialData() {
-      if (isParent) return;
+      if (isParent || !user) return;
       try {
         const [scRes, ctxRes, cRes, tchRes] = await Promise.all([
           apiService.getSchool().catch(() => null),
@@ -167,7 +168,7 @@ export const AttendanceRegisterView: React.FC<AttendanceRegisterViewProps> = ({
 
   // Load students & daily register strictly from database for the assigned stream/class
   useEffect(() => {
-    if (isParent) return;
+    if (isParent || !user) return;
     if (!streamId) {
       setStudents([]);
       setAttendanceEntries({});

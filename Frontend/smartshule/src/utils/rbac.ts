@@ -5,6 +5,16 @@ export interface NavItemDef {
   label: string;
   icon: string;
   allowedRoles: UserRole[];
+  badgeKey?: 'slots' | 'onboard' | 'forwarded_payments';
+}
+
+export interface NavModuleDef {
+  id: string;
+  title: string;
+  icon: string;
+  isStandalone?: boolean;
+  items: NavItemDef[];
+  allowedRoles: UserRole[];
 }
 
 export interface NavGroupDef {
@@ -12,9 +22,27 @@ export interface NavGroupDef {
   items: NavItemDef[];
 }
 
-export const ALL_NAV_SECTIONS: NavGroupDef[] = [
+export const ALL_NAV_MODULES: NavModuleDef[] = [
+  // 1. Dashboard (Standalone Top Item)
   {
-    group: 'Overview',
+    id: 'dashboard-module',
+    title: 'Dashboard',
+    icon: 'dashboard',
+    isStandalone: true,
+    allowedRoles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.ADMIN,
+      UserRole.SCHOOL_ADMIN,
+      UserRole.HEAD_TEACHER,
+      UserRole.DEPUTY_HEAD_TEACHER,
+      UserRole.ADMISSIONS,
+      UserRole.BURSAR,
+      UserRole.ACCOUNTANT,
+      UserRole.TEACHER,
+      UserRole.PARENT,
+      UserRole.GUARDIAN,
+      UserRole.STUDENT,
+    ],
     items: [
       {
         id: 'dashboard',
@@ -37,13 +65,215 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
       },
     ],
   },
+
+  // 2. Admissions & Enrolment (DEDICATED MODULE)
   {
-    group: 'Academics & Learners',
+    id: 'admissions-enrolment',
+    title: 'Admissions & Enrolment',
+    icon: 'how_to_reg',
+    allowedRoles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.ADMIN,
+      UserRole.SCHOOL_ADMIN,
+      UserRole.HEAD_TEACHER,
+      UserRole.DEPUTY_HEAD_TEACHER,
+      UserRole.ADMISSIONS,
+    ],
+    items: [
+      {
+        id: 'admissions-dashboard',
+        label: 'Admissions Dashboard',
+        icon: 'dashboard',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.HEAD_TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
+          UserRole.ADMISSIONS,
+        ],
+      },
+      {
+        id: 'admit-learner',
+        label: 'Admit New Learner',
+        icon: 'person_add',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.HEAD_TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
+          UserRole.ADMISSIONS,
+        ],
+      },
+      {
+        id: 'slot-applications',
+        label: 'Slot Applications',
+        icon: 'event_available',
+        badgeKey: 'slots',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.HEAD_TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
+          UserRole.ADMISSIONS,
+        ],
+      },
+      {
+        id: 'onboard-queue',
+        label: 'Onboard Queue',
+        icon: 'how_to_reg',
+        badgeKey: 'onboard',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.HEAD_TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
+          UserRole.ADMISSIONS,
+        ],
+      },
+      {
+        id: 'application-review',
+        label: 'Application Review',
+        icon: 'rate_review',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.HEAD_TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
+          UserRole.ADMISSIONS,
+        ],
+      },
+      {
+        id: 'admission-reports',
+        label: 'Admission Reports',
+        icon: 'analytics',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.HEAD_TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
+          UserRole.ADMISSIONS,
+        ],
+      },
+    ],
+  },
+
+  // 3. Staff Management (DEDICATED MODULE)
+  {
+    id: 'staff-management',
+    title: 'Staff Management',
+    icon: 'badge',
+    allowedRoles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.ADMIN,
+      UserRole.SCHOOL_ADMIN,
+      UserRole.HEAD_TEACHER,
+      UserRole.DEPUTY_HEAD_TEACHER,
+      UserRole.ADMISSIONS,
+    ],
+    items: [
+      {
+        id: 'staff-directory',
+        label: 'Staff Directory',
+        icon: 'groups',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.HEAD_TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
+          UserRole.ADMISSIONS,
+        ],
+      },
+      {
+        id: 'onboard-staff',
+        label: 'Onboard Staff',
+        icon: 'person_add',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.HEAD_TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
+          UserRole.ADMISSIONS,
+        ],
+      },
+      {
+        id: 'teachers-staff',
+        label: 'Teaching Staff',
+        icon: 'school',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.HEAD_TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
+          UserRole.ADMISSIONS,
+        ],
+      },
+      {
+        id: 'non-teaching-staff',
+        label: 'Non-Teaching Staff',
+        icon: 'work',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.HEAD_TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
+          UserRole.ADMISSIONS,
+        ],
+      },
+      {
+        id: 'staff-verifications',
+        label: 'Staff Verification / Approval',
+        icon: 'rule',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.HEAD_TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
+        ],
+      },
+    ],
+  },
+
+  // 4. Academics & Learners
+  {
+    id: 'academics-learners',
+    title: 'Academics & Learners',
+    icon: 'school',
+    allowedRoles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.ADMIN,
+      UserRole.SCHOOL_ADMIN,
+      UserRole.HEAD_TEACHER,
+      UserRole.DEPUTY_HEAD_TEACHER,
+      UserRole.ADMISSIONS,
+      UserRole.TEACHER,
+      UserRole.PARENT,
+      UserRole.GUARDIAN,
+    ],
     items: [
       {
         id: 'parent-profile',
         label: 'My Profile & Children',
         icon: 'manage_accounts',
+        allowedRoles: [
+          UserRole.PARENT,
+          UserRole.GUARDIAN,
+        ],
+      },
+      {
+        id: 'parent-consent',
+        label: 'Parent Consent',
+        icon: 'draw',
         allowedRoles: [
           UserRole.PARENT,
           UserRole.GUARDIAN,
@@ -60,29 +290,13 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
         ],
       },
       {
-        id: 'slot-applications',
-        label: 'Slot Applications',
-        icon: 'event_available',
+        id: 'salary-acknowledgement',
+        label: 'Salary Payment Acknowledgement',
+        icon: 'payments',
         allowedRoles: [
-          UserRole.SUPER_ADMIN,
-          UserRole.ADMIN,
-          UserRole.SCHOOL_ADMIN,
+          UserRole.TEACHER,
           UserRole.HEAD_TEACHER,
           UserRole.DEPUTY_HEAD_TEACHER,
-          UserRole.ADMISSIONS,
-        ],
-      },
-      {
-        id: 'onboard-queue',
-        label: 'Onboard Queue',
-        icon: 'how_to_reg',
-        allowedRoles: [
-          UserRole.SUPER_ADMIN,
-          UserRole.ADMIN,
-          UserRole.SCHOOL_ADMIN,
-          UserRole.HEAD_TEACHER,
-          UserRole.DEPUTY_HEAD_TEACHER,
-          UserRole.ADMISSIONS,
         ],
       },
       {
@@ -108,19 +322,6 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
           UserRole.ADMIN,
           UserRole.SCHOOL_ADMIN,
           UserRole.HEAD_TEACHER,
-        ],
-      },
-      {
-        id: 'teachers-staff',
-        label: 'Teachers & Staff',
-        icon: 'badge',
-        allowedRoles: [
-          UserRole.SUPER_ADMIN,
-          UserRole.ADMIN,
-          UserRole.SCHOOL_ADMIN,
-          UserRole.HEAD_TEACHER,
-          UserRole.DEPUTY_HEAD_TEACHER,
-          UserRole.ADMISSIONS,
         ],
       },
       {
@@ -150,6 +351,26 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
           UserRole.TEACHER,
         ],
       },
+    ],
+  },
+
+  // 4. CBE Competencies & Grading
+  {
+    id: 'cbe-grading',
+    title: 'CBE Competencies & Grading',
+    icon: 'fact_check',
+    allowedRoles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.ADMIN,
+      UserRole.SCHOOL_ADMIN,
+      UserRole.HEAD_TEACHER,
+      UserRole.DEPUTY_HEAD_TEACHER,
+      UserRole.TEACHER,
+      UserRole.PARENT,
+      UserRole.GUARDIAN,
+      UserRole.STUDENT,
+    ],
+    items: [
       {
         id: 'learning-areas',
         label: 'Subjects & Learning Areas',
@@ -164,11 +385,6 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
           UserRole.STUDENT,
         ],
       },
-    ],
-  },
-  {
-    group: 'CBE Competencies & Grading',
-    items: [
       {
         id: 'formative-assessments',
         label: 'Formative (Continuous / CATs)',
@@ -254,8 +470,24 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
       },
     ],
   },
+
+  // 5. Curriculum & Timetable
   {
-    group: 'Curriculum & Timetable',
+    id: 'curriculum-timetable',
+    title: 'Curriculum & Timetable',
+    icon: 'calendar_month',
+    allowedRoles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.ADMIN,
+      UserRole.SCHOOL_ADMIN,
+      UserRole.HEAD_TEACHER,
+      UserRole.DEPUTY_HEAD_TEACHER,
+      UserRole.ADMISSIONS,
+      UserRole.TEACHER,
+      UserRole.PARENT,
+      UserRole.GUARDIAN,
+      UserRole.STUDENT,
+    ],
     items: [
       {
         id: 'schemes-lesson-plans',
@@ -270,7 +502,6 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
           UserRole.TEACHER,
         ],
       },
-      // ADDED RECORDS OF WORK HERE
       {
         id: 'records-of-work',
         label: 'Records of Work',
@@ -346,8 +577,24 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
       },
     ],
   },
+
+  // 6. Finance & Billing
   {
-    group: 'Finance & Billing',
+    id: 'finance-billing',
+    title: 'Finance & Billing',
+    icon: 'payments',
+    allowedRoles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.ADMIN,
+      UserRole.SCHOOL_ADMIN,
+      UserRole.BURSAR,
+      UserRole.ACCOUNTANT,
+      UserRole.ADMISSIONS,
+      UserRole.PARENT,
+      UserRole.GUARDIAN,
+      UserRole.HEAD_TEACHER,
+      UserRole.DEPUTY_HEAD_TEACHER,
+    ],
     items: [
       {
         id: 'student-fee-search',
@@ -392,6 +639,7 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
         id: 'forwarded-payments',
         label: 'Forwarded Payments Queue',
         icon: 'forward_to_inbox',
+        badgeKey: 'forwarded_payments',
         allowedRoles: [
           UserRole.SUPER_ADMIN,
           UserRole.ADMIN,
@@ -488,8 +736,20 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
       },
     ],
   },
+
+  // 7. Student Welfare & Infirmary
   {
-    group: 'Student Welfare & Infirmary',
+    id: 'welfare-infirmary',
+    title: 'Student Welfare & Infirmary',
+    icon: 'medical_services',
+    allowedRoles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.ADMIN,
+      UserRole.SCHOOL_ADMIN,
+      UserRole.HEAD_TEACHER,
+      UserRole.DEPUTY_HEAD_TEACHER,
+      UserRole.TEACHER,
+    ],
     items: [
       {
         id: 'clinic',
@@ -532,8 +792,21 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
       },
     ],
   },
+
+  // 8. Stores & Fixed Assets
   {
-    group: 'Stores & Fixed Assets',
+    id: 'stores-assets',
+    title: 'Stores & Fixed Assets',
+    icon: 'inventory',
+    allowedRoles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.ADMIN,
+      UserRole.SCHOOL_ADMIN,
+      UserRole.HEAD_TEACHER,
+      UserRole.DEPUTY_HEAD_TEACHER,
+      UserRole.BURSAR,
+      UserRole.ACCOUNTANT,
+    ],
     items: [
       {
         id: 'inventory',
@@ -551,8 +824,26 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
       },
     ],
   },
+
+  // 9. Digital Diary & Media
   {
-    group: 'Digital Diary & Media',
+    id: 'digital-diary',
+    title: 'Digital Diary & Media',
+    icon: 'campaign',
+    allowedRoles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.ADMIN,
+      UserRole.SCHOOL_ADMIN,
+      UserRole.HEAD_TEACHER,
+      UserRole.DEPUTY_HEAD_TEACHER,
+      UserRole.ADMISSIONS,
+      UserRole.BURSAR,
+      UserRole.ACCOUNTANT,
+      UserRole.TEACHER,
+      UserRole.PARENT,
+      UserRole.GUARDIAN,
+      UserRole.STUDENT,
+    ],
     items: [
       {
         id: 'announcements',
@@ -628,8 +919,23 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
       },
     ],
   },
+
+  // 10. Administration & System
   {
-    group: 'Administration & System',
+    id: 'admin-system',
+    title: 'Administration & System',
+    icon: 'admin_panel_settings',
+    allowedRoles: [
+      UserRole.SUPER_ADMIN,
+      UserRole.ADMIN,
+      UserRole.SCHOOL_ADMIN,
+      UserRole.HEAD_TEACHER,
+      UserRole.DEPUTY_HEAD_TEACHER,
+      UserRole.TEACHER,
+      UserRole.BURSAR,
+      UserRole.ACCOUNTANT,
+      UserRole.ADMISSIONS,
+    ],
     items: [
       {
         id: 'user-management',
@@ -643,7 +949,7 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
       },
       {
         id: 'archived-records',
-        label: 'Archived Accounts & Data',
+        label: 'Archived Data Vault',
         icon: 'inventory_2',
         allowedRoles: [
           UserRole.SUPER_ADMIN,
@@ -678,6 +984,18 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
         ],
       },
       {
+        id: 'consent-management',
+        label: 'Parent Consent Records',
+        icon: 'how_to_reg',
+        allowedRoles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.ADMIN,
+          UserRole.SCHOOL_ADMIN,
+          UserRole.HEAD_TEACHER,
+          UserRole.DEPUTY_HEAD_TEACHER,
+        ],
+      },
+      {
         id: 'digital-signature',
         label: 'My Digital Signature',
         icon: 'draw',
@@ -697,8 +1015,17 @@ export const ALL_NAV_SECTIONS: NavGroupDef[] = [
   },
 ];
 
+// Flat sections for backward compatibility
+export const ALL_NAV_SECTIONS: NavGroupDef[] = ALL_NAV_MODULES.map((mod) => ({
+  group: mod.title,
+  items: mod.items,
+}));
+
 export function normalizeRoleAliases(role?: UserRole): UserRole[] {
   if (!role) return [];
+  if (role === UserRole.SUPER_ADMIN) {
+    return Object.values(UserRole);
+  }
   const roles: UserRole[] = [role];
   if (role === UserRole.ADMIN && !roles.includes(UserRole.SCHOOL_ADMIN)) roles.push(UserRole.SCHOOL_ADMIN);
   if (role === UserRole.SCHOOL_ADMIN && !roles.includes(UserRole.ADMIN)) roles.push(UserRole.ADMIN);
@@ -709,19 +1036,69 @@ export function normalizeRoleAliases(role?: UserRole): UserRole[] {
   return roles;
 }
 
-export function getFilteredNavSections(role?: UserRole): NavGroupDef[] {
+export function getFilteredNavModules(role?: UserRole): NavModuleDef[] {
   const activeRoles = normalizeRoleAliases(role || UserRole.SUPER_ADMIN);
-  return ALL_NAV_SECTIONS.map((section) => ({
-    group: section.group,
-    items: section.items.filter((item) => item.allowedRoles.some((r) => activeRoles.includes(r))),
-  })).filter((section) => section.items.length > 0);
+  return ALL_NAV_MODULES.map((module) => {
+    const isModuleAllowed = module.allowedRoles.some((r) => activeRoles.includes(r));
+    if (!isModuleAllowed) return null;
+
+    const allowedItems = module.items.filter((item) =>
+      item.allowedRoles.some((r) => activeRoles.includes(r))
+    );
+
+    if (allowedItems.length === 0) return null;
+
+    return {
+      ...module,
+      items: allowedItems,
+    };
+  }).filter((mod): mod is NavModuleDef => mod !== null);
+}
+
+export function getFilteredNavSections(role?: UserRole): NavGroupDef[] {
+  const filteredModules = getFilteredNavModules(role);
+  return filteredModules.map((mod) => ({
+    group: mod.title,
+    items: mod.items,
+  }));
 }
 
 export function isTabPermitted(tab: TabType, role?: UserRole): boolean {
   if (!role) return false;
+
+  // Administrators and Super Admins have full access across the entire school platform
+  if (
+    role === UserRole.SUPER_ADMIN ||
+    role === UserRole.ADMIN ||
+    role === UserRole.SCHOOL_ADMIN
+  ) {
+    return true;
+  }
+
   const activeRoles = normalizeRoleAliases(role);
-  for (const section of ALL_NAV_SECTIONS) {
-    const found = section.items.find((item) => item.id === tab);
+
+  // Map sub-tabs and aliases to their parent or canonical navigation permission
+  const tabAliases: Record<string, TabType> = {
+    'new-applications': 'admissions-dashboard',
+    'admission-assessments': 'admissions-dashboard',
+    'admission-decisions': 'admissions-dashboard',
+    'admission-offers': 'admissions-dashboard',
+    'admission-enrolment': 'admissions-dashboard',
+    'admission-settings': 'admissions-dashboard',
+    'teaching-staff': 'teachers-staff',
+    'teachers': 'teachers-staff',
+    'staff-directory': 'teachers-staff',
+    'cashflow-ledger': 'financial-reports',
+    'capitation-income': 'financial-reports',
+    'assessments': 'formative-assessments',
+    'complaints': 'concerns',
+    'defaulters-receipts': 'arrears',
+  };
+
+  const effectiveTab = tabAliases[tab] || tab;
+
+  for (const module of ALL_NAV_MODULES) {
+    const found = module.items.find((item) => item.id === effectiveTab);
     if (found) {
       return found.allowedRoles.some((r) => activeRoles.includes(r));
     }

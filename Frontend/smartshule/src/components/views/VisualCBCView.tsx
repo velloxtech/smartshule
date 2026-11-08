@@ -57,9 +57,10 @@ const normalizeStudent = (st: any): Student => {
 };
 
 export const VisualCBCView: React.FC = () => {
-  const { user } = useAuth();
-  const isGuardian = user?.role === UserRole.GUARDIAN || user?.role === UserRole.PARENT;
-  const isTeacher = user?.role === UserRole.TEACHER || user?.role === UserRole.HEAD_TEACHER || user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.SCHOOL_ADMIN;
+  const { user, activeViewMode, isStaffWithChildren } = useAuth();
+  const effectiveRole = (isStaffWithChildren && activeViewMode === 'PARENT') ? UserRole.PARENT : user?.role;
+  const isGuardian = effectiveRole === UserRole.GUARDIAN || effectiveRole === UserRole.PARENT;
+  const isTeacher = effectiveRole === UserRole.TEACHER || effectiveRole === UserRole.HEAD_TEACHER || effectiveRole === UserRole.SUPER_ADMIN || effectiveRole === UserRole.SCHOOL_ADMIN;
 
   const [activeTab, setActiveTab] = useState<'help_desk' | 'progress_gallery'>('help_desk');
   const [helpRequests, setHelpRequests] = useState<ParentHelpRequest[]>([]);

@@ -11,6 +11,8 @@ interface TeachersViewProps {
   onAssignTeacher?: (teacherId: string, assignedClass: string) => void;
   onNavigateTab?: (tabId: string) => void;
   onTeacherUpdated?: (updatedTeacher: Teacher) => void;
+  initialCategory?: 'ALL' | 'TEACHING' | 'NON_TEACHING';
+  initialTab?: 'roster' | 'corrections';
 }
 
 const CBC_STANDARD_CLASSES = [
@@ -36,6 +38,8 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
   onAssignTeacher,
   onNavigateTab,
   onTeacherUpdated,
+  initialCategory,
+  initialTab,
 }) => {
   const { user } = useAuth();
   const canOnboard = Boolean(
@@ -48,7 +52,16 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
     ].includes(user.role)
   );
 
-  const [activeTab, setActiveTab] = useState<'roster' | 'corrections'>('roster');
+  const [activeTab, setActiveTab] = useState<'roster' | 'corrections'>(initialTab || 'roster');
+  const [staffCategory, setStaffCategory] = useState<'ALL' | 'TEACHING' | 'NON_TEACHING'>(initialCategory || 'ALL');
+
+  useEffect(() => {
+    if (initialCategory) setStaffCategory(initialCategory);
+  }, [initialCategory]);
+
+  useEffect(() => {
+    if (initialTab) setActiveTab(initialTab);
+  }, [initialTab]);
   const [search, setSearch] = useState('');
   const [classes, setClasses] = useState<ClassRoom[]>([]);
   const [streamsMap, setStreamsMap] = useState<Record<string, StreamItem[]>>({});
@@ -534,7 +547,17 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
     }
   };
 
+  const isTeachingStaff = (t: Teacher) => {
+    const r = (t as any).role || (t as any).user?.role || 'TEACHER';
+    return ['TEACHER', 'HEAD_TEACHER', 'DEPUTY_HEAD_TEACHER'].includes(r);
+  };
+
+  const teachingCount = teachers.filter(isTeachingStaff).length;
+  const nonTeachingCount = teachers.filter((t) => !isTeachingStaff(t)).length;
+
   const filteredTeachers = teachers.filter((t) => {
+    if (staffCategory === 'TEACHING' && !isTeachingStaff(t)) return false;
+    if (staffCategory === 'NON_TEACHING' && isTeachingStaff(t)) return false;
     const s = search.toLowerCase();
     return (
       t.name.toLowerCase().includes(s) ||
@@ -542,6 +565,7 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
       (t.phone || '').toLowerCase().includes(s) ||
       (t.tscNumber || '').toLowerCase().includes(s) ||
       (t.employeeNumber || '').toLowerCase().includes(s) ||
+      ((t as any).department || '').toLowerCase().includes(s) ||
       t.learningAreas.some((la) => la.toLowerCase().includes(s))
     );
   });
@@ -567,7 +591,7 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
           </div>
           <div className="flex items-center gap-2 mt-1">
             <h1 className="font-headline-lg text-headline-lg text-on-surface">
-              Faculty & Biometric Clock-in Registry
+              Faculty & Staff Management Registry
             </h1>
             <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-teal-50 border border-teal-200 text-teal-800 text-[11px] font-bold">
               <span className="material-symbols-outlined text-[14px]">verified</span>
@@ -575,7 +599,7 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
             </span>
           </div>
           <p className="text-xs text-on-surface-variant mt-0.5">
-            TSC registered educators, stream allocations, profile records verification, and correction approvals.
+            Teaching faculty and non-teaching operational personnel, stream allocations, profile records verification, and correction approvals.
           </p>
         </div>
 
@@ -598,7 +622,7 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
               className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 text-xs font-semibold shadow-xs transition-all cursor-pointer"
             >
               <span className="material-symbols-outlined text-[16px]">person_add</span>
-              <span>Onboard Teacher</span>
+              <span>Onboard Staff Member</span>
             </button>
           )}
 
@@ -631,32 +655,56 @@ export const TeachersView: React.FC<TeachersViewProps> = ({
       )}
 
       {/* Tab Switcher: Faculty Roster vs Correction Requests */}
-      <div className="flex items-center justify-between border-b border-outline-variant/30 pb-1">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-outline-variant/30 pb-1 gap-2">
+        <div className="flex items-center gap-1 overflow-x-auto">
           <button
-            onClick={() => setActiveTab('roster')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl text-xs font-bold transition-all cursor-pointer border-b-2 ${
-              activeTab === 'roster'
+            onClick={() => { setActiveTab('roster'); setStaffCategory('ALL'); }}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-t-xl text-xs font-bold transition-all cursor-pointer border-b-2 shrink-0 ${
+              activeTab === 'roster' && staffCategory === 'ALL'
                 ? 'border-primary text-primary bg-primary/5'
                 : 'border-transparent text-on-surface-variant hover:text-on-surface'
             }`}
           >
-            <span className="material-symbols-outlined text-[18px]">groups</span>
-            <span>Faculty Roster ({teachers.length})</span>
+            <span className="material-symbols-outlined text-[17px]">groups</span>
+            <span>All Staff ({teachers.length})</span>
+          </button>
+
+          <button
+            onClick={() => { setActiveTab('roster'); setStaffCategory('TEACHING'); }}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-t-xl text-xs font-bold transition-all cursor-pointer border-b-2 shrink-0 ${
+              activeTab === 'roster' && staffCategory === 'TEACHING'
+                ? 'border-primary text-primary bg-primary/5'
+                : 'border-transparent text-on-surface-variant hover:text-on-surface'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[17px]">school</span>
+            <span>Teaching Faculty ({teachingCount})</span>
+          </button>
+
+          <button
+            onClick={() => { setActiveTab('roster'); setStaffCategory('NON_TEACHING'); }}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-t-xl text-xs font-bold transition-all cursor-pointer border-b-2 shrink-0 ${
+              activeTab === 'roster' && staffCategory === 'NON_TEACHING'
+                ? 'border-primary text-primary bg-primary/5'
+                : 'border-transparent text-on-surface-variant hover:text-on-surface'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[17px]">badge</span>
+            <span>Non-Teaching Staff ({nonTeachingCount})</span>
           </button>
 
           <button
             onClick={() => setActiveTab('corrections')}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-t-xl text-xs font-bold transition-all cursor-pointer border-b-2 ${
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-t-xl text-xs font-bold transition-all cursor-pointer border-b-2 shrink-0 ${
               activeTab === 'corrections'
                 ? 'border-primary text-primary bg-primary/5'
                 : 'border-transparent text-on-surface-variant hover:text-on-surface'
             }`}
           >
-            <span className="material-symbols-outlined text-[18px]">rule</span>
-            <span>Profile Correction Requests</span>
+            <span className="material-symbols-outlined text-[17px]">rule</span>
+            <span>Correction Requests</span>
             {pendingRequestsCount > 0 && (
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-500 text-white animate-pulse">
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-amber-500 text-white animate-pulse">
                 {pendingRequestsCount} Pending
               </span>
             )}

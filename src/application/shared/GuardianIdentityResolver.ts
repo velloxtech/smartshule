@@ -95,8 +95,47 @@ export class GuardianIdentityResolver {
       }
     }
 
+    // Resolve any sibling guardian accounts for this parent (e.g. same phone number across duplicate imports)
+    let siblingGuardians: Guardian[] = [];
+    if (effectivePhone) {
+      try {
+        const allG = await guardianRepository.findAll();
+        siblingGuardians = allG.filter((g: any) => 
+          g.id !== guardian!.id && PhoneUtils.areMatches(g.emergencyContact, effectivePhone)
+        );
+        for (const sg of siblingGuardians) {
+          const bySgStudents = await studentRepository.findByGuardianId(sg.id);
+          for (const s of bySgStudents) {
+            if (!linkedStudents.some(ls => ls.id === s.id)) {
+              linkedStudents.push(s);
+            }
+          }
+          if (sg.userId && sg.userId !== sg.id) {
+            const bySgUserStudents = await studentRepository.findByGuardianId(sg.userId);
+            for (const s of bySgUserStudents) {
+              if (!linkedStudents.some(ls => ls.id === s.id)) {
+                linkedStudents.push(s);
+              }
+            }
+          }
+          // Also check explicit studentIds on sibling guardian
+          if (Array.isArray(sg.studentIds)) {
+            for (const sid of sg.studentIds) {
+              const candidate = await studentRepository.findById(sid);
+              if (candidate && !linkedStudents.some(ls => ls.id === candidate.id)) {
+                linkedStudents.push(candidate);
+              }
+            }
+          }
+        }
+      } catch {}
+    }
+
     const isThisGuardian = (gid: string) =>
-      gid === guardian!.id || (Boolean(guardian!.userId) && gid === guardian!.userId) || gid === userId;
+      gid === guardian!.id || 
+      (Boolean(guardian!.userId) && gid === guardian!.userId) || 
+      gid === userId ||
+      siblingGuardians.some(sg => sg.id === gid || sg.userId === gid);
 
     // Filter to active learners
     let verifiedStudents = linkedStudents.filter(

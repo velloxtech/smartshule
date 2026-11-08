@@ -49,7 +49,29 @@ export type TabType =
   | 'fee-deadline-banner'
   | 'sponsored-students'
   | 'digital-signature'
-  | 'teacher-profile';
+  | 'document-signing'
+  | 'teacher-profile'
+  // Admissions & Enrolment tabs
+  | 'admissions-dashboard'
+  | 'admit-learner'
+  | 'new-applications'
+  | 'application-review'
+  | 'admission-assessments'
+  | 'admission-decisions'
+  | 'admission-offers'
+  | 'admission-enrolment'
+  | 'admission-reports'
+  | 'admission-settings'
+  // Staff Management tabs
+  | 'staff-directory'
+  | 'onboard-staff'
+  | 'teaching-staff'
+  | 'non-teaching-staff'
+  | 'staff-verifications'
+  // Consents & Salary Acknowledgement
+  | 'parent-consent'
+  | 'consent-management'
+  | 'salary-acknowledgement';
 
 export interface FeeBannerConfig {
   id: string;
@@ -971,7 +993,7 @@ export interface LessonPlan {
 
 export type RecordOfWorkStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'RETURNED';
 
-export type LearnerComprehension = 'EXCELLENT' | 'GOOD' | 'AVERAGE' | 'BELOW_AVERAGE' | 'POOR';
+export type LearnerComprehension = 'EXCELLENT' | 'GOOD' | 'AVERAGE' | 'BELOW_AVERAGE' | 'POOR' | 'NEEDS_REMEDIATION';
 
 export interface RecordOfWorkReflection {
   comprehensionLevel?: LearnerComprehension;
@@ -2218,8 +2240,95 @@ export interface PayrollRecord {
   reversedAt?: string;
   reversalReason?: string;
   notes?: string;
+  acknowledgedAt?: string;
+  acknowledgedByUserId?: string;
+  acknowledgementStatement?: string;
+  acknowledgementMethod?: string;
+  acknowledgementSignature?: string;
+  acknowledgementStatus?: 'UNACKNOWLEDGED' | 'AWAITING_ACKNOWLEDGEMENT' | 'ACKNOWLEDGED' | 'UNDER_REVIEW' | 'DISPUTED';
+  disputedAt?: string;
+  disputeReason?: string;
+  disputedByUserId?: string;
+  isPaid?: boolean;
+  canAcknowledge?: boolean;
+  canDispute?: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ParentConsentRequest {
+  id: string;
+  schoolId: string;
+  title: string;
+  category: 'TRIP' | 'MEDICAL' | 'MEDIA' | 'SPORTS' | 'TRANSPORT' | 'GENERAL' | string;
+  description?: string;
+  termsAndConditions: string;
+  version: number;
+  targetType: 'WHOLE_SCHOOL' | 'GRADE' | 'STREAM' | 'INDIVIDUAL';
+  targetClassIds?: string[];
+  targetStudentIds?: string[];
+  isMandatory: boolean;
+  deadline?: string;
+  status: 'DRAFT' | 'PUBLISHED' | 'EXPIRED' | 'ARCHIVED';
+  createdByUserId?: string;
+  createdByName?: string;
+  createdAt: string;
+  updatedAt: string;
+  metrics?: {
+    totalEligible: number;
+    totalResponded: number;
+    consentedCount: number;
+    declinedCount: number;
+    pendingCount: number;
+    responseRatePercentage: number;
+  };
+}
+
+export interface ParentConsentResponse {
+  id: string;
+  schoolId: string;
+  consentRequestId: string;
+  consentVersion: number;
+  studentId: string;
+  parentUserId: string;
+  parentGuardianId?: string;
+  parentName: string;
+  parentRelationship?: string;
+  parentNationalId?: string;
+  parentPhone?: string;
+  decision: 'CONSENTED' | 'DECLINED';
+  notes?: string;
+  signatureType: 'DRAWN' | 'TYPED' | 'UPLOADED' | 'SAVED_PROFILE';
+  signatureData?: string;
+  signatureHash?: string;
+  ipAddress?: string;
+  userAgent?: string;
+  submittedAt: string;
+  previousResponseId?: string;
+  isLatest: boolean;
+}
+
+export interface ParentConsentItem {
+  consentRequestId: string;
+  title: string;
+  category: string;
+  description?: string;
+  termsAndConditions: string;
+  version: number;
+  targetType: string;
+  isMandatory: boolean;
+  deadline?: string;
+  student: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    admissionNumber: string;
+    gradeLevel: string;
+    streamId?: string;
+  };
+  responseStatus: 'PENDING' | 'CONSENTED' | 'DECLINED' | 'OUTDATED_VERSION';
+  requiresResubmission: boolean;
+  latestResponse?: ParentConsentResponse | null;
 }
 
 export interface StaffLeave {
@@ -2726,7 +2835,6 @@ export interface OccurrenceDailySummary {
 
 export type WeekCoverageStatus = 'PENDING' | 'IN_PROGRESS' | 'COVERED' | 'DELAYED';
 export type DailyLessonStatus = 'TAUGHT' | 'PARTIALLY_TAUGHT' | 'POSTPONED' | 'REMEDIAL';
-export type LearnerComprehension = 'EXCELLENT' | 'GOOD' | 'AVERAGE' | 'NEEDS_REMEDIATION';
 
 export interface DailyReflection {
   comprehensionLevel: LearnerComprehension;

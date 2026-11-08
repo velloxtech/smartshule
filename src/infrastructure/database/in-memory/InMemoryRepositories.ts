@@ -26,7 +26,8 @@ import {
   PaymentFilterCriteria,
   ExpenseFilterCriteria,
   OtherIncomeFilterCriteria,
-  ReversalRequestFilterCriteria
+  ReversalRequestFilterCriteria,
+  BulkBillingBatchRecord
 } from '../../../core/ports/repositories/IFeeRepository';
 import {
   IMediaRepository,
@@ -949,6 +950,7 @@ export class InMemoryFeeRepository implements IFeeRepository {
   private expenses: Map<string, Expense> = new Map();
   private otherIncomes: Map<string, OtherIncome> = new Map();
   private reversalRequests: Map<string, TransactionReversalRequest> = new Map();
+  private bulkBillingBatches: Map<string, BulkBillingBatchRecord> = new Map();
   private lockQueues: Map<string, Promise<any>> = new Map();
 
   public async withLock<T>(key: string, operation: () => Promise<T>): Promise<T> {
@@ -1297,6 +1299,16 @@ export class InMemoryFeeRepository implements IFeeRepository {
         r => r.transactionId === transactionId && (r.status === 'PENDING_ADMIN_APPROVAL' || r.status === 'PROCESSING')
       ) || null
     );
+  }
+
+  public async saveBulkBillingBatch(batch: BulkBillingBatchRecord): Promise<void> {
+    this.bulkBillingBatches.set(batch.id, { ...batch });
+  }
+
+  public async findBulkBillingBatches(schoolId: string): Promise<BulkBillingBatchRecord[]> {
+    return Array.from(this.bulkBillingBatches.values())
+      .filter(b => b.schoolId === schoolId)
+      .sort((a, b) => ((b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0)));
   }
 }
 

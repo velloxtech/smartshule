@@ -26,7 +26,8 @@ import {
   PaymentFilterCriteria,
   ExpenseFilterCriteria,
   OtherIncomeFilterCriteria,
-  ReversalRequestFilterCriteria
+  ReversalRequestFilterCriteria,
+  BulkBillingBatchRecord
 } from '../../../core/ports/repositories/IFeeRepository';
 import { TransactionReversalRequest } from '../../../core/domain/finance/TransactionReversalRequest';
 import {
@@ -1520,14 +1521,17 @@ export class PostgresUserRepository implements IUserRepository {
     const subscriber = PhoneUtils.getSubscriberDigits(phone);
     if (subscriber.length >= 7) {
       const res = await this.pool.query(
-        "SELECT * FROM users WHERE RIGHT(regexp_replace(COALESCE(phone, ''), '[^0-9]', '', 'g'), 9) = $1 LIMIT 1",
+        "SELECT * FROM users WHERE RIGHT(regexp_replace(COALESCE(phone, ''), '[^0-9]', '', 'g'), 9) = $1 ORDER BY (email IS NOT NULL) DESC, updated_at DESC, created_at DESC LIMIT 1",
         [subscriber]
       );
       if (res.rows.length > 0) {
         return this.mapRow(res.rows[0]);
       }
     }
-    const res = await this.pool.query('SELECT * FROM users WHERE phone = $1 LIMIT 1', [phone.trim()]);
+    const res = await this.pool.query(
+      'SELECT * FROM users WHERE phone = $1 ORDER BY (email IS NOT NULL) DESC, updated_at DESC, created_at DESC LIMIT 1',
+      [phone.trim()]
+    );
     if (res.rows.length === 0) return null;
     return this.mapRow(res.rows[0]);
   }
@@ -1670,13 +1674,24 @@ export class PostgresStudentRepository implements IStudentRepository {
     return res.rows.length ? this.mapRow(res.rows[0]) : null;
   }
   public async findByGuardianId(guardianId: string): Promise<Student[]> {
-    const res = await this.pool.query(
-      `SELECT * FROM students 
-       WHERE (guardian_ids @> $1::jsonb OR guardian_ids::text LIKE $2)
-       ORDER BY created_at ASC`,
-      [JSON.stringify([guardianId]), `%"${guardianId}"%`]
-    );
-    return res.rows.map(r => this.mapRow(r));
+    try {
+      const res = await this.pool.query(
+        `SELECT DISTINCT s.* FROM students s 
+         LEFT JOIN student_parent_links spl ON spl.student_id = s.id
+         WHERE (s.guardian_ids @> $1::jsonb OR s.guardian_ids::text LIKE $2 OR spl.guardian_id = $3 OR spl.parent_user_id = $3)
+         ORDER BY s.created_at ASC`,
+        [JSON.stringify([guardianId]), `%"${guardianId}"%`, guardianId]
+      );
+      return res.rows.map(r => this.mapRow(r));
+    } catch {
+      const res = await this.pool.query(
+        `SELECT * FROM students 
+         WHERE (guardian_ids @> $1::jsonb OR guardian_ids::text LIKE $2)
+         ORDER BY created_at ASC`,
+        [JSON.stringify([guardianId]), `%"${guardianId}"%`]
+      );
+      return res.rows.map(r => this.mapRow(r));
+    }
   }
   public async findAll(filters?: StudentFilterCriteria): Promise<Student[]> {
     let q = 'SELECT * FROM students WHERE 1=1';
@@ -2037,12 +2052,19 @@ export class PostgresGuardianRepository implements IGuardianRepository {
     const subscriber = PhoneUtils.getSubscriberDigits(phone);
     if (subscriber.length >= 7) {
       const res = await this.pool.query(
-        "SELECT * FROM guardians WHERE RIGHT(regexp_replace(COALESCE(emergency_contact, ''), '[^0-9]', '', 'g'), 9) = $1 LIMIT 1",
+        `SELECT * FROM guardians 
+         WHERE RIGHT(regexp_replace(COALESCE(emergency_contact, ''), '[^0-9]', '', 'g'), 9) = $1 
+         ORDER BY jsonb_array_length(CASE WHEN jsonb_typeof(student_ids) = 'array' THEN student_ids ELSE '[]'::jsonb END) DESC, updated_at DESC LIMIT 1`,
         [subscriber]
       );
       if (res.rows.length > 0) return this.mapRow(res.rows[0]);
     }
-    const res = await this.pool.query('SELECT * FROM guardians WHERE emergency_contact = $1 LIMIT 1', [phone]);
+    const res = await this.pool.query(
+      `SELECT * FROM guardians 
+       WHERE emergency_contact = $1 
+       ORDER BY jsonb_array_length(CASE WHEN jsonb_typeof(student_ids) = 'array' THEN student_ids ELSE '[]'::jsonb END) DESC, updated_at DESC LIMIT 1`,
+      [phone]
+    );
     return res.rows.length ? this.mapRow(res.rows[0]) : null;
   }
   public async findAll(): Promise<Guardian[]> {
@@ -4229,6 +4251,77 @@ export class PostgresFeeRepository implements IFeeRepository {
     );
     if (!res.rows.length) return null;
     return this.mapReversalRow(res.rows[0]);
+  }
+
+  public async saveBulkBillingBatch(batch: BulkBillingBatchRecord): Promise<void> {
+    try {
+      await this.pool.query(
+        `INSERT INTO bulk_billing_batches (
+          id, school_id, academic_year_id, term_id, scope, target_grade_level,
+          total_eligible, total_generated, total_skipped, total_failed,
+          total_amount_billed, status, execution_summary, created_by_user_id,
+          created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+        ON CONFLICT (id) DO UPDATE SET
+          total_eligible = EXCLUDED.total_eligible,
+          total_generated = EXCLUDED.total_generated,
+          total_skipped = EXCLUDED.total_skipped,
+          total_failed = EXCLUDED.total_failed,
+          total_amount_billed = EXCLUDED.total_amount_billed,
+          status = EXCLUDED.status,
+          execution_summary = EXCLUDED.execution_summary,
+          updated_at = NOW()`,
+        [
+          batch.id,
+          batch.schoolId,
+          batch.academicYearId,
+          batch.termId,
+          batch.scope,
+          batch.targetGradeLevel || null,
+          batch.totalEligible,
+          batch.totalGenerated,
+          batch.totalSkipped,
+          batch.totalFailed,
+          batch.totalAmountBilled,
+          batch.status,
+          JSON.stringify(batch.executionSummary || {}),
+          batch.createdByUserId || null,
+          batch.createdAt || new Date(),
+          batch.updatedAt || new Date()
+        ]
+      );
+    } catch (err) {
+      console.error('Failed to save bulk billing batch record:', err);
+    }
+  }
+
+  public async findBulkBillingBatches(schoolId: string): Promise<BulkBillingBatchRecord[]> {
+    try {
+      const res = await this.pool.query(
+        `SELECT * FROM bulk_billing_batches WHERE school_id = $1 ORDER BY created_at DESC`,
+        [schoolId]
+      );
+      return res.rows.map(r => ({
+        id: r.id,
+        schoolId: r.school_id,
+        academicYearId: r.academic_year_id,
+        termId: r.term_id,
+        scope: r.scope,
+        targetGradeLevel: r.target_grade_level,
+        totalEligible: Number(r.total_eligible) || 0,
+        totalGenerated: Number(r.total_generated) || 0,
+        totalSkipped: Number(r.total_skipped) || 0,
+        totalFailed: Number(r.total_failed) || 0,
+        totalAmountBilled: Number(r.total_amount_billed) || 0,
+        status: r.status,
+        executionSummary: typeof r.execution_summary === 'string' ? JSON.parse(r.execution_summary) : (r.execution_summary || {}),
+        createdByUserId: r.created_by_user_id,
+        createdAt: r.created_at ? new Date(r.created_at) : undefined,
+        updatedAt: r.updated_at ? new Date(r.updated_at) : undefined
+      }));
+    } catch {
+      return [];
+    }
   }
 }
 

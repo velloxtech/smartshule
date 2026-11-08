@@ -153,7 +153,12 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
   const currentChildFee = currentChild?.fee;
   const isSponsored = Boolean(currentChild?.isSponsored || currentChild?.sponsorship || currentChild?.isChargeExempt || (currentChild as any)?.sponsorship);
   const feeBalance = isSponsored ? 0 : (currentChildFee?.balance || (currentChild as any)?.feeBalance || 0);
-  const isFeeCleared = isSponsored || feeBalance <= 0;
+  const hasInvoices = Boolean(
+    (currentChildFee?.invoices && currentChildFee.invoices.length > 0) ||
+    currentChildFee?.hasInvoices
+  );
+  const isUnbilled = !isSponsored && !hasInvoices && feeBalance === 0;
+  const isFeeCleared = isSponsored || isUnbilled || (hasInvoices && feeBalance <= 0);
   const arrearsAmount = isSponsored ? 0 : (currentChildFee?.arrearsAmount || (currentChild as any)?.priorArrears || 0);
   const feeBannerConfig: FeeBannerConfig | null = portalData?.feeBanner || null;
   const rawDueDate = feeBannerConfig?.deadlineDate || currentChildFee?.dueDate || currentChildFee?.invoices?.[0]?.dueDate || null;
@@ -539,6 +544,31 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
                 </button>
               </div>
             </div>
+          ) : isUnbilled ? (
+            <div className="bg-amber-500/10 border-2 border-amber-500/30 rounded-2xl p-4 sm:p-5 shadow-xs flex items-center justify-between gap-4 animate-fade-in">
+              <div className="flex items-center gap-3.5">
+                <div className="w-11 h-11 rounded-2xl bg-amber-500/20 text-amber-900 border border-amber-500/30 flex items-center justify-center font-bold shrink-0">
+                  <span className="material-symbols-outlined text-[26px]">hourglass_top</span>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-extrabold text-amber-950">
+                      Term Invoice Pending · Not Billed Yet
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-700 text-white">
+                      Status: Unbilled
+                    </span>
+                  </div>
+                  <p className="text-xs text-amber-900/80 mt-0.5">
+                    The school finance desk has not yet issued the term fee invoice for <strong>{currentChild.firstName}</strong>. No outstanding balance is due at this time.
+                  </p>
+                </div>
+              </div>
+              <div className="text-right hidden sm:block">
+                <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider block">Current Ledger Balance</span>
+                <span className="text-base font-black font-data-mono text-amber-800">KES 0 (Unbilled)</span>
+              </div>
+            </div>
           ) : feeBalance <= 0 ? (
             <div className="bg-emerald-500/10 border-2 border-emerald-500/30 rounded-2xl p-4 sm:p-5 shadow-xs flex items-center justify-between gap-4 animate-fade-in">
               <div className="flex items-center gap-3.5">
@@ -651,13 +681,15 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
 
             <div className="p-4 rounded-xl bg-surface-container-lowest border border-outline-variant/30 shadow-xs">
               <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
-                {isSponsored ? 'Fee Status' : feeBalance < 0 ? 'Account Credit / Overpayment' : 'Outstanding Balance'}
+                {isSponsored ? 'Fee Status' : isUnbilled ? 'Term Billing Status' : feeBalance < 0 ? 'Account Credit / Overpayment' : 'Outstanding Balance'}
               </span>
               <div className={`text-2xl font-bold font-data-mono mt-1 ${
-                isSponsored || feeBalance === 0 ? 'text-emerald-700' : feeBalance < 0 ? 'text-teal-700' : 'text-error'
+                isSponsored || (feeBalance === 0 && !isUnbilled) ? 'text-emerald-700' : isUnbilled ? 'text-amber-700' : feeBalance < 0 ? 'text-teal-700' : 'text-error'
               }`}>
                 {isSponsored
                   ? 'KES 0 (CLEARED)'
+                  : isUnbilled
+                  ? 'KES 0 (UNBILLED)'
                   : feeBalance < 0
                   ? `-KES ${Math.abs(feeBalance).toLocaleString()}`
                   : `KES ${feeBalance.toLocaleString()}`}
@@ -671,6 +703,10 @@ export const ParentDashboardView: React.FC<ParentDashboardViewProps> = ({
               {isSponsored ? (
                 <span className="text-[11px] text-emerald-800 font-bold mt-1 block">
                   100% Institutional Scholarship
+                </span>
+              ) : isUnbilled ? (
+                <span className="text-[11px] text-amber-800 font-medium mt-1 block">
+                  Term invoice pending / not generated yet
                 </span>
               ) : feeBalance < 0 ? (
                 <span className="text-[11px] text-teal-700 font-bold mt-1 block">
