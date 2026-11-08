@@ -3542,8 +3542,14 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
     const yearCache = new Map<string, any>();
     const termCache = new Map<string, any>();
 
+    // Batch preload unique students to eliminate N+1 queries
+    const uniqueStudentIds = [...new Set(invoices.map(i => i.studentId).filter(Boolean))];
+    const preloadedStudents = uniqueStudentIds.length > 0 ? await this.studentRepository.findByIds(uniqueStudentIds) : [];
+    const studentMap = new Map<string, Student>();
+    for (const s of preloadedStudents) studentMap.set(s.id, s);
+
     for (const inv of invoices) {
-      const student = await this.studentRepository.findById(inv.studentId);
+      const student = studentMap.get(inv.studentId);
       const invJson = inv.toJSON();
 
       let academicYearName: string | undefined = undefined;
@@ -6805,26 +6811,44 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
     const totalCollected = invoices.reduce((sum, inv) => sum + inv.amountPaid, 0);
     const collectionRatePercentage = totalInvoiced > 0 ? Math.round((totalCollected / totalInvoiced) * 100) : 0;
 
+    // Batch preload students, guardians, users, and sponsorships to eliminate N+1 queries
+    const allStudents = await this.studentRepository.findAll(schoolId ? { schoolId } : undefined);
+    const studentsMap = new Map<string, Student>();
+    for (const s of allStudents) studentsMap.set(s.id, s);
+
+    const allGuardians = await this.guardianRepository.findAll();
+    const studentToGuardianMap = new Map<string, any>();
+    for (const g of allGuardians) {
+      for (const sid of g.studentIds || []) {
+        if (!studentToGuardianMap.has(sid)) studentToGuardianMap.set(sid, g);
+      }
+    }
+
+    const allUsers = await this.userRepository.findAll();
+    const usersMap = new Map<string, any>();
+    for (const u of allUsers) usersMap.set(u.id, u);
+
+    const spMap = new Map<string, any>();
+    if (this.studentSponsorshipRepository) {
+      try {
+        const sponsorships = await this.studentSponsorshipRepository.findAll(schoolId ? { schoolId } : undefined);
+        for (const sp of sponsorships) {
+          if (sp.sponsorshipStatus === 'ACTIVE') spMap.set(sp.studentId, sp.toJSON());
+        }
+      } catch {}
+    }
+
     const defaulters = [];
     for (const inv of defaulterInvoices) {
-      const student = await this.studentRepository.findById(inv.studentId);
-      const guardians = student ? await this.guardianRepository.findByStudentId(student.id) : [];
-      const primaryGuardianUser = guardians.length > 0 ? await this.userRepository.findById(guardians[0].userId) : null;
-
-      let spJson: any = null;
-      if (this.studentSponsorshipRepository && student) {
-        try {
-          const sp = await this.studentSponsorshipRepository.findByStudentId(student.id);
-          if (sp && sp.sponsorshipStatus === 'ACTIVE') {
-            spJson = sp.toJSON();
-          }
-        } catch {}
-      }
-
+      const spJson = spMap.get(inv.studentId) || null;
       if (spJson) {
         // Sponsored learners have 100% fee waiver - exclude from defaulters
         continue;
       }
+
+      const student = studentsMap.get(inv.studentId);
+      const guardian = studentToGuardianMap.get(inv.studentId);
+      const primaryGuardianUser = guardian ? usersMap.get(guardian.userId) : null;
 
       defaulters.push({
         invoiceId: inv.id,
@@ -6837,9 +6861,9 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
         amountPaid: inv.amountPaid,
         balance: inv.balance,
         dueDate: inv.dueDate,
-        guardianContact: primaryGuardianUser ? { name: primaryGuardianUser.fullName, phone: primaryGuardianUser.phone } : null,
-        isSponsored: !!spJson,
-        sponsorship: spJson
+        guardianContact: primaryGuardianUser ? { name: primaryGuardianUser.fullName, phone: primaryGuardianUser.phone } : (guardian ? { name: 'Parent', phone: guardian.emergencyContact } : null),
+        isSponsored: false,
+        sponsorship: null
       });
     }
 
@@ -6882,8 +6906,13 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
     });
 
     const result = [];
+    const uniqueStudentIds = [...new Set(payments.map(p => p.studentId).filter(Boolean))];
+    const preloadedStudents = uniqueStudentIds.length > 0 ? await this.studentRepository.findByIds(uniqueStudentIds) : [];
+    const studentMap = new Map<string, Student>();
+    for (const s of preloadedStudents) studentMap.set(s.id, s);
+
     for (const p of payments) {
-      const student = await this.studentRepository.findById(p.studentId);
+      const student = studentMap.get(p.studentId);
       result.push({
         ...p.toJSON(),
         studentName: student ? student.fullName : 'Learner',
@@ -6934,8 +6963,10 @@ ${receipt.schoolName} Accounts Office | Tel: ${receipt.schoolPhone} | ${receipt.
     }
 
     // Case 2: Administrative / School View
-    const invoices = await this.feeRepository.findInvoices({ schoolId });
-    const payments = await this.feeRepository.findPayments({ schoolId });
+    const [invoices, payments] = await Promise.all([
+      this.feeRepository.findInvoices({ schoolId }),
+      this.feeRepository.findPayments({ schoolId })
+    ]);
 
     const activeInvoices = invoices.filter(
       i => (i.status as any) !== 'CARRIED_FORWARD' && (i.status as any) !== InvoiceStatus.CARRIED_FORWARD

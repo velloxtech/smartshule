@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { AppContainer } from '../../container';
 import { createAuthMiddleware, createOptionalAuthMiddleware, requireRoles } from '../middlewares/authMiddleware';
 import { validateBody } from '../middlewares/validateRequest';
+import { authLimiter, passwordResetLimiter, sensitiveFinanceLimiter } from '../middlewares/rateLimiter';
 import { UserRole, BILLING_AUTHORIZED_ROLES } from '../../../core/domain/user/User';
 
 import {
@@ -285,11 +286,11 @@ export function createApiRouter(container: AppContainer): Router {
   const authRouter = Router();
   authRouter.get('/setup-status', authController.getSetupStatus);
   authRouter.post('/register', validateBody(RegisterUserSchema), authController.register);
-  authRouter.post('/login', validateBody(LoginUserSchema), authController.login);
+  authRouter.post('/login', authLimiter, validateBody(LoginUserSchema), authController.login);
   authRouter.post('/refresh', validateBody(RefreshTokenSchema), authController.refresh);
   authRouter.get('/profile', authMiddleware, authController.getProfile);
   authRouter.post('/change-password', authMiddleware, validateBody(ChangePasswordSchema), authController.changePassword);
-  authRouter.post('/forgot-password', validateBody(ForgotPasswordSchema), authController.forgotPassword);
+  authRouter.post('/forgot-password', passwordResetLimiter, validateBody(ForgotPasswordSchema), authController.forgotPassword);
   authRouter.get('/verify-reset-token', authController.verifyResetToken);
   authRouter.post('/reset-password', validateBody(ResetPasswordSchema), authController.resetPassword);
   router.use('/auth', authRouter);
@@ -677,9 +678,9 @@ export function createApiRouter(container: AppContainer): Router {
   financeRouter.post('/structures/init-graceseed', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), financeController.initGraceSeedsStructures);
   financeRouter.get('/structures', authMiddleware, financeController.listFeeStructures);
   financeRouter.delete('/structures/:id', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), financeController.deleteFeeStructure);
-  financeRouter.post('/invoices/generate', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), validateBody(GenerateInvoicesSchema), financeController.generateInvoices);
+  financeRouter.post('/invoices/generate', authMiddleware, sensitiveFinanceLimiter, requireRoles(...BILLING_AUTHORIZED_ROLES), validateBody(GenerateInvoicesSchema), financeController.generateInvoices);
   financeRouter.post('/invoices/bulk/preview', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), financeController.previewBulkInvoices);
-  financeRouter.post('/invoices/bulk/execute', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), financeController.executeBulkInvoices);
+  financeRouter.post('/invoices/bulk/execute', authMiddleware, sensitiveFinanceLimiter, requireRoles(...BILLING_AUTHORIZED_ROLES), financeController.executeBulkInvoices);
   financeRouter.get('/invoices/bulk/history', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), financeController.getBulkBillingHistory);
   financeRouter.post('/invoices/individual', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), validateBody(CreateIndividualInvoiceSchema), financeController.createIndividualInvoice);
   financeRouter.post('/invoices/:id/issue', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), financeController.issueDraftInvoice);
@@ -691,8 +692,8 @@ export function createApiRouter(container: AppContainer): Router {
   financeRouter.get('/summary', authMiddleware, financeController.getFinanceSummary); // Parent vs Admin summary
   financeRouter.post('/payments/preview-allocation', authMiddleware, financeController.previewPaymentAllocation);
   financeRouter.get('/students/:studentId/payment-preview', authMiddleware, financeController.previewPaymentAllocation);
-  financeRouter.post('/payments', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), validateBody(RecordPaymentSchema), financeController.recordPayment);
-  financeRouter.post('/payments/:id/reverse', authMiddleware, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), validateBody(ReversePaymentSchema), financeController.reversePayment);
+  financeRouter.post('/payments', authMiddleware, sensitiveFinanceLimiter, requireRoles(...BILLING_AUTHORIZED_ROLES), validateBody(RecordPaymentSchema), financeController.recordPayment);
+  financeRouter.post('/payments/:id/reverse', authMiddleware, sensitiveFinanceLimiter, requireRoles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.HEAD_TEACHER), validateBody(ReversePaymentSchema), financeController.reversePayment);
   financeRouter.get('/payments', authMiddleware, financeController.listPayments); // Parent isolated
   financeRouter.get('/payments/:id/receipt', authMiddleware, financeController.getPaymentReceipt);
   financeRouter.post('/payments/:id/issue-receipt', authMiddleware, requireRoles(...BILLING_AUTHORIZED_ROLES), financeController.reissueReceipt);

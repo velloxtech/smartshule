@@ -195,9 +195,11 @@ export class DatabaseFactory {
       const pool = new Pool({ 
         connectionString,
         ssl: requiresSsl ? { rejectUnauthorized: false } : false,
-        connectionTimeoutMillis: 30000,
+        connectionTimeoutMillis: 10000,
         idleTimeoutMillis: 30000,
         max: 20,
+        statement_timeout: 15000,
+        query_timeout: 15000,
         keepAlive: true,
       });
 

@@ -1590,6 +1590,65 @@ export class PostgresDatabaseInitializer {
       ALTER TABLE payroll_records ADD COLUMN IF NOT EXISTS disputed_at TIMESTAMP WITH TIME ZONE;
       ALTER TABLE payroll_records ADD COLUMN IF NOT EXISTS dispute_reason TEXT;
       ALTER TABLE payroll_records ADD COLUMN IF NOT EXISTS disputed_by_user_id VARCHAR(100);
+
+      -- High-Performance Production Indexes
+      -- 1. Students & Enrollment
+      CREATE INDEX IF NOT EXISTS idx_students_school ON students(school_id);
+      CREATE INDEX IF NOT EXISTS idx_students_admission ON students(admission_number);
+      CREATE INDEX IF NOT EXISTS idx_students_grade_school ON students(school_id, grade_level);
+      CREATE INDEX IF NOT EXISTS idx_students_classroom ON students(classroom_id);
+      CREATE INDEX IF NOT EXISTS idx_students_stream ON students(stream_id);
+      CREATE INDEX IF NOT EXISTS idx_students_status ON students(status);
+      CREATE INDEX IF NOT EXISTS idx_students_upi ON students(upi_number);
+
+      -- 2. Student Invoices & Billing
+      CREATE INDEX IF NOT EXISTS idx_invoices_student ON student_invoices(student_id);
+      CREATE INDEX IF NOT EXISTS idx_invoices_school ON student_invoices(school_id);
+      CREATE INDEX IF NOT EXISTS idx_invoices_term_year ON student_invoices(academic_year_id, term_id);
+      CREATE INDEX IF NOT EXISTS idx_invoices_status ON student_invoices(status);
+      CREATE INDEX IF NOT EXISTS idx_invoices_due_date ON student_invoices(due_date);
+
+      -- 3. Payments & Receipts
+      CREATE INDEX IF NOT EXISTS idx_payments_student ON payments(student_id);
+      CREATE INDEX IF NOT EXISTS idx_payments_school ON payments(school_id);
+      CREATE INDEX IF NOT EXISTS idx_payments_invoice ON payments(invoice_id);
+      CREATE INDEX IF NOT EXISTS idx_payments_receipt ON payments(receipt_number);
+      CREATE INDEX IF NOT EXISTS idx_payments_tx_ref ON payments(transaction_reference);
+      CREATE INDEX IF NOT EXISTS idx_payments_date ON payments(payment_date);
+
+      -- 4. Users & Authentication
+      CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+      CREATE INDEX IF NOT EXISTS idx_users_school ON users(school_id);
+      CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+      CREATE INDEX IF NOT EXISTS idx_users_status ON users(status);
+
+      -- 5. Guardians & Teachers
+      CREATE INDEX IF NOT EXISTS idx_guardians_user ON guardians(user_id);
+      CREATE INDEX IF NOT EXISTS idx_guardians_national_id ON guardians(national_id);
+      CREATE INDEX IF NOT EXISTS idx_teachers_user ON teachers(user_id);
+      CREATE INDEX IF NOT EXISTS idx_teachers_emp_no ON teachers(employee_number);
+      CREATE INDEX IF NOT EXISTS idx_teachers_tsc_no ON teachers(tsc_number);
+
+      -- 6. CBC Assessments (Formative & Summative)
+      CREATE INDEX IF NOT EXISTS idx_formative_student ON formative_assessments(student_id);
+      CREATE INDEX IF NOT EXISTS idx_formative_teacher ON formative_assessments(teacher_id);
+      CREATE INDEX IF NOT EXISTS idx_formative_learning_area ON formative_assessments(learning_area_id);
+      CREATE INDEX IF NOT EXISTS idx_formative_term_year ON formative_assessments(academic_year_id, term_id);
+      CREATE INDEX IF NOT EXISTS idx_formative_sub_strand ON formative_assessments(sub_strand_id);
+      CREATE INDEX IF NOT EXISTS idx_summative_student ON summative_assessments(student_id);
+      CREATE INDEX IF NOT EXISTS idx_summative_teacher ON summative_assessments(teacher_id);
+      CREATE INDEX IF NOT EXISTS idx_summative_learning_area ON summative_assessments(learning_area_id);
+      CREATE INDEX IF NOT EXISTS idx_summative_term_year ON summative_assessments(academic_year_id, term_id);
+
+      -- 7. Attendance, Fees & School Operations
+      CREATE INDEX IF NOT EXISTS idx_attendance_school_date ON attendance_registers(school_id, date);
+      CREATE INDEX IF NOT EXISTS idx_attendance_class_stream ON attendance_registers(classroom_id, stream_id);
+      CREATE INDEX IF NOT EXISTS idx_attendance_term_year ON attendance_registers(academic_year_id, term_id);
+      CREATE INDEX IF NOT EXISTS idx_fee_struct_school_grade ON fee_structures(school_id, grade_level);
+      CREATE INDEX IF NOT EXISTS idx_fee_struct_year_term ON fee_structures(academic_year_id, term_id);
+      CREATE INDEX IF NOT EXISTS idx_expenses_school ON expenses(school_id);
+      CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(expense_date);
+      CREATE INDEX IF NOT EXISTS idx_expenses_category ON expenses(category);
     `).catch((err) => {
       console.warn('[PostgreSQL Init Warning] Error running supplemental migrations:', err?.message || err);
     });

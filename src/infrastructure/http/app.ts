@@ -4,10 +4,12 @@ import fs from 'fs';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import compression from 'compression';
 import { AppContainer } from '../container';
 import { createApiRouter } from './routes';
 import { errorHandler } from './middlewares/errorHandler';
 import { createAccountabilityMiddleware } from './middlewares/accountabilityMiddleware';
+import { generalApiLimiter } from './middlewares/rateLimiter';
 
 export function createExpressApp(container: AppContainer): Express {
   const app = express();
@@ -15,8 +17,31 @@ export function createExpressApp(container: AppContainer): Express {
   // Enable trust proxy for accurate client IP behind reverse proxies/load balancers
   app.set('trust proxy', true);
 
-  // Standard Middlewares
-  app.use(helmet({ contentSecurityPolicy: false }));
+  // Correlation ID tracking
+  app.use((req: Request, res: Response, next) => {
+    const correlationId = (req.headers['x-correlation-id'] as string) || `req_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    res.setHeader('X-Correlation-ID', correlationId);
+    (req as any).correlationId = correlationId;
+    next();
+  });
+
+  // Response Compression (threshold: 1KB)
+  app.use(compression({
+    threshold: 1024,
+    filter: (req, res) => {
+      if (req.headers['x-no-compression']) return false;
+      return compression.filter(req, res);
+    }
+  }));
+
+  // Production Security Headers via Helmet
+  app.use(helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+    xContentTypeOptions: true,
+    xFrameOptions: { action: 'sameorigin' },
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
+  }));
   const rawCors = process.env.CORS_ORIGIN || process.env.FRONTEND_URL || '*';
   const corsOrigin = rawCors === '*' ? '*' : rawCors.trim().replace(/\/+$/, '');
   const allowedOrigins = [
@@ -95,14 +120,37 @@ export function createExpressApp(container: AppContainer): Express {
     });
   });
 
-  // Health Check Endpoint
+  // Liveness Check Endpoint
   app.get('/health', (req: Request, res: Response) => {
     res.status(200).json({
       status: 'UP',
       service: 'SmartShule CBC School Management Backend',
       version: '1.0.0',
+      uptimeSeconds: Math.round(process.uptime()),
       timestamp: new Date().toISOString()
     });
+  });
+
+  // Readiness Check Endpoint (Verifies active database connectivity)
+  app.get('/health/ready', async (req: Request, res: Response) => {
+    try {
+      if ((container.academicRepository as any)?.pool?.query) {
+        await (container.academicRepository as any).pool.query('SELECT 1');
+      }
+      res.status(200).json({
+        status: 'READY',
+        service: 'SmartShule CBC School Management Backend',
+        database: 'CONNECTED',
+        uptimeSeconds: Math.round(process.uptime()),
+        timestamp: new Date().toISOString()
+      });
+    } catch {
+      res.status(503).json({
+        status: 'NOT_READY',
+        database: 'DISCONNECTED',
+        timestamp: new Date().toISOString()
+      });
+    }
   });
 
   // API Documentation Overview / Root
@@ -127,8 +175,8 @@ export function createExpressApp(container: AppContainer): Express {
     });
   });
 
-  // Register API Routes
-  app.use('/api/v1', createApiRouter(container));
+  // Register API Routes with General API Rate Limiter
+  app.use('/api/v1', generalApiLimiter, createApiRouter(container));
 
   // Serve Frontend production build if dist exists
   if (frontendDist) {

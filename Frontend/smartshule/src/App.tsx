@@ -1,77 +1,79 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import { TabType, Student, Teacher, SystemActivity, AssessmentRecord, FeeTransaction, UserRole } from './types';
 import { apiService } from './services/api';
 import { useAuth } from './context/AuthContext';
 import { isTabPermitted } from './utils/rbac';
 import { resolveStreamName, resolveGradeName, resolveTeacherAssignedClasses } from './utils/formatters';
+import { ViewLoadingSkeleton } from './components/common/ViewLoadingSkeleton';
 
-// Public & Auth Views
+// Public & Auth Views (Immediate eager loading)
 import { LandingPage } from './components/landing/LandingPage';
 import { LoginPage } from './components/auth/LoginPage';
-
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { DashboardView } from './components/views/DashboardView';
-import { SuperAdminDashboardView } from './components/views/SuperAdminDashboardView';
-import { HeadTeacherDashboardView } from './components/views/HeadTeacherDashboardView';
-import { DeputyDashboardView } from './components/views/DeputyDashboardView';
-import { AdmissionsDashboardView } from './components/views/AdmissionsDashboardView';
-import { AdmissionsEnrolmentHubView } from './components/views/AdmissionsEnrolmentHubView';
-import { BursarDashboardView } from './components/views/BursarDashboardView';
-import { TeacherDashboardView } from './components/views/TeacherDashboardView';
-import { ParentDashboardView } from './components/views/ParentDashboardView';
-import { StudentsView } from './components/views/StudentsView';
-import { OnboardQueueView } from './components/views/OnboardQueueView';
-import { SlotApplicationsView } from './components/views/SlotApplicationsView';
-import { TeachersView } from './components/views/TeachersView';
-import { GeofenceView } from './components/views/GeofenceView';
-import { ClassesView } from './components/views/ClassesView';
-import { LearningAreasView } from './components/views/LearningAreasView';
-import { AssessmentsView } from './components/views/AssessmentsView';
-import { FormativeAssessmentsView } from './components/views/FormativeAssessmentsView';
-import { SummativeAssessmentsView } from './components/views/SummativeAssessmentsView';
-import { StrandsView } from './components/views/StrandsView';
-import { ReportCardsView } from './components/views/ReportCardsView';
-import { CompetencyAnalyticsView } from './components/views/CompetencyAnalyticsView';
-import { SchemesView } from './components/views/SchemesView';
-import { TimetableView } from './components/views/TimetableView';
-import { AttendanceRegisterView } from './components/views/AttendanceRegisterView';
-import { FeeStructureView } from './components/views/FeeStructureView';
-import { InvoicesMpesaView } from './components/views/InvoicesMpesaView';
-import { CashFlowLedgerView } from './components/views/CashFlowLedgerView';
-import { ExpensesView } from './components/views/ExpensesView';
-import { FinancialReportsView } from './components/views/FinancialReportsView';
-import { EDiaryView } from './components/views/EDiaryView';
-import { VisualCBCView } from './components/views/VisualCBCView';
-import { WhatsAppBotView } from './components/views/WhatsAppBotView';
-import { UserManagementView } from './components/views/UserManagementView';
-import RecordsOfWorkView from './components/views/RecordsOfWorkView';
-import { SystemLogsView } from './components/views/SystemLogsView';
-import { ConcernsView } from './components/views/ConcernsView';
-import { LunchFeeManagementView } from './components/views/LunchFeeManagementView';
-import { ParentProfileView } from './components/views/ParentProfileView';
-import { StudentFeeCheckerView } from './components/views/StudentFeeCheckerView';
-import { ArrearsView } from './components/views/ArrearsView';
-import { ForwardedPaymentsView } from './components/views/ForwardedPaymentsView';
-import { ArchivedRecordsView } from './components/views/ArchivedRecordsView';
-import { StandaloneArchivedRecordsPage } from './components/views/StandaloneArchivedRecordsPage';
-import { LibraryView } from './components/views/LibraryView';
-import { AnnouncementsView } from './components/views/AnnouncementsView';
-import { PayrollManagementView } from './components/views/PayrollManagementView';
-import { ClinicManagementView } from './components/views/ClinicManagementView';
-import { InventoryManagementView } from './components/views/InventoryManagementView';
-import { DisciplineClubsView } from './components/views/DisciplineClubsView';
-import { MasterBroadsheetView } from './components/views/MasterBroadsheetView';
-import { OccurrenceBookView } from './components/views/OccurrenceBookView';
-import { CurriculumTrackerView } from './components/views/CurriculumTrackerView';
-import { FeeDeadlineBannerManagementView } from './components/views/FeeDeadlineBannerManagementView';
-import { SponsoredStudentsView } from './components/views/SponsoredStudentsView';
-import { MyDigitalSignatureView } from './components/views/MyDigitalSignatureView';
-import { DocumentSigningCenterView } from './components/views/DocumentSigningCenterView';
-import { TeacherProfileView } from './components/views/TeacherProfileView';
-import { ParentConsentView } from './components/views/ParentConsentView';
-import { AdminConsentManagementView } from './components/views/AdminConsentManagementView';
-import { TeacherSalaryAcknowledgementView } from './components/views/TeacherSalaryAcknowledgementView';
+
+// Route-Level Code Splitting (Lazy loaded views)
+const SuperAdminDashboardView = lazy(() => import('./components/views/SuperAdminDashboardView').then(m => ({ default: m.SuperAdminDashboardView })));
+const HeadTeacherDashboardView = lazy(() => import('./components/views/HeadTeacherDashboardView').then(m => ({ default: m.HeadTeacherDashboardView })));
+const DeputyDashboardView = lazy(() => import('./components/views/DeputyDashboardView').then(m => ({ default: m.DeputyDashboardView })));
+const AdmissionsDashboardView = lazy(() => import('./components/views/AdmissionsDashboardView').then(m => ({ default: m.AdmissionsDashboardView })));
+const AdmissionsEnrolmentHubView = lazy(() => import('./components/views/AdmissionsEnrolmentHubView').then(m => ({ default: m.AdmissionsEnrolmentHubView })));
+const BursarDashboardView = lazy(() => import('./components/views/BursarDashboardView').then(m => ({ default: m.BursarDashboardView })));
+const TeacherDashboardView = lazy(() => import('./components/views/TeacherDashboardView').then(m => ({ default: m.TeacherDashboardView })));
+const ParentDashboardView = lazy(() => import('./components/views/ParentDashboardView').then(m => ({ default: m.ParentDashboardView })));
+const StudentsView = lazy(() => import('./components/views/StudentsView').then(m => ({ default: m.StudentsView })));
+const OnboardQueueView = lazy(() => import('./components/views/OnboardQueueView').then(m => ({ default: m.OnboardQueueView })));
+const SlotApplicationsView = lazy(() => import('./components/views/SlotApplicationsView').then(m => ({ default: m.SlotApplicationsView })));
+const TeachersView = lazy(() => import('./components/views/TeachersView').then(m => ({ default: m.TeachersView })));
+const GeofenceView = lazy(() => import('./components/views/GeofenceView').then(m => ({ default: m.GeofenceView })));
+const ClassesView = lazy(() => import('./components/views/ClassesView').then(m => ({ default: m.ClassesView })));
+const LearningAreasView = lazy(() => import('./components/views/LearningAreasView').then(m => ({ default: m.LearningAreasView })));
+const AssessmentsView = lazy(() => import('./components/views/AssessmentsView').then(m => ({ default: m.AssessmentsView })));
+const FormativeAssessmentsView = lazy(() => import('./components/views/FormativeAssessmentsView').then(m => ({ default: m.FormativeAssessmentsView })));
+const SummativeAssessmentsView = lazy(() => import('./components/views/SummativeAssessmentsView').then(m => ({ default: m.SummativeAssessmentsView })));
+const StrandsView = lazy(() => import('./components/views/StrandsView').then(m => ({ default: m.StrandsView })));
+const ReportCardsView = lazy(() => import('./components/views/ReportCardsView').then(m => ({ default: m.ReportCardsView })));
+const CompetencyAnalyticsView = lazy(() => import('./components/views/CompetencyAnalyticsView').then(m => ({ default: m.CompetencyAnalyticsView })));
+const SchemesView = lazy(() => import('./components/views/SchemesView').then(m => ({ default: m.SchemesView })));
+const TimetableView = lazy(() => import('./components/views/TimetableView').then(m => ({ default: m.TimetableView })));
+const AttendanceRegisterView = lazy(() => import('./components/views/AttendanceRegisterView').then(m => ({ default: m.AttendanceRegisterView })));
+const FeeStructureView = lazy(() => import('./components/views/FeeStructureView').then(m => ({ default: m.FeeStructureView })));
+const InvoicesMpesaView = lazy(() => import('./components/views/InvoicesMpesaView').then(m => ({ default: m.InvoicesMpesaView })));
+const CashFlowLedgerView = lazy(() => import('./components/views/CashFlowLedgerView').then(m => ({ default: m.CashFlowLedgerView })));
+const ExpensesView = lazy(() => import('./components/views/ExpensesView').then(m => ({ default: m.ExpensesView })));
+const FinancialReportsView = lazy(() => import('./components/views/FinancialReportsView').then(m => ({ default: m.FinancialReportsView })));
+const EDiaryView = lazy(() => import('./components/views/EDiaryView').then(m => ({ default: m.EDiaryView })));
+const VisualCBCView = lazy(() => import('./components/views/VisualCBCView').then(m => ({ default: m.VisualCBCView })));
+const WhatsAppBotView = lazy(() => import('./components/views/WhatsAppBotView').then(m => ({ default: m.WhatsAppBotView })));
+const UserManagementView = lazy(() => import('./components/views/UserManagementView').then(m => ({ default: m.UserManagementView })));
+const RecordsOfWorkView = lazy(() => import('./components/views/RecordsOfWorkView'));
+const SystemLogsView = lazy(() => import('./components/views/SystemLogsView').then(m => ({ default: m.SystemLogsView })));
+const ConcernsView = lazy(() => import('./components/views/ConcernsView').then(m => ({ default: m.ConcernsView })));
+const LunchFeeManagementView = lazy(() => import('./components/views/LunchFeeManagementView').then(m => ({ default: m.LunchFeeManagementView })));
+const ParentProfileView = lazy(() => import('./components/views/ParentProfileView').then(m => ({ default: m.ParentProfileView })));
+const StudentFeeCheckerView = lazy(() => import('./components/views/StudentFeeCheckerView').then(m => ({ default: m.StudentFeeCheckerView })));
+const ArrearsView = lazy(() => import('./components/views/ArrearsView').then(m => ({ default: m.ArrearsView })));
+const ForwardedPaymentsView = lazy(() => import('./components/views/ForwardedPaymentsView').then(m => ({ default: m.ForwardedPaymentsView })));
+const ArchivedRecordsView = lazy(() => import('./components/views/ArchivedRecordsView').then(m => ({ default: m.ArchivedRecordsView })));
+const StandaloneArchivedRecordsPage = lazy(() => import('./components/views/StandaloneArchivedRecordsPage').then(m => ({ default: m.StandaloneArchivedRecordsPage })));
+const LibraryView = lazy(() => import('./components/views/LibraryView').then(m => ({ default: m.LibraryView })));
+const AnnouncementsView = lazy(() => import('./components/views/AnnouncementsView').then(m => ({ default: m.AnnouncementsView })));
+const PayrollManagementView = lazy(() => import('./components/views/PayrollManagementView').then(m => ({ default: m.PayrollManagementView })));
+const ClinicManagementView = lazy(() => import('./components/views/ClinicManagementView').then(m => ({ default: m.ClinicManagementView })));
+const InventoryManagementView = lazy(() => import('./components/views/InventoryManagementView').then(m => ({ default: m.InventoryManagementView })));
+const DisciplineClubsView = lazy(() => import('./components/views/DisciplineClubsView').then(m => ({ default: m.DisciplineClubsView })));
+const MasterBroadsheetView = lazy(() => import('./components/views/MasterBroadsheetView').then(m => ({ default: m.MasterBroadsheetView })));
+const OccurrenceBookView = lazy(() => import('./components/views/OccurrenceBookView').then(m => ({ default: m.OccurrenceBookView })));
+const CurriculumTrackerView = lazy(() => import('./components/views/CurriculumTrackerView').then(m => ({ default: m.CurriculumTrackerView })));
+const FeeDeadlineBannerManagementView = lazy(() => import('./components/views/FeeDeadlineBannerManagementView').then(m => ({ default: m.FeeDeadlineBannerManagementView })));
+const SponsoredStudentsView = lazy(() => import('./components/views/SponsoredStudentsView').then(m => ({ default: m.SponsoredStudentsView })));
+const MyDigitalSignatureView = lazy(() => import('./components/views/MyDigitalSignatureView').then(m => ({ default: m.MyDigitalSignatureView })));
+const DocumentSigningCenterView = lazy(() => import('./components/views/DocumentSigningCenterView').then(m => ({ default: m.DocumentSigningCenterView })));
+const TeacherProfileView = lazy(() => import('./components/views/TeacherProfileView').then(m => ({ default: m.TeacherProfileView })));
+const ParentConsentView = lazy(() => import('./components/views/ParentConsentView').then(m => ({ default: m.ParentConsentView })));
+const AdminConsentManagementView = lazy(() => import('./components/views/AdminConsentManagementView').then(m => ({ default: m.AdminConsentManagementView })));
+const TeacherSalaryAcknowledgementView = lazy(() => import('./components/views/TeacherSalaryAcknowledgementView').then(m => ({ default: m.TeacherSalaryAcknowledgementView })));
 
 // Modals
 import { RecordPaymentModal } from './components/modals/RecordPaymentModal';
@@ -983,8 +985,9 @@ export default function App() {
           </div>
         )}
 
-        {/* Dynamic Route Content */}
+        {/* Dynamic Route Content with Suspense Loading Skeleton */}
         <main className="flex-1 px-4 sm:px-6 lg:px-8 pt-4 pb-12 max-w-7xl w-full mx-auto print:p-0 print:m-0 print:max-w-none print:w-full">
+          <Suspense fallback={<ViewLoadingSkeleton />}>
           {currentTab === 'dashboard' && (
             (() => {
               if (isStaffWithChildren && activeViewMode === 'PARENT') {
@@ -1434,6 +1437,7 @@ export default function App() {
           {currentTab === 'curriculum-tracker' && (
             <CurriculumTrackerView onNavigateTab={(tab) => setCurrentTab(tab as any)} />
           )}
+          </Suspense>
         </main>
 
         {/* Global Portal Footer: Pure Maroon (#800000) & Vellox Tech Watermark */}

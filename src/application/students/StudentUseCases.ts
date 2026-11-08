@@ -1208,6 +1208,13 @@ export class StudentUseCases {
     }
 
     const userCache = new Map<string, any>();
+    try {
+      const usersList = await this.userRepository.findAll();
+      for (const u of usersList) {
+        userCache.set(u.id, u.toJSON());
+      }
+    } catch {}
+
     const getUser = async (userId: string) => {
       if (!userId) return null;
       if (userCache.has(userId)) return userCache.get(userId);
@@ -1220,6 +1227,19 @@ export class StudentUseCases {
     const classCache = new Map<string, any>();
     const streamCache = new Map<string, any>();
     const yearCache = new Map<string, any>();
+
+    if (this.academicRepository) {
+      try {
+        const [classes, streams, years] = await Promise.all([
+          this.academicRepository.findAllClasses().catch(() => []),
+          this.academicRepository.findAllStreams().catch(() => []),
+          this.academicRepository.findAllYears().catch(() => [])
+        ]);
+        for (const c of classes) classCache.set(c.id, c);
+        for (const s of streams) streamCache.set(s.id, s);
+        for (const y of years) yearCache.set(y.id, y);
+      } catch {}
+    }
 
     // Load fee balances for students if fee repository is available
     const studentFeeMap = new Map<string, { balance: number; billed: number; paid: number; priorArrears: number }>();
@@ -1350,7 +1370,7 @@ export class StudentUseCases {
 
         // 1. Check student.guardianIds
         for (const gid of s.guardianIds || []) {
-          const g = guardianMap.get(gid) || (await this.guardianRepository.findById(gid));
+          const g = guardianMap.get(gid);
           if (g && !linkedGuardians.some(x => x.id === g.id)) {
             linkedGuardians.push(g);
           }
@@ -1361,16 +1381,6 @@ export class StudentUseCases {
         for (const g of reverseLinked) {
           if (!linkedGuardians.some(x => x.id === g.id)) {
             linkedGuardians.push(g);
-          }
-        }
-
-        // 3. Fallback to findByStudentId if none found yet
-        if (linkedGuardians.length === 0) {
-          const found = await this.guardianRepository.findByStudentId(s.id);
-          for (const g of found) {
-            if (!linkedGuardians.some(x => x.id === g.id)) {
-              linkedGuardians.push(g);
-            }
           }
         }
 

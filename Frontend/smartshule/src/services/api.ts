@@ -194,35 +194,100 @@ const getHeaders = () => {
   return headers;
 };
 
-async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
-  const res = await fetch(url, {
-    ...options,
-    headers: {
-      ...getHeaders(),
-      ...(options.headers || {}),
-    },
-  });
+const inFlightRequests = new Map<string, Promise<any>>();
+const apiCache = new Map<string, { timestamp: number; data: any }>();
+const CACHE_TTL_MS = 30_000; // 30 seconds for static metadata
 
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    let detailsMsg = '';
-    if (errorData.error?.details) {
-      if (Array.isArray(errorData.error.details)) {
-        detailsMsg = errorData.error.details.map((d: any) => d.message || JSON.stringify(d)).join('; ');
-      } else if (typeof errorData.error.details === 'string') {
-        detailsMsg = errorData.error.details;
+export function clearApiCache(endpointPrefix?: string) {
+  if (!endpointPrefix) {
+    apiCache.clear();
+  } else {
+    for (const key of apiCache.keys()) {
+      if (key.includes(endpointPrefix)) {
+        apiCache.delete(key);
       }
     }
-    const message =
-      detailsMsg ||
-      errorData.error?.message ||
-      errorData.message ||
-      `API Error: ${res.status}`;
-    throw new Error(message);
+  }
+}
+
+async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  const method = (options.method || 'GET').toUpperCase();
+  const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
+
+  // On any mutating request, clear relevant cache so user never sees stale data
+  if (method !== 'GET') {
+    clearApiCache();
   }
 
-  return res.json();
+  // Check cache for eligible GET metadata endpoints
+  const isCacheable = method === 'GET' && (
+    endpoint.includes('/academics/context') ||
+    endpoint.includes('/academics/classes') ||
+    endpoint.includes('/academics/streams') ||
+    endpoint.includes('/academics/learning-areas') ||
+    endpoint.includes('/schools')
+  );
+
+  if (isCacheable) {
+    const cached = apiCache.get(url);
+    if (cached && (Date.now() - cached.timestamp < CACHE_TTL_MS)) {
+      return cached.data as T;
+    }
+  }
+
+  // In-flight deduplication: collapse simultaneous identical GET requests into 1 network call
+  if (method === 'GET') {
+    const activePromise = inFlightRequests.get(url);
+    if (activePromise) {
+      return activePromise as Promise<T>;
+    }
+  }
+
+  const fetchPromise = (async () => {
+    try {
+      const res = await fetch(url, {
+        ...options,
+        headers: {
+          ...getHeaders(),
+          ...(options.headers || {}),
+        },
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        let detailsMsg = '';
+        if (errorData.error?.details) {
+          if (Array.isArray(errorData.error.details)) {
+            detailsMsg = errorData.error.details.map((d: any) => d.message || JSON.stringify(d)).join('; ');
+          } else if (typeof errorData.error.details === 'string') {
+            detailsMsg = errorData.error.details;
+          }
+        }
+        const message =
+          detailsMsg ||
+          errorData.error?.message ||
+          errorData.message ||
+          `API Error: ${res.status}`;
+        throw new Error(message);
+      }
+
+      const json = await res.json();
+      if (isCacheable) {
+        apiCache.set(url, { timestamp: Date.now(), data: json });
+      }
+      return json;
+    } finally {
+      if (method === 'GET') {
+        inFlightRequests.delete(url);
+      }
+    }
+  })();
+
+  if (method === 'GET') {
+    inFlightRequests.set(url, fetchPromise);
+  }
+
+  return fetchPromise;
 }
 
 export interface ClassTeacherAssignmentItem {

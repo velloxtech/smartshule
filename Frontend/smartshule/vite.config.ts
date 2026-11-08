@@ -36,6 +36,32 @@ export default defineConfig(() => {
         },
       },
     },
+    build: {
+      chunkSizeWarningLimit: 1000,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules')) {
+              if (id.includes('jspdf') || id.includes('html2canvas') || id.includes('jspdf-autotable')) {
+                return 'pdf-vendor';
+              }
+              if (id.includes('lucide-react')) {
+                return 'lucide-icons';
+              }
+              if (id.includes('motion')) {
+                return 'framer-motion';
+              }
+              if (id.includes('@google/genai')) {
+                return 'genai-vendor';
+              }
+              if (id.includes('react') || id.includes('react-dom') || id.includes('scheduler')) {
+                return 'react-vendor';
+              }
+            }
+          }
+        }
+      }
+    },
     preview: {
       port: 5173,
       host: '0.0.0.0',
