@@ -1477,7 +1477,122 @@ export class PostgresDatabaseInitializer {
       ALTER TABLE CBC_report_cards ADD COLUMN IF NOT EXISTS total_marks NUMERIC;
       ALTER TABLE CBC_report_cards ADD COLUMN IF NOT EXISTS mean_points NUMERIC;
       ALTER TABLE CBC_report_cards ADD COLUMN IF NOT EXISTS mean_grade VARCHAR(10);
-    `).catch(() => {});
+
+      -- Student withdrawal metadata
+      ALTER TABLE students ADD COLUMN IF NOT EXISTS withdrawal_date VARCHAR(30);
+      ALTER TABLE students ADD COLUMN IF NOT EXISTS withdrawal_reason TEXT;
+      ALTER TABLE students ADD COLUMN IF NOT EXISTS destination_school VARCHAR(255);
+      ALTER TABLE students ADD COLUMN IF NOT EXISTS withdrawn_by_user_id VARCHAR(100);
+      ALTER TABLE students ADD COLUMN IF NOT EXISTS withdrawal_notes TEXT;
+
+      -- Deleted students archive metadata
+      ALTER TABLE deleted_students ADD COLUMN IF NOT EXISTS retention_policy_years INT DEFAULT 7;
+      ALTER TABLE deleted_students ADD COLUMN IF NOT EXISTS retention_expires_at TIMESTAMP WITHOUT TIME ZONE;
+      ALTER TABLE deleted_students ADD COLUMN IF NOT EXISTS archived_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW();
+
+      -- Lunch program enhancements
+      ALTER TABLE lunch_enrollments ADD COLUMN IF NOT EXISTS payment_frequency VARCHAR(20) DEFAULT 'TERMLY';
+      ALTER TABLE lunch_enrollments ADD COLUMN IF NOT EXISTS daily_rate NUMERIC DEFAULT 0;
+      ALTER TABLE lunch_payments ADD COLUMN IF NOT EXISTS is_reversed BOOLEAN DEFAULT FALSE;
+      ALTER TABLE lunch_payments ADD COLUMN IF NOT EXISTS reversed_at TIMESTAMP WITHOUT TIME ZONE;
+      ALTER TABLE lunch_payments ADD COLUMN IF NOT EXISTS reversed_by_user_id VARCHAR(255);
+      ALTER TABLE lunch_payments ADD COLUMN IF NOT EXISTS reversal_reason TEXT;
+      ALTER TABLE lunch_payments ADD COLUMN IF NOT EXISTS reversal_audit_metadata JSONB;
+      ALTER TABLE lunch_payments ADD COLUMN IF NOT EXISTS idempotency_key VARCHAR(255);
+
+      -- Student parent normalized links
+      CREATE TABLE IF NOT EXISTS student_parent_links (
+          id VARCHAR(100) PRIMARY KEY,
+          school_id VARCHAR(100) NOT NULL REFERENCES schools(id) ON DELETE CASCADE,
+          parent_user_id VARCHAR(100) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          guardian_id VARCHAR(100) REFERENCES guardians(id) ON DELETE SET NULL,
+          student_id VARCHAR(100) NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+          relationship_type VARCHAR(50) DEFAULT 'PARENT',
+          is_primary BOOLEAN DEFAULT true,
+          can_view_academics BOOLEAN DEFAULT true,
+          can_view_finances BOOLEAN DEFAULT true,
+          created_by_user_id VARCHAR(100),
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT uq_student_parent_link UNIQUE (school_id, parent_user_id, student_id)
+      );
+      CREATE INDEX IF NOT EXISTS idx_student_parent_links_parent ON student_parent_links(parent_user_id);
+      CREATE INDEX IF NOT EXISTS idx_student_parent_links_student ON student_parent_links(student_id);
+
+      -- Bulk billing batches
+      CREATE TABLE IF NOT EXISTS bulk_billing_batches (
+          id VARCHAR(100) PRIMARY KEY,
+          school_id VARCHAR(100) NOT NULL REFERENCES schools(id) ON DELETE CASCADE,
+          academic_year_id VARCHAR(100) NOT NULL,
+          term_id VARCHAR(100) NOT NULL,
+          scope VARCHAR(50) NOT NULL,
+          target_grade_level VARCHAR(50),
+          total_eligible INT DEFAULT 0,
+          total_generated INT DEFAULT 0,
+          total_skipped INT DEFAULT 0,
+          total_failed INT DEFAULT 0,
+          total_amount_billed NUMERIC(15, 2) DEFAULT 0,
+          status VARCHAR(50) DEFAULT 'COMPLETED',
+          execution_summary JSONB DEFAULT '{}'::jsonb,
+          created_by_user_id VARCHAR(100),
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- Parent consent requests and immutable responses
+      CREATE TABLE IF NOT EXISTS parent_consent_requests (
+          id VARCHAR(100) PRIMARY KEY,
+          school_id VARCHAR(100) NOT NULL REFERENCES schools(id) ON DELETE CASCADE,
+          title VARCHAR(255) NOT NULL,
+          category VARCHAR(50) NOT NULL DEFAULT 'GENERAL',
+          description TEXT,
+          terms_and_conditions TEXT NOT NULL,
+          version INT NOT NULL DEFAULT 1,
+          target_type VARCHAR(50) NOT NULL DEFAULT 'WHOLE_SCHOOL',
+          target_class_ids JSONB DEFAULT '[]'::jsonb,
+          target_student_ids JSONB DEFAULT '[]'::jsonb,
+          is_mandatory BOOLEAN NOT NULL DEFAULT true,
+          deadline TIMESTAMP WITH TIME ZONE,
+          status VARCHAR(50) NOT NULL DEFAULT 'PUBLISHED',
+          created_by_user_id VARCHAR(100),
+          created_by_name VARCHAR(255),
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS parent_consent_responses (
+          id VARCHAR(100) PRIMARY KEY,
+          school_id VARCHAR(100) NOT NULL REFERENCES schools(id) ON DELETE CASCADE,
+          consent_request_id VARCHAR(100) NOT NULL REFERENCES parent_consent_requests(id) ON DELETE CASCADE,
+          consent_version INT NOT NULL DEFAULT 1,
+          student_id VARCHAR(100) NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+          parent_user_id VARCHAR(100) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          parent_guardian_id VARCHAR(100),
+          parent_name VARCHAR(255) NOT NULL,
+          parent_relationship VARCHAR(50) DEFAULT 'PARENT',
+          parent_national_id VARCHAR(50),
+          parent_phone VARCHAR(50),
+          decision VARCHAR(50) NOT NULL,
+          notes TEXT,
+          signature_type VARCHAR(50) DEFAULT 'DRAWN',
+          signature_data TEXT,
+          signature_hash VARCHAR(128),
+          ip_address VARCHAR(100),
+          user_agent TEXT,
+          submitted_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          previous_response_id VARCHAR(100),
+          is_latest BOOLEAN NOT NULL DEFAULT true,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+
+      -- Payroll dispute columns
+      ALTER TABLE payroll_records ADD COLUMN IF NOT EXISTS disputed_at TIMESTAMP WITH TIME ZONE;
+      ALTER TABLE payroll_records ADD COLUMN IF NOT EXISTS dispute_reason TEXT;
+      ALTER TABLE payroll_records ADD COLUMN IF NOT EXISTS disputed_by_user_id VARCHAR(100);
+    `).catch((err) => {
+      console.warn('[PostgreSQL Init Warning] Error running supplemental migrations:', err?.message || err);
+    });
 
     console.log('[PostgreSQL] Database tables initialized successfully.');
   }
@@ -1539,7 +1654,7 @@ export class PostgresUserRepository implements IUserRepository {
   public async findAll(filters?: { schoolId?: string; role?: string }): Promise<User[]> {
     let q = 'SELECT * FROM users WHERE 1=1';
     const params: any[] = [];
-    if (filters?.schoolId) { params.push(filters.schoolId); q += ` AND school_id = $${params.length}`; }
+    if (filters?.schoolId) { params.push(filters.schoolId); q += ` AND (school_id = $${params.length} OR school_id IS NULL OR school_id = '')`; }
     if (filters?.role) { params.push(filters.role); q += ` AND role = $${params.length}`; }
     const res = await this.pool.query(q, params);
     return res.rows.map(r => this.mapRow(r));
