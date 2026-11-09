@@ -1,4 +1,8 @@
 import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
+import { App as CapApp } from '@capacitor/app';
+import { StatusBar, Style } from '@capacitor/status-bar';
+import { SplashScreen } from '@capacitor/splash-screen';
+import { Network } from '@capacitor/network';
 import { TabType, Student, Teacher, SystemActivity, AssessmentRecord, FeeTransaction, UserRole } from './types';
 import { apiService } from './services/api';
 import { useAuth } from './context/AuthContext';
@@ -168,6 +172,108 @@ export default function App() {
   const [backendConnected, setBackendConnected] = useState(false);
   const [currentContext, setCurrentContext] = useState<any>(null);
   const [school, setSchool] = useState<any>(null);
+
+  // Native Capacitor Status Bar, Splash Screen & Network Handling
+  useEffect(() => {
+    let networkListener: any = null;
+    const initNativeFeatures = async () => {
+      try {
+        await StatusBar.setStyle({ style: Style.Dark });
+        await StatusBar.setBackgroundColor({ color: '#7b1c35' });
+      } catch {}
+      try {
+        await SplashScreen.hide();
+      } catch {}
+      try {
+        networkListener = await Network.addListener('networkStatusChange', (status) => {
+          if (!status.connected) {
+            showToast('Network disconnected. Check your internet connection.', 'error');
+          } else {
+            showToast('Network connection restored.', 'success');
+          }
+        });
+      } catch {}
+    };
+
+    initNativeFeatures();
+
+    return () => {
+      if (networkListener) {
+        networkListener.remove?.();
+      }
+    };
+  }, [showToast]);
+
+  // Native Android Hardware Back Button Navigation Handling
+  useEffect(() => {
+    let backListener: any = null;
+    const setupBackHandler = async () => {
+      try {
+        backListener = await CapApp.addListener('backButton', () => {
+          // 1. Close open modal dialogs
+          if (changePasswordModalOpen) { setChangePasswordModalOpen(false); return; }
+          if (legalModalOpen) { setLegalModalOpen(false); return; }
+          if (academicTermsModalOpen) { setAcademicTermsModalOpen(false); return; }
+          if (onboardTeacherModalOpen) { setOnboardTeacherModalOpen(false); return; }
+          if (recordPaymentModalOpen) { setRecordPaymentModalOpen(false); return; }
+          if (forwardPaymentModalOpen) { setForwardPaymentModalOpen(false); return; }
+          if (CBCModalOpen) { setCBCModalOpen(false); return; }
+          if (admitModalOpen) { setAdmitModalOpen(false); return; }
+          if (smsModalOpen) { setSmsModalOpen(false); return; }
+          if (exportReportModalOpen) { setExportReportModalOpen(false); return; }
+          if (uploadMarksModalOpen) { setUploadMarksModalOpen(false); return; }
+          if (createLessonPlanModalOpen) { setCreateLessonPlanModalOpen(false); return; }
+          if (createSchemeModalOpen) { setCreateSchemeModalOpen(false); return; }
+
+          // 2. Close mobile drawer sidebar
+          if (mobileSidebarOpen) {
+            setMobileSidebarOpen(false);
+            return;
+          }
+
+          // 3. Return to Dashboard if inside portal on a sub-tab
+          if (appView === 'portal' && currentTab !== 'dashboard') {
+            setCurrentTab('dashboard');
+            return;
+          }
+
+          // 4. Return to landing from login or archive
+          if (appView === 'login' || appView === 'archive') {
+            setAppView('landing');
+            return;
+          }
+
+          // 5. Exit application if on root screen
+          CapApp.exitApp();
+        });
+      } catch {}
+    };
+
+    setupBackHandler();
+
+    return () => {
+      if (backListener) {
+        backListener.remove?.();
+      }
+    };
+  }, [
+    changePasswordModalOpen,
+    legalModalOpen,
+    academicTermsModalOpen,
+    onboardTeacherModalOpen,
+    recordPaymentModalOpen,
+    forwardPaymentModalOpen,
+    CBCModalOpen,
+    admitModalOpen,
+    smsModalOpen,
+    exportReportModalOpen,
+    uploadMarksModalOpen,
+    createLessonPlanModalOpen,
+    createSchemeModalOpen,
+    mobileSidebarOpen,
+    appView,
+    currentTab,
+  ]);
 
   // Synchronize view state with authentication status
   useEffect(() => {

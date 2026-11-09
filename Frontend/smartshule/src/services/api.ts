@@ -121,6 +121,18 @@ function resolveApiBaseUrl(): string {
   // Remove trailing slashes
   url = url.replace(/\/+$/, '');
 
+  // Detect native Capacitor or WebView container environment
+  const isCapacitorNative = typeof window !== 'undefined' && Boolean(
+    (window as any).Capacitor?.isNativePlatform?.() ||
+    window.location.protocol === 'capacitor:' ||
+    (window.location.hostname === 'localhost' && window.location.protocol === 'https:' && !window.location.port)
+  );
+
+  // If running inside Capacitor mobile native app and no explicit external URL was provided
+  if (isCapacitorNative && (!url || url === '/api/v1' || url.startsWith('/'))) {
+    return 'https://smartshule-vg15.onrender.com/api/v1';
+  }
+
   // If running on legacy Render static hosting and no explicit full URL is set, fallback to companion backend
   if (!url || url === '/api/v1') {
     if (typeof window !== 'undefined' && window.location.hostname === 'smartshule-1.onrender.com') {
@@ -133,6 +145,8 @@ function resolveApiBaseUrl(): string {
 }
 
 const API_BASE_URL = resolveApiBaseUrl();
+
+export const getApiBaseUrl = (): string => API_BASE_URL;
 
 let authToken: string | null = localStorage.getItem('smartshule_token') || null;
 

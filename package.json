@@ -21,7 +21,10 @@
     "db:switch": "ts-node scripts/db-switch.ts",
     "db:status": "ts-node scripts/db-switch.ts status",
     "db:local": "ts-node scripts/db-switch.ts local",
-    "db:online": "ts-node scripts/db-switch.ts online"
+    "db:online": "ts-node scripts/db-switch.ts online",
+    "cap:sync": "npm --prefix Frontend/smartshule run cap:sync",
+    "cap:build": "npm --prefix Frontend/smartshule run cap:build",
+    "cap:open": "npm --prefix Frontend/smartshule run cap:open"
   },
   "keywords": [
     "school-management",

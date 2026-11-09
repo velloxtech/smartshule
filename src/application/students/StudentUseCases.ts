@@ -2292,23 +2292,27 @@ export class StudentUseCases {
           };
         }
 
-        let attendanceStats = { attendanceRate: 100, todayStatus: 'PRESENT' };
+        let attendanceStats = { attendanceRate: 0, todayStatus: 'NOT_RECORDED' };
         if (this.attendanceRepository) {
           const registers = await this.attendanceRepository.findRegisters({ schoolId: s.schoolId });
           let totalMarked = 0;
           let presentCount = 0;
-          let latestToday = 'PRESENT';
+          let todayStatus = 'NOT_RECORDED';
+          const todayIso = new Date().toISOString().split('T')[0];
           for (const reg of registers) {
+            const regDate = typeof reg.date === 'string' ? reg.date.split('T')[0] : ((reg.date as any) instanceof Date ? (reg.date as any).toISOString().split('T')[0] : String(reg.date));
             const entry = reg.entries.find(e => e.studentId === s.id);
             if (entry) {
               totalMarked++;
               if (entry.status === 'PRESENT') presentCount++;
-              latestToday = entry.status;
+              if (regDate === todayIso) {
+                todayStatus = entry.status;
+              }
             }
           }
           attendanceStats = {
-            attendanceRate: totalMarked > 0 ? Math.round((presentCount / totalMarked) * 100) : 100,
-            todayStatus: latestToday
+            attendanceRate: totalMarked > 0 ? Math.round((presentCount / totalMarked) * 100) : 0,
+            todayStatus
           };
         }
 

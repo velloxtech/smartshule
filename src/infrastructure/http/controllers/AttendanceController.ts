@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { AttendanceUseCases } from '../../../application/attendance/AttendanceUseCases';
+import { AnalyticsUseCases } from '../../../application/analytics/AnalyticsUseCases';
 import { AttendanceStatus, AttendanceType } from '../../../core/domain/attendance/Attendance';
 import { UserRole } from '../../../core/domain/user/User';
 import { SystemLogUseCases } from '../../../application/system-logs/SystemLogUseCases';
@@ -27,13 +28,19 @@ export const MarkAttendanceSchema = z.object({
 export class AttendanceController {
   constructor(
     private readonly attendanceUseCases: AttendanceUseCases,
-    private readonly systemLogUseCases?: SystemLogUseCases
+    private readonly systemLogUseCases?: SystemLogUseCases,
+    private readonly analyticsUseCases?: AnalyticsUseCases
   ) {}
 
   public markAttendance = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const user = (req as any).user;
       const register = await this.attendanceUseCases.markAttendance(req.body, user);
+
+      // Invalidate analytics dashboard cache so dashboard updates immediately
+      try {
+        this.analyticsUseCases?.clearDashboardCache();
+      } catch {}
 
       this.systemLogUseCases?.log({
         schoolId: user?.schoolId || req.body.schoolId || 'school-001',

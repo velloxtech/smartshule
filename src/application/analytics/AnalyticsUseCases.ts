@@ -47,6 +47,10 @@ export class AnalyticsUseCases {
   private dashboardCache = new Map<string, { timestamp: number; data: any }>();
   private inFlightDashboardRequests = new Map<string, Promise<any>>();
 
+  public clearDashboardCache(): void {
+    this.dashboardCache.clear();
+  }
+
   public async getSchoolDashboardSummary(
     schoolIdOrOptions?: string | DashboardFilterOptions,
     academicYearIdArg?: string,
@@ -381,7 +385,6 @@ export class AnalyticsUseCases {
           presentCount += 1;
         } else if (entry.status === AttendanceStatus.LATE) {
           lateCount += 1;
-          presentCount += 1; // Late arrivals are physically present in school
         } else if (entry.status === AttendanceStatus.ABSENT) {
           absentCount += 1;
           absentLearnersList.push({

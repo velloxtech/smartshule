@@ -52,6 +52,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     return `${y}-${m}-${day}`;
   }, []);
 
+  const [selectedAttendanceDate, setSelectedAttendanceDate] = useState<string>(todayIso);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (quickActionRef.current && !quickActionRef.current.contains(event.target as Node)) {
@@ -62,13 +64,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const loadDashboardStats = useCallback(async (yearId?: string, termId?: string) => {
+  const loadDashboardStats = useCallback(async (yearId?: string, termId?: string, targetDate?: string) => {
+    const effectiveDate = targetDate || selectedAttendanceDate || todayIso;
     setIsLoading(true);
     try {
       const [res, cRes, attRes] = await Promise.all([
-        apiService.getDashboardAnalytics({ yearId, termId, date: todayIso }).catch(() => null),
+        apiService.getDashboardAnalytics({ yearId, termId, date: effectiveDate }).catch(() => null),
         apiService.getClasses().catch(() => null),
-        apiService.getAttendanceReport({ date: todayIso }).catch(() => null),
+        apiService.getAttendanceReport({ date: effectiveDate }).catch(() => null),
       ]);
 
       if (res?.success && res.data) {
@@ -89,8 +92,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
       if (Array.isArray(rawRegisters)) {
         rawRegisters.forEach((reg: any) => {
-          // Strictly protect today's status: ignore historical registers for past dates
-          if (reg.date && reg.date !== todayIso) return;
+          const rDate = typeof reg.date === 'string' ? reg.date.split('T')[0] : (reg.date instanceof Date ? reg.date.toISOString().split('T')[0] : '');
+          if (rDate && rDate !== effectiveDate) return;
           if (reg.entries && Array.isArray(reg.entries)) {
             reg.entries.forEach((e: any) => {
               if (e.studentId) {
@@ -106,22 +109,23 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [todayIso]);
+  }, [selectedAttendanceDate, todayIso]);
 
   useEffect(() => {
-    loadDashboardStats();
-  }, [loadDashboardStats]);
+    loadDashboardStats(selectedYearId, selectedTermId, selectedAttendanceDate);
+  }, [loadDashboardStats, selectedYearId, selectedTermId, selectedAttendanceDate]);
 
   useEffect(() => {
-    const handleAttendanceSync = () => {
-      loadDashboardStats(selectedYearId, selectedTermId);
+    const handleAttendanceSync = (event?: any) => {
+      const syncDate = event?.detail?.date || selectedAttendanceDate;
+      loadDashboardStats(selectedYearId, selectedTermId, syncDate);
     };
 
     window.addEventListener('smartshule:attendance-updated', handleAttendanceSync);
     return () => {
       window.removeEventListener('smartshule:attendance-updated', handleAttendanceSync);
     };
-  }, [loadDashboardStats, selectedYearId, selectedTermId]);
+  }, [loadDashboardStats, selectedYearId, selectedTermId, selectedAttendanceDate]);
 
   const handleYearChange = (yearId: string) => {
     setSelectedYearId(yearId);
@@ -180,7 +184,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   const totalPresentToday = useMemo(() => {
     if (Object.keys(todayRegisterMap).length > 0) {
-      return Object.values(todayRegisterMap).filter((st) => st === 'PRESENT' || st === 'LATE').length;
+      return Object.values(todayRegisterMap).filter((st) => st === 'PRESENT').length;
     }
     return summaryData?.attendanceSummary?.present ?? 0;
   }, [todayRegisterMap, summaryData]);
@@ -199,17 +203,24 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     return summaryData?.attendanceSummary?.late ?? 0;
   }, [todayRegisterMap, summaryData]);
 
+  const excusedStudentsCount = useMemo(() => {
+    if (Object.keys(todayRegisterMap).length > 0) {
+      return Object.values(todayRegisterMap).filter((st) => st === 'EXCUSED' || (st as any) === 'SICK').length;
+    }
+    return summaryData?.attendanceSummary?.excused ?? 0;
+  }, [todayRegisterMap, summaryData]);
+
   const avgAttendancePct = useMemo(() => {
     if (!hasRegisterDataToday) return 0;
     const totalMarked = Object.keys(todayRegisterMap).length;
     if (totalMarked > 0) {
-      return Math.round((totalPresentToday / totalMarked) * 100);
+      return Math.round(((totalPresentToday + lateStudentsCount) / totalMarked) * 100);
     }
     if (summaryData?.attendanceSummary?.presentPercentage !== null && summaryData?.attendanceSummary?.presentPercentage !== undefined) {
       return summaryData.attendanceSummary.presentPercentage;
     }
     return 0;
-  }, [hasRegisterDataToday, todayRegisterMap, totalPresentToday, summaryData]);
+  }, [hasRegisterDataToday, todayRegisterMap, totalPresentToday, lateStudentsCount, summaryData]);
 
   // CBC Assessments
   const CBCProf = summaryData?.CBCProficiency;
@@ -310,11 +321,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         if (statusToday === 'PRESENT') {
           map[g].present += 1;
         } else if (statusToday === 'LATE') {
-          map[g].present += 1;
           map[g].late += 1;
         } else if (statusToday === 'ABSENT') {
           map[g].absent += 1;
-        } else if (statusToday === 'EXCUSED') {
+        } else if (statusToday === 'EXCUSED' || (statusToday as any) === 'SICK') {
           map[g].excused += 1;
         }
       }
@@ -742,34 +752,47 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         >
           <div className="flex items-center justify-between">
             <span className="font-label-md text-[11px] text-on-surface-variant uppercase tracking-wider font-bold truncate">
-              Roll Call Today
+              {selectedAttendanceDate === todayIso ? 'Roll Call Today' : `Attendance (${selectedAttendanceDate})`}
             </span>
             <span className={`inline-flex items-center text-[10px] font-bold px-1.5 py-0.2 rounded ${hasRegisterDataToday ? 'bg-secondary-container text-on-secondary-container' : 'bg-slate-100 text-slate-600'}`}>
-              {hasRegisterDataToday ? 'Live' : 'Pending'}
+              {hasRegisterDataToday ? 'Recorded' : 'Pending'}
             </span>
           </div>
           <div className="my-1.5">
             <div className="flex items-baseline gap-1">
               <span className="font-display font-bold text-xl lg:text-2xl text-secondary font-data-mono">
-                {hasRegisterDataToday ? `${avgAttendancePct}%` : '--'}
+                {hasRegisterDataToday ? `${avgAttendancePct}%` : '--%'}
               </span>
               <span className="text-[11px] text-on-surface-variant">
-                {hasRegisterDataToday ? 'present' : 'unmarked'}
+                {hasRegisterDataToday ? 'attendance' : 'not recorded'}
               </span>
             </div>
           </div>
           <div className="pt-1.5 border-t border-surface-container flex items-center justify-between text-[11px] text-on-surface-variant flex-wrap gap-1">
-            <span className="text-[10px] text-secondary font-bold font-data-mono">
-              {totalPresentToday} Present
-            </span>
-            {lateStudentsCount > 0 && (
-              <span className="text-[10px] text-amber-700 font-bold font-data-mono">
-                · {lateStudentsCount} Late
+            {hasRegisterDataToday ? (
+              <>
+                <span className="text-[10px] text-secondary font-bold font-data-mono">
+                  {totalPresentToday} Present
+                </span>
+                {lateStudentsCount > 0 && (
+                  <span className="text-[10px] text-amber-700 font-bold font-data-mono">
+                    · {lateStudentsCount} Late
+                  </span>
+                )}
+                {excusedStudentsCount > 0 && (
+                  <span className="text-[10px] text-sky-700 font-bold font-data-mono">
+                    · {excusedStudentsCount} Excused
+                  </span>
+                )}
+                <span className="text-[10px] text-error font-bold font-data-mono">
+                  {absentStudentsCount} Absent
+                </span>
+              </>
+            ) : (
+              <span className="text-[10px] text-slate-500 italic">
+                Attendance not yet recorded
               </span>
             )}
-            <span className="text-[10px] text-error font-bold font-data-mono">
-              {absentStudentsCount} Absent
-            </span>
           </div>
         </div>
 
@@ -931,10 +954,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </h2>
               </div>
               <p className="font-label-md text-label-md text-on-surface-variant mt-0.5">
-                Real-time teacher-logged roll calls for today ({todayIso})
+                Real-time teacher-logged roll calls for {selectedAttendanceDate === todayIso ? `today (${todayIso})` : selectedAttendanceDate}
               </p>
             </div>
-            <div className="flex items-center gap-xs self-start sm:self-auto">
+            <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+              <input
+                type="date"
+                value={selectedAttendanceDate}
+                onChange={(e) => setSelectedAttendanceDate(e.target.value)}
+                className="px-2.5 py-1 text-xs font-semibold bg-surface-container-low border border-outline-variant/50 rounded-lg text-on-surface focus:outline-none focus:ring-2 focus:ring-primary"
+                title="Select attendance date"
+              />
               <button
                 onClick={() => onNavigateTab('attendance-register')}
                 className="px-sm py-xs rounded-lg bg-[#7a1228] text-white font-label-md text-label-md hover:bg-[#5e0d1e] transition-colors cursor-pointer"
@@ -949,7 +979,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="flex flex-col gap-sm">
             {!hasAnyGradeAttendanceLoggedToday ? (
               <div className="py-8 text-center text-xs text-on-surface-variant bg-surface-container-low rounded-xl">
-                No class attendance records logged today yet. Teachers mark roll call via the portal.
+                Attendance not yet recorded for {selectedAttendanceDate === todayIso ? 'today' : selectedAttendanceDate}. Teachers mark roll call via the portal.
               </div>
             ) : (
               dynamicAttendanceGradeData.map((item) => (

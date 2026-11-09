@@ -108,7 +108,10 @@ export class AttendanceUseCases {
       } catch {}
     }
 
-    let register = await this.attendanceRepository.findRegister(dto.streamId || '', dto.date, dto.type, dto.classRoomId);
+    const attendanceType = dto.type || AttendanceType.DAILY_MORNING;
+    dto.type = attendanceType;
+
+    let register = await this.attendanceRepository.findRegister(dto.streamId || '', dto.date, attendanceType, dto.classRoomId);
 
     const formattedEntries: StudentAttendanceEntry[] = [];
     for (const item of dto.entries) {
@@ -233,7 +236,7 @@ export class AttendanceUseCases {
         excused: totalExcused + totalSick,
         overallAttendanceRate: totalPossibleAttendances > 0
           ? Math.round(((totalPresent + totalLate) / totalPossibleAttendances) * 100)
-          : 100
+          : 0
       },
       registers: registers.map(r => r.toJSON())
     };

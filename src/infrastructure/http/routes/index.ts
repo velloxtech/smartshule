@@ -257,7 +257,7 @@ export function createApiRouter(container: AppContainer): Router {
   const curriculumController = new CurriculumPlanController(container.curriculumUseCases);
   const recordOfWorkController = new RecordOfWorkController(container.recordOfWorkUseCases);
   const timetableController = new TimetableController(container.timetableUseCases);
-  const attendanceController = new AttendanceController(container.attendanceUseCases, container.systemLogUseCases);
+  const attendanceController = new AttendanceController(container.attendanceUseCases, container.systemLogUseCases, container.analyticsUseCases);
   const financeController = new FinanceController(container.feeUseCases, container.systemLogUseCases, container.financialApprovalUseCases);
   const lunchFeeController = new LunchFeeController(container.lunchFeeUseCases, container.systemLogUseCases);
   const analyticsController = new AnalyticsController(container.analyticsUseCases);
@@ -1160,8 +1160,7 @@ export function createApiRouter(container: AppContainer): Router {
     UserRole.ADMIN,
     UserRole.SCHOOL_ADMIN,
     UserRole.HEAD_TEACHER,
-    UserRole.DEPUTY_HEAD_TEACHER,
-    UserRole.TEACHER
+    UserRole.DEPUTY_HEAD_TEACHER
   );
 
   // Notice Board: List & View (All School Community Members / Public Notice Board)

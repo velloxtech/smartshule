@@ -17,6 +17,7 @@ import {
   togglePinAnnouncement,
   acknowledgeAnnouncement,
   getStoredAuthToken,
+  getApiBaseUrl,
 } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { resolveGradeName } from '../../utils/formatters';
@@ -169,7 +170,9 @@ export const AnnouncementsView: React.FC = () => {
   const [formAudience, setFormAudience] = useState<AnnouncementAudience>('ALL');
   const [formGradeLevel, setFormGradeLevel] = useState<string>('GRADE_1');
   const [formIsPinned, setFormIsPinned] = useState(false);
+  const [formPublishDate, setFormPublishDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [formExpiryDate, setFormExpiryDate] = useState('');
+  const [formStatus, setFormStatus] = useState<'PUBLISHED' | 'DRAFT'>('PUBLISHED');
   const [formSendSms, setFormSendSms] = useState(false);
   const [formSendWhatsApp, setFormSendWhatsApp] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -180,11 +183,10 @@ export const AnnouncementsView: React.FC = () => {
     if (!user) return false;
     const allowedRoles: UserRole[] = [
       UserRole.SUPER_ADMIN,
+      UserRole.ADMIN,
       UserRole.SCHOOL_ADMIN,
       UserRole.HEAD_TEACHER,
       UserRole.DEPUTY_HEAD_TEACHER,
-      UserRole.BURSAR,
-      UserRole.TEACHER,
     ];
     return allowedRoles.includes(user.role);
   }, [user]);
@@ -207,7 +209,7 @@ export const AnnouncementsView: React.FC = () => {
           localStorage.getItem('token') ||
           localStorage.getItem('authToken')
         : null);
-    const baseUrl = (import.meta as any).env?.VITE_API_URL || '/api/v1';
+    const baseUrl = getApiBaseUrl();
     const cleanBase = baseUrl.replace(/\/+$/, '');
     const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
     const res = await fetch(`${cleanBase}${cleanEndpoint}`, {
@@ -447,7 +449,9 @@ export const AnnouncementsView: React.FC = () => {
     setFormAudience('ALL');
     setFormGradeLevel('GRADE_1');
     setFormIsPinned(false);
+    setFormPublishDate(new Date().toISOString().split('T')[0]);
     setFormExpiryDate('');
+    setFormStatus('PUBLISHED');
     setFormSendSms(false);
     setFormSendWhatsApp(false);
     setFormError(null);
@@ -464,7 +468,9 @@ export const AnnouncementsView: React.FC = () => {
     setFormAudience(item.targetAudience);
     setFormGradeLevel(item.targetGradeLevel || 'GRADE_1');
     setFormIsPinned(item.isPinned);
+    setFormPublishDate(item.publishDate ? item.publishDate.slice(0, 10) : new Date().toISOString().split('T')[0]);
     setFormExpiryDate(item.expiryDate ? item.expiryDate.slice(0, 10) : '');
+    setFormStatus((item.status as any) === 'DRAFT' ? 'DRAFT' : 'PUBLISHED');
     setFormSendSms(!!item.sendSmsBroadcast);
     setFormSendWhatsApp(!!item.sendWhatsAppBroadcast);
     setFormError(null);
@@ -501,7 +507,9 @@ export const AnnouncementsView: React.FC = () => {
       targetAudience: formAudience,
       targetGradeLevel: formAudience === 'SPECIFIC_GRADE' ? formGradeLevel : undefined,
       isPinned: formIsPinned,
+      publishDate: formPublishDate ? new Date(formPublishDate).toISOString() : new Date().toISOString(),
       expiryDate: formExpiryDate ? new Date(formExpiryDate).toISOString() : undefined,
+      status: formStatus,
       sendSmsBroadcast: formSendSms,
       sendWhatsAppBroadcast: formSendWhatsApp,
       authorName: user?.name || 'School Administration',
@@ -960,9 +968,10 @@ export const AnnouncementsView: React.FC = () => {
               <button
                 onClick={openCreateModal}
                 className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-sm font-semibold transition shadow-md hover:shadow-lg cursor-pointer"
+                title="Create a new official notice"
               >
-                <span className="material-symbols-outlined text-base">post_add</span>
-                <span>Post New Notice</span>
+                <span className="material-symbols-outlined text-base">add</span>
+                <span>+ Add Notice</span>
               </button>
             </>
           )}
@@ -1174,18 +1183,18 @@ export const AnnouncementsView: React.FC = () => {
         </div>
       ) : filteredAnnouncements.length === 0 ? (
         <div className="py-16 text-center text-slate-500 bg-white rounded-2xl border border-dashed border-slate-300">
-          <span className="material-symbols-outlined text-5xl text-slate-300">mark_email_unread</span>
-          <h3 className="text-base font-semibold text-slate-700 mt-2">No announcements found</h3>
+          <span className="material-symbols-outlined text-5xl text-slate-300">campaign</span>
+          <h3 className="text-base font-semibold text-slate-700 mt-2">No notices available.</h3>
           <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1">
-            There are no notices matching your current search or filter criteria.
+            There are no official notices or circulars posted on the board yet.
           </p>
           {canManage && (
             <button
               onClick={openCreateModal}
-              className="mt-4 inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold"
+              className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-sm transition"
             >
               <span className="material-symbols-outlined text-sm">add</span>
-              Post a Notice
+              + Add Notice
             </button>
           )}
         </div>
@@ -1751,6 +1760,42 @@ export const AnnouncementsView: React.FC = () => {
                     </select>
                   </div>
                 )}
+              </div>
+
+              {/* Publication Status & Dates */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Publication Status *</label>
+                  <select
+                    value={formStatus}
+                    onChange={(e) => setFormStatus(e.target.value as 'PUBLISHED' | 'DRAFT')}
+                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  >
+                    <option value="PUBLISHED">PUBLISHED (Live)</option>
+                    <option value="DRAFT">DRAFT (Admin Only)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Publication Date *</label>
+                  <input
+                    type="date"
+                    required
+                    value={formPublishDate}
+                    onChange={(e) => setFormPublishDate(e.target.value)}
+                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Expiry Date (Optional)</label>
+                  <input
+                    type="date"
+                    value={formExpiryDate}
+                    onChange={(e) => setFormExpiryDate(e.target.value)}
+                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                  />
+                </div>
               </div>
 
               {/* Content Textarea */}

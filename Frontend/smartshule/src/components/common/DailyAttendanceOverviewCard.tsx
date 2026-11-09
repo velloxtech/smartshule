@@ -269,6 +269,14 @@ export const DailyAttendanceOverviewCard: React.FC<DailyAttendanceOverviewCardPr
         </div>
       </div>
 
+      {/* Attendance Not Yet Recorded Notification Banner */}
+      {metrics.completedRegisters === 0 && metrics.present === 0 && metrics.absent === 0 && (
+        <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-2 text-xs text-amber-800">
+          <span className="material-symbols-outlined text-base text-amber-600">info</span>
+          <span>Attendance not yet recorded for {selectedDate}. Class teachers mark roll calls through the Attendance Register portal.</span>
+        </div>
+      )}
+
       {/* Daily Figures Grid: 7 Standard Metric Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
         {/* 1. Expected Enrolled */}
@@ -288,10 +296,14 @@ export const DailyAttendanceOverviewCard: React.FC<DailyAttendanceOverviewCardPr
             Present
           </span>
           <div className="my-1">
-            <span className="text-xl font-black font-data-mono text-emerald-800">{metrics.present}</span>
+            <span className="text-xl font-black font-data-mono text-emerald-800">
+              {metrics.completedRegisters > 0 ? metrics.present : '--'}
+            </span>
             <span className="text-[10px] text-emerald-800 font-bold ml-1">in school</span>
           </div>
-          <span className="text-[10px] text-emerald-900 font-bold">{metrics.presentPercentage}% attendance</span>
+          <span className="text-[10px] text-emerald-900 font-bold">
+            {metrics.completedRegisters > 0 ? `${metrics.presentPercentage}% attendance` : 'Not recorded'}
+          </span>
         </div>
 
         {/* 3. Absent Learners */}
@@ -308,7 +320,9 @@ export const DailyAttendanceOverviewCard: React.FC<DailyAttendanceOverviewCardPr
             {metrics.absent > 0 && <span className="text-[9px] text-rose-800 font-black underline">Drill down →</span>}
           </span>
           <div className="my-1">
-            <span className="text-xl font-black font-data-mono text-rose-800">{metrics.absent}</span>
+            <span className="text-xl font-black font-data-mono text-rose-800">
+              {metrics.completedRegisters > 0 ? metrics.absent : '--'}
+            </span>
             <span className="text-[10px] text-rose-800 font-bold ml-1">unexcused</span>
           </div>
           <span className="text-[10px] text-rose-900 font-bold">Immediate follow-up</span>
@@ -321,7 +335,9 @@ export const DailyAttendanceOverviewCard: React.FC<DailyAttendanceOverviewCardPr
             Late Arrivals
           </span>
           <div className="my-1">
-            <span className="text-xl font-black font-data-mono text-amber-800">{metrics.late}</span>
+            <span className="text-xl font-black font-data-mono text-amber-800">
+              {metrics.completedRegisters > 0 ? metrics.late : '--'}
+            </span>
             <span className="text-[10px] text-amber-800 font-bold ml-1">arrived late</span>
           </div>
           <span className="text-[10px] text-amber-950 font-bold">Logged after bell</span>
@@ -341,7 +357,9 @@ export const DailyAttendanceOverviewCard: React.FC<DailyAttendanceOverviewCardPr
             {metrics.excused > 0 && <span className="text-[9px] text-blue-800 font-black underline">Notes →</span>}
           </span>
           <div className="my-1">
-            <span className="text-xl font-black font-data-mono text-blue-800">{metrics.excused}</span>
+            <span className="text-xl font-black font-data-mono text-blue-800">
+              {metrics.completedRegisters > 0 ? metrics.excused : '--'}
+            </span>
             <span className="text-[10px] text-blue-800 font-bold ml-1">medical / leave</span>
           </div>
           <span className="text-[10px] text-blue-950 font-bold">Documented reasons</span>

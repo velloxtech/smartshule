@@ -664,18 +664,22 @@ export class WhatsAppService {
 
     let total = 0;
     let present = 0;
-    let todayStatus = 'PRESENT';
+    let todayStatus = 'Not Yet Recorded';
+    const todayIso = new Date().toISOString().split('T')[0];
 
     for (const r of registers) {
+      const regDate = typeof r.date === 'string' ? r.date.split('T')[0] : ((r.date as any) instanceof Date ? (r.date as any).toISOString().split('T')[0] : String(r.date));
       const entry = (r.entries as any[])?.find(e => e.studentId === primary.id);
       if (entry) {
         total++;
         if (entry.status === 'PRESENT') present++;
-        todayStatus = entry.status;
+        if (regDate === todayIso) {
+          todayStatus = entry.status;
+        }
       }
     }
 
-    const rate = total > 0 ? Math.round((present / total) * 100) : 100;
+    const rate = total > 0 ? Math.round((present / total) * 100) : 0;
     const reply =
       `*LIVE ATTENDANCE REPORT*\n` +
       `━━━━━━━━━━━━━━━━━━━━\n` +

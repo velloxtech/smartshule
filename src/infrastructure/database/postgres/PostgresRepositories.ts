@@ -3628,11 +3628,17 @@ export class PostgresTimetableRepository implements ITimetableRepository {
 
 export class PostgresAttendanceRepository implements IAttendanceRepository {
   constructor(private pool: Pool) {}
+  private normalizeDate(d: any): string {
+    if (!d) return '';
+    if (typeof d === 'string') return d.split('T')[0];
+    if (d instanceof Date) return d.toISOString().split('T')[0];
+    return String(d).split('T')[0];
+  }
   public async findRegisterById(id: string): Promise<AttendanceRegister | null> {
     const res = await this.pool.query('SELECT * FROM attendance_registers WHERE id = $1', [id]);
     if (!res.rows.length) return null;
     const r = res.rows[0];
-    return AttendanceRegister.create({ schoolId: r.school_id, classRoomId: r.classroom_id, streamId: r.stream_id, academicYearId: r.academic_year_id, termId: r.term_id, date: r.date, type: r.type, lessonId: r.lesson_id, markedByTeacherId: r.marked_by_teacher_id, entries: typeof r.entries === 'string' ? JSON.parse(r.entries) : r.entries }, r.id, r.created_at, r.updated_at);
+    return AttendanceRegister.create({ schoolId: r.school_id, classRoomId: r.classroom_id, streamId: r.stream_id, academicYearId: r.academic_year_id, termId: r.term_id, date: this.normalizeDate(r.date), type: r.type, lessonId: r.lesson_id, markedByTeacherId: r.marked_by_teacher_id, entries: typeof r.entries === 'string' ? JSON.parse(r.entries) : r.entries }, r.id, r.created_at, r.updated_at);
   }
   public async findRegister(streamId: string, date: string, type: AttendanceType, classRoomId?: string): Promise<AttendanceRegister | null> {
     if (streamId && streamId.trim() !== '') {
@@ -3642,7 +3648,7 @@ export class PostgresAttendanceRepository implements IAttendanceRepository {
       );
       if (res.rows.length) {
         const r = res.rows[0];
-        return AttendanceRegister.create({ schoolId: r.school_id, classRoomId: r.classroom_id, streamId: r.stream_id, academicYearId: r.academic_year_id, termId: r.term_id, date: r.date, type: r.type, lessonId: r.lesson_id, markedByTeacherId: r.marked_by_teacher_id, entries: typeof r.entries === 'string' ? JSON.parse(r.entries) : r.entries }, r.id, r.created_at, r.updated_at);
+        return AttendanceRegister.create({ schoolId: r.school_id, classRoomId: r.classroom_id, streamId: r.stream_id, academicYearId: r.academic_year_id, termId: r.term_id, date: this.normalizeDate(r.date), type: r.type, lessonId: r.lesson_id, markedByTeacherId: r.marked_by_teacher_id, entries: typeof r.entries === 'string' ? JSON.parse(r.entries) : r.entries }, r.id, r.created_at, r.updated_at);
       }
     }
     if (classRoomId && classRoomId.trim() !== '') {
@@ -3652,7 +3658,7 @@ export class PostgresAttendanceRepository implements IAttendanceRepository {
       );
       if (res.rows.length) {
         const r = res.rows[0];
-        return AttendanceRegister.create({ schoolId: r.school_id, classRoomId: r.classroom_id, streamId: r.stream_id, academicYearId: r.academic_year_id, termId: r.term_id, date: r.date, type: r.type, lessonId: r.lesson_id, markedByTeacherId: r.marked_by_teacher_id, entries: typeof r.entries === 'string' ? JSON.parse(r.entries) : r.entries }, r.id, r.created_at, r.updated_at);
+        return AttendanceRegister.create({ schoolId: r.school_id, classRoomId: r.classroom_id, streamId: r.stream_id, academicYearId: r.academic_year_id, termId: r.term_id, date: this.normalizeDate(r.date), type: r.type, lessonId: r.lesson_id, markedByTeacherId: r.marked_by_teacher_id, entries: typeof r.entries === 'string' ? JSON.parse(r.entries) : r.entries }, r.id, r.created_at, r.updated_at);
       }
     }
     return null;
@@ -3671,7 +3677,7 @@ export class PostgresAttendanceRepository implements IAttendanceRepository {
     if (filters.type) { params.push(filters.type); q += ` AND type = $${params.length}`; }
     q += ' ORDER BY date DESC';
     const res = await this.pool.query(q, params);
-    return res.rows.map(r => AttendanceRegister.create({ schoolId: r.school_id, classRoomId: r.classroom_id, streamId: r.stream_id, academicYearId: r.academic_year_id, termId: r.term_id, date: r.date, type: r.type, lessonId: r.lesson_id, markedByTeacherId: r.marked_by_teacher_id, entries: typeof r.entries === 'string' ? JSON.parse(r.entries) : r.entries }, r.id, r.created_at, r.updated_at));
+    return res.rows.map(r => AttendanceRegister.create({ schoolId: r.school_id, classRoomId: r.classroom_id, streamId: r.stream_id, academicYearId: r.academic_year_id, termId: r.term_id, date: this.normalizeDate(r.date), type: r.type, lessonId: r.lesson_id, markedByTeacherId: r.marked_by_teacher_id, entries: typeof r.entries === 'string' ? JSON.parse(r.entries) : r.entries }, r.id, r.created_at, r.updated_at));
   }
   public async saveRegister(reg: AttendanceRegister): Promise<void> {
     const q = `INSERT INTO attendance_registers (id, school_id, classroom_id, stream_id, academic_year_id, term_id, date, type, lesson_id, marked_by_teacher_id, entries, created_at, updated_at)
@@ -3705,7 +3711,7 @@ export class PostgresAttendanceRepository implements IAttendanceRepository {
       `SELECT * FROM attendance_registers WHERE entries::text LIKE $1`,
       [`%"studentId":"${studentId}"%`]
     );
-    return res.rows.map(r => AttendanceRegister.create({ schoolId: r.school_id, classRoomId: r.classroom_id, streamId: r.stream_id, academicYearId: r.academic_year_id, termId: r.term_id, date: r.date, type: r.type, lessonId: r.lesson_id, markedByTeacherId: r.marked_by_teacher_id, entries: typeof r.entries === 'string' ? JSON.parse(r.entries) : r.entries }, r.id, r.created_at, r.updated_at));
+    return res.rows.map(r => AttendanceRegister.create({ schoolId: r.school_id, classRoomId: r.classroom_id, streamId: r.stream_id, academicYearId: r.academic_year_id, termId: r.term_id, date: this.normalizeDate(r.date), type: r.type, lessonId: r.lesson_id, markedByTeacherId: r.marked_by_teacher_id, entries: typeof r.entries === 'string' ? JSON.parse(r.entries) : r.entries }, r.id, r.created_at, r.updated_at));
   }
   public async removeStudentFromRegisters(studentId: string): Promise<void> {
     const registers = await this.findRegistersByStudent(studentId);
