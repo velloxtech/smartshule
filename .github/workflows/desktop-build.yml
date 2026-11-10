@@ -104,8 +104,13 @@ jobs:
         if: (startsWith(github.ref, 'refs/tags/v') || inputs.publish_release == true)
         uses: softprops/action-gh-release@v2
         with:
-          files: Frontend/smartshule/release/*.*
-          draft: true
+          files: |
+            Frontend/smartshule/release/*.AppImage
+            Frontend/smartshule/release/*.deb
+            Frontend/smartshule/release/*.exe
+            Frontend/smartshule/release/*.dmg
+            Frontend/smartshule/release/*.zip
+          draft: false
           prerelease: false
           generate_release_notes: true
         env:
