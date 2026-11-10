@@ -1,7 +1,12 @@
 {
-  "name": "react-example",
+  "name": "smartshule-desktop",
+  "productName": "SmartShule",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "SmartShule - Grace Seeds School Management & CBC Tracking Desktop Client",
+  "author": "Vellox Tech <support@velloxtech.com>",
+  "homepage": "https://smartshule.ac.ke",
+  "main": "electron/main.cjs",
   "type": "module",
   "scripts": {
     "dev": "vite --port=5173 --host=0.0.0.0",
@@ -12,7 +17,14 @@
     "cap:sync": "cap sync android",
     "cap:open": "cap open android",
     "cap:build": "npm run build && cap sync android",
-    "cap:assemble": "npm run build && cap sync android && cd android && ./gradlew assembleDebug"
+    "cap:assemble": "npm run build && cap sync android && cd android && ./gradlew assembleDebug",
+    "electron:start": "electron .",
+    "electron:dev": "npm run build && electron .",
+    "electron:build": "npm run build && electron-builder --config electron-builder.json",
+    "electron:build:linux": "npm run build && electron-builder --linux --config electron-builder.json",
+    "electron:build:win": "npm run build && electron-builder --win --config electron-builder.json",
+    "electron:build:mac": "npm run build && electron-builder --mac --config electron-builder.json",
+    "electron:pack": "npm run build && electron-builder --dir --config electron-builder.json"
   },
   "dependencies": {
     "@capacitor/app": "^7.1.2",
@@ -39,6 +51,8 @@
     "@types/express": "^4.17.21",
     "@types/node": "^22.14.0",
     "autoprefixer": "^10.4.21",
+    "electron": "^34.5.8",
+    "electron-builder": "^25.1.8",
     "esbuild": "^0.25.0",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",

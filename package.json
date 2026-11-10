@@ -24,7 +24,12 @@
     "db:online": "ts-node scripts/db-switch.ts online",
     "cap:sync": "npm --prefix Frontend/smartshule run cap:sync",
     "cap:build": "npm --prefix Frontend/smartshule run cap:build",
-    "cap:open": "npm --prefix Frontend/smartshule run cap:open"
+    "cap:open": "npm --prefix Frontend/smartshule run cap:open",
+    "desktop:build": "npm --prefix Frontend/smartshule run electron:build",
+    "desktop:build:linux": "npm --prefix Frontend/smartshule run electron:build:linux",
+    "desktop:build:win": "npm --prefix Frontend/smartshule run electron:build:win",
+    "desktop:build:mac": "npm --prefix Frontend/smartshule run electron:build:mac",
+    "desktop:dev": "npm --prefix Frontend/smartshule run electron:dev"
   },
   "keywords": [
     "school-management",

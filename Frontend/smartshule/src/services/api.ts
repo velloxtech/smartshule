@@ -128,8 +128,15 @@ function resolveApiBaseUrl(): string {
     (window.location.hostname === 'localhost' && window.location.protocol === 'https:' && !window.location.port)
   );
 
-  // If running inside Capacitor mobile native app and no explicit external URL was provided
-  if (isCapacitorNative && (!url || url === '/api/v1' || url.startsWith('/'))) {
+  // Detect Electron desktop environment (preload API, userAgent, or local file protocol)
+  const isElectron = typeof window !== 'undefined' && Boolean(
+    (window as any).electronAPI ||
+    (typeof navigator !== 'undefined' && navigator.userAgent && navigator.userAgent.includes('Electron')) ||
+    window.location.protocol === 'file:'
+  );
+
+  // If running inside Capacitor mobile native app or Electron desktop app and no explicit external URL was provided
+  if ((isCapacitorNative || isElectron) && (!url || url === '/api/v1' || url.startsWith('/'))) {
     return 'https://smartshule-vg15.onrender.com/api/v1';
   }
 
