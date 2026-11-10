@@ -81,12 +81,9 @@
         "arch": ["x64", "arm64"]
       }
     ],
-    "icon": "electron/assets/icon.png",
+    "icon": "electron/assets/icon.icns",
     "category": "public.app-category.education",
-    "hardenedRuntime": true,
     "gatekeeperAssess": false,
-    "entitlements": "electron/entitlements.mac.plist",
-    "entitlementsInherit": "electron/entitlements.mac.plist",
     "artifactName": "${productName}-${version}-${arch}.${ext}"
   },
   "dmg": {

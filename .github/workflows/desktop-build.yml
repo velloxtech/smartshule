@@ -25,19 +25,13 @@ jobs:
         include:
           - os: ubuntu-22.04
             platform: linux
-            build_cmd: npm --prefix Frontend/smartshule run electron:build:linux
             artifact_name: smartshule-linux-x64
-            artifact_path: Frontend/smartshule/release/*.AppImage\nFrontend/smartshule/release/*.deb
           - os: windows-latest
             platform: windows
-            build_cmd: npm --prefix Frontend/smartshule run electron:build:win
             artifact_name: smartshule-windows-x64
-            artifact_path: Frontend/smartshule/release/*.exe
           - os: macos-latest
             platform: macos
-            build_cmd: npm --prefix Frontend/smartshule run electron:build:mac
             artifact_name: smartshule-macos-universal
-            artifact_path: Frontend/smartshule/release/*.dmg\nFrontend/smartshule/release/*.zip
 
     steps:
       - name: Checkout repository
@@ -72,16 +66,31 @@ jobs:
           WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
           WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
 
-          # macOS Code Signing & Notarization (Optional / Documented in Apple Developer guidelines)
+          # macOS Code Signing & Notarization (Optional)
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
-          # Disable Gatekeeper hard failure for unsigned CI test builds on macOS
+          # Prevent keychain popup prompts on CI machines
           CSC_IDENTITY_AUTO_DISCOVERY: false
-        run: ${{ matrix.build_cmd }}
+        shell: bash
+        run: |
+          cd Frontend/smartshule
+          if [ "${{ matrix.platform }}" = "macos" ]; then
+            if [ -n "${{ secrets.CSC_LINK }}" ]; then
+              echo "Using supplied Developer ID certificate for macOS signing..."
+              npx electron-builder --mac --config electron-builder.json -c.mac.hardenedRuntime=true -c.mac.entitlements=electron/entitlements.mac.plist -c.mac.entitlementsInherit=electron/entitlements.mac.plist
+            else
+              echo "No macOS Developer ID secret provided. Packaging unsigned DMG and ZIP distributions..."
+              npx electron-builder --mac --config electron-builder.json -c.mac.identity=null
+            fi
+          elif [ "${{ matrix.platform }}" = "windows" ]; then
+            npx electron-builder --win --config electron-builder.json
+          else
+            npx electron-builder --linux --config electron-builder.json
+          fi
 
       - name: Upload Desktop Artifacts
         uses: actions/upload-artifact@v4
