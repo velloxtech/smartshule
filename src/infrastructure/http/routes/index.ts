@@ -15,7 +15,11 @@ import {
   AdminResetPasswordSchema,
   ChangePasswordSchema,
   ForgotPasswordSchema,
-  ResetPasswordSchema
+  ResetPasswordSchema,
+  WebAuthnVerifyRegistrationSchema,
+  WebAuthnLoginOptionsSchema,
+  WebAuthnVerifyLoginSchema,
+  WebAuthnUserStatusSchema
 } from '../controllers/AuthController';
 
 import {
@@ -234,7 +238,7 @@ export function createApiRouter(container: AppContainer): Router {
   const authMiddleware = createAuthMiddleware(container.tokenService);
   const optionalAuthMiddleware = createOptionalAuthMiddleware(container.tokenService);
 
-  const authController = new AuthController(container.authUseCases, container.systemLogUseCases);
+  const authController = new AuthController(container.authUseCases, container.systemLogUseCases, container.webAuthnUseCases);
   const studentController = new StudentController(container.studentUseCases, container.systemLogUseCases);
   const teacherController = new TeacherController(container.teacherUseCases);
   const academicController = new AcademicController(container.academicUseCases, container.systemLogUseCases);
@@ -277,6 +281,15 @@ export function createApiRouter(container: AppContainer): Router {
   authRouter.post('/forgot-password', validateBody(ForgotPasswordSchema), authController.forgotPassword);
   authRouter.get('/verify-reset-token', authController.verifyResetToken);
   authRouter.post('/reset-password', validateBody(ResetPasswordSchema), authController.resetPassword);
+  // WebAuthn Biometric & Passkey Routes (Universal Device & Platform Compatibility)
+  authRouter.post('/webauthn/register/options', authMiddleware, authController.getWebAuthnRegistrationOptions);
+  authRouter.post('/webauthn/register/verify', authMiddleware, validateBody(WebAuthnVerifyRegistrationSchema), authController.verifyWebAuthnRegistration);
+  authRouter.post('/webauthn/login/options', validateBody(WebAuthnLoginOptionsSchema), authController.getWebAuthnLoginOptions);
+  authRouter.post('/webauthn/login/verify', validateBody(WebAuthnVerifyLoginSchema), authController.verifyWebAuthnLogin);
+  authRouter.get('/webauthn/credentials', authMiddleware, authController.listWebAuthnCredentials);
+  authRouter.delete('/webauthn/credentials/:credentialId', authMiddleware, authController.deleteWebAuthnCredential);
+  authRouter.post('/webauthn/user-status', validateBody(WebAuthnUserStatusSchema), authController.checkWebAuthnUserStatus);
+
   router.use('/auth', authRouter);
 
   // ==========================================

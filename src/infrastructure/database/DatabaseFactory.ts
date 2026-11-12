@@ -1,3 +1,6 @@
+import { IBiometricCredentialRepository } from '../../core/ports/repositories/IBiometricCredentialRepository';
+import { InMemoryBiometricCredentialRepository } from './in-memory/InMemoryBiometricCredentialRepository';
+import { PostgresBiometricCredentialRepository } from './postgres/PostgresBiometricCredentialRepository';
 import mongoose from 'mongoose';
 import { Pool } from 'pg';
 import { resolveDatabaseConfig } from '../config/databaseResolver';
@@ -136,6 +139,7 @@ export interface RepositoryBundle {
   payrollRepository?: IPayrollRepository;
   inventoryRepository?: IInventoryRepository;
   signatureRepository?: ISignatureRepository;
+  biometricCredentialRepository?: IBiometricCredentialRepository;
 }
 
 export class DatabaseFactory {
@@ -268,6 +272,7 @@ export class DatabaseFactory {
         inventoryRepository: new PostgresInventoryRepository(pool),
         signatureRepository: new PostgresSignatureRepository(pool),
         teacherCorrectionRequestRepository: new PostgresTeacherCorrectionRequestRepository(pool),
+        biometricCredentialRepository: new PostgresBiometricCredentialRepository(pool),
       };
     }
 

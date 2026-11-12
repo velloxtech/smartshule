@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { detectDeviceCapabilities, DeviceCapabilities } from '../../services/deviceCapabilityDetector';
+import { biometricService } from '../../services/biometricService';
+import { WebAuthnUserStatus } from '../../types';
 import { apiService } from '../../services/api';
 
 interface LoginPageProps {
@@ -19,7 +22,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   initialResetToken,
   initialResetEmail
 }) => {
-  const { login, isLoading, error: authError } = useAuth();
+  const { login, loginWithBiometrics, isLoading, error: authError } = useAuth();
   const [authMode, setAuthMode] = useState<AuthMode>('login');
 
   // Setup status
@@ -30,6 +33,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+  // Intelligent Biometric Device & Capability State
+  const [capabilities, setCapabilities] = useState<DeviceCapabilities | null>(null);
+  const [userBiometricStatus, setUserBiometricStatus] = useState<WebAuthnUserStatus | null>(null);
+  const [checkingBioStatus, setCheckingBioStatus] = useState<boolean>(false);
+  const [bioLoading, setBioLoading] = useState<boolean>(false);
+  const [bioError, setBioError] = useState<string | null>(null);
+
 
   // Initial setup / Registration state
   const [regFirstName, setRegFirstName] = useState('');
@@ -92,6 +102,59 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       // safe fallback
     }
   }, [initialResetToken, initialResetEmail]);
+
+
+  // Detect device capabilities on component mount
+  useEffect(() => {
+    let isMounted = true;
+    detectDeviceCapabilities()
+      .then((caps) => {
+        if (isMounted) setCapabilities(caps);
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Check user registered biometric status when identifier is entered
+  useEffect(() => {
+    if (!email.trim() || email.trim().length < 3) {
+      setUserBiometricStatus(null);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setCheckingBioStatus(true);
+      try {
+        const status = await biometricService.checkUserStatus(email.trim());
+        setUserBiometricStatus(status);
+      } catch {
+        setUserBiometricStatus(null);
+      } finally {
+        setCheckingBioStatus(false);
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [email]);
+
+  const handleBiometricLogin = async () => {
+    setLocalError(null);
+    setBioError(null);
+    setBioLoading(true);
+    try {
+      const ok = await loginWithBiometrics(email.trim() || undefined);
+      if (ok) {
+        onSuccess();
+      } else {
+        setBioError(authError || 'Biometric prompt was canceled or not recognized.');
+      }
+    } catch (err: any) {
+      setBioError(err.message || 'Biometric authentication failed.');
+    } finally {
+      setBioLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -351,6 +414,96 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             {/* 1. SIGN IN VIEW */}
             {authMode === 'login' && (
               <>
+                
+                {/* Guidance for Unsupported Devices / Insecure Contexts */}
+                {capabilities && !capabilities.isWebAuthnSupported && (
+                  <div className="p-3 mb-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 text-xs flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[18px] text-slate-400 shrink-0">
+                      info
+                    </span>
+                    <span>
+                      {capabilities.insecureHttpDetected
+                        ? 'Biometric login requires accessing SmartShule via http://localhost:5173 or HTTPS. Please sign in using your password below.'
+                        : 'WebAuthn biometric authentication is not supported on this browser or device. Please sign in using your password below.'}
+                    </span>
+                  </div>
+                )}
+
+                {/* Adaptive Biometric & Passkey Login Section */}
+                {capabilities && capabilities.isWebAuthnSupported && (
+                  <div className="space-y-3 pb-2">
+                    <button
+                      type="button"
+                      disabled={isLoading || bioLoading}
+                      onClick={handleBiometricLogin}
+                      className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-semibold rounded-xl text-xs shadow-sm hover:shadow transition-all flex items-center justify-center gap-2.5 cursor-pointer border border-slate-700 disabled:opacity-60"
+                    >
+                      {bioLoading ? (
+                        <>
+                          <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                          <span>Verifying with {capabilities.shortLabel}...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="material-symbols-outlined text-[19px] text-amber-400">
+                            {capabilities.iconName}
+                          </span>
+                          <span>
+                            {userBiometricStatus?.hasCredentials
+                              ? capabilities.displayName
+                              : `Sign in with ${capabilities.shortLabel}`}
+                          </span>
+                        </>
+                      )}
+                    </button>
+
+                    {/* Intelligent Device & Status Feedback */}
+                    {userBiometricStatus && (
+                      <div className="text-[11px] px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 animate-in fade-in">
+                        {userBiometricStatus.hasCredentials ? (
+                          <div className="flex items-start gap-2">
+                            <span className="material-symbols-outlined text-[16px] text-emerald-600 shrink-0 mt-0.5">
+                              verified_user
+                            </span>
+                            <div className="leading-snug">
+                              <span className="font-semibold text-slate-900">
+                                {userBiometricStatus.credentialCount} registered passkey(s)
+                              </span>{' '}
+                              found for this account ({userBiometricStatus.deviceLabels.join(', ')}). Click above to authenticate instantly.
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-start gap-2 text-slate-600">
+                            <span className="material-symbols-outlined text-[16px] text-slate-400 shrink-0 mt-0.5">
+                              info
+                            </span>
+                            <div className="leading-snug">
+                              Biometric sign-in is available on this {capabilities.platformName} device! Sign in using your password below to register your authenticator.
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {bioError && (
+                      <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center gap-2 animate-in fade-in">
+                        <span className="material-symbols-outlined text-[18px] text-amber-600 shrink-0">
+                          info
+                        </span>
+                        <span>{bioError}</span>
+                      </div>
+                    )}
+
+                    <div className="relative flex py-1 items-center">
+                      <div className="flex-grow border-t border-gray-200"></div>
+                      <span className="flex-shrink mx-3 text-[10px] uppercase font-bold text-gray-400 tracking-wider">
+                        or sign in with password
+                      </span>
+                      <div className="flex-grow border-t border-gray-200"></div>
+                    </div>
+                  </div>
+                )}
+
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-gray-600 mb-1.5">

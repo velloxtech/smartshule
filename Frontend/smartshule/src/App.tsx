@@ -83,6 +83,7 @@ import { CreateLessonPlanModal } from './components/modals/CreateLessonPlanModal
 import { CreateSchemeModal } from './components/modals/CreateSchemeModal';
 import { AcademicTermsModal } from './components/modals/AcademicTermsModal';
 import { ChangePasswordModal } from './components/modals/ChangePasswordModal';
+import { BiometricDevicesModal } from './components/modals/BiometricDevicesModal';
 import { LegalModal, LegalTabType } from './components/legal/LegalModal';
 import { CookieBanner } from './components/legal/CookieBanner';
 
@@ -96,6 +97,7 @@ export default function App() {
   const [currentTerm, setCurrentTerm] = useState('Term 3 - 2026');
   const [academicTermsModalOpen, setAcademicTermsModalOpen] = useState(false);
   const [changePasswordModalOpen, setChangePasswordModalOpen] = useState(false);
+  const [biometricModalOpen, setBiometricModalOpen] = useState(false);
   const [legalModalOpen, setLegalModalOpen] = useState(false);
   const [legalModalTab, setLegalModalTab] = useState<LegalTabType>('terms');
 
@@ -879,6 +881,7 @@ export default function App() {
           onNavigateTab={(tab) => setCurrentTab(tab as any)}
           onOpenAcademicTermsModal={() => setAcademicTermsModalOpen(true)}
           onOpenChangePasswordModal={() => setChangePasswordModalOpen(true)}
+          onOpenBiometricModal={() => setBiometricModalOpen(true)}
           academicContext={currentContext}
           onSelectStudent={(student) => {
             handleViewReportCard(student);
@@ -1474,6 +1477,12 @@ export default function App() {
           user?.role === UserRole.HEAD_TEACHER
         }
         userRole={user?.role}
+      />
+
+      
+      <BiometricDevicesModal
+        isOpen={biometricModalOpen}
+        onClose={() => setBiometricModalOpen(false)}
       />
 
       <ChangePasswordModal

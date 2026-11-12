@@ -4,14 +4,15 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --port=5173 --host=0.0.0.0",
+    "dev": "vite --port=5173 --host=localhost",
     "build": "vite build",
-    "preview": "vite preview",
+    "preview": "vite preview --port=5173 --host=localhost",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
+    "@simplewebauthn/browser": "^14.0.0",
     "@tailwindcss/vite": "^4.1.14",
     "@types/leaflet": "^1.9.22",
     "@vitejs/plugin-react": "^5.0.4",

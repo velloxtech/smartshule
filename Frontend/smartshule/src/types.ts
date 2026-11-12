@@ -2667,3 +2667,25 @@ export interface EndorseDailyLogDTO {
 
 
 
+
+
+export interface RegisteredWebAuthnCredential {
+  id: string;
+  userId: string;
+  credentialId: string;
+  deviceLabel: string;
+  deviceType: 'windows_hello' | 'apple_biometrics' | 'android_biometrics' | 'fido2_key' | 'platform_generic';
+  transports: string[];
+  aaguid?: string;
+  backupEligible?: boolean;
+  backupState?: boolean;
+  createdAt: string;
+  lastUsedAt?: string | null;
+}
+
+export interface WebAuthnUserStatus {
+  hasCredentials: boolean;
+  credentialCount: number;
+  deviceLabels: string[];
+  deviceTypes: string[];
+}

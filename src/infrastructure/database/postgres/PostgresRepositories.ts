@@ -1242,6 +1242,24 @@ export class PostgresDatabaseInitializer {
       );
       CREATE INDEX IF NOT EXISTS idx_tcr_teacher ON teacher_correction_requests(teacher_id);
       CREATE INDEX IF NOT EXISTS idx_tcr_school_status ON teacher_correction_requests(school_id, status);
+
+      CREATE TABLE IF NOT EXISTS biometric_credentials (
+        id VARCHAR(100) PRIMARY KEY,
+        user_id VARCHAR(100) NOT NULL,
+        credential_id TEXT NOT NULL UNIQUE,
+        public_key TEXT NOT NULL,
+        counter BIGINT NOT NULL DEFAULT 0,
+        device_label VARCHAR(255) NOT NULL,
+        device_type VARCHAR(64) NOT NULL DEFAULT 'platform_generic',
+        transports TEXT[] DEFAULT '{}',
+        aaguid VARCHAR(100),
+        backup_eligible BOOLEAN DEFAULT false,
+        backup_state BOOLEAN DEFAULT false,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        last_used_at TIMESTAMP WITH TIME ZONE
+      );
+      CREATE INDEX IF NOT EXISTS idx_biometric_user_id ON biometric_credentials(user_id);
+      CREATE INDEX IF NOT EXISTS idx_biometric_credential_id ON biometric_credentials(credential_id);
     `;
 
     await pool.query(ddl);

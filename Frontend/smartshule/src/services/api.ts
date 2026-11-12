@@ -395,6 +395,60 @@ const coreApiService = {
     return apiFetch<ApiResponse<{ valid: boolean; email?: string; message?: string }>>(`/auth/verify-reset-token?${params.toString()}`);
   },
 
+  // 1c. WebAuthn Biometric & Passkey Endpoints
+  webAuthnGetRegistrationOptions: async (): Promise<ApiResponse<any>> => {
+    return apiFetch<ApiResponse<any>>('/auth/webauthn/register/options', {
+      method: 'POST',
+    });
+  },
+
+  webAuthnVerifyRegistration: async (data: {
+    response: any;
+    deviceLabel?: string;
+    deviceType?: string;
+  }): Promise<ApiResponse<RegisteredWebAuthnCredential>> => {
+    return apiFetch<ApiResponse<RegisteredWebAuthnCredential>>('/auth/webauthn/register/verify', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  webAuthnGetLoginOptions: async (identifier?: string): Promise<ApiResponse<{ options: any; hasUserCredentials: boolean }>> => {
+    return apiFetch<ApiResponse<{ options: any; hasUserCredentials: boolean }>>('/auth/webauthn/login/options', {
+      method: 'POST',
+      body: JSON.stringify({ identifier }),
+    });
+  },
+
+  webAuthnVerifyLogin: async (response: any): Promise<ApiResponse<AuthResponse>> => {
+    const res = await apiFetch<ApiResponse<AuthResponse>>('/auth/webauthn/login/verify', {
+      method: 'POST',
+      body: JSON.stringify({ response }),
+    });
+    if (res.data?.accessToken) {
+      setAuthToken(res.data.accessToken);
+    }
+    return res;
+  },
+
+  webAuthnListCredentials: async (): Promise<ApiResponse<RegisteredWebAuthnCredential[]>> => {
+    return apiFetch<ApiResponse<RegisteredWebAuthnCredential[]>>('/auth/webauthn/credentials');
+  },
+
+  webAuthnDeleteCredential: async (credentialId: string): Promise<ApiResponse<{ message?: string }>> => {
+    return apiFetch<ApiResponse<{ message?: string }>>(`/auth/webauthn/credentials/${credentialId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  webAuthnCheckUserStatus: async (identifier: string): Promise<ApiResponse<WebAuthnUserStatus>> => {
+    return apiFetch<ApiResponse<WebAuthnUserStatus>>('/auth/webauthn/user-status', {
+      method: 'POST',
+      body: JSON.stringify({ identifier }),
+    });
+  },
+
+
   // 1b. User Management & Access Control Endpoints
   getUsers: async (filters?: { role?: string; search?: string }): Promise<ApiResponse<ManageableUser[]>> => {
     const params = new URLSearchParams();

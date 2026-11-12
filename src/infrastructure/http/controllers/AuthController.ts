@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { AuthUseCases } from '../../../application/auth/AuthUseCases';
+import { WebAuthnUseCases } from '../../../application/auth/WebAuthnUseCases';
 import { UserRole, UserStatus } from '../../../core/domain/user/User';
 import { AuthenticatedRequest } from '../middlewares/authMiddleware';
 import { resolveNetworkIdentity } from '../../utils/networkAccountability';
@@ -82,12 +83,32 @@ export const ResetPasswordSchema = z.object({
   message: 'Reset verification code or token is required'
 });
 
+
+export const WebAuthnVerifyRegistrationSchema = z.object({
+  response: z.any(),
+  deviceLabel: z.string().optional(),
+  deviceType: z.enum(['windows_hello', 'apple_biometrics', 'android_biometrics', 'fido2_key', 'platform_generic']).optional()
+});
+
+export const WebAuthnLoginOptionsSchema = z.object({
+  identifier: z.string().optional()
+});
+
+export const WebAuthnVerifyLoginSchema = z.object({
+  response: z.any()
+});
+
+export const WebAuthnUserStatusSchema = z.object({
+  identifier: z.string().min(1, 'Identifier is required')
+});
+
 import { SystemLogUseCases } from '../../../application/system-logs/SystemLogUseCases';
 
 export class AuthController {
   constructor(
     private readonly authUseCases: AuthUseCases,
-    private readonly systemLogUseCases?: SystemLogUseCases
+    private readonly systemLogUseCases?: SystemLogUseCases,
+    private readonly webAuthnUseCases?: WebAuthnUseCases
   ) {}
 
   public getSetupStatus = async (req: Request, res: Response, next: NextFunction) => {
@@ -361,4 +382,184 @@ export class AuthController {
       next(err);
     }
   };
+  public getWebAuthnRegistrationOptions = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      if (!this.webAuthnUseCases) {
+        return res.status(501).json({ success: false, message: 'WebAuthn service not available' });
+      }
+      const origin = req.get('origin') || (req.headers.referer ? new URL(req.headers.referer).origin : undefined);
+      const options = await this.webAuthnUseCases.generateRegistrationOptions(req.user!.userId, origin);
+      return res.status(200).json({
+        success: true,
+        data: options
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public verifyWebAuthnRegistration = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      if (!this.webAuthnUseCases) {
+        return res.status(501).json({ success: false, message: 'WebAuthn service not available' });
+      }
+      const origin = req.get('origin') || (req.headers.referer ? new URL(req.headers.referer).origin : undefined);
+      const credential = await this.webAuthnUseCases.verifyRegistration({
+        userId: req.user!.userId,
+        response: req.body.response,
+        deviceLabel: req.body.deviceLabel,
+        deviceType: req.body.deviceType,
+        requestOrigin: origin
+      });
+
+      const identity = resolveNetworkIdentity(req);
+      this.systemLogUseCases?.log({
+        level: 'INFO',
+        category: 'AUTH',
+        action: 'WEBAUTHN_REGISTER',
+        actorUserId: req.user!.userId,
+        actorEmail: req.user!.email,
+        actorRole: req.user!.role,
+        ipAddress: identity.ipAddress,
+        macAddress: identity.macAddress,
+        status: 'SUCCESS',
+        details: `Registered biometric / passkey authenticator "${req.body.deviceLabel || 'New Authenticator'}" (${req.body.deviceType || 'generic'})`,
+        metadata: { credentialId: credential.credentialId, deviceLabel: credential.deviceLabel }
+      }).catch(() => {});
+
+      return res.status(201).json({
+        success: true,
+        message: 'Biometric passkey device registered successfully',
+        data: credential
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public getWebAuthnLoginOptions = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      if (!this.webAuthnUseCases) {
+        return res.status(501).json({ success: false, message: 'WebAuthn service not available' });
+      }
+      const origin = req.get('origin') || (req.headers.referer ? new URL(req.headers.referer).origin : undefined);
+      const identifier = (req.body?.identifier || req.query?.identifier || '') as string;
+      const result = await this.webAuthnUseCases.generateAuthenticationOptions({
+        identifier: identifier || undefined,
+        requestOrigin: origin
+      });
+      return res.status(200).json({
+        success: true,
+        data: result
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public verifyWebAuthnLogin = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      if (!this.webAuthnUseCases) {
+        return res.status(501).json({ success: false, message: 'WebAuthn service not available' });
+      }
+      const origin = req.get('origin') || (req.headers.referer ? new URL(req.headers.referer).origin : undefined);
+      const result = await this.webAuthnUseCases.verifyAuthentication({
+        response: req.body.response,
+        requestOrigin: origin
+      });
+
+      const identity = resolveNetworkIdentity(req);
+      this.systemLogUseCases?.log({
+        schoolId: result.user.schoolId,
+        level: 'INFO',
+        category: 'AUTH',
+        action: 'USER_LOGIN_WEBAUTHN',
+        actorUserId: result.user.id,
+        actorEmail: result.user.email || result.user.phone,
+        actorRole: result.user.role,
+        ipAddress: identity.ipAddress,
+        macAddress: identity.macAddress,
+        status: 'SUCCESS',
+        details: `User ${result.user.email || result.user.phone} (${result.user.role}) logged in via Biometric / Passkey authenticator [Device: ${identity.macAddress}]`,
+        metadata: { userId: result.user.id, role: result.user.role, userAgent: identity.userAgent }
+      }).catch(() => {});
+
+      return res.status(200).json({
+        success: true,
+        message: 'Biometric authentication successful',
+        data: result
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public listWebAuthnCredentials = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      if (!this.webAuthnUseCases) {
+        return res.status(501).json({ success: false, message: 'WebAuthn service not available' });
+      }
+      const credentials = await this.webAuthnUseCases.listUserCredentials(req.user!.userId);
+      return res.status(200).json({
+        success: true,
+        data: credentials
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public deleteWebAuthnCredential = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    try {
+      if (!this.webAuthnUseCases) {
+        return res.status(501).json({ success: false, message: 'WebAuthn service not available' });
+      }
+      const credentialId = req.params.credentialId as string;
+      const deleted = await this.webAuthnUseCases.deleteUserCredential(req.user!.userId, credentialId);
+      if (!deleted) {
+        return res.status(404).json({
+          success: false,
+          message: 'Authenticator credential not found or already deleted'
+        });
+      }
+
+      const identity = resolveNetworkIdentity(req);
+      this.systemLogUseCases?.log({
+        level: 'INFO',
+        category: 'AUTH',
+        action: 'WEBAUTHN_DELETE',
+        actorUserId: req.user!.userId,
+        actorEmail: req.user!.email,
+        actorRole: req.user!.role,
+        ipAddress: identity.ipAddress,
+        macAddress: identity.macAddress,
+        status: 'SUCCESS',
+        details: `Removed registered biometric passkey credential ID ${req.params.credentialId}`
+      }).catch(() => {});
+
+      return res.status(200).json({
+        success: true,
+        message: 'Registered authenticator removed successfully'
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
+  public checkWebAuthnUserStatus = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      if (!this.webAuthnUseCases) {
+        return res.status(501).json({ success: false, message: 'WebAuthn service not available' });
+      }
+      const identifier = (req.body?.identifier || req.query?.identifier || '') as string;
+      const status = await this.webAuthnUseCases.checkUserStatus(identifier);
+      return res.status(200).json({
+        success: true,
+        data: status
+      });
+    } catch (err) {
+      next(err);
+    }
+  };
+
 }

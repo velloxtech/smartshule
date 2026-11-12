@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { AuthUser, UserRole } from '../types';
 import { apiService, setAuthToken } from '../services/api';
+import { biometricService } from '../services/biometricService';
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -12,6 +13,7 @@ interface AuthContextType {
   isStaffWithChildren: boolean;
   enrolledChildrenCount: number;
   login: (email: string, password: string) => Promise<boolean>;
+  loginWithBiometrics: (identifier?: string) => Promise<boolean>;
   logout: () => void;
   refreshProfile: () => Promise<void>;
   updateUser: (updated: Partial<AuthUser>) => void;
@@ -105,6 +107,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+
+  const loginWithBiometrics = async (identifier?: string): Promise<boolean> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const res = await biometricService.loginWithBiometrics(identifier);
+      if (res.success && res.data) {
+        setUser(res.data.user);
+        setToken(res.data.accessToken);
+        setIsLoading(false);
+        return true;
+      }
+      setError(res.error || 'Biometric authentication was not completed.');
+      setIsLoading(false);
+      return false;
+    } catch (err: any) {
+      setError(err.message || 'Error during biometric authentication');
+      setIsLoading(false);
+      return false;
+    }
+  };
+
   const logout = () => {
     setAuthToken(null);
     setToken(null);
@@ -129,6 +153,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isStaffWithChildren,
         enrolledChildrenCount,
         login,
+        loginWithBiometrics,
         logout,
         refreshProfile,
         updateUser,
