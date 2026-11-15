@@ -1,3 +1,6 @@
+import { IBiometricCredentialRepository } from '../../core/ports/repositories/IBiometricCredentialRepository';
+import { InMemoryBiometricCredentialRepository } from './in-memory/InMemoryBiometricCredentialRepository';
+import { PostgresBiometricCredentialRepository } from './postgres/PostgresBiometricCredentialRepository';
 import mongoose from 'mongoose';
 import { Pool } from 'pg';
 import { resolveDatabaseConfig } from '../config/databaseResolver';
@@ -145,6 +148,7 @@ export interface RepositoryBundle {
   signatureRepository?: ISignatureRepository;
   financialApprovalRepository?: IFinancialApprovalRepository;
   parentConsentRepository?: IParentConsentRepository;
+  biometricCredentialRepository?: IBiometricCredentialRepository;
 }
 
 export class DatabaseFactory {
@@ -282,6 +286,7 @@ export class DatabaseFactory {
         financialApprovalRepository: new PostgresFinancialApprovalRepository(pool),
         ediaryRepository: new PostgresEDiaryRepository(pool),
         parentConsentRepository: new PostgresParentConsentRepository(pool),
+        biometricCredentialRepository: new PostgresBiometricCredentialRepository(pool),
       };
     }
 

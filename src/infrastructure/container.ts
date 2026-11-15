@@ -1,3 +1,7 @@
+import { IBiometricCredentialRepository } from '../core/ports/repositories/IBiometricCredentialRepository';
+import { InMemoryBiometricCredentialRepository } from './database/in-memory/InMemoryBiometricCredentialRepository';
+import { WebAuthnUseCases } from '../application/auth/WebAuthnUseCases';
+import { WebAuthnService } from './services/WebAuthnService';
 import { IUserRepository } from '../core/ports/repositories/IUserRepository';
 import { IStudentRepository } from '../core/ports/repositories/IStudentRepository';
 import { ITeacherRepository, IGuardianRepository } from '../core/ports/repositories/ITeacherRepository';
@@ -142,6 +146,7 @@ export class AppContainer {
   public teacherCorrectionRequestRepository: ITeacherCorrectionRequestRepository;
   public financialApprovalRepository: IFinancialApprovalRepository;
   public parentConsentRepository: IParentConsentRepository;
+  public biometricCredentialRepository: IBiometricCredentialRepository;
 
   // Services
   public readonly tokenService = new JwtAuthTokenService();
@@ -156,6 +161,7 @@ export class AppContainer {
 
   // Use Cases
   public authUseCases!: AuthUseCases;
+  public webAuthnUseCases!: WebAuthnUseCases;
   public studentUseCases!: StudentUseCases;
   public teacherUseCases!: TeacherUseCases;
   public academicUseCases!: AcademicUseCases;
@@ -231,6 +237,7 @@ export class AppContainer {
       customRepositories?.studentSponsorshipRepository || new InMemoryStudentSponsorshipRepository();
     this.signatureRepository =
       customRepositories?.signatureRepository || new InMemorySignatureRepository();
+    this.biometricCredentialRepository = customRepositories?.biometricCredentialRepository || new InMemoryBiometricCredentialRepository();
     this.teacherCorrectionRequestRepository =
       customRepositories?.teacherCorrectionRequestRepository || new InMemoryTeacherCorrectionRequestRepository();
     this.financialApprovalRepository =
@@ -256,6 +263,17 @@ export class AppContainer {
       this.studentRepository,
       this.systemLogRepository,
       this.teacherRepository
+    );
+    const webAuthnService = new WebAuthnService({
+      rpId: process.env.WEBAUTHN_RP_ID || 'localhost',
+      rpName: process.env.WEBAUTHN_RP_NAME || 'SmartShule',
+      expectedOrigin: process.env.WEBAUTHN_ORIGIN || process.env.FRONTEND_URL || 'http://localhost:5173'
+    });
+    this.webAuthnUseCases = new WebAuthnUseCases(
+      this.biometricCredentialRepository,
+      this.userRepository,
+      this.tokenService,
+      webAuthnService
     );
     this.studentUseCases = new StudentUseCases(
       this.studentRepository,

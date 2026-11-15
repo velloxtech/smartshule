@@ -14,7 +14,7 @@ export default defineConfig(() => {
     },
     server: {
       port: 5173,
-      host: '0.0.0.0',
+      host: 'localhost',
       allowedHosts: true as any,
       // Configure HMR: allow optional custom HMR clientPort for tunneling (e.g., ngrok), defaulting to standard Vite HMR
       hmr: process.env.DISABLE_HMR === 'true' 
@@ -65,7 +65,7 @@ export default defineConfig(() => {
     },
     preview: {
       port: 5173,
-      host: '0.0.0.0',
+      host: 'localhost',
       allowedHosts: true as any,
       proxy: {
         '/api': {

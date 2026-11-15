@@ -9,6 +9,7 @@ export interface AdmissionsPageProps {
   onNavigateProgrammes: () => void
   onNavigateOnboarding?: () => void
   onNavigateApplySlot?: () => void
+  onNavigateFindUs?: () => void
 }
 
 export const ADMISSION_STEPS = [
@@ -76,6 +77,7 @@ export default function AdmissionsPage({
   onNavigateProgrammes,
   onNavigateOnboarding,
   onNavigateApplySlot,
+  onNavigateFindUs,
 }: AdmissionsPageProps) {
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0)
   const [phoneCopied, setPhoneCopied] = useState(false)
@@ -333,6 +335,14 @@ export default function AdmissionsPage({
               <h4 style={{ fontFamily: 'Fraunces, serif' }} className="text-lg font-bold text-[#f5c84a] mb-1">School Location</h4>
               <p className="text-white/80 text-sm">Kisumu, Kisian, KEMRI Road</p>
               <p className="text-white/50 text-xs mt-2">Visiting: Mon – Fri: 8:00 AM – 3:00 PM</p>
+              {onNavigateFindUs && (
+                <button
+                  onClick={onNavigateFindUs}
+                  className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-[#f5c84a] hover:text-white underline cursor-pointer"
+                >
+                  <span>Interactive Map & Directions →</span>
+                </button>
+              )}
             </div>
 
             <div className="bg-white/10 p-6 rounded-2xl border border-white/15">

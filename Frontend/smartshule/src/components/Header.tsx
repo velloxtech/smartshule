@@ -15,6 +15,7 @@ interface HeaderProps {
   onOpenQuickAction?: (action: string) => void;
   onOpenAcademicTermsModal?: () => void;
   onOpenChangePasswordModal?: () => void;
+  onOpenBiometricModal?: () => void;
   onNavigateLanding?: () => void;
   onNavigateTab?: (tab: string) => void;
   academicContext?: AcademicContext | null;
@@ -32,6 +33,7 @@ export const Header: React.FC<HeaderProps> = ({
   onNavigateTab,
   onOpenAcademicTermsModal,
   onOpenChangePasswordModal,
+  onOpenBiometricModal,
   academicContext,
   backendConnected = true,
 }) => {
@@ -568,6 +570,20 @@ export const Header: React.FC<HeaderProps> = ({
                     >
                       <span className="material-symbols-outlined text-[16px] text-[#800000]">public</span>
                       <span>View Public Landing Page</span>
+                    </button>
+                  )}
+
+                  
+                  {onOpenBiometricModal && (
+                    <button
+                      onClick={() => {
+                        setUserMenuOpen(false);
+                        onOpenBiometricModal();
+                      }}
+                      className="w-full text-left px-3 py-2 text-xs font-semibold text-slate-800 hover:bg-slate-100 rounded-lg transition-colors flex items-center gap-2 cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[16px] text-[#7a1228]">fingerprint</span>
+                      <span>Biometric & Passkey Devices</span>
                     </button>
                   )}
 
